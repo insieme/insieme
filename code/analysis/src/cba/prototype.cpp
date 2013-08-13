@@ -413,7 +413,9 @@ namespace cba {
 
 			void visitVariable(const VariableAddress& variable, const Context& ctxt, Constraints& constraints) {
 
-				// add constraint r(var) \subset C(var)
+				// ----- Part I: read variable value -------
+
+				// add constraint a(var) \subset A(var)
 				auto var = context.getVariable(variable);
 				auto l_var = context.getLabel(variable);
 
@@ -421,6 +423,91 @@ namespace cba {
 				auto A_var = context.getSet(A, l_var, ctxt);
 
 				constraints.add(subset(a_var, A_var));
+
+
+				// ----- Part II: add constraints for variable definition point ------
+
+				// let it be handled by the definition point
+				VariableAddress def = getDefinitionPoint(variable);
+				if (def != variable) {
+					addConstraints(def, ctxt, constraints);
+					return;
+				}
+
+				// ok - this is the definition point
+				// => check type of variable (determined by parent)
+
+				// no parent: free variable, nothing to do
+				if (def.isRoot()) return;
+
+				// so, there should be a parent
+				auto parent = def.getParentAddress();
+				switch(parent->getNodeType()) {
+
+					// if the variable is declared imperatively => just handle declaration statement
+					case NT_DeclarationStmt: {
+						// TODO: consider for-loops
+						addConstraints(parent, ctxt, constraints);
+						break;
+					}
+
+					// the variable may be a parameter of a lambda or bind
+					case NT_Parameters: {
+
+						// this should not be the end
+						assert(!parent.isRoot());
+
+						// we have to get to the call site
+						unsigned userOffset = (parent.getParentNode().isa<LambdaPtr>() ? 5 : 2);		// lambda or bind
+
+						assert_lt(userOffset, parent.getDepth());
+						auto user = parent.getParentAddress(userOffset);
+
+						std::cout << "User: " << user << ": " << *user << "\n";
+
+						// distinguish user type
+						auto call = user.isa<CallExprAddress>();
+						if (call && call->getFunctionExpr() == parent.getParentAddress(userOffset - 1)) {
+
+							// this is a direct call to the function / bind => no context switch
+							// process call using current (=inner) context
+							addConstraints(call, ctxt, constraints);
+
+						} else {
+
+							// TODO: limit call-contexts to actual possible once
+
+							// this function might be called indirectly => link in all potential call sites
+							auto num_args = parent.as<ParametersPtr>().size();
+							for(const auto& site : context.getDynamicCalls()) {
+								// filter out incorrect number of parameters
+								if (site.size() != num_args) continue;
+
+								for(const auto& l : context.getDynamicCallLabels()) {
+
+									// compute potential caller context
+									Context srcCtxt = ctxt;
+									srcCtxt.callContext >>= l;
+
+									// add constraints for this site
+									addConstraints(site, srcCtxt, constraints);
+								}
+							}
+						}
+
+						// this should be it
+						break;
+					}
+
+					default: {
+						// fail at this point
+						assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType() << "\n";
+						break;
+					}
+				}
+
+
+
 			}
 
 			void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
@@ -1160,75 +1247,355 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 		// ----------------------------------------------------------------------------------------------------------------------------
 
 
+		template<typename SetIDType, typename Collector>
+		class BasicInOutConstraintCollector : public ConstraintResolver {
 
-		template<typename SetIDType, typename Derived>
-		class BaseImperativeConstraintCollector : public ConstraintResolver {
+		protected:
 
 			typedef ConstraintResolver super;
-
-			typedef std::pair<CallExprAddress, Context> Item;
-			std::set<Item> processed;
-
-		private:
 
 			// the sets to be used for in/out states
 			const SetIDType& Ain;
 			const SetIDType& Aout;
 
+			Collector& collector;
+
 		public:
 
-			BaseImperativeConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout)
-				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)), Ain(Ain), Aout(Aout) {};
+			BasicInOutConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+				: super(context, utils::set::toSet<SetTypeSet>(&Ain)), Ain(Ain), Aout(Aout), collector(collector) {}
 
+		protected:
 
-			// TODO: redesign
-			//	- implement routine obtaining predecessor
-			//	- implement routine obtaining successors
-			//	- implement forward / backward constraint collector on top of those
-			//  - use utility within implementation of this class
-
-			// ----------- Expressions -----------------------------------------------------------------------------------------------------
-
-			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(call, ctxt, constraints);
-
-				// use internal variant
-				visitCallExprInternal(call, ctxt, constraints);
+			void connectSets(const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+				connectStateSets(a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
 			}
 
-			virtual void visitCallExprInternal(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			template<typename E>
+			void connectSets(const E& value, const TypedSetID<E>& set, const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+				connectStateSetsIf(value, set, a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
+			}
 
-				// check processed-cache
-				if (!processed.insert(Item(call, ctxt)).second) return;
+			void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+				collector.connectStateSets(a,al,ac,b,bl,bc,constraints);
+			}
 
-//				// recursively process sub-expressions
-//				visit(call->getFunctionExpr(), ctxt, constraints);
-//				for(auto arg : call) visit(arg, ctxt, constraints);
+			template<typename E>
+			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+				collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
+			}
 
-				// otherwise default handling
+		};
+
+
+		template<typename SetIDType, typename Collector>
+		class ImperativeInConstraintCollector : public BasicInOutConstraintCollector<SetIDType, Collector> {
+
+			typedef BasicInOutConstraintCollector<SetIDType, Collector> super;
+
+		public:
+
+			ImperativeInConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+				: super(context, Ain, Aout, collector) {}
+
+			void visitCompoundStmt(const CompoundStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+
+				// TODO: check whether it is a function body => otherwise default handling
+				if (stmt.isRoot()) return;
+
+				auto parent = stmt.getParentAddress();
+
+				// handle lambda
+				if (auto lambda = parent.isa<LambdaAddress>()) {
+
+					// get call site
+					auto user = parent.getParentAddress(4);
+					auto call = user.isa<CallExprAddress>();
+					if (call && call->getFunctionExpr() == parent.getParentAddress(3)) {
+
+						// it is a direct call => process call
+						this->collector.addConstraints(call, ctxt, constraints);
+
+					} else {
+
+						// this function is invoked indirectly
+						auto numParams = lambda.as<LambdaPtr>()->getParameters().size();
+						for(auto& call : this->context.getDynamicCalls()) {
+							if(numParams != call.size()) continue;
+
+							for(auto& l : this->context.getDynamicCallLabels()) {
+								Context srcCtxt = ctxt;
+								srcCtxt.callContext >>= l;
+								this->collector.addConstraints(call, srcCtxt, constraints);
+							}
+						}
+
+					}
+
+					// done
+					return;
+				}
+
+				// use default handling
+				visitStatement(stmt, ctxt, constraints);
+
+			}
+
+
+			void visitStatement(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
+
+				// determine predecessor based on parent
+				if (stmt.isRoot()) return;		// no predecessor
+
+				// check out parent
+				auto parent = stmt.getParentAddress();
+
+				// a simple case - it is just a nested expression
+				if (auto expr = parent.isa<ExpressionAddress>()) {
+
+					// parent is an expression => in of parent is in of current stmt
+					this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, constraints);
+					return;	// done
+				}
+
+				// handle full-expressions
+				if (auto compound = parent.isa<CompoundStmtAddress>()) {
+
+					// parent is a compound, predecessor is one statement before
+					auto pos = stmt.getIndex();
+
+					// special case: first statement
+					if (pos == 0) {
+						this->connectSets(this->Ain, compound, ctxt, this->Ain, stmt, ctxt, constraints);
+						return;	// done
+					}
+
+					// general case - link with predecessor
+					auto prev = compound[pos-1];
+
+					// do not link with previous control statements
+					switch(prev->getNodeType()) {
+					case NT_ReturnStmt: case NT_ContinueStmt: case NT_BreakStmt: return;
+					default: break;
+					}
+
+					this->connectSets(this->Aout, prev, ctxt, this->Ain, stmt, ctxt, constraints);
+					return;	// done
+				}
+
+				// handle simple statements
+				if (parent.isa<ReturnStmtAddress>() || parent.isa<DeclarationStmtAddress>()) {
+					// in is the in of the stmt
+					this->connectSets(this->Ain, parent.as<StatementAddress>(), ctxt, this->Ain, stmt, ctxt, constraints);
+					return; // done
+				}
+
+
+				assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType();
+			}
+		};
+
+//		template<typename SetIDType, typename Collector>
+//		class ImperativeTransferConstraintCollector : public BasicInOutConstraintCollector<SetIDType, Collector> {
+//
+//			typedef BasicInOutConstraintCollector<SetIDType, Collector> super;
+//
+//			const SetIDType& Ain;
+//			const SetIDType& Aout;
+//
+//		public:
+//
+//			ImperativeTransferConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+//				: super(context, Ain, Aout, collector), Ain(Ain), Aout(Aout) {}
+//
+//
+//			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+//
+//				// things to do:
+//				//  - link in of call with in of arguments
+//				//  - link out of arguments with in of function
+//				//  - link out of function with out of call
+//
+//				auto l_call = this->context.getLabel(call);
+//
+//				// link in of call with in of arguments
+//				for(auto arg : call) {
+//					auto l_arg = this->context.getLabel(arg);
+//					connectStateSets(Ain, l_call, ctxt, Ain, l_arg, ctxt, constraints);
+//				}
+//
+//				// and the function
+//				auto l_fun = this->context.getLabel(call->getFunctionExpr());
+//				connectStateSets(Ain, l_call, ctxt, Ain, l_fun, ctxt, constraints);
+//
+//
+//				// create inner call context
+//				Context innerCallContext = ctxt;
+//
+//				// get set of potential target functions
+//				auto C_fun = this->context.getSet(C, l_fun, ctxt);
+//
+//				// a utility resolving constraints for the called function
+//				auto addConstraints = [&](const Callable& target, bool fixed) {
+//					auto expr = target.definition;
+//
+//					// check correct number of arguments
+//					if (call.size() != expr.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
+//						// this is not a valid target
+//						return;
+//					}
+//
+//					// ---- Effect of arguments => in of function ----
+//
+//					// get body
+//					StatementAddress body;
+//					if (auto lambda = expr.isa<LambdaExprAddress>()) {
+//						body = lambda->getBody();
+////					} else if (auto bind = expr.isa<BindExprAddress>()) {
+////						body = bind->getCall();
+//					} else {
+//						std::cout << "Unsupported potential target of type " << expr->getNodeType() << " encountered.";
+//						assert(false && "Unsupported potential call target.");
+//					}
+//
+//					// get label for body
+//					auto l_fun = this->context.getLabel(body);
+//
+//					// forward effects of argument evaluation
+//					for (auto arg : call) {
+//						auto l_arg = this->context.getLabel(arg);
+//						if (fixed) {
+//							this->connectStateSets(Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
+//						} else {
+//							this->connectStateSetsIf(target, C_fun, Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
+//						}
+//					}
+//
+//					// also add effects of function-expression evaluation
+//					auto l_call_fun = this->context.getLabel(call->getFunctionExpr());
+//					if (fixed) {
+//						this->connectStateSets(Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
+//					} else {
+//						this->connectStateSetsIf(target, C_fun, Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
+//					}
+//
+//					// ---- Effect of function => out of call ---
+//
+//					// link out of fun with call out
+//					if (fixed) {
+//						this->connectStateSets(Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+//					} else {
+//						this->connectStateSetsIf(target, C_fun, Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+//					}
+//
+//					// process function body
+//					if(fixed) this->visit(body, innerCallContext, constraints);
+//
+//				};
+//
+//
+//				// handle call target
+//				auto fun = call->getFunctionExpr();
+//
+//				if (fun.isa<LiteralPtr>()) {
+//
+//					// - here we are assuming side-effect free literals -
+//
+//					// just connect out of arguments to call-out
+//					for (auto arg : call) {
+//						auto l_arg = this->context.getLabel(arg);
+//						this->connectStateSets(Aout, l_arg, ctxt, Aout, l_call, ctxt, constraints);
+//					}
+//
+//					// and the function
+//					this->connectStateSets(Aout, l_fun, ctxt, Aout, l_call, ctxt, constraints);
+//
+//				} else if (auto lambda = fun.isa<LambdaExprAddress>()) {
+//
+//					// direct call => handle directly
+//					addConstraints(Callable(lambda), true);
+//
+//				} else if (auto bind = fun.isa<BindExprAddress>()) {
+//
+//					// direct call of bind => handle directly
+//					addConstraints(Callable(bind, ctxt), true);
+//
+//				} else {
+//
+//					// create new call-context
+//					innerCallContext.callContext <<= l_call;
+//
+//					// indirect call => dynamic dispatching required
+//					for(auto cur : this->context.getCallables()) {
+//						addConstraints(cur,false);
+//					}
+//
+//				}
+//
+//			}
+//
+//			void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& res) {
+//				// just forward state
+//				auto l_cur = this->context.getLabel(expr);
+//				this->connectStateSets(Ain, l_cur, ctxt, Aout, l_cur, ctxt, res);
+//			}
+//
+//			void visitReturnStmt(const ReturnStmtAddress& ret, const Context& ctxt, Constraints& res) {
+//				// nothing to transfer
+//			}
+//
+//			void visitContinueStmt(const ContinueStmtAddress& ret, const Context& ctxt, Constraints& res) {
+//				// nothing to transfer
+//			}
+//
+//			void visitBreakStmt(const BreakStmtAddress& ret, const Context& ctxt, Constraints& res) {
+//				// nothing to transfer
+//			}
+//
+//			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& res) {
+//				// nothing to transfer (done by in / out collectors)
+//			}
+//
+//			void visitDeclarationStmt(const DeclarationStmtAddress& compound, const Context& ctxt, Constraints& res) {
+//				// connect in to inner int and inner out to outer out
+//				auto initVal = compound->getInitialization();
+//				this->connectSets(Ain, compound, ctxt, Ain, initVal, ctxt, res);
+//				this->connectSets(Aout, initVal, ctxt, Aout, compound, ctxt, res);
+//			}
+//
+//			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& res) {
+//				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
+//			}
+//
+//		};
+
+		template<typename SetIDType, typename Collector>
+		class ImperativeOutConstraintCollector : public BasicInOutConstraintCollector<SetIDType, Collector> {
+
+			typedef BasicInOutConstraintCollector<SetIDType, Collector> super;
+
+		public:
+
+			ImperativeOutConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+				: super(context, Ain, Aout, collector) {}
+
+
+			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+
+				// things to do:
 				//  - link in of call with in of arguments
 				//  - link out of arguments with in of function
 				//  - link out of function with out of call
 
-				auto l_call = context.getLabel(call);
-
-				// link in of call with in of arguments
-				for(auto arg : call) {
-					auto l_arg = context.getLabel(arg);
-					connectStateSets(Ain, l_call, ctxt, Ain, l_arg, ctxt, constraints);
-				}
-
-				// and the function
-				auto l_fun = context.getLabel(call->getFunctionExpr());
-				connectStateSets(Ain, l_call, ctxt, Ain, l_fun, ctxt, constraints);
+				auto l_call = this->context.getLabel(call);
 
 
 				// create inner call context
 				Context innerCallContext = ctxt;
 
 				// get set of potential target functions
-				auto C_fun = context.getSet(C, l_fun, ctxt);
+				auto l_fun = this->context.getLabel(call->getFunctionExpr());
+				auto C_fun = this->context.getSet(C, l_fun, ctxt);
 
 				// a utility resolving constraints for the called function
 				auto addConstraints = [&](const Callable& target, bool fixed) {
@@ -1240,7 +1607,7 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 						return;
 					}
 
-					// ---- Effect of arguments => in of function ----
+					// ---- Effect of function => out of call ---
 
 					// get body
 					StatementAddress body;
@@ -1254,38 +1621,17 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 					}
 
 					// get label for body
-					auto l_fun = context.getLabel(body);
-
-					// forward effects of argument evaluation
-					for (auto arg : call) {
-						auto l_arg = context.getLabel(arg);
-						if (fixed) {
-							this->connectStateSets(Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
-						} else {
-							this->connectStateSetsIf(target, C_fun, Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
-						}
-					}
-
-					// also add effects of function-expression evaluation
-					auto l_call_fun = context.getLabel(call->getFunctionExpr());
-					if (fixed) {
-						this->connectStateSets(Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
-					} else {
-						this->connectStateSetsIf(target, C_fun, Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
-					}
-
-					// ---- Effect of function => out of call ---
+					auto l_fun = this->context.getLabel(body);
 
 					// link out of fun with call out
 					if (fixed) {
-						this->connectStateSets(Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+						this->connectStateSets(this->Aout, l_fun, innerCallContext, this->Aout, l_call, ctxt, constraints);
 					} else {
-						this->connectStateSetsIf(target, C_fun, Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+						this->connectStateSetsIf(target, C_fun, this->Aout, l_fun, innerCallContext, this->Aout, l_call, ctxt, constraints);
 					}
 
 					// process function body
-					if(fixed) this->visit(body, innerCallContext, constraints);
-
+//					if(fixed) this->visit(body, innerCallContext, constraints);
 				};
 
 
@@ -1298,12 +1644,12 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 
 					// just connect out of arguments to call-out
 					for (auto arg : call) {
-						auto l_arg = context.getLabel(arg);
-						connectStateSets(Aout, l_arg, ctxt, Aout, l_call, ctxt, constraints);
+						auto l_arg = this->context.getLabel(arg);
+						this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_call, ctxt, constraints);
 					}
 
 					// and the function
-					connectStateSets(Aout, l_fun, ctxt, Aout, l_call, ctxt, constraints);
+					this->connectStateSets(this->Aout, l_fun, ctxt, this->Aout, l_call, ctxt, constraints);
 
 				} else if (auto lambda = fun.isa<LambdaExprAddress>()) {
 
@@ -1321,317 +1667,595 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 					innerCallContext.callContext <<= l_call;
 
 					// indirect call => dynamic dispatching required
-					for(auto cur : context.getCallables()) {
+					for(const auto& cur : this->context.getCallables()) {
 						addConstraints(cur,false);
 					}
-
-				}
-
-			}
-
-			void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(bind, ctxt, constraints);
-
-				auto boundExprs = bind->getBoundExpressions();
-
-				// special case: no bound expressions
-				if (boundExprs.empty()) {
-					// forward in to out and be done
-					visitExpression(bind, ctxt, constraints);
-					return;
-				}
-
-				auto l_bind = context.getLabel(bind);
-
-				// evaluate bound expressions
-				for(auto& cur : boundExprs) {
-					auto l_arg = context.getLabel(cur);
-
-					//   - forward in to expression in
-					connectStateSets(Ain, l_bind, ctxt, Ain, l_arg, ctxt, constraints);
-
-					//   - process bound expressions
-					visit(cur, ctxt, constraints);
-
-					//   - forward out of expression to out of bind
-					connectStateSets(Aout, l_arg, ctxt, Aout, l_bind, ctxt, constraints);
 				}
 			}
 
 			void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(expr, ctxt, constraints);
-
-				// in the general case, not much happening => connect in and out
-				auto label = context.getLabel(expr);
-				connectStateSets(Ain, label, ctxt, Aout, label, ctxt, constraints);
+				// for most expressions: just connect in and out
+				auto l_cur = this->context.getLabel(expr);
+				this->connectStateSets(this->Ain, l_cur, ctxt, this->Aout, l_cur, ctxt, constraints);
 			}
 
+			void visitCompoundStmt(const CompoundStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 
-			// ----------- Statements -----------------------------------------------------------------------------------------------------
-
-			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(compound, ctxt, constraints);
-
-				// special handling for empty compound = NoOp
-				if (compound.empty()) {
-					auto l = context.getLabel(compound);
-					connectStateSets(Ain, l, ctxt, Aout, l, ctxt, constraints);
+				// special case: empty compound
+				if (stmt.empty()) {
+					this->connectSets(this->Ain, stmt, ctxt, this->Aout, stmt, ctxt, constraints);
 					return;
 				}
 
-				// connect contained statements
-				for(std::size_t i = 0; i < compound.size()-1; i++) {
-					// skip connection if current stmt is a return / break / continue statement
-					switch(compound[i]->getNodeType()) {
-					case NT_ReturnStmt: case NT_BreakStmt: case NT_ContinueStmt: continue;
-					default: break;
-					}
-
-					// connect those
-					auto la = context.getLabel(compound[i]);
-					auto lb = context.getLabel(compound[i+1]);
-					connectStateSets(Aout, la, ctxt, Ain, lb, ctxt, constraints);
-				}
-
-				// connect in-state with in of first statement
-				auto l = context.getLabel(compound);
-				auto la = context.getLabel(compound[0]);
-				connectStateSets(Ain, l, ctxt, Ain, la, ctxt, constraints);
-
-				// connect out-state of last statement with out-state
-				auto lb = context.getLabel(compound[compound.size()-1]);
-				connectStateSets(Aout, lb, ctxt, Aout, l, ctxt, constraints);
-
-				// and add constraints of all inner statements
-				for(auto cur : compound) {
-					visit(cur, ctxt, constraints);
-				}
+				// connect with last statement
+				auto last = stmt[stmt.size()-1];
+				this->connectSets(this->Aout, last, ctxt, this->Aout, stmt, ctxt, constraints);
 			}
 
-			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(decl, ctxt, constraints);
-
-				// just connect in with init value and out of innit value with out
-				auto l = context.getLabel(decl);
-				auto l_init = context.getLabel(decl->getInitialization());
-
-				connectStateSets(Ain, l, ctxt, Ain, l_init, ctxt, constraints);
-				connectStateSets(Aout, l_init, ctxt, Aout, l, ctxt, constraints);
-
-				// and create constraints for initialization value
-				visit(decl->getInitialization(), ctxt, constraints);
+			void visitDeclarationStmt(const DeclarationStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// link out of init expression to out of decl stmt
+				this->connectSets(this->Aout, stmt->getInitialization(), ctxt, this->Aout, stmt, ctxt, constraints);
 			}
 
 			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(stmt, ctxt, constraints);
-
-				// connect Ain with Ain of return expression
-				auto l_ret = context.getLabel(stmt);
-				auto l_val = context.getLabel(stmt->getReturnExpr());
-				connectStateSets(Ain, l_ret, ctxt, Ain, l_val, ctxt, constraints);
-
-				// find enclosing lambda
-				LambdaAddress lambda = getEnclosingLambda(stmt);
-				if (!lambda) {
-					std::cout << "WARNING: encountered free return!\n";
-					return;
-				}
-
-				// connect Aout of value with Aout of function
-				auto l_fun = context.getLabel(lambda->getBody());
-				connectStateSets(Aout, l_val, ctxt, Aout, l_fun, ctxt, constraints);
-
-				// fix constraints for return expr
-				visit(stmt->getReturnExpr(), ctxt, constraints);
+				// link out of return expression to out of return stmt
+				this->connectSets(this->Aout, stmt->getReturnExpr(), ctxt, this->Aout, stmt, ctxt, constraints);
 			}
 
+//			void visitStatement(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
+//
+//				// determine predecessor based on parent
+//				if (stmt.isRoot()) return;		// no predecessor
+//
+//				// check out parent
+//				auto parent = stmt.getParentAddress();
+//
+//				// a simple case - it is just a nested expression
+//				if (auto expr = parent.isa<ExpressionAddress>()) {
+//
+//					// parent is an expression => in of parent is in of current stmt
+//					this->connectStateSets(this->Aout, stmt, ctxt, this->Aout, expr, ctxt, constraints);
+//					return;	// done
+//				}
+//
+//				// handle full-expressions
+//				if (auto compound = parent.isa<CompoundStmtAddress>()) {
+//
+//					// parent is a compound, predecessor is one statement before
+//					auto pos = stmt.getIndex();
+//
+//					// special case: last statement
+//					if (pos == compound.size()-1) {
+//						this->connectStateSets(this->Aout, stmt, ctxt, this->Aout, compound, ctxt, constraints);
+//						return;	// done
+//					}
+//
+//					// general case - link with successor
+//					auto succ = compound[pos+1];
+//
+//					// do not link with successor if this is control flow statement
+//					switch(stmt->getNodeType()) {
+//					case NT_ReturnStmt: case NT_ContinueStmt: case NT_BreakStmt: return;
+//					default: break;
+//					}
+//
+//					this->connectStateSets(this->Aout, stmt, ctxt, this->Ain, succ, ctxt, constraints);
+//					return;	// done
+//				}
+//
+//				assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType();
+//			}
 
-			void visitContinueStmt(const ContinueStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(cur, ctxt, constraints);
+			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& res) {
+				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
+			}
+		};
 
-				// do not connect in with out
+
+		template<typename SetIDType, typename Derived>
+		class BaseImperativeConstraintCollector : public ConstraintResolver {
+
+			typedef ConstraintResolver super;
+
+			ImperativeInConstraintCollector<SetIDType, BaseImperativeConstraintCollector<SetIDType, Derived>> r_in;
+//			ImperativeTransferConstraintCollector<SetIDType, BaseImperativeConstraintCollector<SetIDType, Derived>> r_trans;
+			ImperativeOutConstraintCollector<SetIDType, BaseImperativeConstraintCollector<SetIDType, Derived>> r_out;
+
+		public:
+
+			BaseImperativeConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout)
+				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)),
+				  r_in(context, Ain, Aout, *this), r_out(context, Ain, Aout, *this) {};
+
+			void visitStatement(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
+
+				// create Ain constraints
+				r_in.addConstraints(stmt, ctxt, constraints);
+
+				// and Aout constraints
+				r_out.addConstraints(stmt, ctxt, constraints);
+
 			}
 
-			void visitBreakStmt(const BreakStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(cur, ctxt, constraints);
-
-				// do not connect in with out
-			}
-
-			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(stmt, ctxt, constraints);
-
-				// get some labels
-				auto l_if = context.getLabel(stmt);
-				auto l_cond = context.getLabel(stmt->getCondition());
-				auto l_then = context.getLabel(stmt->getThenBody());
-				auto l_else = context.getLabel(stmt->getElseBody());
-
-				auto B_cond = context.getSet(B, l_cond, ctxt);
-
-				// -- conditional has to be always evaluated --
-				connectStateSets(Ain, l_if, ctxt, Ain, l_cond, ctxt, constraints);
-
-				// connect Aout of condition to then and else branch
-				connectStateSetsIf(true,  B_cond, Aout, l_cond, ctxt, Ain, l_then, ctxt, constraints);
-				connectStateSetsIf(false, B_cond, Aout, l_cond, ctxt, Ain, l_else, ctxt, constraints);
-
-				// connect Aout of then and else branch with Aout of if
-				connectStateSetsIf(true,  B_cond, Aout, l_then, ctxt, Aout, l_if, ctxt, constraints);
-				connectStateSetsIf(false, B_cond, Aout, l_else, ctxt, Aout, l_if, ctxt, constraints);
-
+//
+//			// TODO: redesign
+//			//	- implement routine obtaining predecessor
+//			//	- implement routine obtaining successors
+//			//	- implement forward / backward constraint collector on top of those
+//			//  - use utility within implementation of this class
+//
+//			// ----------- Expressions -----------------------------------------------------------------------------------------------------
+//
+//			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(call, ctxt, constraints);
+//
+//				// use internal variant
+//				visitCallExprInternal(call, ctxt, constraints);
+//			}
+//
+//			virtual void visitCallExprInternal(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+//
+//				// check processed-cache
+//				if (!processed.insert(Item(call, ctxt)).second) return;
+//
+////				// recursively process sub-expressions
+////				visit(call->getFunctionExpr(), ctxt, constraints);
+////				for(auto arg : call) visit(arg, ctxt, constraints);
+//
+//				// otherwise default handling
+//				//  - link in of call with in of arguments
+//				//  - link out of arguments with in of function
+//				//  - link out of function with out of call
+//
+//				auto l_call = context.getLabel(call);
+//
+//				// link in of call with in of arguments
+//				for(auto arg : call) {
+//					auto l_arg = context.getLabel(arg);
+//					connectStateSets(Ain, l_call, ctxt, Ain, l_arg, ctxt, constraints);
+//				}
+//
+//				// and the function
+//				auto l_fun = context.getLabel(call->getFunctionExpr());
+//				connectStateSets(Ain, l_call, ctxt, Ain, l_fun, ctxt, constraints);
+//
+//
+//				// create inner call context
+//				Context innerCallContext = ctxt;
+//
+//				// get set of potential target functions
+//				auto C_fun = context.getSet(C, l_fun, ctxt);
+//
+//				// a utility resolving constraints for the called function
+//				auto addConstraints = [&](const Callable& target, bool fixed) {
+//					auto expr = target.definition;
+//
+//					// check correct number of arguments
+//					if (call.size() != expr.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
+//						// this is not a valid target
+//						return;
+//					}
+//
+//					// ---- Effect of arguments => in of function ----
+//
+//					// get body
+//					StatementAddress body;
+//					if (auto lambda = expr.isa<LambdaExprAddress>()) {
+//						body = lambda->getBody();
+//					} else if (auto bind = expr.isa<BindExprAddress>()) {
+//						body = bind->getCall();
+//					} else {
+//						std::cout << "Unsupported potential target of type " << expr->getNodeType() << " encountered.";
+//						assert(false && "Unsupported potential call target.");
+//					}
+//
+//					// get label for body
+//					auto l_fun = context.getLabel(body);
+//
+//					// forward effects of argument evaluation
+//					for (auto arg : call) {
+//						auto l_arg = context.getLabel(arg);
+//						if (fixed) {
+//							this->connectStateSets(Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
+//						} else {
+//							this->connectStateSetsIf(target, C_fun, Aout, l_arg, ctxt, Ain, l_fun, innerCallContext, constraints);
+//						}
+//					}
+//
+//					// also add effects of function-expression evaluation
+//					auto l_call_fun = context.getLabel(call->getFunctionExpr());
+//					if (fixed) {
+//						this->connectStateSets(Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
+//					} else {
+//						this->connectStateSetsIf(target, C_fun, Aout, l_call_fun, ctxt, Ain, l_fun, innerCallContext, constraints);
+//					}
+//
+//					// ---- Effect of function => out of call ---
+//
+//					// link out of fun with call out
+//					if (fixed) {
+//						this->connectStateSets(Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+//					} else {
+//						this->connectStateSetsIf(target, C_fun, Aout, l_fun, innerCallContext, Aout, l_call, ctxt, constraints);
+//					}
+//
+//					// process function body
+//					if(fixed) this->visit(body, innerCallContext, constraints);
+//
+//				};
+//
+//
+//				// handle call target
+//				auto fun = call->getFunctionExpr();
+//
+//				if (fun.isa<LiteralPtr>()) {
+//
+//					// - here we are assuming side-effect free literals -
+//
+//					// just connect out of arguments to call-out
+//					for (auto arg : call) {
+//						auto l_arg = context.getLabel(arg);
+//						connectStateSets(Aout, l_arg, ctxt, Aout, l_call, ctxt, constraints);
+//					}
+//
+//					// and the function
+//					connectStateSets(Aout, l_fun, ctxt, Aout, l_call, ctxt, constraints);
+//
+//				} else if (auto lambda = fun.isa<LambdaExprAddress>()) {
+//
+//					// direct call => handle directly
+//					addConstraints(Callable(lambda), true);
+//
+//				} else if (auto bind = fun.isa<BindExprAddress>()) {
+//
+//					// direct call of bind => handle directly
+//					addConstraints(Callable(bind, ctxt), true);
+//
+//				} else {
+//
+//					// create new call-context
+//					innerCallContext.callContext <<= l_call;
+//
+//					// indirect call => dynamic dispatching required
+//					for(auto cur : context.getCallables()) {
+//						addConstraints(cur,false);
+//					}
+//
+//				}
+//
+//			}
+//
+//			void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(bind, ctxt, constraints);
+//
+//				auto boundExprs = bind->getBoundExpressions();
+//
+//				// special case: no bound expressions
+//				if (boundExprs.empty()) {
+//					// forward in to out and be done
+//					visitExpression(bind, ctxt, constraints);
+//					return;
+//				}
+//
+//				auto l_bind = context.getLabel(bind);
+//
+//				// evaluate bound expressions
+//				for(auto& cur : boundExprs) {
+//					auto l_arg = context.getLabel(cur);
+//
+//					//   - forward in to expression in
+//					connectStateSets(Ain, l_bind, ctxt, Ain, l_arg, ctxt, constraints);
+//
+//					//   - process bound expressions
+//					visit(cur, ctxt, constraints);
+//
+//					//   - forward out of expression to out of bind
+//					connectStateSets(Aout, l_arg, ctxt, Aout, l_bind, ctxt, constraints);
+//				}
+//			}
+//
+//			void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(expr, ctxt, constraints);
+//
+//				// in the general case, not much happening => connect in and out
+//				auto label = context.getLabel(expr);
+//				connectStateSets(Ain, label, ctxt, Aout, label, ctxt, constraints);
+//			}
+//
+//
+//			// ----------- Statements -----------------------------------------------------------------------------------------------------
+//
+//			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(compound, ctxt, constraints);
+//
+//				// special handling for empty compound = NoOp
+//				if (compound.empty()) {
+//					auto l = context.getLabel(compound);
+//					connectStateSets(Ain, l, ctxt, Aout, l, ctxt, constraints);
+//					return;
+//				}
+//
+//				// connect contained statements
+//				for(std::size_t i = 0; i < compound.size()-1; i++) {
+//					// skip connection if current stmt is a return / break / continue statement
+//					switch(compound[i]->getNodeType()) {
+//					case NT_ReturnStmt: case NT_BreakStmt: case NT_ContinueStmt: continue;
+//					default: break;
+//					}
+//
+//					// connect those
+//					auto la = context.getLabel(compound[i]);
+//					auto lb = context.getLabel(compound[i+1]);
+//					connectStateSets(Aout, la, ctxt, Ain, lb, ctxt, constraints);
+//				}
+//
+//				// connect in-state with in of first statement
+//				auto l = context.getLabel(compound);
+//				auto la = context.getLabel(compound[0]);
+//				connectStateSets(Ain, l, ctxt, Ain, la, ctxt, constraints);
+//
+//				// connect out-state of last statement with out-state
+//				auto lb = context.getLabel(compound[compound.size()-1]);
+//				connectStateSets(Aout, lb, ctxt, Aout, l, ctxt, constraints);
+//
+//				// and add constraints of all inner statements
+//				for(auto cur : compound) {
+//					visit(cur, ctxt, constraints);
+//				}
+//			}
+//
+//			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(decl, ctxt, constraints);
+//
+//				// just connect in with init value and out of innit value with out
+//				auto l = context.getLabel(decl);
+//				auto l_init = context.getLabel(decl->getInitialization());
+//
+//				connectStateSets(Ain, l, ctxt, Ain, l_init, ctxt, constraints);
+//				connectStateSets(Aout, l_init, ctxt, Aout, l, ctxt, constraints);
+//
+//				// and create constraints for initialization value
+//				visit(decl->getInitialization(), ctxt, constraints);
+//			}
+//
+//			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(stmt, ctxt, constraints);
+//
+//				// connect Ain with Ain of return expression
+//				auto l_ret = context.getLabel(stmt);
+//				auto l_val = context.getLabel(stmt->getReturnExpr());
+//				connectStateSets(Ain, l_ret, ctxt, Ain, l_val, ctxt, constraints);
+//
+//				// find enclosing lambda
+//				LambdaAddress lambda = getEnclosingLambda(stmt);
+//				if (!lambda) {
+//					std::cout << "WARNING: encountered free return!\n";
+//					return;
+//				}
+//
+//				// connect Aout of value with Aout of function
+//				auto l_fun = context.getLabel(lambda->getBody());
+//				connectStateSets(Aout, l_val, ctxt, Aout, l_fun, ctxt, constraints);
+//
+//				// fix constraints for return expr
+//				visit(stmt->getReturnExpr(), ctxt, constraints);
+//			}
+//
+//
+//			void visitContinueStmt(const ContinueStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(cur, ctxt, constraints);
+//
+//				// do not connect in with out
+//			}
+//
+//			void visitBreakStmt(const BreakStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(cur, ctxt, constraints);
+//
+//				// do not connect in with out
+//			}
+//
+//			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(stmt, ctxt, constraints);
+//
+//				// get some labels
+//				auto l_if = context.getLabel(stmt);
+//				auto l_cond = context.getLabel(stmt->getCondition());
+//				auto l_then = context.getLabel(stmt->getThenBody());
+//				auto l_else = context.getLabel(stmt->getElseBody());
+//
+//				auto B_cond = context.getSet(B, l_cond, ctxt);
+//
+//				// -- conditional has to be always evaluated --
+//				connectStateSets(Ain, l_if, ctxt, Ain, l_cond, ctxt, constraints);
+//
+//				// connect Aout of condition to then and else branch
+//				connectStateSetsIf(true,  B_cond, Aout, l_cond, ctxt, Ain, l_then, ctxt, constraints);
+//				connectStateSetsIf(false, B_cond, Aout, l_cond, ctxt, Ain, l_else, ctxt, constraints);
+//
+//				// connect Aout of then and else branch with Aout of if
+//				connectStateSetsIf(true,  B_cond, Aout, l_then, ctxt, Aout, l_if, ctxt, constraints);
+//				connectStateSetsIf(false, B_cond, Aout, l_else, ctxt, Aout, l_if, ctxt, constraints);
+//
+////				// add constraints recursively
+////				visit(stmt->getCondition(), ctxt, constraints);
+////				visit(stmt->getThenBody(), ctxt, constraints);
+////				visit(stmt->getElseBody(), ctxt, constraints);
+//			}
+//
+//			void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+//				// establish surrounding constraints
+//				handleParentContext(stmt, ctxt, constraints);
+//
+//				// get some labels
+//				auto l_while = context.getLabel(stmt);
+//				auto l_cond = context.getLabel(stmt->getCondition());
+//				auto l_body = context.getLabel(stmt->getBody());
+//
+//				auto B_cond = context.getSet(B, l_cond, ctxt);
+//
+//				// do the wiring
+//				connectStateSets(Ain, l_while, ctxt, Ain, l_cond, ctxt, constraints);
+//				connectStateSetsIf(true, B_cond, Aout, l_cond, ctxt, Ain, l_body, ctxt, constraints);
+//				connectStateSets(Aout, l_body, ctxt, Ain, l_cond, ctxt, constraints);
+//				connectStateSetsIf(false, B_cond, Aout, l_cond, ctxt, Aout, l_while, ctxt, constraints);
+//
 //				// add constraints recursively
 //				visit(stmt->getCondition(), ctxt, constraints);
-//				visit(stmt->getThenBody(), ctxt, constraints);
-//				visit(stmt->getElseBody(), ctxt, constraints);
-			}
+//				visit(stmt->getBody(), ctxt, constraints);
+//			}
+//
+//			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+//				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
+//				assert(false);
+//			}
 
-			void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
-				// establish surrounding constraints
-				handleParentContext(stmt, ctxt, constraints);
+		public:
 
-				// get some labels
-				auto l_while = context.getLabel(stmt);
-				auto l_cond = context.getLabel(stmt->getCondition());
-				auto l_body = context.getLabel(stmt->getBody());
-
-				auto B_cond = context.getSet(B, l_cond, ctxt);
-
-				// do the wiring
-				connectStateSets(Ain, l_while, ctxt, Ain, l_cond, ctxt, constraints);
-				connectStateSetsIf(true, B_cond, Aout, l_cond, ctxt, Ain, l_body, ctxt, constraints);
-				connectStateSets(Aout, l_body, ctxt, Ain, l_cond, ctxt, constraints);
-				connectStateSetsIf(false, B_cond, Aout, l_cond, ctxt, Aout, l_while, ctxt, constraints);
-
-				// add constraints recursively
-				visit(stmt->getCondition(), ctxt, constraints);
-				visit(stmt->getBody(), ctxt, constraints);
-			}
-
-			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
-				assert(false);
-			}
-
-		private:
-
-			void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
-				static_cast<Derived*>(this)->connectStateSets(a,al,ac,b,bl,bc,constraints);
+			void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) const {
+				static_cast<const Derived*>(this)->connectStateSets(a,al,ac,b,bl,bc,constraints);
 			}
 
 			template<typename E>
-			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
-				static_cast<Derived*>(this)->connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
+			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints)  const {
+				static_cast<const Derived*>(this)->connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
 			}
 
 			void handleParentContext(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
-
-				// no context for root node
-				if (stmt.isRoot()) return;
-
-				// check type of parent
-				auto parent = stmt.getParentAddress();;
-
-				// special case: if parent is a lambda
-				if (auto lambda = parent.isa<LambdaAddress>()) {
-
-					// check whether there is a call-side
-					if (lambda.getDepth() < 4) return;
-
-					// get enclosing lambda expression and call
-					auto lambdaExpr = lambda.getParentAddress(3).as<LambdaExprAddress>();
-					auto call = lambdaExpr.getParentAddress().isa<CallExprAddress>();
-
-					// if it is a direct call => handle it
-					if (call && call->getFunctionExpr() == lambdaExpr) {
-						visit(call, ctxt, constraints);
-					} else {
-
-						// process any potential call site
-						for(auto call : context.getDynamicCalls()) {
-							// TODO: check right number of arguments
-
-							if (ctxt.callContext.startsWith(0)) {
-
-								// nobody is calling the root context
-								Context srcCtxt = ctxt;
-								srcCtxt.callContext >>= 0;
-
-								visitCallExprInternal(call, srcCtxt, constraints);
-
-							} else {
-								// anybody may call this nested context
-								for(auto l : context.getDynamicCallLabels()) {
-									Context srcCtxt = ctxt;
-									srcCtxt.callContext >>= l;
-									visitCallExprInternal(call, srcCtxt, constraints);
-								}
-							}
-						}
-					}
-
-					// done
-					return;
-				}
-
-
-				// special case: if parent is a bind expression
-				if (auto bind = parent.isa<BindExprAddress>()) {
-
-					// check whether there is a call-side
-					if (bind.isRoot()) return;
-
-					// get enclosing call expression
-					auto call = bind.getParentAddress().isa<CallExprAddress>();
-
-					// if it is a direct call => handle it
-					if (call && call->getFunctionExpr() == bind) {
-						visit(call, ctxt, constraints);
-					} else {
-
-						// process any potential call site
-						for(auto call : context.getDynamicCalls()) {
-							if (ctxt.callContext.startsWith(0)) {
-
-								// nobody is calling the root context
-								Context srcCtxt = ctxt;
-								srcCtxt.callContext >>= 0;
-
-								visitCallExprInternal(call, srcCtxt, constraints);
-
-							} else {
-								// anybody may call this nested context
-								for(auto l : context.getDynamicCallLabels()) {
-									Context srcCtxt = ctxt;
-									srcCtxt.callContext >>= l;
-									visitCallExprInternal(call, srcCtxt, constraints);
-								}
-							}
-						}
-					}
-
-					// done
-					return;
-				}
-
-				// handle all other statements
-				if (auto stmt = parent.isa<StatementAddress>()) {
-					// add constraints for parent node
-					visit(stmt, ctxt, constraints);
-					return;
-				}
-
-				// otherwise: something is wrong => fail
-				std::cout << "Unsupported parent node type: " << parent->getNodeType() << "\n";
-				assert(false && "Unsupported parent node type.");
+//
+//				// no context for root node
+//				if (stmt.isRoot()) return;
+//
+//				// check type of parent
+//				auto parent = stmt.getParentAddress();;
+//
+//				// special case: if parent is a lambda
+//				if (auto lambda = parent.isa<LambdaAddress>()) {
+//
+//					// check whether there is a call-side
+//					if (lambda.getDepth() < 4) return;
+//
+//					// get enclosing lambda expression and call
+//					auto lambdaExpr = lambda.getParentAddress(3).as<LambdaExprAddress>();
+//					auto call = lambdaExpr.getParentAddress().isa<CallExprAddress>();
+//
+//					// if it is a direct call => handle it
+//					if (call && call->getFunctionExpr() == lambdaExpr) {
+//
+//						if (call.isRoot() || call.getParentNode()->getNodeType() != NT_BindExpr) {
+//							visit(call, ctxt, constraints);
+//						} else {
+//							// process any potential call site
+//							for(auto call : context.getDynamicCalls()) {
+//								// TODO: check right number of arguments
+//
+//								if (ctxt.callContext.startsWith(0)) {
+//
+//									// nobody is calling the root context
+//									Context srcCtxt = ctxt;
+//									srcCtxt.callContext >>= 0;
+//
+//									visitCallExprInternal(call, srcCtxt, constraints);
+//
+//								} else {
+//									// anybody may call this nested context
+//									for(auto l : context.getDynamicCallLabels()) {
+//										Context srcCtxt = ctxt;
+//										srcCtxt.callContext >>= l;
+//										visitCallExprInternal(call, srcCtxt, constraints);
+//									}
+//								}
+//							}
+//						}
+//
+//
+//					} else {
+//
+//						// process any potential call site
+//						for(auto call : context.getDynamicCalls()) {
+//							// TODO: check right number of arguments
+//
+//							if (ctxt.callContext.startsWith(0)) {
+//
+//								// nobody is calling the root context
+//								Context srcCtxt = ctxt;
+//								srcCtxt.callContext >>= 0;
+//
+//								visitCallExprInternal(call, srcCtxt, constraints);
+//
+//							} else {
+//								// anybody may call this nested context
+//								for(auto l : context.getDynamicCallLabels()) {
+//									Context srcCtxt = ctxt;
+//									srcCtxt.callContext >>= l;
+//									visitCallExprInternal(call, srcCtxt, constraints);
+//								}
+//							}
+//						}
+//					}
+//
+//					// done
+//					return;
+//				}
+//
+//
+//				// special case: if parent is a bind expression
+//				if (auto bind = parent.isa<BindExprAddress>()) {
+//
+//					// check whether there is a call-side
+//					if (bind.isRoot()) return;
+//
+//					// get enclosing call expression
+//					auto call = bind.getParentAddress().isa<CallExprAddress>();
+//
+//					// if it is a direct call => handle it
+//					if (call && call->getFunctionExpr() == bind) {
+//						visit(call, ctxt, constraints);
+//					} else {
+//
+//						// process any potential call site
+//						for(auto call : context.getDynamicCalls()) {
+//							if (ctxt.callContext.startsWith(0)) {
+//
+//								// nobody is calling the root context
+//								Context srcCtxt = ctxt;
+//								srcCtxt.callContext >>= 0;
+//
+//								visitCallExprInternal(call, srcCtxt, constraints);
+//
+//							} else {
+//								// anybody may call this nested context
+//								for(auto l : context.getDynamicCallLabels()) {
+//									Context srcCtxt = ctxt;
+//									srcCtxt.callContext >>= l;
+//									visitCallExprInternal(call, srcCtxt, constraints);
+//								}
+//							}
+//						}
+//					}
+//
+//					// done
+//					return;
+//				}
+//
+//				// handle all other statements
+//				if (auto stmt = parent.isa<StatementAddress>()) {
+//					// add constraints for parent node
+//					visit(stmt, ctxt, constraints);
+//					return;
+//				}
+//
+//				// otherwise: something is wrong => fail
+//				std::cout << "Unsupported parent node type: " << parent->getNodeType() << "\n";
+//				assert(false && "Unsupported parent node type.");
 			}
 
 		};
@@ -1664,24 +2288,25 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 				super::visit(node, ctxt, constraints);
 			}
 
-			void connectStateSets(
+			void connectStateSets (
 						const TypedSetType<Reachable>& a, Label al, const Context& ac,
 						const TypedSetType<Reachable>& b, Label bl, const Context& bc,
 						Constraints& constraints
-					) {
+					) const {
 
 				auto A = context.getSet(a, al, ac);
 				auto B = context.getSet(b, bl, bc);
-				constraints.add(subset(A,B));
+				constraints.add(subset(A, B));
+//				constraints.add(subsetIf(Reachable(), A, A, B));
 			}
 
 			template<typename E>
-			void connectStateSetsIf(
+			void connectStateSetsIf (
 						const E& value, const TypedSetID<E>& set,
 						const TypedSetType<Reachable>& a, Label al, const Context& ac,
 						const TypedSetType<Reachable>& b, Label bl, const Context& bc,
 						Constraints& constraints
-					) {
+					) const {
 
 				auto A = context.getSet(a, al, ac);
 				auto B = context.getSet(b, bl, bc);
@@ -1709,7 +2334,7 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 			};
 
 
-			virtual void visitCallExprInternal(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			virtual void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 				const auto& base = call->getNodeManager().getLangBasic();
 
 				// two special cases:
@@ -1785,10 +2410,10 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 //				}
 
 				// everything else is treated using the default procedure
-				super::visitCallExprInternal(call, ctxt, constraints);
+				super::visitCallExpr(call, ctxt, constraints);
 			}
 
-			void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
+			void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
 
 				// general handling - Sin = Sout
 
@@ -1802,7 +2427,7 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 			}
 
 			template<typename E>
-			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
+			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
 
 				// general handling - Sin = Sout
 
@@ -1997,97 +2622,8 @@ std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 				// get targeted node
 				core::StatementAddress trg = getStmt(id);
 				if (!trg) {
-
 					// it is a variable
 					trg = getVariable(id);
-
-					assert_true(trg) << "Unknown id encountered: " << id << "\n"
-							<< "Labels:\n\t" << labels << "\n\t" << reverseLabels << "\n"
-							<< "Variables:\n\t" << vars << "\n\t" << reverseVars << "\n";
-
-					// TODO: the following code should be moved to the constraint resolver
-
-					// handle variable definition
-					if (trg.isRoot()) {
-						// nothing to do
-					} else if (auto decl = trg.getParentAddress().isa<core::DeclarationStmtAddress>()) {
-
-						// add constraints for declaration statement
-						resolver->addConstraints(decl, context, res);
-
-					} else if (auto params = trg.getParentAddress().isa<core::ParametersAddress>()) {
-
-						// it is within a function => get call sides
-						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 5 : 2;		// for bind
-
-//if (!params.getParentNode().isa<LambdaPtr>()) {
-	std::cout << trg << " = " << *trg << "\n";
-	std::cout << params.getParentAddress(userOffset) << "\n";
-	std::cout << params.getParentAddress(userOffset-1) << " = " << *params.getParentAddress(userOffset-1) << "\n";
-	std::cout << params.getParentNode()->getNodeType() << "\n";
-	std::cout << params.getParentAddress(userOffset)->getNodeType() << "\n";
-	std::cout << "\n";
-//}
-
-						auto user = params.getParentAddress(userOffset).as<StatementAddress>();
-						auto userType = user->getNodeType();
-
-						assert_lt(userOffset, params.getDepth());
-
-						if (userType == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == params.getParentAddress(userOffset-1)) {
-std::cout << "Is direct call!\n";
-							resolver->addConstraints(user, context, res);
-//							// it is a direct call - resolve the call expression
-//							if (context.callContext.startsWith(0)) {
-//								// nobody is calling the root context
-//								Context srcCtxt = context;
-//								srcCtxt.callContext >>= 0;
-//std::cout << "A - Resolving context " << srcCtxt << "\n";
-//								resolver->addConstraints(user, srcCtxt, res);
-//							} else {
-//								// anybody may call this nested context
-//								for(auto l : dynamicCallLabels) {
-//									Context srcCtxt = context;
-//									srcCtxt.callContext >>= l;
-//std::cout << "B - Resolving context " << srcCtxt << "\n";
-//									resolver->addConstraints(user, srcCtxt, res);
-//								}
-//							}
-
-						} else if (userType == NT_CompoundStmt) {
-
-							// nothing to do ... this function is not called ...
-
-						} else {
-
-							// it is an indirect call - resolve all calls with a matching parameter list
-							auto num_params = params.size();
-							for(auto call : dynamicCalls) {
-								if (call.size() == num_params) {
-
-									if (context.callContext.startsWith(0)) {
-										// nobody is calling the root context
-										Context srcCtxt = context;
-										srcCtxt.callContext >>= 0;
-										resolver->addConstraints(call, srcCtxt, res);
-									} else {
-										// anybody may call this nested context
-										for(auto l : dynamicCallLabels) {
-											Context srcCtxt = context;
-											srcCtxt.callContext >>= l;
-
-											resolver->addConstraints(call, srcCtxt, res);
-										}
-									}
-								}
-							}
-
-						}
-
-					} else {
-						std::cout << "Unsupported variable type: " << trg.getParentAddress()->getNodeType() << "\n";
-						assert(false && "Unsupported variable type encountered!");
-					}
 				}
 
 				// this should have worked

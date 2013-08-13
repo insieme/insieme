@@ -281,7 +281,7 @@ namespace cba {
 
 		// std::cout << *varZ << " = " << analysis.getValuesOf(varZ) << "\n";
 		EXPECT_EQ("{AP(10)}", toString(analysis.getValuesOf(varZ)));
-//		createDotDump(analysis);
+		createDotDump(analysis);
 	}
 
 	TEST(CBA, ReturnValue2) {

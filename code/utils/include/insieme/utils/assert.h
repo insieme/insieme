@@ -87,4 +87,9 @@
 
 	#define assert_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) < (_B))) std::cerr << "\nAssertion " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
+
 #endif
+
+// ------ derived definitions ------
+
+#define assert_fail() assert_true(false)

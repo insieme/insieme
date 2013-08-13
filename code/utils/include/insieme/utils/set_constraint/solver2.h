@@ -411,7 +411,7 @@ namespace set_constraint_2 {
 			TypedSetID<T> b;
 		public:
 			Subset(const TypedSetID<T>& a, const TypedSetID<T>& b)
-				: a(a), b(b) {}
+				: a(a), b(b) { assert(a != b); }
 			SetIDs getInputs() const {
 				return toVector<SetID>(a);
 			}
