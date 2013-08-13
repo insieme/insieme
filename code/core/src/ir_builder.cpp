@@ -676,6 +676,35 @@ ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
 	    scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
 
+	//we have to check if it is a literal. if
+	//it is a literal we need to create a new
+	//literal instead of a call expr
+	if(LiteralPtr lit = subExpr.isa<LiteralPtr>()) {
+		//if literal starts with a minus delete first character
+		//to invert the sign else add a minus in front
+		//of the literal. If it is has an optional plus delete it,
+		//this has no effect.
+		std::string newname = lit->getStringValue();
+		if(newname[0] == '-' || newname[0] == '+') {
+			newname.erase(0, 1);
+		} else {
+			newname.insert(0, "-");
+		}
+		//if we have a unsigned int the type maybe turns into a
+		//signed type. This can only occur with integer types
+		if(getLangBasic().isUnsignedInt(lit->getType())) {
+			TypePtr type;
+			if(getLangBasic().isUInt1(lit->getType())) 		type = getLangBasic().getInt1();
+			else if(getLangBasic().isUInt2(lit->getType())) 	type = getLangBasic().getInt2();
+			else if(getLangBasic().isUInt4(lit->getType())) 	type = getLangBasic().getInt4();
+			else if(getLangBasic().isUInt8(lit->getType())) 	type = getLangBasic().getInt8();
+			else if(getLangBasic().isUInt16(lit->getType()))	type = getLangBasic().getInt16();
+			assert(type && "Cannot find unsigned int type size.");
+			return literal(newname, type);
+		}
+		return literal(newname, lit->getType());
+	}
+
 	return callExpr(
 			subExpr->getType(), manager.getLangBasic().getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
 			elem, subExpr
