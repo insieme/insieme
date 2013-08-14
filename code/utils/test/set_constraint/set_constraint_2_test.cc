@@ -93,6 +93,31 @@ namespace set_constraint_2 {
 	}
 
 
+	TEST(Solver, ConstraintInputSetsIfElem) {
+
+		typedef TypedSetID<int> Set;
+
+		Set a = 1;
+		Set b = 2;
+		Set c = 3;
+
+		// create constraint to be tested
+		auto constraint = subsetIf(0,a,b,c);
+
+		Assignment ass;
+
+		EXPECT_TRUE(constraint->hasAssignmentDependentDependencies());
+
+		EXPECT_EQ("[s1,s2]", toString(constraint->getInputs()));
+		EXPECT_EQ("[s3]", toString(constraint->getOutputs()));
+		EXPECT_EQ("{s1}", toString(constraint->getUsedInputs(ass)));
+
+		ass[a].insert(0);
+		EXPECT_EQ("{s1,s2}", toString(constraint->getUsedInputs(ass)));
+
+	}
+
+
 	TEST(Constraint, Check) {
 
 		auto s1 = TypedSetID<int>(1);
@@ -272,6 +297,7 @@ namespace set_constraint_2 {
 //		std::cout << res << "\n";
 		EXPECT_EQ("{1836311903}", toString(res[TypedSetID<int>(46)]));
 	}
+
 
 } // end namespace set_constraint
 } // end namespace utils

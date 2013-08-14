@@ -332,6 +332,10 @@ namespace cba {
 
 	protected:
 
+		CBA& getContext() {
+			return context;
+		}
+
 		void addCoveredSet(const SetTypePtr& type) {
 			coveredSets.insert(type);
 		}
