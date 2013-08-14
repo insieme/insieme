@@ -70,6 +70,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/encoder/lists.h"
 
 
 using namespace insieme;
@@ -1595,15 +1596,37 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
-        VLOG(1) << "*************     EXPR  [class:'"<< initList->getStmtClassName() <<"']         **********\n";
-        if( VLOG_IS_ON(2) ) {
-            VLOG(2) << "Dump of clang expression: "; \
-            initList->dump();
-        }
-        VLOG(1) << "-> at location: (" <<
-                    utils::location(initList->getLocStart(), convFact.getSourceManager()) << "); \n ";
-        VLOG(1) << "****************************************************************************************\n";
-assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
+	
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(initList, retIr);
+
+	if (initList->isStringLiteralInit () )
+		assert(false && "string literal" ) ;
+
+//	if (initList->hasArrayFiller ())
+//		assert(false && "array filler");
+
+	// if is a union initilization we build the field assigment, later we wont have it
+	if (const clang::FieldDecl *field = initList->getInitializedFieldInUnion ()){
+		assert(initList->getNumInits() == 1);
+		// AHA!! here is the trick, magic trick. we hide the union initialization into an expression
+		// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!! 
+		// the name of the literal is the field !!! hahaha isn't it briliant???
+		// twisted??? maybe i'm going crazy, but it works! and is criptic enought to piss off people
+		string name = llvm::cast<clang::NamedDecl>(field)->getNameAsString() ;
+		core::ExpressionPtr init = Visit(initList->getInit (0));
+		auto dummyFuncType = builder.functionType(init->getType(), gen.getUnit());
+		return builder.callExpr(builder.literal(name, dummyFuncType), init);
+	}
+
+	// if is anything else, we pack a list, we'll check what is it later on
+	vector<core::ExpressionPtr> inits;
+	for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+		const clang::Expr* subExpr = initList->getInit(i);
+		inits.push_back (Visit(subExpr));
+	}
+
+	return retIr = core::encoder::toIR(mgr, inits);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

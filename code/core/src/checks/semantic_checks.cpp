@@ -142,6 +142,7 @@ OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall
 	NodeType pnt = parent->getNodeType();
 	if(core::analysis::isCallOf(parent, basic.getRefNew()) 
 		|| core::analysis::isCallOf(parent, basic.getRefVar()) 
+		|| core::analysis::isCallOf(parent, basic.getVectorInitUniform())
 		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) {
 
 		return res;

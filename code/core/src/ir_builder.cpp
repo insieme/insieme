@@ -1508,7 +1508,7 @@ StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, con
 
 	assert(staticVariable.getType().isa<RefTypePtr>());
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-	assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
+	//assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
 	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, initValue);
 }

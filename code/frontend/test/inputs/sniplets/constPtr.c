@@ -7,6 +7,4 @@ int main(){
 	int const * const d = &a;
 	const int const *e = &a;
 
-
-
 }

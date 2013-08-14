@@ -81,8 +81,10 @@ namespace frontend {
 
 		string res = toString(core::printer::PrettyPrinter(program));
 
-		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v37 {");		// even header
-		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v38 {");		// odd header
+
+		// this test makes no sense, functions might have whatever names if the resolver is changed
+//		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v37 {");		// even header
+//		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v38 {");		// odd header
 
 		// check global variable setup
 		EXPECT_PRED2(containsSubString, res, "counter := 10;");

@@ -77,6 +77,11 @@ namespace utils {
 
 	core::TypePtr getVectorElement(const core::TypePtr& type);
 
+	/**
+	 * checks if the expression corresponds to a null pointer expression 
+	 * (usually those are wrapped on a cast)
+	 */
+	bool isNullPtrExpression(const core::ExpressionPtr& expr);
 } // end utils namespace 
 } // end frontend namespace
 } // end insisme namespace

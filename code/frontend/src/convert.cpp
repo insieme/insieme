@@ -83,6 +83,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/dump/text_dump.h"
+#include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/annotations/naming.h"
 
@@ -109,39 +110,49 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
+
+
+
 /// convert a initialization for a global
 core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Converter& converter, const clang::VarDecl* var, core::TypePtr elementType){
 
-	auto builder = converter.getIRBuilder();
 	// and get the initial value
 	core::ExpressionPtr initValue;
 
 	if (var->hasInit() && !var->isStaticLocal()) {
-		initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
+		initValue = converter.convertExpr ( var->getInit() ) ;
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
 		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
-			initValue = converter.convertInitExpr (var->getType().getTypePtr(), outDecl->getAnyInitializer(), elementType, false);
+			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
 	}
 
-	if (initValue){
-		// strip of potential ref.var call ...
-		if (core::analysis::isCallOf(initValue, builder.getNodeManager().getLangBasic().getRefVar())) {
-			initValue = initValue.as<core::CallExprPtr>()[0];
-		}
+	// globals are just assigned, so do it carefully
+	if (initValue)
+		initValue = converter.getInitExpr (elementType.as<core::RefTypePtr>()->getElementType(), initValue);
 
-		// de-ref init values (for constructor calls)
-		if (!core::types::isSubTypeOf(initValue->getType(), elementType)) {
-			initValue = builder.deref(initValue);
-		}
-
-		assert(core::types::isSubTypeOf(initValue->getType(), elementType));
-	}
 	return initValue;
 }
 
+
+bool isCppConstructor (const core::ExpressionPtr& expr){
+	// constructor
+	if (core::analysis::isConstructorCall(expr)){
+		return true;
+	}
+	// array constructor 
+	core::NodeManager&  mgr = expr->getNodeManager();
+	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()))
+		return true;
+	//if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr()) 
+	//		return true;
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor() ==*call->getFunctionExpr()) 
+	//		return true;
+	return false;
+}
 
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,6 +163,7 @@ namespace insieme {
 namespace frontend {
 
 // ----------- conversion ------------
+
 
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 	// just delegate operation to converter
@@ -253,7 +265,7 @@ tu::IRTranslationUnit Converter::convert() {
 
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
-			auto initValue = convertInitForGlobal(converter, var, elementType);
+			auto initValue = convertInitForGlobal(converter, var, type);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
 	} varVisitor(*this);
@@ -302,34 +314,6 @@ tu::IRTranslationUnit Converter::convert() {
 	// that's all
 	return irTranslationUnit;
 }
-
-
-//////////////////////////////////////////////////////////////////
-///
-//void Converter::buildGlobalStruct(analysis::GlobalVarCollector& globColl){
-
-	////~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//// Thread private requires to collect all the variables which are marked to be threadprivate
-	//omp::collectThreadPrivate(getPragmaMap(), thread_private);
-
-	////~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	////Omp flush clause forces the flushed variable to be volatile
-	////omp::collectVolatile(getPragmaMap(), volatiles);
-	////~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	//globalStruct = globColl.createGlobalStruct();
-	//if (globalStruct.first) {
-	//	globalVar = builder.variable(builder.refType(globalStruct.first));
-	//}
-
-	//globalIdentMap = globColl.getIdentifierMap();
-	//globalFuncSet = globColl.getUsingGlobals();
-
-	//VLOG(1) << "globals collected";
-	//VLOG(2) << globalStruct.first;
-	//VLOG(2) << globalStruct.second;
-	//VLOG(2) << globalVar;
-//}
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -542,6 +526,11 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// only exception are OpenCL vectors
 		irType = builder.refType(irType);
 	}
+	else{
+		// beware of const pointers
+		if (utils::isRefArray(irType) && varTy.isConstQualified())
+			irType = builder.refType(irType);
+	}
 
 	// if is a global variable, a literal will be generated, with the qualified name
 	// (two qualified names can not coexist within the same TU)
@@ -592,8 +581,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
 		if (varDecl->isStaticDataMember() && !getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
 			VLOG(2)	<< "         is static data member";
-			core::TypePtr&& elementType = convertType( varTy.getTypePtr() );
-			auto initValue = convertInitForGlobal(*this, varDecl, elementType);
+			auto initValue = convertInitForGlobal(*this, varDecl, irType);
 			// as we don't see them in the globalVisitor we have to take care of them here
 			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
 		}
@@ -726,14 +714,14 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 
 	// handle refs initialization
 	// initialize pointer/reference types with undefined
-	core::TypePtr elemType = refType->getElementType();
+	core::TypePtr elementType = refType->getElementType();
 
 	core::ExpressionPtr initValue;
-	if (elemType->getNodeType() == core::NT_RefType) {
+	if (elementType->getNodeType() == core::NT_RefType) {
 		// ref<ref<...>> => this is a pointer, init with 0 (null)
-		initValue = builder.callExpr(elemType, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(elemType));
+		initValue = builder.callExpr(elementType, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(elementType));
 	} else {
-		initValue = defaultInitVal(elemType);
+		initValue = defaultInitVal(elementType);
 	}
 	return builder.refVar(initValue);
 
@@ -770,6 +758,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			//
 			assert(var);
 			assert(var.isa<core::CallExprPtr>());
+
 			// the variable is being unwrapped by default in lookupVariable
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
@@ -777,6 +766,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			if (definition->getInit()) {
 				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
 							var->getType().as<core::RefTypePtr>().getElementType(), false);
+
 				auto call = initIr.isa<core::CallExprPtr>();
 				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
 					//this can also be done by substituting the first param of ctor by the unwrapped static var
@@ -790,9 +780,24 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 		else{
 			// print diagnosis messages
 			assert(var.isa<core::VariablePtr>());
+			core::TypePtr initExprType;
+			if(var->getType().isa<core::RefTypePtr>())
+				initExprType = var->getType().as<core::RefTypePtr>()->getElementType();
+			else if (IS_CPP_REF(var->getType()))
+				initExprType = var->getType();
+			assert( initExprType );
+
 			// initialization value
-			core::ExpressionPtr initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
+			core::ExpressionPtr initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), initExprType, false);
 			assert(initExpr && "not correct initialization of the variable");
+
+			// some Cpp cases do not create new var
+			if (!IS_CPP_REF(var->getType()) && 
+				!isCppConstructor(initExpr) ){
+				initExpr = builder.refVar(initExpr);
+			}
+
+			// finnaly create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}
 	} else {
@@ -880,121 +885,19 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 
 //////////////////////////////////////////////////////////////////
 ///
-/// InitListExpr describes an initializer list, which can be used to initialize objects of different
-/// types, InitListExpr including struct/class/union types, arrays, and vectors. For example:
-/// struct foo x = { 1, { 2, 3 } };
-/// In insieme this statement has to tranformed into a StructExpr, or VectorExpr depending on the
-/// type of the LHS expression.
-core::ExpressionPtr
-Converter::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type)  {
-	const Converter& convFact = *this;
-	core::ExpressionPtr retIr;
-
-//	ATTACH_OMP_ANNOTATIONS(retIr, initList);
-	LOG_EXPR_CONVERSION(initList, retIr);
-
-	// resolve potential type symbol within current translation unit
-	core::TypePtr currType = lookupTypeDetails(type);
-
-	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		currType = lookupTypeDetails(refType->getElementType());
-	}
-
-	// Handles recursive types. Unroll once in order to reveal the actual type (hopefully it will be
-	// a struct type)
-	if (currType->getNodeType() == core::NT_RecType) {
-		currType = currType.as<core::RecTypePtr>()->unroll();
-	}
-
-	if (currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType) {
-
-		auto elemTy = currType.as<core::SingleElementTypePtr>()->getElementType();
-
-		ExpressionList elements;
-		// get all values of the init expression
-		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-			const clang::Expr* subExpr = initList->getInit(i);
-
-			auto convExpr = convertInitExpr(NULL /*FIXME*/, subExpr, elemTy, false);
-
-			assert(convExpr && "convExpr is empty");
-
-			elements.push_back(utils::cast(convExpr, elemTy));
-		}
-
-		retIr = builder.vectorExpr(elements);
-	}
-
-
-	// in the case the initexpr is used to initialize a struct/class we need to create a structExpr
-	// to initialize the structure
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType) ) {
-
-		core::StructExpr::Members members;
-		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-
-			const core::NamedTypePtr& curr = structTy->getEntries()[i];
-			members.push_back(builder.namedValue(
-						curr->getName(),
-						convertInitExpr(NULL, initList->getInit(i), curr->getType(), false))
-				);
-		}
-		retIr = builder.structExpr(structTy, members);
-	}
-
-	// in the case the initexpr is used to initialize a union
-	//
-	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(currType)) {
-
-		auto ie = convertInitExpr(NULL, initList->getInit(0), unionTy->getEntries()[0]->getType(), false);
-		retIr = builder.unionExpr(unionTy, unionTy->getEntries()[0]->getName(), ie);
-
-	//	core::StructExpr::Members members;
-	//	for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-	//		const core::NamedTypePtr& curr = structTy->getEntries()[i];
-	//		members.push_back(
-	//				builder.namedValue(curr->getName(), convertInitExpr(initList->getInit(i), curr->getType(), false)));
-	//	}
-	//	retIr = builder.structExpr(members);
-	}
-
-
-	// debugging info if it failed
-	if (!retIr) {
-		std::cout << "Input:  "; initList->dump(); std::cout << "\n";
-		std::cout << "Type:   " << *type << "\n";
-		std::cout << "Detail: " << *currType << "\n";
-		assert(false && "Couldn't convert initialization expression");
-	}
-
-	// create vector initializator
-	return retIr;
-}
-
-//////////////////////////////////////////////////////////////////
-///
 core::ExpressionPtr
 Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit)  {
 	core::ExpressionPtr retIr;
-	// ATTACH_OMP_ANNOTATIONS(retIr, initList);
-	//FIXME: LOG isn't possible because of non existence of convFact
-	//LOG_EXPR_CONVERSION(retIr);
 
 	// if there is no initialization expression
 	if (!expr) {
 
 		// extract kind
 		core::NodeType kind = type->getNodeType();
-		if (kind == core::NT_RefType) {
-			core::TypePtr elementType = type.as<core::RefTypePtr>()->getElementType();
 
-			// special handling for nested references (pointers)
-			if (elementType.isa<core::RefTypePtr>()) {
-				return builder.refVar((zeroInit)?builder.getZero(elementType):builder.undefined(elementType));
-			}
-
-			// handle others using a recursive call
-			return builder.refVar(convertInitExpr(clangType, expr, elementType, zeroInit));
+		if (type.isa<core::RefTypePtr>()) {
+			return (zeroInit)?builder.getZero(type):
+				              builder.undefined(type);
 		}
 
 		// If the type of this declaration is translated as a array type then it may also include
@@ -1016,115 +919,9 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
 	}
 
-	// if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
-	// structs and unions
-	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		retIr = utils::cast( convertInitializerList(listExpr, type), type);
-		return retIr;
-	}
-
 	// Convert the expression like any other expression
-	retIr = convertExpr(expr);
-
-	// ============================================================================================
-	// =============================== Handling of special cases  =================================
-	// ============================================================================================
-
-	if( core::analysis::isConstructorCall(retIr)){
-		return retIr;
-	}
-
-	// if is a constructor call, we are done
-	// TODO: here you might even check whether it is a constructor call in the IR
-	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){	
-		return retIr;
-	}
-
-	// If this is an initialization of an array using array.create (meaning it was originally a
-	// malloc) then we expliticly invoke the ref.new to allocate the memory on the heap
-	if (core::analysis::isCallOf(retIr, mgr.getLangBasic().getArrayCreate1D())) {
-		return retIr = builder.refNew(retIr);
-	}
-
-	// In the case the object we need to initialize is a ref<array...> then we are not allowed to
-	// deref the actual initializer, therefore we assign the object as it is
-	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) {
-		return retIr = utils::cast(retIr, type);
-	}
-
-	// If we have a string literal as initializer and we need to assign it to a ref<array<...>> we
-	// can directly cast it using the ref.vector.to.ref.array and perform the assignment. We do not
-	// need to create a copy of the object in the right hand side
-	if ( utils::isRefVector(retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
-		 utils::isRefArray(type ) ) {
-		return retIr = utils::cast(retIr, type);
-	}
-
-	// this is a C++ reference ( int& ref = x)
-	if (clangType && clangType->isReferenceType()){
-		core::TypePtr targetType = this->convertType(clangType);
-		core::TypePtr srcType = retIr->getType();
-
-		// if is a CPP ref, convert to IR
-		if (core::analysis::isCppRef(srcType)) {
-			return retIr;
-
-		}
-		else if (core::analysis::isConstCppRef(srcType)) {
-
-			// if we are here, we are initializing a const ref from a const ref or from a ref
-			if (core::analysis::isCppRef(targetType)) {
-				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp());
-			}
-			else {
-				return retIr;
-			}
-		}
-		else{
-			//this reference is initialized with a variable
-			if (core::analysis::isCppRef(targetType)) {
-				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
-			}
-			else {
-				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
-			}
-		}
-	}
-
-	// FIXME: if this is needed, maybe need to add a var to create a ref
-//	// inner expression is null<int<X>> and outer is array, then rebuild something like
-//	//  ref.null(type<array<...>>)
-//	if (core::analysis::isCallOf( retIr, mgr.getLangBasic().getGetNull())){
-//		return builder.deref(builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(type)));
-//	}
-
-	// ============================== End Special Handlings =======================================
-
-	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the
-	// object in the right hand side and create a copy (ref.var).
-	if (type->getNodeType() == core::NT_RefType ) {
-		retIr = utils::cast(retIr, GET_REF_ELEM_TYPE(type));
-		retIr = builder.refVar(retIr);
-	} else {
-		retIr = utils::cast(retIr, type);
-	}
-
-	assert(retIr);
-	return retIr;
+ 	return getInitExpr ( type,convertExpr(expr));
 }
-
-//
-////////////////////////////////////////////////////////////////////
-///// the globalVar parameter is added at the FIRST position of the function parameters
-//core::FunctionTypePtr Converter::addGlobalsToFunctionType( const core::FunctionTypePtr& funcType) {
-//       const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
-//       std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
-//       std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin() + 1);
-//       // function is receiving a reference to the global struct as the first argument
-//       argTypes[0] = builder.refType(globalStruct.first);
-//       return builder.functionType(argTypes, funcType->getReturnType());
-//}
-
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -1426,148 +1223,120 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	return symbol;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							CXX STUFF
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//////////////////////////////////////////////////////////////////
+///  CONVERT FUNCTION DECLARATION
+core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const core::ExpressionPtr& init){
 
+	// null expression is allowed on globals initializations
+	if (!init) return init;
 
+	core::TypePtr elementType = lookupTypeDetails(type);
+	if (core::encoder::isListType(init->getType())) {
+		core::ExpressionPtr retIr;
 
-////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-////							AST CONVERTER
-////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
-//	mFact.setTranslationUnit(&tu);
-//
-//	core::StatementPtr bodyStmt = mFact.convertStmt( body );
-//	auto callExpr = core::transform::outline(mgr, bodyStmt);
-//
-//	annotations::c::CLocAnnotation::ArgumentList args;
-//	auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-//
-//	// ------ Adding source location annotation (CLocAnnotation) -------
-//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
-//	auto fit = mFact.getPragmaMap().getStatementMap().find(body);
-//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
-//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-//		loc.first = fit->second->getStartLocation();
-//	}
-//
-//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
-//		false, // this is not a function decl
-//		args)
-//	);
-//
-//	return callExpr;
-//}
-//
-//core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain /*=false*/) {
-//
-//	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
-//	// defined before starting the parser otherwise reading literals results in wrong values.
-//	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(funcDecl);
-//	assert(rightTU && "Translation unit for function not found.");
-//	mFact.setTranslationUnit(rightTU);
-//
-//	// collect thread-private variables
-//	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.getThreadprivates());
-//
-//	core::ExpressionPtr expr = mFact.convertFunctionDecl(funcDecl);
-//
-//	core::ExpressionPtr lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
-//
-//	// A marker node is allowed if it contains a lambda expression
-//	if (!lambdaExpr) {
-//		lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
-//
-//		if (lambdaExpr) {
-//			assert(	static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr &&
-//					"Conversion of function returned a marker expression which does not contain a lambda expression");
-//		}
-//	}
-//	assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-//
-//	// globals in the main function, globals might need to be initialized
-//	if (isMain)
-//		lambdaExpr = addGlobalsInitialization(lambdaExpr.as<core::LambdaExprPtr>());
-//
-//	return core::IRBuilder(mgr).program(toVector(lambdaExpr));
-//}
-//
-///////////////////////////////////////////////////////////
-////
-//core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
-//
-//	VLOG(1) << "";
-//	VLOG(1) << "************************************************************************************";
-//	VLOG(1) << "******************** Initialize Globals at program start ***************************";
-//	VLOG(1) << "************************************************************************************";
-//	VLOG(1) << "";
-//
-//	// 4 casses:
-//	// extern, do nothing
-//	// static in some function, we need to initialize the constructor flag
-//	// with init, assign value
-//	// without init, do not initialize
-//
-//	// we only want to init what we use, so we check it
-//	core::NodeSet usedLiterals;
-//	core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
-//				usedLiterals.insert(literal);
-//			});
-//
-//	core::IRBuilder builder(mainFunc->getNodeManager());
-//	core::StatementList inits;
-//
-//	// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	for (auto git = globalCollector.globalsInitialization_begin(); git != globalCollector.globalsInitialization_end(); ++git){
-//
-//		if (mFact.getProgram().getInterceptor().isIntercepted((*git)->getQualifiedNameAsString())){
-//			continue;
-//		}
-//
-//		VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
-//
-//		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
-//			core::ExpressionPtr var = mFact.lookUpVariable((*git));
-//			core::ExpressionPtr initValue;
-//			//FIXME: why this is not done in the visitor???
-//			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
-//				initValue =  mFact.convertInitializerList(listExpr, var->getType());
-//			}
-//			else
-//				initValue = mFact.convertExpr(init);
-//
-//			if(initValue->getType().isa<core::RefTypePtr>()){
-//				initValue = utils::cast( initValue, var->getType().as<core::RefTypePtr>().getElementType());
-//			}
-//			core::StatementPtr assign = builder.assign (var, initValue);
-//			inits.push_back(assign);
-//		}
-//	}
-//
-//	// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~A
-//	for (auto sit = globalCollector.staticInitialization_begin(); sit != globalCollector.staticInitialization_end(); ++sit){
-//		VLOG(2) << "initializing static: " << (*sit)->getQualifiedNameAsString();
-//		core::ExpressionPtr var = mFact.lookUpVariable((*sit));
-//		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
-//		if (!litUse){
-//			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
-//		}
-//		assert (litUse && " no literal? who handled this global?");
-//
-//		// no need to touch it if never used
-//		if (contains(usedLiterals, litUse)){
-//			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
-//		}
-//	}
-//
-//	if (inits.empty())
-//		return mainFunc;
-//
-//	return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
-//}
+		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  || 
+			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
+		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+
+		// if array or vector
+		if (  elementType.isa<core::VectorTypePtr>() || elementType.isa<core::ArrayTypePtr>()) {
+			auto membTy = elementType.as<core::SingleElementTypePtr>()->getElementType();
+			ExpressionList elements;
+			// get all values of the init expression
+			for (size_t i = 0; i < inits.size(); ++i) {
+				elements.push_back(getInitExpr(membTy, inits[i] ));
+			}
+			retIr = builder.vectorExpr(elements);
+		
+			// if the sizes dont fit is a partial initialization
+			if (elementType.isa<core::VectorTypePtr>() &&
+				*retIr->getType().as<core::VectorTypePtr>()->getSize() != 
+				*elementType.isa<core::VectorTypePtr>()->getSize())
+				return builder.callExpr(
+						builder.getLangBasic().getVectorInitPartial(), 
+						core::encoder::toIR(type->getNodeManager(), elements), 
+						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
+					);
+
+			return retIr;
+		}
+
+		// if struct
+		if ( core::StructTypePtr&& structTy = elementType.isa<core::StructTypePtr>() ) {
+			core::StructExpr::Members members;
+			for (size_t i = 0; i < inits.size(); ++i) {
+				const core::NamedTypePtr& curr = structTy->getEntries()[i];
+				members.push_back(builder.namedValue(
+							curr->getName(),
+							getInitExpr (curr->getType(), inits[i])));
+			}
+			retIr = builder.structExpr(structTy, members);
+			return retIr;
+		}
+
+		// any other case (unions may not find a list of expressions, there is an spetial encoding)
+		assert(false && "fallthrow");
+	}
+
+	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {
+
+		// here is the thing, the field comes hiden in a literal (the function called)
+		// and the expression is the first paramenter
+		core::StringValuePtr name =  init.as<core::CallExprPtr>()->getFunctionExpr().as<core::LiteralPtr>()->getValue();
+		core::TypePtr entityType;
+		for (unsigned i = 0; i < unionTy->getEntries().size(); ++i) 
+			if (*unionTy->getEntries()[i]->getName() == *name) 
+				entityType = unionTy->getEntries()[0]->getType();
+		assert(entityType && "the type of the entity could not be found");
+		return  builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0]));
+	}
+
+	// the initialization is not a list anymore, this a base case
+	//if types match, we are done
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) return init;
+
+	////////////////////////////////////////////////////////////////////////////
+	// if the type missmatch we might need to take some things in consideration:
+	
+	// constructor
+	if (isCppConstructor(init)) return init;
+
+	if (init->getType().isa<core::RefTypePtr>() &&
+		core::types::isSubTypeOf(lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()), elementType)) {
+		return builder.deref(init);
+	}
+
+	if (core::analysis::isCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), init);
+	if (core::analysis::isConstCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
+	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
+
+	if (IS_CPP_REF(init->getType()) && elementType.isa<core::RefTypePtr>())
+		return builder.toIRRef(init);
+
+	if (builder.getLangBasic().isAny(elementType) ) return init;
+
+	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType()))
+		return utils::castScalar(elementType, init);
+
+	core::ExpressionPtr initVal = init;
+	if ( elementType.isa<core::VectorTypePtr>() ){
+		if (utils::isRefVector(init->getType()))
+			initVal =  builder.deref(initVal);
+		//it can be a partial initialization
+		if(core::types::isSubTypeOf(initVal->getType(), elementType)) 
+			return initVal;
+
+		return utils::cast( initVal, elementType);
+	}
+
+	std::cerr << "initialization fails: \n\t target: " << init->getType() << std::endl;
+	std::cerr << "\t target: " << elementType << std::endl;
+	assert(false && " fallthrow");
+	return init;
+}
 
 } // End conversion namespace
 } // End frontend namespace

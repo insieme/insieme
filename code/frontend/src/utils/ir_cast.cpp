@@ -408,7 +408,6 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		// check the type first 
 		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
-
 			if((*vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
 					&& *vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4())
 				|| (*vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
@@ -662,6 +661,17 @@ bool isVector(const core::TypePtr& type) {
 bool isRefVector(const core::TypePtr& type) {
 	return type->getNodeType() == core::NT_RefType && 
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
+}
+
+bool isNullPtrExpression(const core::ExpressionPtr& expr){
+	auto mgr (expr->getNodeManager());
+
+	bool iscast =  core::analysis::isCallOf( expr, mgr.getLangBasic().getRefReinterpret());
+	std::cout << "is a reinterpret " << iscast;
+
+	return (core::analysis::isCallOf( expr, mgr.getLangBasic().getRefReinterpret()) && 
+			*mgr.getLangBasic().getRefNull() == *(expr.as<core::CallExprPtr>()[0]) ) || 
+			*mgr.getLangBasic().getRefNull() == *expr;
 }
 
 } // end utils namespace
