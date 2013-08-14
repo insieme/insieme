@@ -1321,8 +1321,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType()))
 		return utils::castScalar(elementType, init);
 
-	core::ExpressionPtr initVal = init;
 	if ( elementType.isa<core::VectorTypePtr>() ){
+		core::ExpressionPtr initVal = init;
 		if (utils::isRefVector(init->getType()))
 			initVal =  builder.deref(initVal);
 		//it can be a partial initialization
@@ -1332,7 +1332,11 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 		return utils::cast( initVal, elementType);
 	}
 
-	std::cerr << "initialization fails: \n\t target: " << init->getType() << std::endl;
+	// the case of the Null pointer:
+	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
+		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
+
+	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
 	std::cerr << "\t target: " << elementType << std::endl;
 	assert(false && " fallthrow");
 	return init;
