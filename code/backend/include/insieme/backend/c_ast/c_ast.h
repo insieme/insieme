@@ -405,6 +405,7 @@ namespace c_ast {
 			Indirection,
 			Reference,
 			SizeOf,
+			Typeid,
 			New,
 			Delete,
 			DeleteArray,

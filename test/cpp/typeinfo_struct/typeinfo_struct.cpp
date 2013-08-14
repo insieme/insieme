@@ -32,5 +32,10 @@ int main() {
   std::cout << "Poly_Base vs *ppolybase: ";
   std::cout << ( typeid(Poly_Base)==typeid(*ppolybase) ) << '\n';
 
+  // simple case
+  int a;
+  float b;
+  std::cout << ( typeid(a)==typeid(b) ) << '\n';  
+
   return 0;
 }

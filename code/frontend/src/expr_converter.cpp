@@ -364,12 +364,8 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 	core::TypePtr irType = value->getType();
 
 	// CPP references are Left side exprs but need to be IRized
-	if (core::analysis::isCppRef(irType)) {
+	if (IS_CPP_REF(irType)) {
 		return builder.toIRRef(value);
-	}
-
-	if (core::analysis::isConstCppRef(irType)) {
-		assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
 	}
 
 	// check whether it is a struct element access (by ref)
@@ -386,7 +382,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 
 	// the magic line, this line avoids some trouble with pointers (paramerer references)
 	// but it totaly fuck it up with cpp references
-    if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
+    if (value->getNodeType() != core::NT_CallExpr || irType.isa<core::RefTypePtr>()) {
     	return value;
     }
 
@@ -403,7 +399,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
 			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getArrayRefElem1D(), inner,
+				return builder.callExpr(builder.refType(irType), gen.getArrayRefElem1D(), inner,
 						call->getArgument(1));
 			}
 		}
@@ -413,7 +409,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
 			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getVectorRefElem(), inner,
+				return builder.callExpr(builder.refType(irType), gen.getVectorRefElem(), inner,
 						call->getArgument(1));
 			}
 		}
@@ -422,14 +418,18 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 		if (core::analysis::isCallOf(call, gen.getCompositeMemberAccess())) {
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
-			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getCompositeRefElem(), inner,
+			//if (*inner != *arg) {
+				return builder.callExpr(builder.refType(irType), gen.getCompositeRefElem(), inner,
 						call->getArgument(1), call->getArgument(2));
-			}
+			//}
+		}
+
+		if (core::analysis::isCallOf(call, gen.getRefVectorToRefArray())) {
+			return call;
 		}
 	}
 
-	assert(value->getType()->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
+	assert(irType->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
 	// there is nothing to do
 	return value;
 }
