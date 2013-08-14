@@ -431,7 +431,6 @@ namespace cba {
 
 		// read first set of values
 		EXPECT_EQ("{AP(1)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>())));
-		createDotDump(analysis);
 		EXPECT_EQ("{AP(2)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>())));
 		EXPECT_EQ("{AP(1)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>())));
 		EXPECT_EQ("{AP(2)}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>())));
@@ -453,6 +452,7 @@ namespace cba {
 		EXPECT_EQ("{AP(2)}", toString(analysis.getValuesOf(code[20].as<ExpressionAddress>())));
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[21].as<ExpressionAddress>())));
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[22].as<ExpressionAddress>())));
+//		createDotDump(analysis);
 
 	}
 
@@ -583,6 +583,42 @@ namespace cba {
 		should.insert(ExpressionPtr());
 		should.insert(builder.intLit(1));
 		EXPECT_EQ(should, analysis.getValuesOf(code.getAddressOfChild(3).as<ExpressionAddress>()));
+
+	}
+
+	TEST(CBA, WhileStmt_2) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	*x;"							// should be 1
+				"	while (false) {"
+				"		x = 2;"
+				"	}"
+				"	*x;"							// should still be 1
+				"	while (true) {"
+				"		x = 3;"
+				"	}"
+				"	*x;"							// should nothing (unreachable)
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// check values of *x
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{reachable}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), Rin)));
+		EXPECT_EQ("{reachable}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), Rin)));
+		EXPECT_EQ("{}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), Rin)));
 
 	}
 

@@ -1377,6 +1377,8 @@ namespace cba {
 				// check out parent
 				auto parent = stmt.getParentAddress();
 
+				// TODO: turn this into a visitor!
+
 				// a simple case - it is just a nested expression
 				if (auto expr = parent.isa<ExpressionAddress>()) {
 					// parent is an expression => in of parent is in of current stmt
@@ -1414,6 +1416,62 @@ namespace cba {
 					// in is the in of the stmt
 					this->connectSets(this->Ain, parent.as<StatementAddress>(), ctxt, this->Ain, stmt, ctxt, constraints);
 					return; // done
+				}
+
+				// handle if stmt
+				if (auto ifStmt = parent.isa<IfStmtAddress>()) {
+
+					// check whether which part the current node is
+
+					auto cond = ifStmt->getCondition();
+					if (cond == stmt) {
+
+						// connect in with if-stmt in with condition in
+						this->connectSets(this->Ain, ifStmt, ctxt, this->Ain, stmt, ctxt, constraints);
+
+					} else if (ifStmt->getThenBody() == stmt) {
+
+						// connect out of condition with in of body if condition may be true
+						auto l_cond = this->context.getLabel(cond);
+						auto B_cond = this->context.getSet(B, l_cond, ctxt);
+						this->connectSetsIf(true, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, constraints);
+
+					} else if (ifStmt->getElseBody() == stmt) {
+
+						// connect out of condition with in of body if condition may be false
+						auto l_cond = this->context.getLabel(cond);
+						auto B_cond = this->context.getSet(B, l_cond, ctxt);
+						this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, constraints);
+
+					} else {
+						assert_fail() << "No way!\n";
+					}
+
+					// dones
+					return;
+				}
+
+				// handle while stmt
+				if (auto whileStmt = parent.isa<WhileStmtAddress>()) {
+
+					// check which part of a while the current node is
+					auto cond = whileStmt->getCondition();
+					auto l_cond = this->context.getLabel(cond);
+					auto B_cond = this->context.getSet(B, l_cond, ctxt);
+					if (cond == stmt) {
+						// connect in of while to in of condition
+						this->connectSets(this->Ain, whileStmt, ctxt, this->Ain, stmt, ctxt, constraints);
+
+						// also, in case loop is looping, out of body is in of condition
+						this->connectSetsIf(true, B_cond, this->Aout, whileStmt->getBody(), ctxt, this->Ain, stmt, ctxt, constraints);
+
+					} else if (whileStmt->getBody() == stmt) {
+						// connect out of condition with in of body
+						this->connectSetsIf(true, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, constraints);
+					} else {
+						assert_fail() << "No way!";
+					}
+					return;
 				}
 
 				assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType();
@@ -1551,6 +1609,22 @@ namespace cba {
 			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 				// link out of return expression to out of return stmt
 				this->connectSets(this->Aout, stmt->getReturnExpr(), ctxt, this->Aout, stmt, ctxt, constraints);
+			}
+
+			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// link out with out of bodies
+				auto l_cond = this->context.getLabel(stmt->getCondition());
+				auto B_cond = this->context.getSet(B, l_cond, ctxt);
+				this->connectSetsIf(true,  B_cond, this->Aout, stmt->getThenBody(), ctxt, this->Aout, stmt, ctxt, constraints);
+				this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, constraints);
+			}
+
+			void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// link out of condition to out if condition may ever become false
+				auto cond = stmt->getCondition();
+				auto l_cond = this->context.getLabel(cond);
+				auto B_cond = this->context.getSet(B, l_cond, ctxt);
+				this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Aout, stmt, ctxt, constraints);
 			}
 
 			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& res) {
