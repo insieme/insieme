@@ -615,8 +615,7 @@ namespace tu {
 			for (auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if (!cur.second) continue;
-				core::TypePtr type = cur.first->getType();
-				core::LiteralPtr newLit = builder.literal(cur.first->getValue(), type);
+				core::LiteralPtr newLit = resolver.map(cur.first);
 				if (!contains(usedLiterals, newLit)) continue;
 				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
 			}
