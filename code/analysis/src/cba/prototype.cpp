@@ -46,6 +46,12 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	/**
+	 * For the docu:
+	 * 		- the constraint generation is lazy
+	 * 		- it is based on: target is listing all sources (bringschuld)
+	 */
+
 	using std::set;
 	using std::vector;
 
@@ -250,7 +256,7 @@ namespace cba {
 				labels.push_back(context.getLabel(cur));
 			});
 
-			vector<Sequence<Label, 2>> callContexts;
+			vector<Context::CallContext> callContexts;
 			generateSequences(labels, callContexts);
 
 			// compute resulting set
@@ -261,7 +267,7 @@ namespace cba {
 			threads.push_back(ThreadID());		// default thread
 
 			// create all thread contexts
-			vector<Sequence<ThreadID, 2>> threadContexts;
+			vector<Context::ThreadContext> threadContexts;
 			generateSequences(threads, threadContexts);
 
 
@@ -467,7 +473,7 @@ namespace cba {
 						assert_lt(userOffset, parent.getDepth());
 						auto user = parent.getParentAddress(userOffset);
 
-						std::cout << "User: " << user << ": " << *user << "\n";
+//std::cout << "User: " << user << ": " << *user << "\n";
 
 						// distinguish user type
 						auto call = user.isa<CallExprAddress>();
@@ -603,11 +609,13 @@ namespace cba {
 
 								// handle captured parameter
 								// link value of creation context to body-argument
-								auto l_arg = context.getLabel(cur);
+								if (target.context != innerCallContext) {
+									auto l_arg = context.getLabel(cur);
 
-								auto A_src = context.getSet(A, l_arg, target.context);
-								auto A_trg = context.getSet(A, l_arg, innerCallContext);
-								constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
+									auto A_src = context.getSet(A, l_arg, target.context);
+									auto A_trg = context.getSet(A, l_arg, innerCallContext);
+									constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
+								}
 							}
 						}
 
@@ -645,14 +653,16 @@ namespace cba {
 				}
 
 				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
-				if (auto lambda = fun.isa<LambdaExprAddress>()) {
-					addConstraints(Callable(lambda), true);
-					return;
-				}
+				if (!call.isRoot() && call.getParentNode()->getNodeType() != NT_BindExpr) {
+					if (auto lambda = fun.isa<LambdaExprAddress>()) {
+						addConstraints(Callable(lambda), true);
+						return;
+					}
 
-				if (auto bind = fun.isa<BindExprAddress>()) {
-					addConstraints(Callable(bind, ctxt), true);
-					return;
+					if (auto bind = fun.isa<BindExprAddress>()) {
+						addConstraints(Callable(bind, ctxt), true);
+						return;
+					}
 				}
 
 				// fix pass-by-value semantic - by considering all potential terms
@@ -1302,20 +1312,92 @@ namespace cba {
 			ImperativeInConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
 				: super(context, utils::set::toSet<SetTypeSet>(&Ain), Ain, Aout, collector) {}
 
+
 			void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callable& callable,  Constraints& constraints) {
+
+				// check whether given call / target context is actually valid
+				if (callCtxt.callContext != trgCtxt.callContext) {		// it is not a direct call
+					auto l_call = this->getContext().getLabel(call);
+					if (callCtxt.callContext << l_call != trgCtxt.callContext) return;
+				}
+
+				// check proper number of arguments
+				auto num_params = (callable.definition.getType().as<FunctionTypePtr>()->getParameterTypes().size());
+				if (num_params != call.size()) return;
+
+				// check whether call-site is within a bind
+				bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
+				auto bind = (isCallWithinBind) ? call.getParentAddress().as<BindExprAddress>() : BindExprAddress();
 
 				// get label for the body expression
 				auto l_body = this->getContext().getLabel(body);
 
-				// connect the effect of the function evaluation ...
+				// get labels for call-site
 				auto l_fun = this->getContext().getLabel(call->getFunctionExpr());
 				auto C_call = this->getContext().getSet(C, l_fun, callCtxt);
-				this->connectStateSetsIf(callable, C_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 
-				// ... and the argument evaluation to the in of the body
+				// add effect of function-expression-evaluation (except within bind calls)
+				if (!isCallWithinBind) this->connectStateSetsIf(callable, C_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+
+				// just connect the effect of the arguments of the call-site with the in of the body call statement
 				for(auto arg : call) {
+
+					// skip bound parameters
+					if (bind && bind->isBoundExpression(arg)) continue;
+
+					// add effect of argument
 					auto l_arg = this->getContext().getLabel(arg);
 					this->connectStateSetsIf(callable, C_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+				}
+
+			}
+
+			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+
+				// special handling only for calls in bind expressions
+				if (call.isRoot() || call.getParentNode()->getNodeType() != NT_BindExpr) {
+					// run standard procedure
+					this->visitExpression(call, ctxt, constraints);
+					return;
+				}
+
+				// ----- we have a call in a bind expression ----
+				auto bind = call.getParentAddress().as<BindExprAddress>();
+				if (bind.isRoot()) return;	// nothing to do
+
+				auto user = bind.getParentAddress();
+
+				// check for direct calls ...
+				if (user->getNodeType() == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == bind) {
+
+					// it is one => no change in context
+					this->connectSets(this->Ain, bind, ctxt, this->Ain, call, ctxt, constraints);
+
+				} else {
+					// it is no direct call => change in context possible
+					auto numParams = bind->getParameters().size();
+					for(auto& dynCall : this->context.getDynamicCalls()) {
+						if(numParams != dynCall.size()) continue;
+
+						// special case: ctxt starts with 0 - root context, is not called by anybody
+						if (ctxt.callContext.startsWith(0)) {
+							Context srcCtxt = ctxt;
+							srcCtxt.callContext >>= 0;
+							Callable bindCallable(bind, srcCtxt);
+							connectCallToBody(dynCall, srcCtxt, call, ctxt, bindCallable, constraints);
+						} else {
+
+							// all other contexts may be reached from any other
+							for(auto& l : this->context.getDynamicCallLabels()) {
+								Context srcCtxt = ctxt;
+								srcCtxt.callContext >>= l;
+
+								// connect call site with body
+								Callable bindCallable(bind, srcCtxt);
+								connectCallToBody(dynCall, srcCtxt, call, ctxt, bindCallable, constraints);
+							}
+						}
+					}
 				}
 
 			}
@@ -1348,12 +1430,21 @@ namespace cba {
 						for(auto& call : this->context.getDynamicCalls()) {
 							if(numParams != call.size()) continue;
 
-							for(auto& l : this->context.getDynamicCallLabels()) {
+							// special case: ctxt starts with 0 - root context, is not called by anybody
+							if (ctxt.callContext.startsWith(0)) {
 								Context srcCtxt = ctxt;
-								srcCtxt.callContext >>= l;
-
-								// connect call site with body
+								srcCtxt.callContext >>= 0;
 								connectCallToBody(call, srcCtxt, stmt, ctxt, Callable(lambdaExpr), constraints);
+							} else {
+
+								// all other contexts may be reached from any other
+								for(auto& l : this->context.getDynamicCallLabels()) {
+									Context srcCtxt = ctxt;
+									srcCtxt.callContext >>= l;
+
+									// connect call site with body
+									connectCallToBody(call, srcCtxt, stmt, ctxt, Callable(lambdaExpr), constraints);
+								}
 							}
 						}
 
@@ -1378,6 +1469,21 @@ namespace cba {
 				auto parent = stmt.getParentAddress();
 
 				// TODO: turn this into a visitor!
+
+				// special case: if current expression is an argument of a bind-call expression
+				if (stmt.getDepth() >=2) {
+					if (auto call = parent.isa<CallExprAddress>()) {
+						if (auto bind = call.getParentAddress().isa<BindExprAddress>()) {
+							// if this is a bound expression predecessor is the bind, not the call
+							if (bind->isBoundExpression(stmt.as<ExpressionAddress>())) {
+								// connect bind with stmt - skip the call
+								this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, constraints);
+								// and done
+								return;
+							}
+						}
+					}
+				}
 
 				// a simple case - it is just a nested expression
 				if (auto expr = parent.isa<ExpressionAddress>()) {
@@ -1575,11 +1681,33 @@ namespace cba {
 					// create new call-context
 					innerCallContext.callContext <<= l_call;
 
-					// indirect call => dynamic dispatching required
+					// TODO: check whether this one is actually allowed
+					std::set<ExpressionAddress> targets;
 					for(const auto& cur : this->context.getCallables()) {
-						addConstraints(cur,false);
+						targets.insert(cur.definition);
 					}
+					for(const auto& cur : targets) {
+						addConstraints(Callable(cur), false);
+					}
+
+					// this one produces much more constraints, but it is correct if the abover version fails
+//					// indirect call => dynamic dispatching required
+//					for(const auto& cur : this->context.getCallables()) {
+//						addConstraints(cur,false);
+//					}
 				}
+			}
+
+			void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+
+				// out-effects are only influenced by bound parameters
+				auto l_cur = this->context.getLabel(bind);
+				for(const auto& arg : bind->getBoundExpressions()) {
+					auto l_arg = this->context.getLabel(arg);
+					this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_cur, ctxt, constraints);
+				}
+
+				// and no more ! (in particular not the effects of the inner call)
 			}
 
 			void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {

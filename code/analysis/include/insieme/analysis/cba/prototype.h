@@ -82,7 +82,8 @@ namespace cba {
 		bool operator==(const Sequence& other) const { return this == &other || context == other.context; }
 		bool operator!=(const Sequence& other) const { return !(*this == other); }
 		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
-		bool startsWith(const T& e) const { return s == 0 || context[0] == e; }
+		bool startsWith(const T& e) const { return s == 0 || context.front() == e; }
+		bool endsWith(const T& e) const { return s == 0 || context.back() == e; }
 		Sequence<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];
@@ -201,6 +202,8 @@ namespace cba {
 			: definition(fun), context() {}
 		Callable(const core::BindExprAddress& bind, const Context& context)
 			: definition(bind), context(context) {}
+		Callable(const core::ExpressionAddress& expr, const Context& context = Context())
+			: definition(expr), context(context) { assert(isBind() || isLambda()); }
 		Callable(const Callable& other)
 			: definition(other.definition), context(other.context) {}
 
@@ -215,6 +218,10 @@ namespace cba {
 		}
 
 		bool operator!=(const Callable& other) const { return !(*this == other); }
+
+		bool isBind() const { return definition->getNodeType() == core::NT_BindExpr; }
+		bool isLambda() const { return definition->getNodeType() == core::NT_LambdaExpr; };
+
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
