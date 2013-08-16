@@ -874,16 +874,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		core::TypePtr retType;
 		// the return type of this lambda is the type of the last expression (according to the C standard)
 		std::vector<core::StatementPtr> stmts { lhs };
-		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
-			stmts.push_back(rhs);
-			auto retExpr = rhs.as<core::CallExprPtr>()->getArgument(0);
-			// additionally we have to return the value of the lhs of the assignment stmt
-			stmts.push_back(builder.returnStmt(retExpr));
-			retType = retExpr->getType();
-		} else {
-			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
-			retType = rhs->getType();
-		}
+		stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
+		retType = rhs->getType();
 
 		core::StatementPtr body =  builder.compoundStmt(stmts);
 		return (retIr = builder.createCallExprFromBody(body, retType));
