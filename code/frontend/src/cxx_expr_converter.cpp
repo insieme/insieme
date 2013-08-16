@@ -322,6 +322,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	core::TypePtr&& irClassType = convFact.convertType(classType);
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 
+	// it might be an array construction
+	size_t numElements =0;
+	if (irClassType->getNodeType() == core::NT_VectorType) {
+		numElements = irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+		irClassType	= irClassType.as<core::VectorTypePtr>()->getElementType();
+	}
+
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
 	if (callExpr->isElidable () && ctorDecl->isCopyConstructor()){
@@ -337,7 +344,14 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
 			//classes
 			if(ctorDecl->getParent()->isPOD()) {
-				return builder.undefinedVar(refToClassTy);
+				if (numElements)
+					return builder.callExpr(
+							builder.getLangBasic().getVectorInitUniform(), 
+							builder.undefinedVar(irClassType), 
+							builder.getIntParamLiteral(numElements)
+						);
+				else
+					return builder.undefinedVar(refToClassTy);
 			} else {
 				//use eiter createDefaultCtor or the ctorDecl
 				//if not userprovided we don't need to add a constructor just create the object to work
@@ -360,13 +374,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			//with -- for the rest the BE-compiler takes care of
 			return (Visit(callExpr->getArg(0)));
 		}
-	}
-
-	// it might be an array construction
-	size_t numElements =0;
-	if (irClassType->getNodeType() == core::NT_VectorType) {
-		numElements = irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
-		irClassType	= irClassType.as<core::VectorTypePtr>()->getElementType();
 	}
 
 	// to begin with we translate the constructor as a regular function but with initialization list
@@ -548,7 +555,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::C
 	assert(irType.isa<core::GenericTypePtr>() && "for convention, all this operators deal with generic types");
 	irType = builder.refType(irType);
 
-
 	// build a literal as a placeholder (has to be substituted later by function call expression)
 	core::ExpressionPtr ret =  builder.literal("this", irType);
 
@@ -574,7 +580,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	if( targetTy != srcTy && *targetTy != *srcTy ) {
 		subExpr = convFact.tryDeref(subExpr);
 	}
-	assert(*subExpr->getType() == *targetTy);
+	
+	//assert(*subExpr->getType() == *targetTy); NOTE: we can not compare types this easy, complete
+	//structs may not agree with the genereated generic type
 	/*
 	//if(literal || variable) {
 	if( core::analysis::isRefType(subExpr->getType())

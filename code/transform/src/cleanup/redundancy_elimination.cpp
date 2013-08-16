@@ -129,6 +129,10 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 				VariablePtr targetVar = dynamic_pointer_cast<const Variable>(target);
 				if(!targetVar) return false;
 
+				// + we only proceed if the assigment is a full expression ( statement itself)
+				if (!call.getParentAddress().getAddressedNode().isa<CompoundStmtPtr>())
+					return false;
+
 				// + check if passed to function
 				if(containsPtrToTarget(lambda->getParameterList(), targetVar)) return false;
 

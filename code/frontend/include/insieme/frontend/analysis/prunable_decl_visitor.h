@@ -91,7 +91,22 @@ class PrunableDeclVisitor{
 	}
 
 
+	/**
+	 * a function template
+	 */
 	void VisitFunctionTemplate(const clang::FunctionTemplateDecl* templ) {
+	}
+
+	/**
+	 * a linkage specification:
+	 * this might be needed for c++ codes to preserve the spetial linkage of
+	 * c function declarations
+	 *
+	 *   extern "C" {
+	 *       void function();
+	 *   }
+	 */
+	void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
 	}
 
 	/**
@@ -152,7 +167,7 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::LinkageSpec:
 				{
-					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
+					static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplate:

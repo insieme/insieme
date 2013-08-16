@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -323,20 +323,20 @@ namespace backend {
 		// -- CASTS --
 		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
 
-		res[basic.getUnsignedToInt()] = cast; 
-		res[basic.getRealToInt()] 	  = cast; 
-		res[basic.getCharToInt()] 	  = cast; 
+		res[basic.getUnsignedToInt()] = cast;
+		res[basic.getRealToInt()] 	  = cast;
+		res[basic.getCharToInt()] 	  = cast;
 		res[basic.getBoolToInt()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
 
-		res[basic.getSignedToUnsigned()]= cast; 
-		res[basic.getRealToUnsigned()] 	= cast; 
-		res[basic.getCharToUnsigned()] 	= cast; 
+		res[basic.getSignedToUnsigned()]= cast;
+		res[basic.getRealToUnsigned()] 	= cast;
+		res[basic.getCharToUnsigned()] 	= cast;
 		res[basic.getBoolToUnsigned()] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
 
-		res[basic.getSignedToReal()]  = cast; 
-		res[basic.getUnsignedToReal()]= cast; 
-		res[basic.getCharToReal()] 	  = cast; 
-		res[basic.getBoolToReal()] 	  = cast; 
+		res[basic.getSignedToReal()]  = cast;
+		res[basic.getUnsignedToReal()]= cast;
+		res[basic.getCharToReal()] 	  = cast;
+		res[basic.getBoolToReal()] 	  = cast;
 
 		res[basic.getSignedToChar()]  = cast;
 		res[basic.getUnsignedToChar()]= cast;
@@ -410,7 +410,7 @@ namespace backend {
 
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-		
+
 
 		// -- references --
 
@@ -705,7 +705,7 @@ namespace backend {
 		});
 
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
-		
+
 		res[basic.getArrayRefDistance()] = OP_CONVERTER({
 			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
 		});
@@ -1126,13 +1126,13 @@ namespace backend {
 
 			res[irppExt.getStaticCast()] = OP_CONVERTER({
 				// build up a static cast operator
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				if(!targetTy.isa<core::ArrayTypePtr>()
 					&& !core::analysis::isCppRef(targetTy) ) {
-					targetCType = c_ast::ptr(targetCType);	
+					targetCType = c_ast::ptr(targetCType);
 				}
 
 				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
@@ -1140,74 +1140,84 @@ namespace backend {
 
 			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER({
 				// build up a static cast operator for cpp_ref to cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-			
+
 				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 
 			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER({
 				// build up a static cast operator for const_cpp_ref to const_cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
 				// build up a static cast operator for cpp_ref to const_cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 
 			res[irppExt.getDynamicCast()] = OP_CONVERTER({
 				// build up a dynamic cast operator
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				if(!targetTy.isa<core::ArrayTypePtr>()
 					&& !core::analysis::isCppRef(targetTy) ) {
-					targetCType = c_ast::ptr(targetCType);	
+					targetCType = c_ast::ptr(targetCType);
 				}
 
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
-				
+
 			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER({
 				// build up a dynamic cast operator for cpp_ref to cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-			
+
 				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 
 			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER({
 				// build up a dynamic cast operator for const_cpp_ref to const_cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
 				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
-				
+
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
-				
+
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+			});
+			res[irppExt.getTypeid()] = OP_CONVERTER({
+				// extract typeinfo
+				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
+				if(type) {
+                    			core::TypePtr target = type->getTypeParameter()[0];
+					return c_ast::typeId(CONVERT_TYPE(target));
+				} else {
+                    return c_ast::typeId(c_ast::deref(CONVERT_ARG(0)));
+				}
 			});
 		}
 
@@ -1217,7 +1227,7 @@ namespace backend {
 		return res;
 	}
 
-	
+
 
 
 

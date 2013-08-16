@@ -248,7 +248,7 @@ namespace lang {
 		/**
 		 * typeid implementation
 		 */
-		LANG_EXT_LITERAL(Typeid, "std::typeid",
+		LANG_EXT_LITERAL(Typeid, "typeid",
 			"('a)->struct { ref<std::type_info>  _const_cpp_ref; }"
 		);
 	};

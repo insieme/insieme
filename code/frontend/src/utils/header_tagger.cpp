@@ -125,7 +125,7 @@ namespace utils {
 			string getTopLevelInclude(const clang::SourceLocation& loc) {
 
 				// if it is a dead end
-				if (!loc.isValid()) return " ";
+				if (!loc.isValid()) return "";
 
 				// get the presumed location (whatever this is, ask clang) ...
 				clang::PresumedLoc ploc = sm.getPresumedLoc(loc);

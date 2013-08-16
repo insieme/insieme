@@ -177,10 +177,9 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 	}
 
 	// check for vector types
-	if (subType->getNodeType() == NT_VectorType) {
+	if (subType.isa<VectorTypePtr>() ) {
 		VectorTypePtr vector = static_pointer_cast<const VectorType>(subType);
-
-		// the only potential super type is an array of the same element type
+		// potential super type is an array of the same element type
 		IRBuilder builder(vector->getNodeManager());
 		return *superType == *builder.arrayType(vector->getElementType());
 	}

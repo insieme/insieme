@@ -420,6 +420,7 @@ namespace c_ast {
 					case UnaryOperation::Indirection: 	return out << "*" << print(node->operand);
 					case UnaryOperation::Reference: 	return out << "&" << print(node->operand);
 					case UnaryOperation::SizeOf: 		return out << "sizeof(" << print(node->operand) << ")";
+					case UnaryOperation::Typeid: 		return out << "typeid(" << print(node->operand) << ")";
 					case UnaryOperation::New:			return out << "new " << print(node->operand);
 					case UnaryOperation::Delete:		return out << "delete " << print(node->operand);
 					case UnaryOperation::DeleteArray:	return out << "delete[] " << print(node->operand);

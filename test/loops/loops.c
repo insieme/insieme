@@ -23,7 +23,7 @@ void func2() {
 	}
 }
 
-/*
+
 void func3() {
 	int x;
 
@@ -58,7 +58,7 @@ void func4() {
 		} while(i<2);
 	}
 }
-*/
+
 
 int main(int argc, char* argv[]) {
 
@@ -107,7 +107,6 @@ int main(int argc, char* argv[]) {
 
 	func(a);
 	func2();
-//	func3();
-//	func4();
-
+	func3();
+	func4();
 }

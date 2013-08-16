@@ -347,6 +347,26 @@ public:
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
+	 * this function takes care of the initialization expression of variables.
+	 * it recursively descends the type tree to match everithing very carefully, like a grandma
+	 * it handles several differen cases:
+	 * 	- stack variable: ref<T> var = expr (typed ref<T> ) as well
+	 *	- global variable ref<T> var := expr (typed T!!!)
+	 *		this is why a T typed expression will be returned to be fixed by the variable
+	 *		declaration to the apropiate form.
+	 *	C++ exceptions:
+	 *		- a constructor expression returns already the ref<T> expression, refvar should be
+	 *		ignored
+	 *		- cpp references create aliases to other ref, do not create a refvar to avoid copy
+	 *
+	 *	@param elemType, T in the ref<T> to be match the return type
+	 *	@init, the converted init expression (notice that this is as the visitor returns it, and
+	 *	might not be correct due to initialization lists that need to be fixed in the recursion)
+	 *	@return the "ready to use" init expression as explained before
+	 */
+	core::ExpressionPtr getInitExpr (const core::TypePtr& elemType, const core::ExpressionPtr& init);
+
+	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
 	 * to map the generated IR variable with the translated variable declaration, so that later uses
 	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
@@ -432,12 +452,6 @@ public:
 	 */
 	void printDiagnosis(const clang::SourceLocation& loc);
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// FIXME: where here and not expr visitor????
-	core::ExpressionPtr convertInitializerList(
-			const clang::InitListExpr* initList,
-			const core::TypePtr& type) ;
 };
 
 } // End conversion namespace

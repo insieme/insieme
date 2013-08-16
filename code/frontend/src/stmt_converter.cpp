@@ -571,21 +571,24 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		}
 
 		core::StatementPtr irBody = stmtutils::tryAggregateStmts(builder, body);
-		vector<core::ContinueStmtAddress> conts = getContinues( irBody );
+		
+		if(forStmt->getInc())
+		{
+			vector<core::ContinueStmtAddress> conts = getContinues( irBody );
 
-		// @Ferdinando: this is crashing for the stmt_conversion test since forStmt->getInc() is null at one point
-//		if( !conts.empty() )
-//		{
-//			core::StatementList stmtList;
-//			stmtList.push_back(convFact.convertExpr(forStmt->getInc()));
-//			stmtList.push_back(builder.continueStmt());
-//			core::CompoundStmtPtr incr = builder.compoundStmt(stmtList);
-//			std::map<core::NodeAddress, core::NodePtr> replacementsMap;
-//			for_each(conts.begin(), conts.end(), [&](core::ContinueStmtAddress& cur) {
-//					replacementsMap.insert({cur, incr});
-//					});
-//			irBody = core::transform::replaceAll(builder.getNodeManager(), replacementsMap).as<core::StatementPtr>();
-//		}
+			if( !conts.empty() )
+			{
+				core::StatementList stmtList;
+				stmtList.push_back(convFact.convertExpr(forStmt->getInc()));
+				stmtList.push_back(builder.continueStmt());
+				core::CompoundStmtPtr incr = builder.compoundStmt(stmtList);
+				std::map<core::NodeAddress, core::NodePtr> replacementsMap;
+				for_each(conts.begin(), conts.end(), [&](core::ContinueStmtAddress& cur) {
+						replacementsMap.insert({cur, incr});
+						});
+				irBody = core::transform::replaceAll(builder.getNodeManager(), replacementsMap).as<core::StatementPtr>();
+			}
+		}
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// analysis of loop structure failed, we have to build a while statement:

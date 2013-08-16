@@ -62,7 +62,10 @@ namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
 		assert(newGlobal.first && newGlobal.first->getType().isa<core::RefTypePtr>());
-		assert(!newGlobal.second || core::types::isSubTypeOf(newGlobal.second->getType(), newGlobal.first->getType().as<core::RefTypePtr>()->getElementType()));
+	//	std::cout << "new Global : " << newGlobal.first << " : " << newGlobal.first->getType() << std::endl;
+	//	if (newGlobal.second)
+	//	std::cout << "   init: " << newGlobal.second << " : " << newGlobal.second->getType() << std::endl;
+		//assert(!newGlobal.second || core::types::isSubTypeOf(newGlobal.second->getType(), newGlobal.first->getType().as<core::RefTypePtr>()->getElementType()));
 
 		auto git = std::find_if(globals.begin(), globals.end(), [&](const Global& cur)->bool { return *newGlobal.first == *cur.first; });
 		if( git == globals.end() ) {
@@ -611,8 +614,7 @@ namespace tu {
 			for (auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if (!cur.second) continue;
-				core::TypePtr type = cur.first->getType();
-				core::LiteralPtr newLit = builder.literal(cur.first->getValue(), type);
+				core::LiteralPtr newLit = resolver.map(cur.first);
 				if (!contains(usedLiterals, newLit)) continue;
 				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
 			}

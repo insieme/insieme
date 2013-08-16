@@ -70,6 +70,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/encoder/lists.h"
 
 
 using namespace insieme;
@@ -363,12 +364,8 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 	core::TypePtr irType = value->getType();
 
 	// CPP references are Left side exprs but need to be IRized
-	if (core::analysis::isCppRef(irType)) {
+	if (IS_CPP_REF(irType)) {
 		return builder.toIRRef(value);
-	}
-
-	if (core::analysis::isConstCppRef(irType)) {
-		assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
 	}
 
 	// check whether it is a struct element access (by ref)
@@ -385,7 +382,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 
 	// the magic line, this line avoids some trouble with pointers (paramerer references)
 	// but it totaly fuck it up with cpp references
-    if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
+    if (value->getNodeType() != core::NT_CallExpr || irType.isa<core::RefTypePtr>()) {
     	return value;
     }
 
@@ -402,7 +399,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
 			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getArrayRefElem1D(), inner,
+				return builder.callExpr(builder.refType(irType), gen.getArrayRefElem1D(), inner,
 						call->getArgument(1));
 			}
 		}
@@ -412,7 +409,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
 			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getVectorRefElem(), inner,
+				return builder.callExpr(builder.refType(irType), gen.getVectorRefElem(), inner,
 						call->getArgument(1));
 			}
 		}
@@ -421,14 +418,18 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 		if (core::analysis::isCallOf(call, gen.getCompositeMemberAccess())) {
 			const core::ExpressionPtr arg = call->getArgument(0);
 			const core::ExpressionPtr inner = asLValue(arg);
-			if (*inner != *arg) {
-				return builder.callExpr(builder.refType(value->getType()), gen.getCompositeRefElem(), inner,
+			//if (*inner != *arg) {
+				return builder.callExpr(builder.refType(irType), gen.getCompositeRefElem(), inner,
 						call->getArgument(1), call->getArgument(2));
-			}
+			//}
+		}
+
+		if (core::analysis::isCallOf(call, gen.getRefVectorToRefArray())) {
+			return call;
 		}
 	}
 
-	assert(value->getType()->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
+	assert(irType->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
 	// there is nothing to do
 	return value;
 }
@@ -873,16 +874,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		core::TypePtr retType;
 		// the return type of this lambda is the type of the last expression (according to the C standard)
 		std::vector<core::StatementPtr> stmts { lhs };
-		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
-			stmts.push_back(rhs);
-			auto retExpr = rhs.as<core::CallExprPtr>()->getArgument(0);
-			// additionally we have to return the value of the lhs of the assignment stmt
-			stmts.push_back(builder.returnStmt(retExpr));
-			retType = retExpr->getType();
-		} else {
-			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
-			retType = rhs->getType();
-		}
+		stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
+		retType = rhs->getType();
 
 		core::StatementPtr body =  builder.compoundStmt(stmts);
 		return (retIr = builder.createCallExprFromBody(body, retType));
@@ -1064,7 +1057,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
-			exprTy = lhs.getType();
+			exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
 			break;
 		}
 		default:
@@ -1595,15 +1588,37 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
-        VLOG(1) << "*************     EXPR  [class:'"<< initList->getStmtClassName() <<"']         **********\n";
-        if( VLOG_IS_ON(2) ) {
-            VLOG(2) << "Dump of clang expression: "; \
-            initList->dump();
-        }
-        VLOG(1) << "-> at location: (" <<
-                    utils::location(initList->getLocStart(), convFact.getSourceManager()) << "); \n ";
-        VLOG(1) << "****************************************************************************************\n";
-assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
+	
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(initList, retIr);
+
+	if (initList->isStringLiteralInit () )
+		assert(false && "string literal" ) ;
+
+//	if (initList->hasArrayFiller ())
+//		assert(false && "array filler");
+
+	// if is a union initilization we build the field assigment, later we wont have it
+	if (const clang::FieldDecl *field = initList->getInitializedFieldInUnion ()){
+		assert(initList->getNumInits() == 1);
+		// AHA!! here is the trick, magic trick. we hide the union initialization into an expression
+		// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!! 
+		// the name of the literal is the field !!! hahaha isn't it briliant???
+		// twisted??? maybe i'm going crazy, but it works! and is criptic enought to piss off people
+		string name = llvm::cast<clang::NamedDecl>(field)->getNameAsString() ;
+		core::ExpressionPtr init = Visit(initList->getInit (0));
+		auto dummyFuncType = builder.functionType(init->getType(), gen.getUnit());
+		return builder.callExpr(builder.literal(name, dummyFuncType), init);
+	}
+
+	// if is anything else, we pack a list, we'll check what is it later on
+	vector<core::ExpressionPtr> inits;
+	for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+		const clang::Expr* subExpr = initList->getInit(i);
+		inits.push_back (Visit(subExpr));
+	}
+
+	return retIr = core::encoder::toIR(mgr, inits);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

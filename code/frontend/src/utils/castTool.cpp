@@ -452,7 +452,11 @@ switch (castExpr->getCastKind()) {
 		// Floating point to boolean. (bool) f
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
+		{
+			assert(builder.getLangBasic().isPrimitive(expr->getType()));
+			assert(builder.getLangBasic().isPrimitive(targetTy));
 			return castScalar( targetTy, expr);
+		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NoOp:
