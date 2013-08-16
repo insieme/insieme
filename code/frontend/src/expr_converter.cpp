@@ -1065,7 +1065,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
-			exprTy = lhs.getType();
+			exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
 			break;
 		}
 		default:

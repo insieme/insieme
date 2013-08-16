@@ -453,13 +453,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
 		{
-			// THIS:
-			//if (expr->getType().isa<core::RefTypePtr>()){
-			//	return builder.RefReinterpret(
-			//}
-			//OR:
-			//expr = builder.tryDeref(expr);
-
 			assert(builder.getLangBasic().isPrimitive(expr->getType()));
 			assert(builder.getLangBasic().isPrimitive(targetTy));
 			return castScalar( targetTy, expr);

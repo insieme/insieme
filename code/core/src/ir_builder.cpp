@@ -653,12 +653,12 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 			});
 
 			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
-			return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target,
+			return callExpr(target.getType().as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefAssign(), target,
 					accessMember(value, pos->getName()));
 		}
 	}
 
-	return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target, value);
+	return callExpr(target.getType().as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
 ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
