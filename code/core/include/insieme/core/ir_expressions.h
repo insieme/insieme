@@ -928,6 +928,26 @@ namespace core {
 
 			return res;
 		}
+
+		/**
+		 * Tests whether the given expression is bound by this bind expression.
+		 */
+		bool isBoundExpression(const Ptr<const Expression>& expr) const {
+
+			// make sure it is not a parameter
+			if (expr->getNodeType() == NT_Variable) {
+				const auto& parameters = this->getNode().getParameters()->getElements();
+				if (contains(parameters, expr.template as<VariablePtr>())) return false;
+			}
+
+			// search for bound values
+			for(const auto& cur : getCall()) {
+				if (cur == expr) return true;
+			}
+
+			// it is not there
+			return false;
+		}
 	};
 
 	/**
