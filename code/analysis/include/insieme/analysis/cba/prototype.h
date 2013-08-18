@@ -84,6 +84,8 @@ namespace cba {
 		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
 		bool startsWith(const T& e) const { return s == 0 || context.front() == e; }
 		bool endsWith(const T& e) const { return s == 0 || context.back() == e; }
+		const T& front() const { assert(s > 0u); return context.front(); }
+		const T& back() const { assert(s > 0u); return context.back(); }
 		Sequence<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];

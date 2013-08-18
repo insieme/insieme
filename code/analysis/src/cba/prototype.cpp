@@ -496,58 +496,218 @@ namespace cba {
 						// this should not be the end
 						assert(!parent.isRoot());
 
-						// we have to get to the call site
-						unsigned userOffset = (parent.getParentNode().isa<LambdaPtr>() ? 5 : 2);		// lambda or bind
+						// distinguish two cases: parameter of a lambda or parameter of a bind
+						if (parent.getParentNode().isa<LambdaPtr>()) {
 
-						assert_lt(userOffset, parent.getDepth());
-						auto callable = parent.getParentAddress(userOffset - 1);
-						auto user = parent.getParentAddress(userOffset);
+							// deal with a lambda parameter
 
-//std::cout << "User: " << user << ": " << *user << "\n";
+							assert_lt(5, parent.getDepth());
+							auto lambda = parent.getParentAddress(4);
+							auto user = parent.getParentAddress(5);
 
-						// distinguish user type
-						auto call = user.isa<CallExprAddress>();
-						if (call && call->getFunctionExpr() == callable) {
+							auto call = user.isa<CallExprAddress>();
+							if (call && call->getFunctionExpr() == lambda) {
 
-							// TODO: consider case in which argument is bound value within a bind!
+								// TODO: consider case in which argument is bound value within a bind!
 
-							// this is a direct call to the function / bind => no context switch
-							auto A_arg = context.getSet(A, context.getLabel(call[variable.getIndex()]), ctxt);
+								// get label of argument
+								auto l_arg = context.getLabel(call[variable.getIndex()]);
 
-							// pass value of argument to parameter
-							constraints.add(subset(A_arg, a_var));
+								// check whether use is a call within a bind
+								if (!call.isRoot() && call.getParentNode().isa<BindExprPtr>()) {
 
-						} else {
+									// check whether parameter receives a bound expression
+									auto bind = call.getParentAddress().as<BindExprAddress>();
+									if (bind.isBoundExpression(call[variable.getIndex()])) {
 
-							// TODO: limit call-contexts to actual possible once
+										// check whether context needs to be switched
+										// (bind is not created for a direct use)
+										if (!bind.isRoot()
+												&& (!bind.getParentNode().isa<CallExprPtr>() ||
+														bind.getParentAddress().as<CallExprAddress>()->getFunctionExpr() != bind)) {
 
-							// this function might be called indirectly => link in all potential call sites
-							auto num_args = parent.as<ParametersPtr>().size();
-							for(const auto& site : context.getDynamicCalls()) {
-								// filter out incorrect number of parameters
-								if (site.size() != num_args) continue;
+												for (auto l : context.getDynamicCallLabels()) {
+													// get call-site of current context
+													auto l_cur_call = ctxt.callContext.back();
+													auto l_cur_call_fun = context.getLabel(context.getStmt(l_cur_call).as<CallExprAddress>()->getFunctionExpr());
+													Context curCallCtxt = ctxt;
+													curCallCtxt.callContext >>= l;
+													auto C_cur_call = context.getSet(C, l_cur_call_fun, curCallCtxt);
 
-								auto l_site = context.getLabel(site);
-								if (!ctxt.callContext.endsWith(l_site)) continue;
+													// load bound values of all potential contexts
+													for(const auto& cur : context.getCallables()) {
+														// only interested in this bind
+														if (cur.definition != bind) continue;
 
-								for(const auto& l : context.getDynamicCallLabels()) {
+														// get bound value in this context
+														auto A_arg = context.getSet(A, l_arg, cur.context);
 
-									// compute potential caller context
-									Context srcCtxt = ctxt;
-									srcCtxt.callContext >>= l;
+														constraints.add(subsetIf(cur, C_cur_call, A_arg, a_var));
+													}
+												}
 
-									// get value of argument
-									auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
-									auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
+												// done
+												return;
+										}
+									}
+								}
 
-									// pass value of argument to parameter for any potential callable
-									for(const auto& target : context.getCallables()) {
-										if (target.definition != callable) continue;
-										constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+								// ---- standard lambda call -----
+
+								// this is a direct call to the function => no context switch
+								auto A_arg = context.getSet(A, l_arg, ctxt);
+
+								// pass value of argument to parameter
+								constraints.add(subset(A_arg, a_var));
+
+							} else {
+
+								// TODO: limit call-contexts to actual possible once
+
+								// this function might be called indirectly => link in all potential call sites
+								auto num_args = parent.as<ParametersPtr>().size();
+								for(const auto& site : context.getDynamicCalls()) {
+									// filter out incorrect number of parameters
+									if (site.size() != num_args) continue;
+
+									auto l_site = context.getLabel(site);
+									if (!ctxt.callContext.endsWith(l_site)) continue;
+
+									for(const auto& l : context.getDynamicCallLabels()) {
+
+										// compute potential caller context
+										Context srcCtxt = ctxt;
+										srcCtxt.callContext >>= l;
+
+										// get value of argument
+										auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
+										auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
+
+										// pass value of argument to parameter for any potential callable
+										for(const auto& target : context.getCallables()) {
+											if (target.definition != lambda) continue;
+											constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+										}
 									}
 								}
 							}
+
+						} else {
+
+							// deal with a bind parameter
+							assert(parent.getParentNode().isa<BindExprPtr>());
+							auto bind = parent.getParentAddress().as<BindExprAddress>();
+
+							// link variable value with call-site value
+							if (bind.isRoot()) return;
+
+							auto user = bind.getParentAddress();
+							auto call = user.isa<CallExprAddress>();
+							if (call && call->getFunctionExpr() == bind) {
+
+								// direct call - no context switch
+								auto l_arg = context.getLabel(call[variable.getIndex()]);
+								auto A_arg = context.getSet(A, l_arg, ctxt);
+
+								// pass value of argument to parameter
+								constraints.add(subset(A_arg, a_var));
+
+							} else {
+
+								// indirect call - context switch
+
+								// this bind might be called indirectly => link in all potential call sites
+								auto num_args = parent.as<ParametersPtr>().size();
+								for(const auto& site : context.getDynamicCalls()) {
+									// filter out incorrect number of parameters
+									if (site.size() != num_args) continue;
+
+									auto l_site = context.getLabel(site);
+									if (!ctxt.callContext.endsWith(l_site)) continue;
+
+									for(const auto& l : context.getDynamicCallLabels()) {
+
+										// compute potential caller context
+										Context srcCtxt = ctxt;
+										srcCtxt.callContext >>= l;
+
+										// get value of argument
+										auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
+										auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
+
+										// pass value of argument to parameter for any potential callable
+										for(const auto& target : context.getCallables()) {
+											if (target.definition != bind) continue;
+											constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+										}
+									}
+								}
+							}
+
 						}
+
+//
+//						// we have to get to the call site
+//						unsigned userOffset = (parent.getParentNode().isa<LambdaPtr>() ? 5 : 2);		// lambda or bind
+//
+//						assert_lt(userOffset, parent.getDepth());
+//						auto callable = parent.getParentAddress(userOffset - 1);
+//						auto user = parent.getParentAddress(userOffset);
+//
+////std::cout << "User: " << user << ": " << *user << "\n";
+//
+//						// distinguish user type
+//						auto call = user.isa<CallExprAddress>();
+//						if (call && call->getFunctionExpr() == callable) {
+//
+//							// TODO: consider case in which argument is bound value within a bind!
+//
+//							// check whether use is a call within a bind
+//							if (!call.isRoot() && call.getParentNode().isa<BindExprPtr>()) {
+//
+//							} else {
+//
+//								// ---- standard lambda call -----
+//
+//								// this is a direct call to the function / bind => no context switch
+//								auto A_arg = context.getSet(A, context.getLabel(call[variable.getIndex()]), ctxt);
+//
+//								// pass value of argument to parameter
+//								constraints.add(subset(A_arg, a_var));
+//
+//							}
+//
+//						} else {
+//
+//							// TODO: limit call-contexts to actual possible once
+//
+//							// this function might be called indirectly => link in all potential call sites
+//							auto num_args = parent.as<ParametersPtr>().size();
+//							for(const auto& site : context.getDynamicCalls()) {
+//								// filter out incorrect number of parameters
+//								if (site.size() != num_args) continue;
+//
+//								auto l_site = context.getLabel(site);
+//								if (!ctxt.callContext.endsWith(l_site)) continue;
+//
+//								for(const auto& l : context.getDynamicCallLabels()) {
+//
+//									// compute potential caller context
+//									Context srcCtxt = ctxt;
+//									srcCtxt.callContext >>= l;
+//
+//									// get value of argument
+//									auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
+//									auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
+//
+//									// pass value of argument to parameter for any potential callable
+//									for(const auto& target : context.getCallables()) {
+//										if (target.definition != callable) continue;
+//										constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+//									}
+//								}
+//							}
+//						}
 
 						// this should be it
 						break;
