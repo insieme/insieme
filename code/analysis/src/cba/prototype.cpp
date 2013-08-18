@@ -270,16 +270,6 @@ namespace cba {
 			vector<Context::ThreadContext> threadContexts;
 			generateSequences(threads, threadContexts);
 
-
-//			std::cout << "Sites:                " << labels << "\n";
-			std::cout << "Number of call sites:      " << labels.size() << "\n";
-			std::cout << "Number of call contexts:   " << labels.size()*labels.size() << " = " << callContexts.size() << "\n";
-			std::cout << "Number of threads:         " << threads.size() << "\n";
-			std::cout << "Number of thread contexts: " << threads.size()*threads.size() << " = " << threadContexts.size() << "\n";
-			std::cout << "Total number of contexts:  " << callContexts.size() * threadContexts.size() << "\n";
-//			std::cout << "Contexts:\n" << join("\n", contexts) << "\n\n";
-
-
 			// collect all terms in the code
 			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
 
@@ -304,7 +294,6 @@ namespace cba {
 					res.push_back(Callable(lambda));
 
 				} else if (auto bind = cur.isa<BindExprAddress>()) {
-
 					// binds do
 					for(auto& callContext : callContexts) {
 						for(auto& threadContext : threadContexts) {
@@ -317,6 +306,17 @@ namespace cba {
 					assert(false && "How did you get here?");
 				}
 			});
+
+
+//			std::cout << "Sites:                " << labels << "\n";
+			std::cout << "Number of call sites:      " << labels.size() << "\n";
+			std::cout << "Number of call contexts:   " << labels.size()*labels.size() << " = " << callContexts.size() << "\n";
+			std::cout << "Number of threads:         " << threads.size() << "\n";
+			std::cout << "Number of thread contexts: " << threads.size()*threads.size() << " = " << threadContexts.size() << "\n";
+			std::cout << "Total number of contexts:  " << callContexts.size() * threadContexts.size() << "\n";
+			std::cout << "Total number of callables: " << res.size() << "\n";
+//			std::cout << "Contexts:\n" << join("\n", contexts) << "\n\n";
+
 			return res;
 		}
 
@@ -1897,7 +1897,6 @@ namespace cba {
 
 				auto l_call = this->context.getLabel(call);
 
-
 				// create inner call context
 				Context innerCallContext = ctxt;
 
@@ -1974,20 +1973,20 @@ namespace cba {
 					// create new call-context
 					innerCallContext.callContext <<= l_call;
 
-					// TODO: check whether this one is actually allowed
-					std::set<ExpressionAddress> targets;
-					for(const auto& cur : this->context.getCallables()) {
-						targets.insert(cur.definition);
-					}
-					for(const auto& cur : targets) {
-						addConstraints(Callable(cur), false);
-					}
+//					// TODO: check whether this one is actually allowed
+//					std::set<ExpressionAddress> targets;
+//					for(const auto& cur : this->context.getCallables()) {
+//						targets.insert(cur.definition);
+//					}
+//					for(const auto& cur : targets) {
+//						addConstraints(Callable(cur), false);
+//					}
 
 					// this one produces much more constraints, but it is correct if the abover version fails
-//					// indirect call => dynamic dispatching required
-//					for(const auto& cur : this->context.getCallables()) {
-//						addConstraints(cur,false);
-//					}
+					// indirect call => dynamic dispatching required
+					for(const auto& cur : this->context.getCallables()) {
+						addConstraints(cur,false);
+					}
 				}
 			}
 
