@@ -243,6 +243,11 @@ namespace cba {
 	extern const TypedSetType<Callable> C;
 	extern const TypedSetType<Callable> c;
 
+	// a light version only tracking functions, no context
+	typedef core::ExpressionAddress ContextFreeCallable;
+	extern const TypedSetType<ContextFreeCallable> F;
+	extern const TypedSetType<ContextFreeCallable> f;
+
 
 	// ----------------- references ---------------
 
