@@ -344,6 +344,9 @@ namespace cba {
 
 				// TODO: identify return statements more efficiently
 
+				auto l_body = context.getLabel(compound);
+				auto A_body = context.getSet(A, l_body, ctxt);
+
 				// since value of a compound is the value of return statements => visit those
 				visitDepthFirstPrunable(compound, [&](const StatementAddress& stmt) {
 					// prune inner functions
@@ -351,7 +354,17 @@ namespace cba {
 
 					// visit return statements
 					if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
-						visit(returnStmt, ctxt, constraints);
+
+						// connect value of return statement with body value
+						auto l_return = context.getLabel(returnStmt->getReturnExpr());
+						auto A_return = context.getSet(A, l_return, ctxt);
+
+						// add constraint - forward in case end of return expression is reachable
+						auto R_ret = context.getSet(Rout, l_return, ctxt);
+						constraints.add(subsetIf(Reachable(), R_ret, A_return, A_body));
+
+						// TODO: this is just a performance improvement - but for now disabled
+//						visit(returnStmt, ctxt, constraints);
 						return true;
 					}
 
@@ -362,16 +375,18 @@ namespace cba {
 
 			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const Context& ctxt, Constraints& constraints) {
 
+				// there is nothing to do since a declaration stmt has no value
+
 				// add constraint r(var) \subset C(init)
-				auto var = context.getVariable(decl->getVariable());
-				auto l_init = context.getLabel(decl->getInitialization());
-
-				// TODO: distinguish between control and data flow!
-				auto a_var = context.getSet(a, var, ctxt);
-				auto A_init = context.getSet(A, l_init, ctxt);
-				constraints.add(subset(A_init, a_var));		// TODO: add context (passed by argument)
-
-				// finally, add constraints for init expression
+//				auto var = context.getVariable(decl->getVariable());
+//				auto l_init = context.getLabel(decl->getInitialization());
+//
+//				// TODO: distinguish between control and data flow!
+//				auto a_var = context.getSet(a, var, ctxt);
+//				auto A_init = context.getSet(A, l_init, ctxt);
+//				constraints.add(subset(A_init, a_var));		// TODO: add context (passed by argument)
+//
+//				// finally, add constraints for init expression
 //				visit(decl->getInitialization(), ctxt, constraints);
 			}
 
@@ -393,27 +408,29 @@ namespace cba {
 
 			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 
-				// link the value of the result set to lambda body
+				// there is nothing to do since a return stmt has no value
 
-				// find lambda body
-				LambdaAddress lambda = getEnclosingLambda(stmt);
-				if (!lambda) {
-					std::cout << "Encountered free return!!\n";
-					return;		// return is not bound
-				}
-
-				// and add constraints for return value
-//				visit(stmt->getReturnExpr(), ctxt, constraints);
-
-				auto l_retVal = context.getLabel(stmt->getReturnExpr());
-				auto l_body = context.getLabel(lambda->getBody());
-
-				auto A_retVal = context.getSet(A, l_retVal, ctxt);
-				auto A_body = context.getSet(A, l_body, ctxt);
-
-				// add constraint - forward in case end of return expression is reachable
-				auto R_ret = context.getSet(Rout, l_retVal, ctxt);
-				constraints.add(subsetIf(Reachable(), R_ret, A_retVal, A_body));
+//				// link the value of the result set to lambda body
+//
+//				// find lambda body
+//				LambdaAddress lambda = getEnclosingLambda(stmt);
+//				if (!lambda) {
+//					std::cout << "Encountered free return!!\n";
+//					return;		// return is not bound
+//				}
+//
+//				// and add constraints for return value
+////				visit(stmt->getReturnExpr(), ctxt, constraints);
+//
+//				auto l_retVal = context.getLabel(stmt->getReturnExpr());
+//				auto l_body = context.getLabel(lambda->getBody());
+//
+//				auto A_retVal = context.getSet(A, l_retVal, ctxt);
+//				auto A_body = context.getSet(A, l_body, ctxt);
+//
+//				// add constraint - forward in case end of return expression is reachable
+//				auto R_ret = context.getSet(Rout, l_retVal, ctxt);
+//				constraints.add(subsetIf(Reachable(), R_ret, A_retVal, A_body));
 
 			}
 
@@ -457,7 +474,19 @@ namespace cba {
 					// if the variable is declared imperatively => just handle declaration statement
 					case NT_DeclarationStmt: {
 						// TODO: consider for-loops
-						addConstraints(parent, ctxt, constraints);
+
+						auto decl = parent.as<DeclarationStmtAddress>();
+
+						// add constraint r(var) \subset C(init)
+						auto l_init = context.getLabel(decl->getInitialization());
+
+						// TODO: distinguish between control and data flow!
+						auto A_init = context.getSet(A, l_init, ctxt);
+						constraints.add(subset(A_init, a_var));		// TODO: add context (passed by argument)
+
+						// finally, add constraints for init expression
+//						visit(decl->getInitialization(), ctxt, constraints);
+
 						break;
 					}
 
@@ -471,17 +500,22 @@ namespace cba {
 						unsigned userOffset = (parent.getParentNode().isa<LambdaPtr>() ? 5 : 2);		// lambda or bind
 
 						assert_lt(userOffset, parent.getDepth());
+						auto callable = parent.getParentAddress(userOffset - 1);
 						auto user = parent.getParentAddress(userOffset);
 
 //std::cout << "User: " << user << ": " << *user << "\n";
 
 						// distinguish user type
 						auto call = user.isa<CallExprAddress>();
-						if (call && call->getFunctionExpr() == parent.getParentAddress(userOffset - 1)) {
+						if (call && call->getFunctionExpr() == callable) {
+
+							// TODO: consider case in which argument is bound value within a bind!
 
 							// this is a direct call to the function / bind => no context switch
-							// process call using current (=inner) context
-							addConstraints(call, ctxt, constraints);
+							auto A_arg = context.getSet(A, context.getLabel(call[variable.getIndex()]), ctxt);
+
+							// pass value of argument to parameter
+							constraints.add(subset(A_arg, a_var));
 
 						} else {
 
@@ -493,14 +527,24 @@ namespace cba {
 								// filter out incorrect number of parameters
 								if (site.size() != num_args) continue;
 
+								auto l_site = context.getLabel(site);
+								if (!ctxt.callContext.endsWith(l_site)) continue;
+
 								for(const auto& l : context.getDynamicCallLabels()) {
 
 									// compute potential caller context
 									Context srcCtxt = ctxt;
 									srcCtxt.callContext >>= l;
 
-									// add constraints for this site
-									addConstraints(site, srcCtxt, constraints);
+									// get value of argument
+									auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
+									auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
+
+									// pass value of argument to parameter for any potential callable
+									for(const auto& target : context.getCallables()) {
+										if (target.definition != callable) continue;
+										constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+									}
 								}
 							}
 						}
@@ -535,113 +579,26 @@ namespace cba {
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 
-				// add constraints for function and argument expressions
-//				visit(call->getFunctionExpr(), ctxt, constraints);
-//				for(auto arg : call) visit(arg, ctxt, constraints);
+				// the value of the call expression is the result of the function
 
-				// get values of function
 				auto fun = call->getFunctionExpr();
-				auto C_fun = context.getSet(C, context.getLabel(fun), ctxt);
 
-				// value set of call
+				// get resulting set
 				auto l_call = context.getLabel(call);
 				auto A_call = context.getSet(A, l_call, ctxt);
 
-				// prepare inner call context
-				Context innerCallContext = ctxt;
+				// target may be a literal
+				if (fun->getNodeType() == NT_Literal) {
 
-				// a utility resolving constraints for the given expression
-				auto addConstraints = [&](const Callable& target, bool fixed) {
-
-					// only searching for actual code
-					const auto& expr = target.definition;
-					assert(expr.isa<LambdaExprPtr>() || expr.isa<BindExprPtr>());
-
-					// check whether the term is a function with the right number of arguments
-					auto funType = expr->getType().isa<FunctionTypePtr>();
-					if(funType->getParameterTypes().size() != call.size()) return;		// this is not a potential function
-
-					// handle lambdas
-					if (auto lambda = expr.isa<LambdaExprAddress>()) {
-
-						// add constraints for arguments
-						for(std::size_t i=0; i<call.size(); i++) {
-
-							// add constraint: t \in C(fun) => C(arg) \subset r(param)
-							auto l_arg = context.getLabel(call[i]);
-							auto param = context.getVariable(lambda->getParameterList()[i]);
-
-							auto A_arg = context.getSet(A, l_arg, ctxt);
-							auto a_param = context.getSet(a, param, innerCallContext);
-							constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(target, C_fun, A_arg, a_param));
-						}
-
-						// add constraint for result value
-						auto l_ret = context.getLabel(lambda->getBody());
-						auto A_ret = context.getSet(A, l_ret, innerCallContext);
-						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
-
-						// add function body constraints for targeted call context
-//						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
-
-					// handle bind
-					} else if (auto bind = expr.isa<BindExprAddress>()) {
-						auto body = bind->getCall();
-						auto parameters = bind.as<BindExprPtr>()->getParameters();
-
-						// add constraints for arguments of covered call expression
-						for (auto cur : body) {
-
-							int index = getParameterIndex(parameters, cur);
-
-							// handle bind parameter
-							if (index >= 0) {		// it is a bind parameter
-
-								// link argument to parameter
-								auto l_out = context.getLabel(call[index]);
-								auto l_in  = context.getLabel(cur);
-
-								auto A_out = context.getSet(A, l_out, ctxt);
-								auto A_in  = context.getSet(A, l_in, innerCallContext);
-								constraints.add((fixed) ? subset(A_out, A_in) : subsetIf(target, C_fun, A_out, A_in));
-
-							} else {
-
-								// handle captured parameter
-								// link value of creation context to body-argument
-								if (target.context != innerCallContext) {
-									auto l_arg = context.getLabel(cur);
-
-									auto A_src = context.getSet(A, l_arg, target.context);
-									auto A_trg = context.getSet(A, l_arg, innerCallContext);
-									constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
-								}
-							}
-						}
-
-						// add constraints for result value
-						auto l_body = context.getLabel(body);
-						auto A_ret = context.getSet(A, l_body, innerCallContext);
-						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
-
-						// add function body constraints for targeted bind expression
-//						if (fixed) this->visit(body, innerCallContext, constraints);
-					}
-				};
-
-				// constraints for literals ...
-				if (fun.isa<LiteralPtr>()) {
+					// constraints for literals ...
 					const auto& base = call->getNodeManager().getLangBasic();
 
 					// one special case: if it is a read operation
-					//  B) - read operation (ref.deref)
 					if (base.isRefDeref(fun)) {
 						// read value from memory location
 						auto l_trg = this->context.getLabel(call[0]);
 						auto R_trg = this->context.getSet(R, l_trg, ctxt);
 						for(auto loc : this->context.getLocations()) {
-
-							// TODO: add context
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
 							auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, A);
@@ -649,28 +606,196 @@ namespace cba {
 						}
 					}
 
+					// no other literals supported by default - overloads may add more
 					return;
 				}
 
-				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
-				if (!call.isRoot() && call.getParentNode()->getNodeType() != NT_BindExpr) {
-					if (auto lambda = fun.isa<LambdaExprAddress>()) {
-						addConstraints(Callable(lambda), true);
-						return;
-					}
 
-					if (auto bind = fun.isa<BindExprAddress>()) {
-						addConstraints(Callable(bind, ctxt), true);
-						return;
-					}
+				// target may be a lambda (direct call)
+				if (auto lambda = fun.isa<LambdaExprAddress>()) {
+
+					// take the value of the body (no context switch for direct call)
+					auto l_body = context.getLabel(lambda->getBody());
+					auto A_body = context.getSet(A, l_body, ctxt);
+
+					// take over value of function body
+					constraints.add(subset(A_body, A_call));
+					return;
 				}
 
-				// fix pass-by-value semantic - by considering all potential terms
-				innerCallContext.callContext <<= l_call;
-				for(auto cur : context.getCallables()) {
-					addConstraints(cur, false);
+				// target may be a bind (direct call)
+				if (auto bind = fun.isa<BindExprAddress>()) {
+
+					// take the value of the body (no context switch for direct call)
+					auto l_body = context.getLabel(bind->getCall());
+					auto A_body = context.getSet(A, l_body, ctxt);
+
+					// take over value of function body
+					constraints.add(subset(A_body, A_call));
+					return;
 				}
+
+				// target may be an indirect call => check out all callables
+				Context innerCtxt = ctxt;
+				innerCtxt.callContext <<= l_call;
+
+				auto l_fun = context.getLabel(fun);
+				auto C_fun = context.getSet(C, l_fun, ctxt);
+
+				auto num_args = call.size();
+				for(const auto& cur : context.getCallables()) {
+
+					// check proper number of arguments
+					if (num_args != cur.getNumParams()) continue;
+
+					// connect target body with result value
+					auto l_body = context.getLabel(cur.getBody());
+					auto A_body = context.getSet(A, l_body, innerCtxt);
+					constraints.add(subsetIf(cur, C_fun, A_body, A_call));
+				}
+
 			}
+
+//			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+//
+//				// add constraints for function and argument expressions
+////				visit(call->getFunctionExpr(), ctxt, constraints);
+////				for(auto arg : call) visit(arg, ctxt, constraints);
+//
+//				// get values of function
+//				auto fun = call->getFunctionExpr();
+//				auto C_fun = context.getSet(C, context.getLabel(fun), ctxt);
+//
+//				// value set of call
+//				auto l_call = context.getLabel(call);
+//				auto A_call = context.getSet(A, l_call, ctxt);
+//
+//				// prepare inner call context
+//				Context innerCallContext = ctxt;
+//
+//				// a utility resolving constraints for the given expression
+//				auto addConstraints = [&](const Callable& target, bool fixed) {
+//
+//					// only searching for actual code
+//					const auto& expr = target.definition;
+//					assert(expr.isa<LambdaExprPtr>() || expr.isa<BindExprPtr>());
+//std::cout << "Linking target " << expr << " = " << *expr << " ..\n";
+//					// check whether the term is a function with the right number of arguments
+//					auto funType = expr->getType().isa<FunctionTypePtr>();
+//					if(funType->getParameterTypes().size() != call.size()) return;		// this is not a potential function
+//
+//					// handle lambdas
+//					if (auto lambda = expr.isa<LambdaExprAddress>()) {
+//
+//						// add constraints for arguments
+//						for(std::size_t i=0; i<call.size(); i++) {
+//
+//							// add constraint: t \in C(fun) => C(arg) \subset r(param)
+//							auto l_arg = context.getLabel(call[i]);
+//							auto param = context.getVariable(lambda->getParameterList()[i]);
+//
+//							auto A_arg = context.getSet(A, l_arg, ctxt);
+//							auto a_param = context.getSet(a, param, innerCallContext);
+//							constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(target, C_fun, A_arg, a_param));
+//						}
+//
+//						// add constraint for result value
+//						auto l_ret = context.getLabel(lambda->getBody());
+//						auto A_ret = context.getSet(A, l_ret, innerCallContext);
+//						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
+//
+//						// add function body constraints for targeted call context
+////						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
+//
+//					// handle bind
+//					} else if (auto bind = expr.isa<BindExprAddress>()) {
+//						auto body = bind->getCall();
+//						auto parameters = bind.as<BindExprPtr>()->getParameters();
+//
+//						// add constraints for arguments of covered call expression
+//						for (auto cur : body) {
+//
+//							int index = getParameterIndex(parameters, cur);
+//std::cout << "Argument " << cur << "=" << *cur << " is parameter " << index << "\n";
+//							// handle bind parameter
+//							if (index >= 0) {		// it is a bind parameter
+//
+//								// link argument to parameter
+//								auto l_out = context.getLabel(call[index]);
+//								auto l_in  = context.getLabel(cur);
+//
+//								auto A_out = context.getSet(A, l_out, ctxt);
+//								auto A_in  = context.getSet(A, l_in, innerCallContext);
+//								constraints.add((fixed) ? subset(A_out, A_in) : subsetIf(target, C_fun, A_out, A_in));
+//
+//							} else {
+//
+//								// handle captured parameter
+//								// link value of creation context to body-argument
+//								if (target.context != innerCallContext) {
+//									auto l_arg = context.getLabel(cur);
+//
+//									auto A_src = context.getSet(A, l_arg, target.context);
+//									auto A_trg = context.getSet(A, l_arg, innerCallContext);
+//std::cout << "Linking A[" << cur << " = " << *cur << "] - " << target.context << " to " << innerCallContext << " ..\n";
+//									constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
+//								}
+//							}
+//						}
+//
+//						// add constraints for result value
+//						auto l_body = context.getLabel(body);
+//						auto A_ret = context.getSet(A, l_body, innerCallContext);
+//						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
+//
+//						// add function body constraints for targeted bind expression
+////						if (fixed) this->visit(body, innerCallContext, constraints);
+//					}
+//				};
+//
+//std::cout << "Encountered target function: " << fun << " = " << *fun << "\n";
+//
+//				// constraints for literals ...
+//				if (fun.isa<LiteralPtr>()) {
+//					const auto& base = call->getNodeManager().getLangBasic();
+//
+//					// one special case: if it is a read operation
+//					//  B) - read operation (ref.deref)
+//					if (base.isRefDeref(fun)) {
+//						// read value from memory location
+//						auto l_trg = this->context.getLabel(call[0]);
+//						auto R_trg = this->context.getSet(R, l_trg, ctxt);
+//						for(auto loc : this->context.getLocations()) {
+//
+//							// TODO: add context
+//
+//							// if loc is in R(target) then add Sin[A,trg] to A[call]
+//							auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, A);
+//							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+//						}
+//					}
+//
+//					return;
+//				}
+//
+//				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
+//				if (auto lambda = fun.isa<LambdaExprAddress>()) {
+//					addConstraints(Callable(lambda), true);
+//					return;
+//				}
+//
+//				if (auto bind = fun.isa<BindExprAddress>()) {
+//					addConstraints(Callable(bind, ctxt), true);
+//					return;
+//				}
+//
+//				// fix pass-by-value semantic - by considering all potential terms
+//				innerCallContext.callContext <<= l_call;
+//std::cout << "Callables: " << join("\n\t", context.getCallables(), [](std::ostream& out, const Callable& cur) { out << cur.context << " : " << cur.definition << " = " << *cur.definition; }) << "\n";
+//				for(auto cur : context.getCallables()) {
+//					addConstraints(cur, false);
+//				}
+//			}
 
 			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
@@ -1316,14 +1441,16 @@ namespace cba {
 			void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callable& callable,  Constraints& constraints) {
 
 				// check whether given call / target context is actually valid
-				if (callCtxt.callContext != trgCtxt.callContext) {		// it is not a direct call
-					auto l_call = this->getContext().getLabel(call);
+				auto fun = call->getFunctionExpr();
+				auto l_call = this->getContext().getLabel(call);
+				if (!(fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>())) {		// it is not a direct call
 					if (callCtxt.callContext << l_call != trgCtxt.callContext) return;
+				} else if (callCtxt.callContext != trgCtxt.callContext) {
+					return;
 				}
 
 				// check proper number of arguments
-				auto num_params = (callable.definition.getType().as<FunctionTypePtr>()->getParameterTypes().size());
-				if (num_params != call.size()) return;
+				if (callable.getNumParams() != call.size()) return;
 
 				// check whether call-site is within a bind
 				bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
@@ -1348,6 +1475,12 @@ namespace cba {
 					// add effect of argument
 					auto l_arg = this->getContext().getLabel(arg);
 					this->connectStateSetsIf(callable, C_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+				}
+
+				// special case: if this is a bind with no parameters
+				if (bind && bind->getParameters()->empty()) {
+					// connect in of call site with in of body
+					this->connectStateSetsIf(callable, C_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 				}
 
 			}
@@ -1726,7 +1859,37 @@ namespace cba {
 
 				// connect with last statement
 				auto last = stmt[stmt.size()-1];
-				this->connectSets(this->Aout, last, ctxt, this->Aout, stmt, ctxt, constraints);
+				auto type = last->getNodeType();
+				if (!(type == NT_ReturnStmt || type == NT_ContinueStmt || type==NT_BreakStmt)) {
+					this->connectSets(this->Aout, last, ctxt, this->Aout, stmt, ctxt, constraints);
+				}
+
+				// also connect stmt-out with all returns if it is a lambda body
+				if (stmt.isRoot() || !stmt.getParentNode().isa<LambdaPtr>()) return;
+
+				// TODO: locate return statements more efficiently
+
+				auto l_body = this->context.getLabel(stmt);
+				visitDepthFirstPrunable(stmt, [&](const StatementAddress& stmt) {
+					// prune inner functions
+					if (stmt.isa<LambdaExprAddress>()) return true;
+
+					// visit return statements
+					if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
+
+						// connect value of return statement with body value
+						auto l_ret = this->context.getLabel(returnStmt);
+						auto R_ret = this->context.getSet(Rout, l_ret, ctxt);
+						this->connectStateSetsIf(Reachable(), R_ret, this->Aout, l_ret, ctxt, this->Aout, l_body, ctxt, constraints);
+
+						// TODO: this is just a performance improvement - but for now disabled
+//						visit(returnStmt, ctxt, constraints);
+						return true;
+					}
+
+					return false;
+				});
+
 			}
 
 			void visitDeclarationStmt(const DeclarationStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {

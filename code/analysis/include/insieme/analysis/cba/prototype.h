@@ -222,6 +222,14 @@ namespace cba {
 		bool isBind() const { return definition->getNodeType() == core::NT_BindExpr; }
 		bool isLambda() const { return definition->getNodeType() == core::NT_LambdaExpr; };
 
+		std::size_t getNumParams() const { return definition->getType().as<core::FunctionTypePtr>()->getParameterTypes().size(); }
+		core::StatementAddress getBody() const {
+			assert(isBind() || isLambda());
+			return (isBind())
+					? definition.as<core::BindExprAddress>()->getCall().as<core::StatementAddress>()
+					: definition.as<core::LambdaExprAddress>()->getBody().as<core::StatementAddress>();
+		}
+
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {

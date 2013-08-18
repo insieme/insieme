@@ -1050,6 +1050,9 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+
+		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
+		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
 //		createDotDump(analysis);
 	}
 
@@ -1167,14 +1170,14 @@ namespace cba {
 		CompoundStmtAddress code(in);
 
 		CBA analysis(code);
-std::cout << *in << "\n";
-//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
-		createDotDump(analysis);
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{7}", toString(analysis.getValuesOf(code[14].as<ExpressionAddress>(), A)));
+//		createDotDump(analysis);
 
 	}
 
