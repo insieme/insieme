@@ -302,6 +302,38 @@ namespace runtime {
 			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		});
+		
+		// scratchpad 
+
+		table[basic.getRefLoc()] = OP_CONVERTER({
+			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
+			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
+
+			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_alloc"), size);
+		});
+		
+		table[basic.getRefDelete()] = OP_CONVERTER({
+			// do not free non-heap variables
+			if (ARG(0)->getNodeType() == core::NT_Variable) {
+				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
+				if (GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
+					// return NULL pointer => no op
+					return c_ast::ExpressionPtr();
+				}
+			}
+
+			// ensure correct type
+			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
+
+			// handle destructor call
+			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
+				if (dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
+					return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0]));
+				}
+			}
+
+			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_free"), CONVERT_ARG(0));
+		});
 
 		#include "insieme/backend/operator_converter_end.inc"
 

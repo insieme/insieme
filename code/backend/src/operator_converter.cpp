@@ -460,7 +460,7 @@ namespace backend {
 
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
-			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())) {
+			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefLoc())) {
 				// skip ref.var / ref.new => stupid
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
 				return CONVERT_EXPR(call->getArgument(0));
@@ -544,7 +544,7 @@ namespace backend {
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});
 
-		res[basic.getRefNew()] = OP_CONVERTER({
+		auto refNewLoc = OP_CONVERTER({
 
 			// get result type information
 			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
@@ -613,6 +613,9 @@ namespace backend {
 			return c_ast::call(info.newOperatorName, CONVERT_ARG(0));
 
 		});
+
+		res[basic.getRefNew()] = refNewLoc;
+		res[basic.getRefLoc()] = refNewLoc;
 
 		res[basic.getRefDelete()] = OP_CONVERTER({
 			// TODO: fix when frontend is producing correct code

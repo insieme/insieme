@@ -577,6 +577,7 @@ protected:
 		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 		const Task* taskP = dynamic_cast<const Task*>(clause);
 		StatementList replacements;
+		StatementList localDeallocations;
 		VarList allp;
 		VarList firstPrivates;
 		VarList lastPrivates;
@@ -643,7 +644,11 @@ protected:
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
-			if(contains(alll, varExp)) decl = build.declarationStmt(pVar, build.undefinedLoc(expType));
+			if(contains(alll, varExp)) 
+			{
+				decl = build.declarationStmt(pVar, build.undefinedLoc(expType));
+				localDeallocations.push_back(build.refDelete(pVar));
+			}
 			if(contains(firstPrivates, varExp)) {
 				// make sure to actually get *copies* for firstprivate initialization, not copies of references
 				if(core::analysis::isRefType(expType)) {
@@ -728,6 +733,8 @@ protected:
 		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
+		//append localDeallocations
+		copy(localDeallocations.cbegin(), localDeallocations.cend(), back_inserter(replacements));
 		// append postfix
 		copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
 		// handle threadprivates before it is too late!
