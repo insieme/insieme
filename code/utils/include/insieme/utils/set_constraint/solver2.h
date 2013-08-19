@@ -266,6 +266,8 @@ namespace set_constraint_2 {
 		template<typename A, typename B>
 		struct AndFilter : public Filter<> {
 			A a; B b;
+			AndFilter(const A& a, const B& b)
+				: a(a), b(b) {}
 			bool operator()(const Assignment& ass) const {
 				return a(ass) && b(ass);
 			}
@@ -511,44 +513,84 @@ namespace set_constraint_2 {
 
 	}	// end of details namespace
 
+	// ----------------------------- Filter Factory Functions ------------------------------
 
+	template<typename E>
+	detail::ElementOfFilter<E> f_in(const E& e, const TypedSetID<E>& set) {
+		return detail::ElementOfFilter<E>(e,set);
+	}
+
+	template<typename F1, typename F2>
+	typename std::enable_if<std::is_base_of<detail::Filter<false>, F1>::value && std::is_base_of<detail::Filter<false>, F2>::value, detail::AndFilter<F1, F2>>::type
+	operator&&(const F1& f1, const F2& f2) {
+		return detail::AndFilter<F1,F2>(f1,f2);
+	}
+
+
+	// ----------------------------- Executor Factory Functions ------------------------------
+
+	template<typename E>
+	detail::ElementOf<E> e_in(const E& e, const TypedSetID<E>& set) {
+		return detail::ElementOf<E>(e,set);
+	}
+
+	template<typename E>
+	detail::Subset<E> e_sub(const TypedSetID<E>& a, const TypedSetID<E>& b) {
+		return detail::Subset<E>(a,b);
+	}
 
 	// ----------------------------- Constraint Factory Functions ------------------------------
 
 
+	template<typename F, typename E>
+	typename std::enable_if<std::is_base_of<detail::Filter<F::is_true>, F>::value && std::is_base_of<detail::Executor, E>::value, ConstraintPtr>::type
+	combine(const F& filter, const E& executor) {
+		return std::make_shared<detail::ComposedConstraint<F,E>>(filter, executor);
+	}
+
 	template<typename E>
 	ConstraintPtr elem(const E& e, const TypedSetID<E>& a) {
-		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::ElementOf<E>>>(detail::TrueFilter(), detail::ElementOf<E>(e,a));
+		return combine(detail::TrueFilter(), e_in(e,a));
+	}
+
+	template<typename A, typename B>
+	ConstraintPtr elemIf(const A& e, const TypedSetID<A>& a, const B& f, const TypedSetID<B>& b) {
+		return combine(f_in(e,a), e_in(f,b));
 	}
 
 	template<typename A>
 	ConstraintPtr subset(const TypedSetID<A>& a, const TypedSetID<A>& b) {
-		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::Subset<A>>>(detail::TrueFilter(), detail::Subset<A>(a,b));
+		return combine(detail::TrueFilter(), e_sub(a,b));
 	}
 
 	template<typename E, typename A>
 	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-		return std::make_shared<detail::ComposedConstraint<detail::ElementOfFilter<E>, detail::Subset<A>>>(detail::ElementOfFilter<E>(e,a), detail::Subset<A>(b,c));
+		return combine(f_in(e,a), e_sub(b,c));
+	}
+
+	template<typename A, typename B, typename C>
+	ConstraintPtr subsetIf(const A& a, const TypedSetID<A>& as, const B& b, const TypedSetID<B>& bs, const TypedSetID<C>& in, const TypedSetID<C>& out) {
+		return combine(f_in(a,as) && f_in(b,bs), e_sub(in, out));
 	}
 
 	template<typename A, typename B>
 	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c) {
-		return std::make_shared<detail::ComposedConstraint<detail::BiggerThanFilter<A>, detail::Subset<A>>>(detail::BiggerThanFilter<A>(a,s), detail::Subset<B>(b,c));
+		return combine(detail::BiggerThanFilter<A>(a,s), e_sub(b,c));
 	}
 
 	template<typename E, typename A>
 	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-		return std::make_shared<detail::ComposedConstraint<detail::BiggerThanReducedFilter<E>, detail::Subset<A>>>(detail::BiggerThanReducedFilter<E>(a,e,s), detail::Subset<A>(b,c));
+		return combine(detail::BiggerThanReducedFilter<E>(a,e,s), e_sub(b,c));
 	}
 
 	template<typename A, typename B, typename F>
 	ConstraintPtr subsetUnary(const TypedSetID<A>& in, const TypedSetID<B>& out, const F& fun) {
-		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::SubsetUnary<A,B>>>(detail::TrueFilter(), detail::SubsetUnary<A,B>(in, out, fun));
+		return combine(detail::TrueFilter(), detail::SubsetUnary<A,B>(in, out, fun));
 	}
 
 	template<typename A, typename B, typename R, typename F>
 	ConstraintPtr subsetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const F& fun) {
-		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::SubsetBinary<A,B,R>>>(detail::TrueFilter(), detail::SubsetBinary<A,B,R>(a, b, r, fun));
+		return combine(detail::TrueFilter(), detail::SubsetBinary<A,B,R>(a, b, r, fun));
 	}
 
 	// ----------------------------- Constraint Container ------------------------------
