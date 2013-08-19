@@ -978,8 +978,9 @@ namespace cba {
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A)));
 
-//		EXPECT_EQ(4549u, analysis.getNumSets());
-//		EXPECT_EQ(5166u, analysis.getNumConstraints());
+		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
+		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
+//		createDotDump(analysis);
 	}
 
 
@@ -1179,6 +1180,37 @@ namespace cba {
 		EXPECT_EQ("{7}", toString(analysis.getValuesOf(code[14].as<ExpressionAddress>(), A)));
 //		createDotDump(analysis);
 
+	}
+
+	TEST(CBA, ContextConstraints) {
+
+		// create a code fragment with dynamic contexts
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+			"{"
+			"	auto f = (()->unit a)->unit { a(); };"
+			"	auto g = (()->unit a)->unit { a(); };"
+			"	f(()->unit {});"
+			"	f(()->unit {});"
+			"	g(()->unit {});"
+			"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("[1,2,3,4,5,0]", toString(analysis.getDynamicCallLabels()));
+
+		EXPECT_EQ("{3,4}", toString(analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getBody()[0].as<ExpressionAddress>(), pred)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getBody()[0].as<ExpressionAddress>(), pred)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), pred)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), pred)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), pred)));
+//		createDotDump(analysis);
 	}
 
 

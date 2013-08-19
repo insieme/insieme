@@ -310,6 +310,9 @@ namespace cba {
 	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
 
 
+	// -------------------- Context Constraints ------------
+
+	extern const TypedSetType<Label> pred;		// the set of pre-decessors in call contexts
 
 	// -------------------- Constraint Resolver ---------------------------
 
@@ -385,6 +388,8 @@ namespace cba {
 		typedef tuple<const SetType*, int, Context> SetKey;
 		typedef tuple<const StateSetType*, Label, Context, Location, const SetType*> StateSetKey;
 
+		core::StatementAddress root;
+
 		Solver solver;
 
 		// a list of all dynamic calls within the targeted fragment - filled by the constructor
@@ -393,6 +398,7 @@ namespace cba {
 
 		std::vector<Location> locations;
 		std::vector<Callable> callables;
+		std::vector<ContextFreeCallable> freeFunctions;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
@@ -476,11 +482,11 @@ std::cout << "Looking for "<< id << "\n";
 		void addConstraintsFor(const SetID& set, Constraints& res);
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) {
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context = Context()) {
 			return utils::set_constraint_2::TypedSetID<T>(getSet(static_cast<const SetType&>(type), id, context));
 		}
 
-		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context) {
+		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context = Context()) {
 			SetKey key(&type, id, context);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
@@ -493,11 +499,11 @@ std::cout << "Looking for "<< id << "\n";
 		}
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) const {
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context = Context()) const {
 			return utils::set_constraint_2::TypedSetID<T>(getSet(static_cast<const SetType&>(type), id, context));
 		}
 
-		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context) const {
+		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context = Context()) const {
 			static const utils::set_constraint_2::SetID empty(0);
 
 			SetKey key(&type, id, context);
@@ -604,6 +610,10 @@ std::cout << "Looking for "<< id << "\n";
 
 		const std::vector<Callable>& getCallables() const {
 			return callables;
+		}
+
+		const std::vector<ContextFreeCallable>& getFreeFunctions() const {
+			return freeFunctions;
 		}
 
 		const std::vector<core::CallExprAddress>& getDynamicCalls() const {

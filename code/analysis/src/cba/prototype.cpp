@@ -81,6 +81,8 @@ namespace cba {
 	const StateSetType Sout("Sout");		// out-state of statements
 	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
 
+	const TypedSetType<Label> pred("pred");
+
 	using namespace core;
 
 	VariableAddress getDefinitionPoint(const VariableAddress& varAddress) {
@@ -509,6 +511,9 @@ namespace cba {
 							auto lambda = parent.getParentAddress(4);
 							auto user = parent.getParentAddress(5);
 
+							// obtain the set containing all the potential predecessor of the current call in the context
+							auto predecessor_ctxt = context.getSet(pred, ctxt.callContext.back());
+
 							auto call = user.isa<CallExprAddress>();
 							if (call && call->getFunctionExpr() == lambda) {
 
@@ -531,6 +536,10 @@ namespace cba {
 														bind.getParentAddress().as<CallExprAddress>()->getFunctionExpr() != bind)) {
 
 												for (auto l : context.getDynamicCallLabels()) {
+
+													// nobody calls context 0
+													if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
 													// get call-site of current context
 													auto l_cur_call = ctxt.callContext.back();
 													auto l_cur_call_fun = context.getLabel(context.getStmt(l_cur_call).as<CallExprAddress>()->getFunctionExpr());
@@ -547,6 +556,7 @@ namespace cba {
 														auto A_arg = context.getSet(A, l_arg, cur.context);
 
 														constraints.add(subsetIf(cur, C_cur_call, A_arg, a_var));
+//														constraints.add(subsetIf(curCallCtxt.callContext.back(), predecessor_ctxt, cur, C_cur_call, A_arg, a_var));
 													}
 												}
 
@@ -579,6 +589,9 @@ namespace cba {
 
 									for(const auto& l : context.getDynamicCallLabels()) {
 
+										// nobody calls context 0
+										if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
 										// compute potential caller context
 										Context srcCtxt = ctxt;
 										srcCtxt.callContext >>= l;
@@ -590,7 +603,7 @@ namespace cba {
 										// pass value of argument to parameter for any potential callable
 										for(const auto& target : context.getCallables()) {
 											if (target.definition != lambda) continue;
-											constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+											constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
 										}
 									}
 								}
@@ -630,6 +643,9 @@ namespace cba {
 									if (!ctxt.callContext.endsWith(l_site)) continue;
 
 									for(const auto& l : context.getDynamicCallLabels()) {
+
+										// nobody calls context 0
+										if (l != 0 && ctxt.callContext.startsWith(0)) continue;
 
 										// compute potential caller context
 										Context srcCtxt = ctxt;
@@ -1659,7 +1675,7 @@ namespace cba {
 				: super(context, utils::set::toSet<SetTypeSet>(&Ain), Ain, Aout, collector) {}
 
 
-			void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callable& callable,  Constraints& constraints) {
+			void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
 
 				// check whether given call / target context is actually valid
 				auto fun = call->getFunctionExpr();
@@ -1671,7 +1687,7 @@ namespace cba {
 				}
 
 				// check proper number of arguments
-				if (callable.getNumParams() != call.size()) return;
+				if (callable->getType().as<FunctionTypePtr>()->getParameterTypes().size() != call.size()) return;
 
 				// check whether call-site is within a bind
 				bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
@@ -1682,10 +1698,10 @@ namespace cba {
 
 				// get labels for call-site
 				auto l_fun = this->getContext().getLabel(call->getFunctionExpr());
-				auto C_call = this->getContext().getSet(C, l_fun, callCtxt);
+				auto F_call = this->getContext().getSet(F, l_fun, callCtxt);
 
 				// add effect of function-expression-evaluation (except within bind calls)
-				if (!isCallWithinBind) this->connectStateSetsIf(callable, C_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+				if (!isCallWithinBind) this->connectStateSetsIf(callable, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 
 				// just connect the effect of the arguments of the call-site with the in of the body call statement
 				for(auto arg : call) {
@@ -1695,13 +1711,13 @@ namespace cba {
 
 					// add effect of argument
 					auto l_arg = this->getContext().getLabel(arg);
-					this->connectStateSetsIf(callable, C_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+					this->connectStateSetsIf(callable, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 				}
 
 				// special case: if this is a bind with no parameters
 				if (bind && bind->getParameters()->empty()) {
 					// connect in of call site with in of body
-					this->connectStateSetsIf(callable, C_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+					this->connectStateSetsIf(callable, F_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 				}
 
 			}
@@ -1737,18 +1753,20 @@ namespace cba {
 						if (ctxt.callContext.startsWith(0)) {
 							Context srcCtxt = ctxt;
 							srcCtxt.callContext >>= 0;
-							Callable bindCallable(bind, srcCtxt);
-							connectCallToBody(dynCall, srcCtxt, call, ctxt, bindCallable, constraints);
+							connectCallToBody(dynCall, srcCtxt, call, ctxt, bind, constraints);
 						} else {
 
 							// all other contexts may be reached from any other
 							for(auto& l : this->context.getDynamicCallLabels()) {
+
+								// nobody calls context 0
+								if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
 								Context srcCtxt = ctxt;
 								srcCtxt.callContext >>= l;
 
 								// connect call site with body
-								Callable bindCallable(bind, srcCtxt);
-								connectCallToBody(dynCall, srcCtxt, call, ctxt, bindCallable, constraints);
+								connectCallToBody(dynCall, srcCtxt, call, ctxt, bind, constraints);
 							}
 						}
 					}
@@ -1775,7 +1793,7 @@ namespace cba {
 					if (call && call->getFunctionExpr() == lambdaExpr) {
 
 						// connect call site with body
-						connectCallToBody(call, ctxt, stmt, ctxt, Callable(lambdaExpr), constraints);
+						connectCallToBody(call, ctxt, stmt, ctxt, lambdaExpr, constraints);
 
 					} else {
 
@@ -1784,21 +1802,17 @@ namespace cba {
 						for(auto& call : this->context.getDynamicCalls()) {
 							if(numParams != call.size()) continue;
 
-							// special case: ctxt starts with 0 - root context, is not called by anybody
-							if (ctxt.callContext.startsWith(0)) {
+							// all other contexts may be reached from any other
+							for(auto& l : this->context.getDynamicCallLabels()) {
+
+								// nobody calls context 0
+								if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
 								Context srcCtxt = ctxt;
-								srcCtxt.callContext >>= 0;
-								connectCallToBody(call, srcCtxt, stmt, ctxt, Callable(lambdaExpr), constraints);
-							} else {
+								srcCtxt.callContext >>= l;
 
-								// all other contexts may be reached from any other
-								for(auto& l : this->context.getDynamicCallLabels()) {
-									Context srcCtxt = ctxt;
-									srcCtxt.callContext >>= l;
-
-									// connect call site with body
-									connectCallToBody(call, srcCtxt, stmt, ctxt, Callable(lambdaExpr), constraints);
-								}
+								// connect call site with body
+								connectCallToBody(call, srcCtxt, stmt, ctxt, lambdaExpr, constraints);
 							}
 						}
 
@@ -2033,20 +2047,10 @@ namespace cba {
 					// create new call-context
 					innerCallContext.callContext <<= l_call;
 
-//					// TODO: check whether this one is actually allowed
-					std::set<ExpressionAddress> targets;
-					for(const auto& cur : this->context.getCallables()) {
-						targets.insert(cur.definition);
-					}
-					for(const auto& cur : targets) {
+					// consider every potential target function
+					for(const auto& cur : this->context.getFreeFunctions()) {
 						addConstraints(cur, false);
 					}
-//
-//					// this one produces much more constraints, but it is correct if the abover version fails
-//					// indirect call => dynamic dispatching required
-//					for(const auto& cur : this->context.getCallables()) {
-//						addConstraints(cur,false);
-//					}
 				}
 			}
 
@@ -2190,9 +2194,16 @@ namespace cba {
 						Constraints& constraints
 					) const {
 
-				auto A = context.getSet(a, al, ac);
-				auto B = context.getSet(b, bl, bc);
-				constraints.add(subsetIf(value, set, A, B));
+				if (ac != bc) {
+					auto pre = context.getSet(pred, bc.callContext.back());
+					auto A = context.getSet(a, al, ac);
+					auto B = context.getSet(b, bl, bc);
+					constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
+				} else {
+					auto A = context.getSet(a, al, ac);
+					auto B = context.getSet(b, bl, bc);
+					constraints.add(subsetIf(value, set, A, B));
+				}
 			}
 
 		};
@@ -2272,7 +2283,12 @@ namespace cba {
 				auto s_out = this->context.getSet(b, bl, bc, location, dataSet);
 
 				// state information entering the set is also leaving it
-				constraints.add(subsetIf(value, set, s_in, s_out));
+				if (ac == bc) {
+					constraints.add(subsetIf(value, set, s_in, s_out));
+				} else {
+					auto pre = this->context.getSet(pred, bc.callContext.back());
+					constraints.add(subsetIf(ac.callContext.back(), pre, value, set, s_in, s_out));
+				}
 			}
 		};
 
@@ -2359,6 +2375,193 @@ namespace cba {
 				// state information entering the set is also leaving it
 				constraints.add(subsetIf(value, set, s_in, s_out));
 			}
+		};
+
+
+		// -------------------------------------- Context Predecessor Constraints -----------------------------
+
+		class ContextPredecessor : public ConstraintResolver {
+
+
+		public:
+
+			ContextPredecessor(CBA& cba) : ConstraintResolver(cba, utils::set::toSet<SetTypeSet>(&pred)) {}
+
+
+			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+				// restrict context
+				assert_true(ctxt == Context()) << "This resolver only operates on the default context - given: " << ctxt;
+
+				// check that call is a dynamic call
+				auto funType = call->getFunctionExpr()->getNodeType();
+				assert(funType != NT_LambdaExpr && funType != NT_BindExpr);
+				if (funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
+
+				// fill predecessor set
+				auto pred_res = context.getSet(pred, context.getLabel(call));
+
+				// get surrounding free function
+				auto fun = getSurroundingFreeFunction(call);
+
+				// check whether there is a surrounding free function
+				if (!fun) {
+					// => this function can only reached statically
+					constraints.add(elem(0, pred_res));
+					return;
+				}
+
+				// ----- check whether function forwarding can be traced statically ----
+
+				if (auto staticUses = getStaticUses(fun)) {
+					// if uses can be determined statically, we can just consider them
+					for(Label l_call : *staticUses) {
+						constraints.add(elem(l_call, pred_res));
+					}
+					return;
+				}
+
+				// ----- fallback, the function might reach any point in the code -----
+
+				// uses have to be determined dynamically
+				vector<Context::CallContext> callContexts;
+				generateSequences(context.getDynamicCallLabels(), callContexts);
+
+				// compute all contexts this function may be called at
+				auto num_params = fun->getType().as<FunctionTypePtr>()->getParameterTypes().size();
+				for(const auto& dynCall : context.getDynamicCalls()) {
+					// check number of parameters
+					if (dynCall.size() != num_params) continue;
+
+					auto l_call = context.getLabel(dynCall);
+					auto l_fun = context.getLabel(dynCall->getFunctionExpr());
+
+					for(const auto& callCtxt : callContexts) {
+						auto F_dynCall = context.getSet(F, l_fun, callCtxt);
+						constraints.add(elemIf(fun.as<ExpressionAddress>(), F_dynCall, l_call, pred_res));
+					}
+				}
+			}
+
+		private:
+
+			bool collectUsesOfVariable(const VariableAddress& var, vector<Label>& res) const {
+				assert(getDefinitionPoint(var) == var);
+
+				NodeAddress root;
+				if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
+					root = decl.getParentAddress();
+				} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
+					if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
+						root = lambda->getBody();
+					} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
+						root = bind->getCall();
+					} else {
+						assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
+					}
+ 				} else {
+ 					assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
+ 				}
+
+				// there should be a root now
+				assert(root);
+
+				bool allFine = true;
+				visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
+					// stop if already failed
+					if (!allFine) return true;
+
+					// only process local scope
+					if (cur->getNodeType() == NT_LambdaExpr) return true;
+
+					// for the rest, only interested in variables
+					if (*cur != *var) return false;
+
+					// if variable is used as a function => found a call
+					auto call = cur.getParentAddress().isa<CallExprAddress>();
+
+					// if it is not a call, we don't care
+					if (!call) return false;
+
+					// check out whether it is a call to the function or passed as an argument
+					if (call->getFunctionExpr() == cur) {
+						// it is the target function => collect this one
+						res.push_back(this->context.getLabel(call));
+					} else {
+						// it is an argument
+						if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+							assert(call[cur.getIndex()-2] == cur);
+							// ok - it is a static call => we may follow the parameter
+							allFine = allFine && collectUsesOfVariable(fun->getParameterList()[cur.getIndex()-2], res);
+						}
+					}
+
+					return false;
+
+				});
+
+				return allFine;
+
+			}
+
+			boost::optional<vector<Label>> getUsesOfVariable(const VariableAddress& def) const {
+				static const boost::optional<vector<Label>> fail;
+				vector<Label> res;
+				bool success = collectUsesOfVariable(def, res);
+				return success ? res : fail;
+			}
+
+			boost::optional<vector<Label>> getStaticUses(const LambdaExprAddress& lambda) const {
+				static const boost::optional<vector<Label>> unknown;
+
+				// there is nothing we can do for the root
+				if (lambda.isRoot()) return unknown;
+
+				// option A: the lambda is created as an argument of a call expression
+				auto parent = lambda.getParentAddress();
+				if (auto call = parent.isa<CallExprAddress>()) {
+					assert(call->getFunctionExpr() != lambda);
+
+					// check whether target function is fixed
+					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+						// collect all uses of corresponding function parameter
+						assert(call[lambda.getIndex()-2] == lambda);
+						return getUsesOfVariable(lambda->getParameterList()[lambda.getIndex()-2]);
+					} else {
+						return unknown;
+					}
+				}
+
+				// option B: the lambda is created as the value of a definition
+				if (auto decl = parent.isa<DeclarationStmtAddress>()) {
+					// simply collect all uses of the variable
+					return getUsesOfVariable(decl->getVariable());
+				}
+
+				return unknown;
+			}
+
+			LambdaExprAddress getSurroundingFreeFunction(const NodeAddress& cur) const {
+				static const LambdaExprAddress none;
+
+				// move up until reaching requested function
+				if (cur.isRoot()) return none; // there is none
+
+				// stop decent at lambda expressions
+				auto lambda = cur.isa<LambdaExprAddress>();
+				if (!lambda) return getSurroundingFreeFunction(cur.getParentAddress());
+
+				// check whether lamba is a free function
+				if (lambda.isRoot()) return none;
+
+				// if lambda is not directly called it is a free function
+				auto user = lambda.getParentAddress();
+				auto call = user.isa<CallExprAddress>();
+				if (!call || call->getFunctionExpr() != lambda) return lambda;
+
+				// otherwise continue search
+				return getSurroundingFreeFunction(cur.getParentAddress());
+			}
+
 		};
 
 	}
@@ -2470,7 +2673,8 @@ namespace cba {
 	}
 
 	CBA::CBA(const core::StatementAddress& root)
-		: solver([&](const set<SetID>& sets) {
+		: root(root),
+		  solver([&](const set<SetID>& sets) {
 				Constraints res;
 				for (auto set : sets) {
 					this->addConstraintsFor(set, res);
@@ -2501,7 +2705,15 @@ namespace cba {
 		// obtain list of callable functions
 		callables = getAllCallableTerms(*this, root);
 
-		// and list of all memory locations
+		// and a list of all free functions
+		freeFunctions.clear();
+		for(const auto& cur : callables) {
+			if (!contains(freeFunctions, cur.definition)) {
+				freeFunctions.push_back(cur.definition);
+			}
+		}
+
+		// and a list of all memory locations
 		locations = getAllLocations(*this, root);
 
 
@@ -2512,6 +2724,9 @@ namespace cba {
 		// reachable constraint collector
 		registerResolver<ReachableInConstraintCollector>(root);
 		registerResolver<ReachableOutConstraintCollector>();
+
+		// context constraint collector
+		registerResolver<ContextPredecessor>();
 
 		// install resolver
 		registerResolver<ControlFlowConstraintCollector>();
@@ -2543,6 +2758,7 @@ namespace cba {
 				const SetKey& key = pos->second;
 
 				int id = std::get<1>(key);
+				if (id == 0) return;		// nothing to do here
 				const SetType& type = *std::get<0>(key);
 				const Context& context = std::get<2>(key);
 
@@ -2597,6 +2813,7 @@ namespace cba {
 		const Solution& ass = solver.getAssignment();
 
 		auto getAddress = [&](const Label l)->StatementAddress {
+			if (l == 0) return root;
 			{
 				auto pos = this->reverseLabels.find(l);
 				if (pos != this->reverseLabels.end()) {
