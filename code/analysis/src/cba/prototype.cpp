@@ -2510,22 +2510,22 @@ namespace cba {
 				return success ? res : fail;
 			}
 
-			boost::optional<vector<Label>> getStaticUses(const LambdaExprAddress& lambda) const {
+			boost::optional<vector<Label>> getStaticUses(const ExpressionAddress& function) const {
 				static const boost::optional<vector<Label>> unknown;
 
 				// there is nothing we can do for the root
-				if (lambda.isRoot()) return unknown;
+				if (function.isRoot()) return unknown;
 
 				// option A: the lambda is created as an argument of a call expression
-				auto parent = lambda.getParentAddress();
+				auto parent = function.getParentAddress();
 				if (auto call = parent.isa<CallExprAddress>()) {
-					assert(call->getFunctionExpr() != lambda);
+					assert(call->getFunctionExpr() != function);
 
 					// check whether target function is fixed
 					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
 						// collect all uses of corresponding function parameter
-						assert(call[lambda.getIndex()-2] == lambda);
-						return getUsesOfVariable(lambda->getParameterList()[lambda.getIndex()-2]);
+						assert(call[function.getIndex()-2] == function);
+						return getUsesOfVariable(fun->getParameterList()[function.getIndex()-2]);
 					} else {
 						return unknown;
 					}
@@ -2540,26 +2540,30 @@ namespace cba {
 				return unknown;
 			}
 
-			LambdaExprAddress getSurroundingFreeFunction(const NodeAddress& cur) const {
-				static const LambdaExprAddress none;
+			ExpressionAddress getSurroundingFreeFunction(const NodeAddress& cur) const {
+				static const ExpressionAddress none;
 
 				// move up until reaching requested function
 				if (cur.isRoot()) return none; // there is none
 
-				// stop decent at lambda expressions
-				auto lambda = cur.isa<LambdaExprAddress>();
-				if (!lambda) return getSurroundingFreeFunction(cur.getParentAddress());
+				// stop decent at lambda or binds
+				auto type = cur->getNodeType();
+				if (type != NT_LambdaExpr && type != NT_BindExpr) {
+					return getSurroundingFreeFunction(cur.getParentAddress());
+				}
 
-				// check whether lamba is a free function
-				if (lambda.isRoot()) return none;
+				auto fun = cur.as<ExpressionAddress>();
+
+				// check whether function is a free function
+				if (fun.isRoot()) return none;
 
 				// if lambda is not directly called it is a free function
-				auto user = lambda.getParentAddress();
+				auto user = fun.getParentAddress();
 				auto call = user.isa<CallExprAddress>();
-				if (!call || call->getFunctionExpr() != lambda) return lambda;
+				if (!call || call->getFunctionExpr() != fun) return fun;
 
 				// otherwise continue search
-				return getSurroundingFreeFunction(cur.getParentAddress());
+				return getSurroundingFreeFunction(user);
 			}
 
 		};

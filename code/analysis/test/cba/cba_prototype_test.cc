@@ -1021,6 +1021,8 @@ namespace cba {
 				"	((0 < x) && (x < 2)) && ( y < x );"
 				"	( y < x ) || ((0 < x) && (x < 2));"
 
+				"	false || (true && true);"
+
 				// TODO: check side-effects
 				"}"
 		).as<CompoundStmtPtr>();
@@ -1050,6 +1052,8 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 
 		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
