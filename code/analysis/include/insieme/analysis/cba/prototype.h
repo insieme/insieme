@@ -65,8 +65,13 @@ namespace cba {
 	using std::map;
 
 	// forward declarations
-	typedef int Label;		// the type used to label code locations
-	typedef int Variable;	// the type used to identify variables
+	typedef int Label;										// the type used to label code locations
+	typedef int Variable;									// the type used to identify variables
+
+	class CBA;												// the main analysis entity
+
+	class ConstraintResolver;								// a base class for resolving constraints, managed by CBA instances
+	typedef ConstraintResolver* ConstraintResolverPtr;		// a pointer type for resolver instances - plain, since managed by CBA instances
 
 
 	// ---------- context information ----------------
@@ -161,25 +166,70 @@ namespace cba {
 
 	// ----------- set types ------------------
 
+	/**
+	 * An abstract base class for set types to be handled by the analysis.
+	 * Instances are expected to be immutable global constants.
+	 */
 	class SetType : public boost::noncopyable {
-		string name;
+
+	public:
+
+		// the type of the internally stored resolver factory
+		typedef std::function<ConstraintResolverPtr(CBA&)> resolver_factory;
+
+	private:
+
+		/**
+		 * The name of this set for printing and debugging issues.
+		 */
+		const string name;
+
+		/**
+		 * The factory utilized for obtaining resolver instances for the represented set type.
+		 */
+		const resolver_factory factory;
+
 	protected:
-		SetType(const string& name) : name(name) {}
+
+		SetType(const string& name, const resolver_factory& factory) : name(name), factory(factory) {}
+
 	public:
-		const string& getName() const { return name; }
-		bool operator==(const SetType& other) const { return this == &other; }
+
+		const string& getName() const {
+			return name;
+		}
+
+		bool operator==(const SetType& other) const {
+			// the identity of a set type is fixed by its address
+			return this == &other;
+		}
+
+		bool operator!=(const SetType& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Requests this set type to install a constraint resolver instance
+		 * within the given CBA instance.
+		 */
+		ConstraintResolverPtr getConstraintResolver(CBA& analysis) const {
+			return factory(analysis);
+		}
+
 	};
 
-	// TODO: restrict creation of this kind of objectes somehow ...
+	/**
+	 * A special type of set type fixing the element type of the represented type.
+	 */
 	template<typename E>
-	class TypedSetType : public SetType {
-	public:
-		TypedSetType(const string& name) : SetType(name) {}
+	struct TypedSetType : public SetType {
+		TypedSetType(const string& name, const resolver_factory& factory) : SetType(name, factory) {}
 	};
 
-	// all set types are global constants => pointers can be used plain
+	// all set types are global constants => plain pointers can be used safely
 	typedef const SetType* SetTypePtr;
 
+	// a type for set of types
 	typedef std::set<SetTypePtr> SetTypeSet;
 
 
@@ -302,11 +352,44 @@ namespace cba {
 
 
 
-	// ----------------- state set analysis ---------------
+	// ----------------- imperative analysis ---------------
 
-	// the set-type tokens to be utilized for the state sets
-	struct StateSetType : public TypedSetType<void> {
-		StateSetType(const string& name) : TypedSetType<void>(name) {}
+	// forward declaration
+	class StateSetType;
+
+	// since every state set type is a global constant we can use plain pointer
+	typedef const StateSetType* StateSetTypePtr;
+
+	/**
+	 * The state set type is a special type of set type referencing
+	 * sets attached to pairs of statements and locations (standard
+	 * sets are only attached to statements).
+	 */
+	class StateSetType {
+
+		/**
+		 * The name of this set for printing and debugging issues.
+		 */
+		const string name;
+
+	public:
+
+		StateSetType(const string& name) : name(name) {}
+
+	public:
+
+		const string& getName() const {
+			return name;
+		}
+
+		bool operator==(const StateSetType& other) const {
+			// the identity of a set type is fixed by its address
+			return this == &other;
+		}
+
+		bool operator!=(const StateSetType& other) const {
+			return !(*this == other);
+		}
 	};
 
 	extern const StateSetType Sin;		// in-state of statements
@@ -318,52 +401,70 @@ namespace cba {
 
 	extern const TypedSetType<Label> pred;		// the set of pre-decessors in call contexts
 
+
 	// -------------------- Constraint Resolver ---------------------------
 
+	// the type used for lists of constraints
 	typedef utils::set_constraint_2::Constraints Constraints;
 
-	class CBA;
-	class ConstraintResolver;
-	class StateConstraintResolver;
-
+	/**
+	 * A base class for classes capable of lazily resolving set constraints while processing constraint
+	 * based analysis.
+	 *
+	 * Essentially, a constraint resolver is an IR visitor generating for a given node (addressed by its
+	 * address) and a call / thread context constraints. In general, every resolver is only supposed to
+	 * generate in-constraints for the requested target set specified by the address and context parameter.
+	 */
 	class ConstraintResolver : public core::IRVisitor<void, core::Address, const Context&, Constraints&> {
 
+		// a short-cut for the base class
 		typedef core::IRVisitor<void, core::Address, const Context&, Constraints&> super;
 
-		// a cache recording resolved items
+		/**
+		 * The base-implementation is preventing the same arguments to be processed multiple times.
+		 */
 		typedef std::tuple<core::NodeAddress, Context> Item;
 		std::set<Item> processed;
 
-		SetTypeSet coveredSets;
-
 	protected:
 
+		/**
+		 * The analysis context this resolver is working for. Every instance may only be utilized by
+		 * a single CBA instance.
+		 */
 		CBA& context;
 
 	public:
 
-		ConstraintResolver(CBA& context, const SetTypeSet& coveredSets)
-			: processed(), coveredSets(coveredSets), context(context) {}
+		ConstraintResolver(CBA& context)
+			: processed(), context(context) {}
 
+		/**
+		 * The main entry function for resolving constraints for the given node and context. Constraints
+		 * will be added to the given list.
+		 *
+		 * @param node the node for which constraints shell be generated - details regarding the set covered
+		 * 			by this resolver are implementation specific.
+		 * @param ctxt the call context to be considered for the constraint generation
+		 */
 		void addConstraints(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 			// just forward call to visit-process
 			visit(node, ctxt, constraints);
 		}
 
+		/**
+		 * Overrides the standard visit function of the super type and realizes the guard avoiding the
+		 * repeated evaluation of identical argument types.
+		 */
 		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints);
-
-		const SetTypeSet& getCoveredSets() const {
-			return coveredSets;
-		}
 
 	protected:
 
+		/**
+		 * Provides access to the context
+		 */
 		CBA& getContext() {
 			return context;
-		}
-
-		void addCoveredSet(const SetTypePtr& type) {
-			coveredSets.insert(type);
 		}
 
 	};
@@ -386,13 +487,18 @@ namespace cba {
 		typedef utils::set_constraint_2::SetID SetID;
 		typedef utils::set_constraint_2::LazySolver Solver;
 
-		typedef tuple<const SetType*, int, Context> SetKey;
-		typedef tuple<const StateSetType*, const SetType*, Location> LocationKey;
-		typedef tuple<LocationKey, Label, Context> StateSetKey;
+		typedef tuple<SetTypePtr, int, Context> SetKey;
+		typedef tuple<StateSetTypePtr, SetTypePtr, Location> LocationSetKey;
+		typedef tuple<LocationSetKey, Label, Context> StateSetKey;
 
 		core::StatementAddress root;
 
 		Solver solver;
+
+		// a data structure managing constraint resolvers
+		std::set<ConstraintResolverPtr> resolver;
+		std::map<SetTypePtr, ConstraintResolverPtr> setResolver;
+		std::map<LocationSetKey, ConstraintResolverPtr> locationResolver;
 
 		// a list of all dynamic calls within the targeted fragment - filled by the constructor
 		std::vector<core::CallExprAddress> dynamicCalls;
@@ -415,10 +521,6 @@ namespace cba {
 		std::unordered_map<Label, core::StatementAddress> reverseLabels;
 		std::unordered_map<Variable, core::VariableAddress> reverseVars;
 
-		// a data structure managing constraint resolvers
-		std::set<ConstraintResolverPtr> resolver;
-		std::map<const SetType*, ConstraintResolverPtr> setResolver;
-		std::map<LocationKey, ConstraintResolverPtr> locationResolver;
 
 		// reverse maps for sets (for resolution)
 		std::unordered_map<SetID, SetKey> set2key;
@@ -430,6 +532,10 @@ namespace cba {
 
 		~CBA() {
 			for(auto cur : resolver) delete cur;
+		}
+
+		const core::StatementAddress& getRoot() const {
+			return root;
 		}
 
 		template<typename T>
@@ -452,27 +558,52 @@ namespace cba {
 			return getValuesOf(var, d, ctxt);
 		}
 
+		ConstraintResolverPtr getResolver(const SetType& set) {
+			auto& res = setResolver[&set];
+			return (res) ? res : set.getConstraintResolver(*this);
+		}
+
+		template<typename R>
+		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, ConstraintResolver*>::type
+		getResolver(const SetType& set) {
+			auto& res = setResolver[&set];
+			if (!res) {
+				res = new R(*this);
+				resolver.insert(res);
+			}
+			return res;
+		}
+
+//		ConstraintResolverPtr getResolver(const LocationSetKey& key) {
+//			assert(locationResolver.find(key) != locationResolver.end());
+//			return locationResolver[key];
+//		}
+//
+//		template<template<typename T> class R, typename T>
+//		typename std::enable_if<std::is_base_of<ConstraintResolver, R<T>>::value, ConstraintResolver*>::type
+//		getResolver(const LocationSetKey& key) {
+//			auto& res = locationResolver[key];
+//			if (!res) {
+//				res = new R<T>(*this);
+//				resolver.insert(res);
+//			}
+//			return res;
+//		}
+
 		template<typename R, typename ... Args>
 		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
 		registerResolver(const Args& ... args) {
-			R* r = new R(*this, args ...);
-			resolver.insert(r);
-			for(auto type : r->getCoveredSets()) {
-				assert(!setResolver[type] && "Must not bind two resolvers for the same set type!");
-				setResolver[type] = r;
-			}
+			// TODO: remove
 		}
 
 		template<typename R, typename T, typename ... Args>
 		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
-		registerLocationResolver(const TypedSetType<T>& dataType, const Location& location, const Args& ... args) {
+		registerLocationResolver(const StateSetType& stateSetType, const TypedSetType<T>& dataType, const Location& location, const Args& ... args) {
 			// one resolver for in and out set
 			R* r = new R(*this, dataType, location, args ...);
 			resolver.insert(r);
 
-			for(auto type : r->getCoveredSets()) {
-				locationResolver[std::make_tuple((const StateSetType*)(type),  (const SetType*)(&dataType), location)] = r;
-			}
+			locationResolver[std::make_tuple(&stateSetType,  (const SetType*)(&dataType), location)] = r;
 		}
 
 		const std::set<ConstraintResolverPtr>& getAllResolver() const {
@@ -519,7 +650,7 @@ namespace cba {
 
 		template<typename T>
 		utils::set_constraint_2::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location& loc, const TypedSetType<T>& type_loc) {
-			StateSetKey key(LocationKey(&type, &type_loc, loc), label, context);
+			StateSetKey key(LocationSetKey(&type, &type_loc, loc), label, context);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;

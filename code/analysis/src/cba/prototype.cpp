@@ -55,34 +55,6 @@ namespace cba {
 	using std::set;
 	using std::vector;
 
-	const TypedSetType<Callable> C("C");
-	const TypedSetType<Callable> c("c");
-
-	const TypedSetType<ContextFreeCallable> F("F");
-	const TypedSetType<ContextFreeCallable> f("f");
-
-
-	const TypedSetType<Location> R("R");
-	const TypedSetType<Location> r("r");
-
-	const TypedSetType<core::ExpressionPtr> D("D");
-	const TypedSetType<core::ExpressionPtr> d("d");
-
-	const TypedSetType<Formula> A("A");
-	const TypedSetType<Formula> a("a");
-
-	const TypedSetType<bool> B("B");
-	const TypedSetType<bool> b("b");
-
-	const TypedSetType<Reachable> Rin("Rin");		// the associated term is reached
-	const TypedSetType<Reachable> Rout("Rout");		// the associated term is left
-
-	const StateSetType Sin("Sin");			// in-state of statements
-	const StateSetType Sout("Sout");		// out-state of statements
-	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
-
-	const TypedSetType<Label> pred("pred");
-
 	using namespace core;
 
 	VariableAddress getDefinitionPoint(const VariableAddress& varAddress) {
@@ -385,7 +357,7 @@ namespace cba {
 		public:
 
 			BasicDataFlowConstraintCollector(CBA& context, const TypedSetType<T>& A, const TypedSetType<T>& a)
-				: super(context, utils::set::toSet<SetTypeSet>(&A,&a)), A(A), a(a) { };
+				: super(context), A(A), a(a) { };
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
 
@@ -1080,8 +1052,10 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBA& context, const core::lang::BasicGenerator& base)
-				: super(context, cba::A, cba::a), base(base) { };
+			ArithmeticConstraintCollector(CBA& context)
+				: super(context, cba::A, cba::a),
+				  base(context.getRoot()->getNodeManager().getLangBasic())
+			{ };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -1242,8 +1216,10 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBA& context, const core::lang::BasicGenerator& base)
-				: super(context, cba::B, cba::b), base(base) { };
+			BooleanConstraintCollector(CBA& context)
+				: super(context, cba::B, cba::b),
+				  base(context.getRoot()->getNodeManager().getLangBasic())
+			{ };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -1486,8 +1462,8 @@ namespace cba {
 
 		public:
 
-			BasicInOutConstraintCollector(CBA& context, const SetTypeSet& coveredSets, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-				: super(context, coveredSets), Ain(Ain), Aout(Aout), collector(collector) {}
+			BasicInOutConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+				: super(context), Ain(Ain), Aout(Aout), collector(collector) {}
 
 		protected:
 
@@ -1528,7 +1504,7 @@ namespace cba {
 		public:
 
 			ImperativeInConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-				: super(context, utils::set::toSet<SetTypeSet>(&Ain), Ain, Aout, collector) {}
+				: super(context, Ain, Aout, collector) {}
 
 
 			void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
@@ -1816,7 +1792,7 @@ namespace cba {
 		public:
 
 			ImperativeOutConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-				: super(context, utils::set::toSet<SetTypeSet>(&Aout), Ain, Aout, collector) {}
+				: super(context, Ain, Aout, collector) {}
 
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -2014,8 +1990,8 @@ namespace cba {
 
 		public:
 
-			ReachableInConstraintCollector(CBA& context, const StatementAddress& root)
-				: super(context, Rin, Rout, *this), root(root), initSet(false) { }
+			ReachableInConstraintCollector(CBA& context)
+				: super(context, Rin, Rout, *this), root(context.getRoot()), initSet(false) { }
 
 			virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
@@ -2163,7 +2139,6 @@ namespace cba {
 
 			ImperativeOutStateConstraintCollector(CBA& context, const TypedSetType<T>& dataSet, const Location& location)
 				: super(context, Sin, Sout, *this), dataSet(dataSet), location(location) {
-				this->addCoveredSet(&Stmp);
 			}
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -2241,7 +2216,7 @@ namespace cba {
 
 		public:
 
-			ContextPredecessor(CBA& cba) : ConstraintResolver(cba, utils::set::toSet<SetTypeSet>(&pred)) {}
+			ContextPredecessor(CBA& cba) : ConstraintResolver(cba) {}
 
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -2302,6 +2277,33 @@ namespace cba {
 
 	}
 
+	const TypedSetType<Callable> C("C", [](CBA& cba) { return cba.getResolver<ControlFlowConstraintCollector>(C); });
+	const TypedSetType<Callable> c("c", [](CBA& cba) { return cba.getResolver<ControlFlowConstraintCollector>(C); });
+
+	const TypedSetType<ContextFreeCallable> F("F", [](CBA& cba) { return cba.getResolver<FunctionConstraintCollector>(F); });
+	const TypedSetType<ContextFreeCallable> f("f", [](CBA& cba) { return cba.getResolver<FunctionConstraintCollector>(F); });
+
+
+	const TypedSetType<Location> R("R", [](CBA& cba) { return cba.getResolver<ReferenceConstraintCollector>(R); });
+	const TypedSetType<Location> r("r", [](CBA& cba) { return cba.getResolver<ReferenceConstraintCollector>(R); });
+
+	const TypedSetType<core::ExpressionPtr> D("D", [](CBA& cba) { return cba.getResolver<ConstantConstraintCollector>(D); });
+	const TypedSetType<core::ExpressionPtr> d("d", [](CBA& cba) { return cba.getResolver<ConstantConstraintCollector>(D); });
+
+	const TypedSetType<Formula> A("A", [](CBA& cba) { return cba.getResolver<ArithmeticConstraintCollector>(A); });
+	const TypedSetType<Formula> a("a", [](CBA& cba) { return cba.getResolver<ArithmeticConstraintCollector>(A); });
+
+	const TypedSetType<bool> B("B", [](CBA& cba) { return cba.getResolver<BooleanConstraintCollector>(B); });
+	const TypedSetType<bool> b("b", [](CBA& cba) { return cba.getResolver<BooleanConstraintCollector>(B); });
+
+	const TypedSetType<Reachable> Rin("Rin", [](CBA& cba) { return cba.getResolver<ReachableInConstraintCollector>(Rin); });			// the associated term is reached
+	const TypedSetType<Reachable> Rout("Rout", [](CBA& cba) { return cba.getResolver<ReachableOutConstraintCollector>(Rout); });		// the associated term is left
+
+	const TypedSetType<Label> pred("pred", [](CBA& cba) { return cba.getResolver<ContextPredecessor>(pred); });
+
+	const StateSetType Sin("Sin");		// in-state of statements
+	const StateSetType Sout("Sout");	// out-state of statements
+	const StateSetType Stmp("Stmp");	// temporary states of statements (assignment only)
 
 	using namespace utils::set_constraint_2;
 
@@ -2310,8 +2312,8 @@ namespace cba {
 		template<typename T>
 		void registerImperativeCollector(CBA& context, const TypedSetType<T>& type) {
 			for(auto loc : context.getLocations()) {
-				context.registerLocationResolver<ImperativeInStateConstraintCollector<T>>(type, loc);
-				context.registerLocationResolver<ImperativeOutStateConstraintCollector<T>>(type, loc);
+				context.registerLocationResolver<ImperativeInStateConstraintCollector<T>>(Sin, type, loc);
+				context.registerLocationResolver<ImperativeOutStateConstraintCollector<T>>(Sout, type, loc);
 			}
 		}
 
@@ -2332,8 +2334,8 @@ namespace cba {
 				}
 				return res;
 		  }),
-		  setCounter(0), idCounter(0),
 		  resolver(), setResolver(), locationResolver(),
+		  setCounter(0), idCounter(0),
 		  set2key(), set2statekey() {
 
 		// fill dynamicCalls
@@ -2362,27 +2364,27 @@ namespace cba {
 		locations = getAllLocations(*this, root);
 
 
-		// TODO: move this to another place ...
-		NodeManager& mgr = root->getNodeManager();
-		const auto& base = mgr.getLangBasic();
-
-		// reachable constraint collector
-		registerResolver<ReachableInConstraintCollector>(root);
-		registerResolver<ReachableOutConstraintCollector>();
-
-		// context constraint collector
-		registerResolver<ContextPredecessor>();
-
-		// install resolver
-		registerResolver<ControlFlowConstraintCollector>();
-		registerResolver<FunctionConstraintCollector>();
-		registerResolver<ConstantConstraintCollector>();
-		registerResolver<ReferenceConstraintCollector>();
-		registerResolver<ArithmeticConstraintCollector>(base);
-		registerResolver<BooleanConstraintCollector>(base);
-
-		// and the imperative constraints
-		auto locations = getAllLocations(*this, root);
+//		// TODO: move this to another place ...
+//		NodeManager& mgr = root->getNodeManager();
+//		const auto& base = mgr.getLangBasic();
+//
+//		// reachable constraint collector
+//		registerResolver<ReachableInConstraintCollector>(root);
+//		registerResolver<ReachableOutConstraintCollector>();
+//
+//		// context constraint collector
+//		registerResolver<ContextPredecessor>();
+//
+//		// install resolver
+//		registerResolver<ControlFlowConstraintCollector>();
+//		registerResolver<FunctionConstraintCollector>();
+//		registerResolver<ConstantConstraintCollector>();
+//		registerResolver<ReferenceConstraintCollector>();
+//		registerResolver<ArithmeticConstraintCollector>(base);
+//		registerResolver<BooleanConstraintCollector>(base);
+//
+//		// and the imperative constraints
+//		auto locations = getAllLocations(*this, root);
 		registerImperativeCollector(*this, C);
 		registerImperativeCollector(*this, D);
 		registerImperativeCollector(*this, R);
@@ -2407,7 +2409,7 @@ namespace cba {
 				const SetType& type = *std::get<0>(key);
 				const Context& context = std::get<2>(key);
 
-				auto resolver = setResolver[&type];
+				auto resolver = type.getConstraintResolver(*this);
 
 				// get targeted node
 				core::StatementAddress trg = getStmt(id);
@@ -2438,11 +2440,11 @@ namespace cba {
 
 				// run resolution
 				if (trg) {
-					// TODO: make this key a sub-type of the set-index key to avoid copying state all the time
 					auto type = std::get<0>(key);
-					assert_true(locationResolver.find(type) != locationResolver.end())
-						<< "Unknown resolver for: " << std::get<0>(std::get<0>(key))->getName()
-						<< "," << std::get<1>(std::get<0>(key))->getName() << "\n";
+//					assert_true(locationResolver.find(type) != locationResolver.end())
+//						<< "Unknown resolver for: " << std::get<0>(std::get<0>(key))->getName()
+//						<< "," << std::get<1>(std::get<0>(key))->getName() << "\n";
+					if (!locationResolver[type]) return;
 					locationResolver[type]->addConstraints(trg, std::get<2>(key), res);
 				}
 
