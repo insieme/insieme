@@ -214,6 +214,17 @@ namespace cba {
 			return -1;
 		}
 
+		StatementAddress getBody(const ContextFreeCallable& fun) {
+			if (auto lambda = fun.isa<LambdaExprAddress>()) {
+				return lambda->getBody();
+			}
+			if (auto bind = fun.isa<BindExprAddress>()) {
+				return bind->getCall();
+			}
+			assert_fail() << "Unsupported function type encountered: " << fun->getNodeType();
+			return StatementAddress();
+		}
+
 		using namespace utils::set_constraint_2;
 
 		template<typename T, int pos, int size>
@@ -666,69 +677,6 @@ namespace cba {
 
 						}
 
-//
-//						// we have to get to the call site
-//						unsigned userOffset = (parent.getParentNode().isa<LambdaPtr>() ? 5 : 2);		// lambda or bind
-//
-//						assert_lt(userOffset, parent.getDepth());
-//						auto callable = parent.getParentAddress(userOffset - 1);
-//						auto user = parent.getParentAddress(userOffset);
-//
-////std::cout << "User: " << user << ": " << *user << "\n";
-//
-//						// distinguish user type
-//						auto call = user.isa<CallExprAddress>();
-//						if (call && call->getFunctionExpr() == callable) {
-//
-//							// TODO: consider case in which argument is bound value within a bind!
-//
-//							// check whether use is a call within a bind
-//							if (!call.isRoot() && call.getParentNode().isa<BindExprPtr>()) {
-//
-//							} else {
-//
-//								// ---- standard lambda call -----
-//
-//								// this is a direct call to the function / bind => no context switch
-//								auto A_arg = context.getSet(A, context.getLabel(call[variable.getIndex()]), ctxt);
-//
-//								// pass value of argument to parameter
-//								constraints.add(subset(A_arg, a_var));
-//
-//							}
-//
-//						} else {
-//
-//							// TODO: limit call-contexts to actual possible once
-//
-//							// this function might be called indirectly => link in all potential call sites
-//							auto num_args = parent.as<ParametersPtr>().size();
-//							for(const auto& site : context.getDynamicCalls()) {
-//								// filter out incorrect number of parameters
-//								if (site.size() != num_args) continue;
-//
-//								auto l_site = context.getLabel(site);
-//								if (!ctxt.callContext.endsWith(l_site)) continue;
-//
-//								for(const auto& l : context.getDynamicCallLabels()) {
-//
-//									// compute potential caller context
-//									Context srcCtxt = ctxt;
-//									srcCtxt.callContext >>= l;
-//
-//									// get value of argument
-//									auto A_arg = context.getSet(A, context.getLabel(site[variable.getIndex()]), srcCtxt);
-//									auto C_fun = context.getSet(C, context.getLabel(site->getFunctionExpr()), srcCtxt);
-//
-//									// pass value of argument to parameter for any potential callable
-//									for(const auto& target : context.getCallables()) {
-//										if (target.definition != callable) continue;
-//										constraints.add(subsetIf(target, C_fun, A_arg, a_var));
-//									}
-//								}
-//							}
-//						}
-
 						// this should be it
 						break;
 					}
@@ -819,19 +767,26 @@ namespace cba {
 				Context innerCtxt = ctxt;
 				innerCtxt.callContext <<= l_call;
 
+				// NOTE: - Optimization - we only need to know the body, not the context it was created in (for binds)
+				//  => we can iterate through the list of free functions, not the callables
+
 				auto l_fun = context.getLabel(fun);
-				auto C_fun = context.getSet(C, l_fun, ctxt);
+				auto F_fun = context.getSet(F, l_fun, ctxt);
+
 
 				auto num_args = call.size();
-				for(const auto& cur : context.getCallables()) {
+				for(const auto& cur : context.getFreeFunctions()) {
 
 					// check proper number of arguments
-					if (num_args != cur.getNumParams()) continue;
+					TypeAddress type = cur->getType();
+					FunctionTypePtr funType = type.as<FunctionTypePtr>();
+					auto num_params = funType->getParameterTypes().size();
+					if (num_args != num_params) continue;
 
 					// connect target body with result value
-					auto l_body = context.getLabel(cur.getBody());
+					auto l_body = context.getLabel(getBody(cur));
 					auto A_body = context.getSet(A, l_body, innerCtxt);
-					constraints.add(subsetIf(cur, C_fun, A_body, A_call));
+					constraints.add(subsetIf(cur, F_fun, A_body, A_call));
 				}
 
 			}
@@ -2798,8 +2753,10 @@ namespace cba {
 				// run resolution
 				if (trg) {
 					// TODO: make this key a sub-type of the set-index key to avoid copying state all the time
-					auto type = std::make_tuple(std::get<0>(key),std::get<4>(key), std::get<3>(key));
-					assert_true(locationResolver.find(type) != locationResolver.end()) << "Unknown resolver for: " << std::get<0>(key)->getName() << "," << std::get<4>(key)->getName() << "," << std::get<3>(key) << "\n";
+					auto type = std::get<0>(key);
+					assert_true(locationResolver.find(type) != locationResolver.end())
+						<< "Unknown resolver for: " << std::get<0>(std::get<0>(key))->getName()
+						<< "," << std::get<1>(std::get<0>(key))->getName() << "\n";
 					locationResolver[type]->addConstraints(trg, std::get<2>(key), res);
 				}
 
@@ -2850,11 +2807,12 @@ namespace cba {
 		}
 
 		for(auto cur : stateSets) {
-			string setName = std::get<0>(cur.first)->getName();
-			string dataName = std::get<4>(cur.first)->getName();
+			auto& loc = std::get<0>(cur.first);
+			string setName = std::get<0>(loc)->getName();
+			string dataName = std::get<1>(loc)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
 			out << "\n\t" << cur.second
-					<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<4>(cur.first)
+					<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<2>(loc)
 						<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
 					<< " = " << solutions[cur.second] << "\""
 					<< ((solver.isResolved(cur.second)) ? " shape=box" : "") << "];";

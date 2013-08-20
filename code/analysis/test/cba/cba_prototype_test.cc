@@ -1055,6 +1055,7 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[17].as<ExpressionAddress>(), B)));
 
 		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
 		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";

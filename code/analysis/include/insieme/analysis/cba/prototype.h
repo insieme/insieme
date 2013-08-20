@@ -73,7 +73,7 @@ namespace cba {
 	template<typename T, unsigned s>
 	struct Sequence : public utils::Printable {
 		enum { size = s };
-		array<T, s> context;		// TODO: make length a generic parameter
+		array<T, s> context;
 		Sequence() : context() {}
 		Sequence(const Sequence<T,s>& other) : context(other.context) {}
 		Sequence(const array<T,s>& context) : context(context) {}
@@ -386,7 +386,8 @@ namespace cba {
 		typedef utils::set_constraint_2::LazySolver Solver;
 
 		typedef tuple<const SetType*, int, Context> SetKey;
-		typedef tuple<const StateSetType*, Label, Context, Location, const SetType*> StateSetKey;
+		typedef tuple<const StateSetType*, const SetType*, Location> LocationKey;
+		typedef tuple<LocationKey, Label, Context> StateSetKey;
 
 		core::StatementAddress root;
 
@@ -416,7 +417,7 @@ namespace cba {
 		// a data structure managing constraint resolvers
 		std::set<ConstraintResolverPtr> resolver;
 		std::map<const SetType*, ConstraintResolverPtr> setResolver;
-		std::map<std::tuple<const StateSetType*, const SetType*, Location>, ConstraintResolverPtr> locationResolver;
+		std::map<LocationKey, ConstraintResolverPtr> locationResolver;
 
 		// reverse maps for sets (for resolution)
 		std::unordered_map<SetID, SetKey> set2key;
@@ -519,7 +520,7 @@ std::cout << "Looking for "<< id << "\n";
 
 		template<typename T>
 		utils::set_constraint_2::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location& loc, const TypedSetType<T>& type_loc) {
-			StateSetKey key(&type, label, context, loc, &type_loc);
+			StateSetKey key(LocationKey(&type, &type_loc, loc), label, context);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
