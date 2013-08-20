@@ -225,31 +225,63 @@ namespace cba {
 			return StatementAddress();
 		}
 
+
+		ExpressionAddress getSurroundingFreeFunction(const NodeAddress& cur) {
+			static const ExpressionAddress none;
+
+			// move up until reaching requested function
+			if (cur.isRoot()) return none; // there is none
+
+			// stop decent at lambda or binds
+			auto type = cur->getNodeType();
+			if (type != NT_LambdaExpr && type != NT_BindExpr) {
+				return getSurroundingFreeFunction(cur.getParentAddress());
+			}
+
+			auto fun = cur.as<ExpressionAddress>();
+
+			// check whether function is a free function
+			if (fun.isRoot()) return none;
+
+			// if lambda is not directly called it is a free function
+			auto user = fun.getParentAddress();
+			auto call = user.isa<CallExprAddress>();
+			if (!call || call->getFunctionExpr() != fun) return fun;
+
+			// otherwise continue search
+			return getSurroundingFreeFunction(user);
+		}
+
 		using namespace utils::set_constraint_2;
 
-		template<typename T, int pos, int size>
+		template<typename T, int pos, int size, typename Filter>
 		struct gen_context {
-			void operator()(const vector<T>& values, vector<Sequence<T,size>>& res, array<T,size>& data) const {
-				static const gen_context<T,pos-1,size> inner;
+			void operator()(const vector<T>& values, vector<Sequence<T,size>>& res, const Filter& f, array<T,size>& data) const {
+				static const gen_context<T,pos-1,size,Filter> inner;
 				for(auto cur : values) {
 					data[pos-1] = cur;
-					inner(values, res, data);
+					inner(values, res, f, data);
 				}
 			}
 		};
 
-		template<typename T, int size>
-		struct gen_context<T, 0,size> {
-			void operator()(const vector<T>& values, vector<Sequence<T,size>>& res, array<T,size>& data) const {
-				res.push_back(data);
+		template<typename T, int size, typename Filter>
+		struct gen_context<T, 0,size, Filter> {
+			void operator()(const vector<T>& values, vector<Sequence<T,size>>& res, const Filter& f, array<T,size>& data) const {
+				if (f(data)) res.push_back(data);
 			}
 		};
 
 
+		template<typename T, unsigned s, typename Filter>
+		void generateSequences(const vector<T>& values, vector<Sequence<T, s>>& res, const Filter& f) {
+			array<T,s> tmp;
+			gen_context<T, s, s, Filter>()(values, res, f, tmp);
+		}
+
 		template<typename T, unsigned s>
 		void generateSequences(const vector<T>& values, vector<Sequence<T, s>>& res) {
-			array<T,s> tmp;
-			gen_context<T, s, s>()(values, res, tmp);
+			return generateSequences(values, res, [](const array<T,s>& list) { return true; });
 		}
 
 
@@ -274,7 +306,9 @@ namespace cba {
 			});
 
 			vector<Context::CallContext> callContexts;
-			generateSequences(labels, callContexts);
+			generateSequences(labels, callContexts, [&](const Context::CallContext& cur) {
+				return context.isValid(cur);
+			});
 
 			// compute resulting set
 			vector<Callable> res;
@@ -326,12 +360,12 @@ namespace cba {
 
 
 //			std::cout << "Sites:                " << labels << "\n";
-			std::cout << "Number of call sites:      " << labels.size() << "\n";
-			std::cout << "Number of call contexts:   " << labels.size()*labels.size() << " = " << callContexts.size() << "\n";
-			std::cout << "Number of threads:         " << threads.size() << "\n";
-			std::cout << "Number of thread contexts: " << threads.size()*threads.size() << " = " << threadContexts.size() << "\n";
-			std::cout << "Total number of contexts:  " << callContexts.size() * threadContexts.size() << "\n";
-			std::cout << "Total number of callables: " << res.size() << "\n";
+//			std::cout << "Number of call sites:      " << labels.size() << "\n";
+//			std::cout << "Number of call contexts:   " << labels.size()*labels.size() << " limited to " << callContexts.size() << "\n";
+//			std::cout << "Number of threads:         " << threads.size() << "\n";
+//			std::cout << "Number of thread contexts: " << threads.size()*threads.size() << " limited to " << threadContexts.size() << "\n";
+//			std::cout << "Total number of contexts:  " << callContexts.size() * threadContexts.size() << "\n";
+//			std::cout << "Total number of callables: " << res.size() << "\n";
 //			std::cout << "Contexts:\n" << join("\n", contexts) << "\n\n";
 
 			return res;
@@ -775,7 +809,7 @@ namespace cba {
 
 
 				auto num_args = call.size();
-				for(const auto& cur : context.getFreeFunctions()) {
+				for(const auto& cur : context.getContextFreeCallableCandidate(call)) {
 
 					// check proper number of arguments
 					TypeAddress type = cur->getType();
@@ -790,147 +824,6 @@ namespace cba {
 				}
 
 			}
-
-//			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-//
-//				// add constraints for function and argument expressions
-////				visit(call->getFunctionExpr(), ctxt, constraints);
-////				for(auto arg : call) visit(arg, ctxt, constraints);
-//
-//				// get values of function
-//				auto fun = call->getFunctionExpr();
-//				auto C_fun = context.getSet(C, context.getLabel(fun), ctxt);
-//
-//				// value set of call
-//				auto l_call = context.getLabel(call);
-//				auto A_call = context.getSet(A, l_call, ctxt);
-//
-//				// prepare inner call context
-//				Context innerCallContext = ctxt;
-//
-//				// a utility resolving constraints for the given expression
-//				auto addConstraints = [&](const Callable& target, bool fixed) {
-//
-//					// only searching for actual code
-//					const auto& expr = target.definition;
-//					assert(expr.isa<LambdaExprPtr>() || expr.isa<BindExprPtr>());
-//std::cout << "Linking target " << expr << " = " << *expr << " ..\n";
-//					// check whether the term is a function with the right number of arguments
-//					auto funType = expr->getType().isa<FunctionTypePtr>();
-//					if(funType->getParameterTypes().size() != call.size()) return;		// this is not a potential function
-//
-//					// handle lambdas
-//					if (auto lambda = expr.isa<LambdaExprAddress>()) {
-//
-//						// add constraints for arguments
-//						for(std::size_t i=0; i<call.size(); i++) {
-//
-//							// add constraint: t \in C(fun) => C(arg) \subset r(param)
-//							auto l_arg = context.getLabel(call[i]);
-//							auto param = context.getVariable(lambda->getParameterList()[i]);
-//
-//							auto A_arg = context.getSet(A, l_arg, ctxt);
-//							auto a_param = context.getSet(a, param, innerCallContext);
-//							constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(target, C_fun, A_arg, a_param));
-//						}
-//
-//						// add constraint for result value
-//						auto l_ret = context.getLabel(lambda->getBody());
-//						auto A_ret = context.getSet(A, l_ret, innerCallContext);
-//						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
-//
-//						// add function body constraints for targeted call context
-////						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
-//
-//					// handle bind
-//					} else if (auto bind = expr.isa<BindExprAddress>()) {
-//						auto body = bind->getCall();
-//						auto parameters = bind.as<BindExprPtr>()->getParameters();
-//
-//						// add constraints for arguments of covered call expression
-//						for (auto cur : body) {
-//
-//							int index = getParameterIndex(parameters, cur);
-//std::cout << "Argument " << cur << "=" << *cur << " is parameter " << index << "\n";
-//							// handle bind parameter
-//							if (index >= 0) {		// it is a bind parameter
-//
-//								// link argument to parameter
-//								auto l_out = context.getLabel(call[index]);
-//								auto l_in  = context.getLabel(cur);
-//
-//								auto A_out = context.getSet(A, l_out, ctxt);
-//								auto A_in  = context.getSet(A, l_in, innerCallContext);
-//								constraints.add((fixed) ? subset(A_out, A_in) : subsetIf(target, C_fun, A_out, A_in));
-//
-//							} else {
-//
-//								// handle captured parameter
-//								// link value of creation context to body-argument
-//								if (target.context != innerCallContext) {
-//									auto l_arg = context.getLabel(cur);
-//
-//									auto A_src = context.getSet(A, l_arg, target.context);
-//									auto A_trg = context.getSet(A, l_arg, innerCallContext);
-//std::cout << "Linking A[" << cur << " = " << *cur << "] - " << target.context << " to " << innerCallContext << " ..\n";
-//									constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
-//								}
-//							}
-//						}
-//
-//						// add constraints for result value
-//						auto l_body = context.getLabel(body);
-//						auto A_ret = context.getSet(A, l_body, innerCallContext);
-//						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
-//
-//						// add function body constraints for targeted bind expression
-////						if (fixed) this->visit(body, innerCallContext, constraints);
-//					}
-//				};
-//
-//std::cout << "Encountered target function: " << fun << " = " << *fun << "\n";
-//
-//				// constraints for literals ...
-//				if (fun.isa<LiteralPtr>()) {
-//					const auto& base = call->getNodeManager().getLangBasic();
-//
-//					// one special case: if it is a read operation
-//					//  B) - read operation (ref.deref)
-//					if (base.isRefDeref(fun)) {
-//						// read value from memory location
-//						auto l_trg = this->context.getLabel(call[0]);
-//						auto R_trg = this->context.getSet(R, l_trg, ctxt);
-//						for(auto loc : this->context.getLocations()) {
-//
-//							// TODO: add context
-//
-//							// if loc is in R(target) then add Sin[A,trg] to A[call]
-//							auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, A);
-//							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
-//						}
-//					}
-//
-//					return;
-//				}
-//
-//				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
-//				if (auto lambda = fun.isa<LambdaExprAddress>()) {
-//					addConstraints(Callable(lambda), true);
-//					return;
-//				}
-//
-//				if (auto bind = fun.isa<BindExprAddress>()) {
-//					addConstraints(Callable(bind, ctxt), true);
-//					return;
-//				}
-//
-//				// fix pass-by-value semantic - by considering all potential terms
-//				innerCallContext.callContext <<= l_call;
-//std::cout << "Callables: " << join("\n\t", context.getCallables(), [](std::ostream& out, const Callable& cur) { out << cur.context << " : " << cur.definition << " = " << *cur.definition; }) << "\n";
-//				for(auto cur : context.getCallables()) {
-//					addConstraints(cur, false);
-//				}
-//			}
 
 			void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
@@ -1599,20 +1492,28 @@ namespace cba {
 		protected:
 
 			void connectSets(const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+				// filter out invalid contexts
+				if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
 				connectStateSets(a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
 			}
 
 			template<typename E>
 			void connectSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+				// filter out invalid contexts
+				if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
 				connectStateSetsIf(value, set, a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
 			}
 
 			void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+				// filter out invalid contexts
+				if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
 				collector.connectStateSets(a,al,ac,b,bl,bc,constraints);
 			}
 
 			template<typename E>
 			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+				// filter out invalid contexts
+				if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
 				collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
 			}
 
@@ -2367,7 +2268,7 @@ namespace cba {
 
 				// ----- check whether function forwarding can be traced statically ----
 
-				if (auto staticUses = getStaticUses(fun)) {
+				if (auto staticUses = context.getAllStaticUses(fun)) {
 					// if uses can be determined statically, we can just consider them
 					for(Label l_call : *staticUses) {
 						constraints.add(elem(l_call, pred_res));
@@ -2397,225 +2298,10 @@ namespace cba {
 				}
 			}
 
-		private:
-
-			bool collectUsesOfVariable(const VariableAddress& var, vector<Label>& res) const {
-				assert(getDefinitionPoint(var) == var);
-
-				NodeAddress root;
-				if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
-					root = decl.getParentAddress();
-				} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
-					if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
-						root = lambda->getBody();
-					} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
-						root = bind->getCall();
-					} else {
-						assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
-					}
- 				} else {
- 					assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
- 				}
-
-				// there should be a root now
-				assert(root);
-
-				bool allFine = true;
-				visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
-					// stop if already failed
-					if (!allFine) return true;
-
-					// only process local scope
-					if (cur->getNodeType() == NT_LambdaExpr) return true;
-
-					// for the rest, only interested in variables
-					if (*cur != *var) return false;
-
-					// if variable is used as a function => found a call
-					auto call = cur.getParentAddress().isa<CallExprAddress>();
-
-					// if it is not a call, we don't care
-					if (!call) return false;
-
-					// check out whether it is a call to the function or passed as an argument
-					if (call->getFunctionExpr() == cur) {
-						// it is the target function => collect this one
-						res.push_back(this->context.getLabel(call));
-					} else {
-						// it is an argument
-						if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-							assert(call[cur.getIndex()-2] == cur);
-							// ok - it is a static call => we may follow the parameter
-							allFine = allFine && collectUsesOfVariable(fun->getParameterList()[cur.getIndex()-2], res);
-						}
-					}
-
-					return false;
-
-				});
-
-				return allFine;
-
-			}
-
-			boost::optional<vector<Label>> getUsesOfVariable(const VariableAddress& def) const {
-				static const boost::optional<vector<Label>> fail;
-				vector<Label> res;
-				bool success = collectUsesOfVariable(def, res);
-				return success ? res : fail;
-			}
-
-			boost::optional<vector<Label>> getStaticUses(const ExpressionAddress& function) const {
-				static const boost::optional<vector<Label>> unknown;
-
-				// there is nothing we can do for the root
-				if (function.isRoot()) return unknown;
-
-				// option A: the lambda is created as an argument of a call expression
-				auto parent = function.getParentAddress();
-				if (auto call = parent.isa<CallExprAddress>()) {
-					assert(call->getFunctionExpr() != function);
-
-					// check whether target function is fixed
-					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-						// collect all uses of corresponding function parameter
-						assert(call[function.getIndex()-2] == function);
-						return getUsesOfVariable(fun->getParameterList()[function.getIndex()-2]);
-					} else {
-						return unknown;
-					}
-				}
-
-				// option B: the lambda is created as the value of a definition
-				if (auto decl = parent.isa<DeclarationStmtAddress>()) {
-					// simply collect all uses of the variable
-					return getUsesOfVariable(decl->getVariable());
-				}
-
-				return unknown;
-			}
-
-			ExpressionAddress getSurroundingFreeFunction(const NodeAddress& cur) const {
-				static const ExpressionAddress none;
-
-				// move up until reaching requested function
-				if (cur.isRoot()) return none; // there is none
-
-				// stop decent at lambda or binds
-				auto type = cur->getNodeType();
-				if (type != NT_LambdaExpr && type != NT_BindExpr) {
-					return getSurroundingFreeFunction(cur.getParentAddress());
-				}
-
-				auto fun = cur.as<ExpressionAddress>();
-
-				// check whether function is a free function
-				if (fun.isRoot()) return none;
-
-				// if lambda is not directly called it is a free function
-				auto user = fun.getParentAddress();
-				auto call = user.isa<CallExprAddress>();
-				if (!call || call->getFunctionExpr() != fun) return fun;
-
-				// otherwise continue search
-				return getSurroundingFreeFunction(user);
-			}
-
 		};
 
 	}
 
-
-
-
-
-	Constraints generateConstraints(CBA& context, const StatementPtr& stmt) {
-
-		// create resulting list of constraints
-		Constraints res;
-
-		// let constraint collector do the job
-		StatementAddress root(stmt);
-
-		Context initContext;
-
-		// the set of resolved set-ids
-		std::set<SetID> resolved;
-
-		// create full constraint graph iteratively
-		std::set<SetID> unresolved;
-
-		// a utility function used in the following two loops
-		auto extractUnresolved = [&](const Constraints& constraints) {
-			for(auto& cur : constraints) {
-				for(auto& in : cur->getInputs()) {
-					if (resolved.find(in) == resolved.end()) {
-						unresolved.insert(in);
-					}
-				}
-			}
-		};
-
-		// start with seed
-		for(auto cur : context.getAllResolver()) {
-			Constraints newEntries;
-			cur->addConstraints(root, initContext, newEntries);
-
-			extractUnresolved(newEntries);
-
-			// copy new entries to resulting list
-			res.add(newEntries);
-		}
-
-
-		// now iteratively resolve unresolved sets
-		while(!unresolved.empty()) {
-
-			Constraints newEntries;
-
-			for(auto cur : unresolved) {
-				context.addConstraintsFor(cur, newEntries);
-				resolved.insert(cur);
-			}
-
-			unresolved.clear();
-			extractUnresolved(newEntries);
-
-			// copy new entries to resulting list
-			res.add(newEntries);
-		}
-
-		// done
-		return res;
-
-	}
-
-
-	Solution solve(const Constraints& constraints) {
-		// just use the utils solver
-		return utils::set_constraint_2::solve(constraints);
-	}
-
-	Solution solve(const StatementPtr& stmt, const ExpressionPtr& trg, const SetID& set) {
-
-		// init root
-		StatementAddress root(stmt);
-
-		// create context
-		CBA context(root);
-
-		// bridge context to resolution
-		auto resolver = [&](const std::set<SetID>& sets)->Constraints {
-			Constraints res;
-			for(auto set : sets) {
-				context.addConstraintsFor(set, res);
-			}
-			return res;
-		};
-
-		// use the lazy solver approach
-		return utils::set_constraint_2::solve(set, resolver);
-	}
 
 	using namespace utils::set_constraint_2;
 
@@ -2768,6 +2454,226 @@ namespace cba {
 		// an unknown set?
 		assert_true(false) << "Unknown set encountered: " << set << "\n";
 	}
+
+	namespace {
+
+		bool collectUsesOfVariable(CBA& context, const VariableAddress& var, vector<Label>& res) {
+			assert(getDefinitionPoint(var) == var);
+
+			NodeAddress root;
+			if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
+				root = decl.getParentAddress();
+			} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
+				if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
+					root = lambda->getBody();
+				} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
+					root = bind->getCall();
+				} else {
+					assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
+				}
+			} else {
+				assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
+			}
+
+			// there should be a root now
+			assert(root);
+
+			bool allFine = true;
+			visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
+				// stop if already failed
+				if (!allFine) return true;
+
+				// only process local scope
+				if (cur->getNodeType() == NT_LambdaExpr) return true;
+
+				// for the rest, only interested in variables
+				if (*cur != *var) return false;
+
+				// if variable is used as a function => found a call
+				auto call = cur.getParentAddress().isa<CallExprAddress>();
+
+				// if it is not a call, we don't care
+				if (!call) return false;
+
+				// check out whether it is a call to the function or passed as an argument
+				if (call->getFunctionExpr() == cur) {
+					// it is the target function => collect this one
+					res.push_back(context.getLabel(call));
+				} else {
+					// it is an argument
+					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+						assert(call[cur.getIndex()-2] == cur);
+						// ok - it is a static call => we may follow the parameter
+						allFine = allFine && collectUsesOfVariable(context, fun->getParameterList()[cur.getIndex()-2], res);
+					}
+				}
+
+				return false;
+
+			});
+
+			return allFine;
+
+		}
+
+		CBA::OptCallSiteList getUsesOfVariable(CBA& context, const VariableAddress& def) {
+			static const CBA::OptCallSiteList fail;
+			vector<Label> res;
+			bool success = collectUsesOfVariable(context, def, res);
+			return success ? res : fail;
+		}
+
+		CBA::OptCallSiteList getStaticUses(CBA& context, const ExpressionAddress& function) {
+			static const CBA::OptCallSiteList unknown;
+
+			// there is nothing we can do for the root
+			if (function.isRoot()) return unknown;
+
+			// option A: the lambda is created as an argument of a call expression
+			auto parent = function.getParentAddress();
+			if (auto call = parent.isa<CallExprAddress>()) {
+				assert(call->getFunctionExpr() != function);
+
+				// check whether target function is fixed
+				if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+					// collect all uses of corresponding function parameter
+					assert(call[function.getIndex()-2] == function);
+					return getUsesOfVariable(context, fun->getParameterList()[function.getIndex()-2]);
+				} else {
+					return unknown;
+				}
+			}
+
+			// option B: the lambda is created as the value of a definition
+			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
+				// simply collect all uses of the variable
+				return getUsesOfVariable(context, decl->getVariable());
+			}
+
+			return unknown;
+		}
+
+		bool isFunction(const core::ExpressionAddress& expr) {
+			return expr->getNodeType() == NT_LambdaExpr || expr->getNodeType() == NT_BindExpr;
+		}
+
+		ExpressionAddress tryObtainingFunction(const core::ExpressionAddress& expr) {
+			static const ExpressionAddress unknown;
+
+			// check for null
+			if (!expr) return unknown;
+
+			// check whether we already have one
+			if (isFunction(expr)) return expr;
+
+			// otherwise we are only supporting variables
+			auto var = expr.isa<VariableAddress>();
+			if (!var) return unknown;
+
+			// get definition of variable
+			auto def = getDefinitionPoint(var);
+
+			// if it is a free variable => there is nothing we can do
+			if (def.isRoot()) return unknown;
+
+			// if variable is declared => consider declaration
+			auto parent = def.getParentAddress();
+			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
+				return tryObtainingFunction(decl->getInitialization());
+			}
+
+			// if it is an lambda parameter => follow argument
+			if (auto param = parent.isa<ParametersAddress>()) {
+
+				if (param.isRoot()) return unknown;
+
+				auto userOffset = param.getParentNode().isa<LambdaPtr>() ? 5 : 2;
+				auto user = param.getParentAddress(userOffset);
+
+				// continue with proper argument
+				auto call = user.isa<CallExprAddress>();
+				if (call) return tryObtainingFunction(call[param.getIndex()]);
+			}
+
+			// otherwise there is nothing we can do
+			return unknown;
+		}
+
+	}
+
+
+	const CBA::OptCallSiteList& CBA::getAllStaticUses(const core::ExpressionAddress& fun) {
+
+		// check the cache
+		auto pos = callSiteCache.find(fun);
+		if (pos != callSiteCache.end()) {
+			return pos->second;
+		}
+
+		// compute call-site list
+		return callSiteCache[fun] = getStaticUses(*this, fun);
+	}
+
+	const CBA::OptCallSiteList& CBA::getAllStaticPredecessors(const core::StatementAddress& stmt) {
+		static const CBA::OptCallSiteList root = toVector<Label>(0);
+		auto fun = getSurroundingFreeFunction(stmt);
+		if (!fun) {
+			return root;
+		}
+
+		return getAllStaticUses(fun);
+	}
+
+	const CBA::CallableList& CBA::getCallableCandidates(const core::CallExprAddress& call) {
+
+		// special handling for null-pointer (0 context)
+		static const CBA::CallableList empty;
+		if (!call) return empty;
+
+		// all the rest should by known dynamic calls
+		assert(contains(dynamicCalls, call));
+
+		auto pos = callableCandidateCache.find(call);
+		if (pos != callableCandidateCache.end()) {
+			// if option is not set, the all callables may be targeted
+			return (pos->second) ? *pos->second : callables;
+		}
+
+		// compute set of callables
+
+		// filter out callables depending on the function that may reach the call via forwarding
+		auto& res = callableCandidateCache[call];
+		if (auto fun = tryObtainingFunction(call->getFunctionExpr())) {
+			// filter out callables
+			res = CBA::CallableList();
+			for(const auto& cur : getCallables()) {
+				if (cur.definition == fun && isValid(cur.context)) {
+					res->push_back(cur);
+				}
+			}
+		}
+
+		// return collected result
+		return (res) ? *res : callables;
+	}
+
+	const CBA::ContextFreeCallableList& CBA::getContextFreeCallableCandidate(const core::CallExprAddress& call) {
+		// only supported for known dynamic calls
+		assert(contains(dynamicCalls, call));
+
+		auto pos = contextFreeCallableCandidateCache.find(call);
+		if (pos != contextFreeCallableCandidateCache.end()) {
+			return (pos->second) ? *pos->second : freeFunctions;
+		}
+
+		// compute free functions
+		auto& res = contextFreeCallableCandidateCache[call];
+		if (auto fun = tryObtainingFunction(call->getFunctionExpr())) {
+			res = toVector(fun);
+		}
+		return (res) ? *res : freeFunctions;
+	}
+
 
 	void CBA::plot(std::ostream& out) const {
 		const Constraints& constraints = solver.getConstraints();

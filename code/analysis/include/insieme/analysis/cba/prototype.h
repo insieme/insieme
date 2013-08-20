@@ -41,6 +41,8 @@
 #include <map>
 #include <type_traits>
 
+#include <boost/optional/optional.hpp>
+
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
 
@@ -82,10 +84,12 @@ namespace cba {
 		bool operator==(const Sequence& other) const { return this == &other || context == other.context; }
 		bool operator!=(const Sequence& other) const { return !(*this == other); }
 		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
+		const T& operator[](std::size_t index) const { return context[index]; }
 		bool startsWith(const T& e) const { return s == 0 || context.front() == e; }
 		bool endsWith(const T& e) const { return s == 0 || context.back() == e; }
 		const T& front() const { assert(s > 0u); return context.front(); }
 		const T& back() const { assert(s > 0u); return context.back(); }
+		const T& penultimate() const { assert(s > 1u); return context[size-2]; }
 		Sequence<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];
@@ -346,10 +350,7 @@ namespace cba {
 			visit(node, ctxt, constraints);
 		}
 
-		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-			if (!processed.insert(Item(node,ctxt)).second) return;
-			super::visit(node, ctxt, constraints);
-		}
+		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints);
 
 		const SetTypeSet& getCoveredSets() const {
 			return coveredSets;
@@ -434,14 +435,12 @@ namespace cba {
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getLabel(expr), ctxt);
-std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getVariable(var), ctxt);
-std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
@@ -609,10 +608,6 @@ std::cout << "Looking for "<< id << "\n";
 			return locations;
 		}
 
-		const std::vector<Callable>& getCallables() const {
-			return callables;
-		}
-
 		const std::vector<ContextFreeCallable>& getFreeFunctions() const {
 			return freeFunctions;
 		}
@@ -625,11 +620,94 @@ std::cout << "Looking for "<< id << "\n";
 			return dynamicCallLabels;
 		}
 
+		// -------------- static computation of call sites -----------------
+
+		typedef boost::optional<std::vector<Label>> OptCallSiteList;
+		std::map<core::ExpressionAddress, OptCallSiteList> callSiteCache;
+
+		/**
+		 * Tries to determine all uses of the given function (lambda or bind) and returns
+		 * the vector of dynamic call labels accessing the function. If the uses can not
+		 * be determined statically, the optional result will not be filled.
+		 */
+		const OptCallSiteList& getAllStaticUses(const core::ExpressionAddress& fun);
+
+		/**
+		 * Obtains a list of statically known predecessors of the given statement in
+		 * potential call sequences. The optional result will be empty if there is none.
+		 */
+		const OptCallSiteList& getAllStaticPredecessors(const core::StatementAddress& stmt);
+
+		/**
+		 * Obtains a list of statically known predecessors of the given label in
+		 * potential call sequences. The optional result will be empty if there is none.
+		 */
+		const OptCallSiteList& getAllStaticPredecessors(const Label& label) {
+			static const OptCallSiteList zero = toVector<Label>(0);
+			if (label == 0) return zero;
+			return getAllStaticPredecessors(getStmt(label));
+		}
+
+		bool isValid(const Context& ctxt) {
+			// TODO: materialize all contexts?
+			if (Context::CallContext::size < 2) return true;
+
+//			const auto& list = getAllStaticPredecessors(ctxt.callContext.back());
+//			return !list || contains(*list, ctxt.callContext.penultimate());
+
+			// check sequence
+			const auto& seq = ctxt.callContext;
+			for(int i=0; i<Context::CallContext::size-1; i++) {
+				const auto& list = getAllStaticPredecessors(seq[i+1]);
+				if (list && !contains(*list, seq[i])) return false;
+			}
+			return true;
+		}
+
+		typedef std::vector<Callable> CallableList;
+		typedef boost::optional<CallableList> OptCallableList;
+		std::map<core::CallExprAddress, OptCallableList> callableCandidateCache;
+
+		/**
+		 * Obtains a full list of potential callables.
+		 */
+		const CallableList& getCallables() const {
+			return callables;
+		}
+
+		/**
+		 * Obtains a list of candidate callables to be called by the given call expression.
+		 */
+		const CallableList& getCallableCandidates(const core::CallExprAddress& call);
+
+		const CallableList& getCallableCandidates(const Label& callSite) {
+			return getCallableCandidates(getStmt(callSite).as<core::CallExprAddress>());
+		}
+
+		typedef std::vector<ContextFreeCallable> ContextFreeCallableList;
+		typedef boost::optional<ContextFreeCallableList> OptContextFreeCallableList;
+		std::map<core::CallExprAddress, OptContextFreeCallableList> contextFreeCallableCandidateCache;
+
+		const ContextFreeCallableList& getContextFreeCallableCandidate(const core::CallExprAddress& call);
+
+		// ----------------------- some debugging utilities ---------------------------
+
 		void plot(std::ostream& out = std::cout) const;
 		std::size_t getNumSets() const { return sets.size() + stateSets.size(); }
 		std::size_t getNumConstraints() const { return solver.getConstraints().size(); }
 
 	};
+
+	inline void ConstraintResolver::visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+		// do not resolve the same nodes multiple times
+		if (!processed.insert(Item(node,ctxt)).second) return;
+
+		// filter out invalid contexts
+		if (!context.isValid(ctxt)) return;
+
+		// for valid content => std procedure
+		super::visit(node, ctxt, constraints);
+	}
 
 
 } // end namespace cba
