@@ -2277,36 +2277,6 @@ namespace cba {
 
 	}
 
-	const TypedSetType<Callable> C("C", [](CBA& cba) { return cba.getResolver<ControlFlowConstraintCollector>(C); });
-	const TypedSetType<Callable> c("c", [](CBA& cba) { return cba.getResolver<ControlFlowConstraintCollector>(C); });
-
-	const TypedSetType<ContextFreeCallable> F("F", [](CBA& cba) { return cba.getResolver<FunctionConstraintCollector>(F); });
-	const TypedSetType<ContextFreeCallable> f("f", [](CBA& cba) { return cba.getResolver<FunctionConstraintCollector>(F); });
-
-
-	const TypedSetType<Location> R("R", [](CBA& cba) { return cba.getResolver<ReferenceConstraintCollector>(R); });
-	const TypedSetType<Location> r("r", [](CBA& cba) { return cba.getResolver<ReferenceConstraintCollector>(R); });
-
-	const TypedSetType<core::ExpressionPtr> D("D", [](CBA& cba) { return cba.getResolver<ConstantConstraintCollector>(D); });
-	const TypedSetType<core::ExpressionPtr> d("d", [](CBA& cba) { return cba.getResolver<ConstantConstraintCollector>(D); });
-
-	const TypedSetType<Formula> A("A", [](CBA& cba) { return cba.getResolver<ArithmeticConstraintCollector>(A); });
-	const TypedSetType<Formula> a("a", [](CBA& cba) { return cba.getResolver<ArithmeticConstraintCollector>(A); });
-
-	const TypedSetType<bool> B("B", [](CBA& cba) { return cba.getResolver<BooleanConstraintCollector>(B); });
-	const TypedSetType<bool> b("b", [](CBA& cba) { return cba.getResolver<BooleanConstraintCollector>(B); });
-
-	const TypedSetType<Reachable> Rin("Rin", [](CBA& cba) { return cba.getResolver<ReachableInConstraintCollector>(Rin); });			// the associated term is reached
-	const TypedSetType<Reachable> Rout("Rout", [](CBA& cba) { return cba.getResolver<ReachableOutConstraintCollector>(Rout); });		// the associated term is left
-
-	const TypedSetType<Label> pred("pred", [](CBA& cba) { return cba.getResolver<ContextPredecessor>(pred); });
-
-	const StateSetType Sin("Sin");		// in-state of statements
-	const StateSetType Sout("Sout");	// out-state of statements
-	const StateSetType Stmp("Stmp");	// temporary states of statements (assignment only)
-
-	using namespace utils::set_constraint_2;
-
 	namespace {
 
 		template<typename T>
@@ -2316,6 +2286,57 @@ namespace cba {
 				context.registerLocationResolver<ImperativeOutStateConstraintCollector<T>>(Sout, type, loc);
 			}
 		}
+
+		template<typename R, typename E>
+		struct ResolverFactory {
+			const TypedSetType<E>& setType;
+			ResolverFactory(const TypedSetType<E>& setType) : setType(setType) {}
+			ConstraintResolverPtr operator()(CBA& cba) const {
+				// register imperative constraint resolver
+				registerImperativeCollector(cba, setType);
+				// and the actual resolver for this type
+				return cba.getResolver<R>(setType);
+			}
+		};
+
+		template<typename R, typename E>
+		ResolverFactory<R,E> createFactory(const TypedSetType<E>& setType) {
+			return ResolverFactory<R,E>(setType);
+		}
+
+	}
+
+	const TypedSetType<Callable> C("C", createFactory<ControlFlowConstraintCollector>(C));
+	const TypedSetType<Callable> c("c", createFactory<ControlFlowConstraintCollector>(C));
+
+	const TypedSetType<ContextFreeCallable> F("F", createFactory<FunctionConstraintCollector>(F));
+	const TypedSetType<ContextFreeCallable> f("f", createFactory<FunctionConstraintCollector>(F));
+
+
+	const TypedSetType<Location> R("R", createFactory<ReferenceConstraintCollector>(R));
+	const TypedSetType<Location> r("r", createFactory<ReferenceConstraintCollector>(R));
+
+	const TypedSetType<core::ExpressionPtr> D("D", createFactory<ConstantConstraintCollector>(D));
+	const TypedSetType<core::ExpressionPtr> d("d", createFactory<ConstantConstraintCollector>(D));
+
+	const TypedSetType<Formula> A("A", createFactory<ArithmeticConstraintCollector>(A));
+	const TypedSetType<Formula> a("a", createFactory<ArithmeticConstraintCollector>(A));
+
+	const TypedSetType<bool> B("B", createFactory<BooleanConstraintCollector>(B));
+	const TypedSetType<bool> b("b", createFactory<BooleanConstraintCollector>(B));
+
+	const TypedSetType<Reachable> Rin("Rin", createFactory<ReachableInConstraintCollector>(Rin));			// the associated term is reached
+	const TypedSetType<Reachable> Rout("Rout", createFactory<ReachableOutConstraintCollector>(Rout));		// the associated term is left
+
+	const TypedSetType<Label> pred("pred", createFactory<ContextPredecessor>(pred));
+
+	const StateSetType Sin("Sin");		// in-state of statements
+	const StateSetType Sout("Sout");	// out-state of statements
+	const StateSetType Stmp("Stmp");	// temporary states of statements (assignment only)
+
+	using namespace utils::set_constraint_2;
+
+	namespace {
 
 	}
 
@@ -2362,34 +2383,6 @@ namespace cba {
 
 		// and a list of all memory locations
 		locations = getAllLocations(*this, root);
-
-
-//		// TODO: move this to another place ...
-//		NodeManager& mgr = root->getNodeManager();
-//		const auto& base = mgr.getLangBasic();
-//
-//		// reachable constraint collector
-//		registerResolver<ReachableInConstraintCollector>(root);
-//		registerResolver<ReachableOutConstraintCollector>();
-//
-//		// context constraint collector
-//		registerResolver<ContextPredecessor>();
-//
-//		// install resolver
-//		registerResolver<ControlFlowConstraintCollector>();
-//		registerResolver<FunctionConstraintCollector>();
-//		registerResolver<ConstantConstraintCollector>();
-//		registerResolver<ReferenceConstraintCollector>();
-//		registerResolver<ArithmeticConstraintCollector>(base);
-//		registerResolver<BooleanConstraintCollector>(base);
-//
-//		// and the imperative constraints
-//		auto locations = getAllLocations(*this, root);
-		registerImperativeCollector(*this, C);
-		registerImperativeCollector(*this, D);
-		registerImperativeCollector(*this, R);
-		registerImperativeCollector(*this, A);
-		registerImperativeCollector(*this, B);
 
 	};
 

@@ -574,36 +574,18 @@ namespace cba {
 			return res;
 		}
 
-//		ConstraintResolverPtr getResolver(const LocationSetKey& key) {
-//			assert(locationResolver.find(key) != locationResolver.end());
-//			return locationResolver[key];
-//		}
-//
-//		template<template<typename T> class R, typename T>
-//		typename std::enable_if<std::is_base_of<ConstraintResolver, R<T>>::value, ConstraintResolver*>::type
-//		getResolver(const LocationSetKey& key) {
-//			auto& res = locationResolver[key];
-//			if (!res) {
-//				res = new R<T>(*this);
-//				resolver.insert(res);
-//			}
-//			return res;
-//		}
-
-		template<typename R, typename ... Args>
-		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
-		registerResolver(const Args& ... args) {
-			// TODO: remove
-		}
-
 		template<typename R, typename T, typename ... Args>
 		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
 		registerLocationResolver(const StateSetType& stateSetType, const TypedSetType<T>& dataType, const Location& location, const Args& ... args) {
-			// one resolver for in and out set
-			R* r = new R(*this, dataType, location, args ...);
-			resolver.insert(r);
+			auto key = std::make_tuple(&stateSetType,  (const SetType*)(&dataType), location);
 
-			locationResolver[std::make_tuple(&stateSetType,  (const SetType*)(&dataType), location)] = r;
+			// if there is already a resolver installed => skip new one
+			auto& cur = locationResolver[key];
+			if (cur) return;			
+
+			// create new resolver and register it
+			cur = new R(*this, dataType, location, args ...);
+			resolver.insert(cur);
 		}
 
 		const std::set<ConstraintResolverPtr>& getAllResolver() const {
@@ -782,9 +764,6 @@ namespace cba {
 		bool isValid(const Context& ctxt) {
 			// TODO: materialize all contexts?
 			if (Context::CallContext::size < 2) return true;
-
-//			const auto& list = getAllStaticPredecessors(ctxt.callContext.back());
-//			return !list || contains(*list, ctxt.callContext.penultimate());
 
 			// check sequence
 			const auto& seq = ctxt.callContext;
