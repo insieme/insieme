@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ERROR_HANDLING_H
+#define __GUARD_ERROR_HANDLING_H
 
 #include "declarations.h"
 
@@ -118,3 +120,6 @@ const char* irt_errcode_string(irt_errcode code);
 void irt_print_error_info(FILE* target, irt_error* error);
 
 void irt_error_handler(int signal);
+
+
+#endif // ifndef __GUARD_ERROR_HANDLING_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_WIN_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_AFFINITY_WIN_IMPL_H
 
 #include "declarations.h"
 #include "abstraction/affinity.os_dependent.h"
@@ -149,3 +151,6 @@ uint32 irt_affinity_cores_available() {
 	return count;
 }
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_WIN_IMPL_H

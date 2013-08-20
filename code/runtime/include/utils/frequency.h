@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_FREQUENCY_H
+#define __GUARD_UTILS_FREQUENCY_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -460,3 +462,6 @@ int32 irt_cpu_freq_set_frequency(const uint32 frequency) {
 	}
 	return 0;
 }
+
+
+#endif // ifndef __GUARD_UTILS_FREQUENCY_H

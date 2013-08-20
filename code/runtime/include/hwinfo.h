@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_HWINFO_H
+#define __GUARD_HWINFO_H
 
 #include <unistd.h>
 
@@ -152,3 +154,6 @@ uint32 irt_get_sibling_hyperthread(uint32 coreid) {
 bool irt_get_hyperthreading_enabled() {
 	return (irt_get_num_threads_per_core() > 1);
 }
+
+
+#endif // ifndef __GUARD_HWINFO_H

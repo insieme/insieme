@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IR_INTERFACE_H
+#define __GUARD_IR_INTERFACE_H
 
 #include "declarations.h"
 #include "instrumentation_regions.h"
@@ -105,3 +107,6 @@ static inline void ir_inst_region_start(irt_inst_region_id id) {
 static inline void ir_inst_region_end(irt_inst_region_id id) {
 	irt_inst_region_end(id);
 }
+
+
+#endif // ifndef __GUARD_IR_INTERFACE_H

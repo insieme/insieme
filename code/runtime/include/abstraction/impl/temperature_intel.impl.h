@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_TEMPERATURE_INTEL_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_TEMPERATURE_INTEL_IMPL_H
 
 #include "abstraction/temperature_intel.h"
 #include "abstraction/impl/msr.impl.h"
@@ -118,3 +120,6 @@ bool irt_temperature_intel_package_is_supported() {
 	// CPUID.06H.EAX[6]: digital sensors present or not
 	return ((a>>6)&0x1);
 }
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_TEMPERATURE_INTEL_IMPL_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_GLOBALS_H
+#define __GUARD_GLOBALS_H
 
 #include "config.h" // required to make the switch in threads.h work
 #include "abstraction/threads.h"
@@ -52,3 +54,6 @@ struct _irt_worker;
 extern struct _irt_worker **irt_g_workers;
 
 extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
+
+
+#endif // ifndef __GUARD_GLOBALS_H

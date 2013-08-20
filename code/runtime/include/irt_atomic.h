@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_ATOMIC_H
+#define __GUARD_IRT_ATOMIC_H
 
 
 #ifndef _MSC_VER
@@ -186,3 +188,6 @@
 	#endif // WINVER >= 0x0600
 
 #endif
+
+
+#endif // ifndef __GUARD_IRT_ATOMIC_H

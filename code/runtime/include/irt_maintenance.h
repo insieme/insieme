@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_MAINTENANCE_H
+#define __GUARD_IRT_MAINTENANCE_H
 
 // Insieme runtime maintenance event system
 // Implements a low-overhead system for the execution of maintenance events at fixed timesteps
@@ -245,3 +247,6 @@ void* irt_maintenance_thread_func(void *) {
 	}
 }
 
+
+
+#endif // ifndef __GUARD_IRT_MAINTENANCE_H

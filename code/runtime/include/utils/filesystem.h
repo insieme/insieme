@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_FILESYSTEM_H
+#define __GUARD_UTILS_FILESYSTEM_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,3 +57,6 @@ const char* irt_get_tmp_dir() {
 		return "/tmp";
 	}
 }
+
+
+#endif // ifndef __GUARD_UTILS_FILESYSTEM_H

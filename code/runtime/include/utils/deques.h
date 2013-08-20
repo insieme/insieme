@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_DEQUES_H
+#define __GUARD_UTILS_DEQUES_H
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
@@ -171,3 +173,6 @@ static inline irt_##__type__* irt_##__type__##_deque_take_elem(irt_##__type__##_
 	return retval; \
 }
 
+
+
+#endif // ifndef __GUARD_UTILS_DEQUES_H

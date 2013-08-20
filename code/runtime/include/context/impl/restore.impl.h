@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_IMPL_RESTORE_IMPL_H
+#define __GUARD_CONTEXT_IMPL_RESTORE_IMPL_H
 
 #include "context/restore.h"
 
@@ -280,3 +282,6 @@ void irt_cap_profile_finalize() {
 #ifdef __INTEL_COMPILER
 #pragma warning pop
 #endif
+
+
+#endif // ifndef __GUARD_CONTEXT_IMPL_RESTORE_IMPL_H

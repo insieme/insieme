@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H
 
 // implementation of threads using pthread library; will be used for both Linux and Windows.
 
@@ -168,3 +170,6 @@ int irt_tls_set(irt_tls_key k, void *val) {
 }
 
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H

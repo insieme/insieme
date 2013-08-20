@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_WI_IMPLEMENTATION_H
+#define __GUARD_WI_IMPLEMENTATION_H
 
 #include "declarations.h"
 
@@ -77,3 +79,6 @@ struct _irt_wi_implementation_variant {
 /* ------------------------------ operations ----- */
 
 
+
+
+#endif // ifndef __GUARD_WI_IMPLEMENTATION_H

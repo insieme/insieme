@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_CLIENT_APP_IMPL_H
+#define __GUARD_IMPL_CLIENT_APP_IMPL_H
 
 #include "client_app.h"
 
@@ -68,3 +70,6 @@ void irt_client_app_destroy(irt_client_app* app) {
 
 #endif // ifndef IRT_MIN_MODE
 
+
+
+#endif // ifndef __GUARD_IMPL_CLIENT_APP_IMPL_H

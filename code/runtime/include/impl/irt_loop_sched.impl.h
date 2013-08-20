@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
+#define __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
 
 #include "irt_loop_sched.h"
 #include "work_group.h"
@@ -430,3 +432,6 @@ void irt_loop_sched_policy_init() {
 	}
 	irt_g_loop_sched_policy_single = (irt_loop_sched_policy){ IRT_DYNAMIC_CHUNKED, IRT_SANE_PARALLEL_MAX, { 1000 } };
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H

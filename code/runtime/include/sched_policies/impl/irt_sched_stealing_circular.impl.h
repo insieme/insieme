@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "sched_policies/irt_sched_stealing_circular.h"
@@ -339,3 +341,6 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 }
 
 #endif // 64 bit triplet implementation
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H

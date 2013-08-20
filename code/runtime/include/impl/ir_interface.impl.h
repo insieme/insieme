@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IR_INTERFACE_IMPL_H
+#define __GUARD_IMPL_IR_INTERFACE_IMPL_H
 
 #include "ir_interface.h"
 
@@ -117,3 +119,6 @@ void irt_merge(irt_joinable* joinable) {
 	}
 }
 
+
+
+#endif // ifndef __GUARD_IMPL_IR_INTERFACE_IMPL_H

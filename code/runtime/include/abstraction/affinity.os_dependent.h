@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
 
 /*
  * in this file prototypes of platform dependent affinity functionality shall be declared
@@ -68,3 +70,6 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 uint32 irt_affinity_cores_available();
 
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H
 
 #include "abstraction/threads.h"
 #include "error_handling.h"
@@ -262,3 +264,5 @@ void* irt_tls_get(irt_tls_key k){
 int irt_tls_set(irt_tls_key k, void *val){
 	return !TlsSetValue(k, val);
 }
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H

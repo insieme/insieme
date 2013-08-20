@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_LOOKUP_TABLES_H
+#define __GUARD_UTILS_LOOKUP_TABLES_H
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
@@ -147,3 +149,6 @@ static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
 #define IRT_CREATE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
 irt_##__type__* irt_g_##__type__##_table[__num_buckets__]; \
 irt_spinlock irt_g_##__type__##_table_locks[__num_buckets__];
+
+
+#endif // ifndef __GUARD_UTILS_LOOKUP_TABLES_H

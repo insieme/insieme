@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_DECLARATIONS_H
+#define __GUARD_DECLARATIONS_H
 
 #include "irt_inttypes.h"
 #include "id_generation.h"
@@ -146,3 +148,5 @@ typedef struct _irt_worker irt_worker;
 /* ------------------------------ region instrumentation ----- */
 
 //typedef struct _irt_inst_region_data irt_inst_region_data;
+
+#endif // ifndef __GUARD_DECLARATIONS_H

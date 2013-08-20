@@ -35,9 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_OS_DEPENDENT_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_AFFINITY_OS_DEPENDENT_IMPL_H
 
 #if defined(_WIN32)
 	#include "affinity.win.impl.h"
 #else
 	#include "affinity.unix.impl.h"
 #endif
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_OS_DEPENDENT_IMPL_H

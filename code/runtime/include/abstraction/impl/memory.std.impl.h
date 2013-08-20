@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_STD_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MEMORY_STD_IMPL_H
 
 #include "abstraction/memory.h"
 
@@ -48,3 +50,6 @@ void irt_scratchpad_free(void* ptr)
 	return free(ptr);
 }
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_STD_IMPL_H

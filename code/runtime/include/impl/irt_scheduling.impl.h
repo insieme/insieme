@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_SCHEDULING_IMPL_H
+#define __GUARD_IMPL_IRT_SCHEDULING_IMPL_H
 #include "irt_scheduling.h"
 #include "utils/timing.h"
 #include "impl/instrumentation_events.impl.h"
@@ -107,3 +109,6 @@ void irt_signal_worker(irt_worker* target) {
 	irt_mutex_unlock(&irt_g_active_worker_mutex);
 #endif // IRT_WORKER_SLEEPING
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_SCHEDULING_IMPL_H

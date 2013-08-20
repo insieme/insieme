@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_RAPL_H
+#define __GUARD_ABSTRACTION_RAPL_H
 
 /*
  *
@@ -136,3 +138,6 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data *data);
  */
 
 bool irt_rapl_is_supported();
+
+
+#endif // ifndef __GUARD_ABSTRACTION_RAPL_H

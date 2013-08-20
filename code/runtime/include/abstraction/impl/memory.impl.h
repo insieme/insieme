@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H
 
 #if defined(GEMSCLAIM)
 	#include "memory.gems.impl.h"
@@ -42,3 +44,6 @@
 	#include "memory.std.impl.h"
 #endif
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H

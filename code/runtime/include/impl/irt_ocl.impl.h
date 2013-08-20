@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_OCL_IMPL_H
+#define __GUARD_IMPL_IRT_OCL_IMPL_H
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -1428,3 +1430,6 @@ static cl_ulong _irt_cl_get_local_mem_size(cl_device_id* device) {
 		return retval;
 }
 #endif
+
+
+#endif // ifndef __GUARD_IMPL_IRT_OCL_IMPL_H

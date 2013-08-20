@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_OPTIMIZER_H
+#define __GUARD_IRT_OPTIMIZER_H
 
 #include "declarations.h"
 //#define IRT_RUNTIME_TUNING
@@ -53,3 +55,6 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time,
 #else
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
 #endif
+
+
+#endif // ifndef __GUARD_IRT_OPTIMIZER_H

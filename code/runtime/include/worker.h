@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_WORKER_H
+#define __GUARD_WORKER_H
 
 #include "declarations.h"
 #include "abstraction/threads.h"
@@ -124,3 +126,6 @@ void irt_worker_cleanup(irt_worker* self);
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self);
 #endif
+
+
+#endif // ifndef __GUARD_WORKER_H

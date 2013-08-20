@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_THREADS_H
+#define __GUARD_ABSTRACTION_THREADS_H
 
 
 #include "irt_inttypes.h"
@@ -156,3 +158,6 @@ inline void* irt_tls_get(irt_tls_key k);
 
 /** set the thread local value for key k */
 inline int irt_tls_set(irt_tls_key k, void *val);
+
+
+#endif // ifndef __GUARD_ABSTRACTION_THREADS_H

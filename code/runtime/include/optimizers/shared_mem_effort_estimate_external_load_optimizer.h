@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_OPTIMIZERS_SHARED_MEM_EFFORT_ESTIMATE_EXTERNAL_LOAD_OPTIMIZER_H
+#define __GUARD_OPTIMIZERS_SHARED_MEM_EFFORT_ESTIMATE_EXTERNAL_LOAD_OPTIMIZER_H
 
 uint64 irt_g_opt_min_effort = 1000000ull;
 #include "utils/load.h"
@@ -326,3 +328,6 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_w
 //}
 //
 //#endif
+
+
+#endif // ifndef __GUARD_OPTIMIZERS_SHARED_MEM_EFFORT_ESTIMATE_EXTERNAL_LOAD_OPTIMIZER_H

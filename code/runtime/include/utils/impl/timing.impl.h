@@ -37,6 +37,8 @@
 // platform independent implementations of timing functions
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_TIMING_IMPL_H
+#define __GUARD_UTILS_IMPL_TIMING_IMPL_H
 
 #include "utils/timing.h"
 #include "abstraction/impl/rdtsc.impl.h"
@@ -183,3 +185,6 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 uint64 irt_time_convert_ticks_to_ns(uint64 ticks) {
 	return (uint64)(ticks/((double)irt_g_time_ticks_per_sec/1000000000));
 }
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_TIMING_IMPL_H

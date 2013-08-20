@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_TEMPERATURE_H
+#define __GUARD_UTILS_TEMPERATURE_H
 
 #include "abstraction/temperature_intel.h"
 
@@ -42,3 +44,6 @@ uint64 (*irt_get_temperature_core)(const irt_worker* worker);
 uint64 (*irt_get_temperature_package)(const irt_worker* worker);
 
 void irt_temperature_select_instrumentation_method();
+
+
+#endif // ifndef __GUARD_UTILS_TEMPERATURE_H

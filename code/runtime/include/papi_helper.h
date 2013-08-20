@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_PAPI_HELPER_H
+#define __GUARD_PAPI_HELPER_H
 
 /*
  *
@@ -83,3 +85,4 @@ void irt_papi_select_events_from_env(irt_context* context);
 
 void irt_papi_setup(irt_context* context);
 
+#endif // ifndef __GUARD_PAPI_HELPER_H

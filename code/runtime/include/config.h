@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONFIG_H
+#define __GUARD_CONFIG_H
 
 /* ------------------------------ config options ----- */
 
@@ -125,3 +127,6 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
+
+
+#endif // ifndef __GUARD_CONFIG_H

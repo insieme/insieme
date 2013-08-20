@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_WORK_ITEM_IMPL_H
+#define __GUARD_IMPL_WORK_ITEM_IMPL_H
 
 #include "work_item.h"
 
@@ -395,3 +397,5 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 	}
 }
 
+
+#endif // ifndef __GUARD_IMPL_WORK_ITEM_IMPL_H

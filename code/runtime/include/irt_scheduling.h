@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_SCHEDULING_H
+#define __GUARD_IRT_SCHEDULING_H
 
 #include "declarations.h"
 
@@ -131,3 +133,6 @@ bool irt_scheduling_worker_sleep(irt_worker *self);
 #else
 #error "No scheduling policy set"
 #endif
+
+
+#endif // ifndef __GUARD_IRT_SCHEDULING_H

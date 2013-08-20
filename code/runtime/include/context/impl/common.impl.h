@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_IMPL_COMMON_IMPL_H
+#define __GUARD_CONTEXT_IMPL_COMMON_IMPL_H
 
 // -- utilities shared by the record and restore part of the code
 
@@ -53,3 +55,6 @@ typedef struct {
 	uint32 block;			// a block identifier
 	uint32 offset;			// the pointer offest within the block
 } irt_cap_pointer_substitute;
+
+
+#endif // ifndef __GUARD_CONTEXT_IMPL_COMMON_IMPL_H

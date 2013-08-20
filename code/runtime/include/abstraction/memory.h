@@ -35,9 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_MEMORY_H
+#define __GUARD_ABSTRACTION_MEMORY_H
 
 #include <stdlib.h>
 
 inline void *irt_scratchpad_alloc(size_t size);
 inline void irt_scratchpad_free(void* ptr);
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_MEMORY_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_COUNTED_DEQUES_H
+#define __GUARD_UTILS_COUNTED_DEQUES_H
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
@@ -206,3 +208,6 @@ static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##
 static inline uint32 irt_##__type__##_cdeque_get_size(irt_##__type__##_cdeque* q) { \
 	return q->size; \
 }
+
+
+#endif // ifndef __GUARD_UTILS_COUNTED_DEQUES_H

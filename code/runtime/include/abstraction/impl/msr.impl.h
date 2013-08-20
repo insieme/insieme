@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
 
 #if defined(_MSC_VER)
 	#warning "MSR reading under Windows not implemented!"
@@ -43,3 +45,6 @@
 #else
 	#include "abstraction/impl/msr.unix.impl.h"
 #endif
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H

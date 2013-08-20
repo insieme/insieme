@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_IPC_BASE_IMPL_H
+#define __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_IPC_BASE_IMPL_H
 
 #include "sched_policies/utils/irt_sched_ipc_base.h"
 #include "impl/worker.impl.h"
@@ -65,3 +67,6 @@ static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
 #endif
 	return retval;
 }
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_IPC_BASE_IMPL_H

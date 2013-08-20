@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
 
 #include <math.h>
 #include "irt_inttypes.h"
@@ -124,3 +126,6 @@ bool irt_rapl_is_supported() {
 
 	return false;
 }
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H

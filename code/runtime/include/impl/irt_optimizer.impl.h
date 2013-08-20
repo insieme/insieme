@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_OPTIMIZER_IMPL_H
+#define __GUARD_IMPL_IRT_OPTIMIZER_IMPL_H
 
 #include "utils/timing.h"
 #include "irt_optimizer.h"
@@ -88,3 +90,6 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_ite
 #endif
 
 #endif // ifndef IRT_RUNTIME_TUNING
+
+
+#endif // ifndef __GUARD_IMPL_IRT_OPTIMIZER_IMPL_H

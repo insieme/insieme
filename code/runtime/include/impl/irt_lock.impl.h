@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_LOCK_IMPL_H
+#define __GUARD_IMPL_IRT_LOCK_IMPL_H
 
 #include "declarations.h"
 #include "irt_lock.h"
@@ -88,3 +90,6 @@ void irt_lock_release(irt_lock* lock) {
 	}
 	irt_spin_unlock(&lock->mutex);	
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_LOCK_IMPL_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H
+#define __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H
 
 #include "declarations.h"
 #include "irt_atomic.h"
@@ -278,3 +280,6 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 }
 
 #endif
+
+
+#endif // ifndef __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H

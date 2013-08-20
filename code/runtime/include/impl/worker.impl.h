@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_WORKER_IMPL_H
+#define __GUARD_IMPL_WORKER_IMPL_H
 
 #include "worker.h"
 
@@ -342,3 +344,6 @@ void irt_worker_cleanup(irt_worker* self) {
 		}
 	}
 }
+
+
+#endif // ifndef __GUARD_IMPL_WORKER_IMPL_H

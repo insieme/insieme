@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_OCL_H
+#define __GUARD_IRT_OCL_H
 #include "impl/error_handling.impl.h"
 #include "abstraction/threads.h"
 
@@ -248,3 +250,6 @@ irt_ocl_buffer* irt_ocl_rt_create_buffer(irt_ocl_mem_flag flags, size_t size);
 void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_siz, uint32_t num_args, ...);
 
 void irt_ocl_print_events();
+
+
+#endif // ifndef __GUARD_IRT_OCL_H

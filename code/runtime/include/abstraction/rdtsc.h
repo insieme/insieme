@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_RDTSC_H
+#define __GUARD_ABSTRACTION_RDTSC_H
 
 #include "irt_inttypes.h"
 
@@ -56,3 +58,6 @@ bool irt_time_ticks_constant();
 #ifdef __cplusplus 
 }
 #endif
+
+
+#endif // ifndef __GUARD_ABSTRACTION_RDTSC_H

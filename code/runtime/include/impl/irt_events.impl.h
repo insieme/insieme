@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_EVENTS_IMPL_H
+#define __GUARD_IMPL_IRT_EVENTS_IMPL_H
 
 #include "irt_events.h"
 
@@ -304,3 +306,6 @@ IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM);
 // WG events //////////////////////////////////////
 IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM);
 
+
+
+#endif // ifndef __GUARD_IMPL_IRT_EVENTS_IMPL_H

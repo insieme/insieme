@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_TIMING_H
+#define __GUARD_UTILS_TIMING_H
 
 // prototype of functions using rdtsc
 #include "abstraction/rdtsc.h"
@@ -103,3 +105,6 @@ uint64 irt_time_ticks_per_sec_calibration_mark();
 
 // converts clock ticks to nanoseconds
 uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+
+
+#endif // ifndef __GUARD_UTILS_TIMING_H

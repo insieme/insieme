@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_VERSION_H
+#define __GUARD_IRT_VERSION_H
 
 /**
  * A simple header file defining a default insieme version information. It is overloaded
@@ -48,3 +50,6 @@
 #endif
 
 #define IRT_CODE_VERSION INSIEME_VERSION
+
+
+#endif // ifndef __GUARD_IRT_VERSION_H

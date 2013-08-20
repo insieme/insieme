@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_INTTYPES_H
+#define __GUARD_IRT_INTTYPES_H
 
 // if Visual Studio Compiler
 #ifdef _MSC_VER
@@ -67,3 +69,6 @@
 	typedef int64_t int64;
 	typedef uint64_t uint64;
 #endif
+
+
+#endif // ifndef __GUARD_IRT_INTTYPES_H

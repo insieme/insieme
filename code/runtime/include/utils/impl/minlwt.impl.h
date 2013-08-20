@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_MINLWT_IMPL_H
+#define __GUARD_UTILS_IMPL_MINLWT_IMPL_H
 
 #include "utils/minlwt.h"
 #include "work_item.h"
@@ -273,3 +275,6 @@ void lwt_end(lwt_context *basestack) {
 
 //#endif
 #endif
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_MINLWT_IMPL_H

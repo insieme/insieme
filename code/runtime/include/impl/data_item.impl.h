@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_DATA_ITEM_IMPL_H
+#define __GUARD_IMPL_DATA_ITEM_IMPL_H
 
 #include <stdlib.h>
 #include <string.h>
@@ -220,3 +222,6 @@ void irt_di_free(irt_data_block* b) {
 	// TODO notify parent
 	//_irt_di_dec_use_count(di);
 }
+
+
+#endif // ifndef __GUARD_IMPL_DATA_ITEM_IMPL_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_CONTEXT_IMPL_H
+#define __GUARD_IMPL_IRT_CONTEXT_IMPL_H
 
 #include "irt_context.h"
 
@@ -84,3 +86,6 @@ void irt_context_destroy(irt_context* context) {
 	irt_context_table_remove(context->id);
 	free(context);
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_CONTEXT_IMPL_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_STANDALONE_H
+#define __GUARD_STANDALONE_H
 
 /*
 	definition of global variables, startup, shutdown and signal handling functionality
@@ -373,3 +375,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	irt_exit_handler();
 }
+
+
+#endif // ifndef __GUARD_STANDALONE_H

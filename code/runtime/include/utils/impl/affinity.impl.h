@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_AFFINITY_IMPL_H
+#define __GUARD_UTILS_IMPL_AFFINITY_IMPL_H
 
 #include "utils/affinity.h"
 #include "impl/worker.impl.h"
@@ -183,3 +185,6 @@ void irt_set_global_affinity_policy(irt_affinity_policy policy) {
 		irt_g_workers[i]->affinity = mask;
 	}
 }
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_AFFINITY_IMPL_H

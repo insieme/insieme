@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_queue_pool_base.impl.h"
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
@@ -106,3 +108,4 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H

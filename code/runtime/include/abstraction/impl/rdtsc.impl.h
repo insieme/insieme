@@ -37,6 +37,8 @@
 // platform dependent implmentations of functions using rdtsc
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_RDTSC_IMPL_H
 
 #include "abstraction/rdtsc.h"
 
@@ -81,3 +83,6 @@
 	}
 
 #endif
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_IMPL_H

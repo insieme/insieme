@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_LOCK_H
+#define __GUARD_IRT_LOCK_H
 
 #include "declarations.h"
 #include "abstraction/threads.h"
@@ -54,3 +56,6 @@ struct _irt_lock {
 void irt_lock_init(irt_lock* lock);
 void irt_lock_acquire(irt_lock* lock);
 void irt_lock_release(irt_lock* lock);
+
+
+#endif // ifndef __GUARD_IRT_LOCK_H

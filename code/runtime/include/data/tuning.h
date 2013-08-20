@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_DATA_TUNING_H
+#define __GUARD_DATA_TUNING_H
 
 #include "declarations.h"
 #include "irt_inttypes.h"
@@ -304,3 +306,6 @@ irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_param
  */
 irt_tuning_error_code irt_set_params(const irt_subject* subject, const irt_parameter_id params[], const irt_value value[], unsigned n);
 
+
+
+#endif // ifndef __GUARD_DATA_TUNING_H

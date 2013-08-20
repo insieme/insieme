@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_IMPL_RECORD_IMPL_H
+#define __GUARD_CONTEXT_IMPL_RECORD_IMPL_H
 
 #include "context/record.h"
 #include "irt_atomic.h"
@@ -792,3 +794,6 @@ void irt_cap_profile_save() {
 #ifdef __INTEL_COMPILER
 #pragma warning pop
 #endif
+
+
+#endif // ifndef __GUARD_CONTEXT_IMPL_RECORD_IMPL_H

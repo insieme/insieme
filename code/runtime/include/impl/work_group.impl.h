@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_WORK_GROUP_IMPL_H
+#define __GUARD_IMPL_WORK_GROUP_IMPL_H
 
 #include "work_group.h"
 
@@ -285,3 +287,6 @@ void irt_wg_join(irt_work_group* wg) {
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }
+
+
+#endif // ifndef __GUARD_IMPL_WORK_GROUP_IMPL_H
