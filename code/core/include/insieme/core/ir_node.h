@@ -986,7 +986,7 @@ namespace core {
 		 * Obtains access to an element within this list.
 		 */
 		const Ptr<const ElementType>& getElement(std::size_t index) const {
-			assert(index < size() && "Element index out of bound!");
+			assert_lt(index, size()) << "Element index " << index << " is out of bound: [0.." << size() << ")";
 			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList())[offset + index];
 		}
 
