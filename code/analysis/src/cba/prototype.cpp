@@ -502,6 +502,9 @@ namespace cba {
 						// this should not be the end
 						assert(!parent.isRoot());
 
+						// obtain the set containing all the potential predecessor of the current call in the context
+						auto predecessor_ctxt = context.getSet(pred, ctxt.callContext.back());
+
 						// distinguish two cases: parameter of a lambda or parameter of a bind
 						if (parent.getParentNode().isa<LambdaPtr>()) {
 
@@ -510,9 +513,6 @@ namespace cba {
 							assert_lt(5, parent.getDepth());
 							auto lambda = parent.getParentAddress(4);
 							auto user = parent.getParentAddress(5);
-
-							// obtain the set containing all the potential predecessor of the current call in the context
-							auto predecessor_ctxt = context.getSet(pred, ctxt.callContext.back());
 
 							auto call = user.isa<CallExprAddress>();
 							if (call && call->getFunctionExpr() == lambda) {
@@ -555,8 +555,8 @@ namespace cba {
 														// get bound value in this context
 														auto A_arg = context.getSet(A, l_arg, cur.context);
 
-														constraints.add(subsetIf(cur, C_cur_call, A_arg, a_var));
-//														constraints.add(subsetIf(curCallCtxt.callContext.back(), predecessor_ctxt, cur, C_cur_call, A_arg, a_var));
+														// access parameter in src-ctxt if src-context is actually a potental predecessor
+														constraints.add(subsetIf(curCallCtxt.callContext.back(), predecessor_ctxt, cur, C_cur_call, A_arg, a_var));
 													}
 												}
 
@@ -658,7 +658,7 @@ namespace cba {
 										// pass value of argument to parameter for any potential callable
 										for(const auto& target : context.getCallables()) {
 											if (target.definition != bind) continue;
-											constraints.add(subsetIf(target, C_fun, A_arg, a_var));
+											constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
 										}
 									}
 								}
