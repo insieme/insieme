@@ -1018,6 +1018,10 @@ namespace pattern {
 		EXPECT_PRED2(noMatch, p, parseTree("c(c(s),c(s),a,m,s,m)"));
 		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,s,m,a,m)"));
 
+
+		EXPECT_PRED2(noMatch, p, parseTree("c(s,s,c(m))"));
+		EXPECT_PRED2(noMatch, p, parseTree("c(s,s,c(m),m)"));
+
 	}
 
 
