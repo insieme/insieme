@@ -55,6 +55,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/annotations/c/extern.h"
+#include "insieme/annotations/c/include.h"
 
 namespace insieme {
 namespace frontend {
