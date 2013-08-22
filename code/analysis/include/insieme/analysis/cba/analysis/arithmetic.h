@@ -1,0 +1,269 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#pragma once
+
+#include <boost/optional.hpp>
+
+#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/lang/basic.h"
+
+#include "insieme/utils/printable.h"
+
+namespace insieme {
+namespace analysis {
+namespace cba {
+
+	// ----------------- arithmetic analysis ---------------
+
+	struct Formula : public utils::Printable {
+		typedef boost::optional<core::arithmetic::Formula> formula_type;
+		formula_type formula;
+
+		Formula() : formula() {};
+		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
+
+		bool operator<(const Formula& other) const {
+			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
+		}
+
+		operator bool() const {
+			return formula;
+		}
+
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			if (formula) return out << *formula;
+			return out << "-unknown-";
+		}
+	};
+
+	template<typename C> class ArithmeticConstraintResolver;
+	typedef TypedSetType<Formula,ArithmeticConstraintResolver> ArithmeticSetType;
+
+	const ArithmeticSetType& A() {
+		static const ArithmeticSetType instance("A");
+		return instance;
+	}
+
+	const ArithmeticSetType& a() {
+		static const ArithmeticSetType instance("a");
+		return instance;
+	}
+
+
+
+	namespace {
+
+		template<typename A, typename B, typename R>
+		class total_binary_op {
+			typedef std::function<R(const A&, const B&)> fun_type;
+			fun_type fun;
+		public:
+			total_binary_op(const fun_type& fun) : fun(fun) {}
+
+			R operator()(const A& a, const B& b) const {
+				static const R fail;
+				if (!a) return fail;
+				if (!b) return fail;
+				return fun(a,b);
+			}
+		};
+
+		template<
+			typename F,
+			typename A = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg1_type>::type>::type,
+			typename B = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg2_type>::type>::type,
+			typename R = typename lambda_traits<F>::result_type
+		>
+		total_binary_op<A,B,R> total(const F& fun) {
+			return total_binary_op<A,B,R>(fun);
+		}
+
+		template<typename A, typename B, typename R>
+		class cartesion_product_binary_op {
+
+			typedef std::function<R(const A&, const B&)> fun_type;
+			fun_type fun;
+
+		public:
+
+			cartesion_product_binary_op(const fun_type& fun) : fun(fun) {}
+
+			set<R> operator()(const set<A>& a, const set<B>& b) const {
+				set<R> res;
+
+				// if there is any undefined included => it is undefined
+				if (any(a, [](const A& a)->bool { return !a; }) || any(b, [](const B& b)->bool { return !b; })) {
+					res.insert(R());
+					return res;
+				}
+
+				// compute the cross-product
+				for(auto& x : a) {
+					for (auto& y : b) {
+						res.insert(fun(x,y));
+					}
+				}
+
+				if (res.size() > 10) {
+					// build a set only containing the unknown value
+					set<R> res;
+					res.insert(R());
+					return res;
+				}
+
+				return res;
+			}
+
+		};
+
+		template<
+			typename F,
+			typename A = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg1_type>::type>::type,
+			typename B = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg2_type>::type>::type,
+			typename R = typename lambda_traits<F>::result_type
+		>
+		cartesion_product_binary_op<A,B,R> cartesion_product(const F& fun) {
+			return cartesion_product_binary_op<A,B,R>(fun);
+		}
+
+
+	}
+
+
+	template<typename Context>
+	class ArithmeticConstraintResolver : public BasicDataFlowConstraintResolver<Formula, Context> {
+
+		typedef BasicDataFlowConstraintResolver<Formula, Context> super;
+
+		const core::lang::BasicGenerator& base;
+
+	public:
+
+		ArithmeticConstraintResolver(CBA& cba)
+			: super(cba, cba::A, cba::a),
+			  base(cba.getRoot()->getNodeManager().getLangBasic())
+		{ };
+
+		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+
+			// and default handling
+			super::visitLiteral(literal, ctxt, constraints);
+
+			// only interested in integer literals
+			if (!base.isInt(literal->getType())) return;
+
+			// add constraint literal \in A(lit)
+			Formula value = core::arithmetic::toFormula(literal);
+			auto l_lit = cba.getLabel(literal);
+
+			auto A_lit = cba.getSet(A, l_lit, ctxt);
+			constraints.add(elem(value, A_lit));
+
+		}
+
+
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			static const Formula unknown;
+
+			// conduct std-procedure
+			super::visitCallExpr(call, ctxt, constraints);
+
+			// only care for integer expressions calling literals
+			if (!base.isInt(call->getType())) return;
+
+			// check whether it is a literal => otherwise basic data flow is handling it
+			auto fun = call->getFunctionExpr();
+			if (!fun.isa<LiteralPtr>()) return;
+
+			// get some labels / ids
+			auto A_res = cba.getSet(A, cba.getLabel(call), ctxt);
+
+			// handle unary literals
+			if (call.size() == 1u) {
+				if (base.isRefDeref(fun)) {
+					return;		// has been handled by super!
+				}
+			}
+
+			// and binary operators
+			if (call.size() != 2u) {
+				// this value is unknown
+				constraints.add(elem(unknown, A_res));
+				return;
+			}
+
+			// get sets for operators
+			auto A_lhs = cba.getSet(A, cba.getLabel(call[0]), ctxt);
+			auto A_rhs = cba.getSet(A, cba.getLabel(call[1]), ctxt);
+
+			// special handling for functions
+			if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun)) {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+					return *a.formula + *b.formula;
+				}))));
+				return;
+			}
+
+			if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+					return *a.formula - *b.formula;
+				}))));
+				return;
+			}
+
+			if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+					return *a.formula * *b.formula;
+				}))));
+				return;
+			}
+
+			// otherwise it is unknown
+			constraints.add(elem(unknown, A_res));
+		}
+
+	};
+
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

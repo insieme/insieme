@@ -79,23 +79,23 @@ namespace cba {
 
 	template<typename T, unsigned s>
 	struct Sequence : public utils::Printable {
-		enum { size = s };
+		enum { size = s, empty = (s==0) };
 		array<T, s> context;
 		Sequence() : context() {}
 		Sequence(const Sequence<T,s>& other) : context(other.context) {}
 		Sequence(const array<T,s>& context) : context(context) {}
 		template<typename ... E>
 		Sequence(const E& ... e) : context((array<T,s>){{e...}}) {}
-		bool operator==(const Sequence& other) const { return this == &other || context == other.context; }
+		bool operator==(const Sequence& other) const { return empty || this == &other || context == other.context; }
 		bool operator!=(const Sequence& other) const { return !(*this == other); }
-		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
+		bool operator<(const Sequence& other) const { return !empty && this != &other && context < other.context; }
 		const T& operator[](std::size_t index) const { return context[index]; }
 		bool startsWith(const T& e) const { return s == 0 || context.front() == e; }
 		bool endsWith(const T& e) const { return s == 0 || context.back() == e; }
 		const T& front() const { assert(s > 0u); return context.front(); }
 		const T& back() const { assert(s > 0u); return context.back(); }
-		const T& penultimate() const { assert(s > 1u); return context[size-2]; }
 		Sequence<T,s>& operator<<=(const Label& label) {
+			if (empty) return *this;
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];
 			}
@@ -103,6 +103,7 @@ namespace cba {
 			return *this;
 		}
 		Sequence<T,s>& operator>>=(const Label& label) {
+			if (empty) return *this;
 			for(int i=(s-1); i>=0; --i) {
 				context[i] = context[i-1];
 			}
@@ -114,13 +115,19 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
 
+	template<unsigned s>
 	struct ThreadID : public utils::Printable {
 		Label spawn;
+		Sequence<Label, s> spawnContext;
 		int id;
-		ThreadID() : spawn(0), id(0) {}
-		bool operator==(const ThreadID& other) const { return spawn == other.spawn && id == other.id; }
-		bool operator<(const ThreadID& other) const { return spawn < other.spawn || (spawn == other.spawn && id < other.id); }
-		std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << id << ">"; };
+		ThreadID() : spawn(0), spawnContext(), id(0) {}
+		bool operator==(const ThreadID& other) const { return spawn == other.spawn && id == other.id && spawnContext == other.spawnContext; }
+		bool operator<(const ThreadID& other) const {
+			if (spawn != other.spawn) return spawn < other.spawn;
+			if (id != other.id) return id < other.id;
+			return spawnContext < other.spawnContext;
+		}
+		std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << spawnContext << "," << id << ">"; };
 	};
 
 	/**
@@ -128,10 +135,20 @@ namespace cba {
 	 * TODO: document
 	 * TODO: make generic
 	 */
+//	template<
+//		unsigned call_context_size = 2,
+//		unsigned thread_context_length = 2,
+//		unsigned thread_spawn_context_length = 0
+//	>
 	struct Context : public utils::Printable {
 
+//		typedef Sequence<Label, call_context_size> CallContext;
+//
+//		typedef ThreadID<thread_spawn_context_length> ThreadID;
+//		typedef Sequence<ThreadID, thread_context_length> ThreadContext;
+
 		typedef Sequence<Label, 2> CallContext;
-		typedef Sequence<ThreadID, 2> ThreadContext;
+		typedef Sequence<ThreadID<0>, 2> ThreadContext;
 
 		CallContext callContext;
 		ThreadContext threadContext;
@@ -163,6 +180,10 @@ namespace cba {
 			return out << "[" << callContext << "," << threadContext << "]";
 		};
 	};
+
+//	typedef Context<0,0,0> NoContext;
+//	typedef Context<2,2,0> DefaultContext;
+//	typedef Context<2,2,0> Context;
 
 	// ----------- set types ------------------
 

@@ -286,12 +286,13 @@ namespace cba {
 			vector<Callable> res;
 
 			// TODO: collect potential thread contexts
-			vector<ThreadID> threads;
-			threads.push_back(ThreadID());		// default thread
-
-			// create all thread contexts
+//			vector<ThreadID> threads;
+//			threads.push_back(ThreadID());		// default thread
+//
+//			// create all thread contexts
 			vector<Context::ThreadContext> threadContexts;
-			generateSequences(threads, threadContexts);
+//			generateSequences(threads, threadContexts);
+			threadContexts.push_back(Context::ThreadContext());
 
 			// collect all terms in the code
 			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
