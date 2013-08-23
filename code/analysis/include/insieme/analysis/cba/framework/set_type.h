@@ -97,7 +97,7 @@ namespace cba {
 
 		// expose member types
 		typedef E element_type;
-		typedef R resolver_type;
+		template<typename T> struct resolver_type { typedef R<T> type; };
 
 		/**
 		 * A simple constructor just forwarding the name of the resulting set.

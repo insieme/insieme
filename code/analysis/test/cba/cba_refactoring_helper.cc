@@ -34,31 +34,57 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/set_constraint/solver2.h"
+#include <fstream>
+
+#include "insieme/analysis/cba/cba.h"
+
+#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/context.h"
+#include "insieme/analysis/cba/framework/constraint_resolver.h"
+#include "insieme/analysis/cba/framework/cba.h"
+
+//#include "insieme/analysis/cba/analysis/arithmetic.h"
+//#include "insieme/analysis/cba/analysis/boolean.h"
+#include "insieme/analysis/cba/analysis/simple_constant.h"
+//#include "insieme/analysis/cba/analysis/callables.h"
+//#include "insieme/analysis/cba/analysis/call_context_predecessor.h"
+//#include "insieme/analysis/cba/analysis/reachability.h"
+
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
-	using namespace utils::set_constraint_2;
+	template<typename C> struct DummyResolver : public ConstraintResolver<C> {
+		DummyResolver(CBA& cba) : ConstraintResolver<C>(cba) {}
+	};
 
-	// forward declarations
-	typedef int Label;										// the type used to label code locations
-	typedef int Variable;									// the type used to identify variables
+	TypedSetType<int, DummyResolver> Dummy("Dummy");
 
-	class CBA;												// the main analysis entity
+	/**
+	 * This is not really a test case and should be deleted when no longer used.
+	 * It is simpley used for gradually fixing the refactored CBA infrastructure.
+	 */
 
-//	template<typename Context> class ConstraintResolver;
-//	template<typename T, typename Context> class BasicDataFlowConstraintResolver;
+	TEST(CBA, Refactoring) {
 
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintResolver;
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		core::ExpressionAddress code(builder.parseExpr("1"));
 
-	template<typename A, typename B, typename C> class BasicInConstraintResolver;
-	template<typename A, typename B, typename C> class BasicOutConstraintResolver;
+		// let's start simple
+		CBA cba(code);
+
+		EXPECT_EQ("s1", toString(cba.getSet(Dummy, code)));
+		EXPECT_EQ("s2", toString(cba.getSet(Dummy, code, Context<1,1,0>())));
+		EXPECT_EQ("s3", toString(cba.getSet(Dummy, code, Context<1,1,1>())));
+
+
+		cba.getValuesOf(code, D);
+	}
 
 } // end namespace cba
 } // end namespace analysis

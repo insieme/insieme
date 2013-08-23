@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
 
 #include "insieme/core/forward_decls.h"
@@ -50,26 +50,23 @@ namespace cba {
 	typedef core::ExpressionAddress ContextFreeCallable;
 	template<typename C> class FunctionConstraintResolver;
 
-	const TypedSetType<ContextFreeCallable,FunctionConstraintResolver>& F() {
-		static const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> instance("F");
-		return instance;
-	}
+	typedef TypedSetType<ContextFreeCallable,FunctionConstraintResolver> FunctionSetType;
+	extern const FunctionSetType F;
+	extern const FunctionSetType f;
 
-	const TypedSetType<ContextFreeCallable,FunctionConstraintResolver>& f() {
-		static const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> instance("f");
-		return instance;
-	}
 
 
 	template<typename Context>
-	class FunctionConstraintResolver : public BasicDataFlowConstraintResolver<ContextFreeCallable,Context> {
+	class FunctionConstraintResolver : public BasicDataFlowConstraintResolver<ContextFreeCallable,FunctionSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<ContextFreeCallable,Context> super;
+		typedef BasicDataFlowConstraintResolver<ContextFreeCallable,FunctionSetType,Context> super;
+
+		CBA& cba;
 
 	public:
 
 		FunctionConstraintResolver(CBA& cba)
-			: super(cba, F, f) { };
+			: super(cba, F, f), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 

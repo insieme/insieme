@@ -45,6 +45,7 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
+namespace prototype {
 
 	/**
 	 * For the docu:
@@ -1054,7 +1055,7 @@ namespace cba {
 		public:
 
 			ArithmeticConstraintCollector(CBA& context)
-				: super(context, cba::A, cba::a),
+				: super(context, prototype::A, prototype::a),
 				  base(context.getRoot()->getNodeManager().getLangBasic())
 			{ };
 
@@ -1218,7 +1219,7 @@ namespace cba {
 		public:
 
 			BooleanConstraintCollector(CBA& context)
-				: super(context, cba::B, cba::b),
+				: super(context, B, b),
 				  base(context.getRoot()->getNodeManager().getLangBasic())
 			{ };
 
@@ -1315,8 +1316,8 @@ namespace cba {
 
 				// arithmetic relations
 				{
-					auto A_lhs = context.getSet(cba::A, context.getLabel(call[0]), ctxt);
-					auto A_rhs = context.getSet(cba::A, context.getLabel(call[1]), ctxt);
+					auto A_lhs = context.getSet(prototype::A, context.getLabel(call[0]), ctxt);
+					auto A_rhs = context.getSet(prototype::A, context.getLabel(call[1]), ctxt);
 
 					typedef core::arithmetic::Formula F;
 					typedef core::arithmetic::Inequality Inequality;		// shape: formula <= 0
@@ -2729,6 +2730,7 @@ namespace cba {
 		out << "\n}\n";
 	}
 
+} // end namespace prototype
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

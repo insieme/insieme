@@ -37,7 +37,9 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/entitiey.h"
+//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/utils/cba_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
@@ -47,12 +49,6 @@ namespace analysis {
 namespace cba {
 
 	// ----------------- references ---------------
-
-	template<typename Context>
-	struct Location : public std::tuple<core::ExpressionAddress, Context> {
-		const core::ExpressionAddress& getAddress() const { return first; }
-		const Context& getContext() const { return second; }
-	};
 
 	template<typename Context> class ReferenceConstraintResolver;
 
@@ -69,49 +65,52 @@ namespace cba {
 	}
 
 
-	template<typename Context>
-	class ReferenceConstraintResolver : public BasicDataFlowConstraintResolver<Location<Context>,Context> {
+	template<typename Context> class ReferenceConstraintResolver;
 
-		typedef BasicDataFlowConstraintResolver<Location<Context>,Context> super;
 
-	public:
-
-		ReferenceConstraintResolver(CBA& context) : super(context, R, r) { };
-
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
-
-			// and default handling
-			super::visitLiteral(literal, ctxt, constraints);
-
-			// only interested in memory location constructors
-			if (!isMemoryConstructor(literal)) return;
-
-			// add constraint literal \in R(lit)
-			auto value = context.getLocation(literal);
-			auto l_lit = context.getLabel(literal);
-
-			auto R_lit = context.getSet(R, l_lit, ctxt);
-			constraints.add(elem(value, R_lit));
-
-		}
-
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-
-			// and default handling
-			super::visitCallExpr(call, ctxt, constraints);
-
-			// introduce memory location in some cases
-			if (!isMemoryConstructor(call)) return;
-
-			// add constraint location \in R(call)
-			auto value = context.getLocation(call);
-			auto l_lit = context.getLabel(call);
-
-			auto R_lit = context.getSet(R, l_lit, ctxt);
-			constraints.add(elem(value, R_lit));
-		}
-
-	};
+//	template<typename Context>
+//	class ReferenceConstraintResolver : public BasicDataFlowConstraintResolver<Location<Context>,Context> {
+//
+//		typedef BasicDataFlowConstraintResolver<Location<Context>,Context> super;
+//
+//	public:
+//
+//		ReferenceConstraintResolver(CBA& context) : super(context, R, r) { };
+//
+//		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+//
+//			// and default handling
+//			super::visitLiteral(literal, ctxt, constraints);
+//
+//			// only interested in memory location constructors
+//			if (!isMemoryConstructor(literal)) return;
+//
+//			// add constraint literal \in R(lit)
+//			auto value = context.getLocation(literal);
+//			auto l_lit = context.getLabel(literal);
+//
+//			auto R_lit = context.getSet(R, l_lit, ctxt);
+//			constraints.add(elem(value, R_lit));
+//
+//		}
+//
+//		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+//
+//			// and default handling
+//			super::visitCallExpr(call, ctxt, constraints);
+//
+//			// introduce memory location in some cases
+//			if (!isMemoryConstructor(call)) return;
+//
+//			// add constraint location \in R(call)
+//			auto value = context.getLocation(call);
+//			auto l_lit = context.getLabel(call);
+//
+//			auto R_lit = context.getSet(R, l_lit, ctxt);
+//			constraints.add(elem(value, R_lit));
+//		}
+//
+//	};
 
 } // end namespace cba
 } // end namespace analysis

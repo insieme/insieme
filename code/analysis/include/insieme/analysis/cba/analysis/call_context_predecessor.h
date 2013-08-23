@@ -47,22 +47,18 @@ namespace cba {
 	template<typename C> class ContextPredecessorResolver;
 	typedef TypedSetType<Label,ContextPredecessorResolver> ContextPredecessorType;
 
-	const ContextPredecessorType& pred() {
-		static const ContextPredecessorType instance("pred");
-		return instance;
-	}
-
+	extern const ContextPredecessorType pred;
 
 	// -------------------------------------- Context Predecessor Constraints -----------------------------
 
 	template<typename Context>
 	class ContextPredecessorResolver : public ConstraintResolver<Context> {
 
+		CBA& cba;
 
 	public:
 
-		ContextPredecessorResolver(CBA& cba) : ConstraintResolver<Context>(cba) {}
-
+		ContextPredecessorResolver(CBA& cba) : ConstraintResolver<Context>(cba), cba(cba) {}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 			// restrict context
@@ -74,7 +70,7 @@ namespace cba {
 			if (funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
 
 			// fill predecessor set
-			auto pred_res = context.getSet(pred, context.getLabel(call));
+			auto pred_res = cba.getSet(pred, cba.getLabel(call));
 
 			// get surrounding free function
 			auto fun = getSurroundingFreeFunction(call);
@@ -88,7 +84,7 @@ namespace cba {
 
 			// ----- check whether function forwarding can be traced statically ----
 
-			if (auto staticUses = context.getAllStaticUses(fun)) {
+			if (auto staticUses = cba.getAllStaticUses(fun)) {
 				// if uses can be determined statically, we can just consider them
 				for(Label l_call : *staticUses) {
 					constraints.add(elem(l_call, pred_res));
@@ -98,21 +94,23 @@ namespace cba {
 
 			// ----- fallback, the function might reach any point in the code -----
 
+			// TODO: use contexts provided by CBA
+
 			// uses have to be determined dynamically
-			vector<Context::CallContext> callContexts;
-			generateSequences(context.getDynamicCallLabels(), callContexts);
+			vector<typename Context::call_context> callContexts;
+			generateSequences(cba.getDynamicCallLabels(), callContexts);
 
 			// compute all contexts this function may be called at
 			auto num_params = fun->getType().as<FunctionTypePtr>()->getParameterTypes().size();
-			for(const auto& dynCall : context.getDynamicCalls()) {
+			for(const auto& dynCall : cba.getDynamicCalls()) {
 				// check number of parameters
 				if (dynCall.size() != num_params) continue;
 
-				auto l_call = context.getLabel(dynCall);
-				auto l_fun = context.getLabel(dynCall->getFunctionExpr());
+				auto l_call = cba.getLabel(dynCall);
+				auto l_fun = cba.getLabel(dynCall->getFunctionExpr());
 
 				for(const auto& callCtxt : callContexts) {
-					auto F_dynCall = context.getSet(F, l_fun, callCtxt);
+					auto F_dynCall = cba.getSet(F, l_fun, Context(callCtxt));
 					constraints.add(elemIf(fun.as<ExpressionAddress>(), F_dynCall, l_call, pred_res));
 				}
 			}

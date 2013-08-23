@@ -54,26 +54,18 @@ namespace cba {
 	};
 
 	template<typename C> class ReachableInConstraintResolver;
-
-	const TypedSetType<Reachable,ReachableInConstraintResolver>& Rin() {
-		static const TypedSetType<Reachable,ReachableInConstraintResolver> instance("Rin");
-		return instance;
-	}
+	extern const TypedSetType<Reachable,ReachableInConstraintResolver> Rin;
 
 	template<typename C> class ReachableOutConstraintResolver;
-
-	const TypedSetType<Reachable,ReachableOutConstraintResolver>& Rout() {
-		static const TypedSetType<Reachable,ReachableOutConstraintResolver> instance("Rout");
-		return instance;
-	}
+	extern const TypedSetType<Reachable,ReachableOutConstraintResolver> Rout;
 
 
 	template<typename Context>
-	class ReachableInConstraintResolver : public BasicInConstraintResolver<TypedSetType<Reachable,ReachableInConstraintResolver>, ReachableInConstraintResolver, Context> {
+	class ReachableInConstraintResolver : public BasicInConstraintResolver<TypedSetType<Reachable,ReachableInConstraintResolver>, ReachableInConstraintResolver<Context>, Context> {
 
 		typedef TypedSetType<Reachable,ReachableInConstraintResolver> SetType;
 
-		typedef BasicInConstraintResolver<SetType, ReachableInConstraintResolver, Context> super;
+		typedef BasicInConstraintResolver<TypedSetType<Reachable,ReachableInConstraintResolver>, ReachableInConstraintResolver<Context>, Context> super;
 
 		StatementAddress root;
 
@@ -84,14 +76,14 @@ namespace cba {
 	public:
 
 		ReachableInConstraintResolver(CBA& cba)
-			: super(cba, Rin(), Rout(), *this), root(cba.getRoot()), initSet(false), cba(cba) { }
+			: super(cba, Rin, Rout, *this), root(cba.getRoot()), initSet(false), cba(cba) { }
 
 		virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
 			// make sure root is reachable
 			if (!initSet && node == root && ctxt == Context()) {
 				auto l = cba.getLabel(root);
-				auto R = cba.getSet(Rin(), l, ctxt);
+				auto R = cba.getSet(Rin, l, ctxt);
 				constraints.add(elem(Reachable(), R));
 				initSet = true;
 			}
@@ -134,18 +126,18 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachableOutConstraintResolver : public BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver,Context> {
+	class ReachableOutConstraintResolver : public BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver<Context>,Context> {
 
 		typedef TypedSetType<Reachable,ReachableOutConstraintResolver> SetType;
 
-		typedef BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver,Context> super;
+		typedef BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver<Context>,Context> super;
 
 		CBA& cba;
 
 	public:
 
 		ReachableOutConstraintResolver(CBA& cba)
-			: super(cba, Rin(), Rout(), *this), cba(cba) { }
+			: super(cba, Rin, Rout, *this), cba(cba) { }
 
 		void connectStateSets (
 					const SetType& a, Label al, const Context& ac,

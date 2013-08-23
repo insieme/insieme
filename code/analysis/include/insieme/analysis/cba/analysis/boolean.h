@@ -54,15 +54,8 @@ namespace cba {
 	template<typename C> class BooleanConstraintResolver;
 	typedef TypedSetType<bool,BooleanConstraintResolver> BooleanSetType;
 
-	const BooleanSetType& B() {
-		static const BooleanSetType instance("B");
-		return instance;
-	}
-
-	const BooleanSetType& b() {
-		static const BooleanSetType instance("b");
-		return instance;
-	}
+	extern const BooleanSetType B;
+	extern const BooleanSetType b;
 
 	namespace {
 
@@ -138,17 +131,20 @@ namespace cba {
 	}
 
 	template<typename Context>
-	class BooleanConstraintResolver : public BasicDataFlowConstraintResolver<bool,Context> {
+	class BooleanConstraintResolver : public BasicDataFlowConstraintResolver<bool,BooleanSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<bool,Context> super;
+		typedef BasicDataFlowConstraintResolver<bool,BooleanSetType,Context> super;
 
 		const core::lang::BasicGenerator& base;
+
+		CBA& cba;
 
 	public:
 
 		BooleanConstraintResolver(CBA& cba)
 			: super(cba, cba::B, cba::b),
-			  base(cba.getRoot()->getNodeManager().getLangBasic())
+			  base(cba.getRoot()->getNodeManager().getLangBasic()),
+			  cba(cba)
 		{ };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -163,10 +159,10 @@ namespace cba {
 			bool isTrue = base.isTrue(literal);
 			bool isFalse = base.isFalse(literal);
 
-			auto l_lit = context.getLabel(literal);
+			auto l_lit = cba.getLabel(literal);
 
-			if (isTrue  || (!isTrue && !isFalse)) constraints.add(elem(true, context.getSet(B, l_lit, ctxt)));
-			if (isFalse || (!isTrue && !isFalse)) constraints.add(elem(false, context.getSet(B, l_lit, ctxt)));
+			if (isTrue  || (!isTrue && !isFalse)) constraints.add(elem(true, cba.getSet(B, l_lit, ctxt)));
+			if (isFalse || (!isTrue && !isFalse)) constraints.add(elem(false, cba.getSet(B, l_lit, ctxt)));
 
 		}
 
@@ -184,7 +180,7 @@ namespace cba {
 			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
-			auto B_res = context.getSet(B, context.getLabel(call), ctxt);
+			auto B_res = cba.getSet(B, cba.getLabel(call), ctxt);
 
 			// handle unary literals
 			if (call.size() == 1u) {
@@ -196,7 +192,7 @@ namespace cba {
 
 				// support negation
 				if (base.isBoolLNot(fun)) {
-					auto B_arg = context.getSet(B, context.getLabel(call[0]), ctxt);
+					auto B_arg = cba.getSet(B, cba.getLabel(call[0]), ctxt);
 					constraints.add(subsetUnary(B_arg, B_res, [](const set<bool>& in)->set<bool> {
 						set<bool> out;
 						for(bool cur : in) out.insert(!cur);
@@ -218,8 +214,8 @@ namespace cba {
 			// boolean relations
 			{
 				// get sets for operators
-				auto B_lhs = context.getSet(B, context.getLabel(call[0]), ctxt);
-				auto B_rhs = context.getSet(B, context.getLabel(call[1]), ctxt);
+				auto B_lhs = cba.getSet(B, cba.getLabel(call[0]), ctxt);
+				auto B_rhs = cba.getSet(B, cba.getLabel(call[1]), ctxt);
 
 				if (base.isBoolEq(fun)) {
 					// equality is guaranteed if symbols are identical - no matter what the value is
@@ -244,8 +240,8 @@ namespace cba {
 
 			// arithmetic relations
 			{
-				auto A_lhs = context.getSet(cba::A, context.getLabel(call[0]), ctxt);
-				auto A_rhs = context.getSet(cba::A, context.getLabel(call[1]), ctxt);
+				auto A_lhs = cba.getSet(cba::A, cba.getLabel(call[0]), ctxt);
+				auto A_rhs = cba.getSet(cba::A, cba.getLabel(call[1]), ctxt);
 
 				typedef core::arithmetic::Formula F;
 				typedef core::arithmetic::Inequality Inequality;		// shape: formula <= 0

@@ -49,25 +49,21 @@ namespace cba {
 
 	template<typename Context> class ConstantConstraintResolver;
 
-	const TypedSetType<core::ExpressionPtr,ConstantConstraintResolver>& D() {
-		const static TypedSetType<core::ExpressionPtr,ConstantConstraintResolver> instance("D");
-		return instance;
-	}
-
-	const TypedSetType<core::ExpressionPtr,ConstantConstraintResolver>& d() {
-		const static TypedSetType<core::ExpressionPtr,ConstantConstraintResolver> instance("d");
-		return instance;
-	}
+	typedef TypedSetType<core::ExpressionPtr,ConstantConstraintResolver> SimpleConstantSetType;
+	extern const SimpleConstantSetType D;
+	extern const SimpleConstantSetType d;
 
 	template<typename Context>
-	class ConstantConstraintResolver : public BasicDataFlowConstraintResolver<core::ExpressionPtr,Context> {
+	class ConstantConstraintResolver : public BasicDataFlowConstraintResolver<core::ExpressionPtr,SimpleConstantSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<core::ExpressionPtr,Context> super;
+		typedef BasicDataFlowConstraintResolver<core::ExpressionPtr,SimpleConstantSetType,Context> super;
+
+		CBA& cba;
 
 	public:
 
-		ConstantConstraintResolver(CBA& context)
-			: super(context, D, d) { };
+		ConstantConstraintResolver(CBA& cba)
+			: super(cba, D, d), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -79,9 +75,9 @@ namespace cba {
 
 			// add constraint literal \in C(lit)
 			auto value = literal.as<ExpressionPtr>();
-			auto l_lit = context.getLabel(literal);
+			auto l_lit = cba.getLabel(literal);
 
-			auto D_lit = context.getSet(D, l_lit, ctxt);
+			auto D_lit = cba.getSet(D, l_lit, ctxt);
 			constraints.add(elem(value, D_lit));
 
 		}
@@ -96,7 +92,7 @@ namespace cba {
 			if (base.isIntArithOp(call->getFunctionExpr())) {
 
 				// mark result as being unknown
-				auto D_call = context.getSet(D, context.getLabel(call), ctxt);
+				auto D_call = cba.getSet(D, cba.getLabel(call), ctxt);
 				constraints.add(elem(ExpressionPtr(), D_call));
 
 			}

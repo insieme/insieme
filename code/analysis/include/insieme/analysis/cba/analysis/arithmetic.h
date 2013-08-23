@@ -38,11 +38,11 @@
 
 #include <boost/optional.hpp>
 
-#include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/cba.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/printable.h"
@@ -50,6 +50,8 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
+
+	using std::set;
 
 	// ----------------- arithmetic analysis ---------------
 
@@ -79,15 +81,8 @@ namespace cba {
 	template<typename C> class ArithmeticConstraintResolver;
 	typedef TypedSetType<Formula,ArithmeticConstraintResolver> ArithmeticSetType;
 
-	const ArithmeticSetType& A() {
-		static const ArithmeticSetType instance("A");
-		return instance;
-	}
-
-	const ArithmeticSetType& a() {
-		static const ArithmeticSetType instance("a");
-		return instance;
-	}
+	extern const ArithmeticSetType A;
+	extern const ArithmeticSetType a;
 
 
 
@@ -171,17 +166,20 @@ namespace cba {
 
 
 	template<typename Context>
-	class ArithmeticConstraintResolver : public BasicDataFlowConstraintResolver<Formula, Context> {
+	class ArithmeticConstraintResolver : public BasicDataFlowConstraintResolver<Formula, ArithmeticSetType, Context> {
 
-		typedef BasicDataFlowConstraintResolver<Formula, Context> super;
+		typedef BasicDataFlowConstraintResolver<Formula, ArithmeticSetType, Context> super;
 
 		const core::lang::BasicGenerator& base;
+
+		CBA& cba;
 
 	public:
 
 		ArithmeticConstraintResolver(CBA& cba)
 			: super(cba, cba::A, cba::a),
-			  base(cba.getRoot()->getNodeManager().getLangBasic())
+			  base(cba.getRoot()->getNodeManager().getLangBasic()),
+			  cba(cba)
 		{ };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {

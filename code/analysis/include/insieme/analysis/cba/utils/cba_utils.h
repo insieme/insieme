@@ -36,29 +36,24 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/set_constraint/solver2.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
-	using namespace utils::set_constraint_2;
+	core::ExpressionAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
 
-	// forward declarations
-	typedef int Label;										// the type used to label code locations
-	typedef int Variable;									// the type used to identify variables
+	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
 
-	class CBA;												// the main analysis entity
+	// allows to check whether a given statement is a memory location constructor (including globals)
+	bool isMemoryConstructor(const core::StatementAddress& stmt);
 
-//	template<typename Context> class ConstraintResolver;
-//	template<typename T, typename Context> class BasicDataFlowConstraintResolver;
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
 
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintResolver;
+	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
-	template<typename A, typename B, typename C> class BasicInConstraintResolver;
-	template<typename A, typename B, typename C> class BasicOutConstraintResolver;
 
 } // end namespace cba
 } // end namespace analysis

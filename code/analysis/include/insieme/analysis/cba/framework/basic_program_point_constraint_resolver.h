@@ -42,6 +42,7 @@
 #include "insieme/analysis/cba/framework/cba.h"
 
 #include "insieme/analysis/cba/analysis/analysis.h"
+#include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
 
 #include "insieme/core/ir.h"
@@ -53,6 +54,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	using namespace core;
 	using namespace insieme::utils::set_constraint_2;
 
 	// ----------------------------------------------------------------------------------------------------------------------------
@@ -77,36 +79,38 @@ namespace cba {
 
 		Collector& collector;
 
+		CBA& cba;
+
 	public:
 
 		BasicInOutConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-			: super(cba), Ain(Ain), Aout(Aout), collector(collector) {}
+			: super(cba), Ain(Ain), Aout(Aout), collector(collector), cba(cba) {}
 
 	protected:
 
 		void connectSets(const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
-			if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
-			connectStateSets(a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
+			connectStateSets(a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
 		}
 
 		template<typename E>
 		void connectSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
-			if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
-			connectStateSetsIf(value, set, a, context.getLabel(al), ac, b, context.getLabel(bl), bc, constraints);
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
+			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
 		}
 
 		void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
-			if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSets(a,al,ac,b,bl,bc,constraints);
 		}
 
 		template<typename E>
 		void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
-			if (!this->context.isValid(ac) || !this->context.isValid(bc)) return;
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
 		}
 
@@ -118,11 +122,12 @@ namespace cba {
 
 		typedef BasicInOutConstraintResolver<SetIDType, Collector, Context> super;
 
+		CBA& cba;
+
 	public:
 
 		BasicInConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-			: super(cba, Ain, Aout, collector) {}
-
+			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
 
@@ -195,7 +200,7 @@ namespace cba {
 			} else {
 				// it is no direct call => change in context possible
 				auto numParams = bind->getParameters().size();
-				for(auto& dynCall : this->context.getDynamicCalls()) {
+				for(auto& dynCall : cba.getDynamicCalls()) {
 					if(numParams != dynCall.size()) continue;
 
 					// special case: ctxt starts with 0 - root context, is not called by anybody
@@ -206,7 +211,7 @@ namespace cba {
 					} else {
 
 						// all other contexts may be reached from any other
-						for(auto& l : this->context.getDynamicCallLabels()) {
+						for(auto& l : cba.getDynamicCallLabels()) {
 
 							// nobody calls context 0
 							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
@@ -248,11 +253,11 @@ namespace cba {
 
 					// this function is invoked indirectly
 					auto numParams = lambda.as<LambdaPtr>()->getParameters().size();
-					for(auto& call : this->context.getDynamicCalls()) {
+					for(auto& call : cba.getDynamicCalls()) {
 						if(numParams != call.size()) continue;
 
 						// all other contexts may be reached from any other
-						for(auto& l : this->context.getDynamicCallLabels()) {
+						for(auto& l : cba.getDynamicCallLabels()) {
 
 							// nobody calls context 0
 							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
@@ -355,15 +360,15 @@ namespace cba {
 				} else if (ifStmt->getThenBody() == stmt) {
 
 					// connect out of condition with in of body if condition may be true
-					auto l_cond = this->context.getLabel(cond);
-					auto B_cond = this->context.getSet(B(), l_cond, ctxt);
+					auto l_cond = cba.getLabel(cond);
+					auto B_cond = cba.getSet(B, l_cond, ctxt);
 					this->connectSetsIf(true, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, constraints);
 
 				} else if (ifStmt->getElseBody() == stmt) {
 
 					// connect out of condition with in of body if condition may be false
-					auto l_cond = this->context.getLabel(cond);
-					auto B_cond = this->context.getSet(B(), l_cond, ctxt);
+					auto l_cond = cba.getLabel(cond);
+					auto B_cond = cba.getSet(B, l_cond, ctxt);
 					this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, constraints);
 
 				} else {
@@ -379,8 +384,8 @@ namespace cba {
 
 				// check which part of a while the current node is
 				auto cond = whileStmt->getCondition();
-				auto l_cond = this->context.getLabel(cond);
-				auto B_cond = this->context.getSet(B(), l_cond, ctxt);
+				auto l_cond = cba.getLabel(cond);
+				auto B_cond = cba.getSet(B, l_cond, ctxt);
 				if (cond == stmt) {
 					// connect in of while to in of condition
 					this->connectSets(this->Ain, whileStmt, ctxt, this->Ain, stmt, ctxt, constraints);
@@ -406,10 +411,12 @@ namespace cba {
 
 		typedef BasicInOutConstraintResolver<SetIDType, Collector, Context> super;
 
+		CBA& cba;
+
 	public:
 
 		BasicOutConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
-			: super(cba, Ain, Aout, collector) {}
+			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -419,14 +426,14 @@ namespace cba {
 			//  - link out of arguments with in of function
 			//  - link out of function with out of call
 
-			auto l_call = this->context.getLabel(call);
+			auto l_call = cba.getLabel(call);
 
 			// create inner call context
 			Context innerCallContext = ctxt;
 
 			// get set of potential target functions
-			auto l_fun = this->context.getLabel(call->getFunctionExpr());
-			auto F_fun = this->context.getSet(F, l_fun, ctxt);
+			auto l_fun = cba.getLabel(call->getFunctionExpr());
+			auto F_fun = cba.getSet(F, l_fun, ctxt);
 
 			// a utility resolving constraints for the called function
 			auto addConstraints = [&](const ExpressionAddress& fun, bool fixed) {
@@ -451,7 +458,7 @@ namespace cba {
 				}
 
 				// get label for body
-				auto l_body = this->context.getLabel(body);
+				auto l_body = cba.getLabel(body);
 
 				// link out of fun with call out
 				if (fixed) {
@@ -474,7 +481,7 @@ namespace cba {
 
 				// just connect out of arguments to call-out
 				for (auto arg : call) {
-					auto l_arg = this->context.getLabel(arg);
+					auto l_arg = cba.getLabel(arg);
 					this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_call, ctxt, constraints);
 				}
 
@@ -497,7 +504,7 @@ namespace cba {
 				innerCallContext.callContext <<= l_call;
 
 				// consider every potential target function
-				for(const auto& cur : this->context.getFreeFunctions()) {
+				for(const auto& cur : cba.getFreeFunctions()) {
 					addConstraints(cur, false);
 				}
 			}
@@ -506,9 +513,9 @@ namespace cba {
 		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
 
 			// out-effects are only influenced by bound parameters
-			auto l_cur = this->context.getLabel(bind);
+			auto l_cur = cba.getLabel(bind);
 			for(const auto& arg : bind->getBoundExpressions()) {
-				auto l_arg = this->context.getLabel(arg);
+				auto l_arg = cba.getLabel(arg);
 				this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_cur, ctxt, constraints);
 			}
 
@@ -517,7 +524,7 @@ namespace cba {
 
 		void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
 			// for most expressions: just connect in and out
-			auto l_cur = this->context.getLabel(expr);
+			auto l_cur = cba.getLabel(expr);
 			this->connectStateSets(this->Ain, l_cur, ctxt, this->Aout, l_cur, ctxt, constraints);
 		}
 
@@ -541,7 +548,7 @@ namespace cba {
 
 			// TODO: locate return statements more efficiently
 
-			auto l_body = this->context.getLabel(stmt);
+			auto l_body = cba.getLabel(stmt);
 			visitDepthFirstPrunable(stmt, [&](const StatementAddress& stmt) {
 				// prune inner functions
 				if (stmt.isa<LambdaExprAddress>()) return true;
@@ -550,8 +557,8 @@ namespace cba {
 				if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
 
 					// connect value of return statement with body value
-					auto l_ret = this->context.getLabel(returnStmt);
-					auto R_ret = this->context.getSet(Rout(), l_ret, ctxt);
+					auto l_ret = cba.getLabel(returnStmt);
+					auto R_ret = cba.getSet(Rout, l_ret, ctxt);
 					this->connectStateSetsIf(Reachable(), R_ret, this->Aout, l_ret, ctxt, this->Aout, l_body, ctxt, constraints);
 
 					// TODO: this is just a performance improvement - but for now disabled
@@ -576,8 +583,8 @@ namespace cba {
 
 		void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 			// link out with out of bodies
-			auto l_cond = this->context.getLabel(stmt->getCondition());
-			auto B_cond = this->context.getSet(B(), l_cond, ctxt);
+			auto l_cond = cba.getLabel(stmt->getCondition());
+			auto B_cond = cba.getSet(B, l_cond, ctxt);
 			this->connectSetsIf(true,  B_cond, this->Aout, stmt->getThenBody(), ctxt, this->Aout, stmt, ctxt, constraints);
 			this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, constraints);
 		}
@@ -585,8 +592,8 @@ namespace cba {
 		void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 			// link out of condition to out if condition may ever become false
 			auto cond = stmt->getCondition();
-			auto l_cond = this->context.getLabel(cond);
-			auto B_cond = this->context.getSet(B(), l_cond, ctxt);
+			auto l_cond = cba.getLabel(cond);
+			auto B_cond = cba.getSet(B, l_cond, ctxt);
 			this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Aout, stmt, ctxt, constraints);
 		}
 

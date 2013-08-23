@@ -53,6 +53,9 @@ namespace cba {
 	// the type used for lists of constraints
 	typedef utils::set_constraint_2::Constraints Constraints;
 
+	// declaration of utility function
+	template<typename Context> bool isValidContext(CBA& cba, const Context& context);
+
 	/**
 	 * A base class for classes capable of lazily resolving set constraints while processing constraint
 	 * based analysis.
@@ -103,7 +106,17 @@ namespace cba {
 		 * Overrides the standard visit function of the super type and realizes the guard avoiding the
 		 * repeated evaluation of identical argument types.
 		 */
-		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints);
+		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+
+			// do not resolve the same nodes multiple times
+			if (!processed.insert(Item(node,ctxt)).second) return;
+
+			// filter out invalid contexts
+			if (isValidContext(cba, ctxt)) return;
+
+			// for valid content => std procedure
+			super::visit(node, ctxt, constraints);
+		}
 
 	protected:
 

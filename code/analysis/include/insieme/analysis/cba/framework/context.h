@@ -37,11 +37,13 @@
 #pragma once
 
 #include <array>
+#include <vector>
 
 #include "insieme/analysis/cba/framework/forward_decl.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -141,6 +143,60 @@ namespace cba {
 		};
 	};
 
+
+	// ---------- sequence enumeration -----------------------
+
+	namespace detail {
+
+		template<typename T, int pos, int size, typename Filter>
+		struct gen_context {
+			void operator()(const std::vector<T>& values, std::vector<Sequence<T,size>>& res, const Filter& f, std::array<T,size>& data) const {
+				static const gen_context<T,pos-1,size,Filter> inner;
+				for(auto cur : values) {
+					data[pos-1] = cur;
+					inner(values, res, f, data);
+				}
+			}
+		};
+
+		template<typename T, int size, typename Filter>
+		struct gen_context<T, 0,size, Filter> {
+			void operator()(const std::vector<T>& values, std::vector<Sequence<T,size>>& res, const Filter& f, std::array<T,size>& data) const {
+				if (f(data)) res.push_back(data);
+			}
+		};
+
+	}
+
+	/**
+	 * A utility enumerating all potential sequences that can be obtained by combining a given
+	 * list of values.
+	 *
+	 * @param values the values to be sequenced
+	 * @param f a functor for filtering the resulting elements (could save memory if the full result would be to large)
+	 * @return the requested list of sequences
+	 */
+	template<unsigned s, typename T, typename Filter>
+	std::vector<Sequence<T, s>> generateSequences(const std::vector<T>& values, const Filter& f) {
+		std::vector<Sequence<T, s>> res;
+		std::array<T,s> tmp;
+		detail::gen_context<T, s, s, Filter>()(values, res, f, tmp);
+		return res;
+	}
+
+	/**
+	 * A utility enumerating all potential sequences that can be obtained by combining a given
+	 * list of values.
+	 *
+	 * @param values the values to be sequenced
+	 * @return the requested list of sequences
+	 */
+	template<unsigned s, typename T>
+	std::vector<Sequence<T, s>> generateSequences(const std::vector<T>& values) {
+		return generateSequences(values, [](const std::array<T,s>& list) { return true; });
+	}
+
+
 	/**
 	 * The class representing threads.
 	 */
@@ -173,28 +229,31 @@ namespace cba {
 	/**
 	 * The generic context class associated to
 	 */
-//	template<
-//		unsigned call_context_size = 2,
-//		unsigned thread_context_length = 2,
-//		unsigned thread_spawn_context_length = 0
-//	>
+	template<
+		unsigned call_context_size = 2,
+		unsigned thread_context_size = 2,
+		unsigned thread_spawn_context_size = 0
+	>
 	struct Context : public utils::Printable {
 
-//		typedef Sequence<Label, call_context_size> CallContext;
-//
-//		typedef ThreadID<thread_spawn_context_length> ThreadID;
-//		typedef Sequence<ThreadID, thread_context_length> ThreadContext;
+		enum {
+			call_ctxt_size 			= call_context_size,
+			thread_ctxt_size 		= thread_context_size,
+			thread_spawn_ctxt_size 	= thread_spawn_context_size
+		};
 
-		typedef Sequence<Label, 2> CallContext;
-		typedef Sequence<ThreadID<0>, 2> ThreadContext;
+		typedef Sequence<Label, call_context_size> call_context;
 
-		CallContext callContext;
-		ThreadContext threadContext;
+		typedef ThreadID<thread_spawn_context_size> thread_id;
+		typedef Sequence<thread_id, thread_context_size> thread_context;
+
+		call_context callContext;
+		thread_context threadContext;
 
 		Context()
 			: callContext(), threadContext() {}
 
-		Context(const CallContext& callContext, const ThreadContext& threadContext = ThreadContext())
+		Context(const call_context& callContext, const thread_context& threadContext = thread_context())
 			: callContext(callContext), threadContext(threadContext) {}
 
 		Context(const Context& other)
@@ -222,8 +281,8 @@ namespace cba {
 		};
 	};
 
-//	typedef Context<0,0,0> NoContext;
-//	typedef Context<2,2,0> Context;
+	typedef Context<0,0,0> NoContext;
+	typedef Context<2,2,0> DefaultContext;
 
 } // end namespace cba
 } // end namespace analysis

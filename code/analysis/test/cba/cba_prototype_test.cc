@@ -47,6 +47,7 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
+namespace prototype {
 
 	using namespace core;
 
@@ -1229,6 +1230,7 @@ namespace cba {
 		// TODO ...
 	}
 
+} // end namespace prototype
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

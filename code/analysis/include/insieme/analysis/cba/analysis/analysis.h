@@ -37,23 +37,28 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/entitiey.h"
 
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
-
-	// --- forward definitions of known analysis ---
-
-	class Formula;
-	template<typename C> class ArithmeticConstraintResolver;
-	const TypedSetType<Formula,ArithmeticConstraintResolver>& A();
-	const TypedSetType<Formula,ArithmeticConstraintResolver>& a();
+//
+//	// --- forward definitions of known analysis ---
+//
+//	class Formula;
+//	template<typename C> class ArithmeticConstraintResolver;
+//	extern const TypedSetType<Formula,ArithmeticConstraintResolver> A;
+//	extern const TypedSetType<Formula,ArithmeticConstraintResolver> a;
 
 	template<typename C> class BooleanConstraintResolver;
-	const TypedSetType<bool,BooleanConstraintResolver>& B();
-	const TypedSetType<bool,BooleanConstraintResolver>& b();
+	extern const TypedSetType<bool,BooleanConstraintResolver> B;
+	extern const TypedSetType<bool,BooleanConstraintResolver> b;
+
+	template<typename C> class ControlFlowConstraintResolver;
+	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintResolver>& C();
+	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintResolver>& c();
 
 	template<typename C> class Location;
 	template<typename C> class ReferenceConstraintResolver;
@@ -61,18 +66,19 @@ namespace cba {
 	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintResolver>& r();
 
 	typedef core::ExpressionAddress ContextFreeCallable;
-	const TypedSetType<ContextFreeCallable>& F();
-	const TypedSetType<ContextFreeCallable>& f();
+	template<typename C> class FunctionConstraintResolver;
+	extern const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> F;
+	extern const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> f;
 
 	template<typename C> class ContextPredecessorResolver;
-	const TypedSetType<Label,ContextPredecessorResolver>& pred();
+	extern const TypedSetType<Label,ContextPredecessorResolver> pred;
 
 	struct Reachable;
 	template<typename C> class ReachableInConstraintResolver;
-	const TypedSetType<Reachable,ReachableInConstraintResolver>& Rin();
+	extern const TypedSetType<Reachable,ReachableInConstraintResolver> Rin;
 
 	template<typename C> class ReachableOutConstraintResolver;
-	const TypedSetType<Reachable,ReachableOutConstraintResolver>& Rout();
+	extern const TypedSetType<Reachable,ReachableOutConstraintResolver> Rout;
 
 } // end namespace cba
 } // end namespace analysis

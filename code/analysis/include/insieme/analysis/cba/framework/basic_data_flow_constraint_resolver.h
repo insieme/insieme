@@ -41,9 +41,12 @@
 
 #include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/analysis/analysis.h"
+#include "insieme/analysis/cba/analysis/reachability.h"
+#include "insieme/analysis/cba/analysis/call_context_predecessor.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/set_constraint/solver2.h"
 
@@ -51,6 +54,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	using namespace core;
 	using namespace insieme::utils::set_constraint_2;
 
 //	using insieme::utils::set_constraint_2::elem;
@@ -62,7 +66,23 @@ namespace cba {
 //	using insieme::utils::set_constraint_2::subsetUnary;
 //	using insieme::utils::set_constraint_2::subsetBinary;
 
-	template<typename T, typename Context>
+	namespace {
+
+		StatementAddress getBody(const ContextFreeCallable& fun) {
+			if (auto lambda = fun.isa<LambdaExprAddress>()) {
+				return lambda->getBody();
+			}
+			if (auto bind = fun.isa<BindExprAddress>()) {
+				return bind->getCall();
+			}
+			assert_fail() << "Unsupported function type encountered: " << fun->getNodeType();
+			return StatementAddress();
+		}
+
+	}
+
+
+	template<typename T, typename SetType, typename Context>
 	class BasicDataFlowConstraintResolver : public ConstraintResolver<Context> {
 
 
@@ -71,13 +91,15 @@ namespace cba {
 	protected:
 
 		// the two set types to deal with
-		const TypedSetType<T>& A;		// the value set (labels -> values)
-		const TypedSetType<T>& a;		// the variable set (variables -> values)
+		const SetType& A;		// the value set (labels -> values)
+		const SetType& a;		// the variable set (variables -> values)
+
+		CBA& cba;
 
 	public:
 
-		BasicDataFlowConstraintResolver(CBA& analysis, const TypedSetType<T>& A, const TypedSetType<T>& a)
-			: super(analysis), A(A), a(a) { };
+		BasicDataFlowConstraintResolver(CBA& cba, const SetType& A, const SetType& a)
+			: super(cba), A(A), a(a), cba(cba) { };
 
 		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
 
@@ -279,13 +301,13 @@ namespace cba {
 
 												// get call-site of current context
 												auto l_cur_call = ctxt.callContext.back();
-												auto l_cur_call_fun = cba.getLabel(cba.getStmt(l_cur_call).as<CallExprAddress>()->getFunctionExpr());
+												auto l_cur_call_fun = cba.getLabel(cba.getStmt(l_cur_call).template as<CallExprAddress>()->getFunctionExpr());
 												Context curCallCtxt = ctxt;
 												curCallCtxt.callContext >>= l;
 												auto C_cur_call = cba.getSet(C, l_cur_call_fun, curCallCtxt);
 
 												// load bound values of all potential contexts
-												for(const auto& cur : cba.getCallables()) {
+												for(const auto& cur : cba.getCallables<Context>()) {
 													// only interested in this bind
 													if (cur.definition != bind) continue;
 
@@ -338,7 +360,7 @@ namespace cba {
 									auto C_fun = cba.getSet(C, cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
 									// pass value of argument to parameter for any potential callable
-									for(const auto& target : cba.getCallables()) {
+									for(const auto& target : cba.getCallables<Context>()) {
 										if (target.definition != lambda) continue;
 										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
 									}
@@ -393,7 +415,7 @@ namespace cba {
 									auto C_fun = cba.getSet(C, cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
 									// pass value of argument to parameter for any potential callable
-									for(const auto& target : cba.getCallables()) {
+									for(const auto& target : cba.getCallables<Context>()) {
 										if (target.definition != bind) continue;
 										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
 									}
@@ -452,7 +474,7 @@ namespace cba {
 					// read value from memory location
 					auto l_trg = this->cba.getLabel(call[0]);
 					auto R_trg = this->cba.getSet(R, l_trg, ctxt);
-					for(auto loc : this->cba.getLocations()) {
+					for(auto loc : this->cba.template getLocations<Context>()) {
 
 						// if loc is in R(target) then add Sin[A,trg] to A[call]
 						auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
