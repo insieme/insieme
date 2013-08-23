@@ -46,6 +46,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/typed_map.h"
 
 
 namespace insieme {
@@ -166,7 +167,7 @@ namespace set_constraint_2 {
 
 		typedef std::vector<SetID> SetIDs;
 
-		SetIDs combine(const SetIDs& a, const SetIDs& b) {
+		inline SetIDs combine(const SetIDs& a, const SetIDs& b) {
 			SetIDs res = a;
 			for(auto x : b) {
 				if (!contains(a, x)) {
@@ -667,7 +668,7 @@ namespace set_constraint_2 {
 			}
 		};
 
-		typedef std::map<std::type_index, Container*> container_index_type;
+		typedef TypedMap<TypedContainer, Container> container_index_type;
 
 		container_index_type data;
 
@@ -675,27 +676,17 @@ namespace set_constraint_2 {
 
 		Assignment() {};
 
-		Assignment(const Assignment& other) {
-			for(auto cur : other.data) {
-				data[cur.first] = cur.second->copy();
-			}
-		}
-
-		~Assignment() {
-			for(auto cur : data) {
-				delete cur.second;
-			}
-		}
+		Assignment(const Assignment& other) : data(other.data) { }
 
 		template<typename E>
 		std::set<E>& get(const TypedSetID<E>& set) {
-			return getContainer(set)[set];
+			return data.get<E>()[set];
 		}
 
 		template<typename E>
 		const std::set<E>& get(const TypedSetID<E>& set) const {
 			static const std::set<E> empty;
-			auto& map = getContainer(set);
+			auto& map = data.get<E>();
 			auto pos = map.find(set);
 			if (pos != map.end()) { return pos->second; }
 			return empty;
@@ -716,9 +707,7 @@ namespace set_constraint_2 {
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join(",", data, [](std::ostream& out, const container_index_type::value_type& cur) {
-				out << *cur.second;
-			}) << "}";
+			return out << data;
 		}
 
 		std::map<SetID,string> toStringMap() const {
@@ -731,32 +720,32 @@ namespace set_constraint_2 {
 
 	protected:
 
-		template<typename T>
-		TypedContainer<T>& getContainer(const TypedSetID<T>& type) {
-			auto& key = typeid(T);
-			auto pos = data.find(key);
-			if (pos != data.end()) {
-				return static_cast<TypedContainer<T>&>(*pos->second);
-			}
-
-			// create and request new instance
-			TypedContainer<T>* container = new TypedContainer<T>();
-			data[key] = container;
-			return *container;
-		}
-
-		template<typename T>
-		const TypedContainer<T>& getContainer(const TypedSetID<T>& type) const {
-			static const TypedContainer<T> empty;
-			auto& key = typeid(T);
-			auto pos = data.find(key);
-			if (pos != data.end()) {
-				return static_cast<const TypedContainer<T>&>(*pos->second);
-			}
-
-			// otherwise, return a pointer to an empty one
-			return empty;
-		}
+//		template<typename T>
+//		TypedContainer<T>& getContainer(const TypedSetID<T>& type) {
+//			auto& key = typeid(T);
+//			auto pos = data.find(key);
+//			if (pos != data.end()) {
+//				return static_cast<TypedContainer<T>&>(*pos->second);
+//			}
+//
+//			// create and request new instance
+//			TypedContainer<T>* container = new TypedContainer<T>();
+//			data[key] = container;
+//			return *container;
+//		}
+//
+//		template<typename T>
+//		const TypedContainer<T>& getContainer(const TypedSetID<T>& type) const {
+//			static const TypedContainer<T> empty;
+//			auto& key = typeid(T);
+//			auto pos = data.find(key);
+//			if (pos != data.end()) {
+//				return static_cast<const TypedContainer<T>&>(*pos->second);
+//			}
+//
+//			// otherwise, return a pointer to an empty one
+//			return empty;
+//		}
 
 	};
 
