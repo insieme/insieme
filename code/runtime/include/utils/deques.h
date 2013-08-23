@@ -40,6 +40,7 @@
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/impl/spin_locks.impl.h"
 
 #include "error_handling.h"
 

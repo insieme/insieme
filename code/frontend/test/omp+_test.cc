@@ -41,8 +41,6 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/annotations/c/naming.h"
-
 #include "insieme/frontend/clang_config.h"
 #include "insieme/core/printer/pretty_printer.h"
 

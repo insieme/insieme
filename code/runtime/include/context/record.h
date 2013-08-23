@@ -40,6 +40,7 @@
 
 #include "irt_inttypes.h"
 #include "abstraction/threads.h"
+#include "abstraction/spin_locks.h"
 
 
 // ------------------------------------------------------------------------------------
