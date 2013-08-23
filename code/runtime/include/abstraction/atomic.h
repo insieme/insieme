@@ -35,11 +35,51 @@
  */
 
 #pragma once
-#ifndef __GUARD_IRT_ATOMIC_H
-#define __GUARD_IRT_ATOMIC_H
+#ifndef __GUARD_ABSTRACTION_ATOMIC_H
+#define __GUARD_ABSTRACTION_ATOMIC_H
 
+#ifdef _GEMS
 
-#ifndef _MSC_VER
+	// direct mapping to compiler primitives/instrinsics
+
+	#define irt_atomic_fetch_and_add(__location, __value)  __sync_fetch_and_add(__location, __value)
+	#define irt_atomic_fetch_and_sub(__location, __value)  __sync_fetch_and_sub(__location, __value)
+
+	#define irt_atomic_add_and_fetch(__location, __value)  __sync_add_and_fetch(__location, __value)
+	#define irt_atomic_sub_and_fetch(__location, __value)  __sync_sub_and_fetch(__location, __value)
+	#define irt_atomic_or_and_fetch(__location, __value)   __sync_or_and_fetch(__location, __value)
+	#define irt_atomic_and_and_fetch(__location, __value)  __sync_and_and_fetch(__location, __value)
+	#define irt_atomic_xor_and_fetch(__location, __value)  __sync_xor_and_fetch(__location, __value)
+
+	/**
+	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
+	 *
+	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
+	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
+	 */
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval) __sync_bool_compare_and_swap(__location, __oldval, __newval)
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval)  __sync_val_compare_and_swap(__location, __oldval, __newval)
+
+	// convenience
+	// explicitly cast return value to void to supress warnings
+	#define irt_atomic_inc(__location) (void)irt_atomic_fetch_and_add(__location, 1)
+	#define irt_atomic_dec(__location) (void)irt_atomic_fetch_and_sub(__location, 1)
+
+	int atomic_rmw_int(int *ptr, int value);
+
+	int __sync_fetch_and_add(int *ptr, int value);
+	int __sync_fetch_and_sub(int *ptr, int value);
+
+	int __sync_add_and_fetch(int *ptr, int value);
+	int __sync_sub_and_fetch(int *ptr, int value);
+	int __sync_or_and_fetch(int *ptr, int value);
+	int __sync_and_and_fetch(int *ptr, int value);
+	int __sync_xor_and_fetch(int *ptr, int value);
+
+	int __sync_bool_compare_and_swap(int *ptr, int oldval, int newval);
+	int __sync_val_compare_and_swap(int *ptr, int oldval, int newval);
+
+#elif !defined(_MSC_VER)
 
 	// direct mapping to compiler primitives/instrinsics
 
@@ -190,4 +230,4 @@
 #endif
 
 
-#endif // ifndef __GUARD_IRT_ATOMIC_H
+#endif // ifndef __GUARD_ABSTRACTION_ATOMIC_H

@@ -38,7 +38,9 @@
 #ifndef __GUARD_HWINFO_H
 #define __GUARD_HWINFO_H
 
-#include <unistd.h>
+#ifndef _GEMS
+	#include <unistd.h>
+#endif
 
 #ifdef IRT_USE_PAPI
 #include "papi_helper.h"

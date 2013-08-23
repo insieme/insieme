@@ -43,7 +43,7 @@
 
 #include "data_item.h" 
 
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "irt_types.h"
 #include "utils/lookup_tables.h"
 

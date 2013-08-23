@@ -40,7 +40,7 @@
 
 #include "ir_interface.h"
 
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "utils/timing.h"
 #include "impl/work_item.impl.h"
 #include "impl/work_group.impl.h"

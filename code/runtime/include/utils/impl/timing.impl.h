@@ -46,6 +46,10 @@
 #include "../filesystem.h"
 #include "irt_logging.h"
 
+#ifdef _GEMS
+	#include "include_gems/impl/time.impl.h"
+#endif
+
 // ====== sleep functions ======================================
 
 int irt_nanosleep_timespec(const struct timespec *wait_time) {

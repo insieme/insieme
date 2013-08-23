@@ -40,6 +40,8 @@
 
 #if defined(_WIN32)
 	#include "affinity.win.impl.h"
+#elif defined(_GEMS)
+	#include "affinity.gems.impl.h"
 #else
 	#include "affinity.unix.impl.h"
 #endif

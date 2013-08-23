@@ -364,7 +364,7 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
 	if(freq_str_orig) {
-		char freq_str[strlen(freq_str_orig)]; // needed since strtok modifies the string it's working on
+		char *freq_str = alloca((strlen(freq_str_orig) +1) *sizeof(char)); // needed since strtok modifies the string it's working on
 		strcpy(freq_str, freq_str_orig);
 
 		int32 retval;
@@ -374,7 +374,7 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 		if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, freqs, &length)) == 0) {
 			char *tok = strtok(freq_str, ",");
 			// copies the first entry, to be used by all workers if it was the only one supplied
-			char first_copy[strlen(tok)];
+			char *first_copy = alloca((strlen(tok) +1) *sizeof(char)); 
 			strcpy(first_copy, tok);
 
 			// used to check if only one setting was supplied

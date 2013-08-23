@@ -35,44 +35,31 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
-#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#ifndef __GUARD_INCLUDE_GEMS_SYS_TIME_H
+#define __GUARD_INCLUDE_GEMS_SYS_TIME_H
 
-/*
- * in this file prototypes of platform dependent affinity functionality shall be declared
- */
+#include "irt_inttypes.h"
 
-#include "abstraction/threads.h"
+struct timeval {
+	long tv_sec;
+	long tv_usec;
+};
 
-#ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#elif defined(_GEMS)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
-#else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
-#endif
+// time since boot (in microseconds, 32 bit value):
+// *(unsigned int*)(0x08000000);
 
+int gettimeofday(struct timeval *tv, void *tz)
+{
+	unsigned int cur_time;
 
-// functionality regarding setting, clearing thread affinity and more
+	if(tv == NULL) return -1;
 
-/** restore initial affinity as saved in irt_g_affinity_base_mask */
-void irt_clear_affinity();
+	cur_time = *(unsigned int*)(0x08000000);
 
-/** set the processor-affinity for the specified thread  */
-void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
+	tv->tv_sec 	= cur_time / 1000000;
+	tv->tv_usec 	= cur_time - tv->tv_sec;
 
-/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
- starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
+	return 0;
+}
 
-/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
-uint32 irt_affinity_cores_available();
-
-
-
-
-#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#endif // ifndef __GUARD_INCLUDE_GEMS_SYS_TIME_H

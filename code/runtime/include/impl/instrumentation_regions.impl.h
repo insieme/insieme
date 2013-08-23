@@ -40,7 +40,9 @@
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#include <sys/stat.h>
+#ifndef _GEMS
+	#include <sys/stat.h>
+#endif
 #include <errno.h>
 #include "utils/timing.h"
 #include "utils/energy.h"

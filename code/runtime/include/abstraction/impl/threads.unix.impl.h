@@ -43,7 +43,11 @@
 #include "abstraction/threads.h"
 #include "error_handling.h"
 
-#include <sys/time.h>
+#ifdef _GEMS
+	#include "include_gems/sys_time.h"
+#else
+	#include <sys/time.h>
+#endif
 
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
@@ -60,7 +64,11 @@ void irt_thread_get_current(irt_thread *t) {
 }
 
 void irt_thread_cancel(irt_thread *t){
+#ifdef _GEMS
+	// TODO [_GEMS]: missing implementation of pthread_cancel
+#else
 	pthread_cancel(*t);
+#endif
 }
 
 int irt_thread_join(irt_thread *t){
@@ -80,25 +88,6 @@ bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 	#else
 		return t1 == t2;
 	#endif
-}
-
-
-/* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
-
-void irt_spin_lock(irt_spinlock *lock){
-	pthread_spin_lock(lock);
-}
-
-void irt_spin_unlock(irt_spinlock *lock){
-	pthread_spin_unlock(lock);
-}
-
-int irt_spin_init(irt_spinlock *lock){
-	return pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE);
-}
-
-void irt_spin_destroy(irt_spinlock *lock){
-	pthread_spin_destroy(lock);
 }
 
 
@@ -129,7 +118,12 @@ void irt_mutex_destroy(irt_lock_obj *m) {
 }
 
 void irt_cond_wake_all(irt_cond_var *cv) {
+#ifdef _GEMS
+	// TODO [_GEMS]: missing implementation of pthread_cond_broadcast
+	// it is only needed when workers sleeping mode is active
+#else
 	pthread_cond_broadcast(cv);
+#endif
 }
 
 int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m) {

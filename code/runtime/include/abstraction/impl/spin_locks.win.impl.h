@@ -35,44 +35,34 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
-#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#ifndef __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_WIN_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_WIN_IMPL_H
 
-/*
- * in this file prototypes of platform dependent affinity functionality shall be declared
- */
+#include "abstraction/spin_locks.h"
 
-#include "abstraction/threads.h"
+#define IRT_SPIN_LOCKED 1
+#define IRT_SPIN_UNLOCKED 0
+#define IRT_SPIN_DESTROYED -1 // makes lock variable unusable
 
-#ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#elif defined(_GEMS)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
-#else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
-#endif
+void irt_spin_lock(irt_spinlock *lock){
+	// if value at destination lock == IRT_SPIN_UNLOCKED, then it will be changed to IRT_SPIN_LOCKED and the loop
+	// will exit, otherwise we loop until the condition is met and the lock can be set
+	// InterlockedCompareExchange returns the previous value of the Destination (lock) parameter.
+	while (IRT_SPIN_LOCKED == InterlockedCompareExchange(lock, IRT_SPIN_LOCKED, IRT_SPIN_UNLOCKED)){}
+}
 
+void irt_spin_unlock(irt_spinlock *lock){
+	// if lock was set to IRT_SPIN_LOCKED then it will be set to IRT_SPIN_UNLOCKED, otherwise nothing happens
+	InterlockedCompareExchange(lock, IRT_SPIN_UNLOCKED, IRT_SPIN_LOCKED);
+}
 
-// functionality regarding setting, clearing thread affinity and more
+int irt_spin_init(irt_spinlock *lock){
+	*lock = IRT_SPIN_UNLOCKED;
+	return 0;
+}
 
-/** restore initial affinity as saved in irt_g_affinity_base_mask */
-void irt_clear_affinity();
+void irt_spin_destroy(irt_spinlock *lock){
+	IRT_ASSERT(InterlockedCompareExchange(lock, IRT_SPIN_DESTROYED, IRT_SPIN_UNLOCKED) == IRT_SPIN_UNLOCKED, IRT_ERR_INTERNAL, "Spin lock was either locked, destroyed or uninitialized when attempting to destroy lock.");
+}
 
-/** set the processor-affinity for the specified thread  */
-void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
-
-/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
- starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
-
-/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
-uint32 irt_affinity_cores_available();
-
-
-
-
-#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_WIN_IMPL_H

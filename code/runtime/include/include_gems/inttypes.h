@@ -35,44 +35,19 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
-#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#ifndef __GUARD_INCLUDE_GEMS_INTTYPES_H
+#define __GUARD_INCLUDE_GEMS_INTTYPES_H
 
-/*
- * in this file prototypes of platform dependent affinity functionality shall be declared
- */
+#include "stdint.h"
 
-#include "abstraction/threads.h"
+typedef char int8_t;
+typedef unsigned char uint8_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef int int32_t;
+// TODO [_GEMS]: clash with llrt code
+//typedef unsigned int uint32_t;
+typedef long long int64_t;
+typedef unsigned long long uint64_t;
 
-#ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#elif defined(_GEMS)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
-#else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
-#endif
-
-
-// functionality regarding setting, clearing thread affinity and more
-
-/** restore initial affinity as saved in irt_g_affinity_base_mask */
-void irt_clear_affinity();
-
-/** set the processor-affinity for the specified thread  */
-void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
-
-/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
- starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
-
-/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
-uint32 irt_affinity_cores_available();
-
-
-
-
-#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#endif // ifndef __GUARD_INCLUDE_GEMS_INTTYPES_H

@@ -43,7 +43,7 @@
 #include <stdlib.h>
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "work_group.h"
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"

@@ -44,7 +44,7 @@
 
 // no general variant by design to raise compiler errors in case of a new architecture
 
-#if defined(__x86_64__) || defined(__i386__) /*GNU C x86*/ || defined(_M_IX86) /*VS x86*/
+#if defined(__x86_64__) || defined(__i386__) /*GNU C x86*/ || defined(_M_IX86) /*VS x86*/ || defined(_GEMS)
 
 	// ====== all x86 based platforms, 32 and 64bit =====
 
@@ -52,6 +52,8 @@
 		#include "abstraction/impl/rdtsc.win.impl.h"
 	#elif defined(__MINGW32__)
 		#include "abstraction/impl/rdtsc.mingw.impl.h"
+	#elif defined(_GEMS)
+		#include "abstraction/impl/rdtsc.gems.impl.h"
 	#else
 		#include "abstraction/impl/rdtsc.unix.impl.h"
 	#endif

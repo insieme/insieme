@@ -76,8 +76,6 @@
 
 #if _MSC_VER > 1000
 #pragma once
-#ifndef __GUARD_INCLUDE_WIN32_INTTYPES_H
-#define __GUARD_INCLUDE_WIN32_INTTYPES_H
 #endif
 
 #include "stdint.h"
@@ -344,5 +342,3 @@ imaxdiv_t __cdecl imaxdiv(intmax_t numer, intmax_t denom)
 
 #endif // _MSC_INTTYPES_H_ ]
 
-
-#endif // ifndef __GUARD_INCLUDE_WIN32_INTTYPES_H

@@ -47,7 +47,7 @@ void *irt_scratchpad_alloc(size_t size)
 
 void irt_scratchpad_free(void* ptr)
 {
-	return free(ptr);
+	free(ptr);
 }
 
 

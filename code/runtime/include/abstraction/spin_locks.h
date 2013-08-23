@@ -35,44 +35,31 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
-#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#ifndef __GUARD_ABSTRACTION_SPIN_LOCKS_H
+#define __GUARD_ABSTRACTION_SPIN_LOCKS_H
 
-/*
- * in this file prototypes of platform dependent affinity functionality shall be declared
- */
+#include "irt_inttypes.h"
 
-#include "abstraction/threads.h"
-
-#ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
+#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
+	typedef long irt_spinlock;
 #elif defined(_GEMS)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
+	typedef int irt_spinlock;
 #else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
+	#include <pthread.h>
+	typedef pthread_spinlock_t irt_spinlock;
 #endif
 
+/** spin until lock is acquired */
+inline void irt_spin_lock(irt_spinlock *lock);
 
-// functionality regarding setting, clearing thread affinity and more
+/** release lock */
+inline void irt_spin_unlock(irt_spinlock *lock);
 
-/** restore initial affinity as saved in irt_g_affinity_base_mask */
-void irt_clear_affinity();
+/** initializing spin lock variable puts it in state unlocked. lock variable can not be shared by different processes */
+inline int irt_spin_init(irt_spinlock *lock);
 
-/** set the processor-affinity for the specified thread  */
-void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
+/**	destroy lock variable and free all used resources,
+	will cause an error when attempting to destroy an object which is in any state other than unlocked */
+inline void irt_spin_destroy(irt_spinlock *lock);
 
-/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
- starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
-
-/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
-uint32 irt_affinity_cores_available();
-
-
-
-
-#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#endif // ifndef __GUARD_ABSTRACTION_SPIN_LOCKS_H

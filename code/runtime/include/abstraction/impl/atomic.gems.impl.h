@@ -35,44 +35,65 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
-#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#ifndef __GUARD_ABSTRACTION_IMPL_ATOMIC_GEMS_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_ATOMIC_GEMS_IMPL_H
 
-/*
- * in this file prototypes of platform dependent affinity functionality shall be declared
- */
+#include "abstraction/atomic.h"
 
-#include "abstraction/threads.h"
+asm int atomic_rmw_int(int *ptr, int value)
+{
+	nop;
+	nop;
+	nop;
+	rmw;
+	nop;
+};
 
-#ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#elif defined(_GEMS)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
-#else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
-#endif
+// TODO [_GEMS]: missing implementations
 
+int __sync_fetch_and_add(int *ptr, int value)
+{
+	return 0;
+};
 
-// functionality regarding setting, clearing thread affinity and more
+int __sync_fetch_and_sub(int *ptr, int value)
+{
+	return 0;
+};
 
-/** restore initial affinity as saved in irt_g_affinity_base_mask */
-void irt_clear_affinity();
+int __sync_add_and_fetch(int *ptr, int value)
+{
+	return 0;
+};
 
-/** set the processor-affinity for the specified thread  */
-void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
+int __sync_sub_and_fetch(int *ptr, int value)
+{
+	return 0;
+};
 
-/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
- starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
+int __sync_or_and_fetch(int *ptr, int value)
+{
+	return 0;
+};
 
-/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
-uint32 irt_affinity_cores_available();
+int __sync_and_and_fetch(int *ptr, int value)
+{
+	return 0;
+};
 
+int __sync_xor_and_fetch(int *ptr, int value)
+{
+	return 0;
+};
 
+int __sync_bool_compare_and_swap(int *ptr, int oldval, int newval)
+{
+	return 0;
+};
 
+int __sync_val_compare_and_swap(int *ptr, int oldval, int newval)
+{
+	return 0;
+};
 
-#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_ATOMIC_GEMS_IMPL_H

@@ -41,7 +41,7 @@
 #include "work_group.h"
 
 #include "impl/work_item.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "impl/instrumentation_events.impl.h"
 
 static inline irt_work_group* _irt_wg_new() {

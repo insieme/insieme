@@ -39,7 +39,7 @@
 #define __GUARD_CONTEXT_IMPL_RECORD_IMPL_H
 
 #include "context/record.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 
 #include "context/impl/common.impl.h"
 #include "abstraction/threads.h"

@@ -39,4 +39,6 @@
  */
 #if defined(__GNUC__)
 	#define __irt_unused __attribute__((unused))
+#elif defined(_GEMS)
+	#define __irt_unused
 #endif

@@ -42,7 +42,7 @@
 #include "work_item.h"
 #include "wi_implementation.h"
 #include "impl/error_handling.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 
 //#include <sys/mman.h> /* not required for now, mmap not used (see below) */
 
@@ -197,6 +197,10 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 #elif defined(__MINGW64__) || defined(__MINGW32__) // any mingw compiler
 
 	#include "minlwt.mingw.impl.h"
+
+#elif defined(_GEMS)
+	
+	#include "minlwt.gems.impl.h"
 
 #else // eg. GCC (on Linux), if not gcc compiler we will get an error anyway
 

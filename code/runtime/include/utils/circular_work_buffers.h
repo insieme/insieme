@@ -39,7 +39,7 @@
 #define __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H
 
 #include "declarations.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "abstraction/unused.h"
 
 #ifndef IRT_CWBUFFER_LENGTH

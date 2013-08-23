@@ -51,7 +51,6 @@
 	};
 
 	typedef struct _irt_thread irt_thread;
-	typedef long irt_spinlock;
 
 	// Vista and up will use slim reader writer lock instead of critical section, condition variables are supported too
 	#if (WINVER >= 0x0600)
@@ -66,7 +65,6 @@
 #else
 	#include <pthread.h>
 	typedef pthread_t irt_thread;
-	typedef pthread_spinlock_t irt_spinlock;
 	typedef pthread_cond_t irt_cond_var;
 	typedef pthread_mutex_t irt_lock_obj;
 	typedef pthread_key_t irt_tls_key;
@@ -93,23 +91,6 @@ inline void irt_thread_exit(int exit_code);
 
 /** check if two thread objects are equal */
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2);
-
-
-/* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
-
-/** spin until lock is acquired */
-inline void irt_spin_lock(irt_spinlock *lock);
-
-/** release lock */
-inline void irt_spin_unlock(irt_spinlock *lock);
-
-/** initializing spin lock variable puts it in state unlocked. lock variable can not be shared by different processes */
-inline int irt_spin_init(irt_spinlock *lock);
-
-/**	destroy lock variable and free all used resources,
-	will cause an error when attempting to destroy an object which is in any state other than unlocked */
-inline void irt_spin_destroy(irt_spinlock *lock);
-
 
 
 /* MUTEX FUNCTIONS ------------------------------------------------------------------- */
