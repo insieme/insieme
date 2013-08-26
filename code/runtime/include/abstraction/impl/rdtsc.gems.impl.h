@@ -40,43 +40,22 @@
 
 #include "irt_inttypes.h"
 
-// TODO [_GEMS]: missing implementations (unix ones for reference)
+// TODO [_GEMS]: implementations are work-arounds 
 
 uint64 irt_time_ticks(void) {
-#ifdef _GEMS
-	return 0;
-#else	
-	volatile uint64 a, d;
-	__asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
-	return (a | (d << 32));
-#endif
+	// time in us since boot
+	unsigned int cur_time = *(unsigned int*)(0x08000000);
+
+	// core frequency is 100 MHz (it can be modified via simulator configuration)
+	return cur_time * 100; 
 }
 
-// checks if rdtsc instruction is available
 bool irt_time_ticks_available() {
-#ifdef _GEMS
-	return false;
-#else
-	volatile unsigned d;
-	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
-	if((d & 0x00000010) > 0)
-		return 1;
-	else
-		return 0;
-#endif
+	return true;
 }
 
 bool irt_time_ticks_constant() {
-#ifdef _GEMS
 	return true;
-#else
-	volatile unsigned d;
-	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
-	if((d & 0x00000100) > 0)
-		return 1;
-	else
-		return 0;
-#endif
 }
 
 
