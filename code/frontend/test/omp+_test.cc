@@ -82,23 +82,23 @@ TEST(OMPx, SimpleRegion) {
 
 	// C source code compilation
 
-    fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
-    job.addIncludeDirectory(SRC_DIR "inputs");
-    job.setOption(fe::ConversionJob::OpenMP);
+	fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
+	job.addIncludeDirectory(SRC_DIR "inputs");
+	job.setOption(fe::ConversionJob::OpenMP);
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-    core::ProgramPtr prog = job.execute(manager);
+	core::ProgramPtr prog = job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "simpleRegion");
 	ASSERT_TRUE(progEntry);
 
-    LOG(DEBUG) << "Printing the IR: " << core::printer::PrettyPrinter(progEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	LOG(DEBUG) << "Printing the IR: " << core::printer::PrettyPrinter(progEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    // Target IR code
+	// Target IR code
 
-    LOG(INFO) << "Parsing reference IR code...";
+	LOG(INFO) << "Parsing reference IR code...";
 
 	// Main function with region
 
@@ -109,24 +109,24 @@ TEST(OMPx, SimpleRegion) {
 				"};"
 			"};"
 
-    		"int<4> main() {"
+			"int<4> main() {"
 				"ref<int<4>> v1 = var(0);"
 				"ref<int<4>> v5 = var(0);"
 				"{"
 					"merge(parallel(job([1-1], fun000())));"
 				"};"
 				"return 0;"
-    		"}"));
+			"}"));
 	ASSERT_TRUE(res);
 	auto resEntry = *(res->getEntryPoints().begin());
 	ASSERT_TRUE(resEntry);
 
 	LOG(DEBUG) << "Printing the IR: " << core::printer::PrettyPrinter(resEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    LOG(INFO) << "Comparing results...";
+	LOG(INFO) << "Comparing results...";
 
 	// print program using pretty printer
-    EXPECT_EQ(toString(core::printer::PrettyPrinter(progEntry)), toString(core::printer::PrettyPrinter(resEntry)));
+	EXPECT_EQ(toString(core::printer::PrettyPrinter(progEntry)), toString(core::printer::PrettyPrinter(resEntry)));
 }
 
 TEST(OMPx, FirstLocal) {
@@ -138,48 +138,49 @@ TEST(OMPx, FirstLocal) {
 
 	// C source code compilation
 
-    fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
-    job.addIncludeDirectory(SRC_DIR "inputs");
-    job.setOption(fe::ConversionJob::OpenMP);
+	fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
+	job.addIncludeDirectory(SRC_DIR "inputs");
+	job.setOption(fe::ConversionJob::OpenMP);
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-    core::ProgramPtr prog = job.execute(manager);
+	core::ProgramPtr prog = job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "firstLocal");
 	ASSERT_TRUE(progEntry);
 
-    LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(progEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(progEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    // Target IR code
+	// Target IR code
 
-    LOG(INFO) << "Parsing reference IR code...";
+	LOG(INFO) << "Parsing reference IR code...";
 
 	auto res = analysis::normalize(builder.parseProgram(
 			"let fun000 = (int<4> v0)->unit {"
-    			"ref<int<4>> v2 = loc(v0);"
+				"ref<int<4>> v2 = loc(v0);"
 				"{"
 					"ref<int<4>> v3 = var(*v2 + 3);"
 				"};"
+				"delete(v2);"
 			"};"
 
-    		"int<4> main() {"
+			"int<4> main() {"
 				"ref<int<4>> v1 = var(5);"
 				"{"
 					"int<4> v2 = *v1;"
 					"merge(parallel(job([1-1], fun000(v2))));"
 				"};"
 				"return 0;"
-    		"}"));
+			"}"));
 	ASSERT_TRUE(res);
 	auto resEntry = *(res->getEntryPoints().begin());
 	ASSERT_TRUE(resEntry);
 
 	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(resEntry, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    LOG(INFO) << "Comparing results...";
+	LOG(INFO) << "Comparing results...";
 
 	// print program using pretty printer
-    EXPECT_EQ(toString(core::printer::PrettyPrinter(progEntry)), toString(core::printer::PrettyPrinter(resEntry)));
+	EXPECT_EQ(toString(core::printer::PrettyPrinter(progEntry)), toString(core::printer::PrettyPrinter(resEntry)));
 }

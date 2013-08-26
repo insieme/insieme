@@ -38,7 +38,7 @@
 #pragma insieme mark
 int simpleRegion() {
 
-	int a,n;
+	int a = 0, n = 0;
 
 	/*We need target clause because region directive without clauses is ignored*/
 	#pragma omp region target(accelerator)

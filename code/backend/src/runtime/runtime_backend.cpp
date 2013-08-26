@@ -168,18 +168,15 @@ namespace runtime {
 			table["irt_lock_acquire"] 	= "irt_all_impls.h";
 			table["irt_lock_release"] 	= "irt_all_impls.h";
 
-            table["irt_atomic_fetch_and_or"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_xor"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_and"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_add"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_sub"]			= "irt_atomic.h";
-			table["irt_atomic_add_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_sub_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_or_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_and_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_xor_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_val_compare_and_swap"]	= "irt_atomic.h";
-			table["irt_atomic_bool_compare_and_swap"]	= "irt_atomic.h";
+			table["irt_atomic_fetch_and_add"]			= "irt_all_impls.h";
+			table["irt_atomic_fetch_and_sub"]			= "irt_all_impls.h";
+			table["irt_atomic_add_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_sub_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_or_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_and_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_xor_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_val_compare_and_swap"]	= "irt_all_impls.h";
+			table["irt_atomic_bool_compare_and_swap"]	= "irt_all_impls.h";
 
 			table["irt_variant_pick"]	= "irt_all_impls.h";
 		}
