@@ -39,6 +39,7 @@
 #define __GUARD_ABSTRACTION_IMPL_ATOMIC_GEMS_IMPL_H
 
 #include "abstraction/atomic.h"
+#include "abstraction/spin_locks.h"
 
 asm int atomic_rmw_int(int *ptr, int value)
 {
@@ -47,53 +48,118 @@ asm int atomic_rmw_int(int *ptr, int value)
 	nop;
 	rmw;
 	nop;
+	nop;
 };
 
-// TODO [_GEMS]: missing implementations
+// TODO [_GEMS]: work-around implementation with global lock 
 
-int __sync_fetch_and_add(int *ptr, int value)
-{
-	return 0;
-};
+/* 0 is unlocked */
+irt_spinlock global_lock = 0;
 
-int __sync_fetch_and_sub(int *ptr, int value)
-{
-	return 0;
-};
+#define IRT_DEFINE_SYNC_OP_AND_FETCH(__type__, __op_string__, __op__) \
+	__type__  __sync_##__op_string__##_and_fetch_##__type__(__type__* ptr, __type__ value) { \
+		__type__ tmp; \
+		irt_spin_lock(&global_lock); \
+		*ptr __op__##= value; \
+		tmp = *ptr; \
+		irt_spin_unlock(&global_lock); \
+		return tmp; \
+	};
 
-int __sync_add_and_fetch(int *ptr, int value)
-{
-	return 0;
-};
+#define IRT_DEFINE_SYNC_FETCH_AND_OP(__type__, __op_string__, __op__) \
+	__type__  __sync_fetch_and_##__op_string__##_##__type__(__type__* ptr, __type__ value) { \
+		__type__ tmp; \
+		irt_spin_lock(&global_lock); \
+		tmp = *ptr; \
+		*ptr __op__##= value; \
+		irt_spin_unlock(&global_lock); \
+		return tmp; \
+	}; 
 
-int __sync_sub_and_fetch(int *ptr, int value)
-{
-	return 0;
-};
+#define IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(__type__) \
+	bool  __sync_bool_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) { \
+		bool res; \
+		irt_spin_lock(&global_lock); \
+		if(res = (*ptr == oldval)) { \
+			*ptr = newval; \
+		} \
+		irt_spin_unlock(&global_lock); \
+		return res; \
+	};
 
-int __sync_or_and_fetch(int *ptr, int value)
-{
-	return 0;
-};
+#define IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(__type__) \
+	__type__  __sync_val_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) { \
+		__type__ res; \
+		irt_spin_lock(&global_lock); \
+		if((res = *ptr) == oldval) { \
+			*ptr = newval; \
+		} \
+		irt_spin_unlock(&global_lock); \
+		return res; \
+	};
 
-int __sync_and_and_fetch(int *ptr, int value)
-{
-	return 0;
-};
+/* 32-bit signed int versions */
 
-int __sync_xor_and_fetch(int *ptr, int value)
-{
-	return 0;
-};
+IRT_DEFINE_SYNC_FETCH_AND_OP(int32_t, add, +)
+IRT_DEFINE_SYNC_FETCH_AND_OP(int32_t, sub, -)
 
-int __sync_bool_compare_and_swap(int *ptr, int oldval, int newval)
-{
-	return 0;
-};
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32_t, add, +)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32_t, sub, -)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32_t, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32_t, and, &)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32_t, xor, ^)
 
-int __sync_val_compare_and_swap(int *ptr, int oldval, int newval)
-{
-	return 0;
-};
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(int32_t)
+IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(int32_t)
+
+/* 32-bit unsigned int versions */
+
+IRT_DEFINE_SYNC_FETCH_AND_OP(uint32_t, add, +)
+IRT_DEFINE_SYNC_FETCH_AND_OP(uint32_t, sub, -)
+
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32_t, add, +)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32_t, sub, -)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32_t, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32_t, and, &)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32_t, xor, ^)
+
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(uint32_t)
+IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(uint32_t)
+
+/* 64-bit signed int versions */
+
+IRT_DEFINE_SYNC_FETCH_AND_OP(int64_t, add, +)
+IRT_DEFINE_SYNC_FETCH_AND_OP(int64_t, sub, -)
+
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64_t, add, +)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64_t, sub, -)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64_t, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64_t, and, &)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64_t, xor, ^)
+
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(int64_t)
+IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(int64_t)
+
+/* 64-bit unsigned int versions */
+
+IRT_DEFINE_SYNC_FETCH_AND_OP(uint64_t, add, +)
+IRT_DEFINE_SYNC_FETCH_AND_OP(uint64_t, sub, -)
+
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64_t, add, +)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64_t, sub, -)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64_t, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64_t, and, &)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64_t, xor, ^)
+
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(uint64_t)
+IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(uint64_t)
+
+/* unitptr_t versions */
+
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(uintptr_t)
+
+/* bool versions */
+
+IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(bool)
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_ATOMIC_GEMS_IMPL_H

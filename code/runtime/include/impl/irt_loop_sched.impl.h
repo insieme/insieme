@@ -120,7 +120,7 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
@@ -141,7 +141,7 @@ inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* sel
 	uint64 comp = sched_data->completed;
 	sched_data->part_times[id] = 0;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
@@ -164,7 +164,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64_t)) {
 			uint64 new_bsize = MAX(sched_data->policy.param.chunk_size, bsize*0.8); // TODO factor tweakable?
 			//irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize);
 			sched_data->block_size = MIN(new_bsize, sched_data->block_size);
@@ -355,7 +355,7 @@ inline static void irt_schedule_loop(
 	uint32 part_inc;
 	do {
 		part_inc = sched_data->participants_complete+1;
-	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
+	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc, uint32_t));
 
 	if(part_inc == sched_data->policy.participants) {
 		// sched_data no longer volatile, loop completed

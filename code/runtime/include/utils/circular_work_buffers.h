@@ -119,7 +119,7 @@ static inline bool irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_ite
 		if(newstate.top_update == state.bot_update 
 			|| newstate.top_update == state.bot_val) return false; // not enough space in buffer, would be full after op
 		// if we reach this point and no changes happened, we can perform our op
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // repeat if state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64_t)) break; // repeat if state change since check
 	}
 
 	// write actual data to buffer
@@ -142,7 +142,7 @@ static inline bool irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 		if(newstate.bot_update == state.top_update 
 			|| newstate.bot_update == state.top_val) return false; // not enough space in buffer, would be full after op
 		// if we reach this point and no changes happened, we can perform our op
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // repeat if state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64_t)) break; // repeat if state change since check
 	}
 
 	// write actual data to buffer
@@ -166,7 +166,7 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 		newstate.all = state.all;
 		newstate.top_update = (newstate.top_update-1) & IRT_CWBUFFER_MASK;
 		
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64_t)) break; // state change since check
 	}
 
 	// read actual data from buffer
@@ -191,7 +191,7 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 		// decrement update pointer if feasible
 		newstate.all = state.all;
 		newstate.bot_update = (newstate.bot_update+1) & IRT_CWBUFFER_MASK;
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64_t)) break; // state change since check
 	}
 
 	// read actual data from buffer

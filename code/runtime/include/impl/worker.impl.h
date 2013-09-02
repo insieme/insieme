@@ -98,7 +98,7 @@ typedef struct __irt_worker_func_arg {
 /** wait until all worker threads are created (signal->init_count == irt_g_worker_count) */
 void _irt_await_all_workers_init(irt_worker_init_signal *signal){
 	#if defined(WINVER) && (WINVER < 0x0600)
-		irt_atomic_inc(&(signal->init_count));
+		irt_atomic_inc(&(signal->init_count, uint32_t));
 		HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
 		// wait until master thread signals ev
 		WaitForSingleObject(ev, INFINITE);
@@ -177,7 +177,7 @@ void* _irt_worker_func(void *argvp) {
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
 
-	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING)) {
+	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 		irt_scheduling_loop(self);
 	}

@@ -41,15 +41,17 @@
 #ifdef _GEMS
 
 	// direct mapping to compiler primitives/instrinsics
+	 
+	#define irt_atomic_fetch_and_add(__location, __value, __type)  __sync_fetch_and_add_##__type##(__location, __value)
 
-	#define irt_atomic_fetch_and_add(__location, __value)  __sync_fetch_and_add(__location, __value)
-	#define irt_atomic_fetch_and_sub(__location, __value)  __sync_fetch_and_sub(__location, __value)
+	#define irt_atomic_fetch_and_add(__location, __value, __type)  __sync_fetch_and_add_##__type##(__location, __value)
+	#define irt_atomic_fetch_and_sub(__location, __value, __type)  __sync_fetch_and_sub_##__type##(__location, __value)
 
-	#define irt_atomic_add_and_fetch(__location, __value)  __sync_add_and_fetch(__location, __value)
-	#define irt_atomic_sub_and_fetch(__location, __value)  __sync_sub_and_fetch(__location, __value)
-	#define irt_atomic_or_and_fetch(__location, __value)   __sync_or_and_fetch(__location, __value)
-	#define irt_atomic_and_and_fetch(__location, __value)  __sync_and_and_fetch(__location, __value)
-	#define irt_atomic_xor_and_fetch(__location, __value)  __sync_xor_and_fetch(__location, __value)
+	#define irt_atomic_add_and_fetch(__location, __value, __type)  __sync_add_and_fetch_##__type##(__location, __value)
+	#define irt_atomic_sub_and_fetch(__location, __value, __type)  __sync_sub_and_fetch_##__type##(__location, __value)
+	#define irt_atomic_or_and_fetch(__location, __value, __type)   __sync_or_and_fetch_##__type##(__location, __value)
+	#define irt_atomic_and_and_fetch(__location, __value, __type)  __sync_and_and_fetch_##__type##(__location, __value)
+	#define irt_atomic_xor_and_fetch(__location, __value, __type)  __sync_xor_and_fetch_##__type##(__location, __value)
 
 	/**
 	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
@@ -57,45 +59,101 @@
 	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
 	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
 	 */
-	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval) __sync_bool_compare_and_swap(__location, __oldval, __newval)
-	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval)  __sync_val_compare_and_swap(__location, __oldval, __newval)
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type) __sync_bool_compare_and_swap_##__type##(__location, __oldval, __newval)
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type)  __sync_val_compare_and_swap_##__type##(__location, __oldval, __newval)
 
 	// convenience
 	// explicitly cast return value to void to supress warnings
-	#define irt_atomic_inc(__location) (void)irt_atomic_fetch_and_add(__location, 1)
-	#define irt_atomic_dec(__location) (void)irt_atomic_fetch_and_sub(__location, 1)
+	#define irt_atomic_inc(__location, __type) (void)irt_atomic_fetch_and_add(__location, 1, __type)
+	#define irt_atomic_dec(__location, __type) (void)irt_atomic_fetch_and_sub(__location, 1, __type)
 
 	int atomic_rmw_int(int *ptr, int value);
 
-	int __sync_fetch_and_add(int *ptr, int value);
-	int __sync_fetch_and_sub(int *ptr, int value);
+	#define IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(__type__, __op_string__) \
+		__type__  __sync_fetch_and_##__op_string__##_##__type__ (__type__*  ptr, __type__  value); 
 
-	int __sync_add_and_fetch(int *ptr, int value);
-	int __sync_sub_and_fetch(int *ptr, int value);
-	int __sync_or_and_fetch(int *ptr, int value);
-	int __sync_and_and_fetch(int *ptr, int value);
-	int __sync_xor_and_fetch(int *ptr, int value);
+	#define IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(__type__, __op_string__) \
+		__type__  __sync_##__op_string__##_and_fetch_##__type__ (__type__*  ptr, __type__  value); 
 
-	int __sync_bool_compare_and_swap(int *ptr, int oldval, int newval);
-	int __sync_val_compare_and_swap(int *ptr, int oldval, int newval);
+	#define IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(__type) \
+		bool __sync_bool_compare_and_swap_##__type (__type  *ptr, __type  oldval, __type  newval); 
+
+	#define IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP_DECLARATION(__type) \
+		__type  __sync_val_compare_and_swap_##__type (__type  *ptr, __type  oldval, __type  newval); 
+
+	/* 32-bit signed versions */
+
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(int32_t, add)
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(int32_t, sub)
+
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int32_t, add)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int32_t, sub)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int32_t, or)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int32_t, and)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int32_t, xor)
+	
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(int32_t)
+	IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP_DECLARATION(int32_t)
+
+	/* 32-bit unsigned versions */
+
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(uint32_t, sub)
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(uint32_t, add)
+
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint32_t, add)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint32_t, sub)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint32_t, or)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint32_t, and)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint32_t, xor)
+	
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(uint32_t)
+	IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP_DECLARATION(uint32_t)
+
+	/* 64-bit signed versions */
+
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(int64_t, sub)
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(int64_t, add)
+
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int64_t, add)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int64_t, sub)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int64_t, or)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int64_t, and)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(int64_t, xor)
+	
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(int64_t)
+	IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP_DECLARATION(int64_t)
+
+	/* 64-bit unsigned versions */
+
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(uint64_t, sub)
+	IRT_DEFINE_SYNC_FETCH_AND_OP_DECLARATION(uint64_t, add)
+
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint64_t, add)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint64_t, sub)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint64_t, or)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint64_t, and)
+	IRT_DEFINE_SYNC_OP_AND_FETCH_DECLARATION(uint64_t, xor)
+	
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(uint64_t)
+	IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP_DECLARATION(uint64_t)
+
+	/* additional versions */
+
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(uintptr_t)
+	IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(bool)
 
 #elif !defined(_MSC_VER)
 
 	// direct mapping to compiler primitives/instrinsics
 
-	#define irt_atomic_fetch_and_add(__location, __value, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_fetch_and_sub(__location, __value, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_fetch_and_or(__location, __value, ...)   __sync_fetch_and_or(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_fetch_and_and(__location, __value, ...)  __sync_fetch_and_and(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_fetch_and_xor(__location, __value, ...)  __sync_fetch_and_xor(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_add(__location, __value, __type, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_sub(__location, __value, __type, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
 
-
-
-	#define irt_atomic_add_and_fetch(__location, __value, ...)  __sync_add_and_fetch(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_sub_and_fetch(__location, __value, ...)  __sync_sub_and_fetch(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_or_and_fetch(__location, __value, ...)   __sync_or_and_fetch(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_and_and_fetch(__location, __value, ...)  __sync_and_and_fetch(__location, __value, ##__VA_ARGS__)
-	#define irt_atomic_xor_and_fetch(__location, __value, ...)  __sync_xor_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_add_and_fetch(__location, __value, __type, ...)  __sync_add_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_sub_and_fetch(__location, __value, __type, ...)  __sync_sub_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_or_and_fetch(__location, __value, __type, ...)   __sync_or_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_and_and_fetch(__location, __value, __type, ...)  __sync_and_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_xor_and_fetch(__location, __value, __type, ...)  __sync_xor_and_fetch(__location, __value, ##__VA_ARGS__)
 
 	/**
 	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
@@ -103,36 +161,36 @@
 	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
 	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
 	 */
-	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...) __sync_bool_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
-	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)  __sync_val_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type, ...) __sync_bool_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type, ...)  __sync_val_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
 
 	//#define irt_atomic_lock_test_and_set(__location,  __value, ...) __sync_lock_test_and_set(__location, __value, ##__VA_ARGS__)
 	//#define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
 
 	// convenience
 	// explicitly cast return value to void to supress warnings
-	#define irt_atomic_inc(__location) (void)irt_atomic_fetch_and_add(__location, 1)
-	#define irt_atomic_dec(__location) (void)irt_atomic_fetch_and_sub(__location, 1)
+	#define irt_atomic_inc(__location, __type) (void)irt_atomic_fetch_and_add(__location, 1, __type)
+	#define irt_atomic_dec(__location, __type) (void)irt_atomic_fetch_and_sub(__location, 1, __type)
 
 #else
 
 	#include <Windows.h>
 
 	// working common mappings for all windows versions
-	#define irt_atomic_or_and_fetch(__location, __value, ...)		(_InterlockedOr(__location, __value))
-	#define irt_atomic_and_and_fetch(__location, __value, ...)		(_InterlockedAnd(__location, __value))
-	#define irt_atomic_xor_and_fetch(__location, __value, ...)		(_InterlockedXor(__location, __value))
+	#define irt_atomic_or_and_fetch(__location, __value, __type, ...)		(_InterlockedOr(__location, __value))
+	#define irt_atomic_and_and_fetch(__location, __value, __type, ...)		(_InterlockedAnd(__location, __value))
+	#define irt_atomic_xor_and_fetch(__location, __value, __type, ...)		(_InterlockedXor(__location, __value))
 
 
 	// Windows 7 and up -> InterlockedExchangeAdd and others are overloaded (such that there is a function with matching types)
 	#if (WINVER >= 0x0601)
 
 		// fetch_and_op: original value before op shall be returned
-		#define irt_atomic_fetch_and_add(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value))
-		#define irt_atomic_fetch_and_sub(__location, __value, ...)		(InterlockedExchangeAdd(__location, - (__value)))
+		#define irt_atomic_fetch_and_add(__location, __value, __type, ...)		(InterlockedExchangeAdd(__location, __value))
+		#define irt_atomic_fetch_and_sub(__location, __value, __type, ...)		(InterlockedExchangeAdd(__location, - (__value)))
 
-		#define irt_atomic_add_and_fetch(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value) + (__value))
-		#define irt_atomic_sub_and_fetch(__location, __value, ...)		(InterlockedExchangeAdd(__location, - (__value)) - (__value))
+		#define irt_atomic_add_and_fetch(__location, __value, __type, ...)		(InterlockedExchangeAdd(__location, __value) + (__value))
+		#define irt_atomic_sub_and_fetch(__location, __value, __type, ...)		(InterlockedExchangeAdd(__location, - (__value)) - (__value))
 
 		/**
 		 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
@@ -140,11 +198,11 @@
 		 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
 		 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
 		 */
-		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...)	((__oldval) == InterlockedCompareExchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
-		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)	InterlockedCompareExchange(__location, __newval, __oldval)
+		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type, ...)	((__oldval) == InterlockedCompareExchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
+		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type, ...)	InterlockedCompareExchange(__location, __newval, __oldval)
 
-		#define irt_atomic_inc(__location) InterlockedIncrement(__location)
-		#define irt_atomic_dec(__location) InterlockedDecrement(__location)
+		#define irt_atomic_inc(__location, __type) InterlockedIncrement(__location)
+		#define irt_atomic_dec(__location, __type) InterlockedDecrement(__location)
 
 	// Windows XP, Windows Vista (and below?) -> there exist no overloaded functions but 32bit and 64bit versions of interlocked functions
 	// hence we do the overloading
@@ -212,18 +270,18 @@
 		}
 
 
-		#define irt_atomic_fetch_and_add(__location, __value, ...)		(_irt_interlocked_exchange_add(__location, __value))
-		#define irt_atomic_fetch_and_sub(__location, __value, ...)		(_irt_interlocked_exchange_add(__location, - (__value)))
+		#define irt_atomic_fetch_and_add(__location, __value, __type, ...)		(_irt_interlocked_exchange_add(__location, __value))
+		#define irt_atomic_fetch_and_sub(__location, __value, __type, ...)		(_irt_interlocked_exchange_add(__location, - (__value)))
 
-		#define irt_atomic_add_and_fetch(__location, __value, ...)		(_irt_interlocked_exchange_add(__location, __value) + (__value))
-		#define irt_atomic_sub_and_fetch(__location, __value, ...)		(_irt_interlocked_exchange_add(__location, - (__value)) - (__value))
+		#define irt_atomic_add_and_fetch(__location, __value, __type, ...)		(_irt_interlocked_exchange_add(__location, __value) + (__value))
+		#define irt_atomic_sub_and_fetch(__location, __value, __type, ...)		(_irt_interlocked_exchange_add(__location, - (__value)) - (__value))
 
 
-		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...)	((__oldval) == _irt_interlocked_compare_exchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
-		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)	_irt_interlocked_compare_exchange(__location, __newval, __oldval)
+		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type, ...)	((__oldval) == _irt_interlocked_compare_exchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
+		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type, ...)	_irt_interlocked_compare_exchange(__location, __newval, __oldval)
 
-		#define irt_atomic_inc(__location) _irt_interlocked_increment(__location)
-		#define irt_atomic_dec(__location) _irt_interlocked_decrement(__location)
+		#define irt_atomic_inc(__location, __type) _irt_interlocked_increment(__location)
+		#define irt_atomic_dec(__location, __type) _irt_interlocked_decrement(__location)
 
 	#endif // WINVER >= 0x0600
 

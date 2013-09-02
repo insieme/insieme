@@ -40,16 +40,19 @@
 
 #include "abstraction/spin_locks.h"
 
+#define IRT_SPIN_LOCKS_GEM_UNLOCKED	0
+#define IRT_SPIN_LOCKS_GEM_LOCKED	1	
+
 void irt_spin_lock(irt_spinlock *lock){
-	while(atomic_rmw_int(lock, 1) == 1);
+	while(atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_LOCKED) == IRT_SPIN_LOCKS_GEM_LOCKED);
 }
 
 void irt_spin_unlock(irt_spinlock *lock){
-	*lock = 0;
+	atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_UNLOCKED);
 }
 
 int irt_spin_init(irt_spinlock *lock){
-	while(atomic_rmw_int(lock, 1) == 1);
+	atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_UNLOCKED);
 
 	return 0;
 }
