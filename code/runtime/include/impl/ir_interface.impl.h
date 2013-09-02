@@ -100,7 +100,11 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	}
 	for(uint32 i=0; i<num_threads; ++i) {
 		irt_scheduling_generate_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
-	}
+    }
+#ifdef _GEMS
+	// alloca is implemented as malloc
+	free(wis);
+#endif
 	return IRT_TAG_WG_PTR(retwg);
 }
 

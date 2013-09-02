@@ -397,12 +397,27 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 
 			if(strcmp(tok, "OS") == 0) {
 				int32 retval = irt_cpu_freq_reset_frequency_worker(worker);
+			#ifdef _GEMS
+				// alloca is implemented as malloc
+				free(first_copy);
+				free(freq_str);
+			#endif
 				return retval;
 			} else if(strcmp(tok, "MAX") == 0) {
 				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[0]);
+			#ifdef _GEMS
+				// alloca is implemented as malloc
+				free(first_copy);
+				free(freq_str);
+			#endif
 				return retval;
 			} else if(strcmp(tok, "MIN") == 0) {
 				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[length-1]);
+			#ifdef _GEMS
+				// alloca is implemented as malloc
+				free(first_copy);
+				free(freq_str);
+			#endif
 				return retval;
 			} else {
 
@@ -417,15 +432,37 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 
 				if(available) {
 					int32 retval = irt_cpu_freq_set_frequency_worker(worker, freq);
+				#ifdef _GEMS
+					// alloca is implemented as malloc
+					free(first_copy);
+					free(freq_str);
+				#endif
 					return retval;
 				} else {
 					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCIES));
+				#ifdef _GEMS
+					// alloca is implemented as malloc
+					free(first_copy);
+					free(freq_str);
+				#endif
 					return -1;
 				}
 			}
+		#ifdef _GEMS
+			// alloca is implemented as malloc
+			free(first_copy);
+		#endif
 		} else {
+		#ifdef _GEMS
+			// alloca is implemented as malloc
+			free(freq_str);
+		#endif
 			return retval;
 		}
+	#ifdef _GEMS
+		// alloca is implemented as malloc
+		free(freq_str);
+	#endif
 	} else {
 		return 0;
 	}

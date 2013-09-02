@@ -40,9 +40,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
-#include <malloc.h>
+	#include <malloc.h>
+#elif defined(_GEMS)
+	#include <include_gems/alloca.h>
 #else
-#include <alloca.h>
+	#include <alloca.h>
 #endif
 #include <ctype.h>
 #include "irt_ocl.h"
@@ -136,7 +138,7 @@ void irt_ocl_init_devices() {
 	local_devices = NULL;
 	local_num_devices = 0;
 	
-	cl_platform_id* cl_platforms;
+	cl_platform_id* cl_platforms = NULL;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
 	if (cl_num_platforms != 0) {
 		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
@@ -157,6 +159,12 @@ void irt_ocl_init_devices() {
 	cl_uint index = 0;
 	
 	if (cl_num_platforms != 0) {
+	#ifdef _GEMS
+		if(cl_platforms != NULL) {
+			// alloca is implemented as malloc
+			free(cl_platforms);
+		}
+	#endif
 		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
 		_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
 
@@ -216,6 +224,10 @@ void irt_ocl_init_devices() {
 					ldev->local_buffer = NULL;
 					irt_spin_init(&(ldev->local_buffer_lock));
 				}
+			#ifdef _GEMS
+				// alloca is implemented as malloc
+				free(cl_devices);
+			#endif
 			}
 		}
 		//General devices list ordered: CPUs, GPUs, ACCs
@@ -235,6 +247,12 @@ void irt_ocl_init_devices() {
 		}
 		//for (int i = 0; i < num_devices; ++i) irt_ocl_print_device_infos(&(devices[i]));
 	}
+#ifdef _GEMS
+	if(cl_platforms != NULL) {
+		// alloca is implemented as malloc
+		free(cl_platforms);
+	}
+#endif
 #endif
 
 #ifdef REMOTE_MODE

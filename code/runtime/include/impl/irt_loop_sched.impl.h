@@ -421,9 +421,17 @@ void irt_loop_sched_policy_init() {
 				}
 			} else {
 				fprintf(stderr, "unknown loop scheduler policy requested: %s\n", policy_env_copy);
+				#ifdef _GEMS
+					// alloca is implemented as malloc
+					free(policy_env_copy);
+				#endif
 				exit(-1);
 			}
 		}
+	#ifdef _GEMS
+		// alloca is implemented as malloc
+		free(policy_env_copy);
+	#endif
 	} else {
 		irt_log_setting_s("IRT_LOOP_SCHED_POLICY", "IRT_STATIC");
 		irt_g_loop_sched_policy_default.type = IRT_STATIC;

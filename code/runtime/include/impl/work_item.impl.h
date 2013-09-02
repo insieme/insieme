@@ -359,6 +359,10 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 	uint64 step = (r->end - r->begin) / elements, cur = r->begin;
 	for(uint32 i=0; i<elements; ++i, cur+=step) offsets[i] = cur;
 	irt_wi_split(wi, elements, offsets, out_wis);
+#ifdef _GEMS
+	// alloca is implemented as malloc
+	free(offsets);
+#endif
 }
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	// TODO implement custom (faster)

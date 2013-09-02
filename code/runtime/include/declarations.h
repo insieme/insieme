@@ -45,7 +45,8 @@
 #ifdef _WIN32
 	#include <Windows.h>
 	#include <malloc.h>
-#elif defined _GEMS
+#elif defined(_GEMS)
+	#include <include_gems/alloca.h>
 #else
 	#include <alloca.h>
 #endif
