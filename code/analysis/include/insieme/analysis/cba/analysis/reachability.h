@@ -54,18 +54,18 @@ namespace cba {
 	};
 
 	template<typename C> class ReachableInConstraintResolver;
-	extern const TypedSetType<Reachable,ReachableInConstraintResolver> Rin;
+	typedef TypedSetType<Reachable,ReachableInConstraintResolver> ReachableInSetType;
+	extern const ReachableInSetType Rin;
 
 	template<typename C> class ReachableOutConstraintResolver;
-	extern const TypedSetType<Reachable,ReachableOutConstraintResolver> Rout;
+	typedef TypedSetType<Reachable,ReachableOutConstraintResolver> ReachableOutSetType;
+	extern const ReachableOutSetType Rout;
 
 
 	template<typename Context>
-	class ReachableInConstraintResolver : public BasicInConstraintResolver<TypedSetType<Reachable,ReachableInConstraintResolver>, ReachableInConstraintResolver<Context>, Context> {
+	class ReachableInConstraintResolver : public BasicInConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableInConstraintResolver<Context>, Context> {
 
-		typedef TypedSetType<Reachable,ReachableInConstraintResolver> SetType;
-
-		typedef BasicInConstraintResolver<TypedSetType<Reachable,ReachableInConstraintResolver>, ReachableInConstraintResolver<Context>, Context> super;
+		typedef BasicInConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableInConstraintResolver<Context>, Context> super;
 
 		StatementAddress root;
 
@@ -92,9 +92,10 @@ namespace cba {
 			super::visit(node, ctxt, constraints);
 		}
 
+		template<typename SetTypeA, typename SetTypeB>
 		void connectStateSets (
-					const SetType& a, Label al, const Context& ac,
-					const SetType& b, Label bl, const Context& bc,
+					const SetTypeA& a, Label al, const Context& ac,
+					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
 				) const {
 
@@ -103,11 +104,11 @@ namespace cba {
 			constraints.add(subset(A, B));
 		}
 
-		template<typename E>
+		template<typename E, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
 					const E& value, const TypedSetID<E>& set,
-					const SetType& a, Label al, const Context& ac,
-					const SetType& b, Label bl, const Context& bc,
+					const SetTypeA& a, Label al, const Context& ac,
+					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
 				) const {
 
@@ -126,11 +127,9 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachableOutConstraintResolver : public BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver<Context>,Context> {
+	class ReachableOutConstraintResolver : public BasicOutConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintResolver<Context>,Context> {
 
-		typedef TypedSetType<Reachable,ReachableOutConstraintResolver> SetType;
-
-		typedef BasicOutConstraintResolver<TypedSetType<Reachable,ReachableOutConstraintResolver>, ReachableOutConstraintResolver<Context>,Context> super;
+		typedef BasicOutConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintResolver<Context>,Context> super;
 
 		CBA& cba;
 
@@ -139,9 +138,10 @@ namespace cba {
 		ReachableOutConstraintResolver(CBA& cba)
 			: super(cba, Rin, Rout, *this), cba(cba) { }
 
+		template<typename SetTypeA, typename SetTypeB>
 		void connectStateSets (
-					const SetType& a, Label al, const Context& ac,
-					const SetType& b, Label bl, const Context& bc,
+					const SetTypeA& a, Label al, const Context& ac,
+					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
 				) const {
 
@@ -150,11 +150,11 @@ namespace cba {
 			constraints.add(subset(A, B));
 		}
 
-		template<typename E>
+		template<typename E, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
 					const E& value, const TypedSetID<E>& set,
-					const SetType& a, Label al, const Context& ac,
-					const SetType& b, Label bl, const Context& bc,
+					const SetTypeA& a, Label al, const Context& ac,
+					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
 				) const {
 

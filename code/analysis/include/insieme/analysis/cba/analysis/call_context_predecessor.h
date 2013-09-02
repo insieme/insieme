@@ -36,7 +36,8 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/analysis/functions.h"
 
 namespace insieme {
 namespace analysis {
@@ -97,8 +98,7 @@ namespace cba {
 			// TODO: use contexts provided by CBA
 
 			// uses have to be determined dynamically
-			vector<typename Context::call_context> callContexts;
-			generateSequences(cba.getDynamicCallLabels(), callContexts);
+			auto callContexts = generateSequences<Context::call_context::size>(cba.getDynamicCallLabels());
 
 			// compute all contexts this function may be called at
 			auto num_params = fun->getType().as<FunctionTypePtr>()->getParameterTypes().size();

@@ -46,7 +46,7 @@
 #include "insieme/analysis/cba/framework/forward_decl.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/context.h"
-#include "insieme/analysis/cba/framework/entitiey.h"
+#include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/constraint_resolver.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
@@ -112,6 +112,7 @@ namespace cba {
 		}
 	};
 
+	// TODO: make those an enum
 	extern const StateSetType Sin;		// in-state of statements
 	extern const StateSetType Sout;		// out-state of statements
 	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
@@ -124,6 +125,10 @@ namespace cba {
 
 		struct ContainerBase {
 			virtual ~ContainerBase() {}
+			virtual std::size_t getNumSets() const =0;
+
+			virtual void addConstraintsFor(CBA& cba, const SetID& set, Constraints& res) const =0;
+			virtual void plot(const CBA& cba, const std::map<SetID,string>& solution, std::ostream& out) const =0;
 		};
 
 		template<typename Context>
@@ -202,7 +207,94 @@ namespace cba {
 				R<Context>* res = new R<Context>(cba);
 				resolver.insert(res);
 				setResolver[&type] = res;
+
+				// also location resolver instances
+				for(const auto& loc : getAllLocations(cba)) {
+					auto in  = new ImperativeInStateConstraintCollector<Context,TypedSetType<T,R>>(cba, type, loc);
+					auto out = new ImperativeOutStateConstraintCollector<Context,TypedSetType<T,R>>(cba, type, loc);
+					resolver.insert(in);
+					resolver.insert(out);
+					locationResolver[LocationSetKey(&Sin,  &type, loc)] = in;
+					locationResolver[LocationSetKey(&Sout, &type, loc)] = out;
+				}
+
 				return *res;
+			}
+
+			ConstraintResolverPtr getResolver(const SetType& type) const {
+				auto pos = setResolver.find(&type);
+				return (pos != setResolver.end()) ? pos->second : ConstraintResolverPtr();
+			}
+
+			virtual void addConstraintsFor(CBA& cba, const SetID& set, Constraints& res) const {
+				// check standard set keys
+				{
+					auto pos = set2key.find(set);
+					if (pos != set2key.end()) {
+
+						const SetKey& key = pos->second;
+
+						int id = std::get<1>(key);
+						if (id == 0) return;		// nothing to do here
+						const SetType& type = *std::get<0>(key);
+						const Context& context = std::get<2>(key);
+
+						auto resolver = getResolver(type);
+						assert_true(resolver) << "No resolver registered for type " << type.getName() << "\n";
+
+						// get targeted node
+						core::StatementAddress trg = cba.getStmt(id);
+						if (!trg) {
+							// it is a variable
+							trg = cba.getVariable(id);
+						}
+
+						// this should have worked
+						assert(trg && "Unable to obtain target!");
+
+						// run resolution
+						resolver->addConstraints(trg, context, res);
+
+						// done
+						return;
+					}
+				}
+
+				// try a state formula
+				{
+					auto pos = set2statekey.find(set);
+					if (pos != set2statekey.end()) {
+						const StateSetKey& key = pos->second;
+
+						// get targeted node
+						core::StatementAddress trg = cba.getStmt(std::get<1>(key));
+
+						// run resolution
+						if (trg) {
+							auto type = std::get<0>(key);
+//							assert_true(locationResolver.find(type) != locationResolver.end())
+//								<< "Unknown resolver for: " << std::get<0>(std::get<0>(key))->getName()
+//								<< "," << std::get<1>(std::get<0>(key))->getName() << "\n";
+
+
+							// ignore temporaries
+							if (std::get<0>(type) == &Stmp) return;
+
+							// obtain resolver
+							auto pos = locationResolver.find(type);
+							assert_true(pos != locationResolver.end()) << "No resolver registered for type " << std::get<0>(type)->getName() << "/" << std::get<1>(type)->getName() << "\n";
+
+							// add constraints
+							pos->second->addConstraints(trg, std::get<2>(key), res);
+						}
+
+						// done
+						return;
+					}
+				}
+
+				// an unknown set?
+				assert_true(false) << "Unknown set encountered: " << set << "\n";
 			}
 
 			const std::vector<Context>& getContexts(CBA& cba) {
@@ -233,6 +325,49 @@ namespace cba {
 				if (callables) return callables;
 				callables = getAllCallables(cba);
 				return callables;
+			}
+
+			virtual std::size_t getNumSets() const {
+				return sets.size() + stateSets.size();
+			}
+
+			virtual void plot(const CBA& cba, const std::map<SetID,string>& solution, std::ostream& out) const {
+
+				// a utility obtaining the address of a label
+				auto getAddress = [&](const Label l)->StatementAddress {
+					if (l == 0) return cba.root;
+					auto res = cba.getStmt(l);
+					return (res) ? res : cba.getVariable(l);
+				};
+
+				auto getSolution = [&](const SetID& set)->const string& {
+					static const string& none = "";
+					auto pos = solution.find(set);
+					return (pos != solution.end()) ? pos->second : none;
+				};
+
+				// name sets
+				for(auto cur : sets) {
+					string setName = std::get<0>(cur.first)->getName();
+					auto pos = getAddress(std::get<1>(cur.first));
+					out << "\n\t" << cur.second
+							<< " [label=\"" << cur.second << " = " << setName
+								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
+							<< " = " << getSolution(cur.second) << "\""
+							<< ((cba.solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
+				}
+
+				for(auto cur : stateSets) {
+					auto& loc = std::get<0>(cur.first);
+					string setName = std::get<0>(loc)->getName();
+					string dataName = std::get<1>(loc)->getName();
+					auto pos = getAddress(std::get<1>(cur.first));
+					out << "\n\t" << cur.second
+							<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<2>(loc)
+								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
+							<< " = " << getSolution(cur.second) << "\""
+							<< ((cba.solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
+				}
 			}
 
 		private:
@@ -309,6 +444,8 @@ namespace cba {
 
 		utils::Lazy<std::vector<ContextFreeCallable>> freeFunctions;
 
+		std::unordered_map<SetID, ContainerBase*> set2container;
+
 	public:
 
 		CBA(const core::StatementAddress& root);
@@ -323,7 +460,8 @@ namespace cba {
 		// -- main entry point for running analysis --
 
 		template<typename T, template<typename C> class R, typename C = DefaultContext>
-		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T,R>& set, const C& ctxt = C()) {
+		typename std::enable_if<is_context<C>::value, const std::set<T>&>::type
+		getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T,R>& set, const C& ctxt = C()) {
 			auto id = getSet(set, getLabel(expr), ctxt);
 			return solver.solve(id)[id];
 		}
@@ -333,12 +471,18 @@ namespace cba {
 
 		template<typename T, template<typename C> class R, typename Context = DefaultContext>
 		sc::TypedSetID<T> getSet(const TypedSetType<T,R>& type, int id, const Context& context = Context()) {
-			return getContainer<Context>().getSet(*this, type, id, context);
+			Container<Context>& container = getContainer<Context>();
+			sc::TypedSetID<T> res = container.getSet(*this, type, id, context);
+			set2container[res] = &container;
+			return res;
 		}
 
 		template<typename T, template<typename C> class R, typename Context = DefaultContext>
 		sc::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const TypedSetType<T,R>& type_loc) {
-			return getContainer<Context>().getSet(*this, type, label, context, loc, type_loc);
+			Container<Context>& container = getContainer<Context>();
+			sc::TypedSetID<T> res = container.getSet(*this, type, label, context, loc, type_loc);
+			set2container[res] = &container;
+			return res;
 		}
 
 		// -- label management --
@@ -378,7 +522,7 @@ namespace cba {
 
 			Variable res;
 			if (def == var) {
-				res = ++idCounter; 		// reserve 0 for the empty set
+				res = getLabel(def);		// use label of definition point
 				reverseVars[res] = def;
 			} else {
 				res = getVariable(def);
@@ -403,6 +547,26 @@ namespace cba {
 		template<typename Context>
 		const std::vector<Location<Context>>& getLocations() {
 			return getContainer<Context>().getLocations(*this);
+		}
+
+		// TODO: remove default values
+		// TODO: think about moving this to the reference analysis module
+		template<typename Context>
+		Location<Context> getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
+			Context context;
+
+			assert(isMemoryConstructor(ctor));
+
+			// obtain address of definition point
+			auto def = getLocationDefinitionPoint(ctor);
+
+			// for globals the call context and thread context is not relevant
+			if (ctor.isa<core::LiteralPtr>()) {
+				return Location<Context>(def, Context());
+			}
+
+			// create the location instance
+			return Location<Context>(def, context);
 		}
 
 		template<typename Context>
@@ -515,12 +679,28 @@ namespace cba {
 			return isValid(ctxt.callContext);
 		}
 
+		// ----------------------- some debugging utilities ---------------------------
+
+		void plot(std::ostream& out = std::cout) const;
+
+		std::size_t getNumSets() const {
+			std::size_t sum = 0;
+			for(auto cur : indices) {
+				sum += cur.second->getNumSets();
+			}
+			return sum;
+		}
+
+		std::size_t getNumConstraints() const {
+			return solver.getConstraints().size();
+		}
+
 	private:
 
 		template<typename T>
 		Container<T>& getContainer() { return indices.get<T>(); }
 
-		void addConstraintsFor(const SetID& set, Constraints& res) {}
+		void addConstraintsFor(const SetID& set, Constraints& res);
 
 //
 //		template<typename T>
@@ -802,3 +982,10 @@ namespace cba {
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
+
+/**
+ * This include has to follow the CBA class definition due to dependencies and needs to
+ * be always included whenever the CBA class is included. That is why it is located at
+ * the end of the file and must not be moved to the top.
+ */
+#include "insieme/analysis/cba/framework/imperative_constraint_resolver.h"

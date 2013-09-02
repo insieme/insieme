@@ -42,6 +42,7 @@
 #include "insieme/analysis/cba/analysis/arithmetic.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 namespace insieme {
 namespace analysis {

@@ -235,6 +235,7 @@ namespace prototype {
 
 		EXPECT_EQ("{AP(12)}", toString(analysis.getValuesOf(initX)));
 		EXPECT_EQ("{AP(12)}", toString(analysis.getValuesOf(varX)));
+		createDotDump(analysis);
 
 		auto declY = code[1].as<DeclarationStmtAddress>();
 		VariableAddress varY = declY->getVariable();
@@ -255,7 +256,6 @@ namespace prototype {
 
 		EXPECT_EQ("{AP(14)}", toString(analysis.getValuesOf(varZ, Context::CallContext(0,l1))));
 		EXPECT_EQ("{AP(16)}", toString(analysis.getValuesOf(varZ, Context::CallContext(0,l2))));
-//		createDotDump(analysis);
 
 	}
 

@@ -66,7 +66,7 @@ namespace cba {
 	// TODO: rewrite Collector => Derived
 
 
-	template<typename SetIDType, typename Collector, typename Context>
+	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
 	class BasicInOutConstraintResolver : public ConstraintResolver<Context> {
 
 	protected:
@@ -74,8 +74,8 @@ namespace cba {
 		typedef ConstraintResolver<Context> super;
 
 		// the sets to be used for in/out states
-		const SetIDType& Ain;
-		const SetIDType& Aout;
+		const InSetIDType& Ain;
+		const OutSetIDType& Aout;
 
 		Collector& collector;
 
@@ -83,32 +83,34 @@ namespace cba {
 
 	public:
 
-		BasicInOutConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+		BasicInOutConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba), Ain(Ain), Aout(Aout), collector(collector), cba(cba) {}
 
 	protected:
 
-		void connectSets(const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+		template<typename SetTypeA, typename SetTypeB>
+		void connectSets(const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSets(a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
 		}
 
-		template<typename E>
-		void connectSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, const StatementAddress& al, const Context& ac, const SetIDType& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+		template<typename E, typename SetTypeA, typename SetTypeB>
+		void connectSetsIf(const E& value, const TypedSetID<E>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
 		}
 
-		void connectStateSets(const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+		template<typename SetTypeA, typename SetTypeB>
+		void connectStateSets(const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSets(a,al,ac,b,bl,bc,constraints);
 		}
 
-		template<typename E>
-		void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetIDType& a, Label al, const Context& ac, const SetIDType& b, Label bl, const Context& bc, Constraints& constraints) {
+		template<typename E, typename SetTypeA, typename SetTypeB>
+		void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
@@ -117,23 +119,23 @@ namespace cba {
 	};
 
 
-	template<typename SetIDType, typename Collector, typename Context>
-	class BasicInConstraintResolver : public BasicInOutConstraintResolver<SetIDType, Collector, Context> {
+	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
+	class BasicInConstraintResolver : public BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> {
 
-		typedef BasicInOutConstraintResolver<SetIDType, Collector, Context> super;
+		typedef BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicInConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+		BasicInConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
 
 			// check whether given call / target context is actually valid
 			auto fun = call->getFunctionExpr();
-			auto l_call = this->getContext().getLabel(call);
+			auto l_call = cba.getLabel(call);
 			if (!(fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>())) {		// it is not a direct call
 				if (callCtxt.callContext << l_call != trgCtxt.callContext) return;
 			} else if (callCtxt.callContext != trgCtxt.callContext) {
@@ -148,11 +150,11 @@ namespace cba {
 			auto bind = (isCallWithinBind) ? call.getParentAddress().as<BindExprAddress>() : BindExprAddress();
 
 			// get label for the body expression
-			auto l_body = this->getContext().getLabel(body);
+			auto l_body = cba.getLabel(body);
 
 			// get labels for call-site
-			auto l_fun = this->getContext().getLabel(call->getFunctionExpr());
-			auto F_call = this->getContext().getSet(F, l_fun, callCtxt);
+			auto l_fun = cba.getLabel(call->getFunctionExpr());
+			auto F_call = cba.getSet(F, l_fun, callCtxt);
 
 			// add effect of function-expression-evaluation (except within bind calls)
 			if (!isCallWithinBind) this->connectStateSetsIf(callable, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
@@ -164,7 +166,7 @@ namespace cba {
 				if (bind && bind->isBoundExpression(arg)) continue;
 
 				// add effect of argument
-				auto l_arg = this->getContext().getLabel(arg);
+				auto l_arg = cba.getLabel(arg);
 				this->connectStateSetsIf(callable, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 			}
 
@@ -406,16 +408,16 @@ namespace cba {
 		}
 	};
 
-	template<typename SetIDType, typename Collector, typename Context>
-	class BasicOutConstraintResolver : public BasicInOutConstraintResolver<SetIDType, Collector, Context> {
+	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
+	class BasicOutConstraintResolver : public BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> {
 
-		typedef BasicInOutConstraintResolver<SetIDType, Collector, Context> super;
+		typedef BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicOutConstraintResolver(CBA& cba, const SetIDType& Ain, const SetIDType& Aout, Collector& collector)
+		BasicOutConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 

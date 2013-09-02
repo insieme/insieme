@@ -42,6 +42,9 @@
 #include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/analysis/analysis.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
+#include "insieme/analysis/cba/analysis/callables.h"
+#include "insieme/analysis/cba/analysis/references.h"
+#include "insieme/analysis/cba/analysis/functions.h"
 #include "insieme/analysis/cba/analysis/call_context_predecessor.h"
 
 #include "insieme/core/ir.h"
@@ -304,7 +307,7 @@ namespace cba {
 												auto l_cur_call_fun = cba.getLabel(cba.getStmt(l_cur_call).template as<CallExprAddress>()->getFunctionExpr());
 												Context curCallCtxt = ctxt;
 												curCallCtxt.callContext >>= l;
-												auto C_cur_call = cba.getSet(C, l_cur_call_fun, curCallCtxt);
+												auto C_cur_call = cba.getSet(C<Context>(), l_cur_call_fun, curCallCtxt);
 
 												// load bound values of all potential contexts
 												for(const auto& cur : cba.getCallables<Context>()) {
@@ -357,7 +360,7 @@ namespace cba {
 
 									// get value of argument
 									auto A_arg = cba.getSet(A, cba.getLabel(site[variable.getIndex()]), srcCtxt);
-									auto C_fun = cba.getSet(C, cba.getLabel(site->getFunctionExpr()), srcCtxt);
+									auto C_fun = cba.getSet(C<Context>(), cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
 									// pass value of argument to parameter for any potential callable
 									for(const auto& target : cba.getCallables<Context>()) {
@@ -412,7 +415,7 @@ namespace cba {
 
 									// get value of argument
 									auto A_arg = cba.getSet(A, cba.getLabel(site[variable.getIndex()]), srcCtxt);
-									auto C_fun = cba.getSet(C, cba.getLabel(site->getFunctionExpr()), srcCtxt);
+									auto C_fun = cba.getSet(C<Context>(), cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
 									// pass value of argument to parameter for any potential callable
 									for(const auto& target : cba.getCallables<Context>()) {
@@ -473,7 +476,7 @@ namespace cba {
 				if (base.isRefDeref(fun)) {
 					// read value from memory location
 					auto l_trg = this->cba.getLabel(call[0]);
-					auto R_trg = this->cba.getSet(R, l_trg, ctxt);
+					auto R_trg = this->cba.getSet(R<Context>(), l_trg, ctxt);
 					for(auto loc : this->cba.template getLocations<Context>()) {
 
 						// if loc is in R(target) then add Sin[A,trg] to A[call]

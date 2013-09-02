@@ -42,6 +42,11 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	const StateSetType Sin("Sin");			// in-state of statements
+	const StateSetType Sout("Sout");		// out-state of statements
+	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
+
+
 	using std::set;
 
 	using namespace core;
@@ -89,6 +94,16 @@ namespace cba {
 //		locations = getAllLocations(*this, root);
 
 	};
+
+	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
+
+		// get container
+		auto pos = set2container.find(set);
+		assert_true(pos != set2container.end()) << "Unknown set type encountered: " << set << "\n";
+
+		// let container create constraints
+		pos->second->addConstraintsFor(*this, set, res);
+	}
 
 
 	namespace {
@@ -276,6 +291,31 @@ namespace cba {
 		}
 		return (res) ? *res : freeFunctions;
 	}
+
+	void CBA::plot(std::ostream& out) const {
+		const Constraints& constraints = solver.getConstraints();
+		const Assignment& ass = solver.getAssignment();
+
+
+		// get solutions as strings
+		auto solution = ass.toStringMap();
+
+		out << "digraph G {";
+
+		// print names of all sets
+		for(auto cur : indices) {
+			cur.second->plot(*this, solution, out);
+		}
+
+		// print constraints
+		for(auto cur : constraints) {
+			out << "\n\t";
+			cur->writeDotEdge(out, ass);
+		}
+
+		out << "\n}\n";
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

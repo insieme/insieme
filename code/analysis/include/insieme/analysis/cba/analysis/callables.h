@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/entitiey.h"
+#include "insieme/analysis/cba/framework/entities.h"
 //#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
 
 #include "insieme/core/forward_decls.h"
@@ -64,65 +64,66 @@ namespace cba {
 	}
 
 
-	template<typename C> class ControlFlowConstraintResolver {};
 
-//	template<typename Context>
-//	class ControlFlowConstraintResolver : public BasicDataFlowConstraintResolver<Callable<Context>,Context> {
-//
-//		typedef BasicDataFlowConstraintResolver<Callable<Context>,Context> super;
-//
-//	public:
-//
-//		ControlFlowConstraintResolver(CBA& cba)
-//			: super(cba, C, c) { };
-//
-//		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
-//
-//			// and default handling
-//			super::visitLiteral(literal, ctxt, constraints);
-//
-//			// only interested in functions ...
-//			if (!literal->getType().isa<FunctionTypePtr>()) return;
-//
-//			// add constraint: literal \in C(lit)
-//			auto value = Callable(literal);
-//			auto l_lit = cba.getLabel(literal);
-//
-//			auto C_lit = cba.getSet(C, l_lit, ctxt);
-//			constraints.add(elem(value, C_lit));
-//
-//		}
-//
-//		void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
-//
-//			// and default handling
-//			super::visitLambdaExpr(lambda, ctxt, constraints);
-//
-//			// add constraint: lambda \in C(lambda)
-//			auto value = Callable(lambda);
-//			auto label = cba.getLabel(lambda);
-//
-//			constraints.add(elem(value, cba.getSet(C, label, ctxt)));
-//
-//			// TODO: handle recursions
-//
-//		}
-//
-//		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
-//
-//			// and default handling
-//			super::visitBindExpr(bind, ctxt, constraints);
-//
-//			// add constraint: bind \in C(bind)
-//			auto value = Callable(bind, ctxt);
-//			auto label = cba.getLabel(bind);
-//
-//			auto C_bind = cba.getSet(C, label, ctxt);
-//			constraints.add(elem(value, C_bind));
-//
-//		}
-//
-//	};
+	template<typename Context>
+	class ControlFlowConstraintResolver : public BasicDataFlowConstraintResolver<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintResolver>, Context> {
+
+		typedef BasicDataFlowConstraintResolver<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintResolver>, Context> super;
+
+		CBA& cba;
+
+	public:
+
+		ControlFlowConstraintResolver(CBA& cba)
+			: super(cba, C<Context>(), c<Context>()), cba(cba) { };
+
+		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+
+			// and default handling
+			super::visitLiteral(literal, ctxt, constraints);
+
+			// only interested in functions ...
+			if (!literal->getType().isa<FunctionTypePtr>()) return;
+
+			// add constraint: literal \in C(lit)
+			auto value = Callable<Context>(literal);
+			auto l_lit = cba.getLabel(literal);
+
+			auto C_lit = cba.getSet(C<Context>(), l_lit, ctxt);
+			constraints.add(elem(value, C_lit));
+
+		}
+
+		void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
+
+			// and default handling
+			super::visitLambdaExpr(lambda, ctxt, constraints);
+
+			// add constraint: lambda \in C(lambda)
+			auto value = Callable<Context>(lambda);
+			auto label = cba.getLabel(lambda);
+
+			constraints.add(elem(value, cba.getSet(C<Context>(), label, ctxt)));
+
+			// TODO: handle recursions
+
+		}
+
+		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+
+			// and default handling
+			super::visitBindExpr(bind, ctxt, constraints);
+
+			// add constraint: bind \in C(bind)
+			auto value = Callable<Context>(bind, ctxt);
+			auto label = cba.getLabel(bind);
+
+			auto C_bind = cba.getSet(C<Context>(), label, ctxt);
+			constraints.add(elem(value, C_bind));
+
+		}
+
+	};
 
 
 } // end namespace cba

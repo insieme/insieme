@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/entitiey.h"
+#include "insieme/analysis/cba/framework/entities.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -47,10 +47,10 @@ namespace cba {
 //
 //	// --- forward definitions of known analysis ---
 //
-//	class Formula;
-//	template<typename C> class ArithmeticConstraintResolver;
-//	extern const TypedSetType<Formula,ArithmeticConstraintResolver> A;
-//	extern const TypedSetType<Formula,ArithmeticConstraintResolver> a;
+	class Formula;
+	template<typename C> class ArithmeticConstraintResolver;
+	extern const TypedSetType<Formula,ArithmeticConstraintResolver> A;
+	extern const TypedSetType<Formula,ArithmeticConstraintResolver> a;
 
 	template<typename C> class BooleanConstraintResolver;
 	extern const TypedSetType<bool,BooleanConstraintResolver> B;

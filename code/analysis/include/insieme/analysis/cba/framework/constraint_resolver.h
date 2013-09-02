@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "insieme/analysis/cba/framework/forward_decl.h"
 #include "insieme/analysis/cba/framework/context.h"
 
@@ -112,7 +114,7 @@ namespace cba {
 			if (!processed.insert(Item(node,ctxt)).second) return;
 
 			// filter out invalid contexts
-			if (isValidContext(cba, ctxt)) return;
+			if (!isValidContext(cba, ctxt)) return;
 
 			// for valid content => std procedure
 			super::visit(node, ctxt, constraints);
