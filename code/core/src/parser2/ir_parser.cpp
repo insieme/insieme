@@ -1361,7 +1361,7 @@ namespace parser {
 						if (res && res->getNodeCategory() == NC_Expression) return res;
 						return cur.getSymbolManager().lookup(cur.getSubRange(0)).isa<ExpressionPtr>();
 					},
-					1 // higher priority than other rules
+					2 // higher priority than other rules
 			));
 
 			g.addRule("E", rule(
@@ -1371,7 +1371,7 @@ namespace parser {
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
 						return dynamic_pointer_cast<ExpressionPtr>(res);
 					},
-					1    // higher priority than generic type rule
+					1    // lower priority than variable resolution
 			));
 
 			// -- call expression --
