@@ -95,10 +95,19 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 
 std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	std::string name = funcDecl->getQualifiedNameAsString();
-
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl))
 		if (method->isVirtual())
 			name = funcDecl->getNameAsString();
+
+    //if we have non type template specialization args,
+    //we have to modify the name (e.g. template <bool VAR>)
+    if(funcDecl->getTemplateSpecializationArgs()) {
+        for(unsigned int i=0; i<funcDecl->getTemplateSpecializationArgs()->size(); i++) {
+            if(funcDecl->getTemplateSpecializationArgs()->get(i).getKind() == clang::TemplateArgument::ArgKind::Integral) {
+                name.append(funcDecl->getTemplateSpecializationArgs()->get(i).getAsIntegral().toString(10));
+            }
+        }
+    }
 
     //we need to replace right and left shift operators with a dummy
     //to avoid wrong renaming and double occurence when both operators

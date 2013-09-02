@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -143,7 +143,12 @@ namespace tu {
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
-			assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
+			//check if function exists, if it exists we
+			//have to check if they are really the same.
+			//assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
+			if(functions.find(symbol) != functions.end()) {
+                assert(core::analysis::equalNormalize ( definition, functions[symbol] ));
+			}
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
