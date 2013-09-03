@@ -704,6 +704,10 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
 				}
 			}
+			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
+				irNode = builder.literal("alloca", funcTy);
+				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
+			}
 
 			irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
 

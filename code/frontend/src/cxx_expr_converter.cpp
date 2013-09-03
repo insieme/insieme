@@ -689,7 +689,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			}
 
 			if (*newIr == *innerIr){
-				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order 
+				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order
 			}
 			else{
 				innerIr = newIr;
@@ -811,6 +811,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 		expr = Visit(typeidExpr->getExprOperand());
 	}
 	retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getTypeid(), expr);
+	return retIr;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			Substituted non type template parameter expression
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr) {
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(substExpr, retIr);
+	assert(substExpr->getReplacement() && "template parameter cannot be substituted by nothing");
+	retIr = Visit(substExpr->getReplacement());
 	return retIr;
 }
 

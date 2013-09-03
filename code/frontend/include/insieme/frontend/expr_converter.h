@@ -446,6 +446,7 @@ public:
 	core::ExpressionPtr VisitExprWithCleanups			(const clang::ExprWithCleanups* cleanupExpr);
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
+	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  default visitor call
