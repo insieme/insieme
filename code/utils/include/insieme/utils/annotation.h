@@ -314,7 +314,8 @@ namespace detail {
 		 *
 		 * @param value the value to be represented
 		 */
-		ValueAnnotationBase(const V& value) : value(value) {}
+		template<typename ... Args>
+		ValueAnnotationBase(const Args& ... args) : value(args...) {}
 
 		/**
 		 * Obtains the key to be used to identify this annotation within an annotatable object.
@@ -404,7 +405,8 @@ namespace detail {
 	template<typename V, typename AnnotationType, typename KeyType>
 	class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
 	public:
-		ValueAnnotation(const V& value) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(value) {}
+		template<typename ... Args>
+		ValueAnnotation(const Args& ... args) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(args...) {}
 	};
 
 }
@@ -677,10 +679,10 @@ public:
 	 * @tparam V the key and the type of the value to be attached
 	 * @param value the value to be attached
 	 */
-	template<typename V>
-	void attachValue(const V& value = V()) const {
+	template<typename V, typename ... Args>
+	void attachValue(const Args&  ... args) const {
 		std::shared_ptr<detail::ValueAnnotation<V,AnnotationType,KeyType>> annotation
-			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(value);
+			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(args...);
 		addAnnotation(annotation);
 	}
 

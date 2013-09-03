@@ -423,6 +423,11 @@ namespace core {
 			return getNode().getAnnotationContainer().attachValue<V>(value);
 		}
 
+		template<typename V, typename ... Args>
+		void attachValue(const Args& ... args) const {
+			return getNode().getAnnotationContainer().attachValue<V>(args...);
+		}
+
 		template<typename V>
 		void detachValue() const {
 			getNode().getAnnotationContainer().detachValue<V>();
