@@ -404,6 +404,31 @@ namespace cba {
 				return;
 			}
 
+			// handle for stmt
+			if (auto forStmt = parent.isa<ForStmtAddress>()) {
+
+				// check which part of a while the current node is
+				auto body = forStmt->getBody();
+				if (body == stmt) {
+
+					// connect out of declaration, end and step to in of body
+					this->connectSets(this->Aout, forStmt->getDeclaration(), ctxt, this->Ain, body, ctxt, constraints);
+					this->connectSets(this->Aout, forStmt->getEnd(),         ctxt, this->Ain, body, ctxt, constraints);
+					this->connectSets(this->Aout, forStmt->getStep(),        ctxt, this->Ain, body, ctxt, constraints);
+
+					// also, since it is a loop, the out of the loop body is the in of the next iteration
+					// TODO: consider continues and breaks!
+					this->connectSets(this->Aout, body, ctxt, this->Ain, body, ctxt, constraints);
+
+				} else {
+
+					// connect in of for with in of declaration, end and step (current stmt)
+					this->connectSets(this->Ain, forStmt, ctxt, this->Ain, stmt, ctxt, constraints);
+
+				}
+				return;
+			}
+
 			assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType();
 		}
 	};
@@ -597,6 +622,13 @@ namespace cba {
 			auto l_cond = cba.getLabel(cond);
 			auto B_cond = cba.getSet(B, l_cond, ctxt);
 			this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Aout, stmt, ctxt, constraints);
+		}
+
+		void visitForStmt(const ForStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+			// link out of body with out of for stmt
+			auto body = stmt->getBody();
+			// TODO: consider continues and breaks!
+			this->connectSets(this->Aout, body, ctxt, this->Aout, stmt, ctxt, constraints);
 		}
 
 		void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& res) {

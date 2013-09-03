@@ -55,6 +55,8 @@ namespace cba {
 		core::ExpressionAddress definition;
 		Context context;
 
+		Callable()
+			: definition(), context() {}
 		Callable(const core::LiteralAddress& lit)
 			: definition(lit.getAddressedNode()), context() {}
 		Callable(const core::LambdaExprAddress& fun)
@@ -82,6 +84,7 @@ namespace cba {
 		bool isLambda() const { return definition->getNodeType() == core::NT_LambdaExpr; };
 
 		std::size_t getNumParams() const { return definition->getType().as<core::FunctionTypePtr>()->getParameterTypes().size(); }
+
 		core::StatementAddress getBody() const {
 			assert(isBind() || isLambda());
 			return (isBind())
@@ -92,6 +95,7 @@ namespace cba {
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
+			if (!definition) return out << "-unknown-";
 			if (auto lit = definition.isa<core::LiteralPtr>()) return out << *lit;
 			return out << "(" << definition->getNodeType() << "@" << definition << "," << context << ")";
 		}

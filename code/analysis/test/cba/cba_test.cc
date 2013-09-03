@@ -633,6 +633,123 @@ namespace cba {
 
 	}
 
+	TEST(CBA, ForStmt) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.normalize(builder.parseStmt(
+				"{"
+				"	for (int<4> i = 0 .. 10 : 1) {"
+				"		i;"								// should be i .. symbolic
+				"		2*i+3;"							// should be 2*i+3 .. symbolic
+				"		(3*i+2*i)*i;"					// should be 5*i^2 .. symbolic
+				"	}"
+				"}"
+		)).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto forStmt = code[0].as<ForStmtAddress>();
+		auto iter = forStmt->getIterator();
+		auto body = forStmt->getBody();
+
+		// check iterator definition points
+		EXPECT_EQ(iter, getDefinitionPoint(iter));
+
+		// within the loop
+		EXPECT_EQ("{v0}",     toString(analysis.getValuesOf(body[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2*v0+3}", toString(analysis.getValuesOf(body[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5*v0^2}", toString(analysis.getValuesOf(body[2].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, ForStmt_2) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.normalize(builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(0);"			// set x to 0
+				"	*x;"								// should be 0
+				"	for (int<4> i = 0 .. 10 : 1) {"
+				"		i;"								// should be i .. symbolic
+				"		2*i+3;"							// should be 2*i+3 .. symbolic
+				"		x = x + i;"
+				"		*x;"							// should be unknown
+				"	}"
+				"	*x;"								// what is x? - should be unknown
+				"}"
+		)).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto forStmt = code[2].as<ForStmtAddress>();
+		auto body = forStmt->getBody();
+
+		// check value of *x before loop
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+
+		// within the loop
+		EXPECT_EQ("{v1}", toString(analysis.getValuesOf(body[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2*v1+3}", toString(analysis.getValuesOf(body[1].as<ExpressionAddress>(), A)));
+
+		// the value of x should be unknown within the loop (although some examples are recorded)
+		EXPECT_TRUE(contains(analysis.getValuesOf(body[3].as<ExpressionAddress>(), A), Formula()));
+
+		// after the loop
+		EXPECT_TRUE(contains(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A), Formula()));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, ForStmt_3) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.normalize(builder.parseStmt(
+				"{"
+				"	for (int<4> i = 0 .. 10 : 1) {"
+				"		auto x = 2*i + 3;"
+				"		for(int<4> j = 0 .. 10 : 1) {"
+				"			i;"
+				"			j;"
+				"			i+j;"
+				"			i+j+x;"
+				"		}"
+				"	}"
+				"}"
+		)).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto forStmtA = code[0].as<ForStmtAddress>();
+		auto bodyA = forStmtA->getBody();
+
+		auto forStmtB = bodyA[1].as<ForStmtAddress>();
+		auto bodyB = forStmtB->getBody();
+
+		// check the inner indices
+		EXPECT_EQ("{v0}", 	  	 toString(analysis.getValuesOf(bodyB[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{v2}", 	  	 toString(analysis.getValuesOf(bodyB[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{v0+v2}",  	 toString(analysis.getValuesOf(bodyB[2].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3*v0+v2+3}", toString(analysis.getValuesOf(bodyB[3].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, Arithmetic_101) {
 
 		NodeManager mgr;

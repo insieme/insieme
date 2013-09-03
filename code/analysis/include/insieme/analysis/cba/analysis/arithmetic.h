@@ -200,6 +200,30 @@ namespace cba {
 
 		}
 
+		void visitVariable(const VariableAddress& var, const Context& ctxt, Constraints& constraints) {
+
+			// special handling: if variable is a loop iterator, use symbolic value
+			auto def = getDefinitionPoint(var);
+			if (def != var || var.getDepth() < 2 || !var.getParentNode(2).isa<ForStmtPtr>()) {
+				// => not a iterator, let parent handle the case
+				super::visitVariable(var, ctxt, constraints);
+				return;
+			}
+
+			// it is a iterator!
+			//	=> use symbolic value
+			Formula value = core::arithmetic::toFormula(var);
+
+			auto v_var = cba.getVariable(var);
+			auto l_var = cba.getLabel(var);
+
+			auto a_var = cba.getSet(cba::a, v_var, ctxt);
+			auto A_var = cba.getSet(cba::A, l_var, ctxt);
+
+			constraints.add(elem(value, a_var));
+			constraints.add(subset(a_var, A_var));
+
+		}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 			static const Formula unknown;

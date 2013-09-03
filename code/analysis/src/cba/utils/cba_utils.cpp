@@ -169,6 +169,16 @@ namespace cba {
 				break;
 			}
 
+			case NT_ForStmt: {
+				// check whether it is an iterator
+				auto iter = cur.as<ForStmtAddress>()->getIterator();
+				if (var == iter.as<VariablePtr>()) {
+					return iter;
+				}
+				// otherwise continue with parent
+				break;
+			}
+
 			default: break;
 			}
 		}

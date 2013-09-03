@@ -58,6 +58,11 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	/**
+	 * TODO: document
+	 * 	  - it is assumed that the default constructed value type is the "unknown" value
+	 */
+
 	using namespace core;
 	using namespace insieme::utils::set_constraint_2;
 
@@ -233,6 +238,15 @@ namespace cba {
 
 				// if the variable is declared imperatively => just handle declaration statement
 				case NT_DeclarationStmt: {
+
+					// check whether it is a for-loop
+					if (!parent.isRoot() && parent.isa<ForStmtAddress>()) {
+
+						// a for-loop iterator is unknown by default
+						constraints.add(elem(T(), a_var));
+						break;
+					}
+
 					// TODO: consider for-loops
 
 					auto decl = parent.as<DeclarationStmtAddress>();
