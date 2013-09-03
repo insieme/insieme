@@ -923,8 +923,6 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	// check whether it is allowed
 	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
 
-	std::cout << "YOU ARE USING OUTLINE, we experienced some errors with this, try to use builder.createCallExprFromBody " << std::endl;
-
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(manager.get(stmt));
 
