@@ -34,52 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <set>
-#include "insieme/core/ir.h"
+#include "insieme/analysis/cba/cba.h"
+#include "insieme/core/ir_builder.h"
 
-#include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/analysis/arithmetic.h"
 
 namespace insieme {
 namespace analysis {
-namespace cba {
 
-	namespace {
+	using namespace core;
 
-		core::StatementPtr getRootStmt(const core::NodeAddress& node) {
-			auto stmt = node.as<core::StatementPtr>();
-			if (node.isRoot()) return stmt;
-			auto res = getRootStmt(node.getParentAddress());
-			return (res) ? res : stmt;
-		}
+	TEST(CBA_Facade, SimpleTest) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parseStmt(
+				"{"
+				"	ref<int<4>> a = var(12);"
+				"	ref<int<4>> b = var(14);"
+				"	"
+				"	if (a+b > 20) {"
+				"		a = 10;"
+				"	}"
+				"	"
+				"	*a;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(code);
+		auto root = CompoundStmtAddress(code);
+
+		// use arithmetic analysis (A) to obtain value of *a statement
+		auto a = root[3].as<ExpressionAddress>();
+		EXPECT_EQ("{10}", toString(cba::getValues(a, cba::A)));
 
 	}
 
-	// forward declarations of the result-set type token
-	template<typename E, template<typename C> class G>
-	struct TypedSetType;
 
-	template<typename T, template<typename C> class G, typename Context = DefaultContext>
-	const std::set<T>& getValues(CBA& cba, const core::ExpressionAddress& expr, const TypedSetType<T,G>& set, const Context& c = Context()) {
-		return cba.getValuesOf(expr, set, c);
-	}
-
-	template<typename T, template<typename C> class G, typename Context = DefaultContext>
-	const std::set<T>& getValues(const core::ExpressionAddress& expr, const TypedSetType<T,G>& set, const Context& c = Context()) {
-
-		typedef std::shared_ptr<CBA> CBA_Ptr;
-
-		// obtain CBA context from root node
-		core::StatementPtr root = getRootStmt(expr);
-		if (!root->hasAttachedValue<CBA_Ptr>()) {
-			root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
-		}
-
-		// run analysis
-		return getValues(*root->getAttachedValue<CBA_Ptr>(), expr, set, c);
-	}
-
-} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

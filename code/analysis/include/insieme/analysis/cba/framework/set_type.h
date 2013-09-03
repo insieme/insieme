@@ -89,13 +89,13 @@ namespace cba {
 	 */
 	template<
 		typename E,
-		template<typename C> class R
+		template<typename C> class G
 	>
 	struct TypedSetType : public SetType {
 
 		// expose member types
 		typedef E element_type;
-		template<typename T> struct resolver_type { typedef R<T> type; };
+		template<typename T> struct resolver_type { typedef G<T> type; };
 
 		/**
 		 * A simple constructor just forwarding the name of the resulting set.
