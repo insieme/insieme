@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1056,8 +1056,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// why to cast?
 			// some casts are not pressent in IR
-			if (gen.isPrimitive(rhs->getType()))
-				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
+			if (gen.isPrimitive(rhs->getType())) {
+                if(core::analysis::isVolatileType(GET_REF_ELEM_TYPE(lhs->getType()))) {
+                    rhs = builder.makeVolatile(utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
+                } else {
+                    rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
+                }
+			}
 
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
@@ -1592,7 +1597,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
-	
+
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(initList, retIr);
 
@@ -1606,7 +1611,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::Ini
 	if (const clang::FieldDecl *field = initList->getInitializedFieldInUnion ()){
 		assert(initList->getNumInits() == 1);
 		// AHA!! here is the trick, magic trick. we hide the union initialization into an expression
-		// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!! 
+		// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!!
 		// the name of the literal is the field !!! hahaha isn't it briliant???
 		// twisted??? maybe i'm going crazy, but it works! and is criptic enought to piss off people
 		string name = llvm::cast<clang::NamedDecl>(field)->getNameAsString() ;
