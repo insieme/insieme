@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -79,7 +79,7 @@ TEST(LangBasic, GroupingEnumeration) {
 	auto& basic = nm.getLangBasic();
 
 	EXPECT_EQ(7u, basic.getUnsignedIntGroup().size());
-	EXPECT_EQ(4u, basic.getRealGroup().size());
+	EXPECT_EQ(5u, basic.getRealGroup().size());
 }
 
 TEST(LangBasic, OperatorGet) {
