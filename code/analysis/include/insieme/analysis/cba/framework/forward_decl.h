@@ -52,17 +52,15 @@ namespace cba {
 
 	class CBA;												// the main analysis entity
 
-//	template<typename Context> class ConstraintResolver;
-//	template<typename T, typename Context> class BasicDataFlowConstraintResolver;
 
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintResolver;
+	template<typename A, typename B, typename C> class BasicDataFlowConstraintGenerator;
 
-	template<typename A, typename B, typename C, typename D> class BasicInConstraintResolver;
-	template<typename A, typename B, typename C, typename D> class BasicOutConstraintResolver;
+	template<typename A, typename B, typename C, typename D> class BasicInConstraintGenerator;
+	template<typename A, typename B, typename C, typename D> class BasicOutConstraintGenerator;
 
 
-	template<typename Context, typename ElementType> class ImperativeInStateConstraintCollector;
-	template<typename Context, typename ElementType> class ImperativeOutStateConstraintCollector;
+	template<typename Context, typename ElementType> class ImperativeInStateConstraintGenerator;
+	template<typename Context, typename ElementType> class ImperativeOutStateConstraintGenerator;
 
 } // end namespace cba
 } // end namespace analysis

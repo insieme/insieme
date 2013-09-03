@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
@@ -48,24 +48,24 @@ namespace cba {
 
 	// a light version only tracking functions, no context
 	typedef core::ExpressionAddress ContextFreeCallable;
-	template<typename C> class FunctionConstraintResolver;
+	template<typename C> class FunctionConstraintGenerator;
 
-	typedef TypedSetType<ContextFreeCallable,FunctionConstraintResolver> FunctionSetType;
+	typedef TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> FunctionSetType;
 	extern const FunctionSetType F;
 	extern const FunctionSetType f;
 
 
 
 	template<typename Context>
-	class FunctionConstraintResolver : public BasicDataFlowConstraintResolver<ContextFreeCallable,FunctionSetType,Context> {
+	class FunctionConstraintGenerator : public BasicDataFlowConstraintGenerator<ContextFreeCallable,FunctionSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<ContextFreeCallable,FunctionSetType,Context> super;
+		typedef BasicDataFlowConstraintGenerator<ContextFreeCallable,FunctionSetType,Context> super;
 
 		CBA& cba;
 
 	public:
 
-		FunctionConstraintResolver(CBA& cba)
+		FunctionConstraintGenerator(CBA& cba)
 			: super(cba, F, f), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {

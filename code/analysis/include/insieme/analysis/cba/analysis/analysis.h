@@ -48,37 +48,37 @@ namespace cba {
 //	// --- forward definitions of known analysis ---
 //
 	class Formula;
-	template<typename C> class ArithmeticConstraintResolver;
-	extern const TypedSetType<Formula,ArithmeticConstraintResolver> A;
-	extern const TypedSetType<Formula,ArithmeticConstraintResolver> a;
+	template<typename C> class ArithmeticConstraintGenerator;
+	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> A;
+	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> a;
 
-	template<typename C> class BooleanConstraintResolver;
-	extern const TypedSetType<bool,BooleanConstraintResolver> B;
-	extern const TypedSetType<bool,BooleanConstraintResolver> b;
+	template<typename C> class BooleanConstraintGenerator;
+	extern const TypedSetType<bool,BooleanConstraintGenerator> B;
+	extern const TypedSetType<bool,BooleanConstraintGenerator> b;
 
-	template<typename C> class ControlFlowConstraintResolver;
-	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintResolver>& C();
-	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintResolver>& c();
+	template<typename C> class ControlFlowConstraintGenerator;
+	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintGenerator>& C();
+	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintGenerator>& c();
 
 	template<typename C> class Location;
-	template<typename C> class ReferenceConstraintResolver;
-	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintResolver>& R();
-	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintResolver>& r();
+	template<typename C> class ReferenceConstraintGenerator;
+	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& R();
+	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& r();
 
 	typedef core::ExpressionAddress ContextFreeCallable;
-	template<typename C> class FunctionConstraintResolver;
-	extern const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> F;
-	extern const TypedSetType<ContextFreeCallable,FunctionConstraintResolver> f;
+	template<typename C> class FunctionConstraintGenerator;
+	extern const TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> F;
+	extern const TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> f;
 
-	template<typename C> class ContextPredecessorResolver;
-	extern const TypedSetType<Label,ContextPredecessorResolver> pred;
+	template<typename C> class ContextPredecessorGenerator;
+	extern const TypedSetType<Label,ContextPredecessorGenerator> pred;
 
 	struct Reachable;
-	template<typename C> class ReachableInConstraintResolver;
-	extern const TypedSetType<Reachable,ReachableInConstraintResolver> Rin;
+	template<typename C> class ReachableInConstraintGenerator;
+	extern const TypedSetType<Reachable,ReachableInConstraintGenerator> Rin;
 
-	template<typename C> class ReachableOutConstraintResolver;
-	extern const TypedSetType<Reachable,ReachableOutConstraintResolver> Rout;
+	template<typename C> class ReachableOutConstraintGenerator;
+	extern const TypedSetType<Reachable,ReachableOutConstraintGenerator> Rout;
 
 } // end namespace cba
 } // end namespace analysis

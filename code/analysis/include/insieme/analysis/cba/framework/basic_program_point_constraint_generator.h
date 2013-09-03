@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/constraint_resolver.h"
+#include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 
 #include "insieme/analysis/cba/framework/cba.h"
@@ -67,11 +67,11 @@ namespace cba {
 
 
 	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
-	class BasicInOutConstraintResolver : public ConstraintResolver<Context> {
+	class BasicInOutConstraintGenerator : public ConstraintGenerator<Context> {
 
 	protected:
 
-		typedef ConstraintResolver<Context> super;
+		typedef ConstraintGenerator<Context> super;
 
 		// the sets to be used for in/out states
 		const InSetIDType& Ain;
@@ -83,7 +83,7 @@ namespace cba {
 
 	public:
 
-		BasicInOutConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
+		BasicInOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba), Ain(Ain), Aout(Aout), collector(collector), cba(cba) {}
 
 	protected:
@@ -120,15 +120,15 @@ namespace cba {
 
 
 	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
-	class BasicInConstraintResolver : public BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> {
+	class BasicInConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context> {
 
-		typedef BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> super;
+		typedef BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicInConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
+		BasicInConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
@@ -409,15 +409,15 @@ namespace cba {
 	};
 
 	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
-	class BasicOutConstraintResolver : public BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> {
+	class BasicOutConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context> {
 
-		typedef BasicInOutConstraintResolver<InSetIDType, OutSetIDType, Collector, Context> super;
+		typedef BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicOutConstraintResolver(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
+		BasicOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba, Ain, Aout, collector), cba(cba) {}
 
 

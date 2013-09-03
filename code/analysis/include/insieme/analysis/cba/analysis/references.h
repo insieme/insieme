@@ -38,7 +38,7 @@
 
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
-//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
 #include "insieme/core/forward_decls.h"
@@ -50,32 +50,32 @@ namespace cba {
 
 	// ----------------- references ---------------
 
-	template<typename Context> class ReferenceConstraintResolver;
+	template<typename Context> class ReferenceConstraintGenerator;
 
 	template<typename Context>
-	const TypedSetType<Location<Context>,ReferenceConstraintResolver>& R() {
-		static const TypedSetType<Location<Context>,ReferenceConstraintResolver> instance("R");
+	const TypedSetType<Location<Context>,ReferenceConstraintGenerator>& R() {
+		static const TypedSetType<Location<Context>,ReferenceConstraintGenerator> instance("R");
 		return instance;
 	}
 
 	template<typename Context>
-	const TypedSetType<Location<Context>,ReferenceConstraintResolver>& r() {
-		static const TypedSetType<Location<Context>,ReferenceConstraintResolver> instance("r");
+	const TypedSetType<Location<Context>,ReferenceConstraintGenerator>& r() {
+		static const TypedSetType<Location<Context>,ReferenceConstraintGenerator> instance("r");
 		return instance;
 	}
 
 
 
 	template<typename Context>
-	class ReferenceConstraintResolver : public BasicDataFlowConstraintResolver<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintResolver>, Context> {
+	class ReferenceConstraintGenerator : public BasicDataFlowConstraintGenerator<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintResolver<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintResolver>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintGenerator>, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		ReferenceConstraintResolver(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba) { };
+		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 

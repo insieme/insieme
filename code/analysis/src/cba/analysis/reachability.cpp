@@ -40,8 +40,8 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const TypedSetType<Reachable,ReachableInConstraintResolver> Rin("Rin");
-	const TypedSetType<Reachable,ReachableOutConstraintResolver> Rout("Rout");
+	const TypedSetType<Reachable,ReachableInConstraintGenerator> Rin("Rin");
+	const TypedSetType<Reachable,ReachableOutConstraintGenerator> Rout("Rout");
 
 } // end namespace cba
 } // end namespace analysis

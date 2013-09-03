@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -47,22 +47,22 @@ namespace cba {
 
 	// ----------------- simple constants ---------------
 
-	template<typename Context> class ConstantConstraintResolver;
+	template<typename Context> class ConstantConstraintGenerator;
 
-	typedef TypedSetType<core::ExpressionPtr,ConstantConstraintResolver> SimpleConstantSetType;
+	typedef TypedSetType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
 	extern const SimpleConstantSetType D;
 	extern const SimpleConstantSetType d;
 
 	template<typename Context>
-	class ConstantConstraintResolver : public BasicDataFlowConstraintResolver<core::ExpressionPtr,SimpleConstantSetType,Context> {
+	class ConstantConstraintGenerator : public BasicDataFlowConstraintGenerator<core::ExpressionPtr,SimpleConstantSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<core::ExpressionPtr,SimpleConstantSetType,Context> super;
+		typedef BasicDataFlowConstraintGenerator<core::ExpressionPtr,SimpleConstantSetType,Context> super;
 
 		CBA& cba;
 
 	public:
 
-		ConstantConstraintResolver(CBA& cba)
+		ConstantConstraintGenerator(CBA& cba)
 			: super(cba, D, d), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {

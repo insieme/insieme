@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/constraint_resolver.h"
+#include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 
 #include "insieme/analysis/cba/framework/cba.h"
@@ -60,15 +60,6 @@ namespace cba {
 	using namespace core;
 	using namespace insieme::utils::set_constraint_2;
 
-//	using insieme::utils::set_constraint_2::elem;
-//	using insieme::utils::set_constraint_2::elemIf;
-//	using insieme::utils::set_constraint_2::subset;
-//	using insieme::utils::set_constraint_2::subsetIf;
-//	using insieme::utils::set_constraint_2::subsetIfBigger;
-//	using insieme::utils::set_constraint_2::subsetIfReducedBigger;
-//	using insieme::utils::set_constraint_2::subsetUnary;
-//	using insieme::utils::set_constraint_2::subsetBinary;
-
 	namespace {
 
 		StatementAddress getBody(const ContextFreeCallable& fun) {
@@ -86,10 +77,10 @@ namespace cba {
 
 
 	template<typename T, typename SetType, typename Context>
-	class BasicDataFlowConstraintResolver : public ConstraintResolver<Context> {
+	class BasicDataFlowConstraintGenerator : public ConstraintGenerator<Context> {
 
 
-		typedef ConstraintResolver<Context> super;
+		typedef ConstraintGenerator<Context> super;
 
 	protected:
 
@@ -101,7 +92,7 @@ namespace cba {
 
 	public:
 
-		BasicDataFlowConstraintResolver(CBA& cba, const SetType& A, const SetType& a)
+		BasicDataFlowConstraintGenerator(CBA& cba, const SetType& A, const SetType& a)
 			: super(cba), A(A), a(a), cba(cba) { };
 
 		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {

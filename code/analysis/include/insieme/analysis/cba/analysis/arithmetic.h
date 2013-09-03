@@ -78,8 +78,8 @@ namespace cba {
 		}
 	};
 
-	template<typename C> class ArithmeticConstraintResolver;
-	typedef TypedSetType<Formula,ArithmeticConstraintResolver> ArithmeticSetType;
+	template<typename C> class ArithmeticConstraintGenerator;
+	typedef TypedSetType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
 
 	extern const ArithmeticSetType A;
 	extern const ArithmeticSetType a;
@@ -166,9 +166,9 @@ namespace cba {
 
 
 	template<typename Context>
-	class ArithmeticConstraintResolver : public BasicDataFlowConstraintResolver<Formula, ArithmeticSetType, Context> {
+	class ArithmeticConstraintGenerator : public BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> {
 
-		typedef BasicDataFlowConstraintResolver<Formula, ArithmeticSetType, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> super;
 
 		const core::lang::BasicGenerator& base;
 
@@ -176,7 +176,7 @@ namespace cba {
 
 	public:
 
-		ArithmeticConstraintResolver(CBA& cba)
+		ArithmeticConstraintGenerator(CBA& cba)
 			: super(cba, cba::A, cba::a),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)

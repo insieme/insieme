@@ -38,7 +38,7 @@
 
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
-//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
@@ -49,32 +49,32 @@ namespace cba {
 
 	// ----------------- inter-procedural control flow ------------------
 
-	template<typename C> class ControlFlowConstraintResolver;
+	template<typename C> class ControlFlowConstraintGenerator;
 
 	template<typename Context>
-	const TypedSetType<Callable<Context>,ControlFlowConstraintResolver>& C() {
-		static const TypedSetType<Callable<Context>,ControlFlowConstraintResolver> instance("C");
+	const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
+		static const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
 		return instance;
 	}
 
 	template<typename Context>
-	const TypedSetType<Callable<Context>,ControlFlowConstraintResolver>& c() {
-		static const TypedSetType<Callable<Context>,ControlFlowConstraintResolver> instance("c");
+	const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
+		static const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
 		return instance;
 	}
 
 
 
 	template<typename Context>
-	class ControlFlowConstraintResolver : public BasicDataFlowConstraintResolver<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintResolver>, Context> {
+	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintResolver<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintResolver>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		ControlFlowConstraintResolver(CBA& cba)
+		ControlFlowConstraintGenerator(CBA& cba)
 			: super(cba, C<Context>(), c<Context>()), cba(cba) { };
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {

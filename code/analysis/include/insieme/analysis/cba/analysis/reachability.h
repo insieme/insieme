@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_program_point_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/basic_program_point_constraint_generator.h"
 
 #include "insieme/utils/printable.h"
 
@@ -53,19 +53,19 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const { return out << "reachable"; };
 	};
 
-	template<typename C> class ReachableInConstraintResolver;
-	typedef TypedSetType<Reachable,ReachableInConstraintResolver> ReachableInSetType;
+	template<typename C> class ReachableInConstraintGenerator;
+	typedef TypedSetType<Reachable,ReachableInConstraintGenerator> ReachableInSetType;
 	extern const ReachableInSetType Rin;
 
-	template<typename C> class ReachableOutConstraintResolver;
-	typedef TypedSetType<Reachable,ReachableOutConstraintResolver> ReachableOutSetType;
+	template<typename C> class ReachableOutConstraintGenerator;
+	typedef TypedSetType<Reachable,ReachableOutConstraintGenerator> ReachableOutSetType;
 	extern const ReachableOutSetType Rout;
 
 
 	template<typename Context>
-	class ReachableInConstraintResolver : public BasicInConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableInConstraintResolver<Context>, Context> {
+	class ReachableInConstraintGenerator : public BasicInConstraintGenerator<ReachableInSetType, ReachableOutSetType, ReachableInConstraintGenerator<Context>, Context> {
 
-		typedef BasicInConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableInConstraintResolver<Context>, Context> super;
+		typedef BasicInConstraintGenerator<ReachableInSetType, ReachableOutSetType, ReachableInConstraintGenerator<Context>, Context> super;
 
 		StatementAddress root;
 
@@ -75,7 +75,7 @@ namespace cba {
 
 	public:
 
-		ReachableInConstraintResolver(CBA& cba)
+		ReachableInConstraintGenerator(CBA& cba)
 			: super(cba, Rin, Rout, *this), root(cba.getRoot()), initSet(false), cba(cba) { }
 
 		virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
@@ -127,15 +127,15 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachableOutConstraintResolver : public BasicOutConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintResolver<Context>,Context> {
+	class ReachableOutConstraintGenerator : public BasicOutConstraintGenerator<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintGenerator<Context>,Context> {
 
-		typedef BasicOutConstraintResolver<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintResolver<Context>,Context> super;
+		typedef BasicOutConstraintGenerator<ReachableInSetType, ReachableOutSetType, ReachableOutConstraintGenerator<Context>,Context> super;
 
 		CBA& cba;
 
 	public:
 
-		ReachableOutConstraintResolver(CBA& cba)
+		ReachableOutConstraintGenerator(CBA& cba)
 			: super(cba, Rin, Rout, *this), cba(cba) { }
 
 		template<typename SetTypeA, typename SetTypeB>

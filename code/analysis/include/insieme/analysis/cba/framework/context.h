@@ -284,13 +284,6 @@ namespace cba {
 	typedef Context<0,0,0> NoContext;
 	typedef Context<2,2,0> DefaultContext;
 
-
-	template<typename T>
-	struct is_context { enum { value = false }; };
-
-	template<unsigned a, unsigned b, unsigned c>
-	struct is_context<Context<a,b,c>> { enum { value = true }; };
-
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

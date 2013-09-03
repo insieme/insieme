@@ -39,7 +39,7 @@
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/analysis/cba/analysis/analysis.h"
-#include "insieme/analysis/cba/framework/basic_program_point_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/basic_program_point_constraint_generator.h"
 
 namespace insieme {
 namespace analysis {
@@ -47,15 +47,15 @@ namespace cba {
 
 
 	template<typename Context, typename ElementSetType>
-	class ImperativeInStateConstraintCollector;
+	class ImperativeInStateConstraintGenerator;
 
 	template<typename Context, typename ElementSetType>
-	class ImperativeOutStateConstraintCollector;
+	class ImperativeOutStateConstraintGenerator;
 
 	template<typename Context, typename ElementSetType>
-	class ImperativeInStateConstraintCollector : public BasicInConstraintResolver<StateSetType, StateSetType,ImperativeInStateConstraintCollector<Context, ElementSetType>,Context> {
+	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, ElementSetType>,Context> {
 
-		typedef BasicInConstraintResolver<StateSetType, StateSetType,ImperativeInStateConstraintCollector<Context, ElementSetType>,Context> super;
+		typedef BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, ElementSetType>,Context> super;
 
 		const ElementSetType& dataSet;
 
@@ -66,7 +66,7 @@ namespace cba {
 
 	public:
 
-		ImperativeInStateConstraintCollector(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
+		ImperativeInStateConstraintGenerator(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
 			: super(cba, Sin, Sout, *this), dataSet(dataSet), location(location), cba(cba) {}
 
 		void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
@@ -103,9 +103,9 @@ namespace cba {
 
 
 	template<typename Context, typename ElementSetType>
-	class ImperativeOutStateConstraintCollector : public BasicOutConstraintResolver<StateSetType, StateSetType,ImperativeOutStateConstraintCollector<Context, ElementSetType>,Context> {
+	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> {
 
-		typedef BasicOutConstraintResolver<StateSetType, StateSetType,ImperativeOutStateConstraintCollector<Context, ElementSetType>,Context> super;
+		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> super;
 
 		const ElementSetType& dataSet;
 
@@ -116,7 +116,7 @@ namespace cba {
 
 	public:
 
-		ImperativeOutStateConstraintCollector(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
+		ImperativeOutStateConstraintGenerator(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
 			: super(cba, Sin, Sout, *this), dataSet(dataSet), location(location), cba(cba) {
 		}
 

@@ -50,7 +50,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// -------------------- Constraint Resolver ---------------------------
+	// -------------------- Constraint Generator ---------------------------
 
 	// the type used for lists of constraints
 	typedef utils::set_constraint_2::Constraints Constraints;
@@ -67,7 +67,7 @@ namespace cba {
 	 * generate in-constraints for the requested target set specified by the address and context parameter.
 	 */
 	template<typename Context>
-	class ConstraintResolver : public core::IRVisitor<void, core::Address, const Context&, Constraints&> {
+	class ConstraintGenerator : public core::IRVisitor<void, core::Address, const Context&, Constraints&> {
 
 		// a short-cut for the base class
 		typedef core::IRVisitor<void, core::Address, const Context&, Constraints&> super;
@@ -88,7 +88,7 @@ namespace cba {
 
 	public:
 
-		ConstraintResolver(CBA& cba)
+		ConstraintGenerator(CBA& cba)
 			: processed(), cba(cba) {}
 
 		/**

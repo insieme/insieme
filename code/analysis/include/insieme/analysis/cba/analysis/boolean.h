@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_resolver.h"
+#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
 
 #include "insieme/analysis/cba/analysis/arithmetic.h"
 
@@ -52,8 +52,8 @@ namespace cba {
 
 	// ----------------- booleans analysis ---------------
 
-	template<typename C> class BooleanConstraintResolver;
-	typedef TypedSetType<bool,BooleanConstraintResolver> BooleanSetType;
+	template<typename C> class BooleanConstraintGenerator;
+	typedef TypedSetType<bool,BooleanConstraintGenerator> BooleanSetType;
 
 	extern const BooleanSetType B;
 	extern const BooleanSetType b;
@@ -132,9 +132,9 @@ namespace cba {
 	}
 
 	template<typename Context>
-	class BooleanConstraintResolver : public BasicDataFlowConstraintResolver<bool,BooleanSetType,Context> {
+	class BooleanConstraintGenerator : public BasicDataFlowConstraintGenerator<bool,BooleanSetType,Context> {
 
-		typedef BasicDataFlowConstraintResolver<bool,BooleanSetType,Context> super;
+		typedef BasicDataFlowConstraintGenerator<bool,BooleanSetType,Context> super;
 
 		const core::lang::BasicGenerator& base;
 
@@ -142,7 +142,7 @@ namespace cba {
 
 	public:
 
-		BooleanConstraintResolver(CBA& cba)
+		BooleanConstraintGenerator(CBA& cba)
 			: super(cba, cba::B, cba::b),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)

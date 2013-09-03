@@ -45,21 +45,21 @@ namespace cba {
 
 	// -------------------- Context Constraints ------------
 
-	template<typename C> class ContextPredecessorResolver;
-	typedef TypedSetType<Label,ContextPredecessorResolver> ContextPredecessorType;
+	template<typename C> class ContextPredecessorGenerator;
+	typedef TypedSetType<Label,ContextPredecessorGenerator> ContextPredecessorType;
 
 	extern const ContextPredecessorType pred;
 
 	// -------------------------------------- Context Predecessor Constraints -----------------------------
 
 	template<typename Context>
-	class ContextPredecessorResolver : public ConstraintResolver<Context> {
+	class ContextPredecessorGenerator : public ConstraintGenerator<Context> {
 
 		CBA& cba;
 
 	public:
 
-		ContextPredecessorResolver(CBA& cba) : ConstraintResolver<Context>(cba), cba(cba) {}
+		ContextPredecessorGenerator(CBA& cba) : ConstraintGenerator<Context>(cba), cba(cba) {}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 			// restrict context
