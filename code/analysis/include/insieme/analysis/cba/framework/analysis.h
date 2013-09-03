@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/_forward_decl.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
 
@@ -44,17 +45,8 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
-//
-//	// --- forward definitions of known analysis ---
-//
-	class Formula;
-	template<typename C> class ArithmeticConstraintGenerator;
-	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> A;
-	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> a;
 
-	template<typename C> class BooleanConstraintGenerator;
-	extern const TypedSetType<bool,BooleanConstraintGenerator> B;
-	extern const TypedSetType<bool,BooleanConstraintGenerator> b;
+	// --- forward definitions of analysis utilized by the framework ---
 
 	template<typename C> class ControlFlowConstraintGenerator;
 	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintGenerator>& C();
@@ -79,6 +71,16 @@ namespace cba {
 
 	template<typename C> class ReachableOutConstraintGenerator;
 	extern const TypedSetType<Reachable,ReachableOutConstraintGenerator> Rout;
+
+	class Formula;
+	template<typename C> class ArithmeticConstraintGenerator;
+	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> A;
+	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> a;
+
+	template<typename C> class BooleanConstraintGenerator;
+	extern const TypedSetType<bool,BooleanConstraintGenerator> B;
+	extern const TypedSetType<bool,BooleanConstraintGenerator> b;
+
 
 } // end namespace cba
 } // end namespace analysis

@@ -38,8 +38,8 @@
 
 #include "insieme/core/lang/basic.h"
 
-#include "insieme/analysis/cba/analysis/analysis.h"
-#include "insieme/analysis/cba/framework/basic_program_point_constraint_generator.h"
+#include "insieme/analysis/cba/framework/analysis.h"
+#include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
 namespace insieme {
 namespace analysis {

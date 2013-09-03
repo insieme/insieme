@@ -46,7 +46,7 @@
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/simple_constant.h"
 #include "insieme/analysis/cba/analysis/callables.h"
-#include "insieme/analysis/cba/analysis/call_context_predecessor.h"
+#include "insieme/analysis/cba/analysis/call_context.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
 
 #include "insieme/core/ir_builder.h"

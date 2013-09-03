@@ -38,7 +38,8 @@
 
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
-//#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
 #include "insieme/core/forward_decls.h"

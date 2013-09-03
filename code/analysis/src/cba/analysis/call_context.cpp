@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/analysis/call_context_predecessor.h"
+#include "insieme/analysis/cba/analysis/call_context.h"
 
 namespace insieme {
 namespace analysis {

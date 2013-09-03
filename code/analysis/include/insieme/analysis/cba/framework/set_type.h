@@ -41,8 +41,6 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "insieme/analysis/cba/framework/forward_decl.h"
-
 namespace insieme {
 namespace analysis {
 namespace cba {

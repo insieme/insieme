@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_data_flow_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/core/forward_decls.h"
 

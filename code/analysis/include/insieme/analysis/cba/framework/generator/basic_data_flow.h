@@ -39,13 +39,14 @@
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 
+#include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/analysis/analysis.h"
+
 #include "insieme/analysis/cba/analysis/reachability.h"
 #include "insieme/analysis/cba/analysis/callables.h"
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/functions.h"
-#include "insieme/analysis/cba/analysis/call_context_predecessor.h"
+#include "insieme/analysis/cba/analysis/call_context.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"

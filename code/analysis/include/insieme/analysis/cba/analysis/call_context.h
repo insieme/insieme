@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+
 #include "insieme/analysis/cba/analysis/functions.h"
 
 namespace insieme {

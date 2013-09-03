@@ -38,9 +38,6 @@
 
 #include <type_traits>
 
-#include "insieme/analysis/cba/framework/forward_decl.h"
-#include "insieme/analysis/cba/framework/context.h"
-
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
 
@@ -49,6 +46,9 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
+
+	// forward declaration
+	class CBA;
 
 	// -------------------- Constraint Generator ---------------------------
 

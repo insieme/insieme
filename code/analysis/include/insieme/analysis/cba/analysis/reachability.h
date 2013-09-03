@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/set_type.h"
-#include "insieme/analysis/cba/framework/basic_program_point_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
 #include "insieme/utils/printable.h"
 

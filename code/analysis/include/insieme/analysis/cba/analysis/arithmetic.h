@@ -39,6 +39,7 @@
 #include <boost/optional.hpp>
 
 #include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/arithmetic/arithmetic.h"

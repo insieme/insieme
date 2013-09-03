@@ -39,9 +39,9 @@
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 
+#include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
 
-#include "insieme/analysis/cba/analysis/analysis.h"
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
 

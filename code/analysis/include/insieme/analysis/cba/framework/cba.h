@@ -43,7 +43,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "insieme/analysis/cba/framework/forward_decl.h"
+#include "insieme/analysis/cba/framework/_forward_decl.h"
 #include "insieme/analysis/cba/framework/set_type.h"
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities.h"
@@ -713,4 +713,4 @@ namespace cba {
  * be always included whenever the CBA class is included. That is why it is located at
  * the end of the file and must not be moved to the top.
  */
-#include "insieme/analysis/cba/framework/imperative_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/mutable_data.h"
