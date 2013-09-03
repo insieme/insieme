@@ -530,6 +530,18 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// beware of const pointers
 		if (utils::isRefArray(irType) && varTy.isConstQualified())
 			irType = builder.refType(irType);
+
+        // if is a constant obj:
+        // might be intercepted
+        // might be generic
+        if (varTy.isConstQualified()) {
+            if((lookupTypeDetails(irType)->getNodeType() == core::NT_StructType) ||
+               (getProgram().getInterceptor().isIntercepted(valDecl->getQualifiedNameAsString()))) {
+                irType = builder.refType(irType);
+            }
+        }
+
+
 	}
 
 	// if is a global variable, a literal will be generated, with the qualified name
