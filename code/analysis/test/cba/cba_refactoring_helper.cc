@@ -83,7 +83,7 @@ namespace cba {
 		EXPECT_EQ("s3", toString(cba.getSet(Dummy, code, Context<1,1,1>())));
 
 
-		EXPECT_EQ("{1}", toString(cba.getValuesOf(code, D)));
+		EXPECT_EQ("{AP(1)}", toString(cba.getValuesOf(code, D)));
 	}
 
 } // end namespace cba

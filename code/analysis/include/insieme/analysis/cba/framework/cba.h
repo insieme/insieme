@@ -142,7 +142,8 @@ namespace cba {
 
 			// a data structure managing constraint resolvers
 			std::set<ConstraintResolverPtr> resolver;
-			std::map<SetTypePtr, ConstraintResolverPtr> setResolver;
+			std::map<SetTypePtr, ConstraintResolverPtr> settype2resolver;			// maps a set type to a resolver
+			std::map<std::type_index, ConstraintResolverPtr> resolverIndex;			// to prevent the same type of resolver being used multiple times
 			std::map<LocationSetKey, ConstraintResolverPtr> locationResolver;
 
 			// set ID maps
@@ -196,17 +197,30 @@ namespace cba {
 				return newSet;
 			}
 
+			template<template<typename C> class R>
+			R<Context>* getResolver(CBA& cba) {
+				std::type_index key = typeid(R<Context>);
+				auto pos = resolverIndex.find(key);
+				if (pos != resolverIndex.end()) {
+					return static_cast<R<Context>*>(pos->second);
+				}
+
+				R<Context>* res = new R<Context>(cba);
+				resolver.insert(res);
+				resolverIndex[key] = res;
+				return res;
+			}
+
 			template<typename T, template<typename C> class R>
 			R<Context>& getResolver(CBA& cba, const TypedSetType<T,R>& type) {
-				auto pos = setResolver.find(&type);
-				if (pos != setResolver.end()) {
+				auto pos = settype2resolver.find(&type);
+				if (pos != settype2resolver.end()) {
 					return static_cast<R<Context>&>(*pos->second);
 				}
 
 				// create and register a new instance
-				R<Context>* res = new R<Context>(cba);
-				resolver.insert(res);
-				setResolver[&type] = res;
+				R<Context>* res = getResolver<R>(cba);
+				settype2resolver[&type] = res;
 
 				// also location resolver instances
 				for(const auto& loc : getAllLocations(cba)) {
@@ -222,8 +236,8 @@ namespace cba {
 			}
 
 			ConstraintResolverPtr getResolver(const SetType& type) const {
-				auto pos = setResolver.find(&type);
-				return (pos != setResolver.end()) ? pos->second : ConstraintResolverPtr();
+				auto pos = settype2resolver.find(&type);
+				return (pos != settype2resolver.end()) ? pos->second : ConstraintResolverPtr();
 			}
 
 			virtual void addConstraintsFor(CBA& cba, const SetID& set, Constraints& res) const {
