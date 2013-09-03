@@ -34,27 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/cba/cba.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	core::ExpressionAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
-
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
-
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
-
-	core::StatementPtr getRootStmt(const core::NodeAddress& node);
 
 } // end namespace cba
 } // end namespace analysis

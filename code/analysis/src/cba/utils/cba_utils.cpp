@@ -203,6 +203,13 @@ namespace cba {
 		return stmt.as<CallExprAddress>();
 	}
 
+	StatementPtr getRootStmt(const NodeAddress& node) {
+		auto stmt = node.as<StatementPtr>();
+		if (node.isRoot()) return stmt;
+		auto res = getRootStmt(node.getParentAddress());
+		return (res) ? res : stmt;
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

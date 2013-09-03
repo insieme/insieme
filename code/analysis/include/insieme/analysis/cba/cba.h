@@ -40,33 +40,40 @@
 #include "insieme/core/ir.h"
 
 #include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/utils/cba_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	namespace {
-
-		core::StatementPtr getRootStmt(const core::NodeAddress& node) {
-			auto stmt = node.as<core::StatementPtr>();
-			if (node.isRoot()) return stmt;
-			auto res = getRootStmt(node.getParentAddress());
-			return (res) ? res : stmt;
-		}
-
-	}
-
 	// forward declarations of the result-set type token
 	template<typename E, template<typename C> class G>
 	struct TypedSetType;
 
+	/**
+	 * The main facade function for utilizing the constraint-based analysis framework (CBA).
+	 *
+	 * Analysis are capable of deducing values of expressions within a given code fragment. The fragment
+	 * is determined by the root node of the given expr-address, while the expression itself is addressing
+	 * the targeted expression. The kind of information to be obtained can be determined by the type
+	 * parameter and potential parameters is determined by the type parameter. A catalog of those is
+	 * provided by the header files located within the cba/analysis directory. Additional analysis
+	 * may be defined for specific tasks.
+	 *
+	 * For Example usages see the
+	 *
+	 * 						ut_analysis_cba_facade.cc
+	 *
+	 * test case.
+	 *
+	 *
+	 * @param expr the expressions which's values should be determined by the analysis
+	 * @param type the the type analysis result to be obtained
+	 * @param ctxt the optional context the given input expression should be considered in
+	 * @return a reference to a set of values representing the result of the analysis
+	 */
 	template<typename T, template<typename C> class G, typename Context = DefaultContext>
-	const std::set<T>& getValues(CBA& cba, const core::ExpressionAddress& expr, const TypedSetType<T,G>& set, const Context& c = Context()) {
-		return cba.getValuesOf(expr, set, c);
-	}
-
-	template<typename T, template<typename C> class G, typename Context = DefaultContext>
-	const std::set<T>& getValues(const core::ExpressionAddress& expr, const TypedSetType<T,G>& set, const Context& c = Context()) {
+	const std::set<T>& getValues(const core::ExpressionAddress& expr, const TypedSetType<T,G>& type, const Context& ctxt = Context()) {
 
 		typedef std::shared_ptr<CBA> CBA_Ptr;
 
@@ -77,7 +84,8 @@ namespace cba {
 		}
 
 		// run analysis
-		return getValues(*root->getAttachedValue<CBA_Ptr>(), expr, set, c);
+		CBA& cba = *root->getAttachedValue<CBA_Ptr>();
+		return cba.getValuesOf(expr, type, ctxt);
 	}
 
 } // end namespace cba

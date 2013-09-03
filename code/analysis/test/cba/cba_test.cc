@@ -941,8 +941,12 @@ namespace cba {
 		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[13].as<ExpressionAddress>(), A)));
-		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
-		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
+
+		EXPECT_LE(analysis.getNumSets(), 322);
+		EXPECT_LE(analysis.getNumConstraints(), 318);
+
+//		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
+//		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
 //		createDotDump(analysis);
 	}
 
@@ -991,8 +995,11 @@ namespace cba {
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A)));
 
-		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
-		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
+		EXPECT_LE(analysis.getNumSets(), 512);
+		EXPECT_LE(analysis.getNumConstraints(), 485);
+
+//		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
+//		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
 //		createDotDump(analysis);
 	}
 
@@ -1070,8 +1077,11 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 //		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[17].as<ExpressionAddress>(), B)));
 
-		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
-		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
+		EXPECT_LE(analysis.getNumSets(), 2058);
+		EXPECT_LE(analysis.getNumConstraints(), 2322);
+
+//		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
+//		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
 //		createDotDump(analysis);
 	}
 
