@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -200,6 +200,30 @@ TEST(StatementsTest, Return) {
 
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, toVector<NodePtr>(literal));
+}
+
+TEST(StatementsTest, Goto) {
+	NodeManager manager;
+
+    StringValuePtr str = StringValue::get(manager, "test");
+	GotoStmtPtr stmt = GotoStmt::get(manager, str);
+
+	EXPECT_EQ ("goto test", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(str));
+}
+
+TEST(StatementsTest, Label) {
+	NodeManager manager;
+
+    StringValuePtr str = StringValue::get(manager, "test");
+	LabelStmtPtr stmt = LabelStmt::get(manager, str);
+
+	EXPECT_EQ ("test: ", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(str));
 }
 
 TEST(StatementsTest, Throw) {

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -329,6 +329,18 @@ namespace c_ast {
 	struct Throw : public Statement {
 		ExpressionPtr value;
 		Throw(ExpressionPtr value) : Statement(NT_Throw), value(value) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Goto : public Statement {
+		string value;
+		Goto(const string& value) : Statement(NT_Goto), value(value) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Label : public Statement {
+		string value;
+		Label(const string& value) : Statement(NT_Label), value(value) {}
 		virtual bool equals(const Node& node) const;
 	};
 

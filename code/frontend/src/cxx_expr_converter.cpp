@@ -346,8 +346,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			if(ctorDecl->getParent()->isPOD()) {
 				if (numElements)
 					return builder.callExpr(
-							builder.getLangBasic().getVectorInitUniform(), 
-							builder.undefinedVar(irClassType), 
+							builder.getLangBasic().getVectorInitUniform(),
+							builder.undefinedVar(irClassType),
 							builder.getIntParamLiteral(numElements)
 						);
 				else
@@ -357,16 +357,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				//if not userprovided we don't need to add a constructor just create the object to work
 				//with -- for the rest the BE-compiler takes care of
 
+                //if we cannot create the struct type we skip this block
 				core::ExpressionPtr ctor;
 				if (core::StructTypePtr structType = irClassType.isa<core::StructTypePtr>()) {
 					ctor = core::analysis::createDefaultConstructor(structType);
-				} else {
+					return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
+				} else if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()) {
 					// this is a 'named' type
-					core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).as<core::StructTypePtr>();
-					ctor = core::analysis::createDefaultConstructor(structType);
-					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+                    ctor = core::analysis::createDefaultConstructor(structType);
+                    ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+                    return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
 				}
-				return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor()) {
@@ -580,7 +581,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	if( targetTy != srcTy && *targetTy != *srcTy ) {
 		subExpr = convFact.tryDeref(subExpr);
 	}
-	
+
 	//assert(*subExpr->getType() == *targetTy); NOTE: we can not compare types this easy, complete
 	//structs may not agree with the genereated generic type
 	/*

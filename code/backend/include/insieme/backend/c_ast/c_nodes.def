@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -189,6 +189,8 @@ AST_TERMINAL(Continue, Statement)
 AST_TERMINAL(Break, Statement)
 AST_TERMINAL(Return, Statement)
 AST_TERMINAL(Throw, Statement)
+AST_TERMINAL(Goto, Statement)
+AST_TERMINAL(Label, Statement)
 
 //
 // --- Expressions ---

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -129,6 +129,10 @@ namespace backend {
 		c_ast::NodePtr visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitLabelStmt(const core::LabelStmtPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context);
 

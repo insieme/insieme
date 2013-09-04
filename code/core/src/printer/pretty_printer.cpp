@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,9 +66,9 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
-const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
+const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
 	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_LITERAL_TYPES | PrettyPrinter::PRINT_DERIVED_IMPL;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
@@ -312,7 +312,7 @@ namespace {
 			IRVisitor<>::visit(element);
 			printAnnotations(element, false);
 			out.flush();
-			depth--; 
+			depth--;
 		}
 
 		/**
@@ -330,7 +330,7 @@ namespace {
 				out << *node->getName();
 				const TypesPtr& types = node->getTypeParameter();
 				const IntTypeParamsPtr& intTypes = node->getIntTypeParameter();
-				
+
 				if( types->empty() && intTypes->empty() ) {
 					return;
 				}
@@ -338,11 +338,11 @@ namespace {
 				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
 
 				if ( !types->empty() && !intTypes->empty() ) {
-			   		out << ",";	
+			   		out << ",";
 				}
 
 				out << join(",", intTypes,
-							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">"; 
+							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">";
 		});
 
 		PRINT(FunctionType, {
@@ -422,11 +422,11 @@ namespace {
 					out << ":";
 				   this->visit(cur->getType());
 			    });
-			
-// TODO: finnish 
+
+// TODO: finnish
 //
 //			if(hasMetaInfo(node)){
-//				const ClassMetaInfo& meta = getMetaInfo(node); 
+//				const ClassMetaInfo& meta = getMetaInfo(node);
 //				for (auto child: meta.getChildNodes()){
 //					out << newLine;
 //					this->visit(child);
@@ -437,8 +437,8 @@ namespace {
 		});
 
 		PRINT(TupleType, {
-				out << '(' << join(",", node->getElementTypes(), 
-						[&](std::ostream&,const TypePtr& cur){ this->visit(cur); }) 
+				out << '(' << join(",", node->getElementTypes(),
+						[&](std::ostream&,const TypePtr& cur){ this->visit(cur); })
 					<< ')';
 		});
 
@@ -489,6 +489,15 @@ namespace {
 		PRINT(ThrowStmt, {
 				out << "throw ";
 				this->visit(node->getThrowExpr());
+		});
+
+		PRINT(GotoStmt, {
+				out << "goto ";
+				this->visit(node->getLabel());
+		});
+
+		PRINT(LabelStmt, {
+				this->visit(node->getLabel()); out << ":";
 		});
 
 		PRINT(DeclarationStmt, {
@@ -636,7 +645,7 @@ namespace {
 					visit(node->getLambda());
 					return;
 				}
-				
+
 				// general case: recursive function
 				out << "recFun ";
 				this->visit(node->getVariable());
@@ -786,12 +795,12 @@ namespace {
 			const std::vector<ExpressionPtr>& elements = node->getExpressions()->getElements();
 
 			bool cut = (elements.size() > limit);
-			
+
 			//if (elements.size() > limit) {
 				//elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);
 				//cut = true;
 			//}
-			
+
 			std::vector<ExpressionPtr>::const_iterator end = cut ? elements.begin()+limit : elements.end();
 
 			out << "[" << ::join(", ", elements.begin(), end, [&](std::ostream&, const ExpressionPtr& cur) {
@@ -930,7 +939,7 @@ namespace {
 			if(printer.hasOption(PrettyPrinter::PRINT_ANNOTATIONS) && node->hasAnnotations()) {
 				if(start) {
 					out << "$[";
-					auto iter = node->getAnnotations().begin(); 
+					auto iter = node->getAnnotations().begin();
 					while(true) {
 						out << *iter->second;
 						if(++iter != node->getAnnotations().end()) out << ", ";
@@ -945,7 +954,7 @@ namespace {
 	};
 
 	// OutputStreamWrapper: Wraps the output stream capturing all the operations performed on it
-	// it used to keep the current position in the output stream and forward the characters to the 
+	// it used to keep the current position in the output stream and forward the characters to the
 	// real output stream
 	class OutputStreamWrapper : public boost::iostreams::sink {
 		std::ostream& out;
@@ -966,11 +975,11 @@ namespace {
 		}
 
 	public:
-		OutputStreamWrapper(std::ostream& out, bool showLineNo, int columnWrap) : 
+		OutputStreamWrapper(std::ostream& out, bool showLineNo, int columnWrap) :
 			 out(out), currLoc(0,0), showLineNo(showLineNo), colWrap(columnWrap != -1), colWidth(columnWrap)
-		{ 
+		{
 			if(showLineNo) {
-				out << std::setw(width) << std::setiosflags(std::ios::left) << 0; 
+				out << std::setw(width) << std::setiosflags(std::ios::left) << 0;
 			}
 		}
 
@@ -994,21 +1003,21 @@ namespace {
 
 	};
 
-	// InspireMapPrinter: this visitor extend the basic InspirePrinter adding the 
-	// capability to map each source range to the corresponding generating IR node 
+	// InspireMapPrinter: this visitor extend the basic InspirePrinter adding the
+	// capability to map each source range to the corresponding generating IR node
 	struct InspireMapPrinter : public InspirePrinter {
-		
+
 		// reference to the underlying output stream
 		std::ostream& out;
-		// reference to the stream wrapper used to get the current position in the 
-		// generated code 
+		// reference to the stream wrapper used to get the current position in the
+		// generated code
 		const OutputStreamWrapper& wout;
 
 		// Range -> IR nodes map
 		SourceLocationMap& srcMap;
 
-		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, 
-				SourceLocationMap& srcMap, 
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out,
+				SourceLocationMap& srcMap,
 				const PrettyPrinter& printer)
 			: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
 
@@ -1104,7 +1113,7 @@ namespace {
 
 		ADD_FORMATTER(basic.getCompositeRefElem(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getCompositeMemberAccess(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
-	
+
 		ADD_FORMATTER(basic.getRealAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
@@ -1174,7 +1183,7 @@ namespace {
 
 		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
 		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
-		
+
 		ADD_FORMATTER(basic.getIfThenElse(), {
 				OUT("("); PRINT_ARG(0); OUT(")?");
 				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
@@ -1219,14 +1228,14 @@ namespace {
 
 } // end of anonymous namespace
 
-SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo, int columnWrap) { 
+SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo, int columnWrap) {
 	using namespace insieme::core::printer;
 	// create a boost stream out of it and pass it to the visitor
 	boost::iostreams::stream<OutputStreamWrapper> wrappedOutStream( out, showLineNo, columnWrap );
-	
+
 	// In order to avoid a copy when the map is returned, we pass it to the printer
 	SourceLocationMap srcMap;
-	
+
 	InspireMapPrinter printer(wrappedOutStream, srcMap, print);
 	printer.print(print.root);
 	wrappedOutStream.flush();
@@ -1305,16 +1314,16 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 	for(SourceLocationMap::const_iterator it = srcMap.begin(), end=srcMap.end(); it != end; ++it) {
 		std::string&& stmt = toString(*it->second);
 		size_t length = stmt.length();
-		
-		out << "@ RANGE: " << it->first << std::endl 
+
+		out << "@ RANGE: " << it->first << std::endl
 		    << "\t-> IR node [addr: " << &*it->second << "] ";
-	   
+
 		if(length < 10)
 			out << stmt;
 		else {
 			// we want to show the last 5 chars just to give an idea of the context
 			size_t remains = (length-10)>5?5:length-10;
-			out << stmt.substr(0,10) << "..." << stmt.substr(length-remains, length-1); 
+			out << stmt.substr(0,10) << "..." << stmt.substr(length-remains, length-1);
 		}
 		out << std::endl;
 	}

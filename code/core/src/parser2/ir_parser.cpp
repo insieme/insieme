@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1006,7 +1006,7 @@ namespace parser {
 			));
 
 			// -- bitwise arithmetic expressions --
-					
+
 			g.addRule("E", rule(
 					seq(E, "&", E),
 					[](Context& cur)->NodePtr {
@@ -1814,6 +1814,21 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						return cur.continueStmt();
 					}
+			));
+
+			g.addRule("S", rule(
+					seq(cap(id), ":"),
+					[](Context& cur)->NodePtr {
+						return cur.labelStmt(cur.stringValue(cur.getSubRange(0)[0].getLexeme()));
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("goto", cap(id), ";"),
+					[](Context& cur)->NodePtr {
+						return cur.gotoStmt(cur.stringValue(cur.getSubRange(0)[0].getLexeme()));
+					},
+					1		// higher priority than variable declaration (of type goto)
 			));
 
 			g.addRule("S", rule(

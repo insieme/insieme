@@ -1348,13 +1348,22 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
     //or if we need further checks
     if (core::analysis::isVolatileType(elementType))
         return init;
-
+/*
+    //if lhs and rhs are struct type we only have
+    //to check if the types are equal
+    if (init->getType().isa<core::StructTypePtr>() && elementType.isa<core::StructTypePtr>()) {
+        //if (core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType))
+            return init;
+    }
+*/
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
 
 	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
-	std::cerr << "\t target: " << elementType << std::endl;
+	std::cerr << "type details: \n\t" << lookupTypeDetails(init->getType()) << std::endl;
+	std::cerr << "\t target: " << type << std::endl;
+
 	assert(false && " fallthrow");
 	return init;
 }

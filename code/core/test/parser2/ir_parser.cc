@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -374,6 +374,19 @@ namespace parser {
 		EXPECT_EQ("try {throw 4;} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 	}
 
+	TEST(IR_Parser2, GotoStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		StringValuePtr str = builder.stringValue("test");
+		EXPECT_EQ(
+                builder.gotoStmt(str),
+                parse(manager, "goto test;")
+        );
+        EXPECT_EQ(
+                builder.labelStmt(str),
+                parse(manager, "test: ")
+        );
+	}
 
 	TEST(IR_Parser2, WhileStatement) {
 		NodeManager manager;

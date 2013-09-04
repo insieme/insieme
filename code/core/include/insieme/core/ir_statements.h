@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -272,7 +272,89 @@ namespace core {
 	};
 
 
+	// ---------------------------------------- Goto Statement ------------------------------
 
+	/**
+	 * The accessor associated to the goto statement.
+	 */
+	IR_NODE_ACCESSOR(GotoStmt, Statement, StringValue)
+		/**
+		 * Obtains a reference to the string value associated to this goto statement.
+		 */
+		IR_NODE_PROPERTY(StringValue, Label, 0);
+	};
+
+	/**
+	 * The entity used to represent goto statements within the IR.
+	 */
+	IR_NODE(GotoStmt, Statement)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "goto " << *getLabel();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain a goto statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param label string value
+		 * @return the requested type instance managed by the given manager
+		 */
+		static GotoStmtPtr get(NodeManager& manager, const StringValuePtr& label) {
+			return manager.get(GotoStmt(label));
+		}
+
+	};
+
+
+
+	// ---------------------------------------- Label Statement ------------------------------
+
+	/**
+	 * The accessor associated to the label statement.
+	 */
+	IR_NODE_ACCESSOR(LabelStmt, Statement, StringValue)
+		/**
+		 * Obtains a reference to the string value associated to this label statement.
+		 */
+		IR_NODE_PROPERTY(StringValue, Label, 0);
+	};
+
+	/**
+	 * The entity used to represent label statements within the IR.
+	 */
+	IR_NODE(LabelStmt, Statement)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << *getLabel() << ": ";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain a label statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param label string value
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LabelStmtPtr get(NodeManager& manager, const StringValuePtr& label) {
+			return manager.get(LabelStmt(label));
+		}
+
+	};
 
 	// ---------------------------------------- Declaration Statement ------------------------------
 

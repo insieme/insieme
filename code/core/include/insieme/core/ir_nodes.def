@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -213,6 +213,10 @@ AST_TERMINAL(SwitchStmt, Statement)
 // + exception handling for C++
 AST_TERMINAL(ThrowStmt, Statement)
 AST_TERMINAL(TryCatchStmt, Statement)
+
+//labels
+AST_TERMINAL(LabelStmt, Statement)
+AST_TERMINAL(GotoStmt, Statement)
 
 //
 // --- Expressions ---
