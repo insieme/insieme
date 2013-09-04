@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -133,8 +133,8 @@ namespace {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
-		// Define the comparator for the set 
-		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
+		// Define the comparator for the set
+		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool {
 			return *lhs < *rhs;
 		};
 		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
@@ -327,6 +327,16 @@ NamedValuePtr IRBuilder::namedValue(const string& name, const ExpressionPtr& val
 	return namedValue(stringValue(name), value);
 }
 
+ExpressionPtr IRBuilder::readVolatile(const ExpressionPtr& expr) const {
+    assert(core::analysis::isVolatileType(expr.getType()) && "volatile read can only be done with volatile type.");
+    return callExpr(getLangBasic().getVolatileRead(), expr);
+}
+
+ExpressionPtr IRBuilder::makeVolatile(const ExpressionPtr& expr) const {
+    if(core::analysis::isVolatileType(expr.getType()))
+        return expr;
+    return callExpr(getLangBasic().getVolatileMake(), expr);
+}
 
 TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
 	TupleTypePtr type = tupleType(extractTypes(values));
@@ -1023,7 +1033,7 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto loopEnd = initialFor->getEnd();
 	auto loopStep = initialFor->getStep();
 	auto loopVarType = loopStart->getType();
-	
+
 	while (loopVarType->getNodeType() == NT_RefType) {
 		loopVarType = analysis::getReferencedType(loopVarType);
 	}
@@ -1032,7 +1042,7 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto pforLambdaParamStart = variable(loopVarType);
 	auto pforLambdaParamEnd = variable(loopVarType);
 	auto pforLambdaParamStep = variable(loopVarType);
-	
+
 	auto adaptedFor = forStmt(initialFor->getIterator(), pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep, initialFor->getBody());
 
 	BindExprPtr lambda = transform::extractLambda(manager, adaptedFor, toVector(pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep));
@@ -1061,7 +1071,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
 		const core::TypePtr& varType = bodyVar->getType();
 
-		// substitute all value use of variables by a value paramenter, this avoids pointers in the 
+		// substitute all value use of variables by a value paramenter, this avoids pointers in the
 		// prototype and interacts better with the materialize read only routine
 		if (varType.isa<RefTypePtr>() && core::analysis::isReadOnly(body, bodyVar)){
 			core::VariablePtr&& parmVar = this->variable( varType.as<RefTypePtr>()->getElementType() );
@@ -1094,7 +1104,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 	for(auto lit : usedLiterals) {
 		const core::LiteralPtr& bodyLit = lit;
 		const core::TypePtr& varType = bodyLit->getType();
-	
+
 		// we create a new variable to replace the captured variable
 		core::VariablePtr&& parmVar = this->variable( varType );
 		argsType.push_back( varType );
@@ -1108,7 +1118,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     	body = core::static_pointer_cast<const core::Statement>(
     			core::transform::replaceAll(manager, body, replLiteralMap)
     		);
-    } 
+    }
 
     core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);

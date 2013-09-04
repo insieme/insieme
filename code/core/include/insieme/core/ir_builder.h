@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -191,6 +191,10 @@ namespace core {
 		inline GenericTypePtr volatileType(const TypePtr& type) const {
 			return genericType("volatile", {type}, IntParamList());
 		}
+
+        ExpressionPtr readVolatile(const ExpressionPtr& expr) const;
+        ExpressionPtr makeVolatile(const ExpressionPtr& expr) const;
+
 
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
 

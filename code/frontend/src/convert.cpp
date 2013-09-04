@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -142,14 +142,14 @@ bool isCppConstructor (const core::ExpressionPtr& expr){
 	if (core::analysis::isConstructorCall(expr)){
 		return true;
 	}
-	// array constructor 
+	// array constructor
 	core::NodeManager&  mgr = expr->getNodeManager();
 	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()))
 		return true;
 	//if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
-	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr()) 
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr())
 	//		return true;
-	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor() ==*call->getFunctionExpr()) 
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor() ==*call->getFunctionExpr())
 	//		return true;
 	return false;
 }
@@ -530,6 +530,18 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// beware of const pointers
 		if (utils::isRefArray(irType) && varTy.isConstQualified())
 			irType = builder.refType(irType);
+
+        // if is a constant obj:
+        // might be intercepted
+        // might be generic
+        if (varTy.isConstQualified()) {
+            if((lookupTypeDetails(irType)->getNodeType() == core::NT_StructType) ||
+               (getProgram().getInterceptor().isIntercepted(valDecl->getQualifiedNameAsString()))) {
+                irType = builder.refType(irType);
+            }
+        }
+
+
 	}
 
 	// if is a global variable, a literal will be generated, with the qualified name
@@ -792,7 +804,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			assert(initExpr && "not correct initialization of the variable");
 
 			// some Cpp cases do not create new var
-			if (!IS_CPP_REF(var->getType()) && 
+			if (!IS_CPP_REF(var->getType()) &&
 				!isCppConstructor(initExpr) ){
 				initExpr = builder.refVar(initExpr);
 			}
@@ -1234,7 +1246,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
 
-		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  || 
+		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  ||
 			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 
@@ -1247,14 +1259,14 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 				elements.push_back(getInitExpr(membTy, inits[i] ));
 			}
 			retIr = builder.vectorExpr(elements);
-		
+
 			// if the sizes dont fit is a partial initialization
 			if (elementType.isa<core::VectorTypePtr>() &&
-				*retIr->getType().as<core::VectorTypePtr>()->getSize() != 
+				*retIr->getType().as<core::VectorTypePtr>()->getSize() !=
 				*elementType.isa<core::VectorTypePtr>()->getSize())
 				return builder.callExpr(
-						builder.getLangBasic().getVectorInitPartial(), 
-						core::encoder::toIR(type->getNodeManager(), elements), 
+						builder.getLangBasic().getVectorInitPartial(),
+						core::encoder::toIR(type->getNodeManager(), elements),
 						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
 					);
 
@@ -1284,8 +1296,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 		// and the expression is the first paramenter
 		core::StringValuePtr name =  init.as<core::CallExprPtr>()->getFunctionExpr().as<core::LiteralPtr>()->getValue();
 		core::TypePtr entityType;
-		for (unsigned i = 0; i < unionTy->getEntries().size(); ++i) 
-			if (*unionTy->getEntries()[i]->getName() == *name) 
+		for (unsigned i = 0; i < unionTy->getEntries().size(); ++i)
+			if (*unionTy->getEntries()[i]->getName() == *name)
 				entityType = unionTy->getEntries()[0]->getType();
 		assert(entityType && "the type of the entity could not be found");
 		return  builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0]));
@@ -1297,7 +1309,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 
 	////////////////////////////////////////////////////////////////////////////
 	// if the type missmatch we might need to take some things in consideration:
-	
+
 	// constructor
 	if (isCppConstructor(init)) return init;
 
@@ -1326,11 +1338,16 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 		if (utils::isRefVector(init->getType()))
 			initVal =  builder.deref(initVal);
 		//it can be a partial initialization
-		if(core::types::isSubTypeOf(initVal->getType(), elementType)) 
+		if(core::types::isSubTypeOf(initVal->getType(), elementType))
 			return initVal;
 
 		return utils::cast( initVal, elementType);
 	}
+
+    //FIXME: check if this is enough
+    //or if we need further checks
+    if (core::analysis::isVolatileType(elementType))
+        return init;
 
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
