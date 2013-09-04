@@ -750,6 +750,42 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, ForStmt_4) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.normalize(builder.parseStmt(
+				"{"
+				"	ref<int<4>> y = var(0);"
+				"	ref<int<4>> z = var(0);"
+				"	for (int<4> i = 0 .. 10 : 1) {"
+				"		auto x = var(2*i + 3);"
+				"		x = x + 2 * i;"
+				"		*x;"
+				"		*y;"
+				"		z = *x;"
+				"		*z;"
+				"	}"
+				"}"
+		)).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto forStmt = code[2].as<ForStmtAddress>();
+		auto body = forStmt->getBody();
+
+		// check the inner indices
+		EXPECT_EQ("{4*v2+3}",  	 toString(analysis.getValuesOf(body[2].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{0}",  	 	 toString(analysis.getValuesOf(body[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4*v2+3}",  	 toString(analysis.getValuesOf(body[5].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, Arithmetic_101) {
 
 		NodeManager mgr;
