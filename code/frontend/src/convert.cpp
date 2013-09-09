@@ -1294,13 +1294,17 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 
 		// here is the thing, the field comes hiden in a literal (the function called)
 		// and the expression is the first paramenter
-		core::StringValuePtr name =  init.as<core::CallExprPtr>()->getFunctionExpr().as<core::LiteralPtr>()->getValue();
-		core::TypePtr entityType;
-		for (unsigned i = 0; i < unionTy->getEntries().size(); ++i)
-			if (*unionTy->getEntries()[i]->getName() == *name)
-				entityType = unionTy->getEntries()[0]->getType();
-		assert(entityType && "the type of the entity could not be found");
-		return  builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0]));
+		if (init.as<core::CallExprPtr>()->getFunctionExpr().isa<core::LiteralPtr>()){
+			core::StringValuePtr name =  init.as<core::CallExprPtr>()->getFunctionExpr().as<core::LiteralPtr>()->getValue();
+			core::TypePtr entityType;
+			for (unsigned i = 0; i < unionTy->getEntries().size(); ++i)
+				if (*unionTy->getEntries()[i]->getName() == *name)
+					entityType = unionTy->getEntries()[0]->getType();
+			assert(entityType && "the type of the entity could not be found");
+			return  builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0]));
+		}
+		// it might be that is an empy initialization, retrieve the type to avoid nested variable creation
+		return init.as<core::CallExprPtr>()[0];
 	}
 
 	// the initialization is not a list anymore, this a base case
