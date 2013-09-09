@@ -50,6 +50,10 @@
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
 
+#ifdef _GEMS
+	#include "include_gems/stdlib.h"
+#endif
+
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
 #include "impl/irt_mqueue.impl.h"

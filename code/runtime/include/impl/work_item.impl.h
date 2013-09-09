@@ -147,7 +147,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children, uint32_t);
 	}
-	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : -1);
+	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : (uint32_t*)-1);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
