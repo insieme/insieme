@@ -49,6 +49,8 @@
 
 #include "insieme/core/analysis/normalize.h"
 
+#include "insieme/core/annotations/naming.h"
+
 #include "insieme/utils/logging.h"
 
 namespace fe = insieme::frontend;
@@ -61,11 +63,9 @@ LambdaExprPtr getEntryPoint(const core::ProgramPtr& prog, const std::string& ent
 {
 	for(auto it=prog->getEntryPoints().begin(); it!=prog->getEntryPoints().end(); it++)
 	{
-		LambdaExprPtr fun = static_pointer_cast<LambdaExprPtr>(*it);
-		std::stringstream ss;
-		ss << *(fun->getAnnotations().begin())->second;
+		LambdaExprPtr fun = (*it).as<LambdaExprPtr>();
 
-		if(ss.str().compare(entry) == 0) {
+		if(core::annotations::hasNameAttached(fun) && core::annotations::getAttachedName(fun).compare(entry) == 0) {
 			return analysis::normalize(fun);
 		}
 	}
