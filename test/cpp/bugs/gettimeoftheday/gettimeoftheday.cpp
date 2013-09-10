@@ -3,20 +3,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <unistd.h>
+
 int main(int argc, char **argv)
 {
 
-	int iterations = 10000;
 	struct timeval start, end;
 
 	gettimeofday(&start, NULL);
 
-	for (int i = 0; i < iterations; i++) {
-	}
+	sleep(1);
 
 	gettimeofday(&end, NULL);
 
-	printf("%ld\n", ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)));
+	if ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec) >= 1000000)
+		printf("SUCCESS");
+	else
+		printf("FAIL");
 
 	return 0;
 }
