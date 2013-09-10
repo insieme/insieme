@@ -112,6 +112,23 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 
 
 
+bool isCppConstructor (const core::ExpressionPtr& expr){
+	// constructor
+	if (core::analysis::isConstructorCall(expr)){
+		return true;
+	}
+	// array constructor
+	core::NodeManager&  mgr = expr->getNodeManager();
+	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()))
+		return true;
+	//if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr())
+	//		return true;
+	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor() ==*call->getFunctionExpr())
+	//		return true;
+	return false;
+}
+
 
 /// convert a initialization for a global
 core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Converter& converter, const clang::VarDecl* var, core::TypePtr elementType){
@@ -130,29 +147,19 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 
 	// globals are just assigned, so do it carefully
-	if (initValue)
+	if (initValue){
 		initValue = converter.getInitExpr (elementType.as<core::RefTypePtr>()->getElementType(), initValue);
+
+		// globals have a little issue with constructor initialization, backend restores right operation
+		if (isCppConstructor(initValue)) {
+			core::IRBuilder builder( initValue->getNodeManager() );
+			initValue = builder.deref(initValue);
+		}
+	}
 
 	return initValue;
 }
 
-
-bool isCppConstructor (const core::ExpressionPtr& expr){
-	// constructor
-	if (core::analysis::isConstructorCall(expr)){
-		return true;
-	}
-	// array constructor
-	core::NodeManager&  mgr = expr->getNodeManager();
-	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()))
-		return true;
-	//if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
-	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr())
-	//		return true;
-	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor() ==*call->getFunctionExpr())
-	//		return true;
-	return false;
-}
 
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
