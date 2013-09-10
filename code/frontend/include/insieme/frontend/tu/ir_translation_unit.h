@@ -137,7 +137,7 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-			assert(types.find(symbol) == types.end());
+		//	assert(types.find(symbol) == types.end());
 			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
 		}
 
