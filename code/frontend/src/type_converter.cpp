@@ -50,6 +50,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/complex_extension.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
@@ -163,9 +164,10 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 //								COMPLEX TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
-	// FIXME
-	assert(false && "ComplexType not yet handled!");
-	return core::TypePtr();
+    //extract the real type
+    const core::TypePtr& type = convert(bulinTy->getElementType().getTypePtr());
+    assert(type && "Conversion of complex element type failed.");
+    return  mgr.getLangExtension<core::lang::ComplexExtensions>().getComplexType(type);
 }
 
 // ------------------------   ARRAYS  -------------------------------------

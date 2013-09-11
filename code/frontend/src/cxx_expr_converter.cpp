@@ -184,7 +184,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 			return retIr;
 		}
 	}
-
 	return retIr = Converter::ExprConverter::VisitDeclRefExpr (declRef);
 }
 
@@ -406,6 +405,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		dumpPretty(ret);
 	}
 
+    assert(ret && "ConstructExpr could not be translated");
 	return ret;
 }
 

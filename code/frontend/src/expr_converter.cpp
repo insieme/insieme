@@ -62,6 +62,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -1302,8 +1303,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		return retIr = subExpr;
 
 	case clang::UO_Real:
+	    return mgr.getLangExtension<core::lang::ComplexExtensions>().getReal(subExpr);
+
 	case clang::UO_Imag:
-	default:
+        return mgr.getLangExtension<core::lang::ComplexExtensions>().getImg(subExpr);
+
+    default:
 		assert(false && "Unary operator not supported");
 	}
 	return core::ExpressionPtr();	// should not be reachable
