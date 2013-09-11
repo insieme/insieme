@@ -1224,7 +1224,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 			params.insert(params.begin(), thisVar);
 
 			// handle this references in body,
-			body = core::transform::replaceAllGen (mgr, body, builder.literal("this", thisType), thisVar, true);
+			body = core::transform::replaceAllGen (mgr, body, builder.literal("this", thisType), thisVar);
 		}
 
 		// build the resulting lambda
