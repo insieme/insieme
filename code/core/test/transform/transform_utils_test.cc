@@ -107,7 +107,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 				builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));
 		// TupleRefElem
 		saStmts.push_back(builder.callExpr(basic.getChar(), basic.getTupleRefElem(), tupleVar, builder.castExpr(basic.getUInt8(), builder.intLit(1)),
-				builder.getTypeLiteral(basic.getWChar())));
+				builder.getTypeLiteral(basic.getWChar16())));
 		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
 
 		// test for errors

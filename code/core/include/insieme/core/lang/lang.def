@@ -64,7 +64,8 @@ TYPE(Any, "any")
 TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
-TYPE(WChar,  "wchar")
+TYPE(WChar16,  "wchar16")
+TYPE(WChar32,  "wchar32")
 TYPE(String, "ref<array<char,1>>")
 TYPE(Identifier, "identifier")
 
@@ -72,7 +73,7 @@ GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
 GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
 GROUP(Int, UnsignedInt, SignedInt)
 
-GROUP(Primitive, Any, Bool, Char, WChar, Int, Real)
+GROUP(Primitive, Any, Bool, Char, WChar16, WChar32, Int, Real)
 
 TYPE(IntGen, "int<#a>")
 TYPE(UIntGen,"uint<#a>")

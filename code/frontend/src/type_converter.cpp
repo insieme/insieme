@@ -126,12 +126,12 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	// char types
 	case BuiltinType::Char_U:
 	case BuiltinType::UChar:		return gen.getUInt1();
-	case BuiltinType::Char16:		return gen.getInt2();
-	case BuiltinType::Char32:		return gen.getInt4();
+	case BuiltinType::Char16:		return gen.getWChar16();
+	case BuiltinType::Char32:		return gen.getWChar32();
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
-	case BuiltinType::WChar_S:		return gen.getWChar();
-	case BuiltinType::WChar_U:		return gen.getWChar();
+	case BuiltinType::WChar_S:		return gen.getWChar32();
+	case BuiltinType::WChar_U:		return gen.getWChar32();
 
 	// integer types
 	case BuiltinType::UShort:		return gen.getUInt2();

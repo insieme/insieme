@@ -464,17 +464,23 @@ namespace backend {
 				return type_info_utils::createInfo(manager, "long double");
 			}
 
+			// ------------ Char and Wide char support ----
 			if (basic.isChar(ptr)) {
 				return type_info_utils::createInfo(manager, "char");
 			}
-			if (basic.isWChar(ptr)) {
-				return type_info_utils::createInfo(manager, "wchar_t");
+			if (basic.isWChar16(ptr)) {
+				return type_info_utils::createInfo(manager, "char16_t");
+			}
+			if (basic.isWChar32(ptr)) {
+				return type_info_utils::createInfo(manager, "char32_t");
 			}
 
+			// ------------ string  -----------------------
 			if (basic.isString(ptr)) {
 				return type_info_utils::createInfo(manager, "char*");
 			}
 
+			// ------------ list  -------------------- ----
 			if (basic.isVarList(ptr)) {
 				return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>());
 			}

@@ -534,8 +534,25 @@ core::ExpressionPtr Converter::ExprConverter::VisitCharacterLiteral(const clang:
 	string value;
 	unsigned int v = charLit->getValue();
 
-	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
+	core::TypePtr elemType;
+	switch (charLit->getKind()){
 
+		case clang::CharacterLiteral::Ascii:
+				elemType = gen.getChar();
+				break;
+		case clang::CharacterLiteral::UTF16:
+				elemType = gen.getWChar16();
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+		case clang::CharacterLiteral::UTF32:
+		case clang::CharacterLiteral::Wide:
+				elemType = gen.getWChar32();
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+	}
+	assert(elemType);
+
+	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
 		value.append("\'");
 		if(v == '\\') value.append("\\\\");
 		else if(v == '\n') value.append("\\n");
@@ -557,16 +574,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitCharacterLiteral(const clang:
 		}
 		value.append("\'");
 	}
-	else
-		/// FIXME: windows and linux implementation may differ here, need to study the case
-		assert (false && "widechar not supported");
 
-	retExpr = builder.literal(
-			value,
-			(charLit->getKind() == clang::CharacterLiteral::Wide ?
-					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar()));
-
-	return retExpr;
+	return retExpr = builder.literal( value, elemType);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,7 +585,33 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(stringLit, retExpr);
 
-	std::string strValue = stringLit->getString().str();
+	// retrieve data itself
+	std::string strValue = stringLit->getBytes().str();
+
+
+	int vectorLenght = strValue.length();
+	core::TypePtr elemType;
+	switch (stringLit->getKind()){
+
+		case clang::StringLiteral::Ascii:
+		case clang::StringLiteral::UTF8:
+				elemType = gen.getChar();
+				break;
+		case clang::StringLiteral::UTF16:
+				elemType = gen.getWChar16();
+				vectorLenght /= 2;
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+		case clang::StringLiteral::UTF32:
+		case clang::StringLiteral::Wide:
+				vectorLenght /= 4;
+				elemType = gen.getWChar32();
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+	}
+	assert(elemType);
+	vectorLenght += 1; // add the null char 
+
 	auto expand = [&](char lookup, const char *replacement) {
 		int last = 0;
 		int it;
@@ -587,24 +622,26 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 		}
 	};
 
-	expand('\\', "\\\\");
-	expand('\n', "\\n");
-	expand('\t', "\\t");
-	expand('\b', "\\b");
-	expand('\a', "\\a");
-	expand('\v', "\\v");
-	expand('\r', "\\r");
-	expand('\f', "\\f");
-	expand('\?', "\\\?");
-	expand('\'', "\\\'");
-	expand('\"', "\\\"");
-	expand('\0', "\\0");
+	if (stringLit->getKind() == clang::StringLiteral::Ascii){
+		expand('\\', "\\\\");
+		expand('\n', "\\n");
+		expand('\t', "\\t");
+		expand('\b', "\\b");
+		expand('\a', "\\a");
+		expand('\v', "\\v");
+		expand('\r', "\\r");
+		expand('\f', "\\f");
+		expand('\?', "\\\?");
+		expand('\'', "\\\'");
+		expand('\"', "\\\"");
+		expand('\0', "\\0");
+	}
 
 	auto vecType =
 		builder.refType(
 			builder.vectorType(
-				gen.getChar(),
-				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()+1)
+				elemType,
+				core::ConcreteIntTypeParam::get(builder.getNodeManager(),vectorLenght )
 			)
 		);
 

@@ -797,6 +797,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			}
 		}
 		else{
+			bool isConstant = false;
 			// print diagnosis messages
 			assert(var.isa<core::VariablePtr>());
 			core::TypePtr initExprType;
@@ -804,6 +805,13 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExprType = var->getType().as<core::RefTypePtr>()->getElementType();
 			else if (IS_CPP_REF(var->getType()))
 				initExprType = var->getType();
+			else{
+				// is a constant variable (left side is not ref, right side does not need to create refvar)
+				// const char name[] = "constant string";
+				// vector<char,16> vX = "constatn string"
+				isConstant = true;
+				initExprType = var->getType();
+			}
 			assert( initExprType );
 
 			// initialization value
@@ -811,8 +819,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			assert(initExpr && "not correct initialization of the variable");
 
 			// some Cpp cases do not create new var
-			if (!IS_CPP_REF(var->getType()) &&
-				!isCppConstructor(initExpr) ){
+			if (!IS_CPP_REF(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
 			}
 

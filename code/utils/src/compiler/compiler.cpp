@@ -76,6 +76,7 @@ namespace compiler {
 		res.addFlag("--std=c++98");
 		res.addFlag("-Wl,--no-as-needed");
 		res.addFlag("-fpermissive");
+		res.addFlag("-Wno-write-strings");
 		return res;
 	}
 
