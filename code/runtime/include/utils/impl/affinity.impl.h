@@ -135,7 +135,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 		else if(strcmp("IRT_AFFINITY_FIXED", tok) == 0) {
 			policy.type = IRT_AFFINITY_FIXED;
 			tok = strtok(NULL, ", ");
-			int i=0;
+			uint32 i=0;
 			while(tok != NULL) {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");

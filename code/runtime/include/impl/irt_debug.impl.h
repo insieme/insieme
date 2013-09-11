@@ -79,7 +79,7 @@ void irt_dbg_print_worker_state(int32 wid) {
 }
 
 void irt_dbg_print_worker_overview() {
-	for(int32 w=0; w<irt_g_worker_count; ++w) {
+	for(uint32 w=0; w<irt_g_worker_count; ++w) {
 		irt_dbg_print_worker_state(w);
 	}
 }

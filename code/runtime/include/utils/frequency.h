@@ -248,7 +248,7 @@ int32 irt_cpu_freq_set_frequency_worker(irt_worker* worker, uint32 frequency) {
 	int32 old_min_freq = irt_cpu_freq_get_min_frequency_worker(worker);
 
 	// min always has to be >= max, so if old_min is larger than max, first set new min
-	if(old_min_freq > frequency) {
+	if((uint32)old_min_freq > frequency) {
 		irt_cpu_freq_set_min_frequency_worker(worker, frequency);
 		irt_cpu_freq_set_max_frequency_worker(worker, frequency);
 	} else {

@@ -96,12 +96,12 @@ inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_
 inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 
-	uint64 memstep = policy->param.chunk_size * base_range.step;
+	int64 memstep = policy->param.chunk_size * base_range.step;  
 	uint64 fullstep = policy->participants * memstep;
 
 	irt_work_item_range range;
 	range.step = base_range.step;
-	for(uint64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
+	for(int64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
 		range.begin = start;
 		range.end = MIN(start + memstep, base_range.end);
 		_irt_loop_fragment_run(self, range, impl_id, args);
@@ -188,10 +188,10 @@ inline static void irt_schedule_loop_fixed(irt_work_item* self, uint32 id, irt_w
 inline static void irt_schedule_loop_shares(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 	
-	uint64 extent = base_range.end - base_range.begin;
-	uint64 start = base_range.begin;
+	int64 extent = base_range.end - base_range.begin;
+	int64 start = base_range.begin;
 	double pos = 0.0; // do this in floating point to prevent bad distribution because of int rounding
-	for(int i = 0; i<id; i++) {
+	for(uint32 i = 0; i<id; i++) {
 		pos += sched_data->policy.param.shares[i];
 	}
 	base_range.begin = start + pos*extent;
@@ -217,8 +217,8 @@ static inline void irt_schedule_loop_dynamic_prepare(volatile irt_loop_sched_dat
 // prepare for loop with guided scheduling and minimum size before entry
 static inline void irt_schedule_loop_guided_chunked_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
 	sched_data->completed = base_range.begin;
-	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-	uint64 chunk = (numit / sched_data->policy.participants * 4);
+	int64 numit = (base_range.end - base_range.begin) / (base_range.step);
+	int64 chunk = (numit / sched_data->policy.participants * 4);
 	sched_data->block_size = MAX(sched_data->policy.param.chunk_size, chunk);
 }
 
@@ -265,7 +265,7 @@ void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_ran
 	for(int i=0; i<10; ++i) {
 		printf("% 3d|", i);
 		effort[i] = (effort[i]*100)/maxeffort;
-		int j;
+		uint32 j;
 		for(j=0; j<effort[i]; ++j) printf("=");
 		for(   ; j<100; ++j) printf(" ");
 		printf("|\n");
@@ -276,9 +276,10 @@ inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 
-	irt_context* context = NULL;
-	int32 implicit_region_id = -1;
 	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		irt_context* context = NULL;
+		int32 implicit_region_id = -1;
+
 		context = irt_context_get_current();
 		implicit_region_id = context->impl_table[impl_id].variants[0].features.implicit_region_id;
 		if(implicit_region_id >= 0) {
@@ -353,8 +354,10 @@ inline static void irt_schedule_loop(
 	case IRT_SHARES: irt_schedule_loop_shares(self, mem->num, base_range, impl_id, args, sched_data); break;
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
-
+	
+	#if (defined IRT_ENABLE_REGION_INSTRUMENTATION || defined IRT_ENABLE_REGION_INSTRUMENTATION)
 	bool isLast = false;
+	#endif 
 
 	// gather performance data if required & cleanup
 	#ifdef IRT_RUNTIME_TUNING

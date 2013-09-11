@@ -319,7 +319,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	void* ev_handle = _irt_init_signalable(&signal);
 
-	for(int i=0; i<irt_g_worker_count; ++i) {
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
 	}
 
@@ -372,7 +372,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	_irt_runtime_init_region_instrumentation(context);
 
-	for(int i=0; i<irt_g_worker_count; ++i) {
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
 	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl_id, startup_params);
