@@ -40,6 +40,9 @@
 
 #include <stdlib.h>
 
+#define malloc(x)	gem_malloc(x, 0)
+#define free(x) 	gem_free(x)
+
 char* getenv(const char* name)
 {
 	return NULL;

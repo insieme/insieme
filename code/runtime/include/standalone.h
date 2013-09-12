@@ -284,10 +284,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_inst_set_all_instrumentation_from_env();
 #endif
 
-//	#ifndef _WIN32
-//		irt_cpu_freq_set_frequency_socket_env();
-//	#endif
-
 	irt_log_comment("starting worker threads");
 	irt_log_setting_u("irt_g_worker_count", worker_count);
 	// get worker count & allocate global worker storage
