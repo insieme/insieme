@@ -52,6 +52,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
+#include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/annotations/c/extern.h"
@@ -265,7 +266,13 @@ namespace backend {
 
 		// handle C string literals (which are of type ref<vector<...>>)
 		if (ptr->getStringValue()[0] == '"') {
-			return res;		// just print it and be done
+			core::IRBuilder builder(ptr->getNodeManager());
+			core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
+			if(builder.getLangBasic().isWChar(type.as<core::VectorTypePtr>()->getElementType())){
+				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
+				res = toLiteral("L"+ptr->getStringValue());
+			}
+			return res;
 		}
 
 		// handle literals declared within other header files

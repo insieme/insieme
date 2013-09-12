@@ -469,10 +469,10 @@ namespace backend {
 				return type_info_utils::createInfo(manager, "char");
 			}
 			if (basic.isWChar16(ptr)) {
-				return type_info_utils::createInfo(manager, "char16_t");
+				return type_info_utils::createInfo(manager, "wchar_t");  // windows likes 16bits wchar
 			}
 			if (basic.isWChar32(ptr)) {
-				return type_info_utils::createInfo(manager, "char32_t");
+				return type_info_utils::createInfo(manager, "wchar_t");  // in unix is 32bit wide
 			}
 
 			// ------------ string  -----------------------

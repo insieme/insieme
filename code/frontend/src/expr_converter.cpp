@@ -73,6 +73,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 
+#include <iconv.h>
 
 using namespace insieme;
 using namespace exprutils;
@@ -587,8 +588,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 
 	// retrieve data itself
 	std::string strValue = stringLit->getBytes().str();
-
-
 	int vectorLenght = strValue.length();
 	core::TypePtr elemType;
 	switch (stringLit->getKind()){
@@ -600,14 +599,30 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 		case clang::StringLiteral::UTF16:
 				elemType = gen.getWChar16();
 				vectorLenght /= 2;
-				convFact.warnings.insert("Insieme widechar support is experimental");
+				convFact.warnings.insert("Insieme widechar support is experimental, check on windows");
 				break;
 		case clang::StringLiteral::UTF32:
 		case clang::StringLiteral::Wide:
-				vectorLenght /= 4;
+				{
+					// some literature about encodings transformation
+					// http://www.joelonsoftware.com/articles/Unicode.html
+				vectorLenght = stringLit->getBytes().size()/4;
 				elemType = gen.getWChar32();
+		
+				size_t size = stringLit->getBytes().size();
+				size_t outSize = size/4;
+				char buff[size];
+				char out[outSize];
+				char *rptr = buff;
+				char *wptr = out;
+				memcpy (buff, stringLit->getBytes().data(), size);
+				iconv_t cd = iconv_open ("UTF-8","UTF-32");
+				iconv (cd, &rptr, &size, &wptr, &outSize);
+				assert(size == 0 && "encoding modification failed.... ");
+				strValue = std::string(out, vectorLenght);
 				convFact.warnings.insert("Insieme widechar support is experimental");
 				break;
+				}
 	}
 	assert(elemType);
 	vectorLenght += 1; // add the null char 
@@ -646,9 +661,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 		);
 
 	retExpr = builder.literal("\"" + strValue + "\"", vecType);
-
 	VLOG(2) << retExpr;
-
 	return retExpr;
 }
 
