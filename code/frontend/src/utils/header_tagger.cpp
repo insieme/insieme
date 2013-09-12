@@ -169,7 +169,12 @@ namespace utils {
 		// check whether there is a declaration at all
 		if (!decl) return;
 
-		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType();
+		if (VLOG_IS_ON(2)){
+			std::string name("UNNAMED");
+			if (const clang::NamedDecl* nmd = llvm::dyn_cast<clang::NamedDecl>(decl))
+				name = nmd->getQualifiedNameAsString();
+			VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << " [clang: " << name << "]" ;
+		}
 
 		HeaderTagger tagger(stdLibDirs, decl->getASTContext().getSourceManager());
 		string fileName = tagger.getTopLevelInclude(decl->getLocation());
@@ -187,6 +192,8 @@ namespace utils {
 
 		// get absolute path of header file
 		fs::path header = fs::canonical(fileName);
+
+		VLOG(2) << "		header to be attached: " << header.string();
 
 		// use resulting header
 		insieme::annotations::c::attachInclude(node, header.string());

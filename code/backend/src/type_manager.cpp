@@ -56,6 +56,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/utils/logging.h"
 
@@ -292,6 +293,7 @@ namespace backend {
 		// --------------------- Implementations of resolution utilities --------------------
 
 		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+			const auto& gen = type->getNodeManager().getLangBasic();
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -299,8 +301,18 @@ namespace backend {
 				return pos->second;
 			}
 
+			// the type might not be generic but be anotated. belongs to some system header and 
+			// redeclaration has to be avoided
+			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
+				const string& name   = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type, info);
+				return info;
+			}
+
 			// check whether there is an annotated include file (intercepted type)
-			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type)) {
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !gen.isPrimitive(type)) {
 				auto genericType = type.as<core::GenericTypePtr>();
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
