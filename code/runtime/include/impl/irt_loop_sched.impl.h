@@ -355,7 +355,7 @@ inline static void irt_schedule_loop(
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 	
-	#if (defined IRT_ENABLE_REGION_INSTRUMENTATION || defined IRT_ENABLE_REGION_INSTRUMENTATION)
+	#if (defined IRT_RUNTIME_TUNING || defined IRT_ENABLE_REGION_INSTRUMENTATION)
 	bool isLast = false;
 	#endif 
 
