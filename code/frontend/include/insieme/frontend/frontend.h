@@ -99,9 +99,9 @@ namespace frontend {
 		vector<path> includeDirs;
 
 		/**
-		 * A list of include directories containing std library headers.
+		 * A list of include directories containing system headers.
 		 */
-		vector<path> stdLibIncludeDirs;
+		vector<path> systemHeaderSearchPath;
 
 		/**
 		 * The C standard to be followed.
@@ -212,22 +212,22 @@ namespace frontend {
 		/**
 		 * Obtains a reference to the covered set of std-library include directories.
 		 */
-		const vector<path>& getStdLibIncludeDirectories() const {
-			return stdLibIncludeDirs;
+		const vector<path>& getSystemHeadersDirectories() const {
+			return systemHeaderSearchPath;
 		}
 
 		/**
 		 * Updates the set of considered std-library include directories.
 		 */
-		void setStdLibIncludeDirectories(const vector<path>& includeDirectories) {
-			this->stdLibIncludeDirs = includeDirectories;
+		void setSystemHeadersDirectories(const vector<path>& includeDirectories) {
+			this->systemHeaderSearchPath = includeDirectories;
 		}
 
 		/**
-		 * Adds an additional std-library include directory.
+		 * Adds an additional user defined header serach path 
 		 */
-		void addStdLibIncludeDirectory(const path& directory) {
-			this->stdLibIncludeDirs.push_back(directory);
+		void addSystemHeadersDirectory(const path& directory) {
+			this->systemHeaderSearchPath.push_back(directory);
 		}
 
 		/**

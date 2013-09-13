@@ -129,6 +129,7 @@ namespace utils {
 
 				// get the presumed location (whatever this is, ask clang) ...
 				clang::PresumedLoc ploc = sm.getPresumedLoc(loc);
+				VLOG(2) <<  ploc.getFilename() ;
 
 				// .. and retrieve the associated include
 				clang::SourceLocation includeLoc = ploc.getIncludeLoc();
@@ -138,15 +139,18 @@ namespace utils {
 					return ""; 		// this happens when element is declared in c / cpp file => no header
 				}
 
+				// we already visited all the headers and we are in the .c/.cpp file
+				if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
+					if (isStdLibHeader(ploc.getFilename()) )
+						return ploc.getFilename(); // this happens when header file is included straight in the code
+					else
+						return "";  // this happens when is declared in a header which is not system header
+				}
+
 				// check if last include was in the search path and next is not,
 				// this case is a system header included inside of a programmer include chain
 				// BUT if both are still in the search path, continue cleaning the include
 				if (isStdLibHeader(ploc.getFilename()) && !isStdLibHeader(sm.getPresumedLoc(includeLoc).getFilename())){
-					return ploc.getFilename();
-				}
-
-				// if the next file is no longer a header, the current file is the desired one
-				if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
 					return ploc.getFilename();
 				}
 

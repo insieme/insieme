@@ -190,8 +190,8 @@ struct Program::ProgramImpl {
 
 	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
 		tranUnit(setup, file),
-		stdLibDirs(::transform(setup.getStdLibIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		interceptor(mgr, setup.getStdLibIncludeDirectories(), setup.getInterceptions())
+		stdLibDirs(::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
+		interceptor(mgr, setup.getSystemHeadersDirectories(), setup.getInterceptions())
 		{}
 };
 

@@ -301,18 +301,8 @@ namespace backend {
 				return pos->second;
 			}
 
-			// the type might not be generic but be anotated. belongs to some system header and 
-			// redeclaration has to be avoided
-			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
-				const string& name   = core::annotations::getAttachedName(type);
-				const string& header = annotations::c::getAttachedInclude(type);
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
-			}
-
-			// check whether there is an annotated include file (intercepted type)
-			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !gen.isPrimitive(type)) {
+			// check whether there is an annotated include file (intercepted type) [avoir primitives and unit, those could have header as well]
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !gen.isIRBuiltin(type)) {
 				auto genericType = type.as<core::GenericTypePtr>();
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
@@ -351,6 +341,16 @@ namespace backend {
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 				addInfo(type,info);
+				return info;
+			}
+
+			// the type might not be generic but be anotated. belongs to some system header and 
+			// redeclaration has to be avoided
+			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
+				const string& name   = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type, info);
 				return info;
 			}
 

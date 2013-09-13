@@ -75,6 +75,7 @@ GROUP(Int, UnsignedInt, SignedInt)
 GROUP(WChar, WChar16, WChar32)
 
 GROUP(Primitive, Any, Bool, Char, WChar, Int, Real)
+GROUP(IRBuiltin, Primitive, Unit)
 
 TYPE(IntGen, "int<#a>")
 TYPE(UIntGen,"uint<#a>")

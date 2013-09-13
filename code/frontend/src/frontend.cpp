@@ -61,7 +61,7 @@ namespace frontend {
 
 	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
 		: includeDirs(includeDirs),
-		  stdLibIncludeDirs(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
+		  systemHeaderSearchPath(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
 		  standard(Auto),
 		  definitions(),
 		  interceptions( { "std::.*", "__gnu_cxx::.*" } ),

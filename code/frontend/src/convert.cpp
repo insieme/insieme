@@ -226,7 +226,7 @@ tu::IRTranslationUnit Converter::convert() {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
 			auto irTy = converter.convertType(typeDecl->getTypeForDecl());
-			utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
+			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
 			// extract new symbol name
@@ -239,7 +239,9 @@ tu::IRTranslationUnit Converter::convert() {
 			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
 				converter.getIRTranslationUnit().addType(symbol, res);
 			}
-			utils::addHeaderForDecl(res, typeDecl, converter.getProgram().getStdLibDirs());
+
+			if (res.isa<core::StructTypePtr>())
+				utils::addHeaderForDecl(res, typeDecl, converter.getProgram().getStdLibDirs());
 		}
 	} typeVisitor(*this);
 
