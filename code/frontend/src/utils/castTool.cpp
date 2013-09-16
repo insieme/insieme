@@ -519,7 +519,7 @@ switch (castExpr->getCastKind()) {
 			// cast from void*
 			if (gen.isAnyRef(exprTy)) {
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getRefReinterpret(),
+				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
 
@@ -530,7 +530,7 @@ switch (castExpr->getCastKind()) {
 				//expression remove it
 				innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
 			}
-			return builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
+			return builder.callExpr(targetTy, gen.getRefReinterpret(),
 									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
@@ -578,10 +578,6 @@ switch (castExpr->getCastKind()) {
 
 			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//  PARTIALY IMPLEMENTED
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueBitCast 	:
@@ -596,7 +592,7 @@ switch (castExpr->getCastKind()) {
 		    //the target type is a ref type because lvalue
 		    //bitcasts look like reinterpret_cast<type&>(x)
 		    targetTy = builder.refType(targetTy);
-            core::CallExprPtr newExpr = builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
+            core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
                                                          expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		    //wrap it as cpp ref
 			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
@@ -615,11 +611,23 @@ switch (castExpr->getCastKind()) {
 				return builder.getZero(targetTy);
 			}
 			else{
-				//FIXME:: might be a cast to function type
-				return expr;
+
+				// it might be that is a reinterpret cast already, we can avoid chaining
+				if (core::analysis::isCallOf(expr, gen.getRefReinterpret())){
+					expr = expr.as<core::CallExprPtr>()[0];
+				}
+
+				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
+				return builder.callExpr(targetTy, gen.getRefReinterpret(),
+										expr, builder.getTypeLiteral(elementType));
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//  PARTIALY IMPLEMENTED
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_ToVoid 	:
 		//Cast to void, discarding the computed value. (void) malloc(2048)
 		{

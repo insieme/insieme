@@ -670,6 +670,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			core::VariablePtr        var  = decl->getVariable();
 			core::ExpressionPtr      init = decl->getInitialization();
 
+			VLOG(2) << " expr: " << innerIr;
+			VLOG(2) << " cleanup: " << var << " (type: " << var->getType() << ")  init: " << init << std::endl;
+
 			core::ExpressionPtr newIr;
 			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
 				// it might happen that we try to materialize an object just to use it by reference,
@@ -687,13 +690,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
 				core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
 				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
+
+				if (*newIr == *innerIr){
+					if(insieme::core::analysis::isConstructorCall(init)) {
+						core::ExpressionPtr trg = builder.deref(var);
+						core::ExpressionPtr subst = builder.deref(init);
+						newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
+					}
+				}
 			}
 
 			if (*newIr == *innerIr){
 				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order
+				VLOG(2) << "	cleanup is a temp";
 			}
 			else{
 				innerIr = newIr;
+				VLOG(2) << "	cleanup is replaced";
 			}
 		}
 	}
@@ -708,6 +721,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 
 	if (stmtList.empty()){
 		// we avoided all expressions to be cleanup, no extra lambda needed
+		VLOG(2) << "	cleanup expression is simplyfied and avoided";
 		return innerIr;
 	}
 
