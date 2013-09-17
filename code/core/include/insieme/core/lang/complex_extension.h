@@ -38,17 +38,6 @@
 
 #include "insieme/core/lang/extension.h"
 
-namespace {
-    insieme::core::ExpressionPtr getComplexMember(const insieme::core::ExpressionPtr& expr, const insieme::core::ExpressionPtr& mem) {
-        //ret type of inner element
-        insieme::core::IRBuilder builder( expr->getNodeManager() );
-
-        insieme::core::StructTypePtr structType = expr->getType().as<insieme::core::RefTypePtr>().getElementType().as<insieme::core::StructTypePtr>();
-		insieme::core::TypePtr innerType = structType->getEntries()[0]->getType();
-        return builder.callExpr(builder.refType(innerType), mem, expr, builder.getTypeLiteral(innerType));
-    }
-}
-
 namespace insieme {
 namespace core {
 namespace lang {
@@ -82,17 +71,60 @@ namespace lang {
 		 * Get real part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexReal,
-            "(ref<struct { 'a _real; 'a _img; }> x, type<'a> t)->ref<'a> { return x->_real; }"
+            "(struct { 'a _real; 'a _img; } x)->'a { return x._real; }"
+        );
+
+        /**
+		 * Get real part of complex ref.
+		 */
+		LANG_EXT_DERIVED(RefComplexReal,
+            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x->_real; }"
         );
 
         /**
 		 * Get imaginary part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexImg,
-            "(ref<struct { 'a _real; 'a _img; }> x, type<'a> t)->ref<'a> { return x->_img; }"
+            "(struct { 'a _real; 'a _img; } x)->'a { return x._img; }"
         );
 
+        /**
+		 * Get imaginary part of complex ref.
+		 */
+		LANG_EXT_DERIVED(RefComplexImg,
+            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x->_img; }"
+        );
 
+        /**
+		 * Create a Complex out of a constant value.
+		 */
+        LANG_EXT_DERIVED(ConstantToComplex,
+                            "let res_t = struct {'a _real; 'a _img} in"
+                            "('a c)->res_t {"
+                                "return (res_t) {c, ('a) 0};"
+                            "}");
+
+        /**
+		 * Check if the real and imaginary part of the complex number are zero.
+		 */
+		LANG_EXT_DERIVED(ComplexToBool,
+            "(struct { 'a _real; 'a _img; } x)->bool { return ((x._img != ('a) 0.0) || (x._real != ('a) 0.0)); }"
+        );
+
+        /**
+		 * Cast a complex number of type a to a complex number of type b
+		 */
+        LANG_EXT_DERIVED(ComplexToComplex,
+                            "(struct {'a _real; 'a _img} c, type<'b> t)->struct {'b _real; 'b _img} {"
+                                "return (struct {'b _real; 'b _img}) { ('b) c._real, ('b) c._img };"
+                            "}");
+
+
+        /**
+		 * Creates a complex type out of a type
+		 * @param elementType the inner type of the complex number
+		 * @return complex type
+		 */
 		TypePtr getComplexType(const TypePtr& elementType) const {
 			IRBuilder builder(elementType->getNodeManager());
 			return builder.structType(toVector(
@@ -101,17 +133,105 @@ namespace lang {
 			));
 		}
 
-
+        /**
+		 * Get the real part out of a complex number
+		 * @param expr the complex number expression
+		 * @return real part of complex number
+		 */
 		ExpressionPtr getReal(const ExpressionPtr& expr) const {
-		    assert(expr->getType().isa<RefTypePtr>());
-		    return getComplexMember(expr, getComplexReal());
-            //expr->getType().i)
+            if(expr->getType().isa<StructTypePtr>())
+                return getComplexMember(expr, getComplexReal());
+            else
+                return getComplexMember(expr, getRefComplexReal());
+            assert(false && "this is no ref or struct type and so it cannot be a complex type.");
 		}
 
+        /**
+		 * Get the imaginary part out of a complex number
+		 * @param expr the complex number expression
+		 * @return imaginary part of complex number
+		 */
         ExpressionPtr getImg(const ExpressionPtr& expr) const {
-           	assert(expr->getType().isa<RefTypePtr>());
-            return getComplexMember(expr, getComplexImg());
+            if(expr->getType().isa<StructTypePtr>())
+                return getComplexMember(expr, getComplexImg());
+            else
+                return getComplexMember(expr, getRefComplexImg());
+            assert(false && "this is no ref or struct type and so it cannot be a complex type.");
 		}
+
+        /**
+		 * Cast a complex number to a bool. Check if the complex number equals 0+0*i.
+		 * @param expr the complex number expression
+		 * @return boolean expression pointer
+		 */
+        ExpressionPtr castComplexToBool(const ExpressionPtr& expr) const {
+            assert(expr);
+            IRBuilder builder(expr->getNodeManager());
+            ExpressionPtr tmp = expr;
+            if(expr->getType().isa<RefTypePtr>()) {
+                tmp = builder.deref(expr);
+            }
+            assert(tmp->getType().isa<insieme::core::StructTypePtr>());
+            return builder.callExpr(getComplexToBool(), tmp);
+        }
+
+        /**
+		 * Cast a complex number of type a to a complex number of type b
+		 * @param expr the complex number expression
+		 * @param targetTy the target type (e.g. int)
+		 * @return complex number
+		 */
+        ExpressionPtr castComplexToComplex(const ExpressionPtr& expr, const TypePtr& targetTy) const {
+            assert(expr);
+            assert(targetTy);
+            IRBuilder builder(expr->getNodeManager());
+            TypePtr target = targetTy.as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();
+            return builder.callExpr(getComplexToComplex(), expr, builder.getTypeLiteral(target));
+        }
+
+
+        /**
+        * Check if the given expression is a complex number
+        * @param expr the complex number expression
+        * @return boolean value
+        */
+        bool isComplexType(const insieme::core::ExpressionPtr& expr) const {
+            if(expr->getType().isa<insieme::core::StructTypePtr>())
+                return true;
+            if(expr->getType().isa<insieme::core::RefTypePtr>()) {
+                if(expr->getType().as<insieme::core::RefTypePtr>().getElementType().isa<insieme::core::StructTypePtr>())
+                    return true;
+            }
+            return false;
+        }
+
+        /**
+        * Returns the inner type of a complex number
+        * @param expr the complex number expression
+        * @return the inner type of the complex number
+        */
+        insieme::core::TypePtr getComplexMemberType(const insieme::core::ExpressionPtr& expr) const {
+            assert(isComplexType(expr) && "This is not a complex type");
+            if(expr->getType().isa<insieme::core::StructTypePtr>())
+                return expr->getType().as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();
+            return expr->getType().as<insieme::core::RefTypePtr>().getElementType().as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();
+        }
+
+        /**
+        * Returns the real or the imaginary part a complex number
+        * @param expr the complex number expression
+        * @param mem real or imaginary part
+        * @return call expression to retrieve the real/imaginary part of a complex number
+        */
+        insieme::core::ExpressionPtr getComplexMember(const insieme::core::ExpressionPtr& expr, const insieme::core::ExpressionPtr& mem) const {
+            //ret type of inner element
+            insieme::core::IRBuilder builder( expr->getNodeManager() );
+            if(expr->getType().isa<insieme::core::StructTypePtr>()) {
+                return builder.callExpr(getComplexMemberType(expr), mem, expr);
+            } else {
+                return builder.callExpr(builder.refType(getComplexMemberType(expr)), mem, expr);
+            }
+        }
 
 
 	};

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,6 +66,7 @@
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
 
 #include "insieme/backend/addons/cpp_references.h"
+#include "insieme/backend/addons/complex_type.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -86,6 +87,7 @@ namespace ocl_host {
 	OCLHostBackendPtr OCLHostBackend::getDefault(const std::string& kernelDumpPath, bool includeEffortEstimation) {
 		auto res = std::make_shared<OCLHostBackend>(includeEffortEstimation, kernelDumpPath);
 		res->addAddOn<addons::CppReferences>();
+		res->addAddOn<addons::ComplexType>();
 		return res;
 	}
 

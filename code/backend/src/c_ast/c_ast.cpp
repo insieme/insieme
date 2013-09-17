@@ -204,6 +204,12 @@ namespace c_ast {
 		return isVirtual == other.isVirtual && *parent == *other.parent;
 	}
 
+    bool ComplexType::equals(const Node& node) const {
+        assert(dynamic_cast<const ComplexType*>(&node));
+        auto other = static_cast<const ComplexType&>(node);
+        return *other.elementType == *elementType;
+    }
+
 	bool StructType::equals(const Node& node) const {
 		assert(dynamic_cast<const StructType*>(&node));
 		auto other = static_cast<const StructType&>(node);
