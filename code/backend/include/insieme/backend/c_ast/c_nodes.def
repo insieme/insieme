@@ -262,6 +262,11 @@ AST_TERMINAL(MemberFunctionPrototype, Node)
 AST_TERMINAL(MemberFunction, Definition)
 
 
+// --- Complex Extensions ---
+//
+
+AST_TERMINAL(ComplexType, Type)
+
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 

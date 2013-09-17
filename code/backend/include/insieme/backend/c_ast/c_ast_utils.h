@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -67,6 +67,8 @@ namespace c_ast {
 		case UnaryOperation::Reference: 	return 14;
 		case UnaryOperation::SizeOf: 		return 14;
 		case UnaryOperation::Typeid: 		return 14;
+		case UnaryOperation::ComplexReal:	return 14;
+		case UnaryOperation::ComplexImag:	return 14;
 		case UnaryOperation::New:			return  1;
 		case UnaryOperation::Delete:		return  1;
 		case UnaryOperation::DeleteArray:	return  1;
@@ -179,6 +181,10 @@ namespace c_ast {
 	inline AttributedTypePtr attribute(const string& attribute, const TypePtr& type) {
 		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
 	}
+
+    inline ComplexTypePtr complexType(const TypePtr& type) {
+        return type->getManager()->create<c_ast::ComplexType>(type);
+    }
 
 	// --- create literals and variables ------------------------
 
@@ -348,6 +354,14 @@ namespace c_ast {
 
 	inline ExpressionPtr typeId(NodePtr element) {
 		return unaryOp(UnaryOperation::Typeid, element);
+	}
+
+	inline ExpressionPtr complexReal(NodePtr element) {
+		return unaryOp(UnaryOperation::ComplexReal, element);
+	}
+
+	inline ExpressionPtr complexImag(NodePtr element) {
+		return unaryOp(UnaryOperation::ComplexImag, element);
 	}
 
 	// -- Binary Operations -------------------------------------

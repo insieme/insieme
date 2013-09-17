@@ -204,6 +204,12 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ComplexType : public Type {
+	    TypePtr elementType;
+        ComplexType(const TypePtr& type) : Type(NT_ComplexType), elementType(type) {};
+        virtual bool equals(const Node& node) const;
+	};
+
 	struct UnionType : public NamedCompositeType {
 		UnionType(IdentifierPtr name) : NamedCompositeType(NT_UnionType, name) {}
 	};
@@ -418,6 +424,8 @@ namespace c_ast {
 			Reference,
 			SizeOf,
 			Typeid,
+			ComplexReal,
+			ComplexImag,
 			New,
 			Delete,
 			DeleteArray,

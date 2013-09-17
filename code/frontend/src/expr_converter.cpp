@@ -608,7 +608,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 					// http://www.joelonsoftware.com/articles/Unicode.html
 				vectorLenght = stringLit->getBytes().size()/4;
 				elemType = gen.getWChar32();
-		
+
 				size_t size = stringLit->getBytes().size();
 				size_t outSize = size/4;
 				char buff[size];
@@ -625,7 +625,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 				}
 	}
 	assert(elemType);
-	vectorLenght += 1; // add the null char 
+	vectorLenght += 1; // add the null char
 
 	auto expand = [&](char lookup, const char *replacement) {
 		int last = 0;

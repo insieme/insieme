@@ -369,7 +369,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				}
 			}
 		}
-		else if( ctorDecl->isCopyConstructor()) {
+		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
 			//if not userprovided we don't need to add a constructor just create the object to work
 			//with -- for the rest the BE-compiler takes care of
 			return (Visit(callExpr->getArg(0)));

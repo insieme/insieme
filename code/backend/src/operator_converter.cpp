@@ -50,6 +50,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/encoder/encoder.h"
