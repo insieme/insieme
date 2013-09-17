@@ -417,7 +417,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(callExpr, retExpr);
 
-	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
+	// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
+	// spetialy double pointer
+	if (!callExpr->getConstructExpr() ){
 
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
 		core::ExpressionPtr placeHolder;
@@ -442,6 +444,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		}
 	}
 	else{
+		//assert(callExpr->getConstructExpr() && "class need to have Constructor of any kind");
 		// is a class, handle construction
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
@@ -867,6 +870,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) {
+
 	core::ExpressionPtr&& retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// print diagnosis messages
