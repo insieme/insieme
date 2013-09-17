@@ -274,6 +274,46 @@ namespace cba {
 
 				}
 
+				// also: the lambda may be recursive => link recursive call sites with body
+				if (lambdaExpr->isRecursive()) {
+
+					// TODO: use a more efficient and safe way to extract recursive call sites (use something from the core)
+
+					// collect recursive calls
+					VariablePtr recVar = lambdaExpr->getVariable();
+					vector<CallExprAddress> recCalls;
+					visitDepthFirstPrunable(lambdaExpr, [&](const NodeAddress& cur)->bool {
+						if (cur.isa<TypePtr>()) return true;
+						if (auto call = cur.isa<CallExprAddress>()) {
+							if (*call->getFunctionExpr() == *recVar) {
+								recCalls.push_back(call);
+							}
+						}
+
+						// stop if the recursive variable gets re-defined
+						if (auto def = cur.isa<LambdaDefinitionPtr>()) {
+							if (cur.getDepth() > lambda.getDepth() && def->getBindingOf(recVar)) return true;
+						}
+						return false;
+					});
+
+					for(auto call : recCalls) {
+
+						// all other contexts may be reached from any other
+						for(auto& l : cba.getDynamicCallLabels()) {
+
+							// nobody calls context 0
+							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
+							Context srcCtxt = ctxt;
+							srcCtxt.callContext >>= l;
+
+							// connect call site with body
+							connectCallToBody(call, srcCtxt, stmt, ctxt, lambdaExpr, constraints);
+						}
+					}
+				}
+
 				// done
 				return;
 			}

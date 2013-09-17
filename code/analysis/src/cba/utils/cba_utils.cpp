@@ -220,6 +220,21 @@ namespace cba {
 		return (res) ? res : stmt;
 	}
 
+	bool isRecursiveCall(const CallExprAddress& call) {
+		if (!call) return false;
+
+		// check function
+		auto fun = call->getFunctionExpr();
+
+		// needs to be a variable
+		auto var = fun.isa<VariableAddress>();
+		if (!var) return false;
+
+		// and this variable needs to be a recursive function
+		auto def = getDefinitionPoint(var);
+		return !def.isRoot() && def.getParentNode().isa<LambdaBindingPtr>();
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

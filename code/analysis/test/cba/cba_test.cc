@@ -1394,6 +1394,38 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+//	TEST(CBA, Recursion_1) {
+//
+//		// create a simple test case containing recursion
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let fac = (int<4> x)->int<4> {"
+//				"		if (x == 0) return 1;"
+//				"		return x * fac(x-1);"
+//				"	};"
+//				"	"
+////				"	fac(0);"
+//				"	fac(1);"
+//				"	fac(2);"
+//				"	fac(3);"
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//dumpPretty(in);
+//		CBA analysis(code);
+//std::cout << "Valid Contexts: " << analysis.getValidContexts<Context<2,0,0>>() << "\n";
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A, Context<5,0,0>())));
+////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+//createDotDump(analysis);
+////		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+////		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+//	}
+
 //
 //	// Known Issues:
 //	//  - for loops

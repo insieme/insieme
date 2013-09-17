@@ -438,6 +438,11 @@ namespace cba {
 					break;
 				}
 
+				// recursive variables may be skipped (no general data flow involved here)
+				case NT_LambdaBinding: {
+					break;
+				}
+
 				default: {
 					// fail at this point
 					assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType() << "\n";
@@ -523,6 +528,22 @@ namespace cba {
 			// target may be an indirect call => check out all callables
 			Context innerCtxt = ctxt;
 			innerCtxt.callContext <<= l_call;
+
+			// target may be a recursive call (somewhat direct call, we know the target statically, but we have to change the context)
+			if (isRecursiveCall(call)) {
+
+				// get the associated lambda expression
+				auto def = getDefinitionPoint(call->getFunctionExpr().as<VariableAddress>());
+				auto body = def.getParentAddress().as<LambdaBindingAddress>()->getLambda()->getBody();
+
+				// obtain set representing result of called function
+				auto l_body = cba.getLabel(body);
+				auto A_body = cba.getSet(A, l_body, innerCtxt);
+
+				// take over value of function body
+				constraints.add(subset(A_body, A_call));
+				return;
+			}
 
 			// NOTE: - Optimization - we only need to know the body, not the context it was created in (for binds)
 			//  => we can iterate through the list of free functions, not the callables

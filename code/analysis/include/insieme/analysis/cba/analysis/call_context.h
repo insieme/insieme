@@ -82,14 +82,30 @@ namespace cba {
 			if (!fun) {
 				// => this function can only reached statically
 				constraints.add(elem(0, pred_res));
+
+				// consider potential recursive case
+				if (isRecursiveCall(call)) {
+					// TODO: add all recursive calls within definition block!
+					constraints.add(elem(cba.getLabel(call), pred_res));
+				}
+
 				return;
 			}
 
-			// ----- check whether function forwarding can be traced statically ----
+//			// ----- check whether function forwarding can be traced statically ----
+//
+//			if (auto staticUses = cba.getAllStaticUses(fun)) {
+//				// if uses can be determined statically, we can just consider them
+//				for(Label l_call : *staticUses) {
+//					constraints.add(elem(l_call, pred_res));
+//				}
+//				return;
+//			}
 
-			if (auto staticUses = cba.getAllStaticUses(fun)) {
+			// utilize statically known context-predecessor list
+			if (auto staticPredecessors = cba.getAllStaticPredecessors(call)) {
 				// if uses can be determined statically, we can just consider them
-				for(Label l_call : *staticUses) {
+				for(Label l_call : *staticPredecessors) {
 					constraints.add(elem(l_call, pred_res));
 				}
 				return;

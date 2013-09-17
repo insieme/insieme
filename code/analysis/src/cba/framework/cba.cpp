@@ -66,34 +66,8 @@ namespace cba {
 				}
 				return res;
 		  }),
-		  setCounter(0), idCounter(0) {
-//
-//		// fill dynamicCalls
-//		core::visitDepthFirst(root, [&](const CallExprAddress& call) {
-//			auto fun = call->getFunctionExpr();
-//			if (fun.isa<LiteralPtr>() || fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) return;
-//			this->dynamicCalls.push_back(call);
-//		});
-//
-//		// fill dynamic call labels
-//		dynamicCallLabels = ::transform(dynamicCalls, [&](const CallExprAddress& cur) { return getLabel(cur); });
-//		dynamicCallLabels.push_back(0);
-//
-//		// obtain list of callable functions
-//		callables = getAllCallableTerms(*this, root);
-//
-//		// and a list of all free functions
-//		freeFunctions.clear();
-//		for(const auto& cur : callables) {
-//			if (!contains(freeFunctions, cur.definition)) {
-//				freeFunctions.push_back(cur.definition);
-//			}
-//		}
-//
-//		// and a list of all memory locations
-//		locations = getAllLocations(*this, root);
-
-	};
+		  setCounter(0), idCounter(0)
+	{ };
 
 	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
 
@@ -265,14 +239,34 @@ namespace cba {
 		return callSiteCache[fun] = getStaticUses(*this, fun);
 	}
 
-	const CBA::OptCallSiteList& CBA::getAllStaticPredecessors(const core::StatementAddress& stmt) {
+	CBA::OptCallSiteList CBA::getAllStaticPredecessors(const core::CallExprAddress& call) {
+
+		// TODO: clean up this mess ..
+
 		static const CBA::OptCallSiteList root = toVector<Label>(0);
-		auto fun = getSurroundingFreeFunction(stmt);
+		auto fun = getSurroundingFreeFunction(call);
 		if (!fun) {
-			return root;
+			auto res = root;
+
+			if (isRecursiveCall(call)) {
+				// add current label to candidate list (todo: also add labels of all other recursive calls in the definition)
+				res->push_back(getLabel(call));
+			}
+
+			return res;
 		}
 
-		return getAllStaticUses(fun);
+		// get static uses
+		auto res = getAllStaticUses(fun);
+		if (!res) return res;
+
+		// if static uses are clear, we also have to add recursive cases
+		if (isRecursiveCall(call)) {
+			// add current label to candidate list (todo: also add labels of all other recursive calls in the definition)
+			res->push_back(getLabel(call));
+		}
+
+		return res;
 	}
 
 	const CBA::ContextFreeCallableList& CBA::getContextFreeCallableCandidate(const core::CallExprAddress& call) {

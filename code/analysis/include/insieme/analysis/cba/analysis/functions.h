@@ -85,6 +85,26 @@ namespace cba {
 
 		}
 
+		void visitVariable(const VariableAddress& var, const Context& ctxt, Constraints& constraints) {
+
+			// special case - lambda-bindings
+			if (!var.isRoot() && var.getParentNode().isa<LambdaBindingPtr>()) {
+
+				auto value = var.getParentAddress(3).as<ExpressionAddress>();
+				auto l_var = cba.getLabel(var);
+				auto f_var = cba.getSet(f, l_var, ctxt);
+
+				constraints.add(elem(value, f_var));
+
+			} else {
+
+				// default handling
+				super::visitVariable(var, ctxt, constraints);
+
+			}
+
+		}
+
 		void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling

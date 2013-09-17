@@ -626,17 +626,19 @@ namespace cba {
 		/**
 		 * Obtains a list of statically known predecessors of the given statement in
 		 * potential call sequences. The optional result will be empty if there is none.
+		 * If the uses can not be determined statically, the optional result will not be filled.
 		 */
-		const OptCallSiteList& getAllStaticPredecessors(const core::StatementAddress& stmt);
+		OptCallSiteList getAllStaticPredecessors(const core::CallExprAddress& call);
 
 		/**
 		 * Obtains a list of statically known predecessors of the given label in
 		 * potential call sequences. The optional result will be empty if there is none.
+		 * If the uses can not be determined statically, the optional result will not be filled.
 		 */
-		const OptCallSiteList& getAllStaticPredecessors(const Label& label) {
+		OptCallSiteList getAllStaticPredecessors(const Label& label) {
 			static const OptCallSiteList zero = toVector<Label>(0);
 			if (label == 0) return zero;
-			return getAllStaticPredecessors(getStmt(label));
+			return getAllStaticPredecessors(getStmt(label).as<CallExprAddress>());
 		}
 
 
@@ -647,6 +649,9 @@ namespace cba {
 		std::map<core::CallExprAddress, OptContextFreeCallableList> contextFreeCallableCandidateCache;
 
 		const ContextFreeCallableList& getContextFreeCallableCandidate(const core::CallExprAddress& call);
+
+
+		// -------------- Static Context Filter -----------------
 
 		bool isValid(const std::array<Label, 0>& call_ctxt) { return true; }
 		bool isValid(const std::array<Label, 1>& call_ctxt) { return contains(getDynamicCallLabels(), call_ctxt.front()); }
@@ -671,6 +676,11 @@ namespace cba {
 		template<unsigned a, unsigned b, unsigned c>
 		bool isValid(const Context<a,b,c>& ctxt) {
 			return isValid(ctxt.callContext);
+		}
+
+		template<typename Context = DefaultContext>
+		const vector<Context>& getValidContexts() {
+			return getContainer<Context>().getContexts(*this);
 		}
 
 		// ----------------------- some debugging utilities ---------------------------

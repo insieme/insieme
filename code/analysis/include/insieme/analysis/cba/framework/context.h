@@ -275,7 +275,11 @@ namespace cba {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << "[" << callContext << "," << threadContext << "]";
+			out << "[";
+			if (call_context::size > 0) out << callContext;
+			if (call_context::size > 0 && thread_context::size > 0) out << ",";
+			if (thread_context::size > 0) out << threadContext;
+			return out << "]";
 		};
 	};
 

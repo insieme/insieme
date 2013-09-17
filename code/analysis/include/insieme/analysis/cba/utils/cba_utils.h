@@ -56,6 +56,8 @@ namespace cba {
 
 	core::StatementPtr getRootStmt(const core::NodeAddress& node);
 
+	bool isRecursiveCall(const core::CallExprAddress& call);
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
