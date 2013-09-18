@@ -61,6 +61,7 @@ using namespace llvm;
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
 		boost::replace_all(str, "::", "_"); \
+		boost::replace_all(str, " ", "_"); \
 }
 
 
@@ -94,6 +95,7 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 
 
 std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+
 	std::string name = funcDecl->getQualifiedNameAsString();
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl))
 		if (method->isVirtual())
@@ -119,10 +121,17 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
 
-	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
-		name.append("_c");
+	// beware of spetialized functions, the type does not show off
+	if (funcDecl->isFunctionTemplateSpecialization ()){
+		for(unsigned i =0; i< funcDecl->getTemplateSpecializationArgs()->size(); ++i){
+			name.append ("_" + funcDecl->getTemplateSpecializationArgs()->get(i).getAsType().getAsString());
+		}
+	}
 
 	REMOVE_SYMBOLS(name);
+	
+	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
+		name.append("_c");
 
     //check for dummyss or dummygg and replace it with the original name
 	boost::algorithm::replace_last(name, "dummyss", "operator<<");
@@ -130,7 +139,6 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//if nothing was found check for the other ones
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
-
 
 	return name;
 }
