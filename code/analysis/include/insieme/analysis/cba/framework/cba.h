@@ -48,6 +48,7 @@
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/constraint_generator.h"
+#include "insieme/analysis/cba/framework/call_site_manager.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
@@ -432,8 +433,10 @@ namespace cba {
 
 		Solver solver;
 
+		// a counter to be incremented for generating fresh set ids
 		int setCounter;
 
+		// the index for all set ids, call sites and locations for individual context types
 		index_map_type indices;
 
 		// two caches for resolving labels and variables
@@ -445,6 +448,8 @@ namespace cba {
 		std::unordered_map<Label, core::StatementAddress> reverseLabels;
 		std::unordered_map<Variable, core::VariableAddress> reverseVars;
 
+		// a utility deducing caller <=> callee relations
+		CallSiteManager callSiteMgr;
 
 		// TODO: move this part to some plug-in system
 
@@ -466,6 +471,9 @@ namespace cba {
 			return root;
 		}
 
+		CallSiteManager& getCallSiteManager() {
+			return callSiteMgr;
+		}
 
 		// -- main entry point for running analysis --
 

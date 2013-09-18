@@ -39,6 +39,8 @@
 #include <array>
 #include <vector>
 
+#include "insieme/analysis/cba/framework/_forward_decl.h"
+
 #include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
