@@ -803,6 +803,17 @@ namespace core {
 		}
 
 		/**
+		 * Obtains a list of addresses pointing to locations referencing the given recursive variable
+		 * utilized for triggering recursive calls.
+		 *
+		 * @param variable the recursive variable to be searched for
+		 * @return the list of recursive references within this definition, rooted by this definition.
+		 */
+		vector<VariableAddress> getRecursiveCallLocations(const VariablePtr& variable) const {
+			return SupportAccessor<Derived,Ptr>::getNode().getRecursiveCallLocations(variable);
+		}
+
+		/**
 		 * Peels this definition the given number of times for the given variable.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
@@ -862,6 +873,15 @@ namespace core {
 		 * @return true if recursive, false otherwise
 		 */
 		bool isRecursivelyDefined(const VariablePtr& variable) const;
+
+		/**
+		 * Obtains a list of addresses pointing to locations referencing the given recursive variable
+		 * utilized for triggering recursive calls.
+		 *
+		 * @param variable the recursive variable to be searched for
+		 * @return the list of recursive references within this definition, rooted by this definition.
+		 */
+		vector<VariableAddress> getRecursiveCallLocations(const VariablePtr& variable) const;
 
 		/**
 		 * Peels this definition for the given variable and number of times.

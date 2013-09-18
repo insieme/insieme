@@ -169,7 +169,7 @@ namespace core {
 		};
 
 
-		const vector<VariableAddress>& getRecursiveCallLocations(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
+		const vector<VariableAddress>& getRecursiveCallLocationsInternal(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
 			// get lambda binding
 			assert(definition->getBindingOf(var) && "Requesting recursive status of invalid rec-lambda variable!");
 
@@ -227,7 +227,14 @@ namespace core {
 
 
 	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
-		return !getRecursiveCallLocations(this, variable).empty();
+		return !getRecursiveCallLocationsInternal(this, variable).empty();
+	}
+
+	vector<VariableAddress> LambdaDefinition::getRecursiveCallLocations(const VariablePtr& variable) const {
+		auto binding = LambdaDefinitionAddress(LambdaDefinitionPtr(this))->getDefinitionOf(variable);
+		return ::transform(getRecursiveCallLocationsInternal(this, variable), [&](const VariableAddress& cur) {
+			return concat(binding, cur);
+		});
 	}
 
 	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
@@ -239,7 +246,7 @@ namespace core {
 		}
 		// compute peeled code versions for each variable
 		std::map<VariablePtr, LambdaExprPtr> peeled;
-		for(const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+		for(const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
 			auto pos = peeled.find(cur);
 			if (pos == peeled.end()) {
 				peeled[cur] = peel(manager, cur, numTimes - 1);
@@ -248,7 +255,7 @@ namespace core {
 
 		// build up replacement map
 		std::map<NodeAddress, NodePtr> replacements;
-		for (const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+		for (const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
 			replacements[cur] = peeled[cur];
 		}
 
@@ -278,7 +285,7 @@ namespace core {
 
 			// build up replacement map
 			std::map<NodeAddress, NodePtr> replacements;
-			for (const VariableAddress& var : getRecursiveCallLocations(this, cur->getVariable())) {
+			for (const VariableAddress& var : getRecursiveCallLocationsInternal(this, cur->getVariable())) {
 				replacements[var] = unrolled[var];
 			}
 
