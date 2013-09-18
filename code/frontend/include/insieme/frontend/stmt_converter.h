@@ -160,7 +160,16 @@ public:
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitNullStmt(clang::NullStmt* nullStmt);
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							GOTO STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitGotoStmt(clang::GotoStmt* gotoStmt);
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							LABEL STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper VisitLabelStmt(clang::LabelStmt* labelStmt);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
@@ -200,6 +209,7 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, CompoundStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
+    CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -274,6 +284,7 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, ContinueStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
+    CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
 
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(IntegerLiteral)

@@ -52,6 +52,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
+#include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/annotations/c/extern.h"
@@ -265,7 +266,14 @@ namespace backend {
 
 		// handle C string literals (which are of type ref<vector<...>>)
 		if (ptr->getStringValue()[0] == '"') {
-			return res;		// just print it and be done
+			core::IRBuilder builder(ptr->getNodeManager());
+			assert(ptr->getType().isa<core::RefTypePtr>());
+			core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
+			if(type.isa<core::VectorTypePtr>() && builder.getLangBasic().isWChar(type.as<core::VectorTypePtr>()->getElementType())){
+				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
+				res = toLiteral("L"+ptr->getStringValue());
+			}
+			return res;
 		}
 
 		// handle literals declared within other header files
@@ -640,7 +648,7 @@ namespace backend {
 		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
 			initValue = core::analysis::getArgument(initValue, 0);
 		}
-		
+
 		return convertExpression(context, initValue);
 	}
 
@@ -669,12 +677,12 @@ namespace backend {
 		context.getDependencies().insert(info_iter.typeInfo->definition);
 
 		auto initVector = toVector(std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())));
-		
+
 		// Process:
 		// For both "end" and "step" expressions:
 		// - if simple: use directly
 		// - if not: build variables to store results
-		
+
 		// handle step
 		core::ExpressionPtr step = ptr->getStep();
 		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
@@ -683,7 +691,7 @@ namespace backend {
 			c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
 			initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
 			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
-		} 
+		}
 		else { // use pre(inc/dec) if abs(step) == 1
 			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
 			if(form.isConstant()) {
@@ -779,6 +787,16 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
 		// just create a throw stmt within the c_ast
 		return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
+	}
+
+	c_ast::NodePtr StmtConverter::visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context) {
+		// just create a goto stmt within the c_ast
+		return converter.getCNodeManager()->create<c_ast::Goto>(ptr->getLabel()->getValue());
+	}
+
+	c_ast::NodePtr StmtConverter::visitLabelStmt(const core::LabelStmtPtr& ptr, ConversionContext& context) {
+		// just create a goto stmt within the c_ast
+		return converter.getCNodeManager()->create<c_ast::Label>(ptr->getLabel()->getValue());
 	}
 
 	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {

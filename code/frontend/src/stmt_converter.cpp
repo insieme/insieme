@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -571,7 +571,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		}
 
 		core::StatementPtr irBody = stmtutils::tryAggregateStmts(builder, body);
-		
+
 		if(forStmt->getInc())
 		{
 			vector<core::ContinueStmtAddress> conts = getContinues( irBody );
@@ -1096,14 +1096,29 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitNullStmt(clang::NullStmt* 
 //							GOTO  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::StmtConverter::VisitGotoStmt(clang::GotoStmt* gotoStmt) {
-	clang::Preprocessor& pp = convFact.getPreprocessor();
-	pp.Diag(
-			gotoStmt->getLocStart(),
-			pp.getDiagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
-					"Gotos are not handled by the Insieme compielr"));
-	assert(false);
-	return stmtutils::StmtWrapper();
+    core::StatementPtr retIr;
+	LOG_STMT_CONVERSION(gotoStmt, retIr);
+
+    core::StringValuePtr str = builder.stringValue(gotoStmt->getLabel()->getName());
+	retIr = builder.gotoStmt(str);
+	return retIr;
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							LABEL  STATEMENT
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+stmtutils::StmtWrapper Converter::StmtConverter::VisitLabelStmt(clang::LabelStmt* labelStmt) {
+    //core::StatementPtr retIr;
+	//LOG_STMT_CONVERSION(labelStmt, retIr);
+	core::StringValuePtr str = builder.stringValue(labelStmt->getName());
+	stmtutils::StmtWrapper retIr = stmtutils::StmtWrapper(builder.labelStmt(str));
+
+	clang::Stmt * stmt = labelStmt->getSubStmt();
+	stmtutils::StmtWrapper retIr2 = Visit(stmt);
+	std::copy(retIr2.begin(), retIr2.end(), std::back_inserter(retIr));
+	return retIr;
+}
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							  STATEMENT

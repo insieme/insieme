@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -50,6 +50,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/complex_extension.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
@@ -125,12 +126,12 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	// char types
 	case BuiltinType::Char_U:
 	case BuiltinType::UChar:		return gen.getUInt1();
-	case BuiltinType::Char16:		return gen.getInt2();
-	case BuiltinType::Char32:		return gen.getInt4();
+	case BuiltinType::Char16:		return gen.getWChar16();
+	case BuiltinType::Char32:		return gen.getWChar32();
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
-	case BuiltinType::WChar_S:		return gen.getWChar();
-	case BuiltinType::WChar_U:		return gen.getWChar();
+	case BuiltinType::WChar_S:		return gen.getWChar32();
+	case BuiltinType::WChar_U:		return gen.getWChar32();
 
 	// integer types
 	case BuiltinType::UShort:		return gen.getUInt2();
@@ -163,9 +164,10 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 //								COMPLEX TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
-	// FIXME
-	assert(false && "ComplexType not yet handled!");
-	return core::TypePtr();
+    //extract the real type
+    const core::TypePtr& type = convert(bulinTy->getElementType().getTypePtr());
+    assert(type && "Conversion of complex element type failed.");
+    return  mgr.getLangExtension<core::lang::ComplexExtensions>().getComplexType(type);
 }
 
 // ------------------------   ARRAYS  -------------------------------------

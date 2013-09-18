@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -67,15 +67,18 @@ TYPE(Any, "any")
 TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
-TYPE(WChar,  "wchar")
+TYPE(WChar16,  "wchar16")
+TYPE(WChar32,  "wchar32")
 TYPE(String, "ref<array<char,1>>")
 TYPE(Identifier, "identifier")
 
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
 GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
 GROUP(Int, UnsignedInt, SignedInt)
+GROUP(WChar, WChar16, WChar32)
 
 GROUP(Primitive, Any, Bool, Char, WChar, Int, Real)
+GROUP(IRBuiltin, Primitive, Unit)
 
 TYPE(IntGen, "int<#a>")
 TYPE(UIntGen,"uint<#a>")

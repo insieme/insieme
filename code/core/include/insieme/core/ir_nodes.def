@@ -214,6 +214,10 @@ AST_TERMINAL(SwitchStmt, Statement)
 AST_TERMINAL(ThrowStmt, Statement)
 AST_TERMINAL(TryCatchStmt, Statement)
 
+//labels
+AST_TERMINAL(LabelStmt, Statement)
+AST_TERMINAL(GotoStmt, Statement)
+
 //
 // --- Expressions ---
 //

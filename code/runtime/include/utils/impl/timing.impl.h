@@ -51,7 +51,7 @@ int irt_nanosleep_timespec(const struct timespec *wait_time) {
 }
 
 int irt_nanosleep(uint64 wait_time) {
-	struct timespec t = {wait_time/1000000000ull, wait_time%1000000000ull};
+	struct timespec t = {(__time_t)(wait_time/1000000000ull), (__time_t)(wait_time%1000000000ull)};
 	return nanosleep(&t, NULL);
 }
 

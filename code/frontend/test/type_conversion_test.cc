@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -89,9 +89,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "int<2>");
+	CHECK_BUILTIN_TYPE(Char16, "wchar16");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "int<4>");
+	CHECK_BUILTIN_TYPE(Char32, "wchar32");
 	// WChar
 	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
 

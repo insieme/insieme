@@ -357,7 +357,7 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	// TODO implement custom (faster)
 	irt_work_item_range *r = &wi->range;
-	uint64 offsets[] = {r->begin, r->begin + ( (r->end - r->begin) / 2)};
+	uint64 offsets[] = {(uint32)r->begin, (uint32)(r->begin + ( (r->end - r->begin) / 2))};
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {

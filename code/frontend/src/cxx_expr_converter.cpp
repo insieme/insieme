@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -184,7 +184,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 			return retIr;
 		}
 	}
-
 	return retIr = Converter::ExprConverter::VisitDeclRefExpr (declRef);
 }
 
@@ -346,8 +345,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			if(ctorDecl->getParent()->isPOD()) {
 				if (numElements)
 					return builder.callExpr(
-							builder.getLangBasic().getVectorInitUniform(), 
-							builder.undefinedVar(irClassType), 
+							builder.getLangBasic().getVectorInitUniform(),
+							builder.undefinedVar(irClassType),
 							builder.getIntParamLiteral(numElements)
 						);
 				else
@@ -357,19 +356,20 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				//if not userprovided we don't need to add a constructor just create the object to work
 				//with -- for the rest the BE-compiler takes care of
 
+                //if we cannot create the struct type we skip this block
 				core::ExpressionPtr ctor;
 				if (core::StructTypePtr structType = irClassType.isa<core::StructTypePtr>()) {
 					ctor = core::analysis::createDefaultConstructor(structType);
-				} else {
+					return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
+				} else if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()) {
 					// this is a 'named' type
-					core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).as<core::StructTypePtr>();
-					ctor = core::analysis::createDefaultConstructor(structType);
-					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+                    ctor = core::analysis::createDefaultConstructor(structType);
+                    ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+                    return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
 				}
-				return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
 			}
 		}
-		else if( ctorDecl->isCopyConstructor()) {
+		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
 			//if not userprovided we don't need to add a constructor just create the object to work
 			//with -- for the rest the BE-compiler takes care of
 			return (Visit(callExpr->getArg(0)));
@@ -405,6 +405,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		dumpPretty(ret);
 	}
 
+    assert(ret && "ConstructExpr could not be translated");
 	return ret;
 }
 
@@ -416,7 +417,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(callExpr, retExpr);
 
-	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
+	// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
+	// spetialy double pointer
+	if (!callExpr->getConstructExpr() ){
 
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
 		core::ExpressionPtr placeHolder;
@@ -441,6 +444,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		}
 	}
 	else{
+		//assert(callExpr->getConstructExpr() && "class need to have Constructor of any kind");
 		// is a class, handle construction
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
@@ -580,7 +584,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	if( targetTy != srcTy && *targetTy != *srcTy ) {
 		subExpr = convFact.tryDeref(subExpr);
 	}
-	
+
 	//assert(*subExpr->getType() == *targetTy); NOTE: we can not compare types this easy, complete
 	//structs may not agree with the genereated generic type
 	/*
@@ -669,6 +673,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			core::VariablePtr        var  = decl->getVariable();
 			core::ExpressionPtr      init = decl->getInitialization();
 
+			VLOG(2) << " expr: " << innerIr;
+			VLOG(2) << " cleanup: " << var << " (type: " << var->getType() << ")  init: " << init << std::endl;
+
 			core::ExpressionPtr newIr;
 			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
 				// it might happen that we try to materialize an object just to use it by reference,
@@ -686,13 +693,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
 				core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
 				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
+
+				if (*newIr == *innerIr){
+					if(insieme::core::analysis::isConstructorCall(init)) {
+						core::ExpressionPtr trg = builder.deref(var);
+						core::ExpressionPtr subst = builder.deref(init);
+						newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
+					}
+				}
 			}
 
 			if (*newIr == *innerIr){
 				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order
+				VLOG(2) << "	cleanup is a temp";
 			}
 			else{
 				innerIr = newIr;
+				VLOG(2) << "	cleanup is replaced";
 			}
 		}
 	}
@@ -707,6 +724,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 
 	if (stmtList.empty()){
 		// we avoided all expressions to be cleanup, no extra lambda needed
+		VLOG(2) << "	cleanup expression is simplyfied and avoided";
 		return innerIr;
 	}
 
@@ -753,6 +771,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			params.push_back(var);
 	}
 
+
+	// if the This literal is used in the expression, we extract it and incorporate an extra paramenter 
+	// with the class type
+	core::ExpressionPtr thisExpr;
+	core::visitDepthFirstOnce (lambdaBody, [&] (const core::LiteralPtr& lit){
+		core::StringValuePtr name =  lit->getValue();
+		std::string str =  name->getValue();
+		if (str == "this")
+			thisExpr = lit.as<core::ExpressionPtr>();
+	});
+
+	if (thisExpr){
+		core::VariablePtr thisReplacement = builder.variable(thisExpr->getType());
+		params.push_back(thisReplacement);
+		lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, thisExpr, thisReplacement, true);
+	}
+
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
 
 	//build the lambda call and its arguments
@@ -765,6 +800,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		else
 			packedArgs.push_back(builder.deref(varPtr));
 	}
+
+	// to end with, we just add the this to the argument list if needed
+	if (thisExpr)
+		packedArgs.push_back(thisExpr);
 
 	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 }
@@ -831,6 +870,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) {
+
 	core::ExpressionPtr&& retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// print diagnosis messages

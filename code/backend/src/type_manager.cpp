@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -56,6 +56,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/utils/logging.h"
 
@@ -292,6 +293,7 @@ namespace backend {
 		// --------------------- Implementations of resolution utilities --------------------
 
 		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+			const auto& gen = type->getNodeManager().getLangBasic();
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -299,8 +301,8 @@ namespace backend {
 				return pos->second;
 			}
 
-			// check whether there is an annotated include file (intercepted type)
-			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type)) {
+			// check whether there is an annotated include file (intercepted type) [avoir primitives and unit, those could have header as well]
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !gen.isIRBuiltin(type)) {
 				auto genericType = type.as<core::GenericTypePtr>();
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
@@ -339,6 +341,16 @@ namespace backend {
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 				addInfo(type,info);
+				return info;
+			}
+
+			// the type might not be generic but be anotated. belongs to some system header and 
+			// redeclaration has to be avoided
+			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
+				const string& name   = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type, info);
 				return info;
 			}
 
@@ -464,17 +476,23 @@ namespace backend {
 				return type_info_utils::createInfo(manager, "long double");
 			}
 
+			// ------------ Char and Wide char support ----
 			if (basic.isChar(ptr)) {
 				return type_info_utils::createInfo(manager, "char");
 			}
-			if (basic.isWChar(ptr)) {
-				return type_info_utils::createInfo(manager, "wchar_t");
+			if (basic.isWChar16(ptr)) {
+				return type_info_utils::createInfo(manager, "wchar_t");  // windows likes 16bits wchar
+			}
+			if (basic.isWChar32(ptr)) {
+				return type_info_utils::createInfo(manager, "wchar_t");  // in unix is 32bit wide
 			}
 
+			// ------------ string  -----------------------
 			if (basic.isString(ptr)) {
 				return type_info_utils::createInfo(manager, "char*");
 			}
 
+			// ------------ list  -------------------- ----
 			if (basic.isVarList(ptr)) {
 				return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>());
 			}

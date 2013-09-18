@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -370,7 +371,6 @@ return castScalar (gen.getBool(), expr);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 									  const clang::CastExpr* castExpr){
-
 const core::IRBuilder& builder = convFact.getIRBuilder();
 const core::lang::BasicGenerator& gen = builder.getLangBasic();
 core::NodeManager& mgr = convFact.getNodeManager();
@@ -380,16 +380,16 @@ core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
 
 core::TypePtr&& exprTy = expr->getType();
 
-//	if (VLOG_IS_ON(2)){
-//		VLOG(2) << "####### Expr: #######" << std::endl;
-//		dumpDetail(expr);
-//		VLOG(2) << "####### Expr Type: #######" << std::endl;
-//		dumpDetail(exprTy);
-//		VLOG(2)<< "####### cast Type: #######" << std::endl;
-//		dumpDetail(targetTy);
-//		VLOG(2)  << "####### clang: #######" << std::endl;
-//		castExpr->dump();
-//	}
+	//if (VLOG_IS_ON(2)){
+	//	VLOG(2) << "####### Expr: #######" ;
+	//	VLOG(2) << (expr);
+	//	VLOG(2) << "####### Expr Type: #######" ;
+	//	VLOG(2) << (exprTy);
+	//	VLOG(2) << "####### cast Type: #######" ;
+	//	VLOG(2) << (targetTy);
+	//  VLOG(2)  << "####### clang: #######" << std::endl;
+    //  castExpr->dump();
+	//}
 
 // it might be that the types are already fixed:
 // like LtoR in arrays, they will allways be a ref<...>
@@ -519,7 +519,7 @@ switch (castExpr->getCastKind()) {
 			// cast from void*
 			if (gen.isAnyRef(exprTy)) {
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getRefReinterpret(),
+				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
 
@@ -530,7 +530,7 @@ switch (castExpr->getCastKind()) {
 				//expression remove it
 				innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
 			}
-			return builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
+			return builder.callExpr(targetTy, gen.getRefReinterpret(),
 									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
@@ -579,9 +579,50 @@ switch (castExpr->getCastKind()) {
 			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//  PARTIALY IMPLEMENTED
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		case clang::CK_FloatingRealToComplex 	:
+        case clang::CK_IntegralRealToComplex 	:
+		    return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtensions>().getConstantToComplex(), expr);
+		/*A conversion of a floating point real to a floating point complex of the original type. Injects the value as the
+		* real component with a zero imaginary component. float -> _Complex float.
+		* */
+		/*Converts from an integral real to an integral complex whose element type matches the source. Injects the value as the
+		* real component with a zero imaginary component. long -> _Complex long.
+		* */
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		case clang::CK_FloatingComplexCast 	:
+        case clang::CK_FloatingComplexToIntegralComplex 	:
+		case clang::CK_IntegralComplexCast 	:
+		case clang::CK_IntegralComplexToFloatingComplex 	:
+            return mgr.getLangExtension<core::lang::ComplexExtensions>().castComplexToComplex(expr, targetTy);
+		/*Converts between different floating point complex types. _Complex float -> _Complex double.
+		* */
+		/*Converts from a floating complex to an integral complex. _Complex float -> _Complex int.
+		* */
+		/*Converts between different integral complex types. _Complex char -> _Complex long long _Complex unsigned int ->
+		* _Complex signed int.
+		* */
+		/*Converts from an integral complex to a floating complex. _Complex unsigned -> _Complex float.
+		* */
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		case clang::CK_FloatingComplexToReal 	:
+		case clang::CK_IntegralComplexToReal 	:
+		    return mgr.getLangExtension<core::lang::ComplexExtensions>().getReal(expr);
+		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
+		* component. _Complex long double -> long double.
+		* */
+		/*Converts an integral complex to an integral real of the source's element type by discarding the imaginary component.
+		* _Complex short -> short.
+		* */
+
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////
+        case clang::CK_IntegralComplexToBoolean 	:
+		case clang::CK_FloatingComplexToBoolean 	:
+		    /*Converts a complex to bool by comparing against 0+0i.
+		* */
+            return mgr.getLangExtension<core::lang::ComplexExtensions>().castComplexToBool(expr);
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueBitCast 	:
@@ -596,7 +637,7 @@ switch (castExpr->getCastKind()) {
 		    //the target type is a ref type because lvalue
 		    //bitcasts look like reinterpret_cast<type&>(x)
 		    targetTy = builder.refType(targetTy);
-            core::CallExprPtr newExpr = builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
+            core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
                                                          expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		    //wrap it as cpp ref
 			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
@@ -615,11 +656,23 @@ switch (castExpr->getCastKind()) {
 				return builder.getZero(targetTy);
 			}
 			else{
-				//FIXME:: might be a cast to function type
-				return expr;
+
+				// it might be that is a reinterpret cast already, we can avoid chaining
+				if (core::analysis::isCallOf(expr, gen.getRefReinterpret())){
+					expr = expr.as<core::CallExprPtr>()[0];
+				}
+
+				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
+				return builder.callExpr(targetTy, gen.getRefReinterpret(),
+										expr, builder.getTypeLiteral(elementType));
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//  PARTIALY IMPLEMENTED
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_ToVoid 	:
 		//Cast to void, discarding the computed value. (void) malloc(2048)
 		{
@@ -835,51 +888,6 @@ switch (castExpr->getCastKind()) {
 
 		case clang::CK_ObjCObjectLValueCast 	:
 		/*Converting between two Objective-C object types, which can occur when performing reference binding to an Objective-C object.
-		* */
-
-		case clang::CK_FloatingRealToComplex 	:
-		/*A conversion of a floating point real to a floating point complex of the original type. Injects the value as the
-		* real component with a zero imaginary component. float -> _Complex float.
-		* */
-
-		case clang::CK_FloatingComplexToReal 	:
-		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
-		* component. _Complex long double -> long double.
-		* */
-
-		case clang::CK_FloatingComplexToBoolean 	:
-		/*Converts a floating point complex to bool by comparing against 0+0i.
-		* */
-
-		case clang::CK_FloatingComplexCast 	:
-		/*Converts between different floating point complex types. _Complex float -> _Complex double.
-		* */
-
-		case clang::CK_FloatingComplexToIntegralComplex 	:
-		/*Converts from a floating complex to an integral complex. _Complex float -> _Complex int.
-		* */
-
-		case clang::CK_IntegralRealToComplex 	:
-		/*Converts from an integral real to an integral complex whose element type matches the source. Injects the value as the
-		* real component with a zero imaginary component. long -> _Complex long.
-		* */
-
-		case clang::CK_IntegralComplexToReal 	:
-		/*Converts an integral complex to an integral real of the source's element type by discarding the imaginary component.
-		* _Complex short -> short.
-		* */
-
-		case clang::CK_IntegralComplexToBoolean 	:
-		/*Converts an integral complex to bool by comparing against 0+0i.
-		* */
-
-		case clang::CK_IntegralComplexCast 	:
-		/*Converts between different integral complex types. _Complex char -> _Complex long long _Complex unsigned int ->
-		* _Complex signed int.
-		* */
-
-		case clang::CK_IntegralComplexToFloatingComplex 	:
-		/*Converts from an integral complex to a floating complex. _Complex unsigned -> _Complex float.
 		* */
 
 		case clang::CK_ARCProduceObject 	:

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -62,6 +62,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -72,6 +73,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 
+#include <iconv.h>
 
 using namespace insieme;
 using namespace exprutils;
@@ -533,8 +535,25 @@ core::ExpressionPtr Converter::ExprConverter::VisitCharacterLiteral(const clang:
 	string value;
 	unsigned int v = charLit->getValue();
 
-	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
+	core::TypePtr elemType;
+	switch (charLit->getKind()){
 
+		case clang::CharacterLiteral::Ascii:
+				elemType = gen.getChar();
+				break;
+		case clang::CharacterLiteral::UTF16:
+				elemType = gen.getWChar16();
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+		case clang::CharacterLiteral::UTF32:
+		case clang::CharacterLiteral::Wide:
+				elemType = gen.getWChar32();
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+	}
+	assert(elemType);
+
+	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
 		value.append("\'");
 		if(v == '\\') value.append("\\\\");
 		else if(v == '\n') value.append("\\n");
@@ -556,16 +575,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitCharacterLiteral(const clang:
 		}
 		value.append("\'");
 	}
-	else
-		/// FIXME: windows and linux implementation may differ here, need to study the case
-		assert (false && "widechar not supported");
 
-	retExpr = builder.literal(
-			value,
-			(charLit->getKind() == clang::CharacterLiteral::Wide ?
-					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar()));
-
-	return retExpr;
+	return retExpr = builder.literal( value, elemType);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -575,7 +586,47 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(stringLit, retExpr);
 
-	std::string strValue = stringLit->getString().str();
+	// retrieve data itself
+	std::string strValue = stringLit->getBytes().str();
+	int vectorLenght = strValue.length();
+	core::TypePtr elemType;
+	switch (stringLit->getKind()){
+
+		case clang::StringLiteral::Ascii:
+		case clang::StringLiteral::UTF8:
+				elemType = gen.getChar();
+				break;
+		case clang::StringLiteral::UTF16:
+				elemType = gen.getWChar16();
+				vectorLenght /= 2;
+				convFact.warnings.insert("Insieme widechar support is experimental, check on windows");
+				break;
+		case clang::StringLiteral::UTF32:
+		case clang::StringLiteral::Wide:
+				{
+					// some literature about encodings transformation
+					// http://www.joelonsoftware.com/articles/Unicode.html
+				vectorLenght = stringLit->getBytes().size()/4;
+				elemType = gen.getWChar32();
+
+				size_t size = stringLit->getBytes().size();
+				size_t outSize = size/4;
+				char buff[size];
+				char out[outSize];
+				char *rptr = buff;
+				char *wptr = out;
+				memcpy (buff, stringLit->getBytes().data(), size);
+				iconv_t cd = iconv_open ("UTF-8","UTF-32");
+				iconv (cd, &rptr, &size, &wptr, &outSize);
+				assert(size == 0 && "encoding modification failed.... ");
+				strValue = std::string(out, vectorLenght);
+				convFact.warnings.insert("Insieme widechar support is experimental");
+				break;
+				}
+	}
+	assert(elemType);
+	vectorLenght += 1; // add the null char
+
 	auto expand = [&](char lookup, const char *replacement) {
 		int last = 0;
 		int it;
@@ -586,31 +637,31 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 		}
 	};
 
-	expand('\\', "\\\\");
-	expand('\n', "\\n");
-	expand('\t', "\\t");
-	expand('\b', "\\b");
-	expand('\a', "\\a");
-	expand('\v', "\\v");
-	expand('\r', "\\r");
-	expand('\f', "\\f");
-	expand('\?', "\\\?");
-	expand('\'', "\\\'");
-	expand('\"', "\\\"");
-	expand('\0', "\\0");
+	if (stringLit->getKind() == clang::StringLiteral::Ascii){
+		expand('\\', "\\\\");
+		expand('\n', "\\n");
+		expand('\t', "\\t");
+		expand('\b', "\\b");
+		expand('\a', "\\a");
+		expand('\v', "\\v");
+		expand('\r', "\\r");
+		expand('\f', "\\f");
+		expand('\?', "\\\?");
+		expand('\'', "\\\'");
+		expand('\"', "\\\"");
+		expand('\0', "\\0");
+	}
 
 	auto vecType =
 		builder.refType(
 			builder.vectorType(
-				gen.getChar(),
-				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()+1)
+				elemType,
+				core::ConcreteIntTypeParam::get(builder.getNodeManager(),vectorLenght )
 			)
 		);
 
 	retExpr = builder.literal("\"" + strValue + "\"", vecType);
-
 	VLOG(2) << retExpr;
-
 	return retExpr;
 }
 
@@ -1302,8 +1353,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		return retIr = subExpr;
 
 	case clang::UO_Real:
+	    return mgr.getLangExtension<core::lang::ComplexExtensions>().getReal(subExpr);
+
 	case clang::UO_Imag:
-	default:
+        return mgr.getLangExtension<core::lang::ComplexExtensions>().getImg(subExpr);
+
+    default:
 		assert(false && "Unary operator not supported");
 	}
 	return core::ExpressionPtr();	// should not be reachable

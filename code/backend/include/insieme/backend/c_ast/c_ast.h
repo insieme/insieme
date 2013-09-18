@@ -204,6 +204,12 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ComplexType : public Type {
+	    TypePtr elementType;
+        ComplexType(const TypePtr& type) : Type(NT_ComplexType), elementType(type) {};
+        virtual bool equals(const Node& node) const;
+	};
+
 	struct UnionType : public NamedCompositeType {
 		UnionType(IdentifierPtr name) : NamedCompositeType(NT_UnionType, name) {}
 	};
@@ -332,6 +338,18 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct Goto : public Statement {
+		string value;
+		Goto(const string& value) : Statement(NT_Goto), value(value) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Label : public Statement {
+		string value;
+		Label(const string& value) : Statement(NT_Label), value(value) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- Expressions -----------------------------
 
 	struct Expression : public Statement {
@@ -406,6 +424,8 @@ namespace c_ast {
 			Reference,
 			SizeOf,
 			Typeid,
+			ComplexReal,
+			ComplexImag,
 			New,
 			Delete,
 			DeleteArray,

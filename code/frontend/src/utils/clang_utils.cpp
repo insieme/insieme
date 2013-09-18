@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -137,9 +137,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 
 std::string buildNameForVariable (const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
-	if (varDecl->isStaticLocal()) REMOVE_SYMBOLS(name);
-	if (varDecl->isStaticDataMember()) REMOVE_SYMBOLS(name);
-
+	REMOVE_SYMBOLS(name);
 	return name;
 }
 

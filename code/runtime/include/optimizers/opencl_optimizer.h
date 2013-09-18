@@ -41,7 +41,7 @@ void irt_get_split_values() {
 	char* split_str = getenv("IRT_OCL_SPLIT_VALUES");
 	if(split_str) {
 		char *tok = strtok(split_str, ", ");
-		int i = 0;
+		unsigned i = 0;
 		while(tok != NULL) {
 		  irt_g_ocl_shares_policy.param.shares[i++] = atof(tok);
 		  tok = strtok(NULL, ", ");
@@ -49,7 +49,7 @@ void irt_get_split_values() {
 		if(i != irt_g_worker_count) IRT_WARN("Splitting values specified, but not for all devices.\n");
 	} else {
 		float split_value = 1.0/irt_g_worker_count;
-		for(int i = 0; i < irt_g_worker_count; ++i){
+		for(unsigned i = 0; i < irt_g_worker_count; ++i){
 			irt_g_ocl_shares_policy.param.shares[i] = split_value;
 		}
 	}

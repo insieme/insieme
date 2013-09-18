@@ -130,6 +130,10 @@ namespace backend {
 
 		c_ast::NodePtr visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context);
 
+		c_ast::NodePtr visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitLabelStmt(const core::LabelStmtPtr& ptr, ConversionContext& context);
+
 		c_ast::NodePtr visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitMarkerStmt(const core::MarkerStmtPtr& ptr, ConversionContext& context);

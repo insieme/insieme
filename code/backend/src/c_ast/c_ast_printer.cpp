@@ -172,6 +172,10 @@ namespace c_ast {
 				return out << print(node->elementType) << "[" << print(node->size) << "]";
 			}
 
+            PRINT(ComplexType) {
+                return out  << "_Complex " << print(node->elementType);
+            }
+
 			PRINT(StructType) {
 				return out << print(node->name);
 			}
@@ -368,6 +372,14 @@ namespace c_ast {
 				return out << "throw " << print(node->value);
 			}
 
+			PRINT(Goto) {
+                return out << "goto " << node->value;
+			}
+
+			PRINT(Label) {
+                return out << node->value << ": ";
+			}
+
 			PRINT(Literal) {
 				return out << node->value;
 			}
@@ -424,6 +436,8 @@ namespace c_ast {
 					case UnaryOperation::New:			return out << "new " << print(node->operand);
 					case UnaryOperation::Delete:		return out << "delete " << print(node->operand);
 					case UnaryOperation::DeleteArray:	return out << "delete[] " << print(node->operand);
+					case UnaryOperation::ComplexReal:	return out << "__real__ " << print(node->operand);
+					case UnaryOperation::ComplexImag:	return out << "__imag__ " << print(node->operand);
 				}
 
 				assert(false && "Invalid unary operation encountered!");

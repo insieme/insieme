@@ -61,6 +61,7 @@
 #include "insieme/backend/c_ast/c_code.h"
 
 #include "insieme/backend/addons/cpp_references.h"
+#include "insieme/backend/addons/complex_type.h"
 
 
 namespace insieme {
@@ -79,6 +80,7 @@ namespace runtime {
 	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation) {
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation);
 		res->addAddOn<addons::CppReferences>();
+        res->addAddOn<addons::ComplexType>();
 		return res;
 	}
 
@@ -114,7 +116,7 @@ namespace runtime {
 	}
 
 	namespace {
-		
+
 		void addRuntimeFunctionIncludes(FunctionIncludeTable& table) {
 
 			// add runtime-specific includes
@@ -164,7 +166,7 @@ namespace runtime {
 			table["irt_work_item_range"]			= "irt_all_impls.h";
 			table["irt_wi_implementation_id"]		= "irt_all_impls.h";
 		}
-		
+
 	}
 
 } // end namespace sequential

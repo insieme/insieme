@@ -129,6 +129,7 @@ namespace utils {
 
 				// get the presumed location (whatever this is, ask clang) ...
 				clang::PresumedLoc ploc = sm.getPresumedLoc(loc);
+				VLOG(2) <<  ploc.getFilename() ;
 
 				// .. and retrieve the associated include
 				clang::SourceLocation includeLoc = ploc.getIncludeLoc();
@@ -138,15 +139,18 @@ namespace utils {
 					return ""; 		// this happens when element is declared in c / cpp file => no header
 				}
 
+				// we already visited all the headers and we are in the .c/.cpp file
+				if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
+					if (isStdLibHeader(ploc.getFilename()) )
+						return ploc.getFilename(); // this happens when header file is included straight in the code
+					else
+						return "";  // this happens when is declared in a header which is not system header
+				}
+
 				// check if last include was in the search path and next is not,
 				// this case is a system header included inside of a programmer include chain
 				// BUT if both are still in the search path, continue cleaning the include
 				if (isStdLibHeader(ploc.getFilename()) && !isStdLibHeader(sm.getPresumedLoc(includeLoc).getFilename())){
-					return ploc.getFilename();
-				}
-
-				// if the next file is no longer a header, the current file is the desired one
-				if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
 					return ploc.getFilename();
 				}
 
@@ -169,7 +173,12 @@ namespace utils {
 		// check whether there is a declaration at all
 		if (!decl) return;
 
-		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType();
+		if (VLOG_IS_ON(2)){
+			std::string name("UNNAMED");
+			if (const clang::NamedDecl* nmd = llvm::dyn_cast<clang::NamedDecl>(decl))
+				name = nmd->getQualifiedNameAsString();
+			VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << " [clang: " << name << "]" ;
+		}
 
 		HeaderTagger tagger(stdLibDirs, decl->getASTContext().getSourceManager());
 		string fileName = tagger.getTopLevelInclude(decl->getLocation());
@@ -187,6 +196,8 @@ namespace utils {
 
 		// get absolute path of header file
 		fs::path header = fs::canonical(fileName);
+
+		VLOG(2) << "		header to be attached: " << header.string();
 
 		// use resulting header
 		insieme::annotations::c::attachInclude(node, header.string());

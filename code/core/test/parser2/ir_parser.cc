@@ -374,6 +374,19 @@ namespace parser {
 		EXPECT_EQ("try {throw 4;} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 	}
 
+	TEST(IR_Parser2, GotoStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		StringValuePtr str = builder.stringValue("test");
+		EXPECT_EQ(
+                builder.gotoStmt(str),
+                parse(manager, "goto test;")
+        );
+        EXPECT_EQ(
+                builder.labelStmt(str),
+                parse(manager, "test: ")
+        );
+	}
 
 	TEST(IR_Parser2, WhileStatement) {
 		NodeManager manager;
