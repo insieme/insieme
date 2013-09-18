@@ -161,7 +161,7 @@ namespace cba {
 		}
 
 		bool isRecursive() const {
-			assert(isLambda());
+			if (!isLambda()) return false;
 			LambdaDefinitionPtr def = definition.getParentAddress(2).as<LambdaDefinitionPtr>();
 			return def->isRecursive(getRecursiveVariable());
 		}
@@ -203,6 +203,7 @@ namespace cba {
 		vector<Caller> computeCaller(const Callee& callee);
 
 		vector<Callee> computeCallee(const Caller& caller);
+
 	};
 
 

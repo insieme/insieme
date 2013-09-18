@@ -66,7 +66,8 @@ namespace cba {
 				}
 				return res;
 		  }),
-		  setCounter(0), idCounter(0), callSiteMgr(root)
+		  setCounter(0), idCounter(0), callSiteMgr(root),
+		  dynamicCalls(), dynamicCallLabels(), freeFunctions(), set2container()
 	{ };
 
 	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {

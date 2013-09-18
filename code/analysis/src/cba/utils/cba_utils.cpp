@@ -141,6 +141,16 @@ namespace cba {
 				break;
 			}
 
+			case NT_LambdaDefinition: {
+				// check whether variable is bound
+				if (auto binding = cur.as<LambdaDefinitionAddress>()->getBindingOf(var)) {
+					return binding->getVariable();
+				}
+
+				// keep on searching
+				break;
+			}
+
 			case NT_BindExpr: {
 				// check parameters
 				for(auto param : cur.as<BindExprAddress>()->getParameters()) {
