@@ -142,7 +142,7 @@ extern __v4sf __builtin_ia32_loadhps(__v4sf, const __v2sf *);
 extern void __builtin_ia32_storehps(__v2si *, __v4sf);
 extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf *);
 //extern void __builtin_ia32_storelps(const __v2sf *, __v4sf);
-extern void __builtin_ia32_storelps(__v2si *, __v4sf);
+extern void __builtin_ia32_storelps(__v2sf *, __v4sf);
 extern __v4sf __builtin_ia32_loadups(const float *);
 extern void __builtin_ia32_storeups(float *, __v4sf);
 extern __v4sf  __builtin_ia32_shufps(__v4sf, __v4sf, int const);
