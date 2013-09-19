@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -191,6 +191,7 @@ public:
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
     core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
+    core::TypePtr VisitMemberPointerType(const clang::MemberPointerType* memPointerTy);
 
 protected:
 

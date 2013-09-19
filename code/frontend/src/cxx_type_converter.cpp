@@ -79,7 +79,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* p
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
-
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, ty) ;
 
@@ -123,7 +122,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
             core::annotations::attachName(classType, classDecl->getNameAsString());
 		}
 	}
-
 	return classType;
 }
 
@@ -313,6 +311,17 @@ core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::Declty
 core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
     return convert(autoTy->getDeducedType().getTypePtr());
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                 MEMBER POINTER TYPE
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
+    core::TypePtr retTy;
+    LOG_TYPE_CONVERSION( memPointerTy, retTy );
+    retTy = convert(memPointerTy->getPointeeType().getTypePtr());
+    return retTy;
+}
+
 
 void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
 
