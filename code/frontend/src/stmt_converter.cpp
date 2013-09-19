@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -154,7 +154,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 		// expression is of array (or vector) type we are sure we have to return a reference, in the
 		// other case we can safely deref the retExpr
 		if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-						!clangTy.getUnqualifiedType()->isExtVectorType()) {
+						(!clangTy.getUnqualifiedType()->isExtVectorType() && !clangTy.getUnqualifiedType()->isVectorType())) {
 			retTy = builder.refType(retTy);
 			retExpr = utils::cast(retExpr, retTy);
 		}
@@ -167,7 +167,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 
 			// Obviously Ocl vectors are an exception and must be handled like scalars
 			// no reference returned
-			if (clangTy->isExtVectorType()) {
+			if (clangTy->isExtVectorType() || clangTy->isVectorType()) {
 				retExpr = utils::cast(retExpr, retTy);
 			}
 

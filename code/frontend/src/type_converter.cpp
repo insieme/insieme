@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -51,6 +51,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/lang/complex_extension.h"
+
+#include "insieme/core/lang/simd_vector.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
@@ -261,9 +263,12 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	// If the return type is of type vector or array we need to add a reference
 	// so that the semantics of C argument passing is maintained
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
-		// only exception are OpenCL vectors
-		if(!dyn_cast<const ExtVectorType>(funcTy->getResultType()->getUnqualifiedDesugaredType()))
+		// exceptions are OpenCL vectors and gcc-vectors
+		if( !funcTy->getResultType()->getUnqualifiedDesugaredType()->isExtVectorType()
+			&& !funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
+		{
 			retTy = builder.refType(retTy);
+		}
 	}
 
 	assert(retTy && "Function has no return type!");
@@ -275,9 +280,12 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
-				// only exception are OpenCL vectors
-				if(!dyn_cast<const ExtVectorType>(currArgType->getUnqualifiedDesugaredType()))
-					argTy = this->builder.refType(argTy);
+				// exceptions are OpenCL vectors and gcc-vectors
+				if( !currArgType->getUnqualifiedDesugaredType()->isExtVectorType()
+					&& !currArgType->getUnqualifiedDesugaredType()->isVectorType())
+				{
+					argTy = builder.refType(argTy);
+				}
 			}
 
 			argTypes.push_back( argTy );
@@ -316,8 +324,29 @@ core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionN
 	return retTy;
 }
 
-// TBD
-//	TypeWrapper VisitVectorType(VectorType* vecTy) {	}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							VECTOR TYPE
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy) {
+	//VectorType - GCC generic vector type
+	//This type is created using __attribute__((vector_size(n)) where "n" specifies the vector size in bytes
+	//or from an Altivec __vector or vector declaration
+	//Since the constructor takes the number of vector elements, the client is responsible for converting the size into the number of elements. 
+	core::TypePtr retIr;
+	LOG_TYPE_CONVERSION( vecTy, retIr);
+	
+    // get vector datatype
+	const QualType qt = vecTy->getElementType();
+	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+	core::TypePtr&& subType = convert(const_cast<BuiltinType*>(buildInTy));
+
+	// get the number of elements
+	size_t num = vecTy->getNumElements();
+	core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(mgr, num);
+
+	auto irVecTy = builder.vectorType( subType, numElem);
+	return (retIr = core::lang::toSIMDVector(irVecTy));
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							EXTENDEND VECTOR TYPE

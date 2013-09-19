@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -77,6 +77,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -527,14 +528,15 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		irType = builder.volatileType(irType);
 	}
 
-	bool isOclVector = !!dyn_cast<const ExtVectorType>(varTy->getUnqualifiedDesugaredType());
+	bool isOclVector = !!varTy->getUnqualifiedDesugaredType()->isExtVectorType();
+	bool isGCCVector = !!varTy->getUnqualifiedDesugaredType()->isVectorType();
 	if (!(varTy.isConstQualified() ||    						// is a constant
 		 varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
  	 	 (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
 		 ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
-		   isOclVector ) ))) {
+		   isOclVector || isGCCVector) ))) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
-		// only exception are OpenCL vectors
+		// only exception are OpenCL vectors and gcc-vectors
 		irType = builder.refType(irType);
 	}
 	else{
@@ -809,7 +811,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExprType = var->getType().as<core::RefTypePtr>()->getElementType();
 			else if (IS_CPP_REF(var->getType()))
 				initExprType = var->getType();
-			else{
+			 else{
 				// is a constant variable (left side is not ref, right side does not need to create refvar)
 				// const char name[] = "constant string";
 				// vector<char,16> vX = "constatn string"
@@ -825,7 +827,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// some Cpp cases do not create new var
 			if (!IS_CPP_REF(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
-			}
+			} 
 
 			// finnaly create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
@@ -948,9 +950,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 		// if no init expression is provided => use zero or undefined value
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
 	}
-
+	
+	auto initExpr = convertExpr(expr);
 	// Convert the expression like any other expression
- 	return getInitExpr ( type,convertExpr(expr));
+ 	return getInitExpr ( type, initExpr);
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1263,6 +1266,26 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	core::TypePtr elementType = lookupTypeDetails(type);
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
+
+		if ( core::lang::isSIMDVector(elementType) )  {
+			auto internalVecTy = core::lang::getSIMDVectorType(elementType);
+			auto membTy = internalVecTy.as<core::SingleElementTypePtr>()->getElementType();
+			//TODO MOVE INTO SOME BUILDER HELPER
+			auto initOp = mgr.getLangExtension<core::lang::SIMDVectorExtension>().getSIMDInitPartial();
+			vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+			ExpressionList elements;
+			// get all values of the init expression
+			for (size_t i = 0; i < inits.size(); ++i) {
+				elements.push_back(getInitExpr(membTy, inits[i] ));
+			}
+			
+			return builder.callExpr(
+					elementType, 
+					initOp, 
+					core::encoder::toIR(type->getNodeManager(), elements),
+					builder.getIntTypeParamLiteral(internalVecTy->getSize())); 
+
+		}
 
 		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  ||
 			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
