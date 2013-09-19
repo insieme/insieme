@@ -108,6 +108,8 @@ namespace cba {
 			: definition(lit) { assert_true(definition); }
 		Callee(const core::LambdaAddress& fun)
 			: definition(fun) { assert_true(definition); }
+		Callee(const core::LambdaExprAddress& fun)
+			: definition(fun->getLambda()) { }
 		Callee(const core::BindExprAddress& bind)
 			: definition(bind) { assert_true(definition); }
 		Callee(const Callee& other)
@@ -190,6 +192,10 @@ namespace cba {
 		map<Caller, vector<Callee>> forward;
 		map<Callee, vector<Caller>> backward;
 
+		// a map of free callees/callers in the code fragment - indexed by the number of arguments
+		map<unsigned, vector<Callee>> freeCallees;
+		map<unsigned, vector<Caller>> freeCallers;
+
 	public:
 
 		CallSiteManager(const StatementAddress& root);
@@ -200,9 +206,13 @@ namespace cba {
 
 	private:
 
-		vector<Caller> computeCaller(const Callee& callee);
+		vector<Caller> computeCaller(const Callee& callee) const;
 
-		vector<Callee> computeCallee(const Caller& caller);
+		vector<Callee> computeCallee(const Caller& caller) const;
+
+		const vector<Caller>& getFreeCallers(unsigned numArgs) const;
+
+		const vector<Callee>& getFreeCallees(unsigned numParams) const;
 
 	};
 

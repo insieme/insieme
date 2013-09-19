@@ -41,11 +41,72 @@
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/core/ir_visitor.h"
 
+#include "insieme/utils/functional_chain.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	CallSiteManager::CallSiteManager(const core::StatementAddress& root) {}
+	namespace {
+
+		NodeAddress tryObtainingFunction(const core::ExpressionAddress& expr);
+
+	}
+
+
+	CallSiteManager::CallSiteManager(const core::StatementAddress& root) : freeCallees(), freeCallers() {
+
+		// collect free callers and callees
+		visitDepthFirst(root,
+			insieme::utils::chain(
+				[&](const ExpressionAddress& cur) {
+
+					// only interested in lambdas, bind and literals
+					auto kind = cur->getNodeType();
+					if (kind != NT_LambdaExpr && kind != NT_BindExpr && kind != NT_Literal) return;
+
+					// for literals: check whether it is a function
+					FunctionTypePtr type = cur.as<ExpressionPtr>()->getType().isa<FunctionTypePtr>();
+					if (!type) return;	// might be the case for literals
+
+					// check whether it is free (not used in a direct call or as a full expression)
+					if(cur.isRoot()) return;
+					auto parent = cur.getParentNode();
+					auto parentKind = cur.getParentNode()->getNodeType();
+					if (parentKind == NT_CompoundStmt) return;
+
+					if (parentKind == NT_CallExpr) {
+						if (parent.as<CallExprPtr>()->getFunctionExpr() == cur.as<ExpressionPtr>()) return;
+					}
+
+					// found a free function => register it
+					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprAddress>()->getLambda()) :
+									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprAddress>()) : Callee(cur.as<LiteralAddress>());
+					freeCallees[type->getParameterTypes()->size()].push_back(callee);
+				},
+				[&](const ExpressionAddress& cur) {
+
+					auto call = cur.isa<CallExprAddress>();
+					if (!call) return;
+
+					// check whether target is fixed
+					auto fun = call->getFunctionExpr();
+					auto kind = fun->getNodeType();
+
+					// check whether it is a direct call
+					if (kind == NT_LambdaExpr || kind == NT_BindExpr || kind == NT_Literal) return;
+
+					// check whether the target is statically known
+					if (kind == NT_Variable) {
+						if (tryObtainingFunction(fun)) return;
+					}
+
+					// this is one
+					freeCallers[call->size()].push_back(call);
+				}
+			)
+		);
+	}
 
 
 	const vector<Callee>& CallSiteManager::getCallee(const Caller& caller) {
@@ -234,7 +295,7 @@ namespace cba {
 	}
 
 
-	vector<Caller> CallSiteManager::computeCaller(const Callee& callee) {
+	vector<Caller> CallSiteManager::computeCaller(const Callee& callee) const {
 		static const vector<Caller> empty;
 
 		// general case: collect all uses
@@ -247,10 +308,7 @@ namespace cba {
 		}
 
 		// no static limit on uses => might be used everywhere
-		// TODO: implement this
-
-		assert_fail() << "Unimplemented\n";
-		return empty;
+		return getFreeCallers(callee.getNumParams());
 	}
 
 	// -------------------------------------------------------------------------------------------
@@ -316,7 +374,7 @@ namespace cba {
 
 	}
 
-	vector<Callee> CallSiteManager::computeCallee(const Caller& caller) {
+	vector<Callee> CallSiteManager::computeCallee(const Caller& caller) const {
 		static const vector<Callee> empty;
 
 		// investigate function expression
@@ -351,16 +409,29 @@ namespace cba {
 					return toVector(Callee(bind));
 				}
 				return toVector(Callee(trg.as<LiteralAddress>()));
-			} else {
-				// bad => it may call any function
-				// TODO: implement this one!
-				assert_fail() << "Unimplemented!";
 			}
 
+			// bad => it may call any function
+			// => fall through
 		}
 
-		assert_fail() << "Unsupported function expression encountered: " << *fun << "\n";
-		return empty;
+		// fall-back: get all accessible callees with the correct number of arguments
+		return getFreeCallees(caller.getNumArgs());
+	}
+
+
+	const vector<Callee>& CallSiteManager::getFreeCallees(unsigned numParams) const {
+		static const vector<Callee> empty;
+
+		auto pos = freeCallees.find(numParams);
+		return (pos == freeCallees.end()) ? empty : pos->second;
+	}
+
+	const vector<Caller>& CallSiteManager::getFreeCallers(unsigned numArgs) const {
+		static const vector<Caller> empty;
+
+		auto pos = freeCallers.find(numArgs);
+		return (pos == freeCallers.end()) ? empty : pos->second;
 	}
 
 

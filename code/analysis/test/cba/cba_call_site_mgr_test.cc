@@ -236,7 +236,16 @@ namespace cba {
 		EXPECT_EQ(toString(toVector(calleeA)), toString(mgr.getCallee(callerA2)));
 		EXPECT_EQ(toString(toVector(callerA1,callerA2)), toString(mgr.getCaller(calleeA)));
 
-		// TODO: check indirect recursive call!!
+		// ----------------------
+
+		// check indirect recursive call
+		Callee calleeB (root[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getLambda());
+		Caller callerB1(root[2].as<CallExprAddress>());
+		Caller callerB2(root[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getLambda()->getBody()[0].as<CallExprAddress>());
+
+		EXPECT_EQ(toString(toVector(calleeB)), toString(mgr.getCallee(callerB1)));
+		EXPECT_EQ(toString(toVector(calleeB)), toString(mgr.getCallee(callerB2)));
+		EXPECT_EQ(toString(toVector(callerB1,callerB2)), toString(mgr.getCaller(calleeB)));
 
 	}
 
@@ -284,6 +293,110 @@ namespace cba {
 		EXPECT_EQ(toString(toVector(callerA,callerF)), toString(mgr.getCaller(calleeF))) << calleeF;
 		EXPECT_EQ(toString(toVector(callerG)), toString(mgr.getCaller(calleeG))) << calleeG;
 
+	}
+
+	TEST(CBA_Call_Site_Mgr, MutualRecursiveCalls_2) {
+
+		NodeManager nodeMgr;
+		IRBuilder builder(nodeMgr);
+
+		auto code = builder.parseStmt(
+				"{"
+				"	let f,g = "
+				"			(int x)->int { g(x); f(x); },"
+				"			(int x)->int { f(x); g(x); };"		// tow mutually recursive functions with mutliple recursive calls
+				"	f(3);"										// a direct call to a recursive function f
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(code);
+
+		CompoundStmtAddress root(code);
+
+		LambdaExprAddress l = root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>();
+		LambdaAddress f = l->getDefinition()[0]->getLambda();
+		LambdaAddress g = l->getDefinition()[1]->getLambda();
+
+		// extract caller and callee
+		Caller callerA(root[0].as<CallExprAddress>());
+		Caller callerG1(f.getBody()[0].as<CallExprAddress>());
+		Caller callerG2(g.getBody()[1].as<CallExprAddress>());
+		Caller callerF1(g.getBody()[0].as<CallExprAddress>());
+		Caller callerF2(f.getBody()[1].as<CallExprAddress>());
+
+		Callee calleeF (f);
+		Callee calleeG (g);
+
+		EXPECT_TRUE(calleeF.isLambda());
+		EXPECT_TRUE(calleeG.isLambda());
+
+		// create call site manager
+		CallSiteManager mgr(root);
+
+		// check direct connection
+		EXPECT_EQ(toString(toVector(calleeF)), toString(mgr.getCallee(callerA)));
+		EXPECT_EQ(toString(toVector(calleeF)), toString(mgr.getCallee(callerF1)));
+		EXPECT_EQ(toString(toVector(calleeF)), toString(mgr.getCallee(callerF2)));
+		EXPECT_EQ(toString(toVector(calleeG)), toString(mgr.getCallee(callerG1)));
+		EXPECT_EQ(toString(toVector(calleeG)), toString(mgr.getCallee(callerG2)));
+
+		EXPECT_EQ(toString(toVector(callerA,callerF2,callerF1)), toString(mgr.getCaller(calleeF))) << calleeF;
+		EXPECT_EQ(toString(toVector(callerG1,callerG2)), toString(mgr.getCaller(calleeG))) << calleeF;
+
+	}
+
+	TEST(CBA_Call_Site_Mgr, OpenCall) {
+
+
+		NodeManager nodeMgr;
+		IRBuilder builder(nodeMgr);
+
+		map<string, NodePtr> symbols;
+		symbols["hide"] = builder.parseExpr("lit(\"hide\" : ('a)->unit)");
+		symbols["get"]  = builder.parseExpr("lit(\"get\" : () -> ()->unit)");
+
+		auto code = builder.parseStmt(
+				"{"
+				"	hide(()->unit {});"					// create a function and forward it somewhere
+				"	hide(()->unit {});"					// and another
+				"	hide((int x)->unit {});"			// and another with a different type
+				"	hide(()=> 2);"						// and a bind
+				"	()->unit {};"						// a function not being used ever
+				"	()=> 3;"							// a bind not being used ever
+				"	get()();"							// retrieve some 'hidden' function and call it
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(code);
+
+		CompoundStmtAddress root(code);
+
+		// get list of all functions
+		Callee calleeA = root[0].as<CallExprAddress>()[0].as<LambdaExprAddress>();
+		Callee calleeB = root[1].as<CallExprAddress>()[0].as<LambdaExprAddress>();
+		Callee calleeC = root[2].as<CallExprAddress>()[0].as<LambdaExprAddress>();
+		Callee calleeD = root[3].as<CallExprAddress>()[0].as<BindExprAddress>();
+		Callee calleeE = root[4].as<LambdaExprAddress>();
+		Callee calleeF = root[5].as<BindExprAddress>();
+
+		// get caller
+		Caller caller = root[6].as<CallExprAddress>();
+
+		// create call site manager
+		CallSiteManager mgr(root);
+
+		// check list of all potential targets
+		EXPECT_EQ(toString(toVector(calleeA, calleeB, calleeD)), toString(mgr.getCallee(caller)));
+
+		vector<Caller> empty;
+		vector<Caller> callA = toVector(caller);
+
+		EXPECT_EQ(toString(callA), toString(mgr.getCaller(calleeA)));
+		EXPECT_EQ(toString(callA), toString(mgr.getCaller(calleeB)));
+		EXPECT_EQ(toString(empty), toString(mgr.getCaller(calleeC)));
+		EXPECT_EQ(toString(callA), toString(mgr.getCaller(calleeD)));
+		EXPECT_EQ(toString(empty), toString(mgr.getCaller(calleeE)));
+		EXPECT_EQ(toString(empty), toString(mgr.getCaller(calleeF)));
 	}
 
 
