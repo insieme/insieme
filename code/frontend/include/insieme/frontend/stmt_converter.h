@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -172,6 +172,12 @@ public:
 	stmtutils::StmtWrapper VisitLabelStmt(clang::LabelStmt* labelStmt);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							ASM STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper VisitAsmStmt(clang::AsmStmt* asmStmt);
+
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,6 +216,7 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
     CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
+    CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -285,6 +292,7 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
     CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
+    CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
 
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(IntegerLiteral)
