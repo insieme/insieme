@@ -1023,7 +1023,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 core::TypePtr Converter::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	return typeConvPtr->convert( type );
+	return typeConvPtr->convert( type);
 }
 
 namespace {
@@ -1063,16 +1063,15 @@ namespace {
 				initList.push_back (expr);
 			}
 			else if ((*it)->isMemberInitializer ()){
-				// create access to the member of the struct/class
-				// we need to use the detailed version to build the reference member operation,
-				// but we substitute it with the generic type as soon as we are done
-				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
-				core::LiteralPtr genThis      = builder.literal("this", builder.refType(classType));
-				core::LiteralPtr completeThis = builder.literal("this", builder.refType (converter.lookupTypeDetails(classType)));
-				init = builder.refMember( completeThis, ident);
-				core::CallExprAddress addr(init.as<core::CallExprPtr>());
-				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
+
+				// construct the member access based on the type and the init expression
+				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
+				core::LiteralPtr genThis = builder.literal("this", builder.refType (classType));
 				expr = converter.convertExpr((*it)->getInit());
+				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
+				init =  builder.callExpr (builder.refType(membTy),
+										  builder.getLangBasic().getCompositeRefElem(), genThis,
+										  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membTy));
 
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
 				if (!IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
@@ -1090,7 +1089,6 @@ namespace {
 					} else { assert(false); }
 				}
 				else{
-					if (*converter.lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()) != *converter.lookupTypeDetails(expr->getType()))
 						expr = builder.tryDeref(expr);
 				}
 				initList.push_back(builder.assign( init, expr));
