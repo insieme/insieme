@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -63,6 +63,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/lang/simd_vector.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -1118,6 +1119,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
+			VLOG(2) << exprTy;
 			break;
 		}
 		default:
@@ -1143,8 +1145,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	if( !isAssignment ) {
 
 		// handling for ocl-vector operations
-		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) {
+		if( (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+			 binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType())
+			) {
 
 			lhs = utils::cast(lhs, exprTy);
 			rhs = utils::cast(rhs, exprTy);
@@ -1164,7 +1167,44 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 				assert(false && "old stuff needed, tell Klaus");
 				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
 			}
+		} else if((binOp->getLHS()->getType().getUnqualifiedType()->isVectorType() ||
+					binOp->getRHS()->getType().getUnqualifiedType()->isVectorType()) ) {
+
+			lhs = utils::cast(lhs, exprTy);
+			rhs = utils::cast(rhs, exprTy);
+
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			auto type = lhs->getType();
+			assert(core::lang::isSIMDVector(type));
+
+			core::LiteralPtr simdOp;
+			switch ( binOp->getOpcode() ) {
+				case clang::BO_Add: simdOp = ext.getSIMDAdd(); break;
+				case clang::BO_Mul: simdOp = ext.getSIMDMul(); break;
+				case clang::BO_Div: simdOp = ext.getSIMDDiv(); break;
+				case clang::BO_Rem: simdOp = ext.getSIMDMod(); break;
+				case clang::BO_And: simdOp = ext.getSIMDAnd(); break;
+				case clang::BO_Or: simdOp = ext.getSIMDOr(); break;
+				case clang::BO_Xor: simdOp = ext.getSIMDXor(); break;
+				case clang::BO_Shl: simdOp = ext.getSIMDLShift(); break;
+				case clang::BO_Shr: simdOp = ext.getSIMDRShift(); break;
+				case clang::BO_EQ: simdOp = ext.getSIMDEq(); break;
+				case clang::BO_NE: simdOp = ext.getSIMDNe(); break;
+				case clang::BO_LT: simdOp = ext.getSIMDLt(); break;
+				case clang::BO_LE: simdOp = ext.getSIMDLe(); break;
+				case clang::BO_GT: simdOp = ext.getSIMDGt(); break;
+				case clang::BO_GE: simdOp = ext.getSIMDGe(); break;
+				
+				default:
+				assert(false && "Operator for simd-vectortypes not supported");
+			}
+
+			auto retTy = lhs->getType();
+			retIr = builder.callExpr(retTy, simdOp, lhs, rhs);
+			return retIr;
 		}
+
+		
 
 		// This is the required pointer arithmetic in the case we deal with pointers
 		if (!core::analysis::isRefType(rhs->getType()) &&
@@ -1331,9 +1371,20 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	// +a
 	case clang::UO_Plus:  return retIr = subExpr;
 	// -a
-	case clang::UO_Minus: return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
+	case clang::UO_Minus: 
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			return (retIr = builder.callExpr(ext.getSIMDMinus(),subExpr));
+		}
+
+		return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
 	// ~a
 	case clang::UO_Not:
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			return (retIr = builder.callExpr(ext.getSIMDNot(),subExpr));
+		}
+
 		retIr = convFact.tryDeref(subExpr);
 		return (retIr = builder.callExpr(
 						retIr->getType(),

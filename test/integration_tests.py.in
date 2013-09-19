@@ -513,6 +513,9 @@ def toAbsolutePaths(path, args):
 		if arg.startswith('-I') and not os.path.isabs(arg[2:].strip()) and not arg[2:].strip().startswith('$'): 
 			abs_args.append("-I{0}/{1}".format(path, arg[2:]))
 			continue
+		if arg.startswith('--intercept'): 
+			abs_args.append("--intercept {0}".format(arg[11:]))
+			continue
 		if not arg.startswith('-') and not os.path.isabs(arg):
 			abs_args.append("{0}/{1}".format(path, arg))
 			continue
