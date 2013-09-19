@@ -255,7 +255,7 @@ namespace cba {
 		).as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(code);
-dumpPretty(code);
+
 		CompoundStmtAddress root(code);
 
 		LambdaExprAddress l = root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>();

@@ -58,11 +58,11 @@ namespace cba {
 
 		const vector<Callee>& res = forward[caller] = computeCallee(caller);
 
-//		// cross-check result - the assertion has to be split up due to a gcc limitation
-//		assert_decl(bool bedirectional = all(computeCallee(caller), [&](const Callee& cur)->bool {
-//			return contains(this->getCaller(cur), caller);
-//		}));
-//		assert_true(bedirectional);
+		// cross-check result - the assertion has to be split up due to a gcc limitation
+		assert_decl(bool bedirectional = all(computeCallee(caller), [&](const Callee& cur)->bool {
+			return contains(this->getCaller(cur), caller);
+		}));
+		assert_true(bedirectional);
 
 		return res;
 
@@ -80,11 +80,11 @@ namespace cba {
 
 		const vector<Caller>& res = backward[callee] = computeCaller(callee);
 
-//		// cross-check result - the assertion has to be split up due to a gcc limitation
-//		assert_decl(bool bedirectional = all(computeCaller(callee), [&](const Caller& cur)->bool {
-//			return contains(this->getCallee(cur), callee);
-//		}));
-//		assert_true(bedirectional);
+		// cross-check result - the assertion has to be split up due to a gcc limitation
+		assert_decl(bool bedirectional = all(computeCaller(callee), [&](const Caller& cur)->bool {
+			return contains(this->getCallee(cur), callee);
+		}));
+		assert_true(bedirectional);
 
 		return res;
 
@@ -214,7 +214,7 @@ namespace cba {
 			// add recursive calls
 			auto def = function.as<LambdaExprAddress>()->getDefinition();
 			auto var = callee.getDefinition().getParentAddress().as<LambdaBindingPtr>()->getVariable();
-			for(auto cur : def->getRecursiveCallLocations(var)) {
+			for(auto cur : def->getRecursiveCallsOf(var)) {
 
 				// compute absolute position of the variable
 				auto var = concat(def, cur);
