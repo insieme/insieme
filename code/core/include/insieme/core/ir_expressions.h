@@ -809,8 +809,8 @@ namespace core {
 		 * @param variable the recursive variable to be searched for
 		 * @return the list of recursive references within this definition, rooted by this definition.
 		 */
-		vector<VariableAddress> getRecursiveCallLocations(const VariablePtr& variable) const {
-			return SupportAccessor<Derived,Ptr>::getNode().getRecursiveCallLocations(variable);
+		const vector<VariableAddress>& getRecursiveCallsOf(const VariablePtr& variable) const {
+			return SupportAccessor<Derived,Ptr>::getNode().getRecursiveCallsOf(variable);
 		}
 
 		/**
@@ -881,7 +881,7 @@ namespace core {
 		 * @param variable the recursive variable to be searched for
 		 * @return the list of recursive references within this definition, rooted by this definition.
 		 */
-		vector<VariableAddress> getRecursiveCallLocations(const VariablePtr& variable) const;
+		const vector<VariableAddress>& getRecursiveCallsOf(const VariablePtr& variable) const;
 
 		/**
 		 * Peels this definition for the given variable and number of times.
