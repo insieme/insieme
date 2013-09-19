@@ -1368,8 +1368,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
 
-	if (IS_CPP_REF(init->getType()) && elementType.isa<core::RefTypePtr>())
-		return builder.toIRRef(init);
+	if (IS_CPP_REF(init->getType())){
+		if (elementType.isa<core::RefTypePtr>())
+			return builder.toIRRef(init);
+		else
+			return builder.deref(builder.toIRRef(init));  // might be a call by value to a function, and we need to derref
+	}
+
 
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 
