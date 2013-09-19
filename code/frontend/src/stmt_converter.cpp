@@ -1125,6 +1125,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitLabelStmt(clang::LabelStmt
 stmtutils::StmtWrapper Converter::StmtConverter::VisitAsmStmt(clang::AsmStmt* asmStmt) {
 	//two subclasses - gccasmstmt/msasmstmt
 	assert(false && "currently not implemented");
+	return stmtutils::StmtWrapper();
 }
 
 
