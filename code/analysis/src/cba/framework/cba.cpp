@@ -67,7 +67,7 @@ namespace cba {
 				return res;
 		  }),
 		  setCounter(0), idCounter(0), callSiteMgr(root),
-		  dynamicCalls(), dynamicCallLabels(), freeFunctions(), set2container()
+		  set2container(), dynamicCallLabels()
 	{ };
 
 	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
@@ -81,153 +81,6 @@ namespace cba {
 	}
 
 
-	namespace {
-
-		bool collectUsesOfVariable(CBA& context, const VariableAddress& var, vector<Label>& res) {
-			assert(getDefinitionPoint(var) == var);
-
-			NodeAddress root;
-			if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
-				root = decl.getParentAddress();
-			} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
-				if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
-					root = lambda->getBody();
-				} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
-					root = bind->getCall();
-				} else {
-					assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
-				}
-			} else {
-				assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
-			}
-
-			// there should be a root now
-			assert(root);
-
-			bool allFine = true;
-			visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
-				// stop if already failed
-				if (!allFine) return true;
-
-				// only process local scope
-				if (cur->getNodeType() == NT_LambdaExpr) return true;
-
-				// for the rest, only interested in variables
-				if (*cur != *var) return false;
-
-				// if variable is used as a function => found a call
-				auto call = cur.getParentAddress().isa<CallExprAddress>();
-
-				// if it is not a call, we don't care
-				if (!call) return false;
-
-				// check out whether it is a call to the function or passed as an argument
-				if (call->getFunctionExpr() == cur) {
-					// it is the target function => collect this one
-					res.push_back(context.getLabel(call));
-				} else {
-					// it is an argument
-					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-						assert(call[cur.getIndex()-2] == cur);
-						// ok - it is a static call => we may follow the parameter
-						allFine = allFine && collectUsesOfVariable(context, fun->getParameterList()[cur.getIndex()-2], res);
-					}
-				}
-
-				return false;
-
-			});
-
-			return allFine;
-
-		}
-
-		CBA::OptCallSiteList getUsesOfVariable(CBA& context, const VariableAddress& def) {
-			static const CBA::OptCallSiteList fail;
-			vector<Label> res;
-			bool success = collectUsesOfVariable(context, def, res);
-			return success ? res : fail;
-		}
-
-		CBA::OptCallSiteList getStaticUses(CBA& context, const ExpressionAddress& function) {
-			static const CBA::OptCallSiteList unknown;
-
-			// there is nothing we can do for the root
-			if (function.isRoot()) return unknown;
-
-			// option A: the lambda is created as an argument of a call expression
-			auto parent = function.getParentAddress();
-			if (auto call = parent.isa<CallExprAddress>()) {
-				assert(call->getFunctionExpr() != function);
-
-				// check whether target function is fixed
-				if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-					// collect all uses of corresponding function parameter
-					assert(call[function.getIndex()-2] == function);
-					return getUsesOfVariable(context, fun->getParameterList()[function.getIndex()-2]);
-				} else {
-					return unknown;
-				}
-			}
-
-			// option B: the lambda is created as the value of a definition
-			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
-				// simply collect all uses of the variable
-				return getUsesOfVariable(context, decl->getVariable());
-			}
-
-			return unknown;
-		}
-
-		bool isFunction(const core::ExpressionAddress& expr) {
-			return expr->getNodeType() == NT_LambdaExpr || expr->getNodeType() == NT_BindExpr;
-		}
-
-		ExpressionAddress tryObtainingFunction(const core::ExpressionAddress& expr) {
-			static const ExpressionAddress unknown;
-
-			// check for null
-			if (!expr) return unknown;
-
-			// check whether we already have one
-			if (isFunction(expr)) return expr;
-
-			// otherwise we are only supporting variables
-			auto var = expr.isa<VariableAddress>();
-			if (!var) return unknown;
-
-			// get definition of variable
-			auto def = getDefinitionPoint(var);
-
-			// if it is a free variable => there is nothing we can do
-			if (def.isRoot()) return unknown;
-
-			// if variable is declared => consider declaration
-			auto parent = def.getParentAddress();
-			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
-				return tryObtainingFunction(decl->getInitialization());
-			}
-
-			// if it is an lambda parameter => follow argument
-			if (auto param = parent.isa<ParametersAddress>()) {
-
-				if (param.isRoot()) return unknown;
-
-				auto userOffset = param.getParentNode().isa<LambdaPtr>() ? 5 : 2;
-				auto user = param.getParentAddress(userOffset);
-
-				// continue with proper argument
-				auto call = user.isa<CallExprAddress>();
-				if (call) return tryObtainingFunction(call[param.getIndex()]);
-			}
-
-			// otherwise there is nothing we can do
-			return unknown;
-		}
-
-	}
-
-
 	const CBA::OptCallSiteList& CBA::getAllStaticUses(const core::ExpressionAddress& fun) {
 
 		// check the cache
@@ -237,7 +90,17 @@ namespace cba {
 		}
 
 		// compute call-site list
-		return callSiteCache[fun] = getStaticUses(*this, fun);
+		const vector<Caller>& callers = getCallSiteManager().getCaller(Callee(fun));
+		if (callers == getCallSiteManager().getFreeCallers(fun->getType().as<FunctionTypePtr>()->getParameterTypes().size())) {
+			return callSiteCache[fun] = CBA::OptCallSiteList();
+		}
+
+
+		vector<Label> res;
+		for(auto cur : callers) {
+			res.push_back(getLabel(cur.getCall()));
+		}
+		return callSiteCache[fun] = res;
 	}
 
 	CBA::OptCallSiteList CBA::getAllStaticPredecessors(const core::CallExprAddress& call) {
@@ -268,23 +131,6 @@ namespace cba {
 		}
 
 		return res;
-	}
-
-	const CBA::ContextFreeCallableList& CBA::getContextFreeCallableCandidate(const core::CallExprAddress& call) {
-		// only supported for known dynamic calls
-		assert(contains(getDynamicCalls(), call));
-
-		auto pos = contextFreeCallableCandidateCache.find(call);
-		if (pos != contextFreeCallableCandidateCache.end()) {
-			return (pos->second) ? *pos->second : freeFunctions;
-		}
-
-		// compute free functions
-		auto& res = contextFreeCallableCandidateCache[call];
-		if (auto fun = tryObtainingFunction(call->getFunctionExpr())) {
-			res = toVector(fun);
-		}
-		return (res) ? *res : freeFunctions;
 	}
 
 	void CBA::plot(std::ostream& out) const {

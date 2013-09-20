@@ -243,7 +243,8 @@ namespace cba {
 					if (!parent.isRoot() && parent.isa<ForStmtAddress>()) {
 
 						// a for-loop iterator is unknown by default
-						constraints.add(elem(T(), a_var));
+						// TODO: find a better solution for this ...
+//						constraints.add(elem(T(), a_var));
 						break;
 					}
 
@@ -274,16 +275,15 @@ namespace cba {
 					auto predecessor_ctxt = cba.getSet(pred, ctxt.callContext.back());
 
 					// distinguish two cases: parameter of a lambda or parameter of a bind
-					if (parent.getParentNode().isa<LambdaPtr>()) {
-
+					if (auto lambda = parent.getParentAddress().isa<LambdaAddress>()) {
 						// deal with a lambda parameter
 
 						assert_lt(5, parent.getDepth());
-						auto lambda = parent.getParentAddress(4);
+						auto lambdaExpr = parent.getParentAddress(4);
 						auto user = parent.getParentAddress(5);
 
 						auto call = user.isa<CallExprAddress>();
-						if (call && call->getFunctionExpr() == lambda) {
+						if (call && call->getFunctionExpr() == lambdaExpr) {
 
 							// TODO: consider case in which argument is bound value within a bind!
 
@@ -316,16 +316,15 @@ namespace cba {
 												auto C_cur_call = cba.getSet(C<Context>(), l_cur_call_fun, curCallCtxt);
 
 												// load bound values of all potential contexts
-												for(const auto& cur : cba.getCallables<Context>()) {
-													// only interested in this bind
-													if (cur.definition != bind) continue;
+												for(const Context& cur : cba.getValidContexts<Context>()) {
 
 													// get bound value in this context
-													auto A_arg = cba.getSet(A, l_arg, cur.context);
+													auto A_arg = cba.getSet(A, l_arg, cur);
 
 													// access parameter in src-ctxt if src-context is actually a potental predecessor
-													constraints.add(subsetIf(curCallCtxt.callContext.back(), predecessor_ctxt, cur, C_cur_call, A_arg, a_var));
+													constraints.add(subsetIf(curCallCtxt.callContext.back(), predecessor_ctxt, Callable<Context>(bind, cur), C_cur_call, A_arg, a_var));
 												}
+
 											}
 
 											// done
@@ -347,11 +346,10 @@ namespace cba {
 							// TODO: limit call-contexts to actual possible once
 
 							// this function might be called indirectly => link in all potential call sites
-							auto num_args = parent.as<ParametersPtr>().size();
-							for(const auto& site : cba.getDynamicCalls()) {
-								// filter out incorrect number of parameters
-								if (site.size() != num_args) continue;
+							Callee callee(lambda);
+							for(const CallExprAddress& site : cba.getCallSiteManager().getCaller(callee)) {
 
+								// filter out incorrect number of parameters
 								auto l_site = cba.getLabel(site);
 								if (!ctxt.callContext.endsWith(l_site)) continue;
 
@@ -368,11 +366,8 @@ namespace cba {
 									auto A_arg = cba.getSet(A, cba.getLabel(site[variable.getIndex()]), srcCtxt);
 									auto C_fun = cba.getSet(C<Context>(), cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
-									// pass value of argument to parameter for any potential callable
-									for(const auto& target : cba.getCallables<Context>()) {
-										if (target.definition != lambda) continue;
-										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
-									}
+									// add constraint for function call
+									constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, Callable<Context>(callee), C_fun, A_arg, a_var));
 								}
 							}
 						}
@@ -402,10 +397,8 @@ namespace cba {
 							// indirect call - context switch
 
 							// this bind might be called indirectly => link in all potential call sites
-							auto num_args = parent.as<ParametersPtr>().size();
-							for(const auto& site : cba.getDynamicCalls()) {
-								// filter out incorrect number of parameters
-								if (site.size() != num_args) continue;
+							Callee callee(bind);
+							for(const CallExprAddress& site : cba.getCallSiteManager().getCaller(bind)) {
 
 								auto l_site = cba.getLabel(site);
 								if (!ctxt.callContext.endsWith(l_site)) continue;
@@ -424,10 +417,14 @@ namespace cba {
 									auto C_fun = cba.getSet(C<Context>(), cba.getLabel(site->getFunctionExpr()), srcCtxt);
 
 									// pass value of argument to parameter for any potential callable
-									for(const auto& target : cba.getCallables<Context>()) {
-										if (target.definition != bind) continue;
-										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
+									for(const Context& ctxt : cba.getValidContexts<Context>()) {
+										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, Callable<Context>(bind, ctxt), C_fun, A_arg, a_var));
 									}
+
+//									for(const Callable<Context>& target : cba.getCallables<Context>(num_args)) {
+//										if (target.getDefinition() != bind) continue;
+//										constraints.add(subsetIf(srcCtxt.callContext.back(), predecessor_ctxt, target, C_fun, A_arg, a_var));
+//									}
 								}
 							}
 						}
@@ -477,93 +474,67 @@ namespace cba {
 			auto l_call = cba.getLabel(call);
 			auto A_call = cba.getSet(A, l_call, ctxt);
 
-			// target may be a literal
-			if (fun->getNodeType() == NT_Literal) {
+			// create context of target body
+			Context innerCtxt = ctxt;
+			if (causesContextShift(call)) {
+				innerCtxt.callContext <<= l_call;
+			}
 
-				// constraints for literals ...
-				const auto& base = call->getNodeManager().getLangBasic();
+			// get list of potential targets
+			const vector<Callee>& targets = cba.getCallSiteManager().getCallee(call);
 
-				// one special case: if it is a read operation
-				if (base.isRefDeref(fun)) {
-					// read value from memory location
-					auto l_trg = this->cba.getLabel(call[0]);
-					auto R_trg = this->cba.getSet(R<Context>(), l_trg, ctxt);
-					for(auto loc : this->cba.template getLocations<Context>()) {
+			// if target is fixed => no conditions on constraint edge
+			if (targets.size() == 1u) {
 
-						// if loc is in R(target) then add Sin[A,trg] to A[call]
-						auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
-						constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+				const auto& fun = targets[0];
+
+				// special handling for literals
+				if (fun.isLiteral()) {
+
+					// one special case: if it is a read operation
+					const auto& base = call->getNodeManager().getLangBasic();
+					if (base.isRefDeref(targets[0].getDefinition())) {
+						// read value from memory location
+						auto l_trg = this->cba.getLabel(call[0]);
+						auto R_trg = this->cba.getSet(R<Context>(), l_trg, ctxt);
+						for(auto loc : this->cba.template getLocations<Context>()) {
+
+							// if loc is in R(target) then add Sin[A,trg] to A[call]
+							auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
+							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+						}
 					}
+
+					// no other literals supported by default - overloads may add more
+					return;
 				}
 
-				// no other literals supported by default - overloads may add more
-				return;
-			}
-
-
-			// target may be a lambda (direct call)
-			if (auto lambda = fun.isa<LambdaExprAddress>()) {
-
-				// take the value of the body (no context switch for direct call)
-				auto l_body = cba.getLabel(lambda->getBody());
-				auto A_body = cba.getSet(A, l_body, ctxt);
-
-				// take over value of function body
-				constraints.add(subset(A_body, A_call));
-				return;
-			}
-
-			// target may be a bind (direct call)
-			if (auto bind = fun.isa<BindExprAddress>()) {
-
-				// take the value of the body (no context switch for direct call)
-				auto l_body = cba.getLabel(bind->getCall());
-				auto A_body = cba.getSet(A, l_body, ctxt);
-
-				// take over value of function body
-				constraints.add(subset(A_body, A_call));
-				return;
-			}
-
-			// target may be an indirect call => check out all callables
-			Context innerCtxt = ctxt;
-			innerCtxt.callContext <<= l_call;
-
-			// target may be a recursive call (somewhat direct call, we know the target statically, but we have to change the context)
-			if (isRecursiveCall(call)) {
-
-				// get the associated lambda expression
-				auto def = getDefinitionPoint(call->getFunctionExpr().as<VariableAddress>());
-				auto body = def.getParentAddress().as<LambdaBindingAddress>()->getLambda()->getBody();
-
-				// obtain set representing result of called function
-				auto l_body = cba.getLabel(body);
+				// for the rest, connect the result of the body with the value of the call
+				auto l_body = cba.getLabel(fun.getBody());
 				auto A_body = cba.getSet(A, l_body, innerCtxt);
 
 				// take over value of function body
 				constraints.add(subset(A_body, A_call));
-				return;
+				return;		// and done
 			}
+
+			// if there is more than 1 potential target a constraint depending
+			// on the value of the function expression is added (to test which
+			// function of the potential list of functions is actually called)
 
 			// NOTE: - Optimization - we only need to know the body, not the context it was created in (for binds)
 			//  => we can iterate through the list of free functions, not the callables
 
+			// get set representing the value of the function expression
 			auto l_fun = cba.getLabel(fun);
 			auto F_fun = cba.getSet(F, l_fun, ctxt);
 
-
-			auto num_args = call.size();
-			for(const auto& cur : cba.getContextFreeCallableCandidate(call)) {
-
-				// check proper number of arguments
-				TypeAddress type = cur->getType();
-				FunctionTypePtr funType = type.as<FunctionTypePtr>();
-				auto num_params = funType->getParameterTypes().size();
-				if (num_args != num_params) continue;
-
+			// process all potential targets
+			for(const Callee& cur : targets) {
 				// connect target body with result value
-				auto l_body = cba.getLabel(getBody(cur));
+				auto l_body = cba.getLabel(cur.getBody());
 				auto A_body = cba.getSet(A, l_body, innerCtxt);
+				// .. if the current target is actually targeted!
 				constraints.add(subsetIf(cur, F_fun, A_body, A_call));
 			}
 

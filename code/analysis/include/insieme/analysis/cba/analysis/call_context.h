@@ -92,46 +92,45 @@ namespace cba {
 				return;
 			}
 
-//			// ----- check whether function forwarding can be traced statically ----
-//
-//			if (auto staticUses = cba.getAllStaticUses(fun)) {
-//				// if uses can be determined statically, we can just consider them
-//				for(Label l_call : *staticUses) {
-//					constraints.add(elem(l_call, pred_res));
-//				}
-//				return;
-//			}
+			// wrap targeted function into a callee instance
+			Callee callee(fun);
 
-			// utilize statically known context-predecessor list
-			if (auto staticPredecessors = cba.getAllStaticPredecessors(call)) {
-				// if uses can be determined statically, we can just consider them
-				for(Label l_call : *staticPredecessors) {
+			// get call sites for surrounding function
+			const vector<Caller>& caller = cba.getCallSiteManager().getCaller(callee);
+
+			// special case: all calls to functions are statically bound => callee is not free
+			if (!cba.getCallSiteManager().isFree(callee)) {
+
+				// just add caller-contexts to resulting set
+				for(const CallExprAddress& cur : caller) {
+					auto l_call = cba.getLabel(cur);
 					constraints.add(elem(l_call, pred_res));
 				}
+
+				// and done
 				return;
 			}
 
-			// ----- fallback, the function might reach any point in the code -----
-
-			// TODO: use contexts provided by CBA
-
-			// uses have to be determined dynamically
+			// all kind of calling-contexts need to be considered
 			auto callContexts = generateSequences<Context::call_context::size>(cba.getDynamicCallLabels());
 
-			// compute all contexts this function may be called at
-			auto num_params = fun->getType().as<FunctionTypePtr>()->getParameterTypes().size();
-			for(const auto& dynCall : cba.getDynamicCalls()) {
-				// check number of parameters
-				if (dynCall.size() != num_params) continue;
+			// the dynamic callers are creating new contexts
+			for(const CallExprAddress& cur : caller) {
 
-				auto l_call = cba.getLabel(dynCall);
-				auto l_fun = cba.getLabel(dynCall->getFunctionExpr());
+				// ignore static calls
+				if (!causesContextShift(cur)) continue;
 
+				auto l_call = cba.getLabel(cur);
+				auto l_fun = cba.getLabel(cur->getFunctionExpr());
+
+				// for all potential source-contexts (context of call site)
 				for(const auto& callCtxt : callContexts) {
+
 					auto F_dynCall = cba.getSet(F, l_fun, Context(callCtxt));
-					constraints.add(elemIf(fun.as<ExpressionAddress>(), F_dynCall, l_call, pred_res));
+					constraints.add(elemIf(callee, F_dynCall, l_call, pred_res));
 				}
 			}
+
 		}
 
 	};

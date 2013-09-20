@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/framework/call_site_manager.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/core/forward_decls.h"
@@ -47,19 +48,18 @@ namespace analysis {
 namespace cba {
 
 	// a light version only tracking functions, no context
-	typedef core::ExpressionAddress ContextFreeCallable;
 	template<typename C> class FunctionConstraintGenerator;
 
-	typedef TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> FunctionSetType;
+	typedef TypedSetType<Callee,FunctionConstraintGenerator> FunctionSetType;
 	extern const FunctionSetType F;
 	extern const FunctionSetType f;
 
 
 
 	template<typename Context>
-	class FunctionConstraintGenerator : public BasicDataFlowConstraintGenerator<ContextFreeCallable,FunctionSetType,Context> {
+	class FunctionConstraintGenerator : public BasicDataFlowConstraintGenerator<Callee,FunctionSetType,Context> {
 
-		typedef BasicDataFlowConstraintGenerator<ContextFreeCallable,FunctionSetType,Context> super;
+		typedef BasicDataFlowConstraintGenerator<Callee,FunctionSetType,Context> super;
 
 		CBA& cba;
 
@@ -77,7 +77,7 @@ namespace cba {
 			if (!literal->getType().isa<FunctionTypePtr>()) return;
 
 			// add constraint: literal \in C(lit)
-			auto value = literal.as<ExpressionAddress>();
+			auto value = Callee(literal);
 			auto l_lit = cba.getLabel(literal);
 
 			auto F_lit = cba.getSet(F, l_lit, ctxt);
@@ -90,7 +90,7 @@ namespace cba {
 			// special case - lambda-bindings
 			if (!var.isRoot() && var.getParentNode().isa<LambdaBindingPtr>()) {
 
-				auto value = var.getParentAddress(3).as<ExpressionAddress>();
+				auto value = Callee(var.getParentAddress().as<LambdaBindingAddress>()->getLambda());
 				auto l_var = cba.getLabel(var);
 				auto f_var = cba.getSet(f, l_var, ctxt);
 
@@ -111,7 +111,7 @@ namespace cba {
 			super::visitLambdaExpr(lambda, ctxt, constraints);
 
 			// add constraint: lambda \in C(lambda)
-			auto value = lambda.as<ExpressionAddress>();
+			auto value = Callee(lambda);
 			auto label = cba.getLabel(lambda);
 
 			constraints.add(elem(value, cba.getSet(F, label, ctxt)));
@@ -126,7 +126,7 @@ namespace cba {
 			super::visitBindExpr(bind, ctxt, constraints);
 
 			// add constraint: bind \in C(bind)
-			auto value = bind.as<ExpressionAddress>();
+			auto value = Callee(bind);
 			auto label = cba.getLabel(bind);
 
 			auto F_bind = cba.getSet(F, label, ctxt);

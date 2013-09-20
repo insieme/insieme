@@ -57,10 +57,10 @@ namespace cba {
 	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& R();
 	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& r();
 
-	typedef core::ExpressionAddress ContextFreeCallable;
+	class Callee;
 	template<typename C> class FunctionConstraintGenerator;
-	extern const TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> F;
-	extern const TypedSetType<ContextFreeCallable,FunctionConstraintGenerator> f;
+	extern const TypedSetType<Callee,FunctionConstraintGenerator> F;
+	extern const TypedSetType<Callee,FunctionConstraintGenerator> f;
 
 	template<typename C> class ContextPredecessorGenerator;
 	extern const TypedSetType<Label,ContextPredecessorGenerator> pred;

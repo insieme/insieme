@@ -41,6 +41,8 @@
 
 #include "insieme/utils/printable.h"
 
+#include "insieme/analysis/cba/framework/call_site_manager.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -52,52 +54,53 @@ namespace cba {
 	// the type used to represent functions / closures
 	template<typename Context>
 	struct Callable : public utils::Printable {
-		core::ExpressionAddress definition;
+		Callee callee;
 		Context context;
 
-		Callable()
-			: definition(), context() {}
 		Callable(const core::LiteralAddress& lit)
-			: definition(lit.getAddressedNode()), context() {}
+			: callee(lit), context() {}
 		Callable(const core::LambdaExprAddress& fun)
-			: definition(fun), context() {}
+			: callee(fun), context() {}
 		Callable(const core::BindExprAddress& bind, const Context& context)
-			: definition(bind), context(context) {}
+			: callee(bind), context(context) {}
 		Callable(const core::ExpressionAddress& expr, const Context& context = Context())
-			: definition(expr), context(context) { assert(isBind() || isLambda()); }
+			: callee(expr), context(context) {}
+		Callable(const Callee& callee, const Context& context = Context())
+			: callee(callee), context(context) {}
 		Callable(const Callable& other)
-			: definition(other.definition), context(other.context) {}
+			: callee(other.callee), context(other.context) {}
 
 		bool operator<(const Callable& other) const {
-			if (definition != other.definition) return definition < other.definition;
+			if (callee != other.callee) return callee < other.callee;
 			if (context != other.context) return context < other.context;
 			return false;
 		}
 		bool operator==(const Callable& other) const {
 			if (this == &other) return true;
-			return definition == other.definition && context == other.context;
+			return callee == other.callee && context == other.context;
 		}
 
 		bool operator!=(const Callable& other) const { return !(*this == other); }
 
-		bool isBind() const { return definition->getNodeType() == core::NT_BindExpr; }
-		bool isLambda() const { return definition->getNodeType() == core::NT_LambdaExpr; };
+		bool isLiteral() const { return callee.isLiteral(); };
+		bool isLambda() const { return callee.isLambda(); };
+		bool isBind() const { return callee.isBind(); }
 
-		std::size_t getNumParams() const { return definition->getType().as<core::FunctionTypePtr>()->getParameterTypes().size(); }
+		std::size_t getNumParams() const { return callee.getNumParams(); }
+
+		const core::NodeAddress& getDefinition() const {
+			return callee.getDefinition();
+		}
 
 		core::StatementAddress getBody() const {
-			assert(isBind() || isLambda());
-			return (isBind())
-					? definition.as<core::BindExprAddress>()->getCall().as<core::StatementAddress>()
-					: definition.as<core::LambdaExprAddress>()->getBody().as<core::StatementAddress>();
+			return callee.getBody();
 		}
 
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			if (!definition) return out << "-unknown-";
-			if (auto lit = definition.isa<core::LiteralPtr>()) return out << *lit;
-			return out << "(" << definition->getNodeType() << "@" << definition << "," << context << ")";
+			if (callee.isLiteral()) return out << callee;
+			return out << "(" << callee << "," << context << ")";
 		}
 	};
 

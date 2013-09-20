@@ -157,7 +157,7 @@ namespace cba {
 
 			utils::Lazy<std::vector<Context>> contexts;
 			utils::Lazy<std::vector<Location<Context>>> locations;
-			utils::Lazy<std::vector<Callable<Context>>> callables;
+			map<std::size_t, std::vector<Callable<Context>>> callables;
 
 			~Container() {
 				for(auto cur : generator) delete cur;
@@ -332,10 +332,12 @@ namespace cba {
 				return locations;
 			}
 
-			const std::vector<Callable<Context>>& getCallables(CBA& cba) {
-				if (callables) return callables;
-				callables = getAllCallables(cba);
-				return callables;
+			const std::vector<Callable<Context>>& getCallables(CBA& cba, std::size_t numParams) {
+				auto pos = callables.find(numParams);
+				if (pos != callables.end()) {
+					return pos->second;
+				}
+				return callables[numParams] = getAllCallables(cba, numParams);
 			}
 
 			virtual std::size_t getNumSets() const {
@@ -400,26 +402,24 @@ namespace cba {
 			}
 
 			// a utility function extracting a list of callables
-			vector<Callable<Context>> getAllCallables(CBA& cba) {
+			vector<Callable<Context>> getAllCallables(CBA& cba, std::size_t numParams) {
 				vector<Callable<Context>> res;
 
-				for(const auto& fun : cba.getFreeFunctions()) {
+				for(const auto& fun : cba.getCallSiteManager().getFreeCallees(numParams)) {
 
-					if (fun->getNodeType() == core::NT_LambdaExpr) {
+					if (fun.isLambda() || fun.isLiteral()) {
 
-						auto lambda = fun.template as<core::LambdaExprAddress>();
-						res.push_back(Callable<Context>(lambda));
+						res.push_back(Callable<Context>(fun));
 
-					} else if (fun->getNodeType() == core::NT_BindExpr) {
+					} else if (fun.isBind()) {
 
-						auto bind = fun.template as<core::BindExprAddress>();
 						for(const auto& ctxt : getContexts(cba)) {
-							res.push_back(Callable<Context>(bind, ctxt));
+							res.push_back(Callable<Context>(fun, ctxt));
 						}
 
 					} else {
 
-						assert_fail() << "Encountered unexpected function type: " << fun->getNodeType();
+						assert_fail() << "Encountered unexpected function type: " << fun.getDefinition()->getNodeType();
 					}
 				}
 
@@ -450,14 +450,6 @@ namespace cba {
 
 		// a utility deducing caller <=> callee relations
 		CallSiteManager callSiteMgr;
-
-		// TODO: move this part to some plug-in system
-
-		// a list of all dynamic calls within the targeted fragment - filled by the constructor
-		utils::Lazy<std::vector<core::CallExprAddress>> dynamicCalls;
-		utils::Lazy<std::vector<Label>> dynamicCallLabels;
-
-		utils::Lazy<std::vector<ContextFreeCallable>> freeFunctions;
 
 		std::unordered_map<SetID, ContainerBase*> set2container;
 
@@ -495,11 +487,21 @@ namespace cba {
 		}
 
 		template<typename T, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedSetID<T> getSet(const TypedSetType<T,G>& type, const core::StatementAddress& stmt, const Context& context = Context()) {
+			return getSet(type, getLabel(stmt), context);
+		}
+
+		template<typename T, template<typename C> class G, typename Context = DefaultContext>
 		sc::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
 			Container<Context>& container = getContainer<Context>();
 			sc::TypedSetID<T> res = container.getSet(*this, type, label, context, loc, type_loc);
 			set2container[res] = &container;
 			return res;
+		}
+
+		template<typename T, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedSetID<T> getSet(const StateSetType& type, const core::StatementAddress& stmt, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
+			return getSet(type, getLabel(stmt), context, loc, type_loc);
 		}
 
 		// -- label management --
@@ -587,39 +589,30 @@ namespace cba {
 		}
 
 		template<typename Context>
-		const std::vector<Callable<Context>>& getCallables() {
-			return getContainer<Context>().getCallables(*this);
+		const std::vector<Callable<Context>>& getCallables(std::size_t numParams) {
+			return getContainer<Context>().getCallables(*this, numParams);
 		}
 
-		const std::vector<ContextFreeCallable>& getFreeFunctions() {
-			if (freeFunctions) return freeFunctions;
-			freeFunctions = getAllFreeFunctions(root);
-			return freeFunctions;
-		}
+	private:
 
-		const std::vector<core::CallExprAddress>& getDynamicCalls() {
-			if (dynamicCalls) return dynamicCalls;
+		utils::Lazy<std::vector<Label>> dynamicCallLabels;
 
-			dynamicCalls = std::vector<core::CallExprAddress>();
-
-			// fill dynamicCalls
-			core::visitDepthFirst(root, [&](const core::CallExprAddress& call) {
-				auto fun = call->getFunctionExpr();
-				if (fun.isa<core::LiteralPtr>() || fun.isa<core::LambdaExprPtr>() || fun.isa<core::BindExprPtr>()) return;
-				this->dynamicCalls->push_back(call);
-			});
-
-			return dynamicCalls;
-		}
+	public:
 
 		const std::vector<Label>& getDynamicCallLabels() {
 			if (dynamicCallLabels) return dynamicCallLabels;
-			dynamicCallLabels = ::transform(getDynamicCalls(), [&](const core::CallExprAddress& cur) { return getLabel(cur); });
+
+			dynamicCallLabels = vector<Label>();
 			dynamicCallLabels->push_back(0);
+			for(const Caller&  cur : getCallSiteManager().getDynamicCalls()) {
+				dynamicCallLabels->push_back(getLabel(cur.getCall()));
+			}
 			return dynamicCallLabels;
 		}
 
 		// -------------- static computation of call sites -----------------
+
+		// TODO: remove this interface and redirect access to call site manager directly
 
 		typedef boost::optional<std::vector<Label>> OptCallSiteList;
 		std::map<core::ExpressionAddress, OptCallSiteList> callSiteCache;
@@ -649,14 +642,6 @@ namespace cba {
 			return getAllStaticPredecessors(getStmt(label).as<CallExprAddress>());
 		}
 
-
-		// -------------- Call-Candidate computation -----------------
-
-		typedef std::vector<ContextFreeCallable> ContextFreeCallableList;
-		typedef boost::optional<ContextFreeCallableList> OptContextFreeCallableList;
-		std::map<core::CallExprAddress, OptContextFreeCallableList> contextFreeCallableCandidateCache;
-
-		const ContextFreeCallableList& getContextFreeCallableCandidate(const core::CallExprAddress& call);
 
 
 		// -------------- Static Context Filter -----------------

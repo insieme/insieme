@@ -62,6 +62,7 @@ namespace cba {
 	namespace {
 
 		void createDotDump(const CBA& analysis) {
+			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
 			{
 				// open file
 				std::ofstream out("solution.dot", std::ios::out );
@@ -252,8 +253,8 @@ namespace cba {
 
 //		std::cout << *varY << " = " << analysis.getValuesOf(varY) << "\n";
 //		std::cout << *initY << " = " << analysis.getValuesOf(initY) << "\n";
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(initY, C<Context>())));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(varY, c<Context>())));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(initY, C<Context>())));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(varY, c<Context>())));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
@@ -266,7 +267,6 @@ namespace cba {
 		EXPECT_EQ("{AP(14)}", toString(analysis.getValuesOf(varZ, d, Context(Context::call_context(0,l1)))));
 		EXPECT_EQ("{AP(16)}", toString(analysis.getValuesOf(varZ, d, Context(Context::call_context(0,l2)))));
 //		createDotDump(analysis);
-
 	}
 
 	TEST(CBA, ReturnValue) {
@@ -1041,6 +1041,7 @@ namespace cba {
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), D)));
 		EXPECT_EQ("{AP(5)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), D)));
 
+//		createDotDump(analysis);
 	}
 
 	TEST(CBA, SideEffectHigherOrder) {
@@ -1081,12 +1082,12 @@ namespace cba {
 		const auto& C = cba::C<DefaultContext>();
 
 		// check functions
-		EXPECT_EQ("{(LambdaExpr@0-6-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-10-3,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()[1], C)));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{((Lambda@0-6-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-10-3-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()[1], C)));
 
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
@@ -1384,7 +1385,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		EXPECT_EQ("[1,2,3,4,5,0]", toString(analysis.getDynamicCallLabels()));
+		EXPECT_EQ("[0,1,2,3,4,5]", toString(analysis.getDynamicCallLabels()));
 
 		EXPECT_EQ("{3,4}", toString(analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getBody()[0].as<ExpressionAddress>(), pred)));
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getBody()[0].as<ExpressionAddress>(), pred)));

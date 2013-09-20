@@ -38,6 +38,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include "insieme/analysis/cba/framework/context.h"
 
@@ -52,6 +53,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	using std::set;
 	using std::map;
 	using std::size_t;
 	using std::vector;
@@ -85,6 +87,8 @@ namespace cba {
 			return !(*this == other);
 		}
 
+		operator const CallExprAddress& () const { return call; }
+
 		std::size_t getNumArgs() const {
 			assert_true(call) << "Must not be invoked on undefined call expression!";
 			return call.size();
@@ -114,6 +118,11 @@ namespace cba {
 			: definition(bind) { assert_true(definition); }
 		Callee(const Callee& other)
 			: definition(other.definition) { assert_true(definition); }
+		Callee(const NodeAddress& definition)
+			: definition((definition.isa<LambdaExprAddress>() ? definition.as<LambdaExprAddress>()->getLambda() : definition)) {
+			assert_true(definition);
+			assert_true(isLiteral() || isBind() || isLambda());
+		}
 
 		const NodeAddress& getDefinition() const {
 			return definition;
@@ -149,7 +158,8 @@ namespace cba {
 
 		StatementAddress getBody() const {
 			if (isBind())   return definition.as<core::BindExprAddress>()->getCall();
-			if (isLambda()) return definition.as<core::LambdaExprAddress>()->getBody();
+			if (isLambda()) return definition.as<core::LambdaAddress>()->getBody();
+			if (isLiteral()) return definition.as<core::LiteralAddress>();
 			assert_fail() << "No body within definition: " << definition << " (" << (definition?"null":toString(definition->getNodeType())) << ")";
 			return StatementAddress();
 		}
@@ -196,6 +206,9 @@ namespace cba {
 		map<unsigned, vector<Callee>> freeCallees;
 		map<unsigned, vector<Caller>> freeCallers;
 
+		// the set of calls for which entries in the call strings are added
+		set<Caller> dynamicCalls;
+
 	public:
 
 		CallSiteManager(const StatementAddress& root);
@@ -204,18 +217,28 @@ namespace cba {
 
 		const vector<Callee>& getCallee(const Caller& caller);
 
+		const set<Caller>& getDynamicCalls() const { return dynamicCalls; }
+
+		const vector<Caller>& getFreeCallers(unsigned numArgs) const;
+
+		const vector<Callee>& getFreeCallees(unsigned numParams) const;
+
+		bool isFree(const Callee& callee) const;
+
 	private:
 
 		vector<Caller> computeCaller(const Callee& callee) const;
 
 		vector<Callee> computeCallee(const Caller& caller) const;
 
-		const vector<Caller>& getFreeCallers(unsigned numArgs) const;
-
-		const vector<Callee>& getFreeCallees(unsigned numParams) const;
-
 	};
 
+
+	inline bool causesContextShift(const CallExprAddress& call) {
+		// a context shift always has to happen when it isn't a direct call
+		auto trgType = call->getFunctionExpr()->getNodeType();
+		return trgType != NT_Literal && trgType != NT_LambdaExpr && trgType != NT_BindExpr;
+	}
 
 //	template<typename Context>
 //	class Caller : public utils::Printable {

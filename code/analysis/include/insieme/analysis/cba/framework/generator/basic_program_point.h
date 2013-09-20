@@ -131,7 +131,7 @@ namespace cba {
 		BasicInConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout, Collector& collector)
 			: super(cba, Ain, Aout, collector), cba(cba) {}
 
-		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const ContextFreeCallable& callable,  Constraints& constraints) {
+		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callee& callee,  Constraints& constraints) {
 
 			// check whether given call / target context is actually valid
 			auto fun = call->getFunctionExpr();
@@ -143,7 +143,7 @@ namespace cba {
 			}
 
 			// check proper number of arguments
-			if (callable->getType().as<FunctionTypePtr>()->getParameterTypes().size() != call.size()) return;
+			if (callee.getNumParams() != call.size()) return;
 
 			// check whether call-site is within a bind
 			bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
@@ -157,7 +157,7 @@ namespace cba {
 			auto F_call = cba.getSet(F, l_fun, callCtxt);
 
 			// add effect of function-expression-evaluation (except within bind calls)
-			if (!isCallWithinBind) this->connectStateSetsIf(callable, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+			if (!isCallWithinBind) this->connectStateSetsIf(callee, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 
 			// just connect the effect of the arguments of the call-site with the in of the body call statement
 			for(auto arg : call) {
@@ -167,13 +167,13 @@ namespace cba {
 
 				// add effect of argument
 				auto l_arg = cba.getLabel(arg);
-				this->connectStateSetsIf(callable, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+				this->connectStateSetsIf(callee, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 			}
 
 			// special case: if this is a bind with no parameters
 			if (bind && bind->getParameters()->empty()) {
 				// connect in of call site with in of body
-				this->connectStateSetsIf(callable, F_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, constraints);
+				this->connectStateSetsIf(callee, F_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, constraints);
 			}
 
 		}
@@ -200,30 +200,22 @@ namespace cba {
 				this->connectSets(this->Ain, bind, ctxt, this->Ain, call, ctxt, constraints);
 
 			} else {
+
 				// it is no direct call => change in context possible
-				auto numParams = bind->getParameters().size();
-				for(auto& dynCall : cba.getDynamicCalls()) {
-					if(numParams != dynCall.size()) continue;
+				Callee callee(bind);
+				for (const Caller& cur : cba.getCallSiteManager().getCaller(callee)) {
 
-					// special case: ctxt starts with 0 - root context, is not called by anybody
-					if (ctxt.callContext.startsWith(0)) {
+					// may be reached from any context
+					for(auto& l : cba.getDynamicCallLabels()) {
+
+						// nobody calls context 0
+						if (l != 0 && ctxt.callContext.startsWith(0)) continue;
+
 						Context srcCtxt = ctxt;
-						srcCtxt.callContext >>= 0;
-						connectCallToBody(dynCall, srcCtxt, call, ctxt, bind, constraints);
-					} else {
+						srcCtxt.callContext >>= l;
 
-						// all other contexts may be reached from any other
-						for(auto& l : cba.getDynamicCallLabels()) {
-
-							// nobody calls context 0
-							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
-
-							Context srcCtxt = ctxt;
-							srcCtxt.callContext >>= l;
-
-							// connect call site with body
-							connectCallToBody(dynCall, srcCtxt, call, ctxt, bind, constraints);
-						}
+						// connect call site with body
+						connectCallToBody(cur, srcCtxt, call, ctxt, bind, constraints);
 					}
 				}
 			}
@@ -240,26 +232,18 @@ namespace cba {
 			// handle lambda
 			if (auto lambda = parent.isa<LambdaAddress>()) {
 
-				// get full lambda expression
-				auto lambdaExpr = parent.getParentAddress(3).as<LambdaExprAddress>();
+				// get all call sites
+				Callee callee(lambda);
+				const vector<Caller>& caller = cba.getCallSiteManager().getCaller(callee);
 
-				// get call site
-				auto user = parent.getParentAddress(4);
-				auto call = user.isa<CallExprAddress>();
-				if (call && call->getFunctionExpr() == lambdaExpr) {
+				// link in all potential call sites
+				for(const Caller& cur : caller) {
 
-					// connect call site with body
-					connectCallToBody(call, ctxt, stmt, ctxt, lambdaExpr, constraints);
+					// check whether context has to be shifted
+					if (causesContextShift(cur)) {
 
-				} else {
-
-					// this function is invoked indirectly
-					auto numParams = lambda.as<LambdaPtr>()->getParameters().size();
-					for(auto& call : cba.getDynamicCalls()) {
-						if(numParams != call.size()) continue;
-
-						// all other contexts may be reached from any other
-						for(auto& l : cba.getDynamicCallLabels()) {
+						// produce all potential call sites
+						for (auto& l : cba.getDynamicCallLabels()) {
 
 							// nobody calls context 0
 							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
@@ -268,50 +252,16 @@ namespace cba {
 							srcCtxt.callContext >>= l;
 
 							// connect call site with body
-							connectCallToBody(call, srcCtxt, stmt, ctxt, lambdaExpr, constraints);
+							connectCallToBody(cur.getCall(), srcCtxt, stmt, ctxt, callee, constraints);
 						}
+
+					} else {
+
+						// no context switch required
+						connectCallToBody(cur.getCall(), ctxt, stmt, ctxt, callee, constraints);
+
 					}
 
-				}
-
-				// also: the lambda may be recursive => link recursive call sites with body
-				if (lambdaExpr->isRecursive()) {
-
-					// TODO: use a more efficient and safe way to extract recursive call sites (use something from the core)
-
-					// collect recursive calls
-					VariablePtr recVar = lambdaExpr->getVariable();
-					vector<CallExprAddress> recCalls;
-					visitDepthFirstPrunable(lambdaExpr, [&](const NodeAddress& cur)->bool {
-						if (cur.isa<TypePtr>()) return true;
-						if (auto call = cur.isa<CallExprAddress>()) {
-							if (*call->getFunctionExpr() == *recVar) {
-								recCalls.push_back(call);
-							}
-						}
-
-						// stop if the recursive variable gets re-defined
-						if (auto def = cur.isa<LambdaDefinitionPtr>()) {
-							if (cur.getDepth() > lambda.getDepth() && def->getBindingOf(recVar)) return true;
-						}
-						return false;
-					});
-
-					for(auto call : recCalls) {
-
-						// all other contexts may be reached from any other
-						for(auto& l : cba.getDynamicCallLabels()) {
-
-							// nobody calls context 0
-							if (l != 0 && ctxt.callContext.startsWith(0)) continue;
-
-							Context srcCtxt = ctxt;
-							srcCtxt.callContext >>= l;
-
-							// connect call site with body
-							connectCallToBody(call, srcCtxt, stmt, ctxt, lambdaExpr, constraints);
-						}
-					}
 				}
 
 				// done
@@ -496,85 +446,49 @@ namespace cba {
 			auto l_call = cba.getLabel(call);
 
 			// create inner call context
-			Context innerCallContext = ctxt;
+			Context innerCtxt = ctxt;
+			if (causesContextShift(call)) {
+				innerCtxt.callContext <<= l_call;
+			}
+
+			// get list of potential targets
+			const vector<Callee>& targets = cba.getCallSiteManager().getCallee(call);
+
+			// if target is fixed => no condition on constraint edge
+			if (targets.size() == 1u) {
+
+				// skip handling of literals
+				if (targets[0].isLiteral()) {
+					// we assume literals have no affect
+					this->connectStateSets(this->Ain, l_call, ctxt, this->Aout, l_call, ctxt, constraints);
+					return;
+				}
+
+				// get label of body
+				auto l_body = cba.getLabel(targets[0].getBody());
+
+				// just connect out of body with out of call
+				this->connectStateSets(this->Aout, l_body, innerCtxt, this->Aout, l_call, ctxt, constraints);
+
+				// and done
+				return;
+			}
+
+			// if there are multiple targets => check the value of the function expression
 
 			// get set of potential target functions
 			auto l_fun = cba.getLabel(call->getFunctionExpr());
 			auto F_fun = cba.getSet(F, l_fun, ctxt);
 
-			// a utility resolving constraints for the called function
-			auto addConstraints = [&](const ExpressionAddress& fun, bool fixed) {
+			for(const Callee& cur : targets) {
 
-				// check correct number of arguments
-				if (call.size() != fun.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
-					// this is not a valid target
-					return;
-				}
+				// get label of body
+				auto l_body = cba.getLabel(cur.getBody());
 
-				// ---- Effect of function => out of call ---
-
-				// get body
-				StatementAddress body;
-				if (auto lambda = fun.isa<LambdaExprAddress>()) {
-					body = lambda->getBody();
-				} else if (auto bind = fun.isa<BindExprAddress>()) {
-					body = bind->getCall();
-				} else {
-					std::cout << "Unsupported potential target of type " << fun->getNodeType() << " encountered.";
-					assert(false && "Unsupported potential call target.");
-				}
-
-				// get label for body
-				auto l_body = cba.getLabel(body);
-
-				// link out of fun with call out
-				if (fixed) {
-					this->connectStateSets(this->Aout, l_body, innerCallContext, this->Aout, l_call, ctxt, constraints);
-				} else {
-					this->connectStateSetsIf(fun, F_fun, this->Aout, l_body, innerCallContext, this->Aout, l_call, ctxt, constraints);
-				}
-
-				// process function body
-//					if(fixed) this->visit(body, innerCallContext, constraints);
-			};
-
-
-			// handle call target
-			auto fun = call->getFunctionExpr();
-
-			if (fun.isa<LiteralPtr>()) {
-
-				// - here we are assuming side-effect free literals -
-
-				// just connect out of arguments to call-out
-				for (auto arg : call) {
-					auto l_arg = cba.getLabel(arg);
-					this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_call, ctxt, constraints);
-				}
-
-				// and the function
-				this->connectStateSets(this->Aout, l_fun, ctxt, this->Aout, l_call, ctxt, constraints);
-
-			} else if (auto lambda = fun.isa<LambdaExprAddress>()) {
-
-				// direct call => handle directly
-				addConstraints(lambda, true);
-
-			} else if (auto bind = fun.isa<BindExprAddress>()) {
-
-				// direct call of bind => handle directly
-				addConstraints(bind, true);
-
-			} else {
-
-				// create new call-context
-				innerCallContext.callContext <<= l_call;
-
-				// consider every potential target function
-				for(const auto& cur : cba.getFreeFunctions()) {
-					addConstraints(cur, false);
-				}
+				// just connect out of body with out of call if function fits
+				this->connectStateSetsIf(cur, F_fun, this->Aout, l_body, innerCtxt, this->Aout, l_call, ctxt, constraints);
 			}
+
 		}
 
 		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {

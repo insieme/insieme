@@ -49,12 +49,17 @@ namespace cba {
 
 	namespace {
 
+		typedef vector<Caller> CallerList;
+		typedef boost::optional<CallerList> OptCallerList;
+
+		OptCallerList getStaticUses(const Callee& callee);
 		NodeAddress tryObtainingFunction(const core::ExpressionAddress& expr);
 
 	}
 
 
-	CallSiteManager::CallSiteManager(const core::StatementAddress& root) : freeCallees(), freeCallers() {
+	CallSiteManager::CallSiteManager(const core::StatementAddress& root)
+		: freeCallees(), freeCallers(), dynamicCalls() {
 
 		// collect free callers and callees
 		visitDepthFirst(root,
@@ -79,6 +84,10 @@ namespace cba {
 						if (parent.as<CallExprPtr>()->getFunctionExpr() == cur.as<ExpressionPtr>()) return;
 					}
 
+					// if all uses of the function can be determined statically => done
+					// TODO: result could be immediately saved within map (since it is required later on)
+					if (getStaticUses(cur.as<NodeAddress>())) return;
+
 					// found a free function => register it
 					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprAddress>()->getLambda()) :
 									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprAddress>()) : Callee(cur.as<LiteralAddress>());
@@ -96,10 +105,14 @@ namespace cba {
 					// check whether it is a direct call
 					if (kind == NT_LambdaExpr || kind == NT_BindExpr || kind == NT_Literal) return;
 
+					// at this point it is a dynamic call - but not yet a free call
+					dynamicCalls.insert(call);
+
+					// TODO: check whether this should be re-enabled
 					// check whether the target is statically known
-					if (kind == NT_Variable) {
-						if (tryObtainingFunction(fun)) return;
-					}
+//					if (kind == NT_Variable) {
+//						if (tryObtainingFunction(fun)) return;
+//					}
 
 					// this is one
 					freeCallers[call->size()].push_back(call);
@@ -120,10 +133,10 @@ namespace cba {
 		const vector<Callee>& res = forward[caller] = computeCallee(caller);
 
 		// cross-check result - the assertion has to be split up due to a gcc limitation
-		assert_decl(bool bedirectional = all(computeCallee(caller), [&](const Callee& cur)->bool {
-			return contains(this->getCaller(cur), caller);
-		}));
-		assert_true(bedirectional);
+//		assert_decl(bool bedirectional = all(computeCallee(caller), [&](const Callee& cur)->bool {
+//			return contains(this->getCaller(cur), caller);
+//		}));
+//		assert_true(bedirectional);
 
 		return res;
 
@@ -142,10 +155,10 @@ namespace cba {
 		const vector<Caller>& res = backward[callee] = computeCaller(callee);
 
 		// cross-check result - the assertion has to be split up due to a gcc limitation
-		assert_decl(bool bedirectional = all(computeCaller(callee), [&](const Caller& cur)->bool {
-			return contains(this->getCallee(cur), callee);
-		}));
-		assert_true(bedirectional);
+//		assert_decl(bool bedirectional = all(computeCaller(callee), [&](const Caller& cur)->bool {
+//			return contains(this->getCallee(cur), callee);
+//		}));
+//		assert_true(bedirectional);
 
 		return res;
 
@@ -211,6 +224,10 @@ namespace cba {
 						assert(call[cur.getIndex()-2] == cur);
 						// ok - it is a static call => we may follow the parameter
 						allFine = allFine && collectUsesOfVariable(fun->getParameterList()[cur.getIndex()-2], res);
+					} else {
+						// it is passed by argument to a non-static call => could go anywhere
+						allFine = false;
+						return true;
 					}
 				}
 
@@ -434,6 +451,9 @@ namespace cba {
 		return (pos == freeCallers.end()) ? empty : pos->second;
 	}
 
+	bool CallSiteManager::isFree(const Callee& callee) const {
+		return contains(getFreeCallees(callee.getNumParams()), callee);
+	}
 
 
 //	namespace {
