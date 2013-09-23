@@ -169,7 +169,7 @@ core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* buli
     //extract the real type
     const core::TypePtr& type = convert(bulinTy->getElementType().getTypePtr());
     assert(type && "Conversion of complex element type failed.");
-    return  mgr.getLangExtension<core::lang::ComplexExtensions>().getComplexType(type);
+    return  mgr.getLangExtension<core::lang::ComplexExtension>().getComplexType(type);
 }
 
 // ------------------------   ARRAYS  -------------------------------------
