@@ -146,12 +146,6 @@ lookup_lib( PAPI papi )
 # lookup ruby
 #find_package( Ruby )
 
-# lookup Xerces library
-if (USE_XML) 	
-	lookup_lib( XERCES xerces-c )
-	add_definitions(-DUSE_XML)				# enable macro within C/C++ code
-endif (USE_XML)
-
 # lookup pthread library
 find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
