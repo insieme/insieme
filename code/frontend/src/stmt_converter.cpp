@@ -654,7 +654,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 
 	core::ExpressionPtr condExpr;
 	if ( const clang::VarDecl* condVarDecl = ifStmt->getConditionVariable()) {
-		assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
 		/*
 		 * we are in the situation where a variable is declared in the if condition, i.e.:
 		 *
@@ -671,23 +670,18 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 		retStmt.push_back(declStmt);
 
 		assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
+	}
 
-		// the expression will be a cast to bool of the declared variable
-		condExpr = builder.castExpr(gen.getBool(), declStmt.as<core::DeclarationStmtPtr>()->getVariable());
+	const clang::Expr* cond = ifStmt->getCond();
+	assert( cond && "If statement with no condition." );
 
-	} else {
+	condExpr = convFact.convertExpr(cond);
 
-		const clang::Expr* cond = ifStmt->getCond();
-		assert( cond && "If statement with no condition." );
-
-		condExpr = convFact.convertExpr(cond);
-
-		if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
-			// an assignment as condition is not allowed in IR, prepend the assignment operation
-			retStmt.push_back( condExpr );
-			// use the first argument as condition
-			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
-		}
+	if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
+		// an assignment as condition is not allowed in IR, prepend the assignment operation
+		retStmt.push_back( condExpr );
+		// use the first argument as condition
+		condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
 	}
 
 	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
