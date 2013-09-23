@@ -1,26 +1,38 @@
-/* Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
-
-   This file is part of GCC.
-
-   GCC is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
-
-   GCC is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   Under Section 7 of GPL version 3, you are granted additional
-   permissions described in the GCC Runtime Library Exception, version
-   3.1, as published by the Free Software Foundation.
-
-   You should have received a copy of the GNU General Public License and
-   a copy of the GCC Runtime Library Exception along with this program;
-   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
-   <http://www.gnu.org/licenses/>.  */
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
 
 /* Implemented from the specification included in the Intel C++ Compiler
    User Guide and Reference, version 9.0.  */
@@ -138,11 +150,9 @@ extern __v4sf __builtin_ia32_movhlps(__v4sf, __v4sf);
 extern __v4sf __builtin_ia32_unpckhps(__v4sf, __v4sf);
 extern __v4sf __builtin_ia32_unpcklps(__v4sf ,__v4sf);
 extern __v4sf __builtin_ia32_loadhps(__v4sf, const __v2sf *);
-//extern void __builtin_ia32_storehps(const __v2sf *, __v4sf);
-extern void __builtin_ia32_storehps(__v2si *, __v4sf);
+//extern void __builtin_ia32_storehps(__v2sf *, __v4sf);
 extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf *);
-//extern void __builtin_ia32_storelps(const __v2sf *, __v4sf);
-extern void __builtin_ia32_storelps(__v2sf *, __v4sf);
+//extern void __builtin_ia32_storelps(__v2sf *, __v4sf);
 extern __v4sf __builtin_ia32_loadups(const float *);
 extern void __builtin_ia32_storeups(float *, __v4sf);
 extern __v4sf  __builtin_ia32_shufps(__v4sf, __v4sf, int const);
@@ -816,7 +826,13 @@ _mm_loadh_pi (__m128 __A, __m64 const *__P)
 extern __inline void __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_storeh_pi (__m64 *__P, __m128 __A)
 {
+#ifdef __clang__
+	//INSIEME HACK clang has a different signature for this builtin
+  __builtin_ia32_storehps ((__v2si *)__P, (__v4sf)__A);
+#else
   __builtin_ia32_storehps ((__v2sf *)__P, (__v4sf)__A);
+#endif
+
 }
 
 /* Moves the upper two values of B into the lower two values of A.  */
@@ -845,7 +861,12 @@ _mm_loadl_pi (__m128 __A, __m64 const *__P)
 extern __inline void __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_storel_pi (__m64 *__P, __m128 __A)
 {
+#ifdef __clang__
+	//INSIEME HACK clang has a different signature for this builtin
+  __builtin_ia32_storelps ((__v2si *)__P, (__v4sf)__A);
+#else 
   __builtin_ia32_storelps ((__v2sf *)__P, (__v4sf)__A);
+#endif
 }
 
 /* Creates a 4-bit mask from the most significant bits of the SPFP values.  */
@@ -1268,8 +1289,12 @@ _mm_prefetch (const void *__P, enum _mm_hint __I)
 extern __inline void __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_stream_pi (__m64 *__P, __m64 __A)
 {
-  //__builtin_ia32_movntq ((unsigned long long *)__P, (unsigned long long)__A);
-  __builtin_ia32_movntq ((__v1di*)__P, (__v1di)__A);
+#ifdef __clang__
+	//INSIEME HACK clang has a different signature for this builtin
+	__builtin_ia32_movntq ((__v1di*)__P, (__v1di)__A);
+#else
+	__builtin_ia32_movntq ((unsigned long long *)__P, (unsigned long long)__A);
+#endif
 }
 
 /* Likewise.  The address must be 16-byte aligned.  */
