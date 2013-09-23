@@ -283,11 +283,20 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef(def);
 	}
 
+	/*** VECTOR EXTENSION STUFF ***/
 	// Enable OpenCL
 	// LO.OpenCL = 1;
 	LO.AltiVec = 1;
 	LO.LaxVectorConversions = 1;
 
+	// to eneable clang to parse gcc-builtins we need the hacked builtinheaders
+	//	+	for some not builtins which are NOT supported by CLANG we give the signature (taken from GCC) as extern
+	//		functiondefinition
+	//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
+	//		intrinsic to use depending on the used compiler the correct casts 
+	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, true, false, false);
+	/*** VECTOR EXTENSION STUFF END ***/
+	
 	// Set OMP define if compiling with OpenMP
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/",
 		clang::frontend::System, true, false, false);
@@ -363,7 +372,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
 	}
-
+	
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();

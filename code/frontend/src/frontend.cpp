@@ -64,7 +64,7 @@ namespace frontend {
 		  systemHeaderSearchPath(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
 		  standard(Auto),
 		  definitions(),
-		  interceptions( { "std::.*", "__gnu_cxx::.*" } ),
+		  interceptions( { "std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*" } ),
 		  flags(DEFAULT_FLAGS) {};
 
 
