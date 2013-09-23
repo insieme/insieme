@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -679,6 +679,22 @@ ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const Type
 		subExpr,
 		getTypeLiteral(newElementType)
 	);
+}
+
+ExpressionPtr IRBuilder::toRef(const ExpressionPtr& srcSinkExpr) const {
+	TypePtr type = srcSinkExpr->getType();
+	assert(type.isa<RefTypePtr>());
+
+	RefTypePtr inType = type.as<RefTypePtr>();
+	if (inType.isReference()) return srcSinkExpr;
+
+	TypePtr resType = refType(inType->getElementType());
+	if (inType.isSource()) {
+		return callExpr(resType, manager.getLangBasic().getSrcToRef(), srcSinkExpr);
+	}
+
+	assert(inType.isSink() && "This should be a sink!");
+	return callExpr(resType, manager.getLangBasic().getSinkToRef(), srcSinkExpr);
 }
 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
