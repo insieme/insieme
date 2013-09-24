@@ -326,7 +326,7 @@ namespace cba {
 		EXPECT_EQ("{AP(3)}", toString(analysis.getValuesOf(decls[3]->getVariable(), d)));
 		EXPECT_EQ("{AP(3)}", toString(analysis.getValuesOf(decls[4]->getVariable(), d)));
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(decls[5]->getVariable(), d)));
-
+//		createDotDump(analysis);
 	}
 
 	TEST(CBA, References1) {
@@ -783,6 +783,33 @@ namespace cba {
 		EXPECT_EQ("{0}",  	 	 toString(analysis.getValuesOf(body[3].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{4*v2+3}",  	 toString(analysis.getValuesOf(body[5].as<ExpressionAddress>(), A)));
 
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, ForStmt_5) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> r = var(1);"
+				"	for(int i = 1 .. 5 : 1) {"
+				"		r = r * i;"
+				"	}"
+				"	*r;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+
+		CompoundStmtAddress code(in);
+
+		Formula unknown;
+
+		CBA analysis(code);
+		EXPECT_TRUE(contains(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A), unknown));
 //		createDotDump(analysis);
 	}
 
@@ -1314,9 +1341,9 @@ namespace cba {
 			CBA analysis(code);
 
 			EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+			createDotDump(analysis);
 			EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
 			EXPECT_EQ("{8}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
-//			createDotDump(analysis);
 	}
 
 	TEST(CBA, BindExpressions_103) {
@@ -1395,37 +1422,37 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-//	TEST(CBA, Recursion_1) {
-//
-//		// create a simple test case containing recursion
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	let fac = (int<4> x)->int<4> {"
-//				"		if (x == 0) return 1;"
-//				"		return x * fac(x-1);"
-//				"	};"
-//				"	"
-////				"	fac(0);"
-//				"	fac(1);"
-//				"	fac(2);"
-//				"	fac(3);"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//dumpPretty(in);
-//		CBA analysis(code);
-//std::cout << "Valid Contexts: " << analysis.getValidContexts<Context<2,0,0>>() << "\n";
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A, Context<5,0,0>())));
-////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
-//createDotDump(analysis);
-////		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
-////		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
-//	}
+	TEST(CBA, Recursion_1) {
+
+		// create a simple test case containing recursion
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let fac = (int<4> x)->int<4> {"
+				"		if (x == 0) return 1;"
+				"		return x * fac(x-1);"
+				"	};"
+				"	"
+//				"	fac(0);"
+				"	fac(1);"
+				"	fac(2);"
+				"	fac(3);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+dumpPretty(in);
+		CBA analysis(code);
+std::cout << "Valid Contexts: " << analysis.getValidContexts<Context<2,0,0>>() << "\n";
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A, Context<3,0,0>())));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+createDotDump(analysis);
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+	}
 
 //
 //	// Known Issues:
