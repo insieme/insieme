@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -443,7 +443,9 @@ namespace {
 		});
 
 		PRINT(RefType, {
-				out << "ref<";
+				if (node->isReference()) out << "ref<";
+				if (node->isSource()) out << "src<";
+				if (node->isSink()) out << "sink<";
 				visit(node->getElementType());
 				out << ">";
 		});

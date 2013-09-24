@@ -79,10 +79,6 @@
 #include "insieme/driver/pragma/pragma_transformer.h"
 #include "insieme/driver/cmd/main_options.h"
 
-#ifdef USE_XML
-#include "insieme/xml/xml_utils.h"
-#endif
-
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
@@ -96,9 +92,6 @@ using namespace insieme::driver::cmd;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace be = insieme::backend;
-#ifdef USE_XML
-	namespace xml = insieme::xml;
-#endif
 namespace utils = insieme::utils;
 namespace anal = insieme::analysis;
 
@@ -526,30 +519,7 @@ int main(int argc, char** argv) {
 			// Creates dot graph of the generated IR
 			showIR(program, errors, options);
 
-			#ifdef USE_XML
-			// XML dump
-			if(!options.DumpXML.empty()) {
-				openBoxTitle("XML Dump");
-				utils::measureTimeFor<INFO>("Xml.dump ",
-						[&]() { xml::XmlUtil::write(program, options.DumpXML); }
-					);
-				closeBox();
-			}
-			#endif
 		}
-
-		#ifdef USE_XML
-		// Load IR from XML file (previous dump)
-		if(!options.LoadXML.empty()) {
-
-			openBoxTitle("XML Load");
-			program = utils::measureTimeFor<ProgramPtr, INFO>("XML Load", [&]() {
-				NodePtr xmlNode= xml::XmlUtil::read(manager, options.LoadXML);
-				return xmlNode.as<ProgramPtr>();
-			});
-			closeBox();
-		}
-		#endif
 
 		{
 			// see whether a backend has been selected

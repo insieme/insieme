@@ -1187,14 +1187,71 @@ namespace core {
 	// --------------------------------- Reference Type ----------------------------
 
 	/**
+	 * An enumeration used for distinguishing the various kinds of function types.
+	 */
+	enum ReferenceKind {
+		RK_SOURCE = 1, 		/* < a read-only reference to a memory location */
+		RK_REFERENCE, 		/* < a read/write reference to a memory location */
+		RK_SINK 			/* < a write only reference to a memory location */
+	};
+
+
+	/**
 	 * The accessor associated to the reference type.
 	 */
-	IR_NODE_ACCESSOR(RefType, Type, Type)
+	IR_NODE_ACCESSOR(RefType, Type, Type, UIntValue)
 
 		/**
 		 * Obtains the type of the referenced element type.
 		 */
 		IR_NODE_PROPERTY(Type, ElementType, 0);
+
+		/**
+		 * Obtains a pointer to the child node determining the kind of this reference type.
+		 */
+		IR_NODE_PROPERTY(UIntValue, ReferenceKind, 1);
+
+		/**
+		 * Obtains the kind of reference this reference type is representing.
+		 */
+		ReferenceKind getKind() const {
+			return (ReferenceKind)getReferenceKind()->getValue();
+		}
+
+		/**
+		 * Checks whether this reference type is representing a source (read-only reference).
+		 */
+		bool isSource() const {
+			return getKind() == RK_SOURCE;
+		}
+
+		/**
+		 * Checks whether this reference type is representing a read/write reference.
+		 */
+		bool isReference() const {
+			return getKind() == RK_REFERENCE;
+		}
+
+		/**
+		 * Checks whether this reference is a write-only reference.
+		 */
+		bool isSink() const {
+			return getKind() == RK_SINK;
+		}
+
+		/**
+		 * Checks whether this reference type can be the target of a read operation.
+		 */
+		bool isRead() const {
+			return isSource() || isReference();
+		}
+
+		/**
+		 * Checks whether this reference can be the target of write operation.
+		 */
+		bool isWrite() const {
+			return isReference() || isSink();
+		}
 
 	};
 
@@ -1208,7 +1265,10 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "ref<" << *getElementType() << ">";
+			if (isSource())    return out << "src<" << *getElementType() << ">";
+			if (isReference()) return out << "ref<" << *getElementType() << ">";
+			if (isSink())      return out << "sink<" << *getElementType() << ">";
+			return out << "unknown_ref<" << *getElementType() << ">";
 		}
 
 	public:
@@ -1220,11 +1280,27 @@ namespace core {
 		 * @param manager 		the manager which should be responsible for maintaining the new
 		 * 				  		type instance and all its referenced elements.
 		 * @param elementType 	the type of element the requested reference is addressing
+		 * @param refKind		the kind of reference to be created
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static RefTypePtr get(NodeManager& manager, const TypePtr& elementType) {
-			return manager.get(RefType(elementType));
+		static RefTypePtr get(NodeManager& manager, const TypePtr& elementType, const UIntValuePtr& refKind) {
+			return manager.get(RefType(elementType, refKind));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to a reference type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager 		the manager which should be responsible for maintaining the new
+		 * 				  		type instance and all its referenced elements.
+		 * @param elementType 	the type of element the requested reference is addressing
+		 * @param refKind		the kind of reference to be created
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static RefTypePtr get(NodeManager& manager, const TypePtr& elementType, const ReferenceKind& refKind = RK_REFERENCE) {
+			return get(manager, elementType, UIntValue::get(manager, refKind));
 		}
 
 	};

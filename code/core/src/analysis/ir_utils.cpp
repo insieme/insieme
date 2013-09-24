@@ -140,6 +140,10 @@ namespace {
 			return boundVars.find(var) == boundVars.end();	// if not, there is a free generic variable
 		}
 
+		bool visitRefType(const RefTypePtr& type, TypeVariableSet& boundVars) {
+			return visit(type->getElementType(), boundVars);
+		}
+
 		bool visitFunctionType(const FunctionTypePtr& funType, TypeVariableSet& boundVars) {
 			return any(funType->getParameterTypes(), [&](const TypePtr& type) { return visit(type, boundVars); }) ||
 					visit(funType->getReturnType(), boundVars);

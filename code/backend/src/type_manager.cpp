@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -995,8 +995,8 @@ namespace backend {
 
 			// produce R and L value type
 			// generally, a level of indirection needs to be added
-			res->lValueType = c_ast::ptr(subType->lValueType);
-			res->rValueType = c_ast::ptr(subType->rValueType);
+			res->lValueType = c_ast::ptr(subType->lValueType, ptr->isSource());
+			res->rValueType = c_ast::ptr((ptr->isSource()) ? c_ast::makeConst(subType->rValueType) : subType->rValueType);
 			if (basic.isAny(elementType)) {
 				// nothing to fix
 			} else if (basic.isAnyRef(elementType)) {
@@ -1008,6 +1008,13 @@ namespace backend {
 			} else if (elementNodeType != core::NT_RefType) {
 				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
 				res->lValueType = subType->lValueType;
+
+				// if it is a source, the value type has to be const
+				if (ptr->isSource()) {
+					res->lValueType = c_ast::makeConst(subType->lValueType);
+					res->rValueType = c_ast::ptr(res->lValueType);
+				}
+
 			} else if (core::analysis::getReferencedType(ptr->getElementType())->getNodeType() == core::NT_ArrayType) {
 				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
 				res->lValueType = subType->lValueType;
@@ -1016,6 +1023,11 @@ namespace backend {
 
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);
+
+			// special handling of source references (const references)
+			if (ptr->isSource()) {
+				res->externalType = c_ast::ptr(c_ast::makeConst(subType->externalType));
+			}
 
 			// special handling of references to arrays (always pointer in C)
 			if (elementNodeType == core::NT_ArrayType) {

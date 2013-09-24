@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -715,6 +715,22 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
 						return cur.refType(elementType);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
+					seq("src<", T, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						return cur.refType(elementType, RK_SOURCE);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
+					seq("sink<", T, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						return cur.refType(elementType, RK_SINK);
 					},
 					1    // higher priority than generic type rule
 			));
