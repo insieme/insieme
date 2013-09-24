@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -161,7 +161,8 @@ namespace c_ast {
 
 	struct PointerType : public Type {
 		TypePtr elementType;
-		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
+		bool isConst;
+		PointerType(TypePtr elementType, bool isConst = false) : Type(NT_PointerType), elementType(elementType), isConst(isConst) {}
 		virtual bool equals(const Node& other) const;
 	};
 

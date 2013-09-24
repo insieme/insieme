@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -795,11 +795,12 @@ namespace c_ast {
 		}
 
 		struct TypeLevel {
-			unsigned pointerCounter;
+			typedef bool Pointer;
+			vector<Pointer> pointers; // true is a const pointer, false a standard pointer
 			vector<ExpressionPtr> subscripts;
 			vector<TypePtr> parameters;
 			bool hasParameters;
-			TypeLevel() : pointerCounter(0), hasParameters(false) {}
+			TypeLevel() : pointers(), hasParameters(false) {}
 		};
 
 		typedef vector<TypeLevel> TypeNesting;
@@ -839,8 +840,9 @@ namespace c_ast {
 
 			// count pointers
 			while(cur->getType() == NT_PointerType) {
-				res.pointerCounter++;
+				PointerTypePtr ptr = cur.as<PointerTypePtr>();
 				cur = static_pointer_cast<PointerType>(cur)->elementType;
+				res.pointers.push_back(ptr->isConst);
 			}
 
 			// resolve rest recursively
@@ -867,7 +869,9 @@ namespace c_ast {
 
 			// print pointers ...
 			const TypeLevel& cur = *start;
-			out << times("*", cur.pointerCounter);
+			for(auto it = cur.pointers.rbegin(); it != cur.pointers.rend(); it++) {
+				out << ((*it) ? "*const" : "*");
+			}
 
 			++start;
 			if (start != end) {

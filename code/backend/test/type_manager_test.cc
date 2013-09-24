@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -388,6 +388,114 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("void**", toC(info.rValueType));
 	EXPECT_EQ("void**", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+}
+
+TEST(TypeManager, RefSourceSinkTypes) {
+
+	core::NodeManager nodeManager;
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
+
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+	RefTypeInfo info;
+	auto lit = cManager->create<c_ast::Literal>("X");
+
+	// test a source (const pointer)
+	core::RefTypePtr type = builder.refType(basic.getInt4(), core::RK_SOURCE);
+	EXPECT_EQ("src<int<4>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("const int32_t", toC(info.lValueType));
+	EXPECT_EQ("const int32_t*", toC(info.rValueType));
+	EXPECT_EQ("const int32_t*", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// test a sink (no C equivalent => just a reference)
+	type = builder.refType(basic.getInt4(), core::RK_SINK);
+	EXPECT_EQ("sink<int<4>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("int32_t", toC(info.lValueType));
+	EXPECT_EQ("int32_t*", toC(info.rValueType));
+	EXPECT_EQ("int32_t*", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// test a pointer to a const location
+	type = builder.refType(builder.refType(basic.getInt4(), core::RK_SOURCE));
+	EXPECT_EQ("ref<src<int<4>>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("const int32_t*", toC(info.lValueType));
+	EXPECT_EQ("const int32_t**", toC(info.rValueType));
+	EXPECT_EQ("const int32_t**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// test a pointer to a const location
+	type = builder.refType(builder.refType(builder.refType(basic.getInt4(), core::RK_SOURCE)));
+	EXPECT_EQ("ref<ref<src<int<4>>>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("const int32_t**", toC(info.lValueType));
+	EXPECT_EQ("const int32_t***", toC(info.rValueType));
+	EXPECT_EQ("const int32_t***", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// test a pointer to a const location
+	type = builder.refType(builder.refType(basic.getInt4()), core::RK_SOURCE);
+	EXPECT_EQ("src<ref<int<4>>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("int32_t*const", toC(info.lValueType));
+	EXPECT_EQ("int32_t*const*", toC(info.rValueType));
+	EXPECT_EQ("int32_t*const*", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// and one more level
+	type = builder.parseType("ref<src<ref<int<4>>>>").as<core::RefTypePtr>();
+	EXPECT_EQ("ref<src<ref<int<4>>>>", toString(*type));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("int32_t*const*", toC(info.lValueType));
+	EXPECT_EQ("int32_t*const**", toC(info.rValueType));
+	EXPECT_EQ("int32_t*const**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 }
 
