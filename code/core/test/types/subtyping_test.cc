@@ -213,6 +213,68 @@ namespace types {
 
 	}
 
+	TEST(TypeUtils, SourceAndSink) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const auto& basic = mgr.getLangBasic();
+
+		TypePtr a = builder.genericType("A");
+
+		TypePtr src = builder.refType(a, RK_SOURCE);
+		TypePtr ref = builder.refType(a, RK_REFERENCE);
+		TypePtr snk = builder.refType(a, RK_SINK);
+
+		// symmetric
+		EXPECT_PRED2(isSubTypeOf, src, src);
+		EXPECT_PRED2(isSubTypeOf, ref, ref);
+		EXPECT_PRED2(isSubTypeOf, snk, snk);
+
+		// ref is a sub-type of src and snk, but not the other way arround
+		EXPECT_PRED2(isSubTypeOf, ref, src);
+		EXPECT_PRED2(isSubTypeOf, ref, snk);
+
+		EXPECT_PRED2(isNotSubTypeOf, src, ref);
+		EXPECT_PRED2(isNotSubTypeOf, snk, ref);
+
+		// sink and source are unrelated
+		EXPECT_PRED2(isNotSubTypeOf, src, snk);
+		EXPECT_PRED2(isNotSubTypeOf, snk, src);
+
+
+		// and references to sub-types
+		TypePtr int4 = basic.getInt4();
+		TypePtr int8 = basic.getInt8();
+
+		EXPECT_PRED2(isSubTypeOf, int4, int8);
+		EXPECT_PRED2(isNotSubTypeOf, int8, int4);
+
+		TypePtr srcInt4 = builder.refType(int4, RK_SOURCE);
+		TypePtr srcInt8 = builder.refType(int8, RK_SOURCE);
+		TypePtr refInt4 = builder.refType(int4);
+		TypePtr refInt8 = builder.refType(int8);
+		TypePtr snkInt4 = builder.refType(int4, RK_SINK);
+		TypePtr snkInt8 = builder.refType(int8, RK_SINK);
+
+		// what is supported
+		EXPECT_PRED2(isSubTypeOf, refInt4, srcInt4);
+		EXPECT_PRED2(isSubTypeOf, refInt8, srcInt8);
+
+		EXPECT_PRED2(isSubTypeOf, refInt4, snkInt4);
+		EXPECT_PRED2(isSubTypeOf, refInt8, snkInt8);
+
+		// what is not supported
+		EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
+		EXPECT_PRED2(isNotSubTypeOf, refInt8, refInt4);
+
+		EXPECT_PRED2(isNotSubTypeOf, refInt8, srcInt4);
+		EXPECT_PRED2(isNotSubTypeOf, refInt8, snkInt4);
+
+		EXPECT_PRED2(isNotSubTypeOf, refInt4, srcInt8);
+		EXPECT_PRED2(isNotSubTypeOf, refInt4, snkInt8);
+
+	}
+
 	//TEST(TypeUtils, IsSubTypeOfTypeVariable) {
 	//
 	//	NodeManager manager;

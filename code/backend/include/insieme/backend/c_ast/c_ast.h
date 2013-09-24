@@ -161,7 +161,8 @@ namespace c_ast {
 
 	struct PointerType : public Type {
 		TypePtr elementType;
-		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
+		bool isConst;
+		PointerType(TypePtr elementType, bool isConst = false) : Type(NT_PointerType), elementType(elementType), isConst(isConst) {}
 		virtual bool equals(const Node& other) const;
 	};
 

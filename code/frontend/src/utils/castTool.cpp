@@ -581,7 +581,7 @@ switch (castExpr->getCastKind()) {
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingRealToComplex 	:
         case clang::CK_IntegralRealToComplex 	:
-		    return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtensions>().getConstantToComplex(), expr);
+		    return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
 		/*A conversion of a floating point real to a floating point complex of the original type. Injects the value as the
 		* real component with a zero imaginary component. float -> _Complex float.
 		* */
@@ -594,7 +594,7 @@ switch (castExpr->getCastKind()) {
         case clang::CK_FloatingComplexToIntegralComplex 	:
 		case clang::CK_IntegralComplexCast 	:
 		case clang::CK_IntegralComplexToFloatingComplex 	:
-            return mgr.getLangExtension<core::lang::ComplexExtensions>().castComplexToComplex(expr, targetTy);
+            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToComplex(expr, targetTy);
 		/*Converts between different floating point complex types. _Complex float -> _Complex double.
 		* */
 		/*Converts from a floating complex to an integral complex. _Complex float -> _Complex int.
@@ -608,7 +608,7 @@ switch (castExpr->getCastKind()) {
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingComplexToReal 	:
 		case clang::CK_IntegralComplexToReal 	:
-		    return mgr.getLangExtension<core::lang::ComplexExtensions>().getReal(expr);
+		    return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(expr);
 		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
 		* component. _Complex long double -> long double.
 		* */
@@ -622,7 +622,7 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_FloatingComplexToBoolean 	:
 		    /*Converts a complex to bool by comparing against 0+0i.
 		* */
-            return mgr.getLangExtension<core::lang::ComplexExtensions>().castComplexToBool(expr);
+            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToBool(expr);
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueBitCast 	:

@@ -14,7 +14,8 @@ int main() {
 
 	// an intercepted function
 	printf("%d\n", func(0));
-
+	printf("%d\n", ns::func(0));
+	
 	// an intercepted type
 	A a;
 	printf("%d\n", a.f(4));

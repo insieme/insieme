@@ -313,6 +313,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 //						CXX CONSTRUCTOR CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
+	
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(callExpr, retIr);
+
 	const core::IRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
@@ -332,7 +336,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	// back end compiler
 	if (callExpr->isElidable () && ctorDecl->isCopyConstructor()){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
-		core::ExpressionPtr retIr = (Visit(callExpr->getArg (0)));
+		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
 		return retIr;
@@ -344,13 +348,15 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			//classes
 			if(ctorDecl->getParent()->isPOD()) {
 				if (numElements)
-					return builder.callExpr(
+					return (retIr = builder.callExpr(
 							builder.getLangBasic().getVectorInitUniform(),
 							builder.undefinedVar(irClassType),
 							builder.getIntParamLiteral(numElements)
-						);
-				else
-					return builder.undefinedVar(refToClassTy);
+						));
+				else {
+					retIr = builder.undefinedVar(refToClassTy);
+					return retIr;
+				}
 			} else {
 				//use eiter createDefaultCtor or the ctorDecl
 				//if not userprovided we don't need to add a constructor just create the object to work
@@ -360,19 +366,19 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				core::ExpressionPtr ctor;
 				if (core::StructTypePtr structType = irClassType.isa<core::StructTypePtr>()) {
 					ctor = core::analysis::createDefaultConstructor(structType);
-					return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
+					return (retIr = builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy)));
 				} else if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()) {
 					// this is a 'named' type
                     ctor = core::analysis::createDefaultConstructor(structType);
                     ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
-                    return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
+                    return (retIr = builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy)));
 				}
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
 			//if not userprovided we don't need to add a constructor just create the object to work
 			//with -- for the rest the BE-compiler takes care of
-			return (Visit(callExpr->getArg(0)));
+			return (retIr = Visit(callExpr->getArg(0)));
 		}
 	}
 
@@ -389,24 +395,20 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	args.insert (args.begin(), builder.undefinedVar(refToClassTy));
 
 	// build expression and we are done!!!
-	core::ExpressionPtr ret;
-	LOG_EXPR_CONVERSION(callExpr, ret);
-
 	if (numElements){
-		ret = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor(),
+		retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor(),
 								mgr.getLangBasic().getRefVar(), ctorFunc, builder.getIntParamLiteral(numElements));
-	}
-	else{
+	} else{
 		//single object constructor
-		ret = builder.callExpr (funcTy.getReturnType(), ctorFunc, args);
+		retIr = builder.callExpr (funcTy.getReturnType(), ctorFunc, args);
 	}
 
 	if (VLOG_IS_ON(2)){
-		dumpPretty(ret);
+		dumpPretty(retIr);
 	}
 
-    assert(ret && "ConstructExpr could not be translated");
-	return ret;
+    assert(retIr && "ConstructExpr could not be translated");
+	return retIr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

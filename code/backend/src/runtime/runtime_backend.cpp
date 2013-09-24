@@ -62,6 +62,7 @@
 
 #include "insieme/backend/addons/cpp_references.h"
 #include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/simd_vector.h"
 
 
 namespace insieme {
@@ -81,6 +82,7 @@ namespace runtime {
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation);
 		res->addAddOn<addons::CppReferences>();
         res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::SIMDVector>();
 		return res;
 	}
 

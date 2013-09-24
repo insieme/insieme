@@ -105,7 +105,7 @@ namespace addons {
 
 		OperatorConverterTable getComplexTypeOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res;
-			const auto& ext = manager.getLangExtension<core::lang::ComplexExtensions>();
+			const auto& ext = manager.getLangExtension<core::lang::ComplexExtension>();
 			const auto& gen = manager.getLangBasic();
 
 			#include "insieme/backend/operator_converter_begin.inc"

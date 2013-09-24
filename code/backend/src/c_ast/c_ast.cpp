@@ -175,9 +175,10 @@ namespace c_ast {
 		return *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
 	}
 
-	bool PointerType::equals(const Node& other) const {
-		assert(dynamic_cast<const PointerType*>(&other));
-		return *elementType == *static_cast<const PointerType&>(other).elementType;
+	bool PointerType::equals(const Node& type) const {
+		assert(dynamic_cast<const PointerType*>(&type));
+		const auto& other = static_cast<const PointerType&>(type);
+		return isConst == other.isConst && *elementType == *other.elementType;
 	}
 
 	bool ReferenceType::equals(const Node& node) const {

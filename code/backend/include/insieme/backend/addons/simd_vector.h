@@ -35,5 +35,33 @@
  */
 
 #pragma once
-#define XML_SCHEMA_DIR std::string("${CMAKE_CURRENT_SOURCE_DIR}/schema/")
 
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/addon.h"
+
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
+namespace insieme {
+namespace backend {
+namespace addons {
+
+
+	/**
+	 * An Add-On providing support for SIMD vectors
+	 * */
+	struct SIMDVector : public AddOn {
+
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+
+	};
+
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme

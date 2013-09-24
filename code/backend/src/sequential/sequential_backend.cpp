@@ -60,6 +60,7 @@
 
 #include "insieme/backend/addons/cpp_references.h"
 #include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/simd_vector.h"
 
 namespace insieme {
 namespace backend {
@@ -68,7 +69,8 @@ namespace sequential {
 	SequentialBackendPtr SequentialBackend::getDefault() {
 		auto res = std::make_shared<SequentialBackend>();
 		res->addAddOn<addons::CppReferences>();
-        res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::SIMDVector>();
 		return res;
 	}
 

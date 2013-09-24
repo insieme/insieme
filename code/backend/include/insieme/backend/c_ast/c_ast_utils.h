@@ -154,12 +154,19 @@ namespace c_ast {
 
 	// --- types ------------------------------------------------
 
-	inline PointerTypePtr ptr(const TypePtr& type) {
-		return type->getManager()->create<c_ast::PointerType>(type);
+	inline PointerTypePtr ptr(const TypePtr& type, bool isConst = false) {
+		return type->getManager()->create<c_ast::PointerType>(type, isConst);
 	}
 
 	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {
 		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
+	}
+
+	inline TypePtr makeConst(const TypePtr& type) {
+		if (type->getNodeType() == NT_PointerType) {
+			return ptr(type.as<PointerTypePtr>()->elementType, true);
+		}
+		return type->getManager()->create<c_ast::ModifiedType>(type, c_ast::ModifiedType::CONST);
 	}
 
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {

@@ -77,6 +77,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -527,14 +528,15 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		irType = builder.volatileType(irType);
 	}
 
-	bool isOclVector = !!dyn_cast<const ExtVectorType>(varTy->getUnqualifiedDesugaredType());
+	bool isOclVector = !!varTy->getUnqualifiedDesugaredType()->isExtVectorType();
+	bool isGCCVector = !!varTy->getUnqualifiedDesugaredType()->isVectorType();
 	if (!(varTy.isConstQualified() ||    						// is a constant
 		 varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
  	 	 (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
 		 ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
-		   isOclVector ) ))) {
+		   isOclVector || isGCCVector) ))) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
-		// only exception are OpenCL vectors
+		// only exception are OpenCL vectors and gcc-vectors
 		irType = builder.refType(irType);
 	}
 	else{
@@ -809,7 +811,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExprType = var->getType().as<core::RefTypePtr>()->getElementType();
 			else if (IS_CPP_REF(var->getType()))
 				initExprType = var->getType();
-			else{
+			 else{
 				// is a constant variable (left side is not ref, right side does not need to create refvar)
 				// const char name[] = "constant string";
 				// vector<char,16> vX = "constatn string"
@@ -825,7 +827,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// some Cpp cases do not create new var
 			if (!IS_CPP_REF(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
-			}
+			} 
 
 			// finnaly create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
@@ -948,9 +950,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 		// if no init expression is provided => use zero or undefined value
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
 	}
-
+	
+	auto initExpr = convertExpr(expr);
 	// Convert the expression like any other expression
- 	return getInitExpr ( type,convertExpr(expr));
+ 	return getInitExpr ( type, initExpr);
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1023,7 +1026,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 core::TypePtr Converter::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	return typeConvPtr->convert( type );
+	return typeConvPtr->convert( type);
 }
 
 namespace {
@@ -1063,16 +1066,15 @@ namespace {
 				initList.push_back (expr);
 			}
 			else if ((*it)->isMemberInitializer ()){
-				// create access to the member of the struct/class
-				// we need to use the detailed version to build the reference member operation,
-				// but we substitute it with the generic type as soon as we are done
-				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
-				core::LiteralPtr genThis      = builder.literal("this", builder.refType(classType));
-				core::LiteralPtr completeThis = builder.literal("this", builder.refType (converter.lookupTypeDetails(classType)));
-				init = builder.refMember( completeThis, ident);
-				core::CallExprAddress addr(init.as<core::CallExprPtr>());
-				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
+
+				// construct the member access based on the type and the init expression
+				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
+				core::LiteralPtr genThis = builder.literal("this", builder.refType (classType));
 				expr = converter.convertExpr((*it)->getInit());
+				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
+				init =  builder.callExpr (builder.refType(membTy),
+										  builder.getLangBasic().getCompositeRefElem(), genThis,
+										  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membTy));
 
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
 				if (!IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
@@ -1090,7 +1092,6 @@ namespace {
 					} else { assert(false); }
 				}
 				else{
-					if (*converter.lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()) != *converter.lookupTypeDetails(expr->getType()))
 						expr = builder.tryDeref(expr);
 				}
 				initList.push_back(builder.assign( init, expr));
@@ -1264,6 +1265,26 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
 
+		if ( core::lang::isSIMDVector(elementType) )  {
+			auto internalVecTy = core::lang::getSIMDVectorType(elementType);
+			auto membTy = internalVecTy.as<core::SingleElementTypePtr>()->getElementType();
+			//TODO MOVE INTO SOME BUILDER HELPER
+			auto initOp = mgr.getLangExtension<core::lang::SIMDVectorExtension>().getSIMDInitPartial();
+			vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+			ExpressionList elements;
+			// get all values of the init expression
+			for (size_t i = 0; i < inits.size(); ++i) {
+				elements.push_back(getInitExpr(membTy, inits[i] ));
+			}
+			
+			return builder.callExpr(
+					elementType, 
+					initOp, 
+					core::encoder::toIR(type->getNodeManager(), elements),
+					builder.getIntTypeParamLiteral(internalVecTy->getSize())); 
+
+		}
+
 		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  ||
 			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
@@ -1347,8 +1368,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
 
-	if (IS_CPP_REF(init->getType()) && elementType.isa<core::RefTypePtr>())
-		return builder.toIRRef(init);
+	if (IS_CPP_REF(init->getType())){
+		if (elementType.isa<core::RefTypePtr>())
+			return builder.toIRRef(init);
+		else
+			return builder.deref(builder.toIRRef(init));  // might be a call by value to a function, and we need to derref
+	}
+
 
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 

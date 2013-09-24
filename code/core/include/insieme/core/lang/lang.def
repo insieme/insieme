@@ -374,8 +374,11 @@ LITERAL(MemLocLocal, "memloc.local", "memloc")
 LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
 LITERAL(RefNull,        "ref.null",             "ref<any>")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> 'a")
-LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
+LITERAL(RefAssign, 		"ref.assign", 			"(sink<'a>,'a) -> 'a")
+LITERAL(RefDeref,  		"ref.deref",  			"(src<'a>) -> 'a")
+
+LITERAL(SrcToRef,		"src.to.ref",			"(src<'a>) -> ref<'a>")
+LITERAL(SinkToRef,		"sink.to.ref",			"(sink<'a>) -> ref<'a>")
 
 DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
 DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap); r = v; return r; }")

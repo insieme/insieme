@@ -61,6 +61,7 @@ using namespace llvm;
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
 		boost::replace_all(str, "::", "_"); \
+		boost::replace_all(str, " ", "_"); \
 }
 
 
@@ -94,6 +95,7 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 
 
 std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+
 	std::string name = funcDecl->getQualifiedNameAsString();
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl))
 		if (method->isVirtual())
@@ -119,10 +121,59 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
 
-	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
-		name.append("_c");
+	// beware of spetialized functions, the type does not show off
+	// check if we have template spec args otherwise seg faults may occur
+	if (funcDecl->isFunctionTemplateSpecialization () && funcDecl->getTemplateSpecializationArgs()){
+		for(unsigned i =0; i<funcDecl->getTemplateSpecializationArgs()->size(); ++i){
+            //only add something if we have a type
+            switch(funcDecl->getTemplateSpecializationArgs()->get(i).getKind()) {
+                case clang::TemplateArgument::Expression: {
+                    name.append ("_" +
+                        funcDecl->getTemplateSpecializationArgs()->get(i).getAsExpr()->getType().getAsString());
+                    break;
+                }
+                case clang::TemplateArgument::Type: {
+                    name.append ("_" + funcDecl->getTemplateSpecializationArgs()->get(i).getAsType().getAsString());
+                    break;
+                }
+                case clang::TemplateArgument::Null: {
+                    name.append ("_null");
+                    break;
+                }
+                case clang::TemplateArgument::Declaration: {
+                    name.append ("_" +
+                        funcDecl->getTemplateSpecializationArgs()->get(i).getAsDecl()->getType().getAsString());
+                        break;
+                }
+                case clang::TemplateArgument::NullPtr: {
+                    name.append ("_nullptr");
+                    break;
+                }
+                case clang::TemplateArgument::Integral:  {
+                    name.append ("_" + funcDecl->getTemplateSpecializationArgs()->get(i).getAsIntegral().toString(10));
+                    break;
+                }
+                case clang::TemplateArgument::Template: {
+                    name.append ("_" +
+                        funcDecl->getTemplateSpecializationArgs()->get(i).getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+                }
+                case clang::TemplateArgument::TemplateExpansion: {
+                    //I don't know what to do here
+                    break;
+                }
+                case clang::TemplateArgument::Pack: {
+                    name.append ("_" +
+                        funcDecl->getTemplateSpecializationArgs()->get(i).getAsTemplateOrTemplatePattern().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+                    break;
+                }
+            }
+		}
+	}
 
 	REMOVE_SYMBOLS(name);
+
+	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
+		name.append("_c");
 
     //check for dummyss or dummygg and replace it with the original name
 	boost::algorithm::replace_last(name, "dummyss", "operator<<");
@@ -130,7 +181,6 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//if nothing was found check for the other ones
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
-
 
 	return name;
 }

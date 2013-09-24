@@ -33,9 +33,6 @@ include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 include_directories( ${insieme_machine_learning_include_dir} )
-if (USE_XML)
-	include_directories( ${insieme_xml_include_dir} )
-endif (USE_XML)
 
 set( insieme_libraries 
 	insieme_utils 
@@ -48,10 +45,6 @@ set( insieme_libraries
 	insieme_driver
 	insieme_machine_learning
 )
-
-if (USE_XML)
-	set( insieme_libraries ${insieme_libraries} insieme_xml )
-endif (USE_XML)
 
 # build executables
 add_definitions( -fopenmp )

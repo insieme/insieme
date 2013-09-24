@@ -718,17 +718,44 @@ TEST(TypeTest, RefType) {
 	RefTypePtr refTypeA = RefType::get(manager, elementTypeA);
 	RefTypePtr refTypeB = RefType::get(manager, elementTypeB);
 
+	RefTypePtr srcType  = RefType::get(manager, elementTypeA, RK_SOURCE);
+	RefTypePtr sinkType = RefType::get(manager, elementTypeB, RK_SINK);
+
 	// check names
 	EXPECT_EQ ( "ref<A>", toString(*refTypeA) );
 	EXPECT_EQ ( "ref<'a>", toString(*refTypeB) );
+	EXPECT_EQ ( "src<A>", toString(*srcType) );
+	EXPECT_EQ ( "sink<'a>", toString(*sinkType) );
 
 	// check element types
 	EXPECT_EQ ( elementTypeA, refTypeA->getElementType() );
 	EXPECT_EQ ( elementTypeB, refTypeB->getElementType() );
+	EXPECT_EQ ( elementTypeA, srcType->getElementType() );
+	EXPECT_EQ ( elementTypeB, sinkType->getElementType() );
+
+	EXPECT_TRUE ( refTypeA->isReference() );
+	EXPECT_FALSE( refTypeA->isSource() );
+	EXPECT_FALSE( refTypeA->isSink() );
+	EXPECT_TRUE ( refTypeA->isRead() );
+	EXPECT_TRUE ( refTypeA->isWrite() );
+
+	EXPECT_FALSE( srcType->isReference() );
+	EXPECT_TRUE ( srcType->isSource() );
+	EXPECT_FALSE( srcType->isSink() );
+	EXPECT_TRUE ( srcType->isRead() );
+	EXPECT_FALSE( srcType->isWrite() );
+
+	EXPECT_FALSE( sinkType->isReference() );
+	EXPECT_FALSE( sinkType->isSource() );
+	EXPECT_TRUE ( sinkType->isSink() );
+	EXPECT_FALSE( sinkType->isRead() );
+	EXPECT_TRUE ( sinkType->isWrite() );
 
 	// check remaining type properties
-	basicTypeTests(refTypeA, true, toList(toVector(elementTypeA)));
-	basicTypeTests(refTypeB, false, toList(toVector(elementTypeB)));
+	basicTypeTests(refTypeA, true,  toList(toVector<NodePtr>(elementTypeA, UIntValue::get(manager, RK_REFERENCE))));
+	basicTypeTests(refTypeB, false, toList(toVector<NodePtr>(elementTypeB, UIntValue::get(manager, RK_REFERENCE))));
+	basicTypeTests(srcType,  true,  toList(toVector<NodePtr>(elementTypeA, UIntValue::get(manager, RK_SOURCE))));
+	basicTypeTests(sinkType, false, toList(toVector<NodePtr>(elementTypeB, UIntValue::get(manager, RK_SINK))));
 }
 
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -77,6 +77,7 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, VariableArrayType)
 	DECLARE_TYPE_VISIT(TypeConverter, FunctionProtoType)
 	DECLARE_TYPE_VISIT(TypeConverter, FunctionNoProtoType)
+	DECLARE_TYPE_VISIT(TypeConverter, VectorType)
 	DECLARE_TYPE_VISIT(TypeConverter, ExtVectorType)
 	DECLARE_TYPE_VISIT(TypeConverter, TypedefType)
 	DECLARE_TYPE_VISIT(TypeConverter, TypeOfType)
@@ -123,6 +124,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, VariableArrayType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionProtoType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionNoProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, VectorType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ExtVectorType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypedefType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfType)
@@ -171,6 +173,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, VariableArrayType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionProtoType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionNoProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, VectorType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ExtVectorType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypedefType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfType)

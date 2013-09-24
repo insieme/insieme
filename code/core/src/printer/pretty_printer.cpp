@@ -443,7 +443,9 @@ namespace {
 		});
 
 		PRINT(RefType, {
-				out << "ref<";
+				if (node->isReference()) out << "ref<";
+				if (node->isSource()) out << "src<";
+				if (node->isSink()) out << "sink<";
 				visit(node->getElementType());
 				out << ">";
 		});

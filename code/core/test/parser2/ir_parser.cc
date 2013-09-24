@@ -89,6 +89,24 @@ namespace parser {
 		EXPECT_EQ("test:[A,virtual B]<A,B>", toString(*parse(manager, "test : A, virtual B <A,B>")));
 	}
 
+	TEST(IR_Parser2, ReferenceType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+
+		EXPECT_EQ(builder.refType(A), builder.parseType("ref<A>"));
+		EXPECT_EQ(builder.refType(A, RK_SOURCE), builder.parseType("src<A>"));
+		EXPECT_EQ(builder.refType(A, RK_SINK),   builder.parseType("sink<A>"));
+
+		EXPECT_EQ(builder.refType(B), builder.parseType("ref<B>"));
+		EXPECT_EQ(builder.refType(B, RK_SOURCE), builder.parseType("src<B>"));
+		EXPECT_EQ(builder.refType(B, RK_SINK),   builder.parseType("sink<B>"));
+
+	}
+
 	TEST(IR_Parser2, TupleType) {
 
 		NodeManager manager;

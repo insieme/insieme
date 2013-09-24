@@ -215,8 +215,20 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 	if (subType->getNodeType() == NT_RefType) {
 		const auto& basic = subType->getNodeManager().getLangBasic();
 
+		// check source / sink
+		auto srcRef = subType.as<RefTypePtr>();
+		auto trgRef = superType.as<RefTypePtr>();
+
+		// check read/write privileges
+		if (trgRef.isRead() && !srcRef.isRead()) return false;
+		if (trgRef.isWrite() && !srcRef.isWrite()) return false;
+
+		// check element type
 		auto srcElement = subType.as<RefTypePtr>()->getElementType();
 		auto trgElement = superType.as<RefTypePtr>()->getElementType();
+
+		// if element types are identical => it is fine
+		if (srcElement == trgElement) return true;
 
 		// if sub-type is ref<any> it is ok
 		if (basic.isAny(trgElement)) {
@@ -244,6 +256,7 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 				return true;
 			}
 		}
+
 	}
 
 	// no other relations are supported

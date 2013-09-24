@@ -719,6 +719,22 @@ namespace parser {
 					1    // higher priority than generic type rule
 			));
 			g.addRule("T", rule(
+					seq("src<", T, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						return cur.refType(elementType, RK_SOURCE);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
+					seq("sink<", T, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						return cur.refType(elementType, RK_SINK);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
 					seq("channel<", T, ",", P, ">"),
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();

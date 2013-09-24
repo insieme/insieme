@@ -200,54 +200,81 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					TEMPLATE SPECIALIZATION TYPE (TODO)
+//					TEMPLATE SPECIALIZATION TYPE 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION(templTy, retTy);
+
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-        //we have to check if Template argument type is an expression or a type
-        clang::QualType qt;
-        if(templTy->getArg(argId).getKind() == clang::TemplateArgument::Expression) {
-            qt = templTy->getArg(argId).getAsExpr()->getType();
-        } else {
-            qt = templTy->getArg(argId).getAsType();
-        }
-        assert(qt.getTypePtr());
-        VLOG(2) << "TemplateArguments: " << qt.getTypePtr()->getTypeClassName();
-    }
-	VLOG(2) << "isSugared: " << templTy->isSugared();
-
-	//START_LOG_TYPE_CONVERSION(templTy);
-	core::TypePtr retTy;
-	LOG_TYPE_CONVERSION( templTy, retTy );
-	if(templTy->isSugared()) {
-		//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
-		for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
-			VLOG(2) << "Converting TemplateArg";
-            //we have to check if Template argument type is an expression or a type
-			clang::QualType qt;
-			if(ait->getKind() == clang::TemplateArgument::Expression) {
-                qt = ait->getAsExpr()->getType();
-			} else {
-                qt = ait->getAsType();
+			
+		switch(templTy->getArg(argId).getKind()){
+			case clang::TemplateArgument::Expression: {
+				VLOG(2) << "arg: expression"; 
+				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType().getTypePtr());
+				break;
 			}
-			convFact.convertType(qt.getTypePtr());
-		}
+			case clang::TemplateArgument::Type: {
+				VLOG(2) << "arg: TYPE"; 
+				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
+				break;
+			}
+												// NON IMPLEMENTED ONES
+			case clang::TemplateArgument::Null: {
+				VLOG(2) << "arg: NULL"; 
+				assert(false);
+				break;
+			}
+			case clang::TemplateArgument::Declaration: {
+				VLOG(2) << "arg: DECL"; 
+				assert(false);
+				break;
+			}
+			case clang::TemplateArgument::NullPtr: {
+				 VLOG(2) << "arg: nullptr"; 
+				assert(false);
+				break;
+			}
+			case clang::TemplateArgument::Integral:  {
+				VLOG(2) << "arg: integral"; 
+				assert(false);
+				break;
+			}
+			case clang::TemplateArgument::Template: {
+				VLOG(2) << "arg: template"; 
+				// no need to do anything
+				//templTy->getArg(argId).getAsTemplate().dump();
 
-		retTy = convFact.convertType(templTy->desugar().getTypePtr());
-	}
-	return retTy;
+				break;
+			}
+			case clang::TemplateArgument::TemplateExpansion: {
+				VLOG(2) << "arg: template expansion"; 
+				assert(false);
+				break;
+			}
+			case clang::TemplateArgument::Pack: {
+				VLOG(2) << "arg: pack"; 
+				assert(false);
+				break;
+			}
+		}
+    }
+
+	assert(templTy->isSugared()&& "no idea what to do with non sugar");
+ 	return	retTy = convFact.convertType(templTy->desugar().getTypePtr());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+//					DEPENDENT TEMPLATE SPECIALIZATION TYPE 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert(false && "DependentTemplateSpecializationType not yet handled!");
+	assert(false && "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR");
 	return retTy;
 }
 
@@ -368,9 +395,12 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 				if (ctorLambda){
 					assert(ctorLambda);
 					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
-                    assert(!ctorLambda.isa<core::LiteralPtr>());
-					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
-					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+					// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
+					// by the complete implementation
+					if (!ctorLambda.isa<core::LiteralPtr>()){
+						if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
+						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+					}
 				}
 			}
 		}
