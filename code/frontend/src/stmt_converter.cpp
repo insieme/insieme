@@ -60,7 +60,17 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include <algorithm> 
+
 using namespace clang;
+
+namespace {
+	struct litCompare{
+		bool operator() (const insieme::core::LiteralPtr& a, const insieme::core::LiteralPtr& b) const{
+			return a->getStringValue() < b->getStringValue();
+		}
+	};
+}
 
 namespace stmtutils {
 
@@ -951,15 +961,20 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		addStmtToOpenCases(convFact.convertStmt(currStmt));
 	}
 
-	// build final cases list
+	// we need to sort the elements to assure same output for different memory aligment, valgrinf problem
+	std::set<core::LiteralPtr, litCompare> caseLiterals;
+	for (auto pair : caseMap){
+		caseLiterals.insert(pair.first);
+	}
+
 	vector<core::SwitchCasePtr> cases;
 	// initialize the default case with an empty compoundstmt
 	core::CompoundStmtPtr defStmt = builder.compoundStmt();
-	for (auto pair : caseMap){
-		if (pair.first != defLit)
-			cases.push_back( builder.switchCase(pair.first, builder.wrapBody(stmtutils::tryAggregateStmts(builder, pair.second ))));
+	for (auto literal : caseLiterals){
+		if (literal != defLit)
+			cases.push_back( builder.switchCase(literal, builder.wrapBody(stmtutils::tryAggregateStmts(builder,  caseMap[literal]))));
 		else
-			defStmt = builder.wrapBody(stmtutils::tryAggregateStmts( builder, pair.second ));
+			defStmt = builder.wrapBody(stmtutils::tryAggregateStmts( builder, caseMap[literal]));
 	}
 
 	core::StatementPtr irSwitch = builder.switchStmt(condExpr, cases, defStmt);

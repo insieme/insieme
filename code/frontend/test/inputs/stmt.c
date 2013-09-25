@@ -316,7 +316,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-		"{ decl int<4> v0 = ( *v100); switch(v0) { case 2: { (v100 := 1); continue; } case 8: { (v100 := (( *v100)+10)); } case 3: { gen.post.inc(v100); return unit; } case 10: { } default: { } };}"
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 10: { } case 2: { (v100 := 1); continue; } case 3: { gen.post.inc(v100); return unit; } case 8: { (v100 := (( *v100)+10)); } default: { } };}"
 	switch(a) {
 		case 10:
 			break;
