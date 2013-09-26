@@ -32,5 +32,13 @@ static jpc_mstabent_t jpc_mstab[] = {
 
 int main()
 {
+	jpc_mstabent_t a = {{NULL, NULL, NULL, NULL}};
+	a.ops.destroyparms == NULL;
+
+	jpc_mstab[0].ops.destroyparms == NULL;
+
+	jpc_mstabent_t b[1] = { {{NULL, NULL, NULL, NULL}} };
+	b[0].ops.destroyparms == NULL;
+
 	return 0;
 }
