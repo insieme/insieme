@@ -1067,8 +1067,8 @@ namespace cba {
 
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), D)));
 		EXPECT_EQ("{AP(5)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), D)));
-
 //		createDotDump(analysis);
+
 	}
 
 	TEST(CBA, SideEffectHigherOrder) {
@@ -1123,8 +1123,8 @@ namespace cba {
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[13].as<ExpressionAddress>(), A)));
 
-		EXPECT_LE(analysis.getNumSets(), 322);
-		EXPECT_LE(analysis.getNumConstraints(), 318);
+		EXPECT_LE(analysis.getNumSets(), 314);
+		EXPECT_LE(analysis.getNumConstraints(), 322);
 
 //		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
 //		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
@@ -1341,9 +1341,9 @@ namespace cba {
 			CBA analysis(code);
 
 			EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
-			createDotDump(analysis);
 			EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
 			EXPECT_EQ("{8}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+//			createDotDump(analysis);
 	}
 
 	TEST(CBA, BindExpressions_103) {
@@ -1435,10 +1435,62 @@ namespace cba {
 				"		return x * fac(x-1);"
 				"	};"
 				"	"
-//				"	fac(0);"
+				"	fac(0);"
 				"	fac(1);"
 				"	fac(2);"
 				"	fac(3);"
+				"	fac(4);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
+//		createDotDump(analysis);
+
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+
+		// the analysis of code[3] should contain the unknown value
+		EXPECT_TRUE(contains(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A), Formula()));
+
+		// but if the accuracy is increased by using a longer call-string it should work
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A, Context<3,0,0>())));
+
+		// yet still not for larger recursive functions
+		EXPECT_TRUE(contains(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()), Formula()));
+	}
+
+	TEST(CBA, Recursion_2) {
+
+		// let's try some mutual recursion
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let even, odd = "
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return true;"
+				"			return odd(x-1);"
+				"		},"
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return false;"
+				"			return even(x-1);"
+				"		};"
+				"	"
+				"	even(0);"
+				"	even(1);"
+				"	even(2);"
+				"	even(3);"
+				"	odd(0);"
+				"	odd(1);"
+				"	odd(2);"
+				"	odd(3);"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -1446,12 +1498,18 @@ namespace cba {
 		CompoundStmtAddress code(in);
 dumpPretty(in);
 		CBA analysis(code);
-std::cout << "Valid Contexts: " << analysis.getValidContexts<Context<2,0,0>>() << "\n";
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A, Context<3,0,0>())));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
-createDotDump(analysis);
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), B)));
+		createDotDump(analysis);
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), B)));
+//
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
+
 	}
 
 //

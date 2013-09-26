@@ -117,16 +117,32 @@ namespace cba {
 			if (!isValidContext(cba, ctxt)) return;
 
 			// for valid content => std procedure
-			super::visit(node, ctxt, constraints);
+			visitInternal(node, ctxt, constraints);
 		}
 
 	protected:
+
+		/**
+		 * An entry point to be intersected in case sub-classes would like to customize the entry point of the
+		 * constraint resolution process (after the cache and ctxt has been checked).
+		 */
+		virtual void visitInternal(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+			// by default, just forward call to visit
+			super::visit(node, ctxt, constraints);
+		}
 
 		/**
 		 * Provides access to the context
 		 */
 		CBA& getCBA() {
 			return cba;
+		}
+
+		/**
+		 * Marks a node / context combination to be processed (visitor will not decent into this pair again).
+		 */
+		void markProcessed(const core::NodeAddress& node, const Context& ctxt) {
+			processed.insert(Item(node,ctxt));
 		}
 
 	};

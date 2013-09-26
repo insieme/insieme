@@ -55,6 +55,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/typed_map.h"
 #include "insieme/utils/lazy.h"
@@ -365,7 +366,7 @@ namespace cba {
 					auto pos = getAddress(std::get<1>(cur.first));
 					out << "\n\t" << cur.second
 							<< " [label=\"" << cur.second << " = " << setName
-								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
+								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " = " << core::printer::PrettyPrinter(pos, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : " << std::get<2>(cur.first) << "]"
 							<< " = " << getSolution(cur.second) << "\""
 							<< ((cba.solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
 				}
@@ -599,6 +600,8 @@ namespace cba {
 
 	public:
 
+		typedef std::vector<Label> CallSiteList;
+
 		const std::vector<Label>& getDynamicCallLabels() {
 			if (dynamicCallLabels) return dynamicCallLabels;
 
@@ -614,7 +617,7 @@ namespace cba {
 
 		// TODO: remove this interface and redirect access to call site manager directly
 
-		typedef boost::optional<std::vector<Label>> OptCallSiteList;
+		typedef boost::optional<CallSiteList> OptCallSiteList;
 		std::map<core::ExpressionAddress, OptCallSiteList> callSiteCache;
 
 		/**
@@ -634,14 +637,13 @@ namespace cba {
 		/**
 		 * Obtains a list of statically known predecessors of the given label in
 		 * potential call sequences. The optional result will be empty if there is none.
-		 * If the uses can not be determined statically, the optional result will not be filled.
 		 */
-		OptCallSiteList getAllStaticPredecessors(const Label& label) {
-			static const OptCallSiteList zero = toVector<Label>(0);
+		CallSiteList getAllStaticPredecessors(const Label& label) {
+			static const CallSiteList zero = toVector<Label>(0);
 			if (label == 0) return zero;
-			return getAllStaticPredecessors(getStmt(label).as<CallExprAddress>());
+			auto list = getAllStaticPredecessors(getStmt(label).as<CallExprAddress>());
+			return (list) ? *list : getDynamicCallLabels();
 		}
-
 
 
 		// -------------- Static Context Filter -----------------
@@ -655,8 +657,7 @@ namespace cba {
 
 			// check sequence
 			for(std::size_t i=0; i<size-1; i++) {
-				const auto& list = getAllStaticPredecessors(seq[i+1]);
-				if (list && !contains(*list, seq[i])) return false;
+				if (!contains(getAllStaticPredecessors(seq[i+1]), seq[i])) return false;
 			}
 			return true;
 		}
@@ -675,6 +676,107 @@ namespace cba {
 		const vector<Context>& getValidContexts() {
 			return getContainer<Context>().getContexts(*this);
 		}
+
+		// --- surrounding contexts ---
+
+		template<typename Context>
+		void addSurroundingContexts(const Context& ctxt, set<Context>& res) {
+
+			// special case for empty context
+			if (Context::call_context::empty) {
+				res.insert(ctxt);
+				return;
+			}
+
+			// special case: root context
+			Context cur = ctxt;
+			cur.callContext >>= 0;
+			res.insert(cur);
+
+			// only 0 context 'calls' 0 context
+			if (ctxt.callContext.front() == 0) {
+				return;	// there will not be any more contexts
+			}
+
+			// create a list of valid contexts
+			for(auto l : getAllStaticPredecessors(ctxt.callContext.front())) {
+				Context cur = ctxt;
+				cur.callContext >>= l;
+				res.insert(cur);
+			}
+		}
+
+		template<typename Context>
+		set<Context> getSurroundingContexts(const set<Context>& ctxts) {
+			set<Context> res;
+			for(const auto& cur : ctxts) {
+				addSurroundingContexts(cur, res);
+			}
+			return res;
+		}
+
+		template<typename Context>
+		set<Context> getSurroundingContexts(const set<Context>& ctxts, unsigned levels) {
+			set<Context> res = ctxts;
+			for(unsigned i=0; i<levels; i++) {
+				res = getSurroundingContexts(res);
+			}
+			return res;
+		}
+
+		template<typename Context>
+		set<Context> getSurroundingContexts(const Context& ctxt, unsigned levels = 1) {
+			set<Context> in; in.insert(ctxt);
+			return getSurroundingContexts(in, levels);
+		}
+
+		// --- nested contexts ---
+
+		template<typename Context>
+		void addNestedContexts(const Context& ctxt, set<Context>& res) {
+
+			// special case for empty context
+			if (Context::call_context::empty) {
+				res.insert(ctxt);
+				return;
+			}
+
+			// extend call context by valid labels
+			auto last = ctxt.callContext.back();
+			for (auto l : getDynamicCallLabels()) {
+				if (contains(getAllStaticPredecessors(l), last)) {
+					Context cur = ctxt;
+					cur.callContext <<= l;
+					res.insert(cur);
+				}
+			}
+
+		}
+
+		template<typename Context>
+		set<Context> getNestedContexts(const set<Context>& ctxts) {
+			set<Context> res;
+			for (const auto& cur : ctxts) {
+				addNestedContexts(cur, res);
+			}
+			return res;
+		}
+
+		template<typename Context>
+		set<Context> getNestedContexts(const set<Context>& ctxts, unsigned levels = 1) {
+			set<Context> res;
+			for(unsigned i = 0; i<levels; i++) {
+				res = getNestedConexts(res);
+			}
+			return res;
+		}
+
+		template<typename Context>
+		set<Context> getNestedContexts(const Context& ctxt, unsigned levels = 1) {
+			set<Context> in; in.insert(ctxt);
+			return getNestedContexts(in, levels);
+		}
+
 
 		// ----------------------- some debugging utilities ---------------------------
 
