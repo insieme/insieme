@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 int main(int argc, char** argv) {
 
@@ -20,7 +21,13 @@ int main(int argc, char** argv) {
                         vec[10] ++;
         }
  
-	printf("Iterations: %d\n" cnt);
+	printf("Iterations: %d\n", cnt);
+	
+
+	int* ptr1, *ptr2;
+
+	for(ptr1=vec; ptr1!=ptr2; ptr1++)
+		cnt++;
 
 	return 0;
 }
