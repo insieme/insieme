@@ -61,6 +61,5 @@ TEST(Stopwatch, basic) {
 		auto sw = StopWatch::start("Second test");
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
-
-	StopWatch::printStatus ();
+	StopWatch::printStatus();
 }
