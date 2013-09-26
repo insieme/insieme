@@ -600,6 +600,12 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return refReinterpret(manager.getLangBasic().getRefNull(), type.as<RefTypePtr>()->getElementType());
 	}
 
+	// if it is a function type -- used for function pointers
+	if(type.isa<core::FunctionTypePtr>()) {
+		// return NULL for the specific type
+		return deref(refReinterpret(manager.getLangBasic().getRefNull(), type));
+	}
+
 	// if it is a vector type use init uniform
 	if (type->getNodeType() == core::NT_VectorType) {
 		VectorTypePtr vectorType = type.as<VectorTypePtr>();

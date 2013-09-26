@@ -688,8 +688,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
 	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullExpr));
+
+    core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(nullExpr, retIr);
 	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
-	return builder.refReinterpret(BASIC.getRefNull(), type);
+	return (retIr = builder.refReinterpret(BASIC.getRefNull(), type));
 }
 
 core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
@@ -1240,6 +1243,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			}
 
 			exprTy = gen.getBool();
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << lhs->getType();
 			opFunc = gen.getOperator(lhs->getType(), op);
 		}
 		else if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
@@ -1254,6 +1258,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << lhsTy;
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
