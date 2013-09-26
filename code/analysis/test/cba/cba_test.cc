@@ -1465,52 +1465,52 @@ namespace cba {
 		EXPECT_TRUE(contains(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()), Formula()));
 	}
 
-	TEST(CBA, Recursion_2) {
-
-		// let's try some mutual recursion
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto in = builder.parseStmt(
-				"{"
-				"	let even, odd = "
-				"		(int<4> x)->bool {"
-				"			if (x == 0) return true;"
-				"			return odd(x-1);"
-				"		},"
-				"		(int<4> x)->bool {"
-				"			if (x == 0) return false;"
-				"			return even(x-1);"
-				"		};"
-				"	"
-				"	even(0);"
-				"	even(1);"
-				"	even(2);"
-				"	even(3);"
-				"	odd(0);"
-				"	odd(1);"
-				"	odd(2);"
-				"	odd(3);"
-				"}"
-		).as<CompoundStmtPtr>();
-
-		ASSERT_TRUE(in);
-		CompoundStmtAddress code(in);
-dumpPretty(in);
-		CBA analysis(code);
-
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), B)));
-//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), B)));
-		createDotDump(analysis);
-//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), B)));
+//	TEST(CBA, Recursion_2) {
 //
-//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), B)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), B)));
-//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), B)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
-
-	}
+//		// let's try some mutual recursion
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let even, odd = "
+//				"		(int<4> x)->bool {"
+//				"			if (x == 0) return true;"
+//				"			return odd(x-1);"
+//				"		},"
+//				"		(int<4> x)->bool {"
+//				"			if (x == 0) return false;"
+//				"			return even(x-1);"
+//				"		};"
+//				"	"
+//				"	even(0);"
+//				"	even(1);"
+//				"	even(2);"
+//				"	even(3);"
+//				"	odd(0);"
+//				"	odd(1);"
+//				"	odd(2);"
+//				"	odd(3);"
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//dumpPretty(in);
+//		CBA analysis(code);
+//
+////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), B)));
+////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), B)));
+//		createDotDump(analysis);
+////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), B)));
+////
+////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), B)));
+////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), B)));
+////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), B)));
+////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
+//
+//	}
 
 //
 //	// Known Issues:
