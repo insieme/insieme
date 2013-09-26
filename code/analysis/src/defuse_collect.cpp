@@ -132,11 +132,15 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 	identifier = core::static_pointer_cast<const core::Literal>(callExpr.getAddressedNode()->getArgument(1));
 
 	// initialize the value of the named composite type 
-	const core::TypePtr& refType = callExpr->getArgument(0)->getType();
-	assert(refType->getNodeType() == core::NT_RefType);
 	
-	core::TypePtr subTy = 
-		core::static_pointer_cast<const core::RefType>(refType)->getElementType();
+	core::TypePtr subTy;
+	if( core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) ) {
+		subTy = callExpr->getArgument(0)->getType();	
+	} else if( core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() )) {
+		const core::TypePtr& refType = callExpr->getArgument(0)->getType();
+		assert(refType.isa<core::RefTypePtr>());
+		subTy = refType.as<core::RefTypePtr>()->getElementType();
+	}
 
 	switch ( subTy->getNodeType() ) {
 	case core::NT_StructType:
