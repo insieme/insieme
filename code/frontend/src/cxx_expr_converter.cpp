@@ -579,25 +579,24 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
 
-	//TODO: check if we need to deref subExpr (for pointerProblem)
-	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
-	core::TypePtr targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
-	core::TypePtr srcTy = subExpr->getType();
-	if( targetTy != srcTy && *targetTy != *srcTy ) {
-		subExpr = convFact.tryDeref(subExpr);
+	core::ExpressionPtr subExpr;
+	core::TypePtr       targetTy;
+	if(throwExpr->getSubExpr()){
+		subExpr = Visit(throwExpr->getSubExpr());
+		targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
+		core::TypePtr srcTy = subExpr->getType();
+		if(targetTy != srcTy) {
+			subExpr = convFact.tryDeref(subExpr);
+		}
+	}
+	else{
+		// a throw without expression rethrows the expression captured in the container catch.
+		// if no expressesion, calls terminate(). but we delegate this to the output compiler
+		targetTy = gen.getUnit();
+		subExpr = builder.literal("__insieme__rethrow", targetTy);
 	}
 
-	//assert(*subExpr->getType() == *targetTy); NOTE: we can not compare types this easy, complete
-	//structs may not agree with the genereated generic type
-	/*
-	//if(literal || variable) {
-	if( core::analysis::isRefType(subExpr->getType())
-	&& (subExpr->getNodeType() == core::NT_Variable || subExpr->getNodeType() == core::NT_Literal) ) {
-		subExpr = builder.deref(subExpr);
-	}
-	*/
-
-	return retIr = builder.createCallExprFromBody(builder.throwStmt(subExpr), subExpr->getType());
+	return retIr = builder.createCallExprFromBody(builder.throwStmt(subExpr), targetTy);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

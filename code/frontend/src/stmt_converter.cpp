@@ -60,7 +60,17 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include <algorithm> 
+
 using namespace clang;
+
+namespace {
+	struct litCompare{
+		bool operator() (const insieme::core::LiteralPtr& a, const insieme::core::LiteralPtr& b) const{
+			return a->getStringValue() < b->getStringValue();
+		}
+	};
+}
 
 namespace stmtutils {
 
@@ -654,7 +664,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 
 	core::ExpressionPtr condExpr;
 	if ( const clang::VarDecl* condVarDecl = ifStmt->getConditionVariable()) {
-		assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
 		/*
 		 * we are in the situation where a variable is declared in the if condition, i.e.:
 		 *
@@ -671,23 +680,18 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 		retStmt.push_back(declStmt);
 
 		assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
+	}
 
-		// the expression will be a cast to bool of the declared variable
-		condExpr = builder.castExpr(gen.getBool(), declStmt.as<core::DeclarationStmtPtr>()->getVariable());
+	const clang::Expr* cond = ifStmt->getCond();
+	assert( cond && "If statement with no condition." );
 
-	} else {
+	condExpr = convFact.convertExpr(cond);
 
-		const clang::Expr* cond = ifStmt->getCond();
-		assert( cond && "If statement with no condition." );
-
-		condExpr = convFact.convertExpr(cond);
-
-		if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
-			// an assignment as condition is not allowed in IR, prepend the assignment operation
-			retStmt.push_back( condExpr );
-			// use the first argument as condition
-			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
-		}
+	if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
+		// an assignment as condition is not allowed in IR, prepend the assignment operation
+		retStmt.push_back( condExpr );
+		// use the first argument as condition
+		condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
 	}
 
 	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
@@ -868,160 +872,116 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 	assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// this Switch stamtement has a body, i.e.:
-	//
-	// 		switch(e) { { body } case x:...  }
-	//
-	// As the IR doens't allow a body to be represented inside the switch stmt we bring this
-	// code outside after the declaration of the eventual conditional variable.
-	//
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	vector<core::SwitchCasePtr> cases;
-	// marks the beginning of a case expression
-	vector<std::pair<core::LiteralPtr, size_t>> caseExprs;
-	size_t defaultStart = 0;
-	// collected statements that will be part of the next case statement
-	vector<core::StatementPtr> caseStmts;
-	bool caseStart = false;
-	bool breakEncountred = false;
-	bool isDefault = false;
-	core::CompoundStmtPtr defStmt = builder.compoundStmt();
+	std::map <core::LiteralPtr, std::vector<core::StatementPtr> > caseMap;
+	std::vector <core::LiteralPtr> openCases;  
+	auto defLit = builder.literal("__insieme_default_case", gen.getUnit());
 
-	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());assert(
-			compStmt && "Switch statements doesn't contain a compound stmt");
+	auto addStmtToOpenCases = [&caseMap, &openCases] (const core::StatementPtr& stmt){
 
-	// lambda function which creates a case stmt using the accumulated statements
-	auto addCase =
-			[this, &cases, &caseStmts, &caseExprs, &defaultStart, &defStmt, &isDefault, &builder]() -> void {
-				std::for_each(caseExprs.begin(), caseExprs.end(),
-						[ &cases, &caseStmts, &builder, this ](const std::pair<core::LiteralPtr,size_t>& curr) {
-							size_t size = caseStmts.size() - curr.second;
-							std::vector<core::StatementPtr> stmtList(size);
-							std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
-							cases.push_back(
-									builder.switchCase(curr.first, builder.wrapBody(stmtutils::tryAggregateStmts( this->builder, stmtList )))
-							);
-						}
-				);
-				if ( isDefault ) {
-					std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
-					std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
-					defStmt = builder.wrapBody(stmtutils::tryAggregateStmts( builder, stmtList ));
-				}
-			};
+		// inspire switches implement break for each code region, we ignore it here
+		if (stmt.isa<core::BreakStmtPtr>()) {
+			openCases.clear();
+		}
+		else{
+			// for each of the open cases, add the statement to their own stmt list
+			for (const auto& caseLit : openCases){
+				caseMap[caseLit].push_back(stmt);
+			}
+			// if is a scope closing statement, finalize all open cases
+			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>())
+				openCases.clear();
+		}
+	};
+	
+	
+	// converts to literal the cases, 
+	auto convertCase = [this, defLit] (const clang::SwitchCase* switchCase) -> core::LiteralPtr{
 
+		assert(switchCase);
+		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
+			return defLit;
+		}
+		core::ExpressionPtr caseExpr = convFact.convertExpr(llvm::cast<clang::CaseStmt>(switchCase)->getLHS());
+		if (caseExpr->getNodeType() == core::NT_CastExpr) {
+			core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
+			if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+				caseExpr = builder.literal(cast->getType(), literal->getValue());
+			}
+		}
+
+		core::LiteralPtr caseLiteral;
+		if (!caseExpr.isa<core::LiteralPtr>()){
+			// clang casts the literal to fit the condition type... and is not a literal anymore
+			// it might be a scalar cast, we retrive the literal
+			caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
+		}
+		else{
+			caseLiteral = caseExpr.as<core::LiteralPtr>();
+		}
+		return caseLiteral;
+	};
+
+	// looks for inner cases inside of cases stmt, and returns the compound attached
+	// 			case A 
+	// 				case B
+	// 					stmt1
+	// 					stmt2
+	// 			break
+	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt) {
+		const clang::Stmt* stmt = caseStmt;
+
+		// we might find some chained stmts
+		while (stmt && llvm::isa<clang::SwitchCase>(stmt)){
+			const clang::SwitchCase* inCase = llvm::cast<clang::SwitchCase>(stmt);
+			openCases.push_back(convertCase(inCase));
+			caseMap[openCases.back()] = std::vector<core::StatementPtr>();
+			stmt = inCase->getSubStmt();
+		}
+
+		// after the case statements, we might find the statements to be executed
+		if (stmt){
+			addStmtToOpenCases(convFact.convertStmt(stmt));
+		}
+	};
+
+	// iterate throw statements inside of switch
+	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
+	assert( compStmt && "Switch statements doesn't contain a compound stmt");
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
-		clang::Stmt* curr = *it;
-		// statements which are before the first case.
-		if (!caseStart && !llvm::isa<clang::SwitchCase>(curr)) {
-			stmtutils::StmtWrapper visitedStmt = this->Visit(curr);
-			// append these statements before the switch statement
-			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
+		clang::Stmt* currStmt = *it;
+
+		// if is a case stmt, create a literal and open it
+		if ( const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt) ){
+			lookForCases (switchCaseStmt);
 			continue;
 		}
-		// we encounter a case statement
-		caseStart = true;
-		while (clang::CaseStmt * caseStmt = dyn_cast<clang::CaseStmt>(curr)) {
-
-			// make sure case expression is a literal
-			core::ExpressionPtr caseExpr = this->convFact.convertExpr(caseStmt->getLHS());
-			if (caseExpr->getNodeType() == core::NT_CastExpr) {
-				core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
-				if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
-					core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
-					caseExpr = builder.literal(cast->getType(), literal->getValue());
-				}
-			}
-
-			core::LiteralPtr caseLiteral;
-			if (caseExpr->getNodeType() != core::NT_Literal){
-				// clang casts the literal to fit the condition type... and is not a literal anymore
-				// it might be a scalar cast, we retrive the literal
-				//FIXME: checks here?
-				caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
-			}
-			else{
-				//caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
-				caseLiteral = caseExpr.as<core::LiteralPtr>();
-			}
-
-			caseExprs.push_back(std::make_pair(caseLiteral, caseStmts.size()));
-
-			core::StatementPtr subStmt;
-			if ( const clang::Expr* rhs = caseStmt->getRHS()) {
-				assert( !caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
-				subStmt = this->convFact.convertExpr(rhs);
-			} else if ( clang::Stmt* sub = caseStmt->getSubStmt()) {
-				// if the sub statement is a case, skip until the end of the loop
-				if (llvm::isa<clang::SwitchCase>(sub)) {
-					curr = sub;
-					continue;
-				}
-
-				subStmt = stmtutils::tryAggregateStmts(this->builder, this->Visit(const_cast<clang::Stmt*>(sub)));
-				/*
-				 * if the sub-statement is a BreakStmt we have to replace it with a noOp and remember to reset the
-				 * caseStmts
-				 */
-				if (subStmt->getNodeType() == core::NT_BreakStmt) {
-					subStmt = builder.getNoOp();
-					breakEncountred = true;
-				}
-			}
-
-			// add the statements defined by this case to the list of statements which has to executed by this case
-			caseStmts.push_back(subStmt);
-			break;
-		}
-
-		if ( const clang::DefaultStmt* defCase = dyn_cast<const clang::DefaultStmt>(curr)) {
-			isDefault = true;
-			defaultStart = caseStmts.size();
-
-			core::StatementPtr subStmt =
-			stmtutils::tryAggregateStmts( builder, Visit( const_cast<clang::Stmt*>(defCase->getSubStmt())) );
-
-			if (subStmt->getNodeType() == core::NT_BreakStmt) {
-				subStmt = builder.getNoOp();
-				breakEncountred = true;
-			}
-			caseStmts.push_back(subStmt);
-		}
-
-		if (llvm::isa<const clang::ContinueStmt>(curr) || llvm::isa<const clang::ReturnStmt>(curr)) {
-			core::StatementPtr subStmt = stmtutils::tryAggregateStmts(builder, Visit(const_cast<clang::Stmt*>(curr)));
-			breakEncountred = true;
-			caseStmts.push_back(subStmt);
-		}
-		/*
-		 * if the current statement is a break, or we encountred a break in the current case we
-		 * create a new case and add to the list of cases for this switch statement
-		 */
-		if (breakEncountred || llvm::isa<const clang::BreakStmt>(curr)) {
-			addCase();
-			// clear the list of statements collected until now
-			caseExprs.clear();
-			caseStmts.clear();
-
-			breakEncountred = false;
-		} else if (!llvm::isa<clang::SwitchCase>(curr)) {
-			stmtutils::StmtWrapper visitedStmt = Visit( const_cast<clang::Stmt*>(curr));
-			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(caseStmts));
-		}
-	}
-	// we still have some statement pending
-	if (!caseStmts.empty()) {
-		addCase();
+		
+		// if is whatever other kind of stmt append it to each of the open cases list
+		addStmtToOpenCases(convFact.convertStmt(currStmt));
 	}
 
+	// we need to sort the elements to assure same output for different memory aligment, valgrinf problem
+	std::set<core::LiteralPtr, litCompare> caseLiterals;
+	for (auto pair : caseMap){
+		caseLiterals.insert(pair.first);
+	}
+
+	vector<core::SwitchCasePtr> cases;
 	// initialize the default case with an empty compoundstmt
-	core::StatementPtr irNode = builder.switchStmt(condExpr, cases, defStmt);
+	core::CompoundStmtPtr defStmt = builder.compoundStmt();
+	for (auto literal : caseLiterals){
+		if (literal != defLit)
+			cases.push_back( builder.switchCase(literal, builder.wrapBody(stmtutils::tryAggregateStmts(builder,  caseMap[literal]))));
+		else
+			defStmt = builder.wrapBody(stmtutils::tryAggregateStmts( builder, caseMap[literal]));
+	}
+
+	core::StatementPtr irSwitch = builder.switchStmt(condExpr, cases, defStmt);
 
 	// handle eventual OpenMP pragmas attached to the Clang node
-	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irNode, switchStmt, convFact);
+	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irSwitch, switchStmt, convFact);
 
-	// Appends the switchstmt to the current list of stmt
 	retStmt.push_back(annotatedNode);
 	retStmt = tryAggregateStmts(builder, retStmt);
 

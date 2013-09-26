@@ -336,6 +336,7 @@ namespace c_ast {
 	struct Throw : public Statement {
 		ExpressionPtr value;
 		Throw(ExpressionPtr value) : Statement(NT_Throw), value(value) {}
+		Throw() : Statement(NT_Throw) {}
 		virtual bool equals(const Node& node) const;
 	};
 

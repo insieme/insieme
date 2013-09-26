@@ -297,7 +297,6 @@ namespace backend {
 		res[basic.getUnsignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-
 		// -- unsigned integers --
 
 		res[basic.getSignedIntAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -388,6 +387,14 @@ namespace backend {
 		res[basic.getRefLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
+		// -- generic --
+		
+		res[basic.getGenEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
 
@@ -596,7 +603,15 @@ namespace backend {
 		});
 
 		res[basic.getRefReinterpret()] = OP_CONVERTER({
-			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
+			c_ast::TypePtr type;
+
+			if( core::analysis::getReferencedType(call->getType()).isa<core::FunctionTypePtr>() ) {
+				//function pointers
+				type = CONVERT_TYPE(core::analysis::getReferencedType(call->getType()));
+			} else {
+				type = CONVERT_TYPE(call->getType());
+			}
+
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});

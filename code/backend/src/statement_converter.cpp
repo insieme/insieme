@@ -784,8 +784,15 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
-		// just create a throw stmt within the c_ast
-		return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
+
+		core::ExpressionPtr expr = ptr->getThrowExpr();
+		core::IRBuilder builder(expr.getNodeManager());
+
+		core::ExpressionPtr rethrow = builder.literal("__insieme__rethrow", builder.getLangBasic().getUnit());
+		if (expr == rethrow)
+			return converter.getCNodeManager()->create<c_ast::Throw>();
+		else
+			return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context) {

@@ -251,9 +251,9 @@ void switch_stmt_test() {
 	//};
 
 
-	// EVIL CODE
-	#pragma test \
-	"{ decl int<4> v0 = (( *v100)+8); (v100 := (( *v100)+1)); switch(v0) { case 1: { } default: { } };}"
+	// EVIL CODE: are we sure the +1 is not ignored??
+	//#pragma test  "{ decl int<4> v0 = (( *v100)+8); (v100 := (( *v100)+1)); switch(v0) { case 1: { } default: { } };}"
+	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { } default: { } };}"
 	switch(a+8) {
 	a += 1;
 	case 1:
@@ -316,7 +316,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 10: { } case 8: { (v100 := (( *v100)+10)); } case 2: { (v100 := 1); continue; } case 3: { gen.post.inc(v100); return unit; } default: { } };}"
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 10: { } case 2: { (v100 := 1); continue; } case 3: { gen.post.inc(v100); return unit; } case 8: { (v100 := (( *v100)+10)); } default: { } };}"
 	switch(a) {
 		case 10:
 			break;
