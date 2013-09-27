@@ -355,15 +355,23 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	if (isRefArray(expr->getType())) {
 		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
 	}
+
+	if (gen.isAnyRef(exprTy)) {
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
+	}
+
+	if( exprTy.isa<core::FunctionTypePtr>()) {
+		return builder.callExpr(gen.getBool(), gen.getGenNe(), expr, builder.getZero(exprTy));
+	}
+
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
+		dumpDetail(expr);
+		std::cout << "****" << std::endl;
+		dumpDetail(expr->getType());
+		assert(false && "this type can not be converted now to bool. implement it! ");
+	}
 
-	dumpDetail(expr);
-	std::cout << "****" << std::endl;
-	dumpDetail(expr->getType());
-	assert(false && "this type can not be converted now to bool. implement it! ");
-}
-
-return castScalar (gen.getBool(), expr);
+	return castScalar (gen.getBool(), expr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
