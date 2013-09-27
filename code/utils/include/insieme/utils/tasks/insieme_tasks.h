@@ -44,6 +44,7 @@
 #include <future>
 #include <chrono>
 #include <thread>
+#include <list>
 
 
 namespace insieme {
@@ -95,15 +96,104 @@ namespace utils {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
 	/**
 	 *	its dutty is to get the work done,
 	 *	it should be purelly private, so only tasks can call it
 	 */
 	class TaskManager{
+
+		std::list<TaskBase*> submitted;
+		std::mutex lock;
+
+		class Worker{
+			TaskManager& mgr;
+			bool done;
+
+			Worker(TaskManager& m) : mgr(m), done(false){
+			}
+
+			void operator()(){
+				while (!done){
+					while (!mgr.submitted.empty()){
+						auto tsk = mgr.getTask();
+						(*tsk)();
+					}
+				}
+			}
+
+			void finish (){
+				done =true;
+			}
+		};
+
+		// HERE: how to model this? 
+		// I need the thread to call join on ending
+		// i need also the obj to call finish
+		std::vector<std::thread> workers;
+
+		////////////////////////////////////////////////
+		//
+		////////////////////////////////////////////////
+
+		TaskManager()
+		{
+			for (int i = 0; i < 7; ++i){
+				//workers.push_back()
+			}
+		}
+
+		inline void processTask(TaskBase* t){
+			(*t)();
+		}
+
+		TaskBase* getTask(){
+			TaskBase* t = nullptr;
+			lock.lock();
+			if (!submitted.empty()){
+				t = submitted.front();
+				submitted.pop_front();
+			}
+			lock.unlock();
+			return t;
+		}
+
+		////////////////////////////////////////////////
+		// Static interface
+		////////////////////////////////////////////////
+		
 		static void addTask(TaskBase* t){
+			TaskManager& mgr =getInstance();
+			mgr.lock.lock();
+			mgr.submitted.push_back(t);
+			mgr.lock.unlock();
 		}
-		static void addDependency(TaskBase* before, TaskBase* after){
+
+		static void wait (TaskBase* t){
+			TaskManager& mgr = getInstance();
+
+			// while the task i wait for is still in the queue, 
+			// this thread is also a worker, therefore works
+			mgr.lock.lock();
+			while (std::find (mgr.submitted.begin(), mgr.submitted.end(), t) != mgr.submitted.end()){
+				mgr.lock.unlock();
+				// work a little...
+				auto tsk = mgr.getTask();
+				(*tsk)();
+
+				mgr.lock.lock();
+			}
+			mgr.lock.unlock();
 		}
+
+		static TaskManager& getInstance(){
+			static TaskManager inst;
+			return inst;
+		}
+
+
+
+		friend class TaskBase;
 	};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
