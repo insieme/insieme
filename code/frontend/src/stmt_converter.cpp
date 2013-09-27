@@ -285,6 +285,16 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 			convFact.wrapRefMap.erase(itUseVar);
 		}
 
+		//check if all vars used in condExpr are readonly
+		for(auto c : loopAnalysis.getCondVars() ) {
+			//
+			if(core::VariablePtr condVar = convFact.lookUpVariable(c).isa<core::VariablePtr>()) {
+				if(!core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), condVar)) { 
+					throw analysis::LoopNormalizationError("Variable in condition expr is not readOnly");
+				}
+			}
+		}
+
 		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
 		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar)) {
 			// convert iterator variable into read-only value

@@ -88,8 +88,13 @@ using insieme::frontend::conversion::Converter;
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
  */
 class LoopAnalyzer {
+public:
+	typedef std::set<const clang::VarDecl*> VarDeclSet;
+
+private:
 
 	struct LoopHelper {
+		VarDeclSet						condVars;
 		const clang::VarDecl* 			inductionVar;
 		insieme::core::ExpressionPtr 	incrExpr;
 		insieme::core::ExpressionPtr	condExpr;
@@ -102,11 +107,11 @@ class LoopAnalyzer {
 	const Converter& 	convFact;
 	LoopHelper 					loopHelper;
 
+	void findConditionVariables(const clang::ForStmt* forStmt);
 	void findInductionVariable(const clang::ForStmt* forStmt);
 	void handleIncrExpr(const clang::ForStmt* forStmt);
 	void handleCondExpr(const clang::ForStmt* forStmt);
 public:
-	typedef std::set<const clang::VarDecl*> VarDeclSet;
 
 	LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact);
 
@@ -114,6 +119,8 @@ public:
 	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
 	 */
 	const clang::VarDecl* getInductionVar() const { return loopHelper.inductionVar; }
+
+	VarDeclSet getCondVars() const { return loopHelper.condVars; }
 
 	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
 

@@ -100,6 +100,8 @@ namespace analysis {
 	LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact): convFact(convFact), loopHelper(LoopHelper()) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
+	// we look for the variables used in the condtion
+	findConditionVariables(forStmt);
 	// we know the induction variable, we analyze the increment expression
 	handleIncrExpr(forStmt);
 	// we look for the condition expression
@@ -133,6 +135,10 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// if we cannot still determine the induction variable, throw an exception
 
 	throw InductionVariableNotFoundException();
+}
+
+void LoopAnalyzer::findConditionVariables(const clang::ForStmt* forStmt) {
+	loopHelper.condVars = VarRefFinder(forStmt->getCond());
 }
 
 void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
@@ -198,7 +204,8 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 					loopHelper.invert = true;
 					break;
 				default:
-					assert(false && "Condition expression not supported");
+					throw LoopNormalizationError("BinOp ("+binOp->getOpcodeStr().str()+") in ConditionExpression not supported");
+					//assert(false && "BinOp ("+binOp->getOpcodeStr().str()+") in Condition expression not supported");
 				}
 				return;
 			}
