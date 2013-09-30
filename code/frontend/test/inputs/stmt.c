@@ -259,6 +259,22 @@ void switch_stmt_test() {
 	case 1:
 		break;
 	}
+
+	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (v1 := 1); } default: { } };}"
+	switch(a+8) {
+		int x;
+	case 1:
+		x = 1;
+		break;
+	}
+
+	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (v1 := 1); } default: { } };}"
+	switch(a+8) {
+		int x = 0;
+	case 1:
+		x = 1;
+		break;
+	}
 	//decl int<a> v2 = CAST<int<a>>((( *v1)+8));
 	//(v1 := (( *v1)+1));
 	//switch(v2) {
@@ -338,6 +354,19 @@ void switch_stmt_test() {
 		"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { } default: { } };}"
 	switch(a) {
 		case 0+1:
+			break;
+	}
+
+	#pragma test \
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 0: { (v100 := 10); break; } case 1: { (v100 := 100); } default: { } };}"
+	switch(a) {
+		case 0: 
+			{
+				a = 10;	
+				break;
+			}
+		case 1:
+			a = 100;
 			break;
 	}
 
