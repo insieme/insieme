@@ -2,16 +2,66 @@
 
 int main()
 {
-	int a =2;
+	int a =0;
+
+	int result =0;
+	int y;
+
+	switch(a) {
+		int x = 1;
+		x++;
+		y++;
+		y=x;
+
+		case ((0 +9) +1):
+		{
+			int asdf;
+			x++;
+			y=x;
+			result = -1;
+			break;
+		}
+
+		int yx = 10;
+		x++;
+		y++;
+
+		case 2:
+			yx++;
+			x++;
+			y=x+yx;
+			result = 0;
+			break;
+
+		int xy = 100;
+		y++;
+		x++;
+
+		default:
+			x++;
+			yx++;
+			xy++;
+			y=x+xy+yx;
+			result = -2;
+	}
 
 	switch(a) {
 		case ((0 +9) +1):
-			return -1;
+		{
+			int asdf;
+			result = -1;
+			break;
+		}
+
 		case 2:
-			return 0;
+			result = 0;
+			break;
+
 		default:
-			return -1;
+			result = -2;
 	}
+	printf("%d\n", y);
+	printf("%d\n", result);
 
 	return 0;
 }
