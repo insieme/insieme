@@ -333,6 +333,14 @@ void switch_stmt_test() {
 			break;
 	}
 	}
+
+	#pragma test \
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { } default: { } };}"
+	switch(a) {
+		case 0+1:
+			break;
+	}
+
 }
 
 

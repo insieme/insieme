@@ -911,23 +911,35 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
 			return defLit;
 		}
-		core::ExpressionPtr caseExpr = convFact.convertExpr(llvm::cast<clang::CaseStmt>(switchCase)->getLHS());
-		if (caseExpr->getNodeType() == core::NT_CastExpr) {
-			core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
-			if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
-				core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
-				caseExpr = builder.literal(cast->getType(), literal->getValue());
-			}
-		}
-
+		
 		core::LiteralPtr caseLiteral;
-		if (!caseExpr.isa<core::LiteralPtr>()){
-			// clang casts the literal to fit the condition type... and is not a literal anymore
-			// it might be a scalar cast, we retrive the literal
-			caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
-		}
-		else{
-			caseLiteral = caseExpr.as<core::LiteralPtr>();
+		const clang::Expr* caseExpr = llvm::cast<clang::CaseStmt>(switchCase)->getLHS();
+
+		//if the expr is an integerConstantExpr
+		if( caseExpr->isIntegerConstantExpr(convFact.getCompiler().getASTContext())) {
+			llvm::APSInt result;
+			//reduce it and store it in result -- done by clang
+			caseExpr->isIntegerConstantExpr(result, convFact.getCompiler().getASTContext());
+			core::TypePtr type = convFact.convertType(caseExpr->getType().getTypePtr());
+			caseLiteral = builder.literal(type, result.toString(10));
+		} else {
+			core::ExpressionPtr caseExprIr = convFact.convertExpr(caseExpr);
+			if (caseExprIr->getNodeType() == core::NT_CastExpr) {
+				core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExprIr);
+				if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+					core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+					caseExprIr = builder.literal(cast->getType(), literal->getValue());
+				} 
+			}
+
+			if (!caseExprIr.isa<core::LiteralPtr>()){
+				// clang casts the literal to fit the condition type... and is not a literal anymore
+				// it might be a scalar cast, we retrive the literal
+				caseLiteral= caseExprIr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
+			}
+			else{
+				caseLiteral = caseExprIr.as<core::LiteralPtr>();
+			}
 		}
 		return caseLiteral;
 	};
