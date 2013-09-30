@@ -572,6 +572,11 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		return builder.callExpr( trgTy, gen.getVolatileRead(), cast(expr, core::analysis::getVolatileType(trgTy)) );
 	}
 
+	// [ FunctionType -> bool ]
+	if( argTy.isa<core::FunctionTypePtr>() && gen.isBool(trgTy) ) {
+		return builder.callExpr(trgTy, gen.getGenNe(), expr, builder.getZero(argTy));
+	}
+
 	return builder.castExpr(trgTy, expr);
 	//assert(false && "Cast conversion not supported!");
 }

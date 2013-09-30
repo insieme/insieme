@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -355,15 +355,23 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	if (isRefArray(expr->getType())) {
 		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
 	}
+
+	if (gen.isAnyRef(exprTy)) {
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
+	}
+
+	if( exprTy.isa<core::FunctionTypePtr>()) {
+		return builder.callExpr(gen.getBool(), gen.getGenNe(), expr, builder.getZero(exprTy));
+	}
+
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
+		dumpDetail(expr);
+		std::cout << "****" << std::endl;
+		dumpDetail(expr->getType());
+		assert(false && "this type can not be converted now to bool. implement it! ");
+	}
 
-	dumpDetail(expr);
-	std::cout << "****" << std::endl;
-	dumpDetail(expr->getType());
-	assert(false && "this type can not be converted now to bool. implement it! ");
-}
-
-return castScalar (gen.getBool(), expr);
+	return castScalar (gen.getBool(), expr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -387,8 +395,8 @@ core::TypePtr&& exprTy = expr->getType();
 	//	VLOG(2) << (exprTy);
 	//	VLOG(2) << "####### cast Type: #######" ;
 	//	VLOG(2) << (targetTy);
-	//  VLOG(2)  << "####### clang: #######" << std::endl;
-    //  castExpr->dump();
+	//	VLOG(2)  << "####### clang: #######" << std::endl;
+	//	castExpr->dump();
 	//}
 
 // it might be that the types are already fixed:
@@ -512,7 +520,7 @@ switch (castExpr->getCastKind()) {
 
 			// is a cast of Null to another pointer type:
 			// we rebuild null
-			if (*expr == *builder.literal(expr->getType(), "0")) {
+			if (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) {
 				return builder.getZero(targetTy);
 			}
 
@@ -552,7 +560,7 @@ switch (castExpr->getCastKind()) {
 		{
 			// is a cast of Null to another pointer type:
 			// we rebuild null
-			if (*expr == *builder.literal(expr->getType(), "0")) {
+			if (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) {
 				return builder.getZero(targetTy);
 			}
 			else{
@@ -649,10 +657,15 @@ switch (castExpr->getCastKind()) {
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
 
-			if (gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
+			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
+			
+			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {
+			if( targetTy.isa<core::FunctionTypePtr>() && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) ) {
+				return builder.getZero(targetTy);
+			}
 
 			// cast NULL to anything else
-			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
+			if( ((targetTy->getNodeType() == core::NT_RefType)) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
 				return builder.getZero(targetTy);
 			}
 			else{
@@ -663,6 +676,7 @@ switch (castExpr->getCastKind()) {
 				}
 
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
+				assert(elementType);
 				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
@@ -818,6 +832,20 @@ switch (castExpr->getCastKind()) {
 			return retIr;
 		}
 
+
+		case clang::CK_PointerToIntegral :
+		// CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
+		// ObjC, and block pointers. (intptr_t) "help!"
+		{
+			return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(targetTy));
+		}
+
+		case clang::CK_FunctionToPointerDecay 	:
+		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
+		{
+			return expr;
+		}
+
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  NOT IMPLEMENTED
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -831,10 +859,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_ToUnion 	:
 		/*case clang::CK_ToUnion - The GCC cast-to-union extension. i
 		* int -> union { int x; float y; } float -> union { int x; float y; }
-		* */
-
-		case clang::CK_FunctionToPointerDecay 	:
-		/*case clang::CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
 		* */
 
 		case clang::CK_NullToMemberPointer 	:
@@ -867,12 +891,6 @@ switch (castExpr->getCastKind()) {
 		/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
 		* struct A { operator int(); }; int i = int(A());
 		* */
-
-		case clang::CK_PointerToIntegral 	:
-		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
-		* ObjC, and block pointers. (intptr_t) "help!"
-		* */
-
 
 		case clang::CK_CPointerToObjCPointerCast 	:
 		/*case clang::CK_CPointerToObjCPointerCast - Casting a C pointer kind to an Objective-C pointer.
@@ -916,6 +934,7 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_CopyAndAutoreleaseBlockObject 	:
 		case clang::CK_BuiltinFnToFnPtr 	:
 			std::cout << " \nCAST: " << castExpr->getCastKindName () << " not supported!!"<< std::endl;
+			castExpr->dump();
 			assert(false);
 		default:
 			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
