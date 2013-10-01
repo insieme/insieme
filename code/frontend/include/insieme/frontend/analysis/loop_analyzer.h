@@ -36,9 +36,10 @@
 
 #pragma once
 
+#include <iostream>
 #include <set>
 #include <exception>
-#include <stdexcept>
+//#include <stdexcept>
 
 #include "insieme/core/ir_expressions.h"
 
@@ -88,45 +89,58 @@ using insieme::frontend::conversion::Converter;
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
  */
 class LoopAnalyzer {
-public:
-	typedef std::set<const clang::VarDecl*> VarDeclSet;
 
 private:
 
-	struct LoopHelper {
-		VarDeclSet						condVars;
-		const clang::VarDecl* 			inductionVar;
-		insieme::core::ExpressionPtr 	incrExpr;
-		insieme::core::ExpressionPtr	condExpr;
-		bool 							invert;
-
-		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), invert(false) {	}
+	enum loopDir{ 
+		LOOP_UP,
+		LOOP_DOWN,
 	};
+	Converter& 	convFact;
 
-	const Converter& 	convFact;
-	LoopHelper 					loopHelper;
+	insieme::core::VariableList		conditionVars;			// variables used in conditions
+
+	insieme::core::ExpressionPtr	originalInductionExpr;  // old induction expressio
+	insieme::core::VariablePtr		inductionVar;  			// New read only induction var
+
+	insieme::core::ExpressionPtr	normalizedInductionExpr; // Expression to use as iterator (normalized)
+	insieme::core::ExpressionPtr	normalizedIterations; 	// normalized number of iterations
+
+	insieme::core::ExpressionPtr 	incrExpr;				// normalized increment ( +1 )
+	insieme::core::ExpressionPtr    stepExpr; 				// step of each iteration
+
+	insieme::core::ExpressionPtr    initValue;				// lowe bonduary for real iteration
+	insieme::core::ExpressionPtr    endValue;				// upper bonduary
+
+	insieme::core::StatementList	preStmts;  				// statements that need to be reproduced BEFORE the loop
+	insieme::core::StatementList	postStmts;  			// statements that need to be reproduced AFTER the loop
+	insieme::core::StatementList	firstStmts;				// statements that need to be reproduced at the BEGINNING of loop body
+	insieme::core::StatementList	lastStmts;				// statements that need to be reproduced at the END of loop body
+
+	loopDir direction;			// loop up or loop down, not used
+	bool    loopToBounduary;    // whenever to loop until value is equal, or until value is less than
+	bool    restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
+
 
 	void findConditionVariables(const clang::ForStmt* forStmt);
 	void findInductionVariable(const clang::ForStmt* forStmt);
 	void handleIncrExpr(const clang::ForStmt* forStmt);
 	void handleCondExpr(const clang::ForStmt* forStmt);
+
 public:
 
-	LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact);
+	LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
+
+	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const { return originalInductionExpr; }
+	const insieme::core::ExpressionPtr 	getInductionExpr() const { return normalizedInductionExpr; }
+
+	const insieme::core::StatementList& getPreStmts() const { return preStmts;}
+	const insieme::core::StatementList& getPostStmts() const { return postStmts;}
 
 	/**
-	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
+	 * creates a loop which is normalized. but is up to the caller to generate the right body
 	 */
-	const clang::VarDecl* getInductionVar() const { return loopHelper.inductionVar; }
-
-	VarDeclSet getCondVars() const { return loopHelper.condVars; }
-
-	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
-
-	insieme::core::ExpressionPtr getCondExpr() const { return loopHelper.condExpr; }
-
-	bool isInverted() const { return loopHelper.invert; }
+	insieme::core::StatementPtr  getNormalizedLoop(const insieme::core::StatementPtr& body) const; 
 };
 
 } // End analysis namespace
