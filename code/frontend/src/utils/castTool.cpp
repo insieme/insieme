@@ -48,6 +48,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -228,6 +229,9 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 	}
 	else if (gen.isBool(type) || gen.isChar(type))
 		return 1;
+    else if (type.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))
+        return 4;
+
 
 	return 0;
 }
@@ -240,13 +244,14 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	const core::TypePtr& exprTy = expr->getType();
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	core::NodeManager& mgr = exprTy.getNodeManager();
 
-//	std::cout << "####### Expr: #######" << std::endl;
-//	dumpDetail(expr);
-//	std::cout << "####### Expr Type: #######" << std::endl;
-//	dumpDetail(exprTy);
-//	std::cout << "####### target Type: #######" << std::endl;
-//	dumpDetail(targetTy);
+	//std::cout << "####### Expr: #######" << std::endl;
+	//dumpDetail(expr);
+	//std::cout << "####### Expr Type: #######" << std::endl;
+	//dumpDetail(exprTy);
+	//std::cout << "####### target Type: #######" << std::endl;
+	//dumpDetail(targetTy);
 
 	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
@@ -272,6 +277,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (exprTy))		code = 3;
 	if (gen.isChar (exprTy))		code = 4;
 	if (gen.isBool (exprTy))		code = 5;
+    if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(exprTy)) code = 6;
 
 	// identify target type
 	if (gen.isSignedInt (targetTy)) 	code += 10;
@@ -279,6 +285,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (targetTy))			code += 30;
 	if (gen.isChar (targetTy))			code += 40;
 	if (gen.isBool (targetTy))			code += 50;
+	if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)) code += 60;
 
 	core::ExpressionPtr op;
 	bool precision = true;
@@ -288,9 +295,13 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 			// only if target precission is smaller, we may have a precission loosse.
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
+        case 16:
+            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
 		case 22:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
+        case 26:
+            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
@@ -326,6 +337,13 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		case 52: op = gen.getUnsignedToBool();precision=false; break;
 		case 53: op = gen.getRealToBool();    precision=false; break;
 		case 54: op = gen.getCharToBool();    precision=false; break;
+
+		case 61: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
+		case 62: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
+
+        case 66: return expr;
 
 		default:
 				 std::cerr << "code: " << (int) code << std::endl;
@@ -461,8 +479,10 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
 		{
-			assert(builder.getLangBasic().isPrimitive(expr->getType()));
-			assert(builder.getLangBasic().isPrimitive(targetTy));
+		    assert(builder.getLangBasic().isPrimitive(expr->getType())
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType()));
+			assert(builder.getLangBasic().isPrimitive(targetTy)
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy));
 			return castScalar( targetTy, expr);
 		}
 
@@ -658,7 +678,7 @@ switch (castExpr->getCastKind()) {
 		{
 
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
-			
+
 			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {
 			if( targetTy.isa<core::FunctionTypePtr>() && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) ) {
 				return builder.getZero(targetTy);

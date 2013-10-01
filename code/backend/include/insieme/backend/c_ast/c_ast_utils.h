@@ -189,9 +189,10 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
 	}
 
-    inline ComplexTypePtr complexType(const TypePtr& type) {
-        return type->getManager()->create<c_ast::ComplexType>(type);
-    }
+    	inline ComplexTypePtr complexType(const TypePtr& type) {
+        	return type->getManager()->create<c_ast::ComplexType>(type);
+    	}
+
 
 	// --- create literals and variables ------------------------
 

@@ -48,9 +48,11 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/castTool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -185,6 +187,9 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 				}
 				else if (core::analysis::isConstCppRef(argTy)) {
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
+				}
+				else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)) {
+					arg = insieme::frontend::utils::castScalar(funcParamTy, arg);
 				}
 				else{
 					arg = utils::cast(arg, funcParamTy);

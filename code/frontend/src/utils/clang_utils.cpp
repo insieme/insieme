@@ -49,6 +49,7 @@
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
+#include <sstream>
 
 namespace insieme {
 namespace frontend {
@@ -185,10 +186,21 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	return name;
 }
 
+
 std::string buildNameForVariable (const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
 	return name;
+}
+
+
+std::string buildNameForEnum (const clang::TagType* type) {
+    std::string name;
+    name = type->getDecl()->getNameAsString();
+    if(name.empty()) {
+        name = "anonymous";
+    }
+    return name;
 }
 
 } // End utils namespace

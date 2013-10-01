@@ -238,6 +238,13 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+    struct EnumType : public Type {
+        string name;
+        string annotation;
+        EnumType(const string& identifier, const string& elements) : Type(NT_EnumType), name(identifier), annotation(elements) {}
+        virtual bool equals(const Node& node) const;
+    };
+
 	// -- Statements -----------------------------
 
 	struct Statement : public Node {

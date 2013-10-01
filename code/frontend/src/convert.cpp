@@ -78,6 +78,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/simd_vector.h"
+#include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -827,7 +828,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// some Cpp cases do not create new var
 			if (!IS_CPP_REF(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
-			} 
+			}
 
 			// finnaly create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
@@ -950,7 +951,7 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 		// if no init expression is provided => use zero or undefined value
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
 	}
-	
+
 	auto initExpr = convertExpr(expr);
 	// Convert the expression like any other expression
  	return getInitExpr ( type, initExpr);
@@ -1276,12 +1277,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			for (size_t i = 0; i < inits.size(); ++i) {
 				elements.push_back(getInitExpr(membTy, inits[i] ));
 			}
-			
+
 			return builder.callExpr(
-					elementType, 
-					initOp, 
+					elementType,
+					initOp,
 					core::encoder::toIR(type->getNodeManager(), elements),
-					builder.getIntTypeParamLiteral(internalVecTy->getSize())); 
+					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
 
@@ -1404,6 +1405,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
             return init;
     }
 */
+
+    // the case of enum type initializations
+    if(mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(init->getType())) {
+        return utils::castScalar(elementType, init);
+    }
+
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
