@@ -328,6 +328,8 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		case 54: op = gen.getCharToBool();    precision=false; break;
 
 		default:
+				 std::cerr << "expr type: " << exprTy << std::endl;
+				 std::cerr << "targ type: " << targetTy << std::endl;
 				 std::cerr << "code: " << (int) code << std::endl;
 				 assert(false && "cast not defined");
 	}

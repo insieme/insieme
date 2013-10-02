@@ -265,7 +265,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
 
 		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
-		retStmt.push_back (loopAnalysis.getNormalizedLoop(body));
+		retStmt.push_back (loopAnalysis.getLoop(body));
 		retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
 		
 		return retStmt;

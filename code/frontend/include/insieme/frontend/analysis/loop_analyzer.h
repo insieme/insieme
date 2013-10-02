@@ -138,9 +138,10 @@ public:
 	const insieme::core::StatementList& getPostStmts() const { return postStmts;}
 
 	/**
-	 * creates a loop which is normalized. but is up to the caller to generate the right body
+	 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
+	 * limitations
 	 */
-	insieme::core::StatementPtr  getNormalizedLoop(const insieme::core::StatementPtr& body) const; 
+	insieme::core::StatementPtr  getLoop(const insieme::core::StatementPtr& body) const; 
 };
 
 } // End analysis namespace
