@@ -116,6 +116,14 @@ struct InitializationCollector : public core::IRVisitor<bool>{
 	}
 };
 
+core::ExpressionPtr absFunc(const core::ExpressionPtr& expr, const core::TypePtr& type){
+	core::IRBuilder builder( expr->getNodeManager() );
+	auto ceilType = builder.functionType(expr->getType(), type);
+	auto ceilLit = builder.literal("abs", ceilType);
+	insieme::annotations::c::attachInclude(ceilLit, "stdlib.h");
+	return builder.callExpr (type, ceilLit, expr);
+}
+
 core::ExpressionPtr insertCeilFunc(const core::ExpressionPtr& expr, const core::TypePtr& type){
 	core::IRBuilder builder( expr->getNodeManager() );
 	auto ceilType = builder.functionType(expr->getType(), type);
@@ -157,88 +165,110 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 	std::cout << "init: " << initValue<< std::endl;
 	std::cout << "end: " << endValue << std::endl;
 	
-	// FIXME: formulas are incomplete, but this is the best option:
-	// 	 - no support to compute with expressions
-	// 	 - need to ceil a division, 
-	// 	 - can i as when a resoutl is a rational or has being simplified??
-//	try{
-//
-//		/////////////////////////////////////////////////////////////
-//		//    #iterations = (up-low)/step  (+1 if EQ)
-//
-//		core::arithmetic::Formula low = core::arithmetic::toFormula(initValue);
-//		core::arithmetic::Formula up = core::arithmetic::toFormula(endValue);
-//		core::arithmetic::Formula range = (up - low);
-//		core::arithmetic::Formula step = core::arithmetic::toFormula(stepExpr);
-//		core::arithmetic::Formula n =  range / step.getTerms()[0];
-//		
-//			// if n is a rational, we need to add ceil function
-//		if (loopToBounduary) n = n +1;
-//
-//		// WRONG
-//		normalizedIterations = insertCeilFunc( core::arithmetic::toIR(convFact.getNodeManager(),n), originalInductionExpr->getType());
-//
-//		/////////////////////////////////////////////////////////////
-//		//    iteration = (it* step)+init
-//		
-//		core::arithmetic::Formula v   = core::arithmetic::Formula(inductionVar);
-//		core::arithmetic::Formula it  = (v * step) + low;
-//		normalizedInductionExpr = core::arithmetic::toIR(convFact.getNodeManager(),it);
-//
-//		////////////////////////////////////////////////////////////
-//		//   final value of the iteration variable: if not declared in the loop
-//		//	( #iterations * step) + init
-//		
-//		if(restoreValue){
-//			core::arithmetic::Formula postValue = (n * step) + low;
-//			core::StatementPtr assign = convFact.getIRBuilder().assign(originalInductionExpr.as<core::CallExprPtr>()[0], 
-//																	   core::arithmetic::toIR(convFact.getNodeManager(), postValue));
-//			postStmts.push_back(assign);
-//		}
-//
-//	}catch(const std::exception& error){
-//		// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!!
-// }
+	//   FIXME: formulas do not work nice whith the paratesis, if all variables, the computation is truncated in several places
+	//try{
 
-	// if the induction variable is a pointer we have to trick the bonduaries
-	//LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> uint<8>")
-	//
+	//	/////////////////////////////////////////////////////////////
+	//	//    #iterations =  (up-low-1)/step   if <  N
+	//	//    #iterations =  (up-low)/step     if <= N
 
-	const core::IRBuilder& builder = convFact.getIRBuilder();
-	if (frontend::utils::isRefArray(inductionVar->getType())){
-		// build the thing for pointers
-		inductionVar =  convFact.getIRBuilder().variable(builder.getLangBasic().getUInt8());
-		core::ExpressionPtr distance = builder.callExpr (builder.getLangBasic().getUInt8(), builder.getLangBasic().getArrayRefDistance(), endValue, initValue);
-		normalizedIterations = insertCeilFunc(builder.div(frontend::utils::castScalar(builder.getLangBasic().getReal8(),distance),
-														  frontend::utils::castScalar(builder.getLangBasic().getReal8(), stepExpr)), builder.getLangBasic().getUInt8());
-		if (loopToBounduary) normalizedIterations = builder.add(normalizedIterations, builder.literal("1", builder.getLangBasic().getUInt8()));
+	//	core::arithmetic::Formula low = core::arithmetic::toFormula(initValue);
+	//	core::arithmetic::Formula up = core::arithmetic::toFormula(endValue);
+	//	core::arithmetic::Formula range = (up - low);
+	//	core::arithmetic::Formula step = core::arithmetic::toFormula(stepExpr);
+	//	core::arithmetic::Formula n = range;
+	//	if (!loopToBounduary)  n = (n + -1);
+	//	n =  (n / step.getTerms()[0]) +1;
 
-		normalizedInductionExpr =  builder.callExpr(builder.getLangBasic().getArrayView(), initValue,
-														  frontend::utils::castScalar(builder.getLangBasic().getInt8(), builder.mul(stepExpr, inductionVar) ));
-		if(restoreValue){
-			core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
-		 												builder.callExpr(builder.getLangBasic().getArrayView(), 
-														initValue,
-														frontend::utils::castScalar(builder.getLangBasic().getInt8(), normalizedIterations)));
-			postStmts.push_back(assign);
+	//	normalizedIterations = core::arithmetic::toIR(convFact.getNodeManager(), n);
+	//	normalizedIterations = frontend::utils::castScalar(inductionVar->getType(), normalizedIterations);
+	//	/////////////////////////////////////////////////////////////
+	//	//    iteration = (it* step)+init
+	//	
+	//	core::arithmetic::Formula v   = core::arithmetic::Formula(inductionVar);
+	//	core::arithmetic::Formula it  = (v * step) + low;
+	//	normalizedInductionExpr = core::arithmetic::toIR(convFact.getNodeManager(),it);
+
+	//	////////////////////////////////////////////////////////////
+	//	//   final value of the iteration variable: if not declared in the loop
+	//	//	( #iterations * step) + init
+	//	
+	//	if(restoreValue){
+	//		core::arithmetic::Formula postValue = (n * step) + low;
+	//		core::StatementPtr assign = convFact.getIRBuilder().assign(originalInductionExpr.as<core::CallExprPtr>()[0], 
+	//																   core::arithmetic::toIR(convFact.getNodeManager(), postValue));
+	//		postStmts.push_back(assign);
+	//	}
+
+	//}catch(const std::exception& error){
+		
+		// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
+		const core::IRBuilder& builder = convFact.getIRBuilder();
+		if (frontend::utils::isRefArray(inductionVar->getType())){
+			
+		throw LoopNormalizationError(" pointer for loop not supported yet!"); 
+			//// build the thing for pointers
+			//inductionVar =  convFact.getIRBuilder().variable(builder.getLangBasic().getUInt8());
+			//core::ExpressionPtr distance = builder.callExpr (builder.getLangBasic().getUInt8(), 
+			//												 builder.getLangBasic().getArrayRefDistance(), endValue, initValue);
+			//normalizedIterations = insertCeilFunc(builder.div(frontend::utils::castScalar(builder.getLangBasic().getReal8(),distance),
+			//												  frontend::utils::castScalar(builder.getLangBasic().getReal8(), stepExpr)), 
+			//									  builder.getLangBasic().getUInt8());
+			//if (loopToBounduary) normalizedIterations = builder.add(normalizedIterations, builder.literal("1", builder.getLangBasic().getUInt8()));
+
+			//normalizedInductionExpr =  builder.callExpr(builder.getLangBasic().getArrayView(), initValue,
+			//												  frontend::utils::castScalar(builder.getLangBasic().getInt8(), 
+			//													  						  builder.mul(stepExpr, inductionVar) ));
+			//if(restoreValue){
+			//	core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
+			//												builder.callExpr(builder.getLangBasic().getArrayView(), 
+			//																initValue,
+			//																frontend::utils::castScalar(builder.getLangBasic().getInt8(), 
+			//																						   normalizedIterations)));
+			//	postStmts.push_back(assign);
+			//}
 		}
-	}
-	else{ // scalar iterated loop
-		core::TypePtr itTy = inductionVar->getType();
-		normalizedIterations = builder.sub(frontend::utils::castScalar(itTy, endValue), frontend::utils::castScalar(itTy, initValue));
-		normalizedIterations = insertCeilFunc(builder.div(frontend::utils::castScalar(builder.getLangBasic().getReal8(),normalizedIterations),
-														  frontend::utils::castScalar(builder.getLangBasic().getReal8(), stepExpr)), itTy);
-		if (loopToBounduary) normalizedIterations = builder.add(normalizedIterations, builder.literal("1", itTy));
+		else{
+			auto one =  builder.literal("1", inductionVar->getType());
+			core::ExpressionPtr tmp;
 
-		normalizedInductionExpr = builder.add(builder.mul(frontend::utils::castScalar(itTy,inductionVar), 
-														  frontend::utils::castScalar(itTy,stepExpr)), 
-														  frontend::utils::castScalar(itTy,initValue));
-		if(restoreValue){
-			core::StatementPtr assign = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], 
-											builder.add(builder.mul(normalizedIterations, frontend::utils::castScalar(itTy, stepExpr)), initValue));
-			postStmts.push_back(assign);
+			std::cout << " LESS THAN? " <<  whileLessThan << std::endl;
+			std::cout << " COND LEFT? " <<  conditionLeft << std::endl;
+			endValue = frontend::utils::castScalar(inductionVar->getType(), endValue);
+			if (whileLessThan) {  
+				tmp= builder.sub(endValue, initValue);
+				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
+			}
+			else{
+				tmp= builder.sub(initValue, endValue);
+				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
+			}
+
+			// we create a variable for the range (needs to be a var because we can not divide the whole arithmetic eq )
+			core::VariablePtr range = builder.variable( inductionVar->getType());
+			auto rangeVarDecl = builder.declarationStmt(range, tmp);
+			preStmts.push_back(rangeVarDecl);
+
+			// we create another variable to use as init value, this way it wont be modified by the inductions without declaration
+			core::VariablePtr startValue = builder.variable( inductionVar->getType());
+			auto startVarDecl = builder.declarationStmt(startValue, initValue);
+			preStmts.push_back(startVarDecl);
+
+			normalizedIterations = builder.add(builder.div(range, absFunc(stepExpr, range->getType())), one);
+			normalizedInductionExpr = builder.add (builder.mul(inductionVar, stepExpr), startValue);
+
+			// if the variable is declared outside, we must give it a final value afer all iterations
+			// and also the right value inside of each iteration (might be indirectly used (might be a global))
+			if(restoreValue){
+				core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
+															builder.add(builder.mul(normalizedIterations, stepExpr), startValue));
+				postStmts.push_back(assign);  
+
+				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
+				firstStmts.push_back(assign);
+			}
 		}
-	}
+//	}
 
 	std::cout << "num iterations: " << normalizedIterations << std::endl; // Expression to use as iterator (normalized)
 	std::cout << "induction expr: " << normalizedInductionExpr << std::endl; // Expression to use as iterator (normalized)
@@ -292,12 +322,14 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 			// left is the induction expression, right is the up bounduary
 			originalInductionExpr = left;
 			endValue = right;
+			conditionLeft = true; 
 		}
 		else{
 			if (!isRight) throw LoopNormalizationError("induction variable could not be identified");
 			// right is the induction expression, left is the up bounduary
 			originalInductionExpr = right;
 			endValue = left;
+			conditionLeft = false; 
 		}
 
 		// strip possible casts
@@ -390,17 +422,32 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		throw LoopNormalizationError("no condition -> no loop");
 
 	// we know the up bonduary from the induction expression lookup, now we just need to determine whenever to stop at bounduary or before
+	// if comparator is ( it < N ) whileLessThan should be true already (because of left side) we invert it if no
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
 		switch(binOp->getOpcode()) {
 		case BO_LT:
+			whileLessThan = conditionLeft;
+			loopToBounduary = false;
+			break;
 		case BO_GT:
+			whileLessThan = !conditionLeft;
+			loopToBounduary = false;
+			break;
 		case BO_NE:
+			whileLessThan = true;
 			loopToBounduary = false;
 			break;
 		case BO_GE:
+			whileLessThan = !conditionLeft;
+			loopToBounduary = true;
+			break;
 		case BO_LE:
+			whileLessThan = conditionLeft;
+			loopToBounduary = true;
+			break;
 		case BO_EQ:
 			loopToBounduary = true;
+			whileLessThan = true;
 			break;
 
 		default:
@@ -440,14 +487,19 @@ insieme::core::StatementPtr  LoopAnalyzer::getLoop(const insieme::core::Statemen
 	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, normalizedInductionExpr, true);
 
 	// allrighty... green light, append extra code that might be needed and we are done
-	// TODO: reproduce first and last stmts
-	
+	// reproduce first and last stmts (like assign value if not loop local)
+	core::StatementList tmp;
+	tmp.insert(tmp.end(), firstStmts.begin(), firstStmts.end());
+	tmp.push_back(newBody);
+	tmp.insert(tmp.end(), lastStmts.begin(), lastStmts.end());
+	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
+
 	std::cout << "New BODY: " << std::endl;
-	dumpPretty ( body);
+	dumpPretty ( finalBody);
 	std::cout << "==========================" << std::endl;
 	
 	core::ExpressionPtr zero = convFact.getIRBuilder().literal("0", inductionVar->getType());
-	return convFact.getIRBuilder().forStmt(inductionVar, zero, normalizedIterations, incrExpr, newBody);
+	return convFact.getIRBuilder().forStmt(inductionVar, zero, normalizedIterations, incrExpr, finalBody);
 }
 
 } // End analysis namespace

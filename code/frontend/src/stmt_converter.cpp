@@ -246,7 +246,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
 
 	// we need to convert the body:
-		StatementList stmtsOld = Visit(forStmt->getBody());
 //
 //	// substitute all usages of the induction variable by the induction expression
 //		core::ExpressionPtr oldInduction = // FIXME: the loop analisis thing  has to find the expression and not a variable..

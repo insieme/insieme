@@ -119,6 +119,8 @@ private:
 
 	loopDir direction;			// loop up or loop down, not used
 	bool    loopToBounduary;    // whenever to loop until value is equal, or until value is less than
+	bool    whileLessThan;       // if induction variable is compared while less than
+	bool    conditionLeft;       // if induction variable is compared while less than
 	bool    restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
 
 
