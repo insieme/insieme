@@ -260,20 +260,42 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 //			}
 //		}
 //
+//
+
 
 		core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
 
+
+		std::cout << " ================================================   " << std::endl;
+		dumpPretty(body);
+		std::cout << " ==================  FIX ANNOTATIONS  ============   " << std::endl;
 
 
 		// we have to replace all ocurrences of the induction expression/var in the annotations of the body
 		// by the new induction var
 		core::visitDepthFirstPrunable (body, [&] (const core::StatementPtr& stmt) -> bool{
+					std::cout << "stmt: " << stmt << std::endl;
 					if (stmt->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = stmt->getAnnotation(omp::BaseAnnotation::KEY);
-						anno->replaceUsage(loopAnalysis.getOriginalInductionExpr(), loopAnalysis.getInductionExpr());
+
+						std::vector<core::VariablePtr> orgVars;
+						std::vector<core::VariablePtr> trgVars;
+						core::visitDepthFirstOnce ( loopAnalysis.getOriginalInductionExpr(), [&] (const core::VariablePtr& var){ orgVars.push_back(var);});
+						core::visitDepthFirstOnce ( loopAnalysis.getInductionExpr(), [&] (const core::VariablePtr& var){ trgVars.push_back(var);});
+
+						int i = 0;
+						for (auto org : orgVars){
+							anno->replaceUsage(org, trgVars[i]);
+							i++;
+						}
 					}
-					return true;
+					if (stmt.isa<core::CompoundStmtPtr>() || stmt.isa<core::IfStmtPtr>() || stmt.isa<core::SwitchStmtPtr>())
+						return false;
+					else
+						return true;
 				});
+		std::cout << " ==================  DONE ============   " << std::endl;
+
 
 		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
 		

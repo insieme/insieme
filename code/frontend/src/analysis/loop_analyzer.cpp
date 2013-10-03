@@ -58,7 +58,7 @@ namespace {
 
 using namespace insieme;
 
-struct InitializationCollector : public core::IRVisitor<bool>{
+struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 	
 	const core::ExpressionPtr& inductionExpr;
 	core::ExpressionPtr init;
@@ -66,40 +66,51 @@ struct InitializationCollector : public core::IRVisitor<bool>{
 	bool isDecl;
 
 	InitializationCollector(const core::ExpressionPtr& ind)
-		: IRVisitor<bool> (false), inductionExpr(ind), isDecl(false)
+		: core::IRVisitor<bool,core::Address> (), inductionExpr(ind), isDecl(false)
 	{
 		assert(inductionExpr->getType().isa<core::RefTypePtr>() && "looking for an initialization, has to be writable");
-
 		std::cout << "We look for: " << inductionExpr << std::endl;
-		
 	}
 
-	bool visitStatement(const core::StatementPtr& stmt){
-		std::cout << " ==== STMT === " << stmt << std::endl;
+	bool visitStatement(const core::StatementAddress& stmt){
 
-		if (stmt.isa<core::DeclarationStmtPtr>()) return this->visitDeclarationStmt(stmt.as<core::DeclarationStmtPtr>());
 		auto& mgr(stmt->getNodeManager());
 
-//		if (core::analysis::isCallOf(stmt, mgr.getLangBasic().getRefDeref())){
-//			std::cout << "STUPID" << std::endl;
-//			init = stmt.as<core::ExpressionPtr>();
-//			return true;
-//		}
+		std::cout << " ==== STMT === " << stmt.as<core::StatementPtr>() << std::endl;
+		if (stmt.isa<core::CallExprAddress>()){
+			if (core::analysis::isCallOf(stmt.as<core::CallExprPtr>(), mgr.getLangBasic().getRefAssign())){
+					std::cout << "    assign!! " << stmt <<std::endl;
 
-		if (core::analysis::isCallOf(stmt, mgr.getLangBasic().getRefAssign())){
-			core::ExpressionPtr left  = stmt.as<core::CallExprPtr>()[0].as<core::ExpressionPtr>();
-			core::ExpressionPtr right = stmt.as<core::CallExprPtr>()[1].as<core::ExpressionPtr>();
-			if (left == inductionExpr) init = right;
-			else {
-				leftoverStmts.push_back(stmt);
-				std::cout << "    assign!! " << stmt <<std::endl;
+					// if there is coma (,) operator, we will find the assigments enclosed into a labmda, we need to translate the 
+					// variable names
+				core::ExpressionPtr left = stmt.as<core::CallExprPtr>()[0].as<core::ExpressionPtr>();
+				if (stmt.as<core::CallExprPtr>()[0].isa<core::VariablePtr>()){
+					core::VariableAddress var  = stmt.as<core::CallExprAddress>()[0].as<core::VariableAddress>();
+					utils::map::PointerMap<core::VariableAddress, core::VariableAddress> paramName = 
+						core::analysis::getRenamedVariableMap(toVector(var));
+					left = paramName[var];
+				}
+				core::ExpressionPtr right = stmt.as<core::CallExprPtr>()[1].as<core::ExpressionPtr>();
+
+				if (left == inductionExpr){
+					init = right;
+					std::cout << " what we look for " << std::endl;
+				}
+				else {
+					core::IRBuilder builder( stmt->getNodeManager() );
+					leftoverStmts.push_back( builder.assign (left, right));
+					std::cout << " stmt " << stmt << std::endl;
+					std::cout << " annother shit " << std::endl;
+				}
+				return true;
 			}
-			return true;
+//utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist);
 		}
 		return false;
 	}
 
-	bool visitDeclarationStmt(const core::DeclarationStmtPtr& decl){
+	bool visitDeclarationStmt(const core::DeclarationStmtAddress& declAdr){
+		core::DeclarationStmtAddress decl = declAdr.as<core::DeclarationStmtAddress>();
 		std::cout << " ==== DECL === " << std::endl;
 		if (core::VariablePtr var = inductionExpr.isa<core::VariablePtr>()){
 				// the initialization must be wrapped into a refvar or something, so we get pure value
@@ -250,11 +261,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			auto rangeVarDecl = builder.declarationStmt(range, tmp);
 			preStmts.push_back(rangeVarDecl);
 
-			// we create another variable to use as init value, this way it wont be modified by the inductions without declaration
-			//core::VariablePtr startValue = builder.variable( inductionVar->getType());
-			//auto startVarDecl = builder.declarationStmt(startValue, initValue);
-			//preStmts.push_back(startVarDecl);
-
 			normalizedIterations = builder.add(builder.div(range, absFunc(stepExpr, range->getType())), one);
 			normalizedInductionExpr = builder.add (builder.mul(inductionVar, stepExpr), initValue);
 
@@ -347,6 +353,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	else throw LoopNormalizationError("Not supported condition");
 
 	std::cout << "induction: " << originalInductionExpr <<  ": " << originalInductionExpr->getType() << std::endl;
+	std::cout << "incrementExpr: " << incrementExpr <<  ": " << originalInductionExpr->getType() << std::endl;
 	std::cout << "endValue: " << endValue <<  ": " << endValue->getType() << std::endl;
 	std::cout << "induction var: " << inductionVar <<  ": " << inductionVar->getType() << std::endl;
 
@@ -361,7 +368,8 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 		core::StatementPtr initIR = convFact.convertStmt(initStmt);
 		std::cout << initIR << std::endl;
 		InitializationCollector collector(incrementExpr);
-		visitDepthFirstPrunable(initIR, collector);
+		std::cout << " INIT STMTS: " << initIR << std::endl;
+		visitDepthFirstPrunable(core::NodeAddress (initIR), collector);
 		initValue = collector.init;
 		preStmts	 = collector.leftoverStmts;
 		restoreValue = !collector.isDecl;
