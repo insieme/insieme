@@ -263,10 +263,30 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 
 		core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
 
+
+
+		// we have to replace all ocurrences of the induction expression/var in the annotations of the body
+		// by the new induction var
+		core::visitDepthFirstPrunable (body, [&] (const core::StatementPtr& stmt) -> bool{
+					if (stmt->hasAnnotation(omp::BaseAnnotation::KEY)){
+						auto anno = stmt->getAnnotation(omp::BaseAnnotation::KEY);
+						anno->replaceUsage(loopAnalysis.getOriginalInductionExpr(), loopAnalysis.getInductionExpr());
+					}
+					return true;
+				});
+
 		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
-		retStmt.push_back (loopAnalysis.getLoop(body));
-		retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
 		
+		core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
+		assert(forIr && "Created for statement is not valid");
+
+		// check for datarange pragma
+		attatchDatarangeAnnotation(forIr, forStmt, convFact);
+		attatchLoopAnnotation(forIr, forStmt, convFact);
+
+		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));
+		retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
+
 		return retStmt;
 		
 	

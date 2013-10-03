@@ -244,28 +244,31 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
 			}
 
-			// we create a variable for the range (needs to be a var because we can not divide the whole arithmetic eq )
+			// we create a variable for the range (needs to be a var because we can not divide the whole arithmetic eq , we have no way to parenthesise the
+			// upper term)
 			core::VariablePtr range = builder.variable( inductionVar->getType());
 			auto rangeVarDecl = builder.declarationStmt(range, tmp);
 			preStmts.push_back(rangeVarDecl);
 
 			// we create another variable to use as init value, this way it wont be modified by the inductions without declaration
-			core::VariablePtr startValue = builder.variable( inductionVar->getType());
-			auto startVarDecl = builder.declarationStmt(startValue, initValue);
-			preStmts.push_back(startVarDecl);
+			//core::VariablePtr startValue = builder.variable( inductionVar->getType());
+			//auto startVarDecl = builder.declarationStmt(startValue, initValue);
+			//preStmts.push_back(startVarDecl);
 
 			normalizedIterations = builder.add(builder.div(range, absFunc(stepExpr, range->getType())), one);
-			normalizedInductionExpr = builder.add (builder.mul(inductionVar, stepExpr), startValue);
+			normalizedInductionExpr = builder.add (builder.mul(inductionVar, stepExpr), initValue);
 
 			// if the variable is declared outside, we must give it a final value afer all iterations
-			// and also the right value inside of each iteration (might be indirectly used (might be a global))
 			if(restoreValue){
 				core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
-															builder.add(builder.mul(normalizedIterations, stepExpr), startValue));
+															builder.add(builder.mul(normalizedIterations, stepExpr), initValue));
+				// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
+				// update this variable so the inner loop side effects have access to it
 				postStmts.push_back(assign);  
-
-				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
-				firstStmts.push_back(assign);
+				if ( initValue != originalInductionExpr){
+					assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
+					firstStmts.push_back(assign);
+				}
 			}
 		}
 //	}
@@ -465,7 +468,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	throw LoopNormalizationError("unable to identify the upper bonduary for this loop");
 }
 
-insieme::core::StatementPtr  LoopAnalyzer::getLoop(const insieme::core::StatementPtr& body) const{
+insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementPtr& body) const{
 	auto& mgr(body->getNodeManager());
 
 	std::cout << "OLD BODY: " << std::endl;

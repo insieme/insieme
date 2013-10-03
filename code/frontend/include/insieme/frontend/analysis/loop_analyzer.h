@@ -143,7 +143,7 @@ public:
 	 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
 	 * limitations
 	 */
-	insieme::core::StatementPtr  getLoop(const insieme::core::StatementPtr& body) const; 
+	insieme::core::ForStmtPtr  getLoop(const insieme::core::StatementPtr& body) const; 
 };
 
 } // End analysis namespace
