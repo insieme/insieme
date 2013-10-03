@@ -87,6 +87,13 @@ using insieme::frontend::conversion::Converter;
 
 /**
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
+ * normalizes the loop.
+ * there is only needed to append the previous generated statements and the post.
+ * 		PRE: 
+ * 			...
+ * 		FOR LOOP { body }
+ * 		POST
+ * 			...
  */
 class LoopAnalyzer {
 
@@ -131,12 +138,28 @@ private:
 
 public:
 
+	/**
+	 * generate an analizer to convert the loop from clang
+	 */
 	LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
 
+	/**
+	 * retrieve the original induction expression used in the original not normalized loop
+	 */
 	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const { return originalInductionExpr; }
+	/**
+	 * retrieve the current induction expression used in the normalized loop
+	 */
 	const insieme::core::ExpressionPtr 	getInductionExpr() const { return normalizedInductionExpr; }
 
+	/**
+	 * retrieve the list of previous statements to be inserted BEFORE the loop
+	 */
 	const insieme::core::StatementList& getPreStmts() const { return preStmts;}
+
+	/**
+	 * retrieve the list of post statements to be inserted AFTER the loop
+	 */
 	const insieme::core::StatementList& getPostStmts() const { return postStmts;}
 
 	/**

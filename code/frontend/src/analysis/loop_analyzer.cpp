@@ -69,18 +69,14 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 		: core::IRVisitor<bool,core::Address> (), inductionExpr(ind), isDecl(false)
 	{
 		assert(inductionExpr->getType().isa<core::RefTypePtr>() && "looking for an initialization, has to be writable");
-		std::cout << "We look for: " << inductionExpr << std::endl;
 	}
 
 	bool visitStatement(const core::StatementAddress& stmt){
 
 		auto& mgr(stmt->getNodeManager());
 
-		std::cout << " ==== STMT === " << stmt.as<core::StatementPtr>() << std::endl;
 		if (stmt.isa<core::CallExprAddress>()){
 			if (core::analysis::isCallOf(stmt.as<core::CallExprPtr>(), mgr.getLangBasic().getRefAssign())){
-					std::cout << "    assign!! " << stmt <<std::endl;
-
 					// if there is coma (,) operator, we will find the assigments enclosed into a labmda, we need to translate the 
 					// variable names
 				core::ExpressionPtr left = stmt.as<core::CallExprPtr>()[0].as<core::ExpressionPtr>();
@@ -94,13 +90,10 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 
 				if (left == inductionExpr){
 					init = right;
-					std::cout << " what we look for " << std::endl;
 				}
 				else {
 					core::IRBuilder builder( stmt->getNodeManager() );
 					leftoverStmts.push_back( builder.assign (left, right));
-					std::cout << " stmt " << stmt << std::endl;
-					std::cout << " annother shit " << std::endl;
 				}
 				return true;
 			}
@@ -111,18 +104,15 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 
 	bool visitDeclarationStmt(const core::DeclarationStmtAddress& declAdr){
 		core::DeclarationStmtAddress decl = declAdr.as<core::DeclarationStmtAddress>();
-		std::cout << " ==== DECL === " << std::endl;
 		if (core::VariablePtr var = inductionExpr.isa<core::VariablePtr>()){
 				// the initialization must be wrapped into a refvar or something, so we get pure value
 			if (decl->getVariable() == var){
 				init = decl->getInitialization().as<core::CallExprPtr>()[0];
 				isDecl = true;
-				std::cout << "    ok:  " << decl <<std::endl;
 				return true;
 			}
 		}
 		leftoverStmts.push_back(decl);
-		std::cout << "    decl!! " << decl <<std::endl;
 		return true;
 	}
 };
@@ -157,10 +147,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 	if ( !forStmt->getInc() )   throw LoopNormalizationError(" no increment expression in loop");
 	if ( !forStmt->getCond() )  throw LoopNormalizationError(" no condition expression in loop");
 
-	std::cout << " ========================================================== " << std::endl;
-	forStmt->dump();
-	std::cout << " ========================================================== " << std::endl;
-
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression
@@ -170,12 +156,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 	// we finish the thing: build normalized induction expression and compute number of iterations
 
-	std::cout << "original expr: " <<  originalInductionExpr << std::endl;  // New read only induction var
-	std::cout << "increment: " << incrExpr << std::endl;	// normalized increment ( +1 )
-	std::cout << "step: " << stepExpr << std::endl; 	// step of each iteration
-	std::cout << "init: " << initValue<< std::endl;
-	std::cout << "end: " << endValue << std::endl;
-	
 	//   FIXME: formulas do not work nice whith the paratesis, if all variables, the computation is truncated in several places
 	//try{
 
@@ -242,9 +222,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 		else{
 			auto one =  builder.literal("1", inductionVar->getType());
 			core::ExpressionPtr tmp;
-
-			std::cout << " LESS THAN? " <<  whileLessThan << std::endl;
-			std::cout << " COND LEFT? " <<  conditionLeft << std::endl;
 			endValue = frontend::utils::castScalar(inductionVar->getType(), endValue);
 			if (whileLessThan) {  
 				tmp= builder.sub(endValue, initValue);
@@ -278,11 +255,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			}
 		}
 //	}
-
-	std::cout << "num iterations: " << normalizedIterations << std::endl; // Expression to use as iterator (normalized)
-	std::cout << "induction expr: " << normalizedInductionExpr << std::endl; // Expression to use as iterator (normalized)
-	std::cout << "post stmt: " << postStmts << std::endl; // post stmts
-	std::cout << "=============================================" << std::endl;
 }
 
 // to identify the induction variable, we cross the expressions in the increment with the expressions in the condition
@@ -352,11 +324,6 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	}
 	else throw LoopNormalizationError("Not supported condition");
 
-	std::cout << "induction: " << originalInductionExpr <<  ": " << originalInductionExpr->getType() << std::endl;
-	std::cout << "incrementExpr: " << incrementExpr <<  ": " << originalInductionExpr->getType() << std::endl;
-	std::cout << "endValue: " << endValue <<  ": " << endValue->getType() << std::endl;
-	std::cout << "induction var: " << inductionVar <<  ": " << inductionVar->getType() << std::endl;
-
 	// now that we know the induction expression and we created a new var, we have to identify the lower bound
 	const clang::Stmt* initStmt = forStmt->getInit();
 
@@ -366,20 +333,16 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	else{
 		// could be a declaration or could be an assigment
 		core::StatementPtr initIR = convFact.convertStmt(initStmt);
-		std::cout << initIR << std::endl;
 		InitializationCollector collector(incrementExpr);
-		std::cout << " INIT STMTS: " << initIR << std::endl;
 		visitDepthFirstPrunable(core::NodeAddress (initIR), collector);
 		initValue = collector.init;
 		preStmts	 = collector.leftoverStmts;
 		restoreValue = !collector.isDecl;
-		std::cout << "PRE STMTs: " << preStmts << std::endl;
 		if (!initValue) {
 			// if we could not find any suitable init, the initialization is the value of the original variable at the begining of the loop
 			initValue = originalInductionExpr;
 		}
 	}
-	std::cout << "start val: " << initValue << std::endl;
 }
 
 void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
@@ -479,9 +442,6 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementPtr& body) const{
 	auto& mgr(body->getNodeManager());
 
-	std::cout << "OLD BODY: " << std::endl;
-	dumpPretty ( body);
-
 	// if any of condition variables is not read only, we can not waranty the condition of the loop
 	for(auto c : conditionVars ) {
 		if(!core::analysis::isReadOnly(body, c))  throw analysis::LoopNormalizationError("Variable in condition expr is not readOnly");
@@ -504,11 +464,8 @@ insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementP
 	tmp.push_back(newBody);
 	tmp.insert(tmp.end(), lastStmts.begin(), lastStmts.end());
 	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
-
-	std::cout << "New BODY: " << std::endl;
-	dumpPretty ( finalBody);
-	std::cout << "==========================" << std::endl;
 	
+	// normalized loop iterates from 0
 	core::ExpressionPtr zero = convFact.getIRBuilder().literal("0", inductionVar->getType());
 	return convFact.getIRBuilder().forStmt(inductionVar, zero, normalizedIterations, incrExpr, finalBody);
 }
