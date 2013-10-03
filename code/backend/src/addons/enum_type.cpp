@@ -64,30 +64,36 @@ namespace addons {
 				return NOT_HANDLED;	// not handled by this handler
 			}
 
-            c_ast::CNodeManager& manager = *converter.getCNodeManager();
-            auto fragmentManager = converter.getFragmentManager();
-            // create constructor (C-style)
-            core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
-            //get name of enum
-            string name = static_pointer_cast<const core::GenericType>(gt->getTypeParameter()[0])->getName()->getValue();
-            //create declaration
-            c_ast::NodePtr ctr;
-            if(core::annotations::hasNameAttached(type))
-                ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
-            else
-                ctr = manager.create<c_ast::EnumType>(name, "");
+            		c_ast::CNodeManager& manager = *converter.getCNodeManager();
+            		auto fragmentManager = converter.getFragmentManager();
+            		// create constructor (C-style)
+            		core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
+            		//get name of enum
+            		string name = static_pointer_cast<const core::GenericType>(gt->getTypeParameter()[0])->getName()->getValue();
+            		//create declaration
+            		c_ast::NodePtr ctr;
+			if(core::annotations::hasNameAttached(type))
+                		ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
+            		else
+                		ctr = manager.create<c_ast::EnumType>(name, "");
 
 			// add constructor (C-style)
 			TypeInfo* info = new TypeInfo();
 			//identifier pointer of enum
 			c_ast::IdentifierPtr idptrname = manager.create(name);
-            c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(idptrname);
+        	    	c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(idptrname);
 			info->lValueType = typeType;
 			info->rValueType = typeType;
 			info->externalType = typeType;
 			//set declaration and definition
-			info->declaration = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ctr));
+			c_ast::NodePtr typed;
+			string enumtypedef = "enum " + name;
+			c_ast::IdentifierPtr idptrenumname = manager.create(enumtypedef);
+			c_ast::TypePtr typeTypeDef = manager.create<c_ast::NamedType>(idptrenumname);
+        	    	typed = manager.create<c_ast::TypeDefinition>(typeTypeDef, idptrname);
+			info->declaration = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ctr, typed));
 			info->definition = info->declaration;
+
 			return info;
 		}
 

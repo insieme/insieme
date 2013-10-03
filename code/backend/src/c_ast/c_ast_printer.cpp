@@ -200,8 +200,7 @@ namespace c_ast {
 			}
 
             PRINT(EnumType) {
-                return out  << "enum " << node->name << " { " << node->annotation << " };\n"
-                            << "typedef enum " << node->name << " " <<  node->name << ";";
+                return out  << "enum " << node->name << " { " << node->annotation << " };";
             }
 
 			PRINT(VarDecl) {
