@@ -199,6 +199,10 @@ namespace c_ast {
 				return out << node->attribute << " " << print(node->type);
 			}
 
+            PRINT(EnumType) {
+                return out  << "enum " << node->name << " { " << node->annotation << " };";
+            }
+
 			PRINT(VarDecl) {
 				// handle single-variable declaration ...
 				if (node->varInit.size() == 1u) {

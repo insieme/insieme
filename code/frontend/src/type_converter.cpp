@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,6 +53,7 @@
 #include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/lang/simd_vector.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
@@ -331,10 +332,10 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 	//VectorType - GCC generic vector type
 	//This type is created using __attribute__((vector_size(n)) where "n" specifies the vector size in bytes
 	//or from an Altivec __vector or vector declaration
-	//Since the constructor takes the number of vector elements, the client is responsible for converting the size into the number of elements. 
+	//Since the constructor takes the number of vector elements, the client is responsible for converting the size into the number of elements.
 	core::TypePtr retIr;
 	LOG_TYPE_CONVERSION( vecTy, retIr);
-	
+
     // get vector datatype
 	const QualType qt = vecTy->getElementType();
 	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
@@ -372,10 +373,12 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	core::TypePtr subType = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);
-
-	// Adding the name of the typedef as annotation
-	core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
-
+    //it may happen that we have something like 'typedef enum {...} name;'
+    //in this case we can forget the annotation
+    if(!mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)) {
+        // Adding the name of the typedef as annotation
+        core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
+    }
     return  subType;
 }
 
@@ -412,8 +415,9 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	// handle enums => always just integers
 	if(def->getTagKind() == clang::TTK_Enum) {
-		return gen.getInt4();
-	}
+        //return enum type
+        return mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(utils::buildNameForEnum(tagType));
+   	}
 
 	// handle struct/union/class
 	const RecordDecl* recDecl = dyn_cast<const RecordDecl>(def);

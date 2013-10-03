@@ -238,6 +238,13 @@ namespace c_ast {
 		return attribute == other.attribute && *type == *other.type;
 	}
 
+    bool EnumType::equals(const Node& node) const {
+        assert(dynamic_cast<const EnumType*>(&node));
+        auto other = static_cast<const EnumType&>(node);
+        return ((name == other.name) && (annotation == other.annotation));
+    }
+
+
 	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
 				: Statement(NT_VarDecl), varInit(initList) {
 		assert(!varInit.empty() && all(varInit, [&](const pair<VariablePtr, ExpressionPtr>& cur)->bool {

@@ -617,15 +617,17 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		// inspire switches implement break for each code region, we ignore it here
 		if (stmt.isa<core::BreakStmtPtr>()) {
 			openCases.clear();
-		}
-		else{
+		} else{
 			// for each of the open cases, add the statement to their own stmt list
 			for (const auto& caseLit : openCases){
 				caseMap[caseLit].push_back(stmt);
 			}
 			// if is a scope closing statement, finalize all open cases
-			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>())
+			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>()) {
 				openCases.clear();
+			} else if (stmt.isa<core::CompoundStmtPtr>() && stmt.as<core::CompoundStmtPtr>()->back().isa<core::BreakStmtPtr>()) {
+				openCases.clear();
+			}
 		}
 	};
 	
@@ -637,23 +639,35 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
 			return defLit;
 		}
-		core::ExpressionPtr caseExpr = convFact.convertExpr(llvm::cast<clang::CaseStmt>(switchCase)->getLHS());
-		if (caseExpr->getNodeType() == core::NT_CastExpr) {
-			core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
-			if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
-				core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
-				caseExpr = builder.literal(cast->getType(), literal->getValue());
-			}
-		}
-
+		
 		core::LiteralPtr caseLiteral;
-		if (!caseExpr.isa<core::LiteralPtr>()){
-			// clang casts the literal to fit the condition type... and is not a literal anymore
-			// it might be a scalar cast, we retrive the literal
-			caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
-		}
-		else{
-			caseLiteral = caseExpr.as<core::LiteralPtr>();
+		const clang::Expr* caseExpr = llvm::cast<clang::CaseStmt>(switchCase)->getLHS();
+
+		//if the expr is an integerConstantExpr
+		if( caseExpr->isIntegerConstantExpr(convFact.getCompiler().getASTContext())) {
+			llvm::APSInt result;
+			//reduce it and store it in result -- done by clang
+			caseExpr->isIntegerConstantExpr(result, convFact.getCompiler().getASTContext());
+			core::TypePtr type = convFact.convertType(caseExpr->getType().getTypePtr());
+			caseLiteral = builder.literal(type, result.toString(10));
+		} else {
+			core::ExpressionPtr caseExprIr = convFact.convertExpr(caseExpr);
+			if (caseExprIr->getNodeType() == core::NT_CastExpr) {
+				core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExprIr);
+				if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+					core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+					caseExprIr = builder.literal(cast->getType(), literal->getValue());
+				} 
+			}
+
+			if (!caseExprIr.isa<core::LiteralPtr>()){
+				// clang casts the literal to fit the condition type... and is not a literal anymore
+				// it might be a scalar cast, we retrive the literal
+				caseLiteral= caseExprIr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
+			}
+			else{
+				caseLiteral = caseExprIr.as<core::LiteralPtr>();
+			}
 		}
 		return caseLiteral;
 	};
@@ -664,7 +678,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// 					stmt1
 	// 					stmt2
 	// 			break
-	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt) {
+	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt, vector<core::StatementPtr>& decls) {
 		const clang::Stmt* stmt = caseStmt;
 
 		// we might find some chained stmts
@@ -672,6 +686,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			const clang::SwitchCase* inCase = llvm::cast<clang::SwitchCase>(stmt);
 			openCases.push_back(convertCase(inCase));
 			caseMap[openCases.back()] = std::vector<core::StatementPtr>();
+			
+			//take care of declarations in switch-body and add them to the case
+			for(auto d : decls) {
+				caseMap[openCases.back()].push_back(d);
+			}
 			stmt = inCase->getSubStmt();
 		}
 
@@ -684,12 +703,21 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// iterate throw statements inside of switch
 	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
 	assert( compStmt && "Switch statements doesn't contain a compound stmt");
+	vector<core::StatementPtr> decls;
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* currStmt = *it;
 
 		// if is a case stmt, create a literal and open it
 		if ( const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt) ){
-			lookForCases (switchCaseStmt);
+			lookForCases (switchCaseStmt, decls);
+			continue;
+		} else if( const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt) ) {
+			//collect all declarations which are in de switch body and add them (without init) to
+			//the cases
+			core::DeclarationStmtPtr decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
+			//remove the init, use undefinedvar 
+			decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+			decls.push_back(decl);
 			continue;
 		}
 		

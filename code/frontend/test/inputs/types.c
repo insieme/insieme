@@ -192,9 +192,9 @@ void mem_alloc() {
 enum E{ ON, OFF=10 };
 
 void test_enum() {
-	#pragma test "decl ref<int<4>> v0 =  var(0)"
+	#pragma test "decl ref<enum<E>> v0 =  var(ON)"
 	enum E a = ON;
-	#pragma test "decl ref<int<4>> v0 =  var(10)"
+	#pragma test "decl ref<enum<E>> v0 =  var(OFF)"
 	enum E b = OFF;
 }
 
