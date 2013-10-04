@@ -213,7 +213,7 @@ void for_stmt_test() {
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl int<4> v0 = ((100-2)-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { (v100 := ((v1*1)+2)); };}"
+	"{ decl ref<int<4>> v0 = ( var(1)); decl ref<int<4>> v1 = ( var(2)); decl int<4> v2 = ((100-0)-1); for(decl int<4> v3 = 0 .. ((v2/abs(1))+1) : 1) { (v100 := ((v3*1)+0)); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	// divission is not supported as for loop increment

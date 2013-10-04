@@ -28,6 +28,11 @@ int main(int argc, char** argv) {
 		iterations++;
 	}
 
+	for(unsigned char i = 8, j = 7; i>-1; --i) {
+		printf("j: %d\n", j);
+		iterations++;
+	}
+
 	}
 	printf("Iterations: %d\n", iterations);
 

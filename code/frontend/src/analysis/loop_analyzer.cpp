@@ -103,7 +103,7 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 	}
 
 	bool visitDeclarationStmt(const core::DeclarationStmtAddress& declAdr){
-		core::DeclarationStmtAddress decl = declAdr.as<core::DeclarationStmtAddress>();
+		core::DeclarationStmtPtr decl = declAdr.as<core::DeclarationStmtPtr>();
 		if (core::VariablePtr var = inductionExpr.isa<core::VariablePtr>()){
 				// the initialization must be wrapped into a refvar or something, so we get pure value
 			if (decl->getVariable() == var){
@@ -232,6 +232,10 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
 			}
 
+			// assure right typing
+			assert(initValue->getType() == endValue->getType());
+			assert(inductionVar->getType() == endValue->getType());
+
 			// we create a variable for the range (needs to be a var because we can not divide the whole arithmetic eq , we have no way to parenthesise the
 			// upper term)
 			core::VariablePtr range = builder.variable( inductionVar->getType());
@@ -239,7 +243,9 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			preStmts.push_back(rangeVarDecl);
 
 			normalizedIterations = builder.add(builder.div(range, absFunc(stepExpr, range->getType())), one);
-			normalizedInductionExpr = builder.add (builder.mul(inductionVar, stepExpr), initValue);
+
+			normalizedInductionExpr = builder.mul(frontend::utils::castScalar(stepExpr->getType(),inductionVar), stepExpr);
+			normalizedInductionExpr = builder.add (frontend::utils::castScalar(initValue->getType(), normalizedInductionExpr), initValue);
 
 			// if the variable is declared outside, we must give it a final value afer all iterations
 			if(restoreValue){
