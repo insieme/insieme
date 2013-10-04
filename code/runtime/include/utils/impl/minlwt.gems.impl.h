@@ -34,51 +34,58 @@
 * regarding third party software licenses.
 */
 
+void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/);
+
 // TODO [_GEMS]: noinline is not supported by lcc
 //__attribute__ ((noinline))
-asm int lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/,
-	intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) {
+void lwt_continue_impl(irt_work_item *wi, wi_implementation_func* func, intptr_t *newstack, intptr_t *basestack) {
+	lwt_continue_impl_asm(wi, func, newstack, basestack);
+}
 
-	; /* save registers on stack r0-r5 (r14 = SP) */
-
-	add r14, -4;
-	sw r0, r14, 0;
-	add r14, -4;
-	sw r1, r14, 0;
-	add r14, -4;
-	sw r2, r14, 0;
-	add r14, -4;
-	sw r3, r14, 0;
-	add r14, -4;
-	sw r4, r14, 0;
-	add r14, -4;
-	sw r5, r14, 0;
+// TODO [_GEMS]: remove useless nops 
+asm void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) {
+	
+	; /* push caller saved registers (r0-r5) on stack (r14 = SP) */
+	
+	add r14, -28
+	nop;
+	sw r0, r14, 24;
+	sw r1, r14, 20;
+	sw r2, r14, 16;
+	sw r3, r14, 12;
+	sw r4, r14,  8;
+	sw r5, r14,  4;
+	
+	; /* push LinkRegister (r15) on the stack (r14 = SP) */
+	
+	sw r15, r14, 0;
+	nop;
 	
 	; /* swap stacks */
 	
-	sw r14, r3, 0;
-	lw r14, r2, 0;
+	sw r14, r3;
+	lw r14, r2;
 	
 	; /* call function if func != NULL */
 	
-	cmpeq r1, NULL;
+	cmpeq r1, 0;
 	bcc ($+3); /* +1 to skip the branch, +1 to skip the nop (branch delay slot) and finally +1 to skip the call*/
 	nop;
-	call r1;
+	call __irt_wi_trampoline; /* r0 still has wi, r1 still has func, so just call */
+	nop;
 	
 	; /* restore registers for other coroutine */
 	
-	lw r5, r14, 0;
-	add r14, 4;
-	lw r4, r14, 0;
-	add r14, 4;
-	lw r3, r14, 0;
-	add r14, 4;
-	lw r2, r14, 0;
-	add r14, 4;
-	lw r1, r14, 0;
-	add r14, 4;
-	lw r0, r14, 0;
-	add r14, 4;
-
+	lw r0, r14,  24;
+	lw r1, r14,  20;
+	lw r2, r14,  16;
+	lw r3, r14,  12;
+	lw r4, r14,   8;
+	lw r5, r14,   4;
+	lw r15, r14,  0;
+	nop;
+	
+	b r15;
+	add r14, 28;
 }
+

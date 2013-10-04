@@ -108,6 +108,8 @@ void _irt_await_all_workers_init(irt_worker_init_signal *signal){
 		if(signal->init_count == irt_g_worker_count) {
 			// signal readyness of created thread to master thread
 			irt_cond_wake_all(&signal->init_condvar);
+			// TODO [_GEMS]: irt_cond_wake_one added since no irt_cond_wake_all implementation is available 
+			irt_cond_wake_one(&signal->init_condvar);
 		} else {
 			irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
 		}
@@ -145,8 +147,6 @@ void* _irt_worker_func(void *argvp) {
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
-	IRT_ASSERT(irt_tls_get(irt_g_worker_key) == arg->generated, IRT_ERR_INTERNAL, "Worker threadprivate data not set");
-
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
@@ -178,8 +178,6 @@ void* _irt_worker_func(void *argvp) {
 
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
-
-	IRT_INFO("Worker %i inited\n", arg->index);
 
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
@@ -290,7 +288,6 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
-	printf("IRT worker create\n");
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;

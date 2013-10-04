@@ -47,8 +47,8 @@
 
 // scheduling policy
 #ifndef IRT_SCHED_POLICY
-	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
 	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
 #endif
 
@@ -118,10 +118,10 @@
 // TODO : better configurability, maybe per-wi stack size set by compiler?
 // updated to 8MB due to failing test cases (quicksort, jacobi)
 // don't misalign!
-#define IRT_WI_STACK_SIZE 8 * 1024 * 1024
+#define IRT_WI_STACK_SIZE 1 * 1024 * 1024
 
 #ifndef IRT_MAX_WORKERS
-#define IRT_MAX_WORKERS 2048
+#define IRT_MAX_WORKERS 1 
 #endif
 #ifndef IRT_MAX_WORK_GROUPS
 #define IRT_MAX_WORK_GROUPS 4

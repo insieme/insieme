@@ -40,8 +40,10 @@
 
 #include "declarations.h"
 
-#ifndef IRT_LOGGING
-#define IRT_LOGGING 1
+#ifdef _GEMS
+	#undef IRT_LOGGING
+#elif !defined(IRT_LOGGING)
+	#define IRT_LOGGING 1
 #endif
 
 void irt_log_init();

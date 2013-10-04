@@ -71,6 +71,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 	// if that failed as well, look in the IPC message queue
 	if(_irt_sched_check_ipc_queue(self))
 		return 1;
+	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems 
+	pthread_yield();
+
 	return 0;
 }
 

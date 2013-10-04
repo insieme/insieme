@@ -41,7 +41,7 @@
 #include "abstraction/atomic.h"
 #include "abstraction/spin_locks.h"
 
-asm int atomic_rmw_int(int *ptr, int value)
+asm int atomic_rmw_int_asm(int *ptr, int value)
 {
 	nop;
 	nop;
@@ -49,6 +49,11 @@ asm int atomic_rmw_int(int *ptr, int value)
 	rmw;
 	nop;
 	nop;
+};
+
+int atomic_rmw_int(int *ptr, int value)
+{
+	return atomic_rmw_int_asm(ptr, value);
 };
 
 // TODO [_GEMS]: work-around implementation with global lock 

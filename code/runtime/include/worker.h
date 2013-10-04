@@ -102,7 +102,7 @@ typedef struct _irt_worker_init_signal {
 	#if !defined(_WIN32) || (WINVER >= 0x0600)
 		irt_cond_var init_condvar;
 	#endif
-	irt_lock_obj init_mutex;
+	irt_mutex_obj init_mutex;
 } irt_worker_init_signal;
 
 /* ------------------------------ operations ----- */

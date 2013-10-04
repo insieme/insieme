@@ -99,23 +99,23 @@ void irt_cond_var_init(irt_cond_var *cv) {
 	 pthread_cond_init(cv, NULL);
 }
 
-void irt_mutex_init(irt_lock_obj *m) {
+void irt_mutex_init(irt_mutex_obj *m) {
 	pthread_mutex_init(m, NULL);
 }
 
-void irt_mutex_lock(irt_lock_obj *m) {
+void irt_mutex_lock(irt_mutex_obj *m) {
 	pthread_mutex_lock(m);
 }
 
-int irt_mutex_trylock(irt_lock_obj *m) {
+int irt_mutex_trylock(irt_mutex_obj *m) {
 	return pthread_mutex_trylock(m);
 }
 
-void irt_mutex_unlock(irt_lock_obj *m) {
+void irt_mutex_unlock(irt_mutex_obj *m) {
 	pthread_mutex_unlock(m);
 }
 
-void irt_mutex_destroy(irt_lock_obj *m) {
+void irt_mutex_destroy(irt_mutex_obj *m) {
 	pthread_mutex_destroy(m);
 }
 
@@ -123,16 +123,17 @@ void irt_cond_wake_all(irt_cond_var *cv) {
 #ifdef _GEMS
 	// TODO [_GEMS]: missing implementation of pthread_cond_broadcast
 	// it is only needed when workers sleeping mode is active
+	IRT_WARN("irt_cond_wake_all empty implementation\n");
 #else
 	pthread_cond_broadcast(cv);
 #endif
 }
 
-int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m) {
+int irt_cond_wait(irt_cond_var *cv, irt_mutex_obj *m) {
 	return pthread_cond_wait(cv, m);
 }
 
-int irt_cond_timedwait(irt_cond_var *cv, irt_lock_obj *m, uint64 time_ns) {
+int irt_cond_timedwait(irt_cond_var *cv, irt_mutex_obj *m, uint64 time_ns) {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	uint64 new_nsecs = ts.tv_nsec + time_ns%(1000ULL*1000*1000);

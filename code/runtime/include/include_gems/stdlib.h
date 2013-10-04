@@ -40,8 +40,20 @@
 
 #include <stdlib.h>
 
-#define malloc(x)	gem_malloc(x, 0)
+#define malloc(x)	gem_malloc(x, MEM_HEAP)
+#define calloc(x, y)	gem_calloc(x * y, MEM_HEAP)
 #define free(x) 	gem_free(x)
+
+void* gem_calloc(size_t sz, int mem_id)
+{
+	char* ptr = gem_malloc(sz, mem_id);
+
+	for (char* p = ptr; p < ptr + sz; p++) {
+		*p = 0;
+	}
+
+	return ptr;
+}
 
 char* getenv(const char* name)
 {

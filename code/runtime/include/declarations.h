@@ -47,6 +47,7 @@
 	#include <malloc.h>
 #elif defined(_GEMS)
 	#include <include_gems/alloca.h>
+	#include <include_gems/stdlib.h>
 #else
 	#include <alloca.h>
 #endif

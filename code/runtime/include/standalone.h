@@ -71,12 +71,12 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 // globals
 irt_tls_key irt_g_error_key;
-irt_lock_obj irt_g_error_mutex;
-irt_lock_obj irt_g_exit_handler_mutex;
+irt_mutex_obj irt_g_error_mutex;
+irt_mutex_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
-irt_lock_obj irt_g_active_worker_mutex;
+irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -97,7 +97,10 @@ void irt_init_globals() {
 	irt_log_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
+#ifndef _GEMS
+	// TODO [_GEMS]: file io is not supported
 	irt_time_ticks_per_sec_calibration_mark();
+#endif
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -117,8 +120,11 @@ void irt_init_globals() {
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
+#ifndef _GEMS
+	// TODO [_GEMS]: file io is not supported
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
+#endif
 }
 
 // cleanup global variables and delete global data structures
@@ -181,7 +187,10 @@ void irt_exit_handler() {
 	irt_g_exit_handling_done = true;
 	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
+#ifndef _GEMS
+	// TODO [_GEMS]: file io is not supported
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
+#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	if(irt_g_instrumentation_event_output_is_enabled)
 		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
@@ -265,6 +274,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
+#ifndef _GEMS
+	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
 		signal(IRT_SIG_ERR, &irt_error_handler);
@@ -274,6 +285,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		signal(SIGSEGV, &irt_abort_handler);
 		atexit(&irt_exit_handler);
 	}
+#endif
 	// initialize globals
 	irt_init_globals();
 	irt_g_exit_handling_done = false;
@@ -321,9 +333,11 @@ uint32 irt_get_default_worker_count() {
 	return irt_affinity_cores_available();
 }
 
-bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
-	irt_lock_obj* mutex = (irt_lock_obj*)mutexp;
-	irt_mutex_unlock(mutex);
+bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {
+	irt_cond_bundle *condbundle = (irt_cond_bundle*)condbundlep;
+	irt_mutex_lock(&condbundle->mutex);
+	irt_cond_wake_one(&condbundle->condvar);
+	irt_mutex_unlock(&condbundle->mutex);
 	return false;
 }
 
@@ -333,19 +347,20 @@ void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *para
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
-	irt_lock_obj mutex; // TODO don't use mutex
-	irt_mutex_init(&mutex);
-	irt_mutex_lock(&mutex);
+	irt_cond_bundle condbundle;
+	irt_mutex_init(&condbundle.mutex);
+	irt_cond_var_init(&condbundle.condvar);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
-	handler.data = &mutex;
+	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 
 	// wait for workers to finish the main work-item
-	irt_mutex_lock(&mutex);
+	irt_mutex_lock(&condbundle.mutex);
+	irt_cond_wait(&condbundle.condvar, &condbundle.mutex);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -373,6 +388,8 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
+	irt_mutex_unlock(&condbundle.mutex);
+	irt_mutex_destroy(&condbundle.mutex);
 	irt_exit_handler();
 }
 

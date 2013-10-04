@@ -38,7 +38,7 @@
 #ifndef __GUARD_INCLUDE_GEMS_STDINT_H
 #define __GUARD_INCLUDE_GEMS_STDINT_H
 
-typedef long long intptr_t;
-typedef unsigned long long uintptr_t;
+typedef int intptr_t;
+typedef unsigned int uintptr_t;
 
 #endif // ifndef __GUARD_INCLUDE_GEMS_STDINT_H

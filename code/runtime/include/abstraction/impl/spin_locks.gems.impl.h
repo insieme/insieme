@@ -44,7 +44,7 @@
 #define IRT_SPIN_LOCKS_GEM_LOCKED	1	
 
 void irt_spin_lock(irt_spinlock *lock){
-	while(atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_LOCKED) == IRT_SPIN_LOCKS_GEM_LOCKED);
+	while(atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_LOCKED) == IRT_SPIN_LOCKS_GEM_LOCKED) pthread_yield();
 }
 
 void irt_spin_unlock(irt_spinlock *lock){

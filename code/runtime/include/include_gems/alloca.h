@@ -40,7 +40,7 @@
 
 void* alloca(size_t size)
 {
-	return malloc(size);
+	return gem_malloc(size, MEM_HEAP);
 }
 
 #endif //#ifndef __GUARD_INCLUDE_GEMS_ALLOCA_H
