@@ -78,6 +78,7 @@ namespace utils {
 
 		auto ts = task([](int a, int b) { std::cout << "a+b=" << a << "+" << b << "=" << (a+b) << "\n"; }, 14, 16);
 		ts();
+
 	}
 
 	TEST(Tasks, ParallelTasks) {
@@ -183,6 +184,7 @@ namespace utils {
 		}
 		EXPECT_EQ(v,4);
 
+		insieme::utils::TaskManager::finalize();
 	}
 } // end namespace analysis
 } // end namespace insieme

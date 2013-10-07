@@ -50,6 +50,17 @@
 namespace insieme {
 namespace utils {
 
+		std::mutex glob_mutex;
+#define GLOBAL_LOCK(x)\
+	{\
+		glob_mutex.lock();\
+		x; \
+		glob_mutex.unlock();\
+	}
+
+#define INSIEME_MAX_THREADS 7
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,18 +70,26 @@ namespace utils {
 		mutable std::vector<TaskBase*> dependencies;
 
 		bool done;
+		static int id_counter;
+		int id;
 
-		TaskBase() : done(false) {}
+		TaskBase() : done(false), id(id_counter) { 
+
+			GLOBAL_LOCK(std::cout <<  std::this_thread::get_id() <<  " new TASK: " << id << std::endl);
+			id_counter++;
+		}
 
 		virtual ~TaskBase() { };
 
 		TaskBase& operator>>(TaskBase& task) {
+			GLOBAL_LOCK(std::cout <<  std::this_thread::get_id() << " " << task.id  <<  " waits for: " << this->id << std::endl);
 			task.dependencies.push_back(this);
 			return task;
 		}
 
 		virtual void operator()() =0;
 	};
+	 int TaskBase::id_counter =  0;
 
 	namespace {
 
@@ -108,43 +127,66 @@ namespace utils {
 
 		class Worker{
 			TaskManager& mgr;
-			bool done;
+			std::thread *thread;
+			int& done;
 
-			Worker(TaskManager& m) : mgr(m), done(false){
+		public:
+			Worker(TaskManager& m, int& done) : mgr(m), done(done){
+				// start the thread!
+				thread = new std::thread(*this);
+			}
+			Worker(Worker&& o)
+				: mgr(o.mgr), thread(o.thread), done (o.done){
+			}
+			Worker(const Worker& o)
+				: mgr(o.mgr), thread(o.thread), done (o.done){
+			}
+
+			// to store it in a vector we need copy assigment operator... WTF?
+			Worker& operator=(const Worker& o) {
+				thread = o.thread;
+				done = o.done;
+				return *this;
 			}
 
 			void operator()(){
+				GLOBAL_LOCK(std::cout <<  std::this_thread::get_id() <<  " START " << std::endl);
 				while (!done){
+
 					while (!mgr.submitted.empty()){
 						auto tsk = mgr.getTask();
-						(*tsk)();
+						if (tsk){
+							GLOBAL_LOCK(std::cout << " submited size: " << mgr.submitted.size() << std::endl);
+							GLOBAL_LOCK(std::cout <<  std::this_thread::get_id()  << " executing: " << tsk->id << std::endl);
+							(*tsk)();
+						}
 					}
+				GLOBAL_LOCK(std::cout <<  std::this_thread::get_id() <<  " no more work " << this << " = " << done << std::endl);
 				}
+				GLOBAL_LOCK(std::cout << std::this_thread::get_id() <<  " END " << std::endl);
 			}
 
 			void finish (){
+				GLOBAL_LOCK(std::cout <<  std::this_thread::get_id() <<  " signaled to finish " << this << " = " << done << std::endl);
+				assert(false);
 				done =true;
+				thread->join();
+				delete thread;
 			}
 		};
 
-		// HERE: how to model this? 
-		// I need the thread to call join on ending
-		// i need also the obj to call finish
-		std::vector<std::thread> workers;
+		std::vector<Worker> workers;
+		// because the spetialization of vector bool, we can not return references, so we need to use chars, and old school 0, 1
+		std::vector<int> 	 workFlags;
 
 		////////////////////////////////////////////////
 		//
 		////////////////////////////////////////////////
 
 		TaskManager()
-		{
-			for (int i = 0; i < 7; ++i){
-				//workers.push_back()
-			}
-		}
-
-		inline void processTask(TaskBase* t){
-			(*t)();
+			:workers(), workFlags(INSIEME_MAX_THREADS, true) {
+			for (int i = 0; i < INSIEME_MAX_THREADS; ++i)
+				workers.push_back(Worker(*this, workFlags[i]));
 		}
 
 		TaskBase* getTask(){
@@ -161,8 +203,10 @@ namespace utils {
 		////////////////////////////////////////////////
 		// Static interface
 		////////////////////////////////////////////////
+		public:
 		
 		static void addTask(TaskBase* t){
+			GLOBAL_LOCK(std::cout << " add task: "  << t->id << std::endl);
 			TaskManager& mgr =getInstance();
 			mgr.lock.lock();
 			mgr.submitted.push_back(t);
@@ -172,6 +216,7 @@ namespace utils {
 		static void wait (TaskBase* t){
 			TaskManager& mgr = getInstance();
 
+			GLOBAL_LOCK(std::cout << "wait: " << t->id << std::endl);
 			// while the task i wait for is still in the queue, 
 			// this thread is also a worker, therefore works
 			mgr.lock.lock();
@@ -179,19 +224,28 @@ namespace utils {
 				mgr.lock.unlock();
 				// work a little...
 				auto tsk = mgr.getTask();
-				(*tsk)();
-
+				if (tsk){
+					GLOBAL_LOCK(std::cout << "  activeWait: " << tsk->id << std::endl);
+					(*tsk)();
+				}
 				mgr.lock.lock();
 			}
 			mgr.lock.unlock();
+		}
+
+		static void finalize (){
+			TaskManager& mgr = getInstance();
+			// wait for everithing not finnished, the problem is with the pointers, if we leave the scope. non finished works will 
+			// be deleted and well have pointers to dirty memory
+			for (auto& f: mgr.workFlags){
+				f = false;
+			}
 		}
 
 		static TaskManager& getInstance(){
 			static TaskManager inst;
 			return inst;
 		}
-
-
 
 		friend class TaskBase;
 	};
@@ -235,17 +289,19 @@ namespace utils {
 			done = true;
 
 			// process dependencies concurrently
-			std::vector<std::future<void>> futures;
+			//std::vector<std::future<void>> futures;
 			for(auto cur : dependencies) {
-				futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
+				TaskManager::addTask(cur);
+		//		futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
 //				futures.push_back(std::async([cur](){ (*cur)(); }));
 			}
 
 			// wait for dependencies
-			for(const auto& cur : futures) cur.wait();
+			for(auto cur : dependencies) TaskManager::wait(cur);
 
+				TaskManager::addTask(this);
 			// process local task
-			apply_tuple<sizeof...(Params)>::on(fun, args);
+			//apply_tuple<sizeof...(Params)>::on(fun, args);
 		}
 
 	};
