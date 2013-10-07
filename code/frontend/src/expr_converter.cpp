@@ -1832,6 +1832,18 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                  ImplicitValueInit EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::ExprConverter::VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr) {
+    core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(initExpr, retIr);
+    core::TypePtr elementType = convFact.convertType ( initExpr->getType().getTypePtr() );
+    assert(elementType && "IR type creation failed (given element type not supported)");
+    retIr = convFact.defaultInitVal(elementType);
+    return retIr;
+}
+
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER
 //										calls Base: Expression Converter
