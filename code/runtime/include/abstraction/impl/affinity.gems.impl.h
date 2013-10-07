@@ -128,7 +128,7 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 
 uint32 irt_affinity_cores_available() {
 #ifdef _GEMS
-	return 0;
+	return NUM_CORES;
 #else
 	_irt_affinity_init_base_mask();
 

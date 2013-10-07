@@ -51,14 +51,12 @@
 
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
-	printf("IRT thread create start\n");
 	if (t == NULL) {
 		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 	}
 	else {
 		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 	}
-	printf("IRT thread create end\n");
 }
 
 void irt_thread_get_current(irt_thread *t) {
@@ -68,6 +66,7 @@ void irt_thread_get_current(irt_thread *t) {
 void irt_thread_cancel(irt_thread *t){
 #ifdef _GEMS
 	// TODO [_GEMS]: missing implementation of pthread_cancel
+	IRT_WARN("irt_thread_cancel empty implementation\n");
 #else
 	pthread_cancel(*t);
 #endif

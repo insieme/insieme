@@ -86,7 +86,11 @@ inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_
 	base_range.begin = base_range.begin + id * chunk * base_range.step;
 
 	// adjust chunk and begin to take care of remainder
-	if(id < rem) chunk += 1;
+	if(id < rem) { 
+		// TODO [_GEMS]: one should not be propagated since gemsclaim compiler is bugged
+		uint64 one = 1;
+		chunk += one;
+	}
 	base_range.begin += MIN(rem, id) * base_range.step;
 	base_range.end = base_range.begin + chunk * base_range.step;
 

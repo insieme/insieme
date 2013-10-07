@@ -120,6 +120,9 @@
 // don't misalign!
 #define IRT_WI_STACK_SIZE 1 * 1024 * 1024
 
+#ifndef IRT_DEF_WORKERS
+#define IRT_DEF_WORKERS 1 
+#endif
 #ifndef IRT_MAX_WORKERS
 #define IRT_MAX_WORKERS 1 
 #endif

@@ -38,6 +38,7 @@
 #ifndef __GUARD_INCLUDE_GEMS_TIME_H
 #define __GUARD_INCLUDE_GEMS_TIME_H
 
+#include <time.h>
 #include "irt_inttypes.h"
 
 struct timespec {

@@ -327,10 +327,16 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 }
 
 uint32 irt_get_default_worker_count() {
+	uint32 cores;
+
 	if(getenv(IRT_NUM_WORKERS_ENV)) {
 		return atoi(getenv(IRT_NUM_WORKERS_ENV));
 	}
-	return irt_affinity_cores_available();
+	else if( (cores = irt_affinity_cores_available()) > 0 )
+		return cores;
+	else
+		return IRT_DEF_WORKERS;
+
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {

@@ -39,6 +39,7 @@
 #define __GUARD_INCLUDE_GEMS_STDLIB_H
 
 #include <stdlib.h>
+#include <string.h>
 
 #define malloc(x)	gem_malloc(x, MEM_HEAP)
 #define calloc(x, y)	gem_calloc(x * y, MEM_HEAP)
@@ -46,11 +47,9 @@
 
 void* gem_calloc(size_t sz, int mem_id)
 {
-	char* ptr = gem_malloc(sz, mem_id);
+	void* ptr = gem_malloc(sz, mem_id);
 
-	for (char* p = ptr; p < ptr + sz; p++) {
-		*p = 0;
-	}
+	memset(ptr, 0, sz);
 
 	return ptr;
 }
