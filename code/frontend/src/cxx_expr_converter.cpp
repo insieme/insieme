@@ -428,6 +428,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		if(callExpr->hasInitializer()) {
             const clang::Expr * initializer = callExpr->getInitializer();
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
+			assert(initializerExpr);
             placeHolder = initializerExpr;
 		}
         else {
@@ -865,6 +866,60 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 	return retIr;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			Cxx11 lambda expression
+//		we could convert the body, encapsulate it into a function and pas all the captures
+//		as parameters, but this will ruin compatibility. We need a class with the operator() overload
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr){
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(lambdaExpr, retIr);
+
+	// convert the enclosing class
+	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
+	core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
+
+	// convert the captures
+	auto captureIt  = lambdaExpr->capture_init_begin();
+	auto captureEnd = lambdaExpr->capture_init_end();
+	std::vector<core::ExpressionPtr> captures; 
+	for (;captureIt != captureEnd; ++captureIt){
+		captures.push_back(convFact.convertExpr(*captureIt));
+	}
+
+	// we will construct the object and return the ref to the functor class
+	core::ExpressionPtr ctorFunc;
+	auto ctorIt  = decl->ctor_begin ();
+	auto ctorEnd = decl->ctor_end ();
+	for (;ctorIt != ctorEnd; ++ ctorIt){
+		bool match = true;
+
+		// select right ctor by matching parameters with capture types
+		auto paramIt   = (*ctorIt)->param_begin();
+		auto paramEnd  = (*ctorIt)->param_end();
+		int pid;
+		for (;paramIt != paramEnd; ++paramIt){
+			
+			if (convFact.lookUpVariable(*paramIt)->getType() != captures[pid]->getType()){
+				match = false;
+				break;
+			}
+			pid++;
+		}
+
+		// if found, convert
+		if (match){
+			ctorFunc = convFact.convertFunctionDecl(*ctorIt);
+		}
+	}
+	assert(ctorFunc && "no constructor could be translated for the anonymous lambda class");
+
+	// build the call to the ctor
+	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
+	retIr = builder.callExpr (funcTy.getReturnType(), ctorFunc, captures);
+
+	return retIr;
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically

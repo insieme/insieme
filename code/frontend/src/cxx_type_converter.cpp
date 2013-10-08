@@ -435,12 +435,12 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			continue;
 		}
 
-		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME for non-userProvided moveAssign ops find solution,
-			//maybe leave them to be handled by the backendCompiler or something else
-			//currently are left over for be-compiler
-			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
-		}
+//		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME for non-userProvided moveAssign ops find solution,
+//			//maybe leave them to be handled by the backendCompiler or something else
+//			//currently are left over for be-compiler
+//			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
+//		}
 
 		const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 

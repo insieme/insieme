@@ -334,9 +334,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 		// set cxx standard to c++98
 		//--> DOES _NOT_ sets LanguageOption::GNUMode
-		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
+		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
 		// set cxx standard to c++11 (+GNUMode)
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx11);
+		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx11);  // with GNU
+		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11); // no GNU extensions
 
 		//should be set already by langdefaults
 		//LO.CPlusPlus = 1; 	// set C++ 98 support
