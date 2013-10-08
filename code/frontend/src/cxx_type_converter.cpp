@@ -210,7 +210,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-			
+		//we trigger the conversion of the inner type,
+		//so we don't use the converted type/expr directly
 		switch(templTy->getArg(argId).getKind()){
 			case clang::TemplateArgument::Expression: {
 				VLOG(2) << "arg: expression"; 
