@@ -119,7 +119,6 @@ namespace cba {
 
 				// visit return statements
 				if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
-
 					// connect value of return statement with body value
 					auto l_return = cba.getLabel(returnStmt->getReturnExpr());
 					auto A_return = cba.getSet(A, l_return, ctxt);

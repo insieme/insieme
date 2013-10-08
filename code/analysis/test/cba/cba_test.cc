@@ -52,6 +52,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -1422,6 +1423,109 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, RecursiveCallContexts_1) {
+
+		// create a simple test case containing recursion
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let fac = (int<4> x)->int<4> {"
+				"		if (x == 0) return 1;"
+				"		return x * fac(x-1);"
+				"	};"
+				"	"
+				"	fac(0);"
+				"	fac(1);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto contexts = toString(analysis.getValidContexts());
+
+		EXPECT_PRED2(containsSubString, contexts, "[0,0]");
+		EXPECT_PRED2(containsSubString, contexts, "[1,1]");
+		EXPECT_PRED2(containsSubString, contexts, "[2,2]");
+
+		EXPECT_PRED2(containsSubString, contexts, "[0,1]");
+		EXPECT_PRED2(containsSubString, contexts, "[0,2]");
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[1,2]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[2,1]");
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[1,0]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[2,0]");
+	}
+
+	TEST(CBA, RecursiveCallContexts_2) {
+
+		// create a simple test case containing recursion
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let even, odd = "
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return true;"
+				"			return odd(x-1);"
+				"		},"
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return false;"
+				"			return even(x-1);"
+				"		};"
+				"	"
+				"	even(0);"
+				"	odd(0);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto contexts = toString(analysis.getValidContexts());
+
+
+		EXPECT_PRED2(   containsSubString, contexts, "[0,0]");
+
+		// --- the first call --
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[1,1]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[2,2]");
+
+		EXPECT_PRED2(   containsSubString, contexts, "[0,1]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[0,2]");
+
+		EXPECT_PRED2(   containsSubString, contexts, "[1,2]");
+		EXPECT_PRED2(   containsSubString, contexts, "[2,1]");
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[1,0]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[2,0]");
+
+		EXPECT_PRED2(   containsSubString, contexts, "[0,0]");
+
+		// --- and the second call --
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[3,3]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[4,4]");
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[0,3]");
+		EXPECT_PRED2(   containsSubString, contexts, "[0,4]");
+
+		EXPECT_PRED2(   containsSubString, contexts, "[3,4]");
+		EXPECT_PRED2(   containsSubString, contexts, "[4,3]");
+
+		EXPECT_PRED2(notContainsSubString, contexts, "[3,0]");
+		EXPECT_PRED2(notContainsSubString, contexts, "[4,0]");
+	}
+
 	TEST(CBA, Recursion_1) {
 
 		// create a simple test case containing recursion
@@ -1448,9 +1552,6 @@ namespace cba {
 
 		CBA analysis(code);
 
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
-//		createDotDump(analysis);
-
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
@@ -1463,54 +1564,56 @@ namespace cba {
 
 		// yet still not for larger recursive functions
 		EXPECT_TRUE(contains(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()), Formula()));
+
+//		createDotDump(analysis);
 	}
 
-//	TEST(CBA, Recursion_2) {
-//
-//		// let's try some mutual recursion
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	let even, odd = "
-//				"		(int<4> x)->bool {"
-//				"			if (x == 0) return true;"
-//				"			return odd(x-1);"
-//				"		},"
-//				"		(int<4> x)->bool {"
-//				"			if (x == 0) return false;"
-//				"			return even(x-1);"
-//				"		};"
-//				"	"
-//				"	even(0);"
-//				"	even(1);"
-//				"	even(2);"
-//				"	even(3);"
-//				"	odd(0);"
-//				"	odd(1);"
-//				"	odd(2);"
-//				"	odd(3);"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//dumpPretty(in);
-//		CBA analysis(code);
-//
-////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), B)));
-////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), B)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), B)));
+	TEST(CBA, Recursion_2) {
+
+		// let's try some mutual recursion
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let even, odd = "
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return true;"
+				"			return odd(x-1);"
+				"		},"
+				"		(int<4> x)->bool {"
+				"			if (x == 0) return false;"
+				"			return even(x-1);"
+				"		};"
+				"	"
+				"	even(0);"
+				"	even(1);"
+				"	even(2);"
+				"	even(3);"
+				"	odd(0);"
+				"	odd(1);"
+				"	odd(2);"
+				"	odd(3);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
+
 //		createDotDump(analysis);
-////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), B)));
-////
-////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), B)));
-////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), B)));
-////		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), B)));
-////		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
-//
-//	}
+	}
 
 //
 //	// Known Issues:

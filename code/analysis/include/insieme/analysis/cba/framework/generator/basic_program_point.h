@@ -133,10 +133,12 @@ namespace cba {
 
 		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callee& callee,  Constraints& constraints) {
 
+			// filter out invalid contexts
+			if (!cba.isValid(callCtxt) || !cba.isValid(trgCtxt)) return;
+
 			// check whether given call / target context is actually valid
-			auto fun = call->getFunctionExpr();
 			auto l_call = cba.getLabel(call);
-			if (!(fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>())) {		// it is not a direct call
+			if (causesContextShift(call)) {
 				if (callCtxt.callContext << l_call != trgCtxt.callContext) return;
 			} else if (callCtxt.callContext != trgCtxt.callContext) {
 				return;

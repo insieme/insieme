@@ -45,7 +45,7 @@ namespace cba {
 
 	using namespace core;
 
-	ExpressionAddress getSurroundingFreeFunction(const NodeAddress& cur) {
+	NodeAddress getSurroundingFreeFunction(const NodeAddress& cur) {
 		static const ExpressionAddress none;
 
 		// move up until reaching requested function
@@ -53,22 +53,44 @@ namespace cba {
 
 		// stop decent at lambda or binds
 		auto type = cur->getNodeType();
-		if (type != NT_LambdaExpr && type != NT_BindExpr) {
+		if (type != NT_Lambda && type != NT_BindExpr) {
 			return getSurroundingFreeFunction(cur.getParentAddress());
 		}
 
-		auto fun = cur.as<ExpressionAddress>();
+		auto fun = cur;
 
 		// check whether function is a free function
 		if (fun.isRoot()) return none;
 
 		// if lambda is not directly called it is a free function
-		auto user = fun.getParentAddress();
+		auto user = (type == NT_Lambda) ? fun.getParentAddress(4) : fun.getParentAddress();
 		auto call = user.isa<CallExprAddress>();
 		if (!call || call->getFunctionExpr() != fun) return fun;
 
 		// otherwise continue search
 		return getSurroundingFreeFunction(user);
+	}
+
+	LambdaAddress getSurroundingRecursiveFunction(const NodeAddress& cur) {
+		static const LambdaAddress none;
+
+		// check whether current node is a function
+		if (cur->getNodeType() == NT_Lambda) {
+
+			auto lambda = cur.as<LambdaAddress>();
+			auto lambdaVar = cur.getParentAddress(1).as<LambdaBindingPtr>()->getVariable();
+			auto lambdaDef = cur.getParentAddress(2).as<LambdaDefinitionAddress>();
+
+			if (lambdaDef->isRecursive(lambdaVar)) {
+				return lambda;
+			}
+		}
+
+		// check for root nodes
+		if (cur.isRoot()) return none;
+
+		// process recursively
+		return getSurroundingRecursiveFunction(cur.getParentAddress());
 	}
 
 	vector<ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root) {
@@ -244,6 +266,18 @@ namespace cba {
 		auto def = getDefinitionPoint(var);
 		return !def.isRoot() && def.getParentNode().isa<LambdaBindingPtr>();
 	}
+//
+//	LambdaDefinitionAddress getRecursiveDefinition(const CallExprAddress& call) {
+//		assert(isRecursiveCall(call));
+//
+//		// get definition point
+//		auto var = call->getFunctionExpr().as<VariableAddress>();
+//		auto def = getDefinitionPoint(var);
+//
+//		// get enclosing definition
+//		return def.getParentAddress(2).as<LambdaDefinitionAddress>();
+//
+//	}
 
 } // end namespace cba
 } // end namespace analysis

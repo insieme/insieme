@@ -36,29 +36,66 @@
 
 #pragma once
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include <set>
+#include <map>
+
+#include "insieme/analysis/cba/framework/_forward_decl.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+	// a forward declaration for the CBA class.
+	class CBA;
+	class Callee;
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+	class CallStringFilter {
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+		CBA& cba;
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+		/**
+		 * All labels to be encountered within call context strings.
+		 */
+		std::set<Label> allCallsSet;
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+		/**
+		 * The same as the allCallsSet but in list form.
+		 */
+		std::vector<Label> allCallsList;
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+		/**
+		 * A map of labels to valid predecessors.
+		 */
+		std::map<Label, std::set<Label>> predecessors;
 
-	core::StatementPtr getRootStmt(const core::NodeAddress& node);
+	public:
 
-	bool isRecursiveCall(const core::CallExprAddress& call);
+		CallStringFilter(CBA& cba);
+
+		const std::set<Label>& getAllPotentialPredecessors(const Label& label);
+
+		const std::vector<Label>& getAllCallStringEntries() const {
+			return allCallsList;
+		}
+
+		bool isValidCallStringEntry(const Label& l) {
+			return allCallsSet.find(l) != allCallsSet.end();
+		}
+
+		bool isValidPredecessor(const Label& pre, const Label& pos) {
+			const std::set<Label>& set = getAllPotentialPredecessors(pos);
+			return set.find(pre) != set.end();
+		}
+
+	private:
+
+		std::set<Label> computePotentialPredecessors(const Label& label);
+
+		std::set<Label> computePotentialPredecessors(const StatementAddress& stmt);
+
+		std::set<Label> getAllStaticUses(const Callee& fun);
+	};
+
 
 } // end namespace cba
 } // end namespace analysis

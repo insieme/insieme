@@ -67,7 +67,7 @@ namespace cba {
 				return res;
 		  }),
 		  setCounter(0), idCounter(0), callSiteMgr(root),
-		  set2container(), dynamicCallLabels()
+		  callStringFilter(*this), set2container()
 	{ };
 
 	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
@@ -78,59 +78,6 @@ namespace cba {
 
 		// let container create constraints
 		pos->second->addConstraintsFor(*this, set, res);
-	}
-
-
-	const CBA::OptCallSiteList& CBA::getAllStaticUses(const core::ExpressionAddress& fun) {
-
-		// check the cache
-		auto pos = callSiteCache.find(fun);
-		if (pos != callSiteCache.end()) {
-			return pos->second;
-		}
-
-		// compute call-site list
-		const vector<Caller>& callers = getCallSiteManager().getCaller(Callee(fun));
-		if (callers == getCallSiteManager().getFreeCallers(fun->getType().as<FunctionTypePtr>()->getParameterTypes().size())) {
-			return callSiteCache[fun] = CBA::OptCallSiteList();
-		}
-
-
-		vector<Label> res;
-		for(auto cur : callers) {
-			res.push_back(getLabel(cur.getCall()));
-		}
-		return callSiteCache[fun] = res;
-	}
-
-	CBA::OptCallSiteList CBA::getAllStaticPredecessors(const core::CallExprAddress& call) {
-
-		// TODO: clean up this mess ..
-
-		static const CBA::OptCallSiteList root = toVector<Label>(0);
-		auto fun = getSurroundingFreeFunction(call);
-		if (!fun) {
-			auto res = root;
-
-			if (isRecursiveCall(call)) {
-				// add current label to candidate list (todo: also add labels of all other recursive calls in the definition)
-				res->push_back(getLabel(call));
-			}
-
-			return res;
-		}
-
-		// get static uses
-		auto res = getAllStaticUses(fun);
-		if (!res) return res;
-
-		// if static uses are clear, we also have to add recursive cases
-		if (isRecursiveCall(call)) {
-			// add current label to candidate list (todo: also add labels of all other recursive calls in the definition)
-			res->push_back(getLabel(call));
-		}
-
-		return res;
 	}
 
 	void CBA::plot(std::ostream& out) const {

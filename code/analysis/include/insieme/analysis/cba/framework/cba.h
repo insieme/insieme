@@ -49,6 +49,7 @@
 #include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/call_site_manager.h"
+#include "insieme/analysis/cba/framework/call_string_filter.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
@@ -166,6 +167,7 @@ namespace cba {
 
 			template<typename T, template<typename C> class R>
 			sc::TypedSetID<T> getSet(CBA& cba, const TypedSetType<T,R>& type, int id, const Context& context) {
+				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
 				SetKey key(&type, id, context);
 				auto pos = sets.find(key);
 				if (pos != sets.end()) {
@@ -184,6 +186,7 @@ namespace cba {
 
 			template<typename T, template<typename C> class G>
 			sc::TypedSetID<T> getSet(CBA& cba, const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
+				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
 				StateSetKey key(LocationSetKey(&type, &type_loc, loc), label, context);
 				auto pos = stateSets.find(key);
 				if (pos != stateSets.end()) {
@@ -452,6 +455,9 @@ namespace cba {
 		// a utility deducing caller <=> callee relations
 		CallSiteManager callSiteMgr;
 
+		// a utility helping to reduce the list of allowed call contexts
+		CallStringFilter callStringFilter;
+
 		std::unordered_map<SetID, ContainerBase*> set2container;
 
 	public:
@@ -594,62 +600,15 @@ namespace cba {
 			return getContainer<Context>().getCallables(*this, numParams);
 		}
 
-	private:
-
-		utils::Lazy<std::vector<Label>> dynamicCallLabels;
-
-	public:
-
-		typedef std::vector<Label> CallSiteList;
-
-		const std::vector<Label>& getDynamicCallLabels() {
-			if (dynamicCallLabels) return dynamicCallLabels;
-
-			dynamicCallLabels = vector<Label>();
-			dynamicCallLabels->push_back(0);
-			for(const Caller&  cur : getCallSiteManager().getDynamicCalls()) {
-				dynamicCallLabels->push_back(getLabel(cur.getCall()));
-			}
-			return dynamicCallLabels;
-		}
-
-		// -------------- static computation of call sites -----------------
-
-		// TODO: remove this interface and redirect access to call site manager directly
-
-		typedef boost::optional<CallSiteList> OptCallSiteList;
-		std::map<core::ExpressionAddress, OptCallSiteList> callSiteCache;
-
-		/**
-		 * Tries to determine all uses of the given function (lambda or bind) and returns
-		 * the vector of dynamic call labels accessing the function. If the uses can not
-		 * be determined statically, the optional result will not be filled.
-		 */
-		const OptCallSiteList& getAllStaticUses(const core::ExpressionAddress& fun);
-
-		/**
-		 * Obtains a list of statically known predecessors of the given statement in
-		 * potential call sequences. The optional result will be empty if there is none.
-		 * If the uses can not be determined statically, the optional result will not be filled.
-		 */
-		OptCallSiteList getAllStaticPredecessors(const core::CallExprAddress& call);
-
-		/**
-		 * Obtains a list of statically known predecessors of the given label in
-		 * potential call sequences. The optional result will be empty if there is none.
-		 */
-		CallSiteList getAllStaticPredecessors(const Label& label) {
-			static const CallSiteList zero = toVector<Label>(0);
-			if (label == 0) return zero;
-			auto list = getAllStaticPredecessors(getStmt(label).as<CallExprAddress>());
-			return (list) ? *list : getDynamicCallLabels();
-		}
-
 
 		// -------------- Static Context Filter -----------------
 
+		const std::vector<Label>& getDynamicCallLabels() {
+			return callStringFilter.getAllCallStringEntries();
+		}
+
 		bool isValid(const std::array<Label, 0>& call_ctxt) { return true; }
-		bool isValid(const std::array<Label, 1>& call_ctxt) { return contains(getDynamicCallLabels(), call_ctxt.front()); }
+		bool isValid(const std::array<Label, 1>& call_ctxt) { return callStringFilter.isValidCallStringEntry(call_ctxt.front()); }
 
 		template<std::size_t size>
 		bool isValid(const std::array<Label, size>& seq) {
@@ -657,7 +616,7 @@ namespace cba {
 
 			// check sequence
 			for(std::size_t i=0; i<size-1; i++) {
-				if (!contains(getAllStaticPredecessors(seq[i+1]), seq[i])) return false;
+				if (!callStringFilter.isValidPredecessor(seq[i], seq[i+1])) return false;
 			}
 			return true;
 		}
@@ -688,18 +647,8 @@ namespace cba {
 				return;
 			}
 
-			// special case: root context
-			Context cur = ctxt;
-			cur.callContext >>= 0;
-			res.insert(cur);
-
-			// only 0 context 'calls' 0 context
-			if (ctxt.callContext.front() == 0) {
-				return;	// there will not be any more contexts
-			}
-
 			// create a list of valid contexts
-			for(auto l : getAllStaticPredecessors(ctxt.callContext.front())) {
+			for(auto l : callStringFilter.getAllPotentialPredecessors(ctxt.callContext.front())) {
 				Context cur = ctxt;
 				cur.callContext >>= l;
 				res.insert(cur);
