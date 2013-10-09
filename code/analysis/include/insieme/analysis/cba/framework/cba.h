@@ -228,7 +228,7 @@ namespace cba {
 				settype2generator[&type] = res;
 
 				// also location generator instances
-				for(const auto& loc : getAllLocations(cba)) {
+				for(const auto& loc : getLocations(cba)) {
 					auto in  = new ImperativeInStateConstraintGenerator<Context,TypedSetType<T,G>>(cba, type, loc);
 					auto out = new ImperativeOutStateConstraintGenerator<Context,TypedSetType<T,G>>(cba, type, loc);
 					generator.insert(in);
@@ -332,7 +332,25 @@ namespace cba {
 
 			const std::vector<Location<Context>>& getLocations(CBA& cba) {
 				if (locations) return locations;
-				locations = getAllLocations(cba);
+
+				locations = std::vector<Location<Context>>();
+
+				// collect all memory location constructors
+				core::visitDepthFirst(cba.getRoot(), [&](const core::ExpressionAddress& cur) {
+
+					// TODO: filter contexts - not all locations may occur in all contexts
+					// (this will reduce the number of sets / constraints)
+
+					if (isMemoryConstructor(cur)) {
+						for(const auto& ctxt : this->getContexts(cba)) {
+							// TODO: move location creation utility to location constructor
+							auto loc = cba.getLocation<Context>(cur, ctxt);
+							if (!contains(*locations, loc)) {
+								locations->push_back(loc);
+							}
+						}
+					}
+				});
 				return locations;
 			}
 
@@ -341,7 +359,28 @@ namespace cba {
 				if (pos != callables.end()) {
 					return pos->second;
 				}
-				return callables[numParams] = getAllCallables(cba, numParams);
+
+				vector<Callable<Context>>& res = callables[numParams];
+
+				for(const auto& fun : cba.getCallSiteManager().getFreeCallees(numParams)) {
+
+					if (fun.isLambda() || fun.isLiteral()) {
+
+						res.push_back(Callable<Context>(fun));
+
+					} else if (fun.isBind()) {
+
+						for(const auto& ctxt : getContexts(cba)) {
+							res.push_back(Callable<Context>(fun, ctxt));
+						}
+
+					} else {
+
+						assert_fail() << "Encountered unexpected function type: " << fun.getDefinition()->getNodeType();
+					}
+				}
+
+				return res;
 			}
 
 			virtual std::size_t getNumSets() const {
@@ -387,48 +426,6 @@ namespace cba {
 				}
 			}
 
-		private:
-
-			// a utility function extracting a list of memory location constructors from the given code fragment
-			vector<Location<Context>> getAllLocations(CBA& cba) {
-				vector<Location<Context>> res;
-
-				// TODO: cache constructor expressions in cba!
-
-				// collect all memory location constructors
-				core::visitDepthFirst(cba.getRoot(), [&](const core::ExpressionAddress& cur) {
-					// TODO: add context info to locations
-					if (isMemoryConstructor(cur)) {
-						res.push_back(Location<Context>(cur));
-					}
-				});
-				return res;
-			}
-
-			// a utility function extracting a list of callables
-			vector<Callable<Context>> getAllCallables(CBA& cba, std::size_t numParams) {
-				vector<Callable<Context>> res;
-
-				for(const auto& fun : cba.getCallSiteManager().getFreeCallees(numParams)) {
-
-					if (fun.isLambda() || fun.isLiteral()) {
-
-						res.push_back(Callable<Context>(fun));
-
-					} else if (fun.isBind()) {
-
-						for(const auto& ctxt : getContexts(cba)) {
-							res.push_back(Callable<Context>(fun, ctxt));
-						}
-
-					} else {
-
-						assert_fail() << "Encountered unexpected function type: " << fun.getDefinition()->getNodeType();
-					}
-				}
-
-				return res;
-			}
 		};
 
 		typedef utils::TypedMap<Container, ContainerBase> index_map_type;
@@ -578,8 +575,7 @@ namespace cba {
 		// TODO: remove default values
 		// TODO: think about moving this to the reference analysis module
 		template<typename Context>
-		Location<Context> getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
-			Context context;
+		Location<Context> getLocation(const core::ExpressionAddress& ctor, const Context& ctxt) {
 
 			assert(isMemoryConstructor(ctor));
 
@@ -592,7 +588,7 @@ namespace cba {
 			}
 
 			// create the location instance
-			return Location<Context>(def, context);
+			return Location<Context>(def, ctxt);
 		}
 
 		template<typename Context>

@@ -109,6 +109,20 @@ namespace utils {
 		}
 
 		/**
+		 * Get access to value using indirection operator.
+		 */
+		V& operator*() {
+			return getValue();
+		}
+
+		/**
+		 * Get access to value using indirection operator.
+		 */
+		const V& operator*() const {
+			return getValue();
+		}
+
+		/**
 		 * An implicit conversion to the value type.
 		 */
 		operator V&() {

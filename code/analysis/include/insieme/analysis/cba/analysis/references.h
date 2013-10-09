@@ -87,7 +87,7 @@ namespace cba {
 			if (!isMemoryConstructor(literal)) return;
 
 			// add constraint literal \in R(lit)
-			auto value = cba.getLocation<Context>(literal);
+			auto value = cba.getLocation<Context>(literal, ctxt);
 			auto l_lit = cba.getLabel(literal);
 
 			auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
@@ -104,7 +104,7 @@ namespace cba {
 			if (!isMemoryConstructor(call)) return;
 
 			// add constraint location \in R(call)
-			auto value = cba.getLocation<Context>(call);
+			auto value = cba.getLocation<Context>(call, ctxt);
 			auto l_lit = cba.getLabel(call);
 
 			auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);

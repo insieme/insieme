@@ -36,8 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include <fstream>
-
 #include "insieme/analysis/cba/cba.h"
 
 #include "insieme/analysis/cba/framework/cba.h"
@@ -54,30 +52,13 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/test/test_utils.h"
 
+#include "cba_test.inc.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using namespace core;
-
-	namespace {
-
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-	}
 
 	TEST(CBA, Context) {
 		typedef DefaultContext Context;
@@ -1124,8 +1105,8 @@ namespace cba {
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[13].as<ExpressionAddress>(), A)));
 
-		EXPECT_LE(analysis.getNumSets(), 314);
-		EXPECT_LE(analysis.getNumConstraints(), 322);
+		EXPECT_LE(analysis.getNumSets(), 400);
+		EXPECT_LE(analysis.getNumConstraints(), 500);
 
 //		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
 //		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
@@ -1177,8 +1158,8 @@ namespace cba {
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A)));
 
-		EXPECT_LE(analysis.getNumSets(), 512);
-		EXPECT_LE(analysis.getNumConstraints(), 485);
+		EXPECT_LE(analysis.getNumSets(), 750);
+		EXPECT_LE(analysis.getNumConstraints(), 750);
 
 //		std::cout << "Num Sets:  " << analysis.getNumSets() << "\n";
 //		std::cout << "Num Const: " << analysis.getNumConstraints() << "\n";
@@ -1613,6 +1594,48 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), B)));
 
 //		createDotDump(analysis);
+	}
+
+	TEST(CBA, LocationContext) {
+
+		// some code where the context of a memory allocation is relevant
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	auto f = ()->ref<int> { return new(0); };"
+				"	"
+				"	ref<int> a = f();"
+				"	ref<int> b = f();"
+				"	"
+				"	a = 4;"
+				"	b = 5;"
+				"	a;"				// should be a location @ context A
+				"	b;"				// should be a location @ context B != A
+				"	*a;"			// should be 4
+				"	*b;"			// should be 5  - if locations have no context, both would be {5}
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ(
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[],0>,<0,[],0>]])}",
+				toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>()))
+		);
+		EXPECT_EQ(
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[],0>,<0,[],0>]])}",
+				toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R<DefaultContext>()))
+		);
+
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
+
 	}
 
 //

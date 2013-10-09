@@ -110,7 +110,8 @@ namespace cba {
 	struct Location : public std::pair<core::ExpressionAddress, Context> {
 		const core::ExpressionAddress& getAddress() const { return this->first; }
 		const Context& getContext() const { return this->second; }
-		Location(const core::ExpressionAddress& def = core::ExpressionAddress(), const Context& context = Context())
+		Location() : std::pair<core::ExpressionAddress, Context>() {}
+		Location(const core::ExpressionAddress& def, const Context& context)
 			: std::pair<core::ExpressionAddress, Context>(def, context) {}
 	};
 
