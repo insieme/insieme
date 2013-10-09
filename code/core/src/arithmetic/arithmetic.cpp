@@ -730,6 +730,10 @@ namespace arithmetic {
 		return (terms.empty())?Rational(0):terms[0].second;
 	}
 
+	int64_t Formula::getIntegerValue() const {
+		assert(isInteger());
+		return getConstantValue().getNumerator();
+	}
 
 	// --- Inequality ------------------------------------------------------------------------------
 
