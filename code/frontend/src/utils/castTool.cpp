@@ -770,6 +770,10 @@ switch (castExpr->getCastKind()) {
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
 				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
+				//if it is no ref we have to materialize it, otherwise refParent cannot be called
+				if(expr->getType()->getNodeType() != core::NT_RefType) {
+					expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+				}
 				expr = builder.refParent(expr, targetTy);
 			}
 
