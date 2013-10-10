@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/cba/framework/data_value.h"
+#include "insieme/analysis/cba/framework/data_index.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -44,29 +45,32 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	using namespace std;
 	using namespace core;
 
-	TEST(DataValue, ElementData) {
+	TEST(DataValue, AtomData) {
 
 		// just some simple data path handling
 
-		typedef data_ptr<int>::type Data;
+		typedef Data<int> Data;
 
-		Data a = elements(1,2,3);
-		Data b = elements(3,4);
-		Data c = element(0);
+		Data a = atomic(1);
+		Data b = atomic(2);
+		Data c = atomic(0);
 
-		EXPECT_EQ("{1,2,3}", toString(a));
-		EXPECT_EQ("{3,4}", toString(b));
-		EXPECT_EQ("{0}", toString(c));
+		EXPECT_EQ("1", toString(a));
+		EXPECT_EQ("2", toString(b));
+		EXPECT_EQ("0", toString(c));
 
+		EXPECT_EQ(a, atomic(1));
+		EXPECT_NE(a, atomic(2));
 	}
 
 	TEST(DataValue, StructData) {
 
 		// just some simple data path handling
 
-		typedef data_ptr<int>::type Data;
+		typedef Data<int> Data;
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -74,14 +78,72 @@ namespace cba {
 		StringValuePtr nA = builder.stringValue("a");
 		StringValuePtr nB = builder.stringValue("b");
 
-		Data a = structData(member(nA, elements(0)), member(nB, elements(1,2)));
-		Data b = structData(member(nB, elements(0)), member(nA, elements(1,2)));
-		Data c = structData(member(nB, elements(1,2)), member(nA, elements(0)));
+		auto e0 = atomic(0);
+		auto e1 = atomic(1);
+		auto e2 = atomic(2);
 
-		EXPECT_EQ("{a={0},b={1,2}}", toString(a));
-		EXPECT_EQ("{a={1,2},b={0}}", toString(b));
-		EXPECT_EQ("{a={0},b={1,2}}", toString(c));
+		auto sA = toSet(e0,e1);
+		auto sB = toSet(e1,e2);
 
+		Data a = structData(member(nA, sA), member(nB, sB));
+		Data b = structData(member(nB, sB), member(nA, sA));
+		Data c = structData(member(nB, sA), member(nA, sB));
+
+		EXPECT_EQ("{a={0,1},b={1,2}}", toString(a));
+		EXPECT_EQ("{a={0,1},b={1,2}}", toString(b));
+		EXPECT_EQ("{a={1,2},b={0,1}}", toString(c));
+
+		EXPECT_EQ(a,b);
+		EXPECT_NE(a,c);
+		EXPECT_NE(b,c);
+	}
+
+
+	TEST(DataValue, ArrayData) {
+
+		// just some simple data path handling
+
+		typedef Data<int> Data;
+
+		auto e0 = atomic(0);
+		auto e1 = atomic(1);
+		auto e2 = atomic(2);
+
+
+		// test with the unit index
+		auto elementUA = element(UnitIndex(), toSet(e0,e1));
+		Data aU = arrayData(elementUA);
+		EXPECT_EQ("{[*]={0,1}}", toString(aU));
+
+
+		// test with the single index
+		auto elementSA = element(SingleIndex(0), toSet(e0));
+		auto elementSB = element(SingleIndex(1), toSet(e1,e2));
+		auto elementSC = element(SingleIndex(), toSet(e2));
+
+		Data aS = arrayData(elementSA, elementSB, elementSC);
+		EXPECT_EQ("{[0]={0},[1]={1,2},[*]={2}}", toString(aS));
+
+	}
+
+	TEST(DataValue, DataSet) {
+
+		auto e0 = atomic(0);
+		auto e1 = atomic(1);
+		auto e2 = atomic(2);
+
+		// create a simple set
+		auto s1 = toSet(e1,e0,e2,e0);
+		EXPECT_EQ("{0,1,2}", toString(s1));
+
+		// and another containing variations of arrays
+
+		auto s2 = toSet(
+			arrayData(element(UnitIndex(), toSet(e0,e2))),
+			arrayData(element(UnitIndex(), toSet(e1)))
+		);
+
+		EXPECT_EQ("{{[*]={0,2}},{[*]={1}}}", toString(s2));
 	}
 
 } // end namespace cba

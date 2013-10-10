@@ -93,7 +93,7 @@ namespace cba {
 		UnitIndex c = a;
 		c = b;	// and assignable
 
-		EXPECT_EQ("unit", toString(a));
+		EXPECT_EQ("*", toString(a));
 		EXPECT_EQ(a,b);
 
 	}

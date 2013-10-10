@@ -80,7 +80,7 @@ namespace cba {
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "unit";
+			return out << "*";
 		}
 
 	};

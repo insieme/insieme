@@ -40,6 +40,9 @@
 #include <utility>
 #include <vector>
 #include <memory>
+#include <typeindex>
+
+#include <boost/operators.hpp>
 
 #include "insieme/core/ir.h"
 #include "insieme/utils/printable.h"
@@ -77,16 +80,75 @@ namespace cba {
 	// ------------------------------------------------------------------------
 
 	// forward declaration of the base type
-	template<typename ElementType> class Data;
+	template<typename ElementType> class DataBase;
 
-	// a type trait for the pointer type to be utilized
-	template<typename ElementType> struct data_ptr {
-		typedef std::shared_ptr<Data<ElementType>> type;
+	// the type of pointer to be used for handling data values
+	template<typename ElementType>
+	class Data :
+			public boost::equality_comparable<Data<ElementType>>,
+			public boost::partially_ordered<Data<ElementType>>,
+			public utils::Printable {
+
+		std::shared_ptr<DataBase<ElementType>> data;
+
+	public:
+
+		Data(const std::shared_ptr<DataBase<ElementType>>& data)
+			: data(data) { assert(data); }
+
+		bool operator==(const Data<ElementType>& other) const {
+			return data == other.data || *data == *other.data;
+		}
+
+		bool operator<(const Data<ElementType>& other) const {
+			return *this != other && *data < *other.data;
+		}
+
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << *data;
+		}
+
 	};
 
 	template<typename Type, typename ... Args>
-	typename data_ptr<typename Type::element_type>::type make_ptr(const Args& ... args) {
-		return std::make_shared<Type>(args...);
+	Data<typename Type::element_type> make_ptr(const Args& ... args) {
+		return Data<typename Type::element_type>(std::make_shared<Type>(args...));
+	}
+
+	template<typename ElementType>
+	class DataSet :
+			public boost::equality_comparable<DataSet<ElementType>>,
+			public boost::partially_ordered<DataSet<ElementType>>,
+			public utils::Printable {
+
+		std::set<Data<ElementType>> data;
+
+	public:
+
+		DataSet(const std::set<Data<ElementType>>& data)
+			: data(data) { }
+
+		bool operator==(const DataSet<ElementType>& other) const {
+			return this == &other || data == other.data;
+		}
+
+		bool operator<(const DataSet<ElementType>& other) const {
+			return *this != other && data < other.data;
+		}
+
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << data;
+		}
+
+	};
+
+	template<typename ET, typename ... Rest>
+	DataSet<ET> toSet(const Data<ET>& first, const Rest& ... rest) {
+		return utils::set::toSet<std::set<Data<ET>>>(first, rest...);
 	}
 
 
@@ -95,36 +157,33 @@ namespace cba {
 	// ------------------------------------------------------------------------
 
 	template<typename ElementType>
-	class Data : public utils::Printable {
+	class DataBase : public utils::Printable {
 
 	public:
 
 		typedef ElementType element_type;
 
-		virtual ~Data() {}
+		virtual ~DataBase() {}
 
-		// an operator for merging data representations
-//		virtual Data& operator+(const Data& other) const =0;
+		bool operator==(const DataBase& other) {
+			return typeid(*this) == typeid(other) && equals(other);
+		}
+
+		bool operator<(const DataBase& other) const {
+			auto typeA = std::type_index(typeid(*this));
+			auto typeB = std::type_index(typeid(other));
+			if (typeA != typeB) return typeA < typeB;
+			return lessThan(other);
+		}
 
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const =0;
-	};
 
-//	template<typename ET>
-//	data_ptr<ET>::type operator+(const data_ptr<ET>::type& a, const data_ptr<ET>::type& b) {
-//		if (!a) return b;
-//
-//	}
-//
-//	template<typename ElementType>
-//	void operator+=(DataPtr& a, const DataPtr& b) const {
-//		if (a) {
-//			(*a) += b;
-//		} else {
-//			a = b->clone();
-//		}
-//	}
+		virtual bool equals(const DataBase& other) const =0;
+
+		virtual bool lessThan(const DataBase& other) const =0;
+	};
 
 
 	// ------------------------------------------------------------------------
@@ -132,74 +191,52 @@ namespace cba {
 	// ------------------------------------------------------------------------
 
 	template<typename ElementType>
-	class ElementData : public Data<ElementType> {
+	class AtomicData : public DataBase<ElementType> {
 
-		std::set<ElementType> data;
-
-		typedef std::shared_ptr<Data<ElementType>> DataPtr;
-		typedef std::shared_ptr<ElementData<ElementType>> ElementDataPtr;
+		ElementType data;
 
 	public:
 
-//		ElementData(const ElementType& element) : data(utils::set::toSet<std::set>(element)) {}
-		ElementData(const std::set<ElementType>& data = std::set<ElementType>()) : data(data) {}
-//		ElementData(const ElementData& other) : data(other.data) {}
+		AtomicData(const ElementType& element) : data(element) {}
 
-		virtual ~ElementData() {}
-
-//		ElementDataPtr clone() const {
-//			return std::make_shared<ElementData<ElementType>>(*this);
-//		}
-//
-//		virtual DataPtr operator+(const DataPtr& otherData) const {
-//			// combine data containers
-//			ElementDataPtr res = clone();
-//			(*res) += otherData;
-//			return res;
-//		}
-//
-//		virtual void operator+=(const DataPtr& otherData) const {
-//			// check type
-//			assert(dynamic_pointer_cast<ElementData<ElementType>>(otherData));
-//
-//			// get other data node
-//			ElementDataPtr other = static_pointer_cast<ElementData<ElementType>>(otherData);
-//
-//			// merge the two data sets
-//			data.insert(other->data.begin(), other->data.end());
-//		}
+		virtual ~AtomicData() {}
 
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << data;
 		}
+
+		virtual bool equals(const DataBase<ElementType>& other) const {
+			assert(dynamic_cast<const AtomicData<ElementType>*>(&other));
+			return data == static_cast<const AtomicData<ElementType>&>(other).data;
+		}
+
+		virtual bool lessThan(const DataBase<ElementType>& other) const {
+			assert(dynamic_cast<const AtomicData<ElementType>*>(&other));
+			return data < static_cast<const AtomicData<ElementType>&>(other).data;
+		}
 	};
 
 
 	// -- Factory Functions --------------
 
-	template<typename ET, typename ... Rest>
-	typename data_ptr<ET>::type elements(const ET& element, const Rest& ... rest) {
-		return make_ptr<ElementData<ET>>(utils::set::toSet<std::set<ET>>(element, rest...));
+	template<typename ET>
+	Data<ET> atomic(const ET& element) {
+		return make_ptr<AtomicData<ET>>(element);
 	}
 
-	template<typename ET>
-	typename data_ptr<ET>::type element(const ET& element) {
-		return elements(element);
-	}
 
 	// ------------------------------------------------------------------------
 	//							a node type for structs
 	// ------------------------------------------------------------------------
 
 	template<typename ElementType>
-	class StructData : public Data<ElementType> {
+	class StructData : public DataBase<ElementType> {
 
-		typedef std::shared_ptr<Data<ElementType>> DataPtr;
-		typedef std::shared_ptr<StructData<ElementType>> StructDataPtr;
+		typedef std::map<core::StringValuePtr, DataSet<ElementType>> data_map_type;
+		typedef typename data_map_type::value_type data_map_value_type;
 
-		typedef std::map<core::StringValuePtr,DataPtr> data_map_type;
 		data_map_type data;
 
 	public:
@@ -208,52 +245,38 @@ namespace cba {
 
 		virtual ~StructData() {}
 
-//		StructDataPtr clone() const {
-//			return std::make_shared<StructData<ElementType>>(*this);
-//		}
-//
-//		virtual DataPtr operator+(const DataPtr& otherData) const {
-//			// combine data containers
-//			StructDataPtr res = std::make_shared<StructData<ElementType>>(*this);
-//			(*res) += otherData;
-//			return res;
-//		}
-//
-//		virtual void operator+=(const DataPtr& otherData) const {
-//			// check type
-//			assert(dynamic_pointer_cast<ElementData<ElementType>>(otherData));
-//
-//			// get other data node
-//			ElementDataPtr other = static_pointer_cast<ElementData<ElementType>>(otherData);
-//
-//			// merge the two data sets
-//			for(const std::pair<core::LiteralPtr, DataPtr>& cur : other->data) {
-//				res->data[cur.first] += cur.second;
-//			}
-//		}
-
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join(",", data, [](std::ostream& out, const std::pair<core::StringValuePtr, DataPtr>& cur) {
-				out << *(cur.first) << "=" << *(cur.second);
+			return out << "{" << join(",", data, [](std::ostream& out, const std::pair<core::StringValuePtr, DataSet<ElementType>>& cur) {
+				out << *(cur.first) << "=" << cur.second;
 			}) << "}";
+		}
+
+		virtual bool equals(const DataBase<ElementType>& other) const {
+			assert(dynamic_cast<const StructData<ElementType>*>(&other));
+			return data == static_cast<const StructData<ElementType>&>(other).data;
+		}
+
+		virtual bool lessThan(const DataBase<ElementType>& other) const {
+			assert(dynamic_cast<const StructData<ElementType>*>(&other));
+			return data < static_cast<const StructData<ElementType>&>(other).data;
 		}
 	};
 
 	template<typename ET>
-	std::pair<core::StringValuePtr, typename data_ptr<ET>::type> member(const core::StringValuePtr& name, const std::shared_ptr<Data<ET>>& data) {
+	std::pair<core::StringValuePtr, DataSet<ET>>
+	member(const core::StringValuePtr& name, const DataSet<ET>& data) {
 		return std::make_pair(name, data);
 	}
 
-
 	template<typename ET>
-	typename data_ptr<ET>::type structData(const std::map<core::StringValuePtr, std::shared_ptr<Data<ET>>>& data) {
+	Data<ET> structData(const std::map<core::StringValuePtr, DataSet<ET>>& data) {
 		return make_ptr<StructData<ET>>(data);
 	}
 
 	template<typename ET, typename ... Rest>
-	typename data_ptr<ET>::type structData(const std::pair<core::StringValuePtr, std::shared_ptr<Data<ET>>>& first, const Rest& ... rest) {
+	Data<ET> structData(const std::pair<core::StringValuePtr, DataSet<ET>>& first, const Rest& ... rest) {
 		return structData(utils::map::toMap(first, rest...));
 	}
 
@@ -263,41 +286,71 @@ namespace cba {
 	// ------------------------------------------------------------------------
 
 	template<typename ElementType, typename IndexType>
-	class ArrayData : public Data<ElementType> {
+	class ArrayData : public DataBase<ElementType> {
 
-		typedef std::shared_ptr<Data<ElementType>> DataPtr;
+		typedef std::vector<std::pair<IndexType, DataSet<ElementType>>> data_type;
+		typedef typename data_type::value_type data_value_type;
 
-		std::vector<std::pair<IndexType, DataPtr>> data;
-		DataPtr other;
+		const data_type data;
 
 	public:
+
+		ArrayData(const data_type& data) : data(data) {
+			assert_true(checkDuplicates()) << "Encountered duplicated indices: " << data;
+
+		}
 
 		virtual ~ArrayData() {}
 
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			out << "{" << join(",", data, [](std::ostream& out, const std::pair<IndexType, DataPtr>& cur) {
-				out << cur.first << "=" << *(cur.second);
-			});
+			return out << "{" << join(",", data, [](std::ostream& out, const std::pair<IndexType, DataSet<ElementType>>& cur) {
+				out << "[" << cur.first << "]=" << cur.second;
+			}) << "}";
+		}
 
-			if (!data.empty() && other) out << ",";
-			if (other) "else=" << *other;
-			return out;
+		virtual bool equals(const DataBase<ElementType>& other) const {
+			assert((dynamic_cast<const ArrayData<ElementType,IndexType>*>(&other)));
+			return data == static_cast<const ArrayData<ElementType,IndexType>&>(other).data;
+		}
+
+		virtual bool lessThan(const DataBase<ElementType>& other) const {
+			assert((dynamic_cast<const ArrayData<ElementType,IndexType>*>(&other)));
+			return data < static_cast<const ArrayData<ElementType,IndexType>&>(other).data;
+		}
+
+	private:
+
+		bool checkDuplicates() const {
+			for(const auto& curA : data) {
+				for(const auto& curB : data) {
+					if (&curA != &curB && curA.first == curB.first) {
+						return false;
+					}
+				}
+			}
+			return true;
 		}
 
 	};
 
+	template<typename ET, typename IT>
+	std::pair<IT,DataSet<ET>>
+	element(const IT index, const DataSet<ET>& values) {
+		return std::make_pair(index, values);
+	}
+
+	template<typename ET, typename IT>
+	Data<ET> arrayData(const std::vector<std::pair<IT, DataSet<ET>>>& data) {
+		return make_ptr<ArrayData<ET,IT>>(data);
+	}
+
+	template<typename ET, typename IT, typename ... Rest>
+	Data<ET> arrayData(const std::pair<IT, DataSet<ET>>& first, const Rest& ... rest) {
+		return arrayData<ET,IT>(toVector(first, rest...));
+	}
 
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
-
-namespace std {
-
-	template<typename T>
-	std::ostream& operator<<(std::ostream& out, const std::shared_ptr<insieme::analysis::cba::Data<T>>& data) {
-		return out << *data;
-	}
-
-} // end namespace data
