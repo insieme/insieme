@@ -313,7 +313,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 //						CXX CONSTRUCTOR CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
-	
+
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
 
@@ -449,6 +449,19 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		//assert(callExpr->getConstructExpr() && "class need to have Constructor of any kind");
 		// is a class, handle construction
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
+		if(ctorCall.isa<core::VariablePtr>()) {
+			//we know that the constructor call delivered a variable
+			//lets check if we can find it in the tempInit map
+			if (llvm::isa<clang::MaterializeTemporaryExpr>(callExpr->getConstructExpr()->getArg(0))) {
+				const clang::MaterializeTemporaryExpr * exp = llvm::cast<clang::MaterializeTemporaryExpr>(callExpr->getConstructExpr()->getArg(0));
+				if(llvm::isa<clang::CXXBindTemporaryExpr>(exp->GetTemporaryExpr()->IgnoreImpCasts())) {
+					clang::CXXTemporary * tmp = llvm::cast<clang::CXXBindTemporaryExpr>(exp->GetTemporaryExpr()->IgnoreImpCasts())->getTemporary();
+					Converter::TemporaryInitMap::const_iterator fit = convFact.tempInitMap.find(tmp);
+					if(fit != convFact.tempInitMap.end())
+						ctorCall = (fit->second.getInitialization());
+				}
+			}
+		}
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
 		core::TypePtr type = ctorCall->getType();
@@ -773,7 +786,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	}
 
 
-	// if the This literal is used in the expression, we extract it and incorporate an extra paramenter 
+	// if the This literal is used in the expression, we extract it and incorporate an extra paramenter
 	// with the class type
 	core::ExpressionPtr thisExpr;
 	core::visitDepthFirstOnce (lambdaBody, [&] (const core::LiteralPtr& lit){
@@ -829,7 +842,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
-
 	// is a left side value, no need to materialize. has being handled by a temporary expression
 	if(IS_CPP_REF(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
