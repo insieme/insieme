@@ -75,7 +75,33 @@ int main(int argc, char** argv)
 			printf("a == NULL\n");	
 		else if(a == 0) 
 			printf("a == NULL\n");	
+		else if(a) 
+			printf("a != NULL\n");	
+		else if(!a) 
+			printf("a == NULL\n");	
 		else
 			printf("a != NULL\n");	
+	}
+	{
+		void* p = 0;
+		void* (*a)() = 0;
+
+		if(a) 
+			printf("a != NULL\n");	
+
+		if(!a) 
+			printf("a == NULL\n");	
+
+		if(p && a) 
+			printf("p != NULL && a != NULL\n");	
+
+		if(a && p) 
+			printf("a != NULL && p != NULL\n");	
+
+		if(!p && !a) 
+			printf("p == NULL && a == NULL\n");	
+
+		if(!a && !p) 
+			printf("a == NULL && p == NULL\n");	
 	}
 }

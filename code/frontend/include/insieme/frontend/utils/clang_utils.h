@@ -93,6 +93,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
  * same story to build a suitable name for variables (spetial treatement )
  */
 std::string buildNameForVariable (const clang::VarDecl* varDecl);
+
+/**
+ * build names for enumerations. anonymous enumerations need a special naming,
+ * otherwise multiple anon. enumerations cannot be distinguished anymore.
+ * @param tagType clang TagType pointer
+ * @return name for enumeration
+ */
+std::string buildNameForEnum (const clang::TagType* type);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

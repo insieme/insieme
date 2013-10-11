@@ -54,217 +54,210 @@ namespace insieme{
 namespace utils{
 
 using namespace std;
-///////////////////////////////////////////////////////////////////////////////////
-//
-class StopWatch{
 
+typedef	chrono::time_point<chrono::high_resolution_clock> tTime;
+
+
+////////////////////////////////////////////////////////////
+/// this is the memory collector, any technique can be implemented here
+inline int getMemUsage(){
+	// TODO:
+	return 0;
+}
+
+/**
+ * high preccission timer
+ */
+inline tTime getTime(){
+	return chrono::high_resolution_clock::now();
+}
+
+/**
+ * retrieve the thread that started this stopwatch. since the stopwatches are scoped
+ * it should not be posible to transfer it to another thread.
+ * the std:: thread id operation should be low level enough to deal with different kind
+ * of shared memory programing models
+ */
+inline thread::id getThid(){
+	return this_thread::get_id();
+}
+
+
+/**
+ * stopwatch class, is a singleton which allows to start and stop timers, 
+ * since is centraliced in a singleton is thread safe and can store the whole program status
+ */
+class StopWatch{
 	class swImpl;
-	static swImpl sw;
 
 	public:
-
 	////////////////////////////////
 	//
 	class swTicket {
-		swImpl& sw;
+		StopWatch::swImpl& sw;
 	public:
 		mutable bool valid;
 		unsigned id;
 
-		swTicket(swImpl& stopWatch, int num);
-		swTicket(const swTicket& o);
-		swTicket(swTicket&& o);
-		~swTicket();
+		swTicket(StopWatch::swImpl& stopWatch, int num)
+		:sw(stopWatch), valid(true), id(num)
+		{ }
 
-		void end();
+		swTicket(const swTicket& o)
+		:sw(o.sw), valid(true), id(o.id)
+		{ o.valid =false;}
+
+		swTicket(swTicket&& o)
+		:sw(o.sw), valid(true), id(o.id)
+		{}
+
+		~swTicket(){
+			//invalidate copy
+			this->end();
+		}
+
+		void end(){
+			if(valid){
+				sw.endTiket(*this);
+				valid=false;
+			}
+		}
 	private:
 
 	/// private assigment
-		swTicket& operator==(swTicket& o);
+		swTicket& operator=(swTicket& o){
+			o.valid = false;
+			return *this;
+		}
+
 	};
 
-	StopWatch();
-	~StopWatch();
+	private:
 
-	static swTicket start(const std::string& str);
+	class swImpl{
+		
+		class tRecord{
+		public:
+			thread::id thid;
+			string name;
+			double mem;
+			std::chrono::microseconds time;
 
+			tTime start;
+			tTime end;
+
+
+			tRecord(thread::id pid, const string& n, double m, tTime t)
+			: thid(pid), name(n), mem(m), start(t)
+			{ }
+
+			void update(double m, tTime t){
+				end = t;
+				mem = m-mem;
+				time = t-start;
+			}
+
+			void dump(ostream& os, tTime globalStart)const{
+				std::chrono::microseconds st = start-globalStart;
+				std::chrono::microseconds nd = end-globalStart;
+				os << thid << "\t" << st.count() << "\t" << nd.count() << "\t" << name << "\t"<< time.count() << endl;
+			}
+		};
+
+		vector<tRecord> 	 measures;
+		mutex staticLock;
+		tTime  globalStart;
+
+		public:
+
+		swImpl()
+		:	globalStart (getTime())
+		{
+			tRecord record(getThid(), "GlobalScope", getMemUsage(), globalStart);
+			measures.insert(measures.end(), record);
+		}
+
+		~swImpl(){
+			// update global scope record
+			measures[0].update(getMemUsage(), getTime());
+			// print status to file
+			ofstream myfile;
+			myfile.open ("times.sw");
+			dump(myfile);
+			myfile.close();
+		}
+
+		swTicket getTicket(const string& str){
+			tRecord record(getThid(), str, getMemUsage(), getTime());
+			staticLock.lock();
+			measures.insert(measures.end(), record);
+			unsigned id = measures.size()-1;
+			staticLock.unlock();
+			swTicket ticket(*this, id);
+			return ticket;
+		}
+
+		void  	 endTiket(const swTicket& swT){
+			measures[swT.id].update(getMemUsage(), getTime());
+		}
+
+		void 	 dump(ostream& os){
+			os << "#microseconds precission (1/ 1 000 000 )" << endl;
+			os << "#[pid]\t[start]\t[end]\t[name]\t[time]" << endl;
+			for (const tRecord& r : measures){
+				r.dump(os, globalStart);
+			}
+		}
+
+		friend class swTicket;
+	} sw;
+
+
+	public:
+
+	/**
+	 * generates a new stopwatch point with a given name. 
+	 */
+	static swTicket start(const std::string& str){
+		return getInstance().sw.getTicket(str);
+	}
+
+	/**
+	 * allow to compose formated names, to parametrize the string 
+	 */
 	template <typename T, typename... Args>
 	static swTicket start(const std::string& str, const T& value, const Args&... args){
 		std::stringstream ss;
 		ss << str << value;
 		return StopWatch::start(ss.str(), args...);
 	}
-	static void 	stop (swTicket& swTicket);
-	static void 	printStatus ();
+	/** 
+	 * stops a stopwatch ticket
+	 */
+	static void 	stop (swTicket& swTicket){
+		swTicket.end();
+	}
+
+	/**
+	 * prints the current status of all tracked stopwatches, 
+	 * any non finished timer will show random end time and 0 duration
+	 */
+	static void printStatus(ostream& os = std::cout){
+		os << "=============== STOPWATCH status =======================" << std::endl;
+		getInstance().sw.dump(os);
+		os << "========================================================" << std::endl;
+	}
+
+	// singleton stuff
+	private:
+	static StopWatch& getInstance(){
+		static StopWatch singleton;
+		return singleton;
+	}
+
+	StopWatch(){};
+	~StopWatch(){};
 };
-
-
-typedef	chrono::time_point<chrono::high_resolution_clock> tTime;
-
-
-class tRecord{
-public:
-	thread::id thid;
-	string name;
-	double mem;
-	std::chrono::microseconds time;
-
-	tTime start;
-	tTime end;
-
-
-	tRecord(thread::id pid, const string& n, double m, tTime t)
-	: thid(pid), name(n), mem(m), start(t)
-	{ }
-
-	void update(double m, tTime t){
-		end = t;
-		mem = m-mem;
-		time = t-start;
-	}
-
-	void dump(ostream& os, tTime globalStart)const{
-		std::chrono::microseconds st = start-globalStart;
-		std::chrono::microseconds nd = end-globalStart;
-
-		os << thid << "\t" << st.count() << "\t" << nd.count() << "\t" << name << "\t"<< time.count() << endl;
-	}
-};
-
-////////////////////////////////////////////////////////////
-/// this is the memory collector, any technique can be implemented here
-int getMemUsage(){
-	// TODO:
-	return 0;
-}
-
-///////////////////////////////////////////////////////////
-/// this is the time measure, any technique can be implemented here
-tTime getTime(){
-	return chrono::high_resolution_clock::now();
-}
-
-thread::id getThid(){
-	return this_thread::get_id();
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////
-//
-
-class StopWatch::swImpl{
-
-	vector<tRecord> 	 measures;
-	mutex staticLock;
-	tTime  globalStart;
-
-public:
-
-	swImpl();
-	~swImpl();
-	swTicket getTicket(const string& str);
-	void  	 endTiket(const swTicket& t);
-	void 	 dump(ostream& os);
-
-	friend class swTicket;
-};
-
-///////////////////////////////////////////////////////////////////////////////////
-//   Tickets impl
-
-StopWatch::swTicket& StopWatch::swTicket::operator==(swTicket& o){
-	o.valid = false;
-	return *this;
-}
-
-StopWatch::swTicket::swTicket(swImpl& stopWatch, int num)
-:sw(stopWatch), valid(true), id(num)
-{ }
-
-StopWatch::swTicket::swTicket(const swTicket& o)
-:sw(o.sw), valid(true), id(o.id)
-{ o.valid =false;}
-
-StopWatch::swTicket::swTicket(swTicket&& o)
-:sw(o.sw), valid(true), id(o.id)
-{}
-
-StopWatch::swTicket::~swTicket(){
-	//invalidate copy
-	this->end();
-}
-
-void StopWatch::swTicket::end(){
-	if(valid){
-		sw.endTiket(*this);
-		valid=false;
-	}
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////
-//   stopwatch implementation
-
-StopWatch::swImpl::swImpl() 
-:	globalStart (getTime())
-{
-	tRecord record(getThid(), "GlobalScope", getMemUsage(), globalStart);
-	measures.insert(measures.end(), record);
-}
-
-StopWatch::swImpl::~swImpl(){
-	// update global scope record
-	measures[0].update(getMemUsage(), getTime());
-	// print status to file
- 	ofstream myfile;
-   	myfile.open ("times.sw");
-	dump(myfile);
-	myfile.close();
-}
-
-
-StopWatch::swTicket StopWatch::swImpl::getTicket(const string& str){
-	tRecord record(getThid(), str, getMemUsage(), getTime());
-	staticLock.lock();
-	measures.insert(measures.end(), record);
-	unsigned id = measures.size()-1;
-	staticLock.unlock();
-	swTicket ticket(*this, id);
-	return ticket;
-}
-
-void StopWatch::swImpl::endTiket(const swTicket& swT){
-	measures[swT.id].update(getMemUsage(), getTime());
-}
-
-void StopWatch::swImpl::dump(ostream& os){
-	os << "#microseconds precission (1/ 1 000 000 )" << endl;
-	os << "#[pid]\t[start]\t[end]\t[name]\t[time]" << endl;
-	for (const tRecord& r : measures){
-		r.dump(os, globalStart);
-	}
-}
-
-// instantiate static member
-StopWatch::swImpl StopWatch::sw;
-
-
-///////////////////////////////////////////////////////////////////////////////////
-//		Static interface
-
-StopWatch::swTicket StopWatch::start(const string& str){
-	return sw.getTicket(str);
-}
-
-void StopWatch::stop (StopWatch::swTicket& swTicket){
-	swTicket.end();
-}
-
-void	StopWatch::printStatus (){
-	cout << "****************** STOPWATCH TIMES *******************" << endl;
-	sw.dump(cout);
-	cout << "****************** STOPWATCH TIMES *******************" << endl;
-}
 
 
 } //utils namespace

@@ -64,6 +64,7 @@
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/simd_vector.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -73,6 +74,8 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
+
+#include "insieme/core/annotations/naming.h"
 
 #include <iconv.h>
 
@@ -1176,7 +1179,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			lhs = utils::cast(lhs, exprTy);
 			rhs = utils::cast(rhs, exprTy);
 
-			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			auto type = lhs->getType();
 			assert(core::lang::isSIMDVector(type));
 
@@ -1197,7 +1200,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 				case clang::BO_LE: simdOp = ext.getSIMDLe(); break;
 				case clang::BO_GT: simdOp = ext.getSIMDGt(); break;
 				case clang::BO_GE: simdOp = ext.getSIMDGe(); break;
-				
+
 				default:
 				assert(false && "Operator for simd-vectortypes not supported");
 			}
@@ -1207,7 +1210,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			return retIr;
 		}
 
-		
+
 
 		// This is the required pointer arithmetic in the case we deal with pointers
 		if (!core::analysis::isRefType(rhs->getType()) &&
@@ -1376,9 +1379,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	// +a
 	case clang::UO_Plus:  return retIr = subExpr;
 	// -a
-	case clang::UO_Minus: 
+	case clang::UO_Minus:
 		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
-			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDMinus(),subExpr));
 		}
 
@@ -1386,7 +1389,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	// ~a
 	case clang::UO_Not:
 		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
-			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();  
+			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDNot(),subExpr));
 		}
 
@@ -1693,11 +1696,34 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		);
 	}
 	if (const clang::EnumConstantDecl* enumDecl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
+        core::TypePtr enumTy =  mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(
+                                    utils::buildNameForEnum(llvm::cast<clang::TagType>(llvm::cast<clang::TypeDecl>(enumDecl->getDeclContext())->getTypeForDecl()))
+                                );
+        //attach enum element to enum type, but only if it is not defined in a system header
+        bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getCanonicalDecl()->getSourceRange().getBegin());
+        if(!systemHeaderOrigin) {
+            if(!core::annotations::hasNameAttached(enumTy)) {
+                core::annotations::attachName(enumTy, enumDecl->getNameAsString()+"="+enumDecl->getInitVal().toString(10));
+            }
+            else {
+                std::stringstream annotation;
+                annotation << core::annotations::getAttachedName(enumTy);
+                std::stringstream attachment;
+                attachment << enumDecl->getNameAsString() << "=" << enumDecl->getInitVal().toString(10);
+                //check if element is already in enum list
+                if(annotation.str().find(attachment.str()) == std::string::npos) {
+                    annotation << ", " << attachment.str();
+                    core::annotations::attachName(enumTy, annotation.str());
+                }
+            }
+        }
 		return (retIr =
 				builder.literal(
-						enumDecl->getInitVal().toString(10),
-						builder.getLangBasic().getInt4()
-				)
+                        enumDecl->getNameAsString(),
+                        mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(
+                            utils::buildNameForEnum(llvm::cast<clang::TagType>(llvm::cast<clang::TypeDecl>(enumDecl->getDeclContext())->getTypeForDecl()))
+                        )
+                )
 		);
 	}
 	assert(false && "clang::DeclRefExpr not supported!");
@@ -1804,6 +1830,18 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 	});
 
 	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                  ImplicitValueInit EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::ExprConverter::VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr) {
+    core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(initExpr, retIr);
+    core::TypePtr elementType = convFact.convertType ( initExpr->getType().getTypePtr() );
+    assert(elementType && "IR type creation failed (given element type not supported)");
+    retIr = convFact.defaultInitVal(elementType);
+    return retIr;
 }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -34,160 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include <functional>
-#include <iostream>
-#include <vector>
-#include <tuple>
-
 #define _GLIBCXX_USE_NANOSLEEP
-
-#include <future>
-
-#include <chrono>
-#include <thread>
-
+#include <gtest/gtest.h>
 #include "insieme/utils/timer.h"
+#include "insieme/utils/tasks/insieme_tasks.h"
+
+
 
 namespace insieme {
 namespace utils {
-
-
-	struct TaskBase {
-
-		mutable std::vector<TaskBase*> dependencies;
-
-		bool done;
-
-		TaskBase() : done(false) {}
-
-		virtual ~TaskBase() {};
-
-		TaskBase& operator>>(TaskBase& task) {
-			task.dependencies.push_back(this);
-			return task;
-		}
-
-		virtual void operator()() =0;
-	};
-
-	namespace {
-
-		template<unsigned N>
-		struct apply_tuple {
-			template<typename F, typename T, typename ... Args>
-			static void on( const F& fun, const T& tuple, const Args& ... args ) {
-				apply_tuple<N-1>::on(fun, tuple, std::get<N-1>(tuple), args...);
-			}
-		};
-
-		template<>
-		struct apply_tuple<0> {
-			template<typename F, typename T, typename ... Args>
-			static void on( const F& fun, const T& tuple, const Args& ... args ) {
-				fun(args ...);
-			}
-		};
-
-	}
-
-
-	template<typename R, typename ... Params>
-	class Task : public TaskBase {
-
-		typedef std::function<R(Params ...)> fun_t;
-
-		fun_t fun;
-
-		std::tuple<Params...> args;
-
-	public:
-
-		Task(const fun_t& fun, const Params& ... args) : fun(fun), args(args ...) {}
-
-		void operator()() {
-			// make sure it hasn't been processed before and is only processed once (DAG)
-			if (done) return;
-			done = true;
-
-			// process dependencies concurrently
-			std::vector<std::future<void>> futures;
-			for(auto cur : dependencies) {
-				futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
-//				futures.push_back(std::async([cur](){ (*cur)(); }));
-			}
-
-			// wait for dependencies
-			for(const auto& cur : futures) cur.wait();
-
-			// process local task
-			apply_tuple<sizeof...(Params)>::on(fun, args);
-		}
-
-	};
-
-
-	namespace {
-
-		template<typename T> struct fun_type_helper;
-
-		template<typename R, typename ... P>
-		struct fun_type_helper<R(P...)> {
-			typedef std::function<R(P...)> type;
-		};
-
-		template<typename C, typename R, typename ... P>
-		struct fun_type_helper<R(C::*)(P...)> {
-			typedef std::function<R(P...)> type;
-		};
-
-		template<typename C, typename R, typename ... P>
-		struct fun_type_helper<R(C::*)(P...) const> {
-			typedef std::function<R(P...)> type;
-		};
-
-
-		template<typename L, typename F = decltype(&L::operator())>
-		struct fun_type : public fun_type_helper<F> {};
-
-	}
-
-
-	namespace {
-
-		template<typename R, typename ... P>
-		Task<R,P...> _task(const std::function<R(P...)>& fun, const P& ... args) {
-			return Task<R,P...>(fun, args...);
-		}
-
-	}
-
-	// Lambda => Task
-	template<typename L, typename F = typename fun_type<L>::type, typename ... Args>
-	auto task(const L& l, const Args& ... args) -> decltype(_task(F(l),args...)) {
-		return _task(F(l), args...);
-	}
-
-	// Function Pointer => Task
-	template<typename R, typename ... P>
-	Task<R,P...> task(R(*fun)(P...), const P& ... args) {
-		return Task<R,P...>(fun, args...);
-	}
-
-	// std::function => Task
-	template<typename R, typename ... P>
-	Task<R,P...> task(const std::function<R(P...)>& fun, const P& ... args) {
-		return _task(fun, args...);
-	}
-
-	// an empty dummy task
-	Task<void> task() {
-		return task([](){});
-	}
-
-
-	// ---------------------------------------------------------------------------------------------
 
 	void testFun() {
 		std::cout << "Function Pointer Works!\n";
@@ -311,8 +166,23 @@ namespace utils {
 		std::cout << "Time for b: " << TIME(b = fib_par(N)) << "\n";
 
 		EXPECT_EQ(a,b);
-
 	}
 
+
+	TEST(Tasks, Scooped) {
+
+		int v = 0;
+		{
+			auto tn = task([&](int x) { v=x; }, 3);
+		}
+		EXPECT_EQ(v,3);
+
+		{
+			auto t1 = task([&]() { v++; });
+			auto t2 = task(t1);
+		}
+		EXPECT_EQ(v,4);
+
+	}
 } // end namespace analysis
 } // end namespace insieme

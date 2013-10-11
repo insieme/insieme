@@ -331,6 +331,10 @@ namespace arithmetic {
 					return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
 				}
 
+				// if is a vector-array conversion
+				if (basic.isRefVectorToRefArray(fun))
+					return isValueInternal(args[0]);
+
 				// handle other value constructor
 				if (isValueConstructor(fun)) {
 					// TODO: extend value to store constructor + arguments as formulas or even piecewise

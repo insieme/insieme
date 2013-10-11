@@ -48,9 +48,11 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/castTool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -185,6 +187,9 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 				}
 				else if (core::analysis::isConstCppRef(argTy)) {
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
+				}
+				else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)) {
+					arg = insieme::frontend::utils::castScalar(funcParamTy, arg);
 				}
 				else{
 					arg = utils::cast(arg, funcParamTy);
@@ -344,6 +349,11 @@ public:
     //                  StmtExpr EXPRESSION
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     core::ExpressionPtr VisitStmtExpr(const clang::StmtExpr* stmtExpr);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                  ImplicitValueInit EXPRESSION
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    core::ExpressionPtr VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr);
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -387,6 +397,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr);
 };
@@ -422,6 +433,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++

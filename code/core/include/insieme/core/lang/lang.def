@@ -499,7 +499,7 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> uint<8>")
-LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
+LITERAL(ScalarToArray, 			"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
 
 // computation of an array-offset and some derivades
 LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")

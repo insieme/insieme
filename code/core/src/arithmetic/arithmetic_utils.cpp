@@ -496,9 +496,10 @@ ExpressionPtr toIR(NodeManager& manager, const Rational& value) {
 		return builder.intLit( value.getNumerator() );
 	}
 
+	// if we have to produce a division, members have to be real, otherwise C will round them (will produce int division)
 	return builder.div(
-			builder.intLit(value.getNumerator()),
-			builder.intLit(value.getDenominator())
+			builder.floatLit(value.getNumerator()),
+			builder.floatLit(value.getDenominator())
 	);
 }
 

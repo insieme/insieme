@@ -48,6 +48,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -228,6 +229,9 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 	}
 	else if (gen.isBool(type) || gen.isChar(type))
 		return 1;
+    else if (type.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))
+        return 4;
+
 
 	return 0;
 }
@@ -240,13 +244,14 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	const core::TypePtr& exprTy = expr->getType();
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	core::NodeManager& mgr = exprTy.getNodeManager();
 
-//	std::cout << "####### Expr: #######" << std::endl;
-//	dumpDetail(expr);
-//	std::cout << "####### Expr Type: #######" << std::endl;
-//	dumpDetail(exprTy);
-//	std::cout << "####### target Type: #######" << std::endl;
-//	dumpDetail(targetTy);
+	//std::cout << "####### Expr: #######" << std::endl;
+	//dumpDetail(expr);
+	//std::cout << "####### Expr Type: #######" << std::endl;
+	//dumpDetail(exprTy);
+	//std::cout << "####### target Type: #######" << std::endl;
+	//dumpDetail(targetTy);
 
 	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
@@ -272,6 +277,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (exprTy))		code = 3;
 	if (gen.isChar (exprTy))		code = 4;
 	if (gen.isBool (exprTy))		code = 5;
+    if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(exprTy)) code = 6;
 
 	// identify target type
 	if (gen.isSignedInt (targetTy)) 	code += 10;
@@ -279,6 +285,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (targetTy))			code += 30;
 	if (gen.isChar (targetTy))			code += 40;
 	if (gen.isBool (targetTy))			code += 50;
+	if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)) code += 60;
 
 	core::ExpressionPtr op;
 	bool precision = true;
@@ -288,9 +295,13 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 			// only if target precission is smaller, we may have a precission loosse.
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
+        case 16:
+            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
 		case 22:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
+        case 26:
+            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
@@ -327,7 +338,16 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		case 53: op = gen.getRealToBool();    precision=false; break;
 		case 54: op = gen.getCharToBool();    precision=false; break;
 
+		case 61: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
+		case 62: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
+
+        case 66: return expr;
+
 		default:
+				 std::cerr << "expr type: " << exprTy << std::endl;
+				 std::cerr << "targ type: " << targetTy << std::endl;
 				 std::cerr << "code: " << (int) code << std::endl;
 				 assert(false && "cast not defined");
 	}
@@ -355,15 +375,23 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	if (isRefArray(expr->getType())) {
 		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
 	}
+
+	if (gen.isAnyRef(exprTy)) {
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
+	}
+
+	if( exprTy.isa<core::FunctionTypePtr>()) {
+		return builder.callExpr(gen.getBool(), gen.getGenNe(), expr, builder.getZero(exprTy));
+	}
+
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
+		dumpDetail(expr);
+		std::cout << "****" << std::endl;
+		dumpDetail(expr->getType());
+		assert(false && "this type can not be converted now to bool. implement it! ");
+	}
 
-	dumpDetail(expr);
-	std::cout << "****" << std::endl;
-	dumpDetail(expr->getType());
-	assert(false && "this type can not be converted now to bool. implement it! ");
-}
-
-return castScalar (gen.getBool(), expr);
+	return castScalar (gen.getBool(), expr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -453,8 +481,10 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
 		{
-			assert(builder.getLangBasic().isPrimitive(expr->getType()));
-			assert(builder.getLangBasic().isPrimitive(targetTy));
+		    assert(builder.getLangBasic().isPrimitive(expr->getType())
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType()));
+			assert(builder.getLangBasic().isPrimitive(targetTy)
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy));
 			return castScalar( targetTy, expr);
 		}
 
@@ -575,13 +605,12 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_PointerToBoolean 	:
 		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC,
 		// and block pointers.
-
 			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingRealToComplex 	:
-        case clang::CK_IntegralRealToComplex 	:
-		    return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
+		case clang::CK_IntegralRealToComplex 	:
+			return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
 		/*A conversion of a floating point real to a floating point complex of the original type. Injects the value as the
 		* real component with a zero imaginary component. float -> _Complex float.
 		* */
@@ -591,10 +620,10 @@ switch (castExpr->getCastKind()) {
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingComplexCast 	:
-        case clang::CK_FloatingComplexToIntegralComplex 	:
+		case clang::CK_FloatingComplexToIntegralComplex 	:
 		case clang::CK_IntegralComplexCast 	:
 		case clang::CK_IntegralComplexToFloatingComplex 	:
-            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToComplex(expr, targetTy);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToComplex(expr, targetTy);
 		/*Converts between different floating point complex types. _Complex float -> _Complex double.
 		* */
 		/*Converts from a floating complex to an integral complex. _Complex float -> _Complex int.
@@ -608,7 +637,7 @@ switch (castExpr->getCastKind()) {
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingComplexToReal 	:
 		case clang::CK_IntegralComplexToReal 	:
-		    return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(expr);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(expr);
 		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
 		* component. _Complex long double -> long double.
 		* */
@@ -618,11 +647,11 @@ switch (castExpr->getCastKind()) {
 
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////
-        case clang::CK_IntegralComplexToBoolean 	:
+		case clang::CK_IntegralComplexToBoolean 	:
 		case clang::CK_FloatingComplexToBoolean 	:
 		    /*Converts a complex to bool by comparing against 0+0i.
 		* */
-            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToBool(expr);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToBool(expr);
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueBitCast 	:
@@ -630,27 +659,27 @@ switch (castExpr->getCastKind()) {
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
 		* */
 		{
-		    //if we have a cpp ref we have to unwrap the expression
-		    if(IS_CPP_REF(expr->getType())) {
-                expr = builder.toIRRef(expr);
-            }
-		    //the target type is a ref type because lvalue
-		    //bitcasts look like reinterpret_cast<type&>(x)
-		    targetTy = builder.refType(targetTy);
-            core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
+			//if we have a cpp ref we have to unwrap the expression
+			if(IS_CPP_REF(expr->getType())) {
+				expr = builder.toIRRef(expr);
+			}
+			//the target type is a ref type because lvalue
+			//bitcasts look like reinterpret_cast<type&>(x)
+			targetTy = builder.refType(targetTy);
+			core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
                                                          expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
-		    //wrap it as cpp ref
+			//wrap it as cpp ref
 			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
-
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
+			//std::cout << "CAST:\n" << expr << std::endl << targetTy << std::endl << core::analysis::isRefType(targetTy) << std::endl;
 
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
-			
+
 			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {
 			if( targetTy.isa<core::FunctionTypePtr>() && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) ) {
 				return builder.getZero(targetTy);
@@ -667,12 +696,22 @@ switch (castExpr->getCastKind()) {
 					expr = expr.as<core::CallExprPtr>()[0];
 				}
 
+				// it might be a function type e.g. fun(void *(**) (size_t)) {} called with fun(__null)
+				if(core::dynamic_pointer_cast<const core::FunctionType>(targetTy)) {
+					return builder.getZero(targetTy);
+				}
+
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				assert(elementType);
+				assert(elementType && "cannot build ref reinterpret without a type");
 				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
 		}
+
+		case clang::CK_MemberPointerToBoolean 	:
+		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
+		* */
+		    return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
@@ -731,6 +770,10 @@ switch (castExpr->getCastKind()) {
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
 				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
+				//if it is no ref we have to materialize it, otherwise refParent cannot be called
+				if(expr->getType()->getNodeType() != core::NT_RefType) {
+					expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+				}
 				expr = builder.refParent(expr, targetTy);
 			}
 
@@ -866,10 +909,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_DerivedToBaseMemberPointer 	:
 		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
 		* int A::*mptr = static_cast<int A::*>(&B::member);
-		* */
-
-		case clang::CK_MemberPointerToBoolean 	:
-		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
 		* */
 
 		case clang::CK_ReinterpretMemberPointer 	:

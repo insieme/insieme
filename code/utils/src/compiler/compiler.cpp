@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -137,7 +137,7 @@ namespace compiler {
 		string startPrefix("#include <...> search starts here:");
 		string stopPrefix("End of search list.");
 		while(fgets(line, 256, file) ) {
-			input = string(line);	
+			input = string(line);
 			//#include <...> search starts here:
 			if(input.substr(0, startPrefix.length()) == startPrefix) {
 				capture = true;
@@ -150,14 +150,17 @@ namespace compiler {
 				//stop after this line
 				break;
 			}
-			
+
 			if(capture) {
 				input.replace(input.begin(),input.begin()+1,"");
 				input.replace(input.end()-1,input.end(),"/");
 				paths.push_back(input);
 			}
 		}
-		pclose(file); 
+		pclose(file);
+		if(paths.empty()) {
+            std::cerr << "ATTENTION: No default include paths found. Terminal local language has to be set to en_XX.\n";
+		}
 		return paths;
 	}
 
@@ -210,7 +213,7 @@ namespace compiler {
 
 		return true;
 	}
-	
+
 	string compileToBinary(const Printable& source, const Compiler& compiler) {
 
 		// create temporary target file name
@@ -239,7 +242,7 @@ namespace compiler {
 
 		// conduct compilation
 		bool res = compile(sourceFile.string(), targetFile, compiler);
-		
+
 		// delete source file
 		if (boost::filesystem::exists(sourceFile)) {
 			boost::filesystem::remove(sourceFile);

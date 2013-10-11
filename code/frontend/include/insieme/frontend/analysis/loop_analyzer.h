@@ -36,9 +36,10 @@
 
 #pragma once
 
+#include <iostream>
 #include <set>
 #include <exception>
-#include <stdexcept>
+//#include <stdexcept>
 
 #include "insieme/core/ir_expressions.h"
 
@@ -86,40 +87,86 @@ using insieme::frontend::conversion::Converter;
 
 /**
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
+ * normalizes the loop.
+ * there is only needed to append the previous generated statements and the post.
+ * 		PRE: 
+ * 			...
+ * 		FOR LOOP { body }
+ * 		POST
+ * 			...
  */
 class LoopAnalyzer {
 
-	struct LoopHelper {
-		const clang::VarDecl* 			inductionVar;
-		insieme::core::ExpressionPtr 	incrExpr;
-		insieme::core::ExpressionPtr	condExpr;
-		bool 							invert;
+private:
 
-		//TODO: recheck: Visual Studio 2010 fix
-		LoopHelper(): inductionVar(NULL), invert(false) {	}
+	enum loopDir{ 
+		LOOP_UP,
+		LOOP_DOWN,
 	};
+	Converter& 	convFact;
 
-	const Converter& 	convFact;
-	LoopHelper 					loopHelper;
+	insieme::core::VariableList		conditionVars;			// variables used in conditions
 
+	insieme::core::ExpressionPtr	originalInductionExpr;  // old induction expressio
+	insieme::core::VariablePtr		inductionVar;  			// New read only induction var
+
+	insieme::core::ExpressionPtr	normalizedInductionExpr; // Expression to use as iterator (normalized)
+	insieme::core::ExpressionPtr	normalizedIterations; 	// normalized number of iterations
+
+	insieme::core::ExpressionPtr 	incrExpr;				// normalized increment ( +1 )
+	insieme::core::ExpressionPtr    stepExpr; 				// step of each iteration
+
+	insieme::core::ExpressionPtr    initValue;				// lowe bonduary for real iteration
+	insieme::core::ExpressionPtr    endValue;				// upper bonduary
+
+	insieme::core::StatementList	preStmts;  				// statements that need to be reproduced BEFORE the loop
+	insieme::core::StatementList	postStmts;  			// statements that need to be reproduced AFTER the loop
+	insieme::core::StatementList	firstStmts;				// statements that need to be reproduced at the BEGINNING of loop body
+	insieme::core::StatementList	lastStmts;				// statements that need to be reproduced at the END of loop body
+
+	loopDir direction;			// loop up or loop down, not used
+	bool    loopToBounduary;    // whenever to loop until value is equal, or until value is less than
+	bool    whileLessThan;       // if induction variable is compared while less than
+	bool    conditionLeft;       // if induction variable is compared while less than
+	bool    restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
+
+
+	void findConditionVariables(const clang::ForStmt* forStmt);
 	void findInductionVariable(const clang::ForStmt* forStmt);
 	void handleIncrExpr(const clang::ForStmt* forStmt);
 	void handleCondExpr(const clang::ForStmt* forStmt);
-public:
-	typedef std::set<const clang::VarDecl*> VarDeclSet;
 
-	LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact);
+public:
 
 	/**
-	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
+	 * generate an analizer to convert the loop from clang
 	 */
-	const clang::VarDecl* getInductionVar() const { return loopHelper.inductionVar; }
+	LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
 
-	insieme::core::ExpressionPtr getIncrExpr() const { return loopHelper.incrExpr; }
+	/**
+	 * retrieve the original induction expression used in the original not normalized loop
+	 */
+	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const { return originalInductionExpr; }
+	/**
+	 * retrieve the current induction expression used in the normalized loop
+	 */
+	const insieme::core::ExpressionPtr 	getInductionExpr() const { return normalizedInductionExpr; }
 
-	insieme::core::ExpressionPtr getCondExpr() const { return loopHelper.condExpr; }
+	/**
+	 * retrieve the list of previous statements to be inserted BEFORE the loop
+	 */
+	const insieme::core::StatementList& getPreStmts() const { return preStmts;}
 
-	bool isInverted() const { return loopHelper.invert; }
+	/**
+	 * retrieve the list of post statements to be inserted AFTER the loop
+	 */
+	const insieme::core::StatementList& getPostStmts() const { return postStmts;}
+
+	/**
+	 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
+	 * limitations
+	 */
+	insieme::core::ForStmtPtr  getLoop(const insieme::core::StatementPtr& body) const; 
 };
 
 } // End analysis namespace

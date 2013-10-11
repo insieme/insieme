@@ -196,42 +196,31 @@ void for_stmt_test() {
 
 	// standard for loop
 	#pragma test \
-	"for(decl int<4> v0 = 0 .. 100 : 1) { }"
+	"{ decl int<4> v0 = ((100-0)-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { { }; };}"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); }; (v101 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));}"
+	"{ decl int<4> v0 = ((100-0)-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { (v100 := v1); (v101 := ((v1*1)+0)); }; (v100 := ((((v0/abs(1))+1)*1)+0));}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v100 := v0); }; (v101 := (( *v100)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v100)))/CAST<real<8>>(6))))*6)));}"
+	"{ decl int<4> v0 = ((100-( *v100))-1); for(decl int<4> v1 = 0 .. ((v0/abs(6))+1) : 1) { (v101 := v1); (v100 := ((v1*6)+( *v100))); }; (v101 := ((((v0/abs(6))+1)*6)+( *v100)));}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
-	"while((( *v100)<100)) { { }; (v100 := (( *v100)+1));}"
+	"{ decl int<4> v0 = ((100-( *v100))-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { { }; };}"
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl ref<int<4>> v0 = ( var(1)); decl ref<int<4>> v1 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v100 := v2); };}"
+	"{ decl ref<int<4>> v0 = ( var(1)); decl ref<int<4>> v1 = ( var(2)); decl int<4> v2 = ((100-0)-1); for(decl int<4> v3 = 0 .. ((v2/abs(1))+1) : 1) { (v100 := ((v3*1)+0)); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
+	// divission is not supported as for loop increment
 	int mq, nq;
-	#pragma test "{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); return (v2 := (( *v2)/2)); }(v100, v101); };}"
+	#pragma test \
+	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); return (v2 := (( *v2)/2)); }(v100, v101); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
-
-	//(v1 := 0);
-	//while((( *v2)>1)) {
-	//	{ };
-	//	fun(ref<int<4>> v5, ref<int<4>> v6) {
-	//		fun(ref<int<4>> v4) {
-	//			decl int<4> v3 = ( *v4);
-	//			(v4 := (( *v4)+CAST<int<4>>(1)));
-	//			return v3;
-	//		}(v5);
-	//		return (v6 := (( *v6)/2));
-	//	}(v1, v2);
-	//};
 }
 
 void switch_stmt_test() {
@@ -257,6 +246,22 @@ void switch_stmt_test() {
 	switch(a+8) {
 	a += 1;
 	case 1:
+		break;
+	}
+
+	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (v1 := 1); } default: { } };}"
+	switch(a+8) {
+		int x;
+	case 1:
+		x = 1;
+		break;
+	}
+
+	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (v1 := 1); } default: { } };}"
+	switch(a+8) {
+		int x = 0;
+	case 1:
+		x = 1;
 		break;
 	}
 	//decl int<a> v2 = CAST<int<a>>((( *v1)+8));
@@ -333,6 +338,27 @@ void switch_stmt_test() {
 			break;
 	}
 	}
+
+	#pragma test \
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { } default: { } };}"
+	switch(a) {
+		case 0+1:
+			break;
+	}
+
+	#pragma test \
+		"{ decl int<4> v0 = ( *v100); switch(v0) { case 0: { (v100 := 10); break; } case 1: { (v100 := 100); } default: { } };}"
+	switch(a) {
+		case 0: 
+			{
+				a = 10;	
+				break;
+			}
+		case 1:
+			a = 100;
+			break;
+	}
+
 }
 
 

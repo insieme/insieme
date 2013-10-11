@@ -29,37 +29,40 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#define _GLIBCXX_USE_NANOSLEEP
-#include <map>
-#include <thread>
-#include <chrono>
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/utils/stop_watch/stopWatch.h"
+#include "insieme/backend/addon.h"
 
-using namespace insieme::utils;
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
+namespace insieme {
+namespace backend {
+namespace addons {
 
 
+	/**
+	 * An Add-On realizing support for enum types.
+	 */
+	struct EnumTypes : public AddOn {
 
-template<typename Map> void testMap();
+		/**
+		 * Installs this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
 
-TEST(Stopwatch, basic) {
+	};
 
-	{
-	auto sw = StopWatch::start("First test");
-		{
-		auto sw = StopWatch::start("nested");
-		}
-	}
-	{
-		auto sw = StopWatch::start("Second test");
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
-	StopWatch::printStatus();
-}
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme
+

@@ -244,311 +244,47 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 	try {
 		// Analyze loop for induction variable
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
-		const clang::VarDecl* iv = loopAnalysis.getInductionVar();
 
-		// before the body is visited we have to make sure to register the loop induction variable
-		// with the correct type:
-		//
-		// we need 3 IR variables:
-		// 	- the conversion of the original loop: ( might localy declared, or in an outer scope)
-		// 	- the new iterator: will be a constant scalar (not ref<type...>)
-		// 	- the use of the iterator: any use of the iterator will be wrapped in a new variable
-		// 		assigned with the right iteration value at the begining of the loop body
-		//
-		core::ExpressionPtr fakeInductionVar= convFact.lookUpVariable(iv);
-		core::VariablePtr 	inductionVar 	= builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
-		core::VariablePtr	 itUseVar     	= builder.variable(builder.refType(inductionVar->getType()));
+		// convert the body
+		core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
 
-		// polute wrapped vars cache to avoid inner replacements
-		if(llvm::isa<clang::ParmVarDecl> (iv)){
-			convFact.wrapRefMap.insert(std::make_pair(itUseVar,itUseVar));
-		}
+		// we have to replace all ocurrences of the induction expression/var in the annotations of the body
+		// by the new induction var
+		core::visitDepthFirstPrunable (body, [&] (const core::StatementPtr& stmt) -> bool{
+					if (stmt->hasAnnotation(omp::BaseAnnotation::KEY)){
+						auto anno = stmt->getAnnotation(omp::BaseAnnotation::KEY);
 
-		// polute vars cache to make sure that the right value is used
-		auto cachedPair = convFact.varDeclMap.find(iv);
-		if (cachedPair != convFact.varDeclMap.end()) {
-			cachedPair->second = itUseVar;
-		} else {
-			cachedPair = convFact.varDeclMap.insert(std::make_pair(loopAnalysis.getInductionVar(), itUseVar)).first;
-		}
+						std::vector<core::VariablePtr> orgVars;
+						std::vector<core::VariablePtr> trgVars;
+						core::visitDepthFirstOnce ( loopAnalysis.getOriginalInductionExpr(), [&] (const core::VariablePtr& var){ orgVars.push_back(var);});
+						core::visitDepthFirstOnce ( loopAnalysis.getInductionExpr(), [&] (const core::VariablePtr& var){ trgVars.push_back(var);});
 
-		// Visit Body
-		StatementList stmtsOld = Visit(forStmt->getBody());
-
-		// restore original variable in cache
-		if (fakeInductionVar->getNodeType() == core::NT_Variable)
-			cachedPair->second = core::static_pointer_cast<const core::VariablePtr>(fakeInductionVar);
-		else
-			convFact.varDeclMap.erase(cachedPair);
-
-		if(llvm::isa<clang::ParmVarDecl> (iv)){
-			convFact.wrapRefMap.erase(itUseVar);
-		}
-
-		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
-		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar)) {
-			// convert iterator variable into read-only value
-			auto deref = builder.deref(itUseVar);
-			auto mat = builder.refVar(inductionVar);
-			for(auto& cur : stmtsOld) {
-				cur = core::transform::replaceAllGen(mgr, cur, deref, inductionVar, true);
-				cur = core::transform::replaceAllGen(mgr, cur, itUseVar, mat, true);
-
-				// TODO: make this more efficient
-				// also update potential omp annotations
-				core::visitDepthFirstOnce(cur, [&] (const core::StatementPtr& node){
-					//if we have a OMP annotation
-					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						anno->replaceUsage(deref, inductionVar);
-						anno->replaceUsage(itUseVar, inductionVar);
+						int i = 0;
+						for (auto org : orgVars){
+							anno->replaceUsage(org, trgVars[i]);
+							i++;
+						}
 					}
+					if (stmt.isa<core::CompoundStmtPtr>() || stmt.isa<core::IfStmtPtr>() || stmt.isa<core::SwitchStmtPtr>())
+						return false;
+					else
+						return true;
 				});
-			}
-		} else {
-			//TODO: check for free return/break/continue
-			// -- see core/transform/manipulation/isOulineAble() for "free return/break/continue" check
 
-			//if the inductionVar is materialized into the itUseVar, the changes are not on the inductionVar
-			//example: for(int i;...;i++) { i++; } the increment in the loop body is lost
-
-			//if the inductionvar is not readonly convert into while
-			throw analysis::InductionVariableNotReadOnly();
-		}
-
-		// build body
-		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
-
-		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
-		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
-		core::ExpressionPtr condExpr = loopAnalysis.getCondExpr();
-		condExpr = utils::castScalar(inductionVar->getType(), condExpr);
-
-		assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
-
-		stmtutils::StmtWrapper initExpr = Visit( forStmt->getInit() );
-
-		if (!initExpr.isSingleStmt()) {
-			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
-					"Not a declaration statement"
-				);
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// We have a multiple declaration in the initialization part of the stmt, e.g.
-			//
-			// 		for(int a,b=0; ...)
-			//
-			// to handle this situation we have to create an outer block in order to declare the
-			// variables which are not used as induction variable:
-			//
-			// 		{
-			// 			int a=0;
-			// 			for(int b=0;...) { }
-			// 		}
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			typedef std::function<bool(const core::StatementPtr&)> InductionVarFilterFunc;
-
-			auto inductionVarFilter =
-			[ & ](const core::StatementPtr& curr) -> bool {
-				core::DeclarationStmtPtr declStmt = curr.as<core::DeclarationStmtPtr>();
-				assert(declStmt && "Not a declaration statement");
-				return declStmt->getVariable() == fakeInductionVar;
-			};
-
-			auto negation =
-			[] (const InductionVarFilterFunc& functor, const core::StatementPtr& curr) -> bool {
-				return !functor(curr);
-			};
-
-			if (!initExpr.empty()) {
-				addDeclStmt = true;
-			}
-
-			/*
-			 * we insert all the variable declarations (excluded the induction
-			 * variable) before the body of the for loop
-			 */
-			std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt),
-					std::bind(negation, inductionVarFilter, std::placeholders::_1));
-
-			// we now look for the declaration statement which contains the induction variable
-			auto fit = std::find_if(initExpr.begin(), initExpr.end(),
-						std::bind( inductionVarFilter, std::placeholders::_1 )
-				);
-
-			assert( fit!=initExpr.end() && "Induction variable not declared in the loop initialization expression");
-			// replace the initExpr with the declaration statement of the induction variable
-			initExpr = *fit;
-		}
-
-		assert( initExpr.isSingleStmt() && "Init expression for loop statement contains multiple statements");
-
-		// We are in the case where we are sure there is exactly 1 element in the initialization expression
-		core::DeclarationStmtPtr declStmt =
-			core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr.getSingleStmt());
-
-		bool iteratorChanged = false;
-
-		if (!declStmt) {
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			// the init expression is not a declaration stmt, it could be a situation where
-			// it is an assignment operation, eg:
-			//
-			// 		for( i=exp; ...) { i... }
-			//
-			// or, it is missing, or is a reference to a global variable.
-			//
-			// In this case we have to replace the old induction variable with a new one and
-			// replace every occurrence of the old variable with the new one. Furthermore,
-			// to maintain the correct semantics of the code, the value of the old induction
-			// variable has to be restored when exiting the loop.
-			//
-			// 		{
-			// 			for(int _i = init; _i < cond; _i += step) { _i... }
-			// 			i = ceil((cond-init)/step) * step + init;
-			// 		}
-			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			core::ExpressionPtr init = initExpr.getSingleStmt().as<core::ExpressionPtr>();
-
-			assert(init && "Initialization statement for loop is not an expression");
-
-			assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
-
-			// Initialize the value of the new induction variable with the value of the old one
-			if ( core::analysis::isCallOf(init, gen.getRefAssign()) ) {
-				init = init.as<core::CallExprPtr>()->getArguments()[1]; // getting RHS
-			} else if ( init->getNodeType() != core::NT_Variable ) {
-				/*
-				 * the initialization variable is in a form which is not yet handled
-				 * therefore, the for loop is transformed into a while loop
-				 */
-				throw analysis::LoopNormalizationError();
-			}
-
-			declStmt = builder.declarationStmt( inductionVar, init );
-
-			// we have to remember that the iterator has been changed for this loop
-			iteratorChanged = true;
-		}
-
-		assert(declStmt && "Failed conversion of loop init expression");
-		core::ExpressionPtr init = declStmt->getInitialization();
-
-		if (core::analysis::isCallOf(init, gen.getRefVar())) {
-			core::CallExprPtr callExpr = init.as<core::CallExprPtr>();
-			assert(callExpr->getArguments().size() == 1);
-
-			init = callExpr->getArgument(0);
-
-			assert(init->getType()->getNodeType() != core::NT_RefType &&
-					"Initialization value of induction variable must be of non-ref type"
-				);
-
-		} else if (init->getType()->getNodeType() == core::NT_RefType) {
-			init = builder.deref(init);
-		}
-
-		assert( init->getType()->getNodeType() != core::NT_RefType);
-
-		declStmt = builder.declarationStmt(inductionVar, init);
-		assert(init->getType()->getNodeType() != core::NT_RefType);
-
-		if (loopAnalysis.isInverted()) {
-			// invert init value
-			core::ExpressionPtr invInitExpr = builder.invertSign( init );
-			declStmt = builder.declarationStmt( declStmt->getVariable(), invInitExpr );
-			assert(declStmt->getVariable()->getType()->getNodeType() != core::NT_RefType);
-
-			// invert the sign of the loop index in body of the loop
-			core::ExpressionPtr inductionVar = builder.invertSign(declStmt->getVariable());
-			core::NodePtr ret = core::transform::replaceAll(
-					builder.getNodeManager(),
-					body.getSingleStmt(),
-					declStmt->getVariable(),
-					inductionVar
-			);
-			body = stmtutils::StmtWrapper( ret.as<core::StatementPtr>() );
-		}
-
-		// Now replace the induction variable of type ref<int<4>> with the non ref type. This
-		// requires to replace any occurence of the iterator in the code with new induction
-		// variable.
-		assert(declStmt->getVariable()->getNodeType() == core::NT_Variable);
-
-		// We finally create the IR ForStmt
-		core::ForStmtPtr forIr =
-		builder.forStmt(declStmt, condExpr, incExpr, stmtutils::tryAggregateStmt(builder, body.getSingleStmt()));
-
+		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
+		
+		core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
 		assert(forIr && "Created for statement is not valid");
 
-		// check for datarange pragma
+		// add annotations
 		attatchDatarangeAnnotation(forIr, forStmt, convFact);
 		attatchLoopAnnotation(forIr, forStmt, convFact);
-
 		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));
-		assert( retStmt.back() && "Created for statement is not valid");
 
-		if (iteratorChanged) {
-			/*
-			 * in the case we replace the loop iterator with a temporary variable, we have to assign the final value
-			 * of the iterator to the old variable so we don't change the semantics of the code:
-			 *
-			 * 		i.e: oldIter = ceil((cond-init)/step) * step + init;
-			 */
-			core::TypePtr iterType =
-					(fakeInductionVar->getType()->getNodeType() == core::NT_RefType) ?
-							core::static_pointer_cast<const core::RefType>(fakeInductionVar->getType())->getElementType() :
-							fakeInductionVar->getType();
+		// incorporate statements do be done after loop and we are done
+		retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
 
-			core::ExpressionPtr cond = convFact.tryDeref(loopAnalysis.getCondExpr());
-			core::ExpressionPtr step = convFact.tryDeref(loopAnalysis.getIncrExpr());
-
-			core::FunctionTypePtr ceilTy = builder.functionType(
-					toVector<core::TypePtr>(gen.getDouble()),
-					gen.getDouble()
-			);
-
-			core::ExpressionPtr finalVal = builder.add(
-					init, // init +
-					builder.mul(
-						builder.castExpr(iterType,// ( cast )
-								builder.callExpr(
-										gen.getDouble(),
-										builder.literal(ceilTy, "ceil"),// ceil()
-										stmtutils::makeOperation(// (cond-init)/step
-												builder,
-												builder.castExpr(gen.getDouble(),
-														stmtutils::makeOperation(builder,
-																cond, init, core::lang::BasicGenerator::Sub
-														)// cond - init
-												),
-												builder.castExpr(gen.getDouble(), step),
-												core::lang::BasicGenerator::Div
-										)
-								)
-						),
-						builder.castExpr(init->getType(), step)
-					)
-			);
-
-			if (loopAnalysis.isInverted()) {
-				// we have to restore the sign
-				finalVal = builder.invertSign(finalVal);
-			}
-
-			// even though, might be the fist use of a value parameter variable.
-			// needs to be wrapped
-			if(llvm::isa<clang::ParmVarDecl> (iv)){
-				auto fit = convFact.wrapRefMap.find(fakeInductionVar.as<core::VariablePtr>());
-				if (fit == convFact.wrapRefMap.end()) {
-					fit = convFact.wrapRefMap.insert(std::make_pair(fakeInductionVar.as<core::VariablePtr>(),
-												  					   builder.variable(builder.refType(fakeInductionVar->getType())))).first;
-				}
-				core::ExpressionPtr wrap = fit->second;
-				fakeInductionVar = wrap.as<core::ExpressionPtr>();
-			}
-
-			retStmt.push_back(builder.assign(fakeInductionVar, finalVal));
-		}
+		return retStmt;
 
 	} catch (const analysis::LoopNormalizationError& e) {
 		// The for loop cannot be normalized into an IR loop, therefore we create a while stmt
@@ -881,15 +617,17 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		// inspire switches implement break for each code region, we ignore it here
 		if (stmt.isa<core::BreakStmtPtr>()) {
 			openCases.clear();
-		}
-		else{
+		} else{
 			// for each of the open cases, add the statement to their own stmt list
 			for (const auto& caseLit : openCases){
 				caseMap[caseLit].push_back(stmt);
 			}
 			// if is a scope closing statement, finalize all open cases
-			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>())
+			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>()) {
 				openCases.clear();
+			} else if (stmt.isa<core::CompoundStmtPtr>() && stmt.as<core::CompoundStmtPtr>()->back().isa<core::BreakStmtPtr>()) {
+				openCases.clear();
+			}
 		}
 	};
 	
@@ -901,23 +639,35 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
 			return defLit;
 		}
-		core::ExpressionPtr caseExpr = convFact.convertExpr(llvm::cast<clang::CaseStmt>(switchCase)->getLHS());
-		if (caseExpr->getNodeType() == core::NT_CastExpr) {
-			core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
-			if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
-				core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
-				caseExpr = builder.literal(cast->getType(), literal->getValue());
-			}
-		}
-
+		
 		core::LiteralPtr caseLiteral;
-		if (!caseExpr.isa<core::LiteralPtr>()){
-			// clang casts the literal to fit the condition type... and is not a literal anymore
-			// it might be a scalar cast, we retrive the literal
-			caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
-		}
-		else{
-			caseLiteral = caseExpr.as<core::LiteralPtr>();
+		const clang::Expr* caseExpr = llvm::cast<clang::CaseStmt>(switchCase)->getLHS();
+
+		//if the expr is an integerConstantExpr
+		if( caseExpr->isIntegerConstantExpr(convFact.getCompiler().getASTContext())) {
+			llvm::APSInt result;
+			//reduce it and store it in result -- done by clang
+			caseExpr->isIntegerConstantExpr(result, convFact.getCompiler().getASTContext());
+			core::TypePtr type = convFact.convertType(caseExpr->getType().getTypePtr());
+			caseLiteral = builder.literal(type, result.toString(10));
+		} else {
+			core::ExpressionPtr caseExprIr = convFact.convertExpr(caseExpr);
+			if (caseExprIr->getNodeType() == core::NT_CastExpr) {
+				core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExprIr);
+				if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+					core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+					caseExprIr = builder.literal(cast->getType(), literal->getValue());
+				} 
+			}
+
+			if (!caseExprIr.isa<core::LiteralPtr>()){
+				// clang casts the literal to fit the condition type... and is not a literal anymore
+				// it might be a scalar cast, we retrive the literal
+				caseLiteral= caseExprIr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
+			}
+			else{
+				caseLiteral = caseExprIr.as<core::LiteralPtr>();
+			}
 		}
 		return caseLiteral;
 	};
@@ -928,7 +678,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// 					stmt1
 	// 					stmt2
 	// 			break
-	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt) {
+	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt, vector<core::StatementPtr>& decls) {
 		const clang::Stmt* stmt = caseStmt;
 
 		// we might find some chained stmts
@@ -936,6 +686,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			const clang::SwitchCase* inCase = llvm::cast<clang::SwitchCase>(stmt);
 			openCases.push_back(convertCase(inCase));
 			caseMap[openCases.back()] = std::vector<core::StatementPtr>();
+			
+			//take care of declarations in switch-body and add them to the case
+			for(auto d : decls) {
+				caseMap[openCases.back()].push_back(d);
+			}
 			stmt = inCase->getSubStmt();
 		}
 
@@ -948,12 +703,21 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// iterate throw statements inside of switch
 	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
 	assert( compStmt && "Switch statements doesn't contain a compound stmt");
+	vector<core::StatementPtr> decls;
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* currStmt = *it;
 
 		// if is a case stmt, create a literal and open it
 		if ( const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt) ){
-			lookForCases (switchCaseStmt);
+			lookForCases (switchCaseStmt, decls);
+			continue;
+		} else if( const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt) ) {
+			//collect all declarations which are in de switch body and add them (without init) to
+			//the cases
+			core::DeclarationStmtPtr decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
+			//remove the init, use undefinedvar 
+			decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+			decls.push_back(decl);
 			continue;
 		}
 		

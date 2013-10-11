@@ -453,24 +453,31 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 				// FIXME: Use clang error report for this
 				ExpressionList vals(vecArgSize);
-				size_t it;
+				size_t it, escapes_count = 0;
 				for(it=0; it<strVal.length()-2; ++it) {
 					char c = strVal.at(it+1);
 					std::string str(1,c);
-					switch(c) {
-						case '\n': str = "\\n";	   break;
+
+					if(c == '\\')
+					{
+						c = strVal.at(it+2);
+						switch(c) {
+						case 'n': str = "\\n";     break;
 						case '\\': str = "\\\\";   break;
-						case '\r': str = "\\r";	   break;
-						case '\t': str = "\\t";	   break;
-						case '\0': str = "\\0";	   break;
+						case 'r': str = "\\r";     break;
+						case 't': str = "\\t";     break;
+						case '0': str = "\\0";     break;
+						}
+						escapes_count++;
+						it++;
 					}
-					vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
+
+					vals[it - escapes_count] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
 				}
 				// put '\0' terminators on the remaining elements
-				vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
-				initList = core::encoder::toIR(plainExpr->getNodeManager(), vals);
+				vals[it - escapes_count] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
+				initList = core::encoder::toIR(plainExpr->getNodeManager(), vals); 
 			} else {
-
 				// we assume that the expr is an initializer for a vector, a vector expr
 				auto vecExpr = plainExpr.as<core::VectorExprPtr>()->getExpressions();
 				initList = core::encoder::toIR(plainExpr->getNodeManager(), 
@@ -570,6 +577,11 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// [ 'a -> volatile<'a> ]
 	if ( core::analysis::isVolatileType(trgTy) ) {
 		return builder.callExpr( trgTy, gen.getVolatileRead(), cast(expr, core::analysis::getVolatileType(trgTy)) );
+	}
+
+	// [ FunctionType -> bool ]
+	if( argTy.isa<core::FunctionTypePtr>() && gen.isBool(trgTy) ) {
+		return builder.callExpr(trgTy, gen.getGenNe(), expr, builder.getZero(argTy));
 	}
 
 	return builder.castExpr(trgTy, expr);
