@@ -175,12 +175,15 @@ namespace utils {
 		int v = 0;
 		{
 			auto tn = task([&](int x) { v=x; }, 3);
+			tn();
 		}
 		EXPECT_EQ(v,3);
 
 		{
 			auto t1 = task([&]() { v++; });
 			auto t2 = task(t1);
+			t1();
+			t2();
 		}
 		EXPECT_EQ(v,4);
 
