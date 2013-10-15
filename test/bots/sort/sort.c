@@ -124,14 +124,11 @@ static ELM *seqpart(ELM *low, ELM *high)
      pivot = choose_pivot(low, high);
 
      while (1) {
-	  h = *curr_high;
-	  while (h > pivot)
-	       h = *(--curr_high);
-	
-	  l = *curr_low;
-	  while (l < pivot) {
-	       l = *(++curr_low);
-	  }
+	  while ((h = *curr_high) > pivot)
+	       curr_high--;
+
+	  while ((l = *curr_low) < pivot)
+	       curr_low++;
 
 	  if (curr_low >= curr_high)
 	       break;
@@ -167,19 +164,11 @@ static void insertion_sort(ELM *low, ELM *high)
      ELM *p, *q;
      ELM a, b;
 
-	 q = low + 1; 
-	 while(q <= high) {
+     for (q = low + 1; q <= high; ++q) {
 	  a = q[0];
-	  p = q - 1; 
-	  b = p[0];
-	  while(p >= low && b > a) {
+	  for (p = q - 1; p >= low && (b = p[0]) > a; p--)
 	       p[1] = b;
-	       --p;
-		   if (p>low)
-			   b = p[0];
-	  }
 	  p[1] = a;
-	  ++q;
      }
 }
 
@@ -233,7 +222,7 @@ void seqmerge(ELM *low1, ELM *high1, ELM *low2, ELM *high2,
      if (low1 < high1 && low2 < high2) {
 	  a1 = *low1;
 	  a2 = *low2;
-	  while(1) {
+	  for (;;) {
 	       if (a1 < a2) {
 		    *lowdest++ = a1;
 		    a1 = *++low1;
@@ -250,7 +239,7 @@ void seqmerge(ELM *low1, ELM *high1, ELM *low2, ELM *high2,
      if (low1 <= high1 && low2 <= high2) {
 	  a1 = *low1;
 	  a2 = *low2;
-	  while(1) {
+	  for (;;) {
 	       if (a1 < a2) {
 		    *lowdest++ = a1;
 		    ++low1;
@@ -362,6 +351,7 @@ void cilkmerge_par(ELM *low1, ELM *high1, ELM *low2, ELM *high2, ELM *lowdest)
      cilkmerge_par(split1 + 1, high1, split2 + 1, high2,
 		     lowdest + lowsize + 2);
 #pragma omp taskwait
+
      return;
 }
 
@@ -400,7 +390,6 @@ void cilksort_par(ELM *low, ELM *tmp, long size)
 #pragma omp task untied
      cilksort_par(D, tmpD, size - 3 * quarter);
 #pragma omp taskwait
-	{}
 
 #pragma omp task untied
      cilkmerge_par(A, A + quarter - 1, B, B + quarter - 1, tmpA);

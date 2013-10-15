@@ -605,13 +605,12 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_PointerToBoolean 	:
 		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC,
 		// and block pointers.
-
 			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingRealToComplex 	:
-        case clang::CK_IntegralRealToComplex 	:
-		    return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
+		case clang::CK_IntegralRealToComplex 	:
+			return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
 		/*A conversion of a floating point real to a floating point complex of the original type. Injects the value as the
 		* real component with a zero imaginary component. float -> _Complex float.
 		* */
@@ -621,10 +620,10 @@ switch (castExpr->getCastKind()) {
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingComplexCast 	:
-        case clang::CK_FloatingComplexToIntegralComplex 	:
+		case clang::CK_FloatingComplexToIntegralComplex 	:
 		case clang::CK_IntegralComplexCast 	:
 		case clang::CK_IntegralComplexToFloatingComplex 	:
-            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToComplex(expr, targetTy);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToComplex(expr, targetTy);
 		/*Converts between different floating point complex types. _Complex float -> _Complex double.
 		* */
 		/*Converts from a floating complex to an integral complex. _Complex float -> _Complex int.
@@ -638,7 +637,7 @@ switch (castExpr->getCastKind()) {
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingComplexToReal 	:
 		case clang::CK_IntegralComplexToReal 	:
-		    return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(expr);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(expr);
 		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
 		* component. _Complex long double -> long double.
 		* */
@@ -648,11 +647,11 @@ switch (castExpr->getCastKind()) {
 
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////
-        case clang::CK_IntegralComplexToBoolean 	:
+		case clang::CK_IntegralComplexToBoolean 	:
 		case clang::CK_FloatingComplexToBoolean 	:
 		    /*Converts a complex to bool by comparing against 0+0i.
 		* */
-            return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToBool(expr);
+			return mgr.getLangExtension<core::lang::ComplexExtension>().castComplexToBool(expr);
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueBitCast 	:
@@ -660,24 +659,24 @@ switch (castExpr->getCastKind()) {
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
 		* */
 		{
-		    //if we have a cpp ref we have to unwrap the expression
-		    if(IS_CPP_REF(expr->getType())) {
-                expr = builder.toIRRef(expr);
-            }
-		    //the target type is a ref type because lvalue
-		    //bitcasts look like reinterpret_cast<type&>(x)
-		    targetTy = builder.refType(targetTy);
-            core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
+			//if we have a cpp ref we have to unwrap the expression
+			if(IS_CPP_REF(expr->getType())) {
+				expr = builder.toIRRef(expr);
+			}
+			//the target type is a ref type because lvalue
+			//bitcasts look like reinterpret_cast<type&>(x)
+			targetTy = builder.refType(targetTy);
+			core::CallExprPtr newExpr = builder.callExpr(targetTy, gen.getRefReinterpret(),
                                                          expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
-		    //wrap it as cpp ref
+			//wrap it as cpp ref
 			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
-
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
+			//std::cout << "CAST:\n" << expr << std::endl << targetTy << std::endl << core::analysis::isRefType(targetTy) << std::endl;
 
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
 
@@ -697,12 +696,22 @@ switch (castExpr->getCastKind()) {
 					expr = expr.as<core::CallExprPtr>()[0];
 				}
 
+				// it might be a function type e.g. fun(void *(**) (size_t)) {} called with fun(__null)
+				if(core::dynamic_pointer_cast<const core::FunctionType>(targetTy)) {
+					return builder.getZero(targetTy);
+				}
+
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				assert(elementType);
+				assert(elementType && "cannot build ref reinterpret without a type");
 				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
 		}
+
+		case clang::CK_MemberPointerToBoolean 	:
+		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
+		* */
+		    return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
@@ -761,6 +770,10 @@ switch (castExpr->getCastKind()) {
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
 				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
+				//if it is no ref we have to materialize it, otherwise refParent cannot be called
+				if(expr->getType()->getNodeType() != core::NT_RefType) {
+					expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+				}
 				expr = builder.refParent(expr, targetTy);
 			}
 
@@ -896,10 +909,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_DerivedToBaseMemberPointer 	:
 		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
 		* int A::*mptr = static_cast<int A::*>(&B::member);
-		* */
-
-		case clang::CK_MemberPointerToBoolean 	:
-		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
 		* */
 
 		case clang::CK_ReinterpretMemberPointer 	:
