@@ -165,6 +165,23 @@ namespace cba {
 		EXPECT_EQ("{0,2}", toString(setUnion(s2,s5)));
 		EXPECT_EQ("{0,1,2}", toString(setUnion(s3,s5)));
 
+		Data c1 = mgr.compound(
+				entry(NominalIndex("a"), mgr.set(e1,e2)),
+				entry(NominalIndex("b"), mgr.set(e0,e2))
+		);
+
+		Data c2 = mgr.compound(
+				entry(NominalIndex("a"), mgr.set(e0,e1)),
+				entry(NominalIndex("b"), mgr.set(e1,e2))
+		);
+
+		EXPECT_EQ("{[a={1,2},b={0,2}]}", toString(setUnion(s1,c1)));
+		EXPECT_EQ("{[a={0,1},b={1,2}]}", toString(setUnion(s1,c2)));
+		EXPECT_EQ("{[a={0,1},b={1,2}],[a={1,2},b={0,2}]}", toString(setUnion(c1,c2)));
+		EXPECT_EQ("{[a={1,2},b={0,2}]}", toString(setUnion(c1,c1)));
+		EXPECT_EQ("{[a={0,1},b={1,2}]}", toString(setUnion(c2,c2)));
+
+		// TODO: ensure structure is identical within sets
 	}
 
 
