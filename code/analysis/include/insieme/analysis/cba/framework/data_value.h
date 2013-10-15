@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <set>
 #include <utility>
 #include <vector>
@@ -131,11 +132,15 @@ namespace cba {
 			: data(data) { }
 
 		bool operator==(const DataSet<ElementType>& other) const {
-			return this == &other || data == other.data;
+			return this == &other || (subSet(other) && other.subSet(*this));
 		}
 
 		bool operator<(const DataSet<ElementType>& other) const {
 			return *this != other && data < other.data;
+		}
+
+		bool subSet(const DataSet<ElementType>& other) const {
+			return this == &other || std::includes(data.begin(), data.end(), other.data.begin(), other.data.end());
 		}
 
 	protected:
