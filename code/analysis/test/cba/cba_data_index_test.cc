@@ -58,6 +58,29 @@ namespace cba {
 
 			// the type has to be default-constructable
 			T a;
+			T b;
+
+			// copy-constructable
+			T c = b;
+
+			// assignable
+			c = b;
+
+			// instances need to be comparable
+			a == b;
+			a < b;
+
+			// elements need to be hashable (for boost)
+			hash_value(a);
+			EXPECT_EQ(hash_value(a), hash_value(b));
+		}
+
+
+		template<typename T>
+		void testArrayIndexTypeConcepts() {
+
+			// test default properties
+			testIndexTypeConcepts<T>();
 
 			// also from a formula
 			NodeManager mgr;
@@ -73,17 +96,38 @@ namespace cba {
 			EXPECT_FALSE(f2.isInteger());
 			T c(f2);
 
-			// instances need to be comparable
-			a == b;
-			a < b;
 		}
 
 	}
 
+	TEST(CBA, NominalIndex) {
+
+		testIndexTypeConcepts<NominalIndex>();
+
+		string s1 = "a";
+		string s2 = "b";
+
+		// just a few basic tests
+		NominalIndex a(s1);
+		NominalIndex b(s2);
+
+		EXPECT_EQ("a", toString(a));
+		EXPECT_EQ("b", toString(b));
+
+		NominalIndex c(s1);
+		EXPECT_NE(a,b);
+		EXPECT_EQ(a,c);
+		EXPECT_NE(b,c);
+
+		EXPECT_NE(a.hash(), b.hash());
+		EXPECT_EQ(a.hash(), c.hash());
+		EXPECT_NE(b.hash(), c.hash());
+
+	}
 
 	TEST(CBA, UnitIndex) {
 
-		testIndexTypeConcepts<UnitIndex>();
+		testArrayIndexTypeConcepts<UnitIndex>();
 
 		// just a few basic tests
 		UnitIndex a;
@@ -100,7 +144,7 @@ namespace cba {
 
 	TEST(CBA, SingleIndex) {
 
-		testIndexTypeConcepts<SingleIndex>();
+		testArrayIndexTypeConcepts<SingleIndex>();
 
 		// a few tests
 		SingleIndex is;

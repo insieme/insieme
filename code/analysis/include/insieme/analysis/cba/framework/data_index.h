@@ -48,8 +48,8 @@ namespace analysis {
 namespace cba {
 
 	/**
-	 * A base class for indices to be utilized for analyzing array operations
-	 * within data values.
+	 * A base class for indices to be utilized for analyzing operations
+	 * on data structures within data values.
 	 */
 	template<typename DerivedIndex>
 	struct Index :
@@ -59,10 +59,70 @@ namespace cba {
 	{};
 
 	/**
+	 * A base class for all indices actually modeling array indices.
+	 */
+	template<typename DerivedIndex>
+	struct ArrayIndex : public Index<DerivedIndex> {};
+
+
+	// -------------------------------------------------------------------------------------------------
+
+	/**
+	 * An index distinguishing different named fields.
+	 */
+	class NominalIndex : public Index<NominalIndex> {
+
+		/**
+		 * The name to be represented - as a reference to save the copy-overhead.
+		 */
+		string name;
+
+		std::size_t hashCode;
+
+	public:
+
+		NominalIndex(const string& name = "") : name(name), hashCode(std::hash<string>()(name)) {};
+
+		NominalIndex(const NominalIndex& other) : name(other.name), hashCode(other.hashCode) {}
+
+		bool operator==(const NominalIndex& other) const {
+			return this == &other || name == other.name;
+		}
+
+		bool operator<(const NominalIndex& other) const {
+			return name < other.name;
+		}
+
+//		NominalIndex& operator=(const NominalIndex& other) {
+//			return *new (this) NominalIndex(other.name);
+//		}
+
+		std::size_t hash() const {
+			return hashCode;
+		}
+
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << name;
+		}
+
+	};
+
+	/**
+	 * Adds hashing support for the nominal index class.
+	 */
+	inline std::size_t hash_value(const NominalIndex& index) {
+		return index.hash();
+	}
+
+	// -------------------------------------------------------------------------------------------------
+
+	/**
 	 * The simplest form of an index - there is only a single instance, all array operations are
 	 * applied to the same instance.
 	 */
-	class UnitIndex : public Index<UnitIndex> {
+	class UnitIndex : public ArrayIndex<UnitIndex> {
 
 	public:
 
@@ -86,10 +146,17 @@ namespace cba {
 	};
 
 	/**
+	 * Adds hashing support for the unit index class.
+	 */
+	inline std::size_t hash_value(const UnitIndex& index) {
+		return 0;	// all the same
+	}
+
+	/**
 	 * An index distinguishing concrete indices (if the value of a subscript is known) from cases
 	 * where the index is unknown or too complex to be evaluated statically.
 	 */
-	class SingleIndex : public Index<SingleIndex> {
+	class SingleIndex : public ArrayIndex<SingleIndex> {
 
 		/**
 		 * A flag determining whether this instances is representing a concrete index
@@ -122,6 +189,15 @@ namespace cba {
 			return index < other.index;
 		}
 
+		bool isConcrete() const {
+			return concrete;
+		}
+
+		std::uint64_t getIndex() const {
+			assert(isConcrete());
+			return index;
+		}
+
 	protected:
 
 		virtual std::ostream& printTo(std::ostream& out) const {
@@ -130,6 +206,13 @@ namespace cba {
 		}
 
 	};
+
+	/**
+	 * Adds hashing support for the single index class.
+	 */
+	inline std::size_t hash_value(const SingleIndex& index) {
+		return (index.isConcrete()) ? std::hash<std::uint64_t>()(index.getIndex()) : 743;
+	}
 
 
 } // end namespace cba
