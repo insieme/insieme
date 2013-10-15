@@ -134,11 +134,6 @@ namespace cba {
 			Entry(DataManager<ElementType>& mgr, std::size_t hash) : mgr(mgr), hash(hash), equality_class(0) {}
 			virtual ~Entry() {};
 
-			// the equality operator is operating on the structural equality - equal to the hash
-			virtual bool operator==(const DerivedType& other) const =0;
-
-			// a less-than operator regarding the structural equality - compatible to the hash and == operator
-			virtual bool operator<(const DerivedType& other) const =0;
 		};
 
 		template<typename ElementType, typename DerivedType>
@@ -153,16 +148,21 @@ namespace cba {
 			set_type data;
 
 			SetEntry(DataManager<ElementType>& mgr, const set_type& data)
-				: Entry<ElementType, SetEntry<ElementType>>(mgr, hash_set(data)), data(data) {}
+				: Entry<ElementType, SetEntry<ElementType>>(mgr, hash_set(data)), data(data) {
+				assert(!data.empty());
+				assert(!any(data, [](const Element<ElementType>& cur) { return cur.empty(); }));
+			}
 
 			SetEntry(DataManager<ElementType>& mgr, std::size_t hash, const set_type& data)
 				: Entry<ElementType, SetEntry<ElementType>>(mgr, hash), data(data) {
 				assert_eq(hash, hash_set(data)) << "Hashes not matching!";
+				assert(!data.empty());
+				assert(!any(data, [](const Element<ElementType>& cur) { return cur.empty(); }));
 			}
 
 			virtual ~SetEntry() {};
 
-			virtual bool operator==(const SetEntry<ElementType>& other) const {
+			bool operator==(const SetEntry<ElementType>& other) const {
 				// important: only structural equivalence
 				return this == &other || (this->hash == other.hash && data == other.data);
 			}
@@ -171,7 +171,7 @@ namespace cba {
 				return data == other;
 			}
 
-			virtual bool operator<(const SetEntry<ElementType>& other) const {
+			bool operator<(const SetEntry<ElementType>& other) const {
 				return this != &other && data < other.data;
 			}
 
@@ -189,6 +189,14 @@ namespace cba {
 			ElementEntry(DataManager<ElementType>& mgr, std::size_t hash)
 				: Entry<ElementType, ElementEntry<ElementType>>(mgr, hash) {}
 
+			// the equality operator is operating on the structural equality - equal to the hash
+			virtual bool operator==(const ElementEntry<ElementType>& other) const =0;
+
+			// a less-than operator regarding the structural equality - compatible to the hash and == operator
+			virtual bool operator<(const ElementEntry<ElementType>& other) const =0;
+
+			// check whether this element represents an empty cross-product
+			virtual bool empty() const =0;
 		};
 
 		template<typename ElementType>
@@ -217,6 +225,10 @@ namespace cba {
 
 			virtual bool operator<(const ElementEntry<ElementType>& other) const {
 				return this != &other && data < cast(other).data;
+			}
+
+			virtual bool empty() const {
+				return false;
 			}
 
 		protected:
@@ -261,6 +273,10 @@ namespace cba {
 
 			virtual bool operator<(const ElementEntry<ElementType>& other) const {
 				return this != &other && data < cast(other).data;
+			}
+
+			virtual bool empty() const {
+				return data.empty() || any(data, [](const typename map_type::value_type& cur) { return cur.second.empty(); });
 			}
 
 		protected:
@@ -313,6 +329,9 @@ namespace cba {
 		}
 
 		Data<ElementType> set(const std::set<Element<ElementType>>& elements) {
+
+			// handle empty sets
+			if (elements.empty()) return Data<ElementType>();
 
 			// compute hash
 			std::size_t hash = hash_set(elements);
@@ -412,6 +431,10 @@ namespace cba {
 			return (data) ? (*data < *other.data) : (other.data == nullptr);
 		}
 
+		bool empty() const {
+			return !data;
+		}
+
 		Data merge(const Data<ElementType>& other) const {
 
 			// handle empty sets
@@ -464,6 +487,10 @@ namespace cba {
 			return *data < *other.data;
 		}
 
+		bool empty() const {
+			return data->empty();
+		}
+
 		DataManager<ElementType>& getManager() const {
 			return data->mgr;
 		}
@@ -503,13 +530,18 @@ namespace cba {
 	Data<ElementType> setDiff(const Data<ElementType>& a, const Data<ElementType>& b);
 
 	template<typename ElementType>
-	bool empty(const Data<ElementType>& a);
+	bool empty(const Data<ElementType>& a) {
+		return a.empty();
+	}
 
 	template<typename ElementType>
 	bool isSubset(const Data<ElementType>& sub, const Data<ElementType>& super);
 
 	template<typename ElementType>
-	bool isEqual(const Data<ElementType>& a, const Data<ElementType>& b);
+	bool isEqual(const Data<ElementType>& a, const Data<ElementType>& b) {
+		// TODO: form equality classes here!
+		return a == b || (isSubset(a,b) && isSubset(b,a));
+	}
 
 
 } // end namespace cba

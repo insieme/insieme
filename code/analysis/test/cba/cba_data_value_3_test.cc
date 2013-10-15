@@ -95,6 +95,12 @@ namespace cba {
 		// check pointer-equality
 		EXPECT_EQ(mgr.set(e0,e1).getPtr(), mgr.set(e1,e0).getPtr());
 
+		// empty check
+		EXPECT_TRUE(Data().empty());
+		EXPECT_TRUE(mgr.set().empty());
+
+		EXPECT_FALSE(mgr.set(e0).empty());
+		EXPECT_FALSE(mgr.set(e0,e1).empty());
 	}
 
 
@@ -138,6 +144,34 @@ namespace cba {
 		);
 
 		EXPECT_EQ("[a={1,2},b={0,2}]", toString(d));
+
+		// empty check
+		EXPECT_FALSE(d.empty());
+
+		EXPECT_FALSE(mgr.compound(
+				entry(NominalIndex("a"), mgr.set(e1,e2)),
+				entry(NominalIndex("b"), mgr.set(e0,e2))
+		).empty());
+
+		EXPECT_TRUE(mgr.compound(
+				entry(NominalIndex("a"), mgr.set()),
+				entry(NominalIndex("b"), mgr.set(e0,e2))
+		).empty());
+
+		EXPECT_TRUE(mgr.compound(
+				entry(NominalIndex("a"), mgr.set(e1,e2)),
+				entry(NominalIndex("b"), mgr.set())
+		).empty());
+
+		EXPECT_TRUE(mgr.compound(
+				entry(NominalIndex("a"), mgr.set()),
+				entry(NominalIndex("b"), mgr.set())
+		).empty());
+
+		m1.clear();
+		EXPECT_TRUE(mgr.compound(m1).empty());
+
+
 	}
 
 
