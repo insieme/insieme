@@ -48,6 +48,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -324,13 +325,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	return retTy;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DECLTYPE TYPE (TODO) -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
-	assert(false && "DeclType not supported");
-	return core::TypePtr();
-}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                 AUTO TYPE -- a CXX0x feature
@@ -349,7 +343,25 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     return retTy;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					DECLTYPE TYPE -- a CXX0x feature
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/**
+ * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations. 
+ *	   If you just need the type for a variable that you are about to initialize auto is often a simpler choice. 
+ *	   You really need decltype if you need a type for something that is not a variable, such as a return type. 
+ */
+core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
+	core::TypePtr retTy;
+    LOG_TYPE_CONVERSION( declTy, retTy );
+	assert(declTy->getUnderlyingExpr());
+	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
+	return retTy;
+}
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                 post convertion action for functions
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
 
 	// now attach meta-info (only for record type definitios)
@@ -484,6 +496,9 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	core::setMetaInfo(irAliasType, core::merge(classInfo, core::getMetaInfo(irAliasType)));
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			The visitor itself
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);

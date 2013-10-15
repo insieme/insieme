@@ -60,5 +60,15 @@ int main(int argc, char** argv) {
 	}
 
 	printf("Iterations: %d\n", cnt);
+
+	int q=0;
+	int w = 10;
+	for( q = 1; q+1 < w; ++q) {
+		cnt++;
+	}
+
+	printf("Iterations: %d\n", cnt);
+
+
 	return 0;
 }

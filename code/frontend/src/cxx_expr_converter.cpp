@@ -316,7 +316,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
-
 	const core::IRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
@@ -334,7 +333,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
-	if (callExpr->isElidable () && ctorDecl->isCopyConstructor()){
+	if (callExpr->isElidable () && (ctorDecl->isCopyConstructor() || ctorDecl->isMoveConstructor())){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
@@ -866,6 +865,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 	return retIr;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//			C++ 11
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //			Cxx11 lambda expression
 //		we could convert the body, encapsulate it into a function and pas all the captures
@@ -920,6 +926,21 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::L
 
 	return retIr;
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			Cxx11 null pointer
+//	Cxx11 introduces a null pointer value called nullptr, it avoid typing problems
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNullPtrLiteralExpr		(const clang::CXXNullPtrLiteralExpr* nullPtrExpr){
+    core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(nullPtrExpr, retIr);
+	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullPtrExpr));
+	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
+	return (retIr = builder.refReinterpret(BASIC.getRefNull(), type));
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically
