@@ -107,6 +107,11 @@ int irt_thread_join(irt_thread *t){
 
 void irt_thread_exit(int exit_code){
 	ExitThread(exit_code);
+}  
+
+void irt_thread_yield()
+{
+	IRT_WARN("irt_thread_yield empty implementation");
 }
 
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){

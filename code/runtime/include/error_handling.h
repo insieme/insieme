@@ -90,13 +90,13 @@ struct _irt_error {
 		fprintf(stderr, /*__message "\n", ##*/__VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); \
 	}
 	#define IRT_INFO(__message, ...) { \
-		printf(__message, ##__VA_ARGS__); fflush(stdout); \
+		sys_printf(__message, ##__VA_ARGS__); fflush(stdout); \
 	}
 	#ifdef IRT_VERBOSE
 	#define IRT_DEBUG_ONLY(__code__) __code__
 	#define IRT_DEBUG(/*__message,*/ ...) { \
-		printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-		printf(/*__message "\n", ##*/__VA_ARGS__); printf("\n"); fflush(stdout); \
+		sys_printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
+		sys_printf(/*__message "\n", ##*/__VA_ARGS__); sys_printf("\n"); fflush(stdout); \
 	}
 	#else
 	#define IRT_DEBUG_ONLY(__code__)

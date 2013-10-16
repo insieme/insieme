@@ -93,6 +93,9 @@ inline int irt_thread_join(irt_thread *t);
 /** exit a thread with specified exit code */
 inline void irt_thread_exit(int exit_code);
 
+/** calling thread relinquishes the CPU */
+inline void irt_thread_yield();
+
 /** check if two thread objects are equal */
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2);
 

@@ -42,50 +42,84 @@ void lwt_continue_impl(irt_work_item *wi, wi_implementation_func* func, intptr_t
 	lwt_continue_impl_asm(wi, func, newstack, basestack);
 }
 
+#define LWT_STACK_SIZE  64
+#define LWT_STACK_POS_R0 (LWT_STACK_SIZE - 4)
+#define LWT_STACK_POS_R1 (LWT_STACK_SIZE - 8)
+#define LWT_STACK_POS_R2 (LWT_STACK_SIZE - 12)
+#define LWT_STACK_POS_R3 (LWT_STACK_SIZE - 16)
+#define LWT_STACK_POS_R4 (LWT_STACK_SIZE - 20)
+#define LWT_STACK_POS_R5 (LWT_STACK_SIZE - 24)
+#define LWT_STACK_POS_R15 (LWT_STACK_SIZE - 28)
+#define LWT_STACK_POS_R6 (LWT_STACK_SIZE - 32)
+#define LWT_STACK_POS_R7 (LWT_STACK_SIZE - 36)
+#define LWT_STACK_POS_R8 (LWT_STACK_SIZE - 40)
+#define LWT_STACK_POS_R9 (LWT_STACK_SIZE - 44)
+#define LWT_STACK_POS_R10 (LWT_STACK_SIZE - 48)
+#define LWT_STACK_POS_R11 (LWT_STACK_SIZE - 52)
+#define LWT_STACK_POS_R12 (LWT_STACK_SIZE - 56)
+#define LWT_STACK_POS_R13 (LWT_STACK_SIZE - 60)
+
+
 // TODO [_GEMS]: remove useless nops 
 asm void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) {
 	
 	; /* push caller saved registers (r0-r5) on stack (r14 = SP) */
 	
-	add r14, -28
+	add r14, -LWT_STACK_SIZE; 
 	nop;
-	sw r0, r14, 24;
-	sw r1, r14, 20;
-	sw r2, r14, 16;
-	sw r3, r14, 12;
-	sw r4, r14,  8;
-	sw r5, r14,  4;
-	
+	sw r0, r14, LWT_STACK_POS_R0;
+	sw r1, r14, LWT_STACK_POS_R1;
+	sw r2, r14, LWT_STACK_POS_R2;
+	sw r3, r14, LWT_STACK_POS_R3;
+	sw r4, r14, LWT_STACK_POS_R4;
+	sw r5, r14, LWT_STACK_POS_R5;
+	sw r6, r14, LWT_STACK_POS_R6;
+	sw r7, r14, LWT_STACK_POS_R7;
+	sw r8, r14, LWT_STACK_POS_R8;
+	sw r9, r14, LWT_STACK_POS_R9;
+	sw r10, r14, LWT_STACK_POS_R10;
+	sw r11, r14, LWT_STACK_POS_R11;
+	sw r12, r14, LWT_STACK_POS_R12;
+	sw r13, r14, LWT_STACK_POS_R13;
+
 	; /* push LinkRegister (r15) on the stack (r14 = SP) */
-	
-	sw r15, r14, 0;
+
+	sw r15, r14, LWT_STACK_POS_R15;
 	nop;
-	
+
 	; /* swap stacks */
-	
+
 	sw r14, r3;
 	lw r14, r2;
-	
+
 	; /* call function if func != NULL */
-	
+
 	cmpeq r1, 0;
 	bcc ($+3); /* +1 to skip the branch, +1 to skip the nop (branch delay slot) and finally +1 to skip the call*/
 	nop;
 	call __irt_wi_trampoline; /* r0 still has wi, r1 still has func, so just call */
 	nop;
-	
+
 	; /* restore registers for other coroutine */
-	
-	lw r0, r14,  24;
-	lw r1, r14,  20;
-	lw r2, r14,  16;
-	lw r3, r14,  12;
-	lw r4, r14,   8;
-	lw r5, r14,   4;
-	lw r15, r14,  0;
+
+	lw r0, r14, LWT_STACK_POS_R0;
+	lw r1, r14, LWT_STACK_POS_R1;
+	lw r2, r14, LWT_STACK_POS_R2;
+	lw r3, r14, LWT_STACK_POS_R3;
+	lw r4, r14, LWT_STACK_POS_R4;
+	lw r5, r14, LWT_STACK_POS_R5;
+	lw r15, r14, LWT_STACK_POS_R15;
+	lw r6, r14, LWT_STACK_POS_R6;
+	lw r7, r14, LWT_STACK_POS_R7;
+	lw r8, r14, LWT_STACK_POS_R8;
+	lw r9, r14, LWT_STACK_POS_R9;
+	lw r10, r14, LWT_STACK_POS_R10;
+	lw r11, r14, LWT_STACK_POS_R11;
+	lw r12, r14, LWT_STACK_POS_R12;
+	lw r13, r14, LWT_STACK_POS_R13;
 	nop;
-	
+
 	b r15;
-	add r14, 28;
+	add r14, LWT_STACK_SIZE;
 }
 

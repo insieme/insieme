@@ -185,6 +185,7 @@ void irt_wg_barrier_busy(irt_work_group* wg) {
 		while(wg->tot_barrier_count == pre_barrier_count) {
 			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
 			irt_busy_ticksleep(1000);
+			irt_thread_yield();
 		}
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
 	}

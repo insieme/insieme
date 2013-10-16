@@ -72,7 +72,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 	if(_irt_sched_check_ipc_queue(self))
 		return 1;
 	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems 
-	pthread_yield();
+	irt_thread_yield();
 
 	return 0;
 }

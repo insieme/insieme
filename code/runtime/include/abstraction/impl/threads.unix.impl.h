@@ -83,6 +83,10 @@ void irt_thread_exit(int exit_code){
 	pthread_exit(&exit_code);
 }
 
+void irt_thread_yield() {
+	pthread_yield();
+}
+
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 	#ifdef _WIN32
 		return t1->p == t2->p;
@@ -119,13 +123,7 @@ void irt_mutex_destroy(irt_mutex_obj *m) {
 }
 
 void irt_cond_wake_all(irt_cond_var *cv) {
-#ifdef _GEMS
-	// TODO [_GEMS]: missing implementation of pthread_cond_broadcast
-	// it is only needed when workers sleeping mode is active
-	IRT_WARN("irt_cond_wake_all empty implementation\n");
-#else
 	pthread_cond_broadcast(cv);
-#endif
 }
 
 int irt_cond_wait(irt_cond_var *cv, irt_mutex_obj *m) {
