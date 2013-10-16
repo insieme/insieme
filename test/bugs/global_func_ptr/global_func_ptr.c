@@ -2,9 +2,13 @@
 void func() {
 	printf("func()\n");
 }
-void (*fp)() = func;
+void (*gfp)() = func;
 
 int main() {
+	void (*fp)() = func;
+
+	(*gfp)();
 	(*fp)();
+	(gfp)();
 	(fp)();
 }
