@@ -73,6 +73,13 @@ namespace cba {
 			// elements need to be hashable (for boost)
 			hash_value(a);
 			EXPECT_EQ(hash_value(a), hash_value(b));
+
+			// any index has to over a cross operator
+			std::map<T,int> mA, mB;
+			std::set<T> x = cross(mA, mB);		// only need to compile => rest is checked by individual tests
+
+			// and a extract operator
+			std::vector<int> d = extract(mA, a); // only need to compile => rest is checked by individual tests
 		}
 
 
@@ -123,6 +130,25 @@ namespace cba {
 		EXPECT_EQ(a.hash(), c.hash());
 		EXPECT_NE(b.hash(), c.hash());
 
+
+		// check operators
+		std::map<NominalIndex, int> mA;
+		mA[a] = 3;
+
+		std::map<NominalIndex, int> mB;
+		mB[b] = 5;
+
+		// check the cross operator
+		EXPECT_EQ("{a}", toString(cross(mA, mA)));
+		EXPECT_EQ("{a,b}", toString(cross(mA, mB)));
+		EXPECT_EQ("{b}", toString(cross(mB, mB)));
+
+		// check the extract operator
+		EXPECT_EQ("[3]", toString(extract(mA, a)));
+		EXPECT_EQ("[]", toString(extract(mA, b)));
+		EXPECT_EQ("[]", toString(extract(mB, a)));
+		EXPECT_EQ("[5]", toString(extract(mB, b)));
+
 	}
 
 	TEST(CBA, UnitIndex) {
@@ -140,6 +166,20 @@ namespace cba {
 		EXPECT_EQ("*", toString(a));
 		EXPECT_EQ(a,b);
 
+		// check operators
+		std::map<UnitIndex, int> mA;
+		mA[a] = 3;
+
+		std::map<UnitIndex, int> mB;
+
+		// check the cross operator
+		EXPECT_EQ("{*}", toString(cross(mA, mA)));
+		EXPECT_EQ("{*}", toString(cross(mA, mB)));
+		EXPECT_EQ("{}", toString(cross(mB, mB)));
+
+		// check the extract operator
+		EXPECT_EQ("[3]", toString(extract(mA, a)));
+		EXPECT_EQ("[]", toString(extract(mB, a)));
 	}
 
 	TEST(CBA, SingleIndex) {
@@ -162,6 +202,31 @@ namespace cba {
 		EXPECT_LT(i1,i2);
 		EXPECT_LT(i1,is);
 		EXPECT_LT(i2,is);
+
+		// check operators
+		std::map<SingleIndex, int> mA;
+		mA[i1] = 3;
+
+		std::map<SingleIndex, int> mB;
+		mB[i2] = 5;
+		mB[is] = 7;
+
+		EXPECT_EQ("{1=3}", toString(mA));
+		EXPECT_EQ("{2=5, *=7}", toString(mB));
+
+		// check the cross operator
+		EXPECT_EQ("{1}", toString(cross(mA, mA)));
+		EXPECT_EQ("{1,2,*}", toString(cross(mA, mB)));
+		EXPECT_EQ("{2,*}", toString(cross(mB, mB)));
+
+		// check the extract operator
+		EXPECT_EQ("[3]", toString(extract(mA, i1)));
+		EXPECT_EQ("[]", toString(extract(mA, i2)));
+		EXPECT_EQ("[]", toString(extract(mA, is)));
+
+		EXPECT_EQ("[7]", toString(extract(mB, i1)));
+		EXPECT_EQ("[5]", toString(extract(mB, i2)));
+		EXPECT_EQ("[7]", toString(extract(mB, is)));
 	}
 
 

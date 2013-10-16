@@ -93,10 +93,6 @@ namespace cba {
 			return name < other.name;
 		}
 
-//		NominalIndex& operator=(const NominalIndex& other) {
-//			return *new (this) NominalIndex(other.name);
-//		}
-
 		std::size_t hash() const {
 			return hashCode;
 		}
@@ -114,6 +110,35 @@ namespace cba {
 	 */
 	inline std::size_t hash_value(const NominalIndex& index) {
 		return index.hash();
+	}
+
+	/**
+	 * The cross operator computing the ranges to be included when combining two indexed structures.
+	 */
+	template<typename E>
+	std::set<NominalIndex> cross(const std::map<NominalIndex, E>& mapA, const std::map<NominalIndex, E>& mapB) {
+		std::set<NominalIndex> res;
+		for(const auto& cur : mapA) {
+			res.insert(cur.first);
+		}
+		for(const auto& cur : mapB) {
+			res.insert(cur.first);
+		}
+		return res;
+	}
+
+	/**
+	 * The extract operator obtaining the values for a given index within a map (the index might not be present or
+	 * explicitly covered).
+	 */
+	template<typename E>
+	std::vector<E> extract(const std::map<NominalIndex, E>& map, const NominalIndex& i) {
+		// check whether the requested index is present
+		auto pos = map.find(i);
+		if (pos != map.end()) {
+			return toVector(pos->second);
+		}
+		return toVector<E>();	// no data present
 	}
 
 	// -------------------------------------------------------------------------------------------------
@@ -150,6 +175,30 @@ namespace cba {
 	 */
 	inline std::size_t hash_value(const UnitIndex& index) {
 		return 0;	// all the same
+	}
+
+	/**
+	 * The cross operator computing the ranges to be included when combining two indexed structures.
+	 */
+	template<typename E>
+	const std::set<UnitIndex>& cross(const std::map<UnitIndex, E>& mapA, const std::map<UnitIndex, E>& mapB) {
+		static const std::set<UnitIndex> empty;
+		static const std::set<UnitIndex> single = utils::set::toSet<std::set<UnitIndex>>(UnitIndex());
+		return (mapA.empty() && mapB.empty()) ? empty : single;
+	}
+
+	/**
+	 * The extract operator obtaining the values for a given index within a map (the index might not be present or
+	 * explicitly covered).
+	 */
+	template<typename E>
+	std::vector<E> extract(const std::map<UnitIndex, E>& map, const UnitIndex& i) {
+		// check whether the requested index is present
+		auto pos = map.find(i);
+		if (pos != map.end()) {
+			return toVector(pos->second);
+		}
+		return toVector<E>();	// no data present
 	}
 
 	/**
@@ -214,6 +263,42 @@ namespace cba {
 		return (index.isConcrete()) ? std::hash<std::uint64_t>()(index.getIndex()) : 743;
 	}
 
+	/**
+	 * The cross operator computing the ranges to be included when combining two indexed structures.
+	 */
+	template<typename E>
+	std::set<SingleIndex> cross(const std::map<SingleIndex, E>& mapA, const std::map<SingleIndex, E>& mapB) {
+		std::set<SingleIndex> res;
+		for(const auto& cur : mapA) {
+			res.insert(cur.first);
+		}
+		for(const auto& cur : mapB) {
+			res.insert(cur.first);
+		}
+		return res;
+	}
+
+	/**
+	 * The extract operator obtaining the values for a given index within a map (the index might not be present or
+	 * explicitly covered).
+	 */
+	template<typename E>
+	std::vector<E> extract(const std::map<SingleIndex, E>& map, const SingleIndex& i) {
+		// check whether the requested index is present
+		auto pos = map.find(i);
+		if (pos != map.end()) {
+			return toVector(pos->second);
+		}
+
+		// otherwise check whether the * element is present
+		pos = map.find(SingleIndex());
+		if (pos != map.end()) {
+			return toVector(pos->second);
+		}
+
+		// no data present
+		return toVector<E>();
+	}
 
 } // end namespace cba
 } // end namespace analysis
