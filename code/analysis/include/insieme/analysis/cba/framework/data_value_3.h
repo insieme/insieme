@@ -67,29 +67,29 @@ namespace cba {
 
 	// some forward declarations
 	template<typename ElementType> class DataManager;
-	template<typename ElementType> class Data;
+	template<typename ElementType> class Set;
 	template<typename ElementType> class Element;
 
 
 	// some forward declarations of operations
 
 	template<typename ElementType>
-	Data<ElementType> setUnion(const Data<ElementType>& a, const Data<ElementType>& b);
+	Set<ElementType> setUnion(const Set<ElementType>& a, const Set<ElementType>& b);
 
 	template<typename ElementType>
-	Data<ElementType> setIntersect(const Data<ElementType>& a, const Data<ElementType>& b);
+	Set<ElementType> setIntersect(const Set<ElementType>& a, const Set<ElementType>& b);
 
 	template<typename ElementType>
-	Data<ElementType> setDiff(const Data<ElementType>& a, const Data<ElementType>& b);
+	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
 
 	template<typename ElementType>
-	bool empty(const Data<ElementType>& a);
+	bool empty(const Set<ElementType>& a);
 
 	template<typename ElementType>
-	bool isSubset(const Data<ElementType>& sub, const Data<ElementType>& super);
+	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
 
 	template<typename ElementType>
-	bool isEqual(const Data<ElementType>& a, const Data<ElementType>& b);
+	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b);
 
 
 	// -------------------------------------------------------------------------------------------------
@@ -112,9 +112,9 @@ namespace cba {
 			}
 
 			template<typename IndexType, typename ElementType>
-			std::size_t hash_map(const std::map<IndexType, Data<ElementType>>& map) {
+			std::size_t hash_map(const std::map<IndexType, Set<ElementType>>& map) {
 				std::size_t hash = 0;
-				for(const std::pair<IndexType, Data<ElementType>>& cur : map) {
+				for(const std::pair<IndexType, Set<ElementType>>& cur : map) {
 					hash += utils::combineHashes(cur.first, cur.second);
 				}
 				return hash;
@@ -197,6 +197,9 @@ namespace cba {
 
 			// check whether this element represents an empty cross-product
 			virtual bool empty() const =0;
+
+			// implement the intersection between two element entries
+			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const =0;
 		};
 
 		template<typename ElementType>
@@ -231,6 +234,11 @@ namespace cba {
 				return false;
 			}
 
+			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
+				// unless equal, the result is empty
+				return (*this == other) ? this : nullptr;
+			}
+
 		protected:
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -249,7 +257,7 @@ namespace cba {
 		template<typename IndexType, typename ElementType>
 		struct CompoundEntry : public ElementEntry<ElementType> {
 
-			typedef std::map<IndexType, Data<ElementType>> map_type;
+			typedef std::map<IndexType, Set<ElementType>> map_type;
 			const map_type data;
 
 			CompoundEntry(DataManager<ElementType>& mgr, const map_type& data)
@@ -279,6 +287,37 @@ namespace cba {
 				return data.empty() || any(data, [](const typename map_type::value_type& cur) { return cur.second.empty(); });
 			}
 
+			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
+				const static ElementEntry<ElementType>* empty = nullptr;
+				// the other element has to be of the same type
+				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
+
+				// check equality
+				if (*this == other) return this;
+
+				// cast type
+				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
+
+				// intersect all elements
+				std::map<IndexType, Set<ElementType>> res;
+				for(const IndexType& cur : cross(data, b.data)) {
+
+					// extract sets of both sides and intersect those
+					Set<ElementType> sA = setUnion(extract(data, cur));
+					Set<ElementType> sB = setUnion(extract(b.data, cur));
+
+					// intersect element sets
+					Set<ElementType> r = setIntersect(sA, sB);
+
+					// check whether it is empty (we can stop in this case)
+					if (r.empty()) return empty;
+					res[cur] = r;
+				}
+
+				// build result
+				return this->mgr.compound(res).getPtr();
+			}
+
 		protected:
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -298,7 +337,7 @@ namespace cba {
 	}
 
 	template<typename IndexType, typename ElementType>
-	std::pair<IndexType, Data<ElementType>> entry(const IndexType& i, const Data<ElementType>& e) {
+	std::pair<IndexType, Set<ElementType>> entry(const IndexType& i, const Set<ElementType>& e) {
 		return std::make_pair(i, e);
 	}
 
@@ -328,10 +367,10 @@ namespace cba {
 			}
 		}
 
-		Data<ElementType> set(const std::set<Element<ElementType>>& elements) {
+		Set<ElementType> set(const std::set<Element<ElementType>>& elements) {
 
 			// handle empty sets
-			if (elements.empty()) return Data<ElementType>();
+			if (elements.empty()) return Set<ElementType>();
 
 			// compute hash
 			std::size_t hash = hash_set(elements);
@@ -351,7 +390,7 @@ namespace cba {
 		}
 
 		template<typename ... Elements>
-		Data<ElementType> set(const Elements& ... elements) {
+		Set<ElementType> set(const Elements& ... elements) {
 			return set(utils::set::toSet<std::set<Element<ElementType>>>(elements...));
 		}
 
@@ -375,7 +414,7 @@ namespace cba {
 		}
 
 		template<typename IndexType>
-		Element<ElementType> compound(const std::map<IndexType, Data<ElementType>>& map) {
+		Element<ElementType> compound(const std::map<IndexType, Set<ElementType>>& map) {
 
 			// compute hash
 			std::size_t hash = hash_map(map);
@@ -397,7 +436,7 @@ namespace cba {
 		}
 
 		template<typename IndexType, typename ... Elements>
-		Element<ElementType> compound(const std::pair<IndexType, Data<ElementType>>& first, const Elements& ... elements) {
+		Element<ElementType> compound(const std::pair<IndexType, Set<ElementType>>& first, const Elements& ... elements) {
 			return compound(utils::map::toMap(first, elements ...));
 		}
 
@@ -405,29 +444,29 @@ namespace cba {
 
 
 	template<typename ElementType>
-	class Data :
-			public boost::equality_comparable<Data<ElementType>>,
-			public boost::partially_ordered<Data<ElementType>> {
+	class Set :
+			public boost::equality_comparable<Set<ElementType>>,
+			public boost::partially_ordered<Set<ElementType>> {
 
-		typedef SetEntry<ElementType>* ptr_type;
+		typedef const SetEntry<ElementType>* ptr_type;
 		ptr_type data;
 
 	public:
 
-		Data(ptr_type ptr = nullptr) : data(ptr) {}
+		Set(ptr_type ptr = nullptr) : data(ptr) {}
 
-		Data(const Element<ElementType>& cur)
+		Set(const Element<ElementType>& cur)
 			: data(cur.getPtr()->mgr.set(cur).data) {}
 
 		ptr_type getPtr() const {
 			return data;
 		}
 
-		bool operator==(const Data<ElementType>& other) const {
+		bool operator==(const Set<ElementType>& other) const {
 			return data == other.data || (data && other.data && *data == *other.data);
 		}
 
-		bool operator<(const Data<ElementType>& other) const {
+		bool operator<(const Set<ElementType>& other) const {
 			return (data) ? (*data < *other.data) : (other.data == nullptr);
 		}
 
@@ -435,7 +474,7 @@ namespace cba {
 			return !data;
 		}
 
-		Data merge(const Data<ElementType>& other) const {
+		Set merge(const Set<ElementType>& other) const {
 
 			// handle empty sets
 			if (!data) return other;
@@ -445,6 +484,31 @@ namespace cba {
 			std::set<Element<ElementType>> sum = data->data;
 			sum.insert(other.data->data.begin(), other.data->data.end());
 			return getManager().set(sum);
+		}
+
+		Set intersect(const Set<ElementType>& other) const {
+
+			// if sets are equivalent, the result is the set itself
+			if (*this == other) return other;
+
+			// if one set is empty, the result is empty
+			if (empty()) return *this;
+			if (other.empty()) return other;
+
+			// otherwise we have to compute the intersection
+			//  - since the elements represent sets, we have to intersect each element of
+			//	  this set with every element of the other set and collect the resulting non-empty pieces
+
+			std::set<Element<ElementType>> res;
+			for(const Element<ElementType>& a : data->data) {
+				for(const Element<ElementType>& b : other.data->data) {
+					Element<ElementType> i = a.intersect(b);
+					if (!i.empty()) res.insert(i);
+				}
+			}
+
+			// return intersected set
+			return getManager().set(res);
 		}
 
 		DataManager<ElementType>& getManager() const {
@@ -460,7 +524,7 @@ namespace cba {
 	 * Adds hashing support for the data facade.
 	 */
 	template<typename ElementType>
-	inline std::size_t hash_value(const Data<ElementType>& data) {
+	inline std::size_t hash_value(const Set<ElementType>& data) {
 		return data.hash();
 	}
 
@@ -468,27 +532,31 @@ namespace cba {
 	template<typename ElementType>
 	class Element :
 			public boost::equality_comparable<Element<ElementType>>,
-			public boost::partially_ordered<Data<ElementType>> {
+			public boost::partially_ordered<Set<ElementType>> {
 
-		typedef ElementEntry<ElementType>* ptr_type;
+		typedef const ElementEntry<ElementType>* ptr_type;
 		ptr_type data;
 
 	public:
 
-		Element(ptr_type ptr) : data(ptr) {
-			assert_true(data) << "This pointer must not be null!";
+		Element(ptr_type ptr = nullptr) : data((!ptr || ptr->empty()) ? nullptr : ptr) {
+			assert_true(!data || !data->empty()) << "Pointer must be null or not empty!";
 		}
 
 		bool operator==(const Element<ElementType>& other) const {
-			return data == other.data || *data == *other.data;
+			return data == other.data || (data && other.data && *data == *other.data);
 		}
 
 		bool operator<(const Element<ElementType>& other) const {
-			return *data < *other.data;
+			return (data) ? (*data < *other.data) : (other.data == nullptr);
 		}
 
 		bool empty() const {
-			return data->empty();
+			return !data;
+		}
+
+		Element<ElementType> intersect(const Element<ElementType>& other) const {
+			return data->intersect(*other.data);
 		}
 
 		DataManager<ElementType>& getManager() const {
@@ -519,26 +587,35 @@ namespace cba {
 	// -------------------------------------------------------------------------------------------------
 
 	template<typename ElementType>
-	Data<ElementType> setUnion(const Data<ElementType>& a, const Data<ElementType>& b) {
+	Set<ElementType> setUnion(const Set<ElementType>& a, const Set<ElementType>& b) {
 		return a.merge(b);
 	}
 
 	template<typename ElementType>
-	Data<ElementType> setIntersect(const Data<ElementType>& a, const Data<ElementType>& b);
+	Set<ElementType> setUnion(const std::vector<Set<ElementType>>& list) {
+		Set<ElementType> res;
+		for(const auto& cur : list) res = setUnion(res, cur);
+		return res;
+	}
 
 	template<typename ElementType>
-	Data<ElementType> setDiff(const Data<ElementType>& a, const Data<ElementType>& b);
+	Set<ElementType> setIntersect(const Set<ElementType>& a, const Set<ElementType>& b) {
+		return a.intersect(b);
+	}
 
 	template<typename ElementType>
-	bool empty(const Data<ElementType>& a) {
+	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
+
+	template<typename ElementType>
+	bool empty(const Set<ElementType>& a) {
 		return a.empty();
 	}
 
 	template<typename ElementType>
-	bool isSubset(const Data<ElementType>& sub, const Data<ElementType>& super);
+	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
 
 	template<typename ElementType>
-	bool isEqual(const Data<ElementType>& a, const Data<ElementType>& b) {
+	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b) {
 		// TODO: form equality classes here!
 		return a == b || (isSubset(a,b) && isSubset(b,a));
 	}
@@ -551,7 +628,7 @@ namespace cba {
 namespace std {
 
 	template<typename ElementType>
-	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Data<ElementType>& data) {
+	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Set<ElementType>& data) {
 		if (data.getPtr() == nullptr) return out << "{}";
 		return out << *data.getPtr();
 	}
