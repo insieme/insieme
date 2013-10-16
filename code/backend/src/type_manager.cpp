@@ -743,8 +743,13 @@ namespace backend {
 				auto impl = cur.getImplementation();
 				if (!core::analysis::isPureVirtual(impl)) {
 
+					// might be than there is no implementation for the function? 
+					// what about ignoring it and allow backend compiler to synthetize it?
+					if(impl.isa<core::LiteralPtr>())
+						continue;
+
 					// generate code for member function
-					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
 
 				} else {
 
