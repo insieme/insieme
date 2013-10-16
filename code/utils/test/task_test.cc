@@ -187,7 +187,7 @@ namespace utils {
 //		}
 //		EXPECT_EQ(v,4);
 //
-		insieme::utils::TaskManager::finalize();
+//		insieme::utils::TaskManager::finalize();
 	}
 } // end namespace analysis
 } // end namespace insieme
