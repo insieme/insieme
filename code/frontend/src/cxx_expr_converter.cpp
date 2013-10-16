@@ -903,9 +903,16 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::L
 		// select right ctor by matching parameters with capture types
 		auto paramIt   = (*ctorIt)->param_begin();
 		auto paramEnd  = (*ctorIt)->param_end();
-		int pid;
+		unsigned pid(0);
 		for (;paramIt != paramEnd; ++paramIt){
 			
+			// if the called constructor has less parameters than this one is obviously not the same
+			if (pid >= captures.size()){
+				match = false;
+				break;
+			}
+			
+			// if types mismatch, there is no chance that its the same ctor
 			if (convFact.lookUpVariable(*paramIt)->getType() != captures[pid]->getType()){
 				match = false;
 				break;
@@ -921,6 +928,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::L
 	assert(ctorFunc && "no constructor could be translated for the anonymous lambda class");
 
 	// build the call to the ctor
+	captures.insert (captures.begin(), builder.undefinedVar(builder.refType(lambdaClassIR)));
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 	retIr = builder.callExpr (funcTy.getReturnType(), ctorFunc, captures);
 

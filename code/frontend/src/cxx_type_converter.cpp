@@ -391,28 +391,23 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 	for (; ctorIt != ctorEnd; ctorIt ++){
 		const CXXConstructorDecl* ctorDecl = *ctorIt;
-		if (ctorDecl->isDefaultConstructor() ||
-			ctorDecl->isCopyConstructor() ||
-			ctorDecl->isMoveConstructor() ){
+		if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
 
-			if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
+			// the function is a template spetialization, but if it has no body, we wont
+			// convert it, it was never instanciated
+			if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+					continue;
+			}
 
-				// the function is a template spetialization, but if it has no body, we wont
-				// convert it, it was never instanciated
-				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-						continue;
-				}
-
-				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-				if (ctorLambda){
-					assert(ctorLambda);
-					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
-					// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
-					// by the complete implementation
-					if (!ctorLambda.isa<core::LiteralPtr>()){
-						if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-					}
+			core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+			if (ctorLambda){
+				assert(ctorLambda);
+				ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
+				// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
+				// by the complete implementation
+				if (!ctorLambda.isa<core::LiteralPtr>()){
+					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
+					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
 		}
@@ -441,11 +436,11 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			continue;
 		}
 
-		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME: for now ignore CopyAssignmentOperator
-			// -- backendCompiler should take care of it
-			continue;
-		}
+//		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME: for now ignore CopyAssignmentOperator
+//			// -- backendCompiler should take care of it
+//			continue;
+//		}
 
 //		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
 //			//FIXME for non-userProvided moveAssign ops find solution,
