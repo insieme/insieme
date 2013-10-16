@@ -426,6 +426,10 @@ bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
  */
 bool isStaticVar (const ExpressionPtr& var);
 
+/**
+ * compare given typePtrs, trying to unroll rectypes
+ */
+bool compareTypes(const TypePtr& a, const TypePtr& b);
 
 } // end namespace utils
 } // end namespace core
