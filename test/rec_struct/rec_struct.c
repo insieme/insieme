@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 struct inner_s;
 struct outer_s;
 
@@ -15,8 +14,8 @@ struct outer_s {
 
 int main()
 {
-		struct inner_s i = (struct inner_s){0, 55};
-        struct outer_s o = (struct outer_s){0, 11};
+        struct outer_s o = {0, 11};
+		struct inner_s i;
 
 		o._inner =  &i;
         i._outer =  &o;
