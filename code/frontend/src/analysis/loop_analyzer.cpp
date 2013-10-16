@@ -249,6 +249,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 			// if the variable is declared outside, we must give it a final value afer all iterations
 			if(restoreValue){
+				std::cout << originalInductionExpr << std::endl;
 				core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
 															builder.add(builder.mul(normalizedIterations, stepExpr), initValue));
 				// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
@@ -324,6 +325,10 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 			if (convFact.getIRBuilder().getLangBasic().isScalarCast (call.getFunctionExpr())){
 				originalInductionExpr = call[0]; 
 			}
+		}
+
+		if (!core::analysis::isCallOf(originalInductionExpr, convFact.getNodeManager().getLangBasic().getRefDeref())){
+			throw LoopNormalizationError("could not determine number of iterations, please simply the for loop condition to see it as a for loop");
 		}
 
 		inductionVar =  convFact.getIRBuilder().variable(originalInductionExpr->getType());
@@ -439,7 +444,6 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		auto cond = convFact.convertExpr(binOp);
 		visitDepthFirst(cond, [this, &vars] (const core::VariablePtr& var){ vars.push_back(var);});
 		conditionVars = vars;
-	
 		return;
 	}
 	throw LoopNormalizationError("unable to identify the upper bonduary for this loop");
