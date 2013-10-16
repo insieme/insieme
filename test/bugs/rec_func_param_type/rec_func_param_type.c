@@ -31,9 +31,8 @@ int main()
 
         o.inner =  0;
         o.inner =  &i;
-        //TROUBLEMAKERs
-//        o.inner =  &_inner_static;
-//       o.inner =  &_inner_global;
+        o.inner =  &_inner_static;
+        o.inner =  &_inner_global;
 
 		if(o.inner->func_ptr) {
 			(*o.inner->func_ptr)(NULL);
