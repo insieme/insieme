@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -373,12 +373,18 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	core::TypePtr subType = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);
+
     //it may happen that we have something like 'typedef enum {...} name;'
     //in this case we can forget the annotation
-    if(!mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)) {
+    //typedef name annotation for struct/union messes with recursive type resolution
+    //as typeDef is syntactic sugar drop the name annotation
+    /* 
+    if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)
+		&& !subType.isa<core::StructTypePtr>() && !subType.isa<core::UnionTypePtr>()) {
         // Adding the name of the typedef as annotation
         core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
     }
+    */
     return  subType;
 }
 
@@ -410,7 +416,11 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		return builder.genericType( tagType->getDecl()->getNameAsString() );
+		core::TypePtr retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+		if (!tagType->getDecl()->getNameAsString().empty()) {
+			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
+		}
+        return retTy;
 	}
 
 	// handle enums => always just integers
@@ -445,9 +455,9 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	core::TypePtr retTy = handleTagType(def, structElements);
 
 	// Adding the name of the C struct as annotation
-	if (!recDecl->getName().empty())
+	if (!recDecl->getNameAsString().empty()) {
         core::annotations::attachName(retTy,recDecl->getName());
-
+	}
 	return retTy;
 }
 
@@ -562,7 +572,12 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if (auto recDecl = toRecordDecl(type)) {
 
 		// create a (temporary) type variable for this type
-		core::GenericTypePtr symbol = builder.genericType(utils::getNameForRecord(recDecl, type));
+		string name = utils::getNameForRecord(recDecl, type);
+		core::GenericTypePtr symbol = builder.genericType(name);
+
+		if (!name.empty()) {
+			core::annotations::attachName(symbol,name);
+		}
 
 		// bind recursive variable within the cache
 		cache[type] = symbol;
