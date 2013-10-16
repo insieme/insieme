@@ -8,11 +8,16 @@ typedef struct inner_s {
 } inner_t;
 
 typedef struct outer_s {
-        struct inner_s *_inner;
+        inner_t *_inner;
 } outer_t;
 
+outer_t global = {0};
 int main()
 {
+	{
+		global._inner;
+		global._inner->_outer;
+	}
 	{
 		inner_t i = {0};
         outer_t o = {0};
@@ -37,6 +42,6 @@ int main()
 		o._inner =  &i;
         i._outer =  &o;
 	}
-        return 0;
+	return 0;
 }
 
