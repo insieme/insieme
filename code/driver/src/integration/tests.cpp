@@ -295,7 +295,7 @@ namespace integration {
 
 		// search for case with given name
 		for(auto it = cases.begin(); it != cases.end(); ++it) {
-			if (it->getName() == name) {
+			if (it->getName() == "base/" + name || it->getName() == "ext/" + name) {
 				return *it;
 			}
 		}
