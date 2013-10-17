@@ -35,6 +35,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 
 #define _GLIBCXX_USE_NANOSLEEP
 #include <functional>
@@ -45,32 +47,76 @@
 #include <chrono>
 #include <thread>
 #include <list>
+#include <algorithm>
+#include <memory>
 
 
 namespace insieme {
 namespace utils {
 
+		std::mutex glob_mutex;
+#define GLOBAL_LOCK(x)\
+		{}
+	//{ glob_mutex.lock(); x;  glob_mutex.unlock(); }
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	struct TaskBase {
+	struct TaskBase;
+	typedef std::shared_ptr<TaskBase>  TaskPtr;
 
-		mutable std::vector<TaskBase*> dependencies;
+	struct TaskBase { //: public std::enable_shared_from_this<TaskBase> {
 
+		mutable std::vector<TaskPtr> dependencies;
+
+		static int id_counter;
+		int id;
+		std::mutex running;
 		bool done;
 
-		TaskBase() : done(false) {}
+		TaskBase() : id(id_counter), done(false) { 
+
+			GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " new TASK: " << id <<  " [" << this << "]" << std::endl);
+			id_counter++;
+		}
 
 		virtual ~TaskBase() { };
 
-		TaskBase& operator>>(TaskBase& task) {
-			task.dependencies.push_back(this);
-			return task;
-		}
-
 		virtual void operator()() =0;
+
+		friend class Task;
 	};
+	int TaskBase::id_counter =  0;
+
+
+	class Task{
+		TaskPtr ptr;
+		public:
+			Task( ): ptr(nullptr) {}
+
+			Task( TaskPtr p)
+				: ptr(p){ }
+
+			Task( const  Task& o)
+			: ptr(o.ptr)
+			{ }
+
+			void operator()(){
+				if (ptr) (*ptr)();
+			}
+
+			Task& operator>> ( const Task& b){
+				GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() << " ARRANGE: " << this->ptr->id  <<  " executes before: " << b.ptr->id << std::endl);
+				b.ptr->dependencies.push_back(ptr);
+				return *this;
+			}
+	};
+
+
+
 
 	namespace {
 
@@ -85,7 +131,7 @@ namespace utils {
 		template<>
 		struct apply_tuple<0> {
 			template<typename F, typename T, typename ... Args>
-			static void on( const F& fun, const T& tuple, const Args& ... args ) {
+			static void on( const F& fun, const T&, const Args& ... args ) {
 				fun(args ...);
 			}
 		};
@@ -99,52 +145,75 @@ namespace utils {
 
 	/**
 	 *	its dutty is to get the work done,
-	 *	it should be purelly private, so only tasks can call it
 	 */
 	class TaskManager{
 
+		int numThreads;
 		std::list<TaskBase*> submitted;
+		std::list<TaskBase*> ran;
 		std::mutex lock;
 
 		class Worker{
 			TaskManager& mgr;
-			bool done;
+			std::thread *thread;
+			int& done;
 
-			Worker(TaskManager& m) : mgr(m), done(false){
+		public:
+			Worker(TaskManager& m, int& done) : mgr(m), done(done){
+				// start the thread!
+				thread = new std::thread(*this);
+			}
+			Worker(Worker&& o)
+				: mgr(o.mgr), thread(o.thread), done (o.done){
+			}
+			Worker(const Worker& o)
+				: mgr(o.mgr), thread(o.thread), done (o.done){
+			}
+
+			// to store it in a vector we need copy assigment operator... WTF?
+			Worker& operator=(const Worker& o) {
+				thread = o.thread;
+				done = o.done;
+				return *this;
 			}
 
 			void operator()(){
+				GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " START " << std::endl);
 				while (!done){
+
 					while (!mgr.submitted.empty()){
 						auto tsk = mgr.getTask();
-						(*tsk)();
+						if (tsk){
+							GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id()  << " executing: " << tsk->id << std::endl);
+							(*tsk)();
+						}
 					}
+			//	GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " no more work " << this << " = " << done << std::endl);
 				}
+				GLOBAL_LOCK(std::cerr << std::this_thread::get_id() <<  " END " << std::endl);
 			}
 
 			void finish (){
+				GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " signaled to finish " << this << " = " << done << std::endl);
+				assert(false);
 				done =true;
+				thread->join();
+				delete thread;
 			}
 		};
 
-		// HERE: how to model this? 
-		// I need the thread to call join on ending
-		// i need also the obj to call finish
-		std::vector<std::thread> workers;
+		std::vector<Worker> workers;
+		// because the spetialization of vector bool, we can not return references, so we need to use chars, and old school 0, 1
+		std::vector<int> 	 workFlags;
 
 		////////////////////////////////////////////////
 		//
 		////////////////////////////////////////////////
 
-		TaskManager()
-		{
-			for (int i = 0; i < 7; ++i){
-				//workers.push_back()
-			}
-		}
-
-		inline void processTask(TaskBase* t){
-			(*t)();
+		TaskManager(int nth)
+			:numThreads(nth), workers(), workFlags(numThreads, false) {
+			for (int i = 0; i < numThreads; ++i)
+				workers.push_back(Worker(*this, workFlags[i]));
 		}
 
 		TaskBase* getTask(){
@@ -153,6 +222,7 @@ namespace utils {
 			if (!submitted.empty()){
 				t = submitted.front();
 				submitted.pop_front();
+				ran.insert(ran.begin(), t);
 			}
 			lock.unlock();
 			return t;
@@ -161,8 +231,10 @@ namespace utils {
 		////////////////////////////////////////////////
 		// Static interface
 		////////////////////////////////////////////////
+		public:
 		
 		static void addTask(TaskBase* t){
+			GLOBAL_LOCK(std::cerr << " add task: "  << t->id  << " [" << t << "]" << std::endl);
 			TaskManager& mgr =getInstance();
 			mgr.lock.lock();
 			mgr.submitted.push_back(t);
@@ -172,26 +244,52 @@ namespace utils {
 		static void wait (TaskBase* t){
 			TaskManager& mgr = getInstance();
 
-			// while the task i wait for is still in the queue, 
-			// this thread is also a worker, therefore works
+			GLOBAL_LOCK(std::cerr << " wait task: "  << t->id  << " [" << t << "]" << std::endl);
+
+			std::list<TaskBase*>::iterator it;
+
+			// while the task is scheduled but not executing 
 			mgr.lock.lock();
-			while (std::find (mgr.submitted.begin(), mgr.submitted.end(), t) != mgr.submitted.end()){
+			while ((it =std::find (mgr.ran.begin(), mgr.ran.end(), t)) == mgr.ran.end()){
 				mgr.lock.unlock();
 				// work a little...
 				auto tsk = mgr.getTask();
-				(*tsk)();
-
+				if (tsk){
+					GLOBAL_LOCK(std::cerr << "  activeWait: " << tsk->id << std::endl);
+					(*tsk)();
+				}
 				mgr.lock.lock();
 			}
 			mgr.lock.unlock();
+
+			// once the task is not waiting anymore, it might be running (by someone else right now) or it might be that we ran it before
+			while (!(*it)->done){
+				auto tsk = mgr.getTask();
+				if (tsk){
+					GLOBAL_LOCK(std::cerr << "  activeWait2: " << tsk->id << std::endl);
+					(*tsk)();
+				}
+
+			}
+
+		}
+		static void configure (int nth){
+			getInstance(nth);
 		}
 
-		static TaskManager& getInstance(){
-			static TaskManager inst;
+		static void finalize (){
+			TaskManager& mgr = getInstance();
+			// wait for everithing not finnished, the problem is with the pointers, if we leave the scope. non finished works will 
+			// be deleted and well have pointers to dirty memory
+			for (auto& f: mgr.workFlags){
+				f = false;
+			}
+		}
+
+		static TaskManager& getInstance(int nth = 7){
+			static TaskManager inst(nth);
 			return inst;
 		}
-
-
 
 		friend class TaskBase;
 	};
@@ -201,7 +299,7 @@ namespace utils {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	template<typename R, typename ... Params>
-	class Task : public TaskBase {
+	class TaskHelper : public TaskBase {
 
 		typedef std::function<R(Params ...)> fun_t;
 
@@ -211,41 +309,48 @@ namespace utils {
 
 		mutable bool owner;
 
-	public:
+		public:
 
-		Task(const fun_t& fun, const Params& ... args) : fun(fun), args(args ...), owner(true){}
+		TaskHelper(const fun_t& fun, const Params& ... args) : fun(fun), args(args ...), owner(true){}
 
 
-		Task(const Task<R, Params...>& o)
+		TaskHelper(const TaskHelper<R, Params...>& o)
 		: fun(o.fun), args(args), owner(true) { 
 			o.owner=false; 
 		}
 
-		Task<R, Params...> operator=(const Task<R, Params...>& o) = delete;
+		TaskHelper<R, Params...> operator=(const TaskHelper<R, Params...>& o) = delete;
 
-		~Task(){
-			if (owner) (*this)();
-		}
+//		~TaskHelper(){
+//			if (owner) (*this)();
+//		}
 
 		//////////////////////////////////////////
 		// operation
 		void operator()() {
 			// make sure it hasn't been processed before and is only processed once (DAG)
-			if (done) return;
-			done = true;
+			if(done) return;
+
+
+			// avoid concurrent executions
+			if(!running.try_lock()) return;
 
 			// process dependencies concurrently
-			std::vector<std::future<void>> futures;
+			//std::vector<std::future<void>> futures;
 			for(auto cur : dependencies) {
-				futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
+				TaskManager::addTask(cur.get());
+		//		futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
 //				futures.push_back(std::async([cur](){ (*cur)(); }));
 			}
 
 			// wait for dependencies
-			for(const auto& cur : futures) cur.wait();
+			for(auto cur : dependencies) TaskManager::wait(cur.get());
 
 			// process local task
 			apply_tuple<sizeof...(Params)>::on(fun, args);
+
+			done =true;
+			running.unlock();
 		}
 
 	};
@@ -280,32 +385,36 @@ namespace utils {
 	namespace {
 
 		template<typename R, typename ... P>
-		Task<R,P...> _task(const std::function<R(P...)>& fun, const P& ... args) {
-			return Task<R,P...>(fun, args...);
+		//TaskHelper<R,P...> _task(const std::function<R(P...)>& fun, const P& ... args) {
+		Task _task(const std::function<R(P...)>& fun, const P& ... args) {
+			return Task(std::make_shared<TaskHelper<R,P...>> (fun, args...));
 		}
 
 	}
 
 	// Lambda => Task
 	template<typename L, typename F = typename fun_type<L>::type, typename ... Args>
-	auto task(const L& l, const Args& ... args) -> decltype(_task(F(l),args...)) {
+	//auto task(const L& l, const Args& ... args) -> decltype(_task(F(l),args...)) {
+	Task task(const L& l, const Args& ... args) {
 		return _task(F(l), args...);
 	}
 
 	// Function Pointer => Task
 	template<typename R, typename ... P>
-	Task<R,P...> task(R(*fun)(P...), const P& ... args) {
-		return Task<R,P...>(fun, args...);
+	//TaskHelpe<R,P...> task(R(*fun)(P...), const P& ... args) {
+	Task task(R(*fun)(P...), const P& ... args) {
+		return Task(std::make_shared<TaskHelper<R,P...>> (fun, args...));
 	}
 
 	// std::function => Task
 	template<typename R, typename ... P>
-	Task<R,P...> task(const std::function<R(P...)>& fun, const P& ... args) {
+	//Task<R,P...> task(const std::function<R(P...)>& fun, const P& ... args) {
+	Task task(const std::function<R(P...)>& fun, const P& ... args) {
 		return _task(fun, args...);
 	}
 
 	// an empty dummy task
-	Task<void> task() {
+	Task task() {
 		return task([](){});
 	}
 
