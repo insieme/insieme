@@ -167,7 +167,13 @@ namespace integration {
 								files.push_back((testCaseDir / file).string());
 							} else if (file.length() > 2){
 								// it's an include directory
-								includeDirs.push_back((testCaseDir / file.substr(2)).string());
+								string path = file.substr(2);
+								// if it starts with /, assume absolute path
+								if(path.at(0) == '/')
+									includeDirs.push_back(path);
+								// if not, assume path to be relative to testCaseDir
+								else
+									includeDirs.push_back((testCaseDir / path).string());
 							}
 						}
 					}
