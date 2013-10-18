@@ -407,7 +407,6 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	// test whether we can get a definiton
 	auto def = findDefinition(tagType);
-
 	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		return builder.genericType( tagType->getDecl()->getNameAsString() );
@@ -436,7 +435,6 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 		core::StringValuePtr id = builder.stringValue(
 				curr->getIdentifier() ? curr->getNameAsString() : "__m"+insieme::utils::numeric_cast<std::string>(mid));
-
 		structElements.push_back(builder.namedType(id, fieldType));
 		mid++;
 	}
@@ -609,15 +607,15 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	return res;
 }
 
-core::TypePtr Converter::CTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		return builder.structType( structElements );
-	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-		return builder.unionType( structElements );
-	}
-	assert(false && "TagType not supported");
-	return core::TypePtr();
-}
+//core::TypePtr Converter::CTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+//	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
+//		return builder.structType( structElements );
+//	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
+//		return builder.unionType( structElements );
+//	}
+//	assert(false && "TagType not supported");
+//	return core::TypePtr();
+//}
 
 } // End conversion namespace
 } // End frontend namespace

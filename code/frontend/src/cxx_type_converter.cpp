@@ -140,17 +140,6 @@ vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRec
 	return bases;
 }
 
-
-core::TypePtr Converter::CXXTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		return convFact.builder.structType( structElements );
-	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-		return convFact.builder.unionType( structElements );
-	}
-	assert(false && "TagType not supported");
-	return core::TypePtr();
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 						DEPENDENT SIZED ARRAY TYPE
 // This type represents an array type in C++ whose size is a value-dependent
