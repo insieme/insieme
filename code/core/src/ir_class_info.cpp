@@ -127,18 +127,12 @@ namespace core {
 		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
 		assert(checkObjectType(function.getImplementation()));
 
-		// create the index key for this function
-		auto key = std::make_tuple(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst());
-
 		// check that there are not duplicates
-		assert(memberFunctionIndex.find(key) == memberFunctionIndex.end() &&
+		assert(!hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst()) &&
 				"Member functions may not exhibit the same name, type and const-flag state.");
 
 		// add new member function
 		this->memberFunctions.push_back(function);
-
-		// add to index
-		memberFunctionIndex[key] = &memberFunctions.back();
 
 		// invalidate child list
 		childList.reset();

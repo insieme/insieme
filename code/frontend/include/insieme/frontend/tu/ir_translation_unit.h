@@ -152,6 +152,15 @@ namespace tu {
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
+		/**
+		 * replaces a previous definition by a new one
+		 */
+		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition){
+			assert_eq(*symbol->getType(), *definition->getType());
+			assert(functions.find(symbol) != functions.end());
+			functions[symbol] = definition;
+		}
+
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
 			addGlobal(Global(symbol, definition));
 		}
