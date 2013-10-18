@@ -922,7 +922,9 @@ bool isOutlineAble(const StatementPtr& stmt) {
 	vector<NodeType> pruneStmts;
 	pruneStmts.push_back(NT_ForStmt);
 	pruneStmts.push_back(NT_WhileStmt);
-	bool hasFreeBreakOrContinue = hasFreeControlStatement(stmt, NT_BreakStmt, pruneStmts) ||	hasFreeControlStatement(stmt, NT_ContinueStmt, pruneStmts);
+	bool hasFreeBreakOrContinue = hasFreeControlStatement(stmt, NT_ContinueStmt, pruneStmts);
+	pruneStmts.push_back(NT_SwitchStmt);
+	hasFreeBreakOrContinue = hasFreeBreakOrContinue || hasFreeControlStatement(stmt, NT_BreakStmt, pruneStmts);
 
 	return !hasFreeBreakOrContinue;
 }
