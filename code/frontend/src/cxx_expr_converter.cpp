@@ -86,6 +86,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
 
+#include "insieme/core/encoder/lists.h"
 
 using namespace clang;
 using namespace insieme;
@@ -885,6 +886,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::L
 	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
 	core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
 
+
+	std::cout << " ========================================================== " << std::endl;
+	std::cout << " NEW LAMBDA, type: " << lambdaClassIR << std::endl;
+
+
 	// convert the captures
 	auto captureIt  = lambdaExpr->capture_init_begin();
 	auto captureEnd = lambdaExpr->capture_init_end();
@@ -893,50 +899,76 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr (const clang::L
 		captures.push_back(convFact.convertExpr(*captureIt));
 	}
 
-	// we will construct the object and return the ref to the functor class
-	core::ExpressionPtr ctorFunc;
-	auto ctorIt  = decl->ctor_begin ();
-	auto ctorEnd = decl->ctor_end ();
-	for (;ctorIt != ctorEnd; ++ ctorIt){
-		bool match = true;
 
-		// select right ctor by matching parameters with capture types
-		auto paramIt   = (*ctorIt)->param_begin();
-		auto paramEnd  = (*ctorIt)->param_end();
-		unsigned pid(0);
-		for (;paramIt != paramEnd; ++paramIt){
-			
-			// if the called constructor has less parameters than this one is obviously not the same
-			if (pid >= captures.size()){
-				match = false;
-				break;
-			}
-			
-			// if types mismatch, there is no chance that its the same ctor
-			if (convFact.lookUpVariable(*paramIt)->getType() != captures[pid]->getType()){
-				match = false;
-				break;
-			}
-			pid++;
+	// we need to substitute any captured usage name by the reference to the local copy
+	// 		- retrieve the operator() (.. )  func
+	// 		- create this->_mX access for captured vars
+	// 		- substitute every usage by member access
+	const core::ClassMetaInfo&  metainfo = core::getMetaInfo(lambdaClassIR);
+	std::vector<core::MemberFunctionPtr> functionals = metainfo.getMemberFunctionOverloads("operator()");
+
+	std::cout << " functionals: " << functionals.size() << std::endl;
+
+	for (auto cur : functionals){
+		std::cout << " member: " << cur->getName() << std::endl;
+		if(cur->isVirtual()){
+			std::cout << "is virtual" << std::endl;
+			continue;
+		}
+		// in the meta information we only store a symbol, the actual implementation is stored in the translation unit
+		core::ExpressionPtr symb = cur->getImplementation();
+		assert(symb);
+		core::LambdaExprPtr membFunction;
+		if  (symb.isa<core::LiteralPtr>()){
+			 membFunction = convFact.getIRTranslationUnit()[symb.as<core::LiteralPtr>()];
+		}
+		else if (symb.isa<core::LambdaExprPtr>()){
+			membFunction = symb.as<core::LambdaExprPtr>();
+			assert(false);
+		}
+		else {
+			std::cout << "membfunc: " << symb  << std::endl; ///<< "  :  " << symb->getType() << std::end;
+		//	assert(symb.isa<core::CallExprPtr>());
+			assert(false && "not a func, not a literal, u tell me what is this" );
+		}
+		core::ExpressionPtr thisExpr = membFunction->getParameterList()[0];
+
+		// for each capture, prepare a substitute
+		core::NodeMap replacements;
+		unsigned id(0);
+		for (auto capExpr : captures){
+
+			core::VariableList vars;
+			visitDepthFirstOnce(capExpr, [this, &vars] (const core::VariablePtr& var){ vars.push_back(var);});
+			assert(vars.size() ==1 && "more than one variable in expression?");
+			core::VariablePtr var = vars[0];
+
+			// build anonymous member access
+			core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
+			core::ExpressionPtr access =  builder.callExpr (var->getType(),
+													  builder.getLangBasic().getCompositeRefElem(), thisExpr,
+													  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
+			replacements[var] = access;
+			id++;
 		}
 
-		// if found, convert
-		if (match){
-			ctorFunc = convFact.convertFunctionDecl(*ctorIt);
+		// replace variables usage and update function implementation in the TU
+		membFunction = core::transform::replaceAllGen(builder.getNodeManager(), membFunction, replacements, false );
+
+		if  (symb.isa<core::LiteralPtr>()){
+			convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), membFunction);
 		}
+		//core::setMetaInfo(lambdaClassIR, metainfo);
 	}
-	assert(ctorFunc && "no constructor could be translated for the anonymous lambda class");
+	// restore new meta info
 
-	// build the call to the ctor
-	captures.insert (captures.begin(), builder.undefinedVar(builder.refType(lambdaClassIR)));
-	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
-	retIr = builder.callExpr (funcTy.getReturnType(), ctorFunc, captures);
-
-	return retIr;
+	core::ExpressionPtr init = core::encoder::toIR(mgr, captures);
+	return retIr = convFact.getInitExpr (lambdaClassIR, init);
+;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //			Cxx11 null pointer
-//	Cxx11 introduces a null pointer value called nullptr, it avoid typing problems
+//	Cxx11 introduces a null pointer value called nullptr, it avoids typing problems
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNullPtrLiteralExpr		(const clang::CXXNullPtrLiteralExpr* nullPtrExpr){
     core::ExpressionPtr retIr;
