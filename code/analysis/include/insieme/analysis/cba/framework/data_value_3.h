@@ -79,18 +79,22 @@ namespace cba {
 	template<typename ElementType>
 	Set<ElementType> setIntersect(const Set<ElementType>& a, const Set<ElementType>& b);
 
-	template<typename ElementType>
-	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
+//	template<typename ElementType>
+//	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
 
 	template<typename ElementType>
 	bool empty(const Set<ElementType>& a);
 
-	template<typename ElementType>
-	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
+//	template<typename ElementType>
+//	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
+//
+//	template<typename ElementType>
+//	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b);
+
+	// -------------------------------------------------------------------------------------------------
 
 	template<typename ElementType>
-	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b);
-
+	bool isMember(const Set<ElementType>& a, const Element<ElementType>& b);
 
 	// -------------------------------------------------------------------------------------------------
 
@@ -162,6 +166,10 @@ namespace cba {
 
 			virtual ~SetEntry() {};
 
+			bool isSingle() const {
+				return data.size() == 1u && data.begin()->isSingle();
+			}
+
 			bool operator==(const SetEntry<ElementType>& other) const {
 				// important: only structural equivalence
 				return this == &other || (this->hash == other.hash && data == other.data);
@@ -198,8 +206,17 @@ namespace cba {
 			// check whether this element represents an empty cross-product
 			virtual bool empty() const =0;
 
+			// check whether this element is representing a "single" element - hence it can not be separated into multiple elements
+			virtual bool isSingle() const =0;
+
+			// check whether the set represented by this element contains the given element
+			virtual bool contains(const ElementEntry<ElementType>& other) const =0;
+
 			// implement the intersection between two element entries
 			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const =0;
+
+			// implement the set difference between two element entries (which needs to be a set of elements)
+			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const =0;
 		};
 
 		template<typename ElementType>
@@ -234,9 +251,24 @@ namespace cba {
 				return false;
 			}
 
+			virtual bool isSingle() const {
+				return true;	// atomic elements are singles by definition
+			}
+
+			virtual bool contains(const ElementEntry<ElementType>& other) const {
+				return *this == other;	// here just an equality comparison is necessary
+			}
+
 			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
 				// unless equal, the result is empty
 				return (*this == other) ? this : nullptr;
+			}
+
+			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const {
+				// for atomic elements it is pretty simple
+				std::vector<Element<ElementType>> res;
+				if (*this != other) res.push_back(this);
+				return res;
 			}
 
 		protected:
@@ -287,6 +319,29 @@ namespace cba {
 				return data.empty() || any(data, [](const typename map_type::value_type& cur) { return cur.second.empty(); });
 			}
 
+			virtual bool isSingle() const {
+				// it is a single if all sets are singles
+				return !empty() && all(data, [](const typename map_type::value_type& cur) { return cur.second.isSingle(); });
+			}
+
+			virtual bool contains(const ElementEntry<ElementType>& other) const {
+				// the other element has to be of the same type
+				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
+
+				// cast type
+				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
+
+				// all fields must be contained
+				for(const auto& cur : b.data) {
+					// get values of of same field in current set
+					Set<ElementType> s = setUnion(extract(data, cur.first));
+					if (!isMember(s, cur.second.getSingleEntry())) return false;
+				}
+
+				// it is contained
+				return true;
+			}
+
 			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
 				const static ElementEntry<ElementType>* empty = nullptr;
 				// the other element has to be of the same type
@@ -316,6 +371,60 @@ namespace cba {
 
 				// build result
 				return this->mgr.compound(res).getPtr();
+			}
+
+			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const {
+
+				assert_not_implemented() << "This operation is not supported!";
+				return std::vector<Element<ElementType>>();
+
+//				// start with empty result
+//				std::vector<Element<ElementType>> res;
+//
+//				// check equality
+//				if (*this == other) return res;	// an empty list
+//
+//				// check empty cases
+//				if (empty() || other.empty()) {
+//					res.push_back(this);
+//					return res;
+//				}
+//
+//				// the other element has to be of the same type
+//				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
+//
+//				// cast type
+//				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
+//
+//				// create a copy with the full index space
+//				std::map<IndexType, Set<ElementType>> full;
+//				auto indices = cross(data, b.data);
+//				for(const IndexType& cur : indices) {
+//					full[cur] = setUnion(extract(data, cur));
+//				}
+//
+//				// now create one copy where each indexed element is reduced once
+//				for(const IndexType& cur : cross(data, b.data)) {
+//
+//					// extract sets of both sides and intersect those
+//					Set<ElementType> sA = setUnion(extract(data, cur));
+//					Set<ElementType> sB = setUnion(extract(b.data, cur));
+//
+//					// intersect element sets
+//					Set<ElementType> r = setDiff(sA, sB);
+//
+//					// if result is empty => done
+//					if (r.empty()) continue;
+//
+//					// insert current copy
+//					Set<ElementType> old = full[cur];
+//					full[cur] = r;
+//					res.push_back(this->mgr.compound(full));
+//					full[cur] = old;
+//				}
+//
+//				// done
+//				return res;
 			}
 
 		protected:
@@ -474,6 +583,20 @@ namespace cba {
 			return !data;
 		}
 
+		bool isSingle() const {
+			return !empty() && data->isSingle();
+		}
+
+		const Element<ElementType>& getSingleEntry() const {
+			assert(isSingle());
+			return *data->data.begin();
+		}
+
+		bool contains(const Element<ElementType>& a) const {
+			assert(a.isSingle());
+			return !empty() && any(data->data, [&](const Element<ElementType>& cur)->bool { return cur.contains(a); });
+		}
+
 		Set merge(const Set<ElementType>& other) const {
 
 			// handle empty sets
@@ -508,6 +631,36 @@ namespace cba {
 			}
 
 			// return intersected set
+			return getManager().set(res);
+		}
+
+		Set diff(const Set<ElementType>& other) const {
+
+			// handle special cases where one operator is empty
+			if (empty() || other.empty()) return *this;
+
+			// otherwise: subtract all elements of other from all elements of this set and collect the bits
+			Set<ElementType> res;
+			for(const Element<ElementType>& a : data->data) {
+				res = setUnion(res, a.diff(other));
+			}
+
+			// return the resulting set
+			return res;
+		}
+
+		Set diff(const Element<ElementType>& other) const {
+
+			// quick check - empty
+			if (empty() || other.empty()) return *this;
+
+			std::set<Element<ElementType>> res;
+			for(const Element<ElementType>& element : data->data) {
+				for(const auto& fragment : element.getPtr()->diff(*other.getPtr())) {
+					if (!fragment.empty()) res.insert(fragment);
+				}
+			}
+
 			return getManager().set(res);
 		}
 
@@ -555,8 +708,34 @@ namespace cba {
 			return !data;
 		}
 
+		bool isSingle() const {
+			return !empty() && data->isSingle();
+		}
+
+		bool contains(const Element<ElementType>& a) const {
+			assert(a.isSingle());
+			return !empty() && data->contains(*a.data);
+		}
+
 		Element<ElementType> intersect(const Element<ElementType>& other) const {
 			return data->intersect(*other.data);
+		}
+
+		Set<ElementType> diff(const Set<ElementType>& other) const {
+
+			// handle empty element
+			if (empty()) return Set<ElementType>();
+
+			// if there is nothing to remove => done
+			if (other.empty()) return *this;
+
+			Set<ElementType> res = *this;
+			for(const auto& cur : other.getPtr()->data) {
+				res = res.diff(Element<ElementType>(cur));
+			}
+
+			// done
+			return res;
 		}
 
 		DataManager<ElementType>& getManager() const {
@@ -603,22 +782,33 @@ namespace cba {
 		return a.intersect(b);
 	}
 
-	template<typename ElementType>
-	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
+	// this operation is not supported in general
+//	template<typename ElementType>
+//	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b) {
+//		return a.diff(b);
+//	}
 
 	template<typename ElementType>
 	bool empty(const Set<ElementType>& a) {
 		return a.empty();
 	}
 
-	template<typename ElementType>
-	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
+	// not supported yet
+//	template<typename ElementType>
+//	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
+//
+//	template<typename ElementType>
+//	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b) {
+//		// TODO: form equality classes here!
+//		return a == b || (isSubset(a,b) && isSubset(b,a));
+//	}
 
 	template<typename ElementType>
-	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b) {
-		// TODO: form equality classes here!
-		return a == b || (isSubset(a,b) && isSubset(b,a));
+	bool isMember(const Set<ElementType>& a, const Element<ElementType>& e) {
+		assert(e.isSingle());
+		return a.contains(e);
 	}
+
 
 
 } // end namespace cba
