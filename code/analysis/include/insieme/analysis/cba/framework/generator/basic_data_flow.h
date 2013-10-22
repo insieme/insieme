@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/constraint_generator.h"
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"

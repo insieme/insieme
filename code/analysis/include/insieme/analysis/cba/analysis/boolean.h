@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/analysis/cba/analysis/arithmetic.h"
@@ -53,7 +53,7 @@ namespace cba {
 	// ----------------- booleans analysis ---------------
 
 	template<typename C> class BooleanConstraintGenerator;
-	typedef TypedSetType<bool,BooleanConstraintGenerator> BooleanSetType;
+	typedef SetBasedAnalysisType<bool,BooleanConstraintGenerator> BooleanSetType;
 
 	extern const BooleanSetType B;
 	extern const BooleanSetType b;

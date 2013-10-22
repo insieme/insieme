@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
@@ -54,23 +54,23 @@ namespace cba {
 	template<typename Context> class ReferenceConstraintGenerator;
 
 	template<typename Context>
-	const TypedSetType<Location<Context>,ReferenceConstraintGenerator>& R() {
-		static const TypedSetType<Location<Context>,ReferenceConstraintGenerator> instance("R");
+	const SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator>& R() {
+		static const SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator> instance("R");
 		return instance;
 	}
 
 	template<typename Context>
-	const TypedSetType<Location<Context>,ReferenceConstraintGenerator>& r() {
-		static const TypedSetType<Location<Context>,ReferenceConstraintGenerator> instance("r");
+	const SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator>& r() {
+		static const SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator> instance("r");
 		return instance;
 	}
 
 
 
 	template<typename Context>
-	class ReferenceConstraintGenerator : public BasicDataFlowConstraintGenerator<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintGenerator>, Context> {
+	class ReferenceConstraintGenerator : public BasicDataFlowConstraintGenerator<Location<Context>,SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Location<Context>,TypedSetType<Location<Context>,ReferenceConstraintGenerator>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Location<Context>,SetBasedAnalysisType<Location<Context>,ReferenceConstraintGenerator>, Context> super;
 
 		CBA& cba;
 

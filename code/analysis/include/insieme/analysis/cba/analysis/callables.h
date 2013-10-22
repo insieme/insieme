@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
@@ -52,23 +52,23 @@ namespace cba {
 	template<typename C> class ControlFlowConstraintGenerator;
 
 	template<typename Context>
-	const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
-		static const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
+	const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
+		static const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
 		return instance;
 	}
 
 	template<typename Context>
-	const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
-		static const TypedSetType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
+	const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
+		static const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
 		return instance;
 	}
 
 
 
 	template<typename Context>
-	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
+	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Callable<Context>, TypedSetType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Callable<Context>, SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
 
 		CBA& cba;
 

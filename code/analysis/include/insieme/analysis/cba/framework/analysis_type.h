@@ -41,19 +41,21 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "insieme/utils/constraint/lattice.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using std::string;
 
-	// ----------- set types ------------------
+	// ----------- analysis types ------------------
 
 	/**
-	 * An abstract base class for set types to be handled by the analysis.
-	 * Instances are expected to be immutable global constants.
+	 * An abstract base class for analysis types. Instances are expected
+	 * to be immutable global constants.
 	 */
-	class SetType : public boost::noncopyable {
+	class AnalysisTypeBase : public boost::noncopyable {
 
 		/**
 		 * The name of this set for printing and debugging issues.
@@ -62,7 +64,7 @@ namespace cba {
 
 	protected:
 
-		SetType(const string& name) : name(name) {}
+		AnalysisTypeBase(const string& name) : name(name) {}
 
 	public:
 
@@ -70,37 +72,57 @@ namespace cba {
 			return name;
 		}
 
-		bool operator==(const SetType& other) const {
-			// the identity of a set type is fixed by its address
+		bool operator==(const AnalysisTypeBase& other) const {
+			// the identity of a analysis type is fixed by its address
 			return this == &other;
 		}
 
-		bool operator!=(const SetType& other) const {
+		bool operator!=(const AnalysisTypeBase& other) const {
 			return !(*this == other);
 		}
 
 	};
 
 	// all set types are global constants => plain pointers can be used safely
-	typedef const SetType* SetTypePtr;
+	typedef const AnalysisTypeBase* AnalysisTypePtr;
 
 	/**
-	 * A special type of set type fixing the element type of the represented type.
+	 * A special type of analysis type fixing the value type of the analysis results and
+	 * class definitions implementing analysis.
+	 *
+	 * @tparam L the lattice forming the result of this analysis
+	 * @tparam G the constraint generator implementation implementing the represented analysis.
 	 */
 	template<
-		typename E,
+		typename L,
 		template<typename C> class G
 	>
-	struct TypedSetType : public SetType {
+	struct AnalysisType : public AnalysisTypeBase {
 
 		// expose member types
-		typedef E element_type;
+		typedef L lattice_type;
 		template<typename T> struct resolver_type { typedef G<T> type; };
 
 		/**
 		 * A simple constructor just forwarding the name of the resulting set.
 		 */
-		TypedSetType(const string& name) : SetType(name) {}
+		AnalysisType(const string& name) : AnalysisTypeBase(name) {}
+
+	};
+
+
+	// TODO: remove this set based analysis type once it is no longer needed (just introduced for
+	//			refactoring)
+	template<
+		typename E,
+		template<typename C> class G
+	>
+	struct SetBasedAnalysisType : public AnalysisType<utils::constraint::SetLattice<E>, G> {
+
+		/**
+		 * A simple constructor just forwarding the name of the resulting set.
+		 */
+		SetBasedAnalysisType(const string& name) : AnalysisType<utils::constraint::SetLattice<E>,G>(name) {}
 
 	};
 

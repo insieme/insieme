@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/_forward_decl.h"
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities.h"
 
 #include "insieme/core/forward_decls.h"
@@ -49,37 +49,37 @@ namespace cba {
 	// --- forward definitions of analysis utilized by the framework ---
 
 	template<typename C> class ControlFlowConstraintGenerator;
-	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintGenerator>& C();
-	template<typename T> const TypedSetType<Callable<T>,ControlFlowConstraintGenerator>& c();
+	template<typename T> const SetBasedAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& C();
+	template<typename T> const SetBasedAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& c();
 
 	template<typename C> class Location;
 	template<typename C> class ReferenceConstraintGenerator;
-	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& R();
-	template<typename C> const TypedSetType<Location<C>,ReferenceConstraintGenerator>& r();
+	template<typename C> const SetBasedAnalysisType<Location<C>,ReferenceConstraintGenerator>& R();
+	template<typename C> const SetBasedAnalysisType<Location<C>,ReferenceConstraintGenerator>& r();
 
 	class Callee;
 	template<typename C> class FunctionConstraintGenerator;
-	extern const TypedSetType<Callee,FunctionConstraintGenerator> F;
-	extern const TypedSetType<Callee,FunctionConstraintGenerator> f;
+	extern const SetBasedAnalysisType<Callee,FunctionConstraintGenerator> F;
+	extern const SetBasedAnalysisType<Callee,FunctionConstraintGenerator> f;
 
 	template<typename C> class ContextPredecessorGenerator;
-	extern const TypedSetType<Label,ContextPredecessorGenerator> pred;
+	extern const SetBasedAnalysisType<Label,ContextPredecessorGenerator> pred;
 
 	struct Reachable;
 	template<typename C> class ReachableInConstraintGenerator;
-	extern const TypedSetType<Reachable,ReachableInConstraintGenerator> Rin;
+	extern const SetBasedAnalysisType<Reachable,ReachableInConstraintGenerator> Rin;
 
 	template<typename C> class ReachableOutConstraintGenerator;
-	extern const TypedSetType<Reachable,ReachableOutConstraintGenerator> Rout;
+	extern const SetBasedAnalysisType<Reachable,ReachableOutConstraintGenerator> Rout;
 
 	class Formula;
 	template<typename C> class ArithmeticConstraintGenerator;
-	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> A;
-	extern const TypedSetType<Formula,ArithmeticConstraintGenerator> a;
+	extern const SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> A;
+	extern const SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> a;
 
 	template<typename C> class BooleanConstraintGenerator;
-	extern const TypedSetType<bool,BooleanConstraintGenerator> B;
-	extern const TypedSetType<bool,BooleanConstraintGenerator> b;
+	extern const SetBasedAnalysisType<bool,BooleanConstraintGenerator> B;
+	extern const SetBasedAnalysisType<bool,BooleanConstraintGenerator> b;
 
 
 } // end namespace cba

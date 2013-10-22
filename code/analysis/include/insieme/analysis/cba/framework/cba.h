@@ -44,7 +44,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "insieme/analysis/cba/framework/_forward_decl.h"
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities.h"
 #include "insieme/analysis/cba/framework/constraint_generator.h"
@@ -136,15 +136,15 @@ namespace cba {
 		template<typename Context>
 		struct Container : public ContainerBase {
 
-			typedef tuple<SetTypePtr, int, Context> SetKey;
-			typedef tuple<StateSetTypePtr, SetTypePtr, Location<Context>> LocationSetKey;
+			typedef tuple<AnalysisTypePtr, int, Context> SetKey;
+			typedef tuple<StateSetTypePtr, AnalysisTypePtr, Location<Context>> LocationSetKey;
 			typedef tuple<LocationSetKey, Label, Context> StateSetKey;
 
 			typedef ConstraintGenerator<Context>* ConstraintGeneratorPtr;
 
 			// a data structure managing constraint generators
 			std::set<ConstraintGeneratorPtr> generator;
-			std::map<SetTypePtr, ConstraintGeneratorPtr> settype2generator;			// maps a set type to a generator
+			std::map<AnalysisTypePtr, ConstraintGeneratorPtr> settype2generator;			// maps a set type to a generator
 			std::map<std::type_index, ConstraintGeneratorPtr> generatorIndex;			// to prevent the same type of generator being used multiple times
 			std::map<LocationSetKey, ConstraintGeneratorPtr> locationGenerator;
 
@@ -164,13 +164,13 @@ namespace cba {
 				for(auto cur : generator) delete cur;
 			}
 
-			template<typename T, template<typename C> class R>
-			sc::TypedSetID<T> getSet(CBA& cba, const TypedSetType<T,R>& type, int id, const Context& context) {
+			template<typename L, template<typename C> class R>
+			sc::TypedValueID<L> getSet(CBA& cba, const AnalysisType<L,R>& type, int id, const Context& context) {
 				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
 				SetKey key(&type, id, context);
 				auto pos = sets.find(key);
 				if (pos != sets.end()) {
-					return sc::TypedSetID<T>(pos->second);
+					return sc::TypedValueID<L>(pos->second);
 				}
 
 				// make sure generator is installed
@@ -180,11 +180,11 @@ namespace cba {
 				SetID newSet(++cba.setCounter);		// reserve 0
 				sets[key] = newSet;
 				set2key[newSet] = key;
-				return sc::TypedSetID<T>(newSet);
+				return sc::TypedValueID<L>(newSet);
 			}
 
-			template<typename T, template<typename C> class G>
-			sc::TypedSetID<T> getSet(CBA& cba, const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
+			template<typename L, template<typename C> class G>
+			sc::TypedValueID<L> getSet(CBA& cba, const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
 				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
 				StateSetKey key(LocationSetKey(&type, &type_loc, loc), label, context);
 				auto pos = stateSets.find(key);
@@ -195,7 +195,7 @@ namespace cba {
 				// TODO: make sure generator are present!
 
 				// create new set
-				sc::TypedSetID<T> newSet(++cba.setCounter);		// reserve 0
+				sc::TypedValueID<L> newSet(++cba.setCounter);		// reserve 0
 				stateSets[key] = newSet;
 				set2statekey[newSet] = key;
 				return newSet;
@@ -215,8 +215,8 @@ namespace cba {
 				return res;
 			}
 
-			template<typename T, template<typename C> class G>
-			G<Context>& getGenerator(CBA& cba, const TypedSetType<T,G>& type) {
+			template<typename L, template<typename C> class G>
+			G<Context>& getGenerator(CBA& cba, const AnalysisType<L,G>& type) {
 				auto pos = settype2generator.find(&type);
 				if (pos != settype2generator.end()) {
 					return static_cast<G<Context>&>(*pos->second);
@@ -228,8 +228,8 @@ namespace cba {
 
 				// also location generator instances
 				for(const auto& loc : getLocations(cba)) {
-					auto in  = new ImperativeInStateConstraintGenerator<Context,TypedSetType<T,G>>(cba, type, loc);
-					auto out = new ImperativeOutStateConstraintGenerator<Context,TypedSetType<T,G>>(cba, type, loc);
+					auto in  = new ImperativeInStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
+					auto out = new ImperativeOutStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
 					generator.insert(in);
 					generator.insert(out);
 					locationGenerator[LocationSetKey(&Sin,  &type, loc)] = in;
@@ -239,7 +239,7 @@ namespace cba {
 				return *res;
 			}
 
-			ConstraintGeneratorPtr getGenerator(const SetType& type) const {
+			ConstraintGeneratorPtr getGenerator(const AnalysisTypeBase& type) const {
 				auto pos = settype2generator.find(&type);
 				return (pos != settype2generator.end()) ? pos->second : ConstraintGeneratorPtr();
 			}
@@ -254,7 +254,7 @@ namespace cba {
 
 						int id = std::get<1>(key);
 						if (id == 0) return;		// nothing to do here
-						const SetType& type = *std::get<0>(key);
+						const auto& type = *std::get<0>(key);
 						const Context& context = std::get<2>(key);
 
 						auto generator = getGenerator(type);
@@ -472,8 +472,8 @@ namespace cba {
 
 		// -- main entry point for running analysis --
 
-		template<typename T, template<typename C> class G, typename C = DefaultContext>
-		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T,G>& set, const C& ctxt = C()) {
+		template<typename L, template<typename C> class G, typename C = DefaultContext>
+		const typename L::value_type& getValuesOf(const core::ExpressionAddress& expr, const AnalysisType<L,G>& set, const C& ctxt = C()) {
 			auto id = getSet(set, getLabel(expr), ctxt);
 			return solver.solve(id)[id];
 		}
@@ -481,29 +481,29 @@ namespace cba {
 
 		// -- set management --
 
-		template<typename T, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedSetID<T> getSet(const TypedSetType<T,G>& type, int id, const Context& context = Context()) {
+		template<typename L, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, int id, const Context& context = Context()) {
 			Container<Context>& container = getContainer<Context>();
-			sc::TypedSetID<T> res = container.getSet(*this, type, id, context);
+			sc::TypedValueID<L> res = container.getSet(*this, type, id, context);
 			set2container[res] = &container;
 			return res;
 		}
 
-		template<typename T, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedSetID<T> getSet(const TypedSetType<T,G>& type, const core::StatementAddress& stmt, const Context& context = Context()) {
+		template<typename L, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, const core::StatementAddress& stmt, const Context& context = Context()) {
 			return getSet(type, getLabel(stmt), context);
 		}
 
-		template<typename T, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
+		template<typename L, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
 			Container<Context>& container = getContainer<Context>();
-			sc::TypedSetID<T> res = container.getSet(*this, type, label, context, loc, type_loc);
+			sc::TypedValueID<L> res = container.getSet(*this, type, label, context, loc, type_loc);
 			set2container[res] = &container;
 			return res;
 		}
 
-		template<typename T, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedSetID<T> getSet(const StateSetType& type, const core::StatementAddress& stmt, const Context& context, const Location<Context>& loc, const TypedSetType<T,G>& type_loc) {
+		template<typename L, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const StateSetType& type, const core::StatementAddress& stmt, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
 			return getSet(type, getLabel(stmt), context, loc, type_loc);
 		}
 

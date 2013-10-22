@@ -50,7 +50,7 @@ namespace cba {
 	// a light version only tracking functions, no context
 	template<typename C> class FunctionConstraintGenerator;
 
-	typedef TypedSetType<Callee,FunctionConstraintGenerator> FunctionSetType;
+	typedef SetBasedAnalysisType<Callee,FunctionConstraintGenerator> FunctionSetType;
 	extern const FunctionSetType F;
 	extern const FunctionSetType f;
 

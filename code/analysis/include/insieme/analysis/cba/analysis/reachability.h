@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
 #include "insieme/utils/printable.h"
@@ -54,11 +54,11 @@ namespace cba {
 	};
 
 	template<typename C> class ReachableInConstraintGenerator;
-	typedef TypedSetType<Reachable,ReachableInConstraintGenerator> ReachableInSetType;
+	typedef SetBasedAnalysisType<Reachable,ReachableInConstraintGenerator> ReachableInSetType;
 	extern const ReachableInSetType Rin;
 
 	template<typename C> class ReachableOutConstraintGenerator;
-	typedef TypedSetType<Reachable,ReachableOutConstraintGenerator> ReachableOutSetType;
+	typedef SetBasedAnalysisType<Reachable,ReachableOutConstraintGenerator> ReachableOutSetType;
 	extern const ReachableOutSetType Rout;
 
 
@@ -106,7 +106,7 @@ namespace cba {
 
 		template<typename E, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
-					const E& value, const TypedSetID<E>& set,
+					const E& value, const TypedValueID<SetLattice<E>>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
@@ -152,7 +152,7 @@ namespace cba {
 
 		template<typename E, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
-					const E& value, const TypedSetID<E>& set,
+					const E& value, const TypedValueID<SetLattice<E>>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints

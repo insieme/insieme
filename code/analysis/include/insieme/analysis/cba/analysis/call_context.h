@@ -48,7 +48,7 @@ namespace cba {
 	// -------------------- Context Constraints ------------
 
 	template<typename C> class ContextPredecessorGenerator;
-	typedef TypedSetType<Label,ContextPredecessorGenerator> ContextPredecessorType;
+	typedef SetBasedAnalysisType<Label,ContextPredecessorGenerator> ContextPredecessorType;
 
 	extern const ContextPredecessorType pred;
 

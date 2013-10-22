@@ -273,8 +273,8 @@ namespace constraint {
 		template<typename T>
 		struct ElementOfFilter : public Filter<>{
 			T e;
-			TypedSetID<T> a;
-			ElementOfFilter(const T& e, const TypedSetID<T>& a)
+			TypedValueID<SetLattice<T>> a;
+			ElementOfFilter(const T& e, const TypedValueID<SetLattice<T>>& a)
 				: e(e), a(a) {}
 			bool operator()(const Assignment& ass) const {
 				return contains(ass[a], e);
@@ -292,9 +292,9 @@ namespace constraint {
 
 		template<typename T>
 		struct BiggerThanFilter : public Filter<>{
-			TypedSetID<T> a;
+			TypedValueID<SetLattice<T>> a;
 			std::size_t s;
-			BiggerThanFilter(const TypedSetID<T>& a, std::size_t s)
+			BiggerThanFilter(const TypedValueID<SetLattice<T>>& a, std::size_t s)
 				: a(a), s(s) {}
 			bool operator()(const Assignment& ass) const {
 				return ass[a].size() > s;
@@ -312,10 +312,10 @@ namespace constraint {
 
 		template<typename T>
 		struct BiggerThanReducedFilter : public Filter<>{
-			TypedSetID<T> a;
+			TypedValueID<SetLattice<T>> a;
 			T e;
 			std::size_t s;
-			BiggerThanReducedFilter(const TypedSetID<T>& a, const T& e, std::size_t s)
+			BiggerThanReducedFilter(const TypedValueID<SetLattice<T>>& a, const T& e, std::size_t s)
 				: a(a), e(e), s(s) {}
 			bool operator()(const Assignment& ass) const {
 				auto& set = ass[a];
@@ -555,7 +555,7 @@ namespace constraint {
 	// ----------------------------- Filter Factory Functions ------------------------------
 
 	template<typename E>
-	detail::ElementOfFilter<E> f_in(const E& e, const TypedSetID<E>& set) {
+	detail::ElementOfFilter<E> f_in(const E& e, const TypedValueID<SetLattice<E>>& set) {
 		return detail::ElementOfFilter<E>(e,set);
 	}
 
@@ -569,7 +569,7 @@ namespace constraint {
 	// ----------------------------- Executor Factory Functions ------------------------------
 
 	template<typename E>
-	detail::ElementOf<E> e_in(const E& e, const TypedSetID<E>& set) {
+	detail::ElementOf<E> e_in(const E& e, const TypedValueID<SetLattice<E>>& set) {
 		return detail::ElementOf<E>(e,set);
 	}
 
@@ -593,12 +593,12 @@ namespace constraint {
 	}
 
 	template<typename E>
-	ConstraintPtr elem(const E& e, const TypedSetID<E>& a) {
+	ConstraintPtr elem(const E& e, const TypedValueID<SetLattice<E>>& a) {
 		return combine(detail::TrueFilter(), e_in(e,a));
 	}
 
 	template<typename A, typename B>
-	ConstraintPtr elemIf(const A& e, const TypedSetID<A>& a, const B& f, const TypedSetID<B>& b) {
+	ConstraintPtr elemIf(const A& e, const TypedValueID<SetLattice<A>>& a, const B& f, const TypedSetID<B>& b) {
 		return combine(f_in(e,a), e_in(f,b));
 	}
 
@@ -618,22 +618,22 @@ namespace constraint {
 	}
 
 	template<typename E, typename L>
-	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedValueID<L>& b, const TypedValueID<L>& c) {
+	ConstraintPtr subsetIf(const E& e, const TypedValueID<SetLattice<E>>& a, const TypedValueID<L>& b, const TypedValueID<L>& c) {
 		return combine(f_in(e,a), e_sub(b,c));
 	}
 
 	template<typename A, typename B, typename C>
-	ConstraintPtr subsetIf(const A& a, const TypedSetID<A>& as, const B& b, const TypedSetID<B>& bs, const TypedValueID<C>& in, const TypedValueID<C>& out) {
+	ConstraintPtr subsetIf(const A& a, const TypedValueID<SetLattice<A>>& as, const B& b, const TypedValueID<SetLattice<B>>& bs, const TypedValueID<C>& in, const TypedValueID<C>& out) {
 		return combine(f_in(a,as) && f_in(b,bs), e_sub(in, out));
 	}
 
 	template<typename A, typename B>
-	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedValueID<B>& b, const TypedValueID<B>& c) {
+	ConstraintPtr subsetIfBigger(const TypedValueID<SetLattice<A>>& a, std::size_t s, const TypedValueID<B>& b, const TypedValueID<B>& c) {
 		return combine(detail::BiggerThanFilter<A>(a,s), e_sub(b,c));
 	}
 
 	template<typename E, typename A>
-	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedValueID<A>& b, const TypedValueID<A>& c) {
+	ConstraintPtr subsetIfReducedBigger(const TypedValueID<SetLattice<E>>& a, const E& e, std::size_t s, const TypedValueID<A>& b, const TypedValueID<A>& c) {
 		return combine(detail::BiggerThanReducedFilter<E>(a,e,s), e_sub(b,c));
 	}
 

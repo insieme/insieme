@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <set>
+
+#include "insieme/utils/set_utils.h"
+
 namespace insieme {
 namespace utils {
 namespace constraint {

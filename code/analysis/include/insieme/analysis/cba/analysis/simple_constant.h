@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/core/forward_decls.h"
@@ -49,7 +49,7 @@ namespace cba {
 
 	template<typename Context> class ConstantConstraintGenerator;
 
-	typedef TypedSetType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
+	typedef SetBasedAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
 	extern const SimpleConstantSetType D;
 	extern const SimpleConstantSetType d;
 

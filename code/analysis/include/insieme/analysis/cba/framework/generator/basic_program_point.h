@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/constraint_generator.h"
-#include "insieme/analysis/cba/framework/set_type.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
@@ -93,7 +93,7 @@ namespace cba {
 		}
 
 		template<typename E, typename SetTypeA, typename SetTypeB>
-		void connectSetsIf(const E& value, const TypedSetID<E>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+		void connectSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
@@ -107,7 +107,7 @@ namespace cba {
 		}
 
 		template<typename E, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
+		void connectStateSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);

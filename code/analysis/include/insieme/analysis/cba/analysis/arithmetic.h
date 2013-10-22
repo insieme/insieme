@@ -80,7 +80,7 @@ namespace cba {
 	};
 
 	template<typename C> class ArithmeticConstraintGenerator;
-	typedef TypedSetType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
+	typedef SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
 
 	extern const ArithmeticSetType A;
 	extern const ArithmeticSetType a;
