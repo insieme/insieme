@@ -41,7 +41,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/utils/set_constraint/solver2.h"
+#include "insieme/utils/constraint/solver.h"
 
 namespace insieme {
 namespace analysis {
@@ -53,7 +53,7 @@ namespace cba {
 	// -------------------- Constraint Generator ---------------------------
 
 	// the type used for lists of constraints
-	typedef utils::set_constraint_2::Constraints Constraints;
+	typedef utils::constraint::Constraints Constraints;
 
 	// declaration of utility function
 	template<typename Context> bool isValidContext(CBA& cba, const Context& context);

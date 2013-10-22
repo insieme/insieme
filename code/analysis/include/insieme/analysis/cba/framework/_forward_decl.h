@@ -37,14 +37,14 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/utils/set_constraint/solver2.h"
+#include "insieme/utils/constraint/solver.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using namespace core;
-	using namespace utils::set_constraint_2;
+	using namespace utils::constraint;
 
 	// forward declarations
 	typedef int Label;										// the type used to label code locations

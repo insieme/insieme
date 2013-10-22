@@ -52,8 +52,6 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/basic.h"
 
-#include "insieme/utils/set_constraint/solver2.h"
-
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -64,7 +62,6 @@ namespace cba {
 	 */
 
 	using namespace core;
-	using namespace insieme::utils::set_constraint_2;
 
 	namespace {
 

@@ -60,7 +60,6 @@
 
 #include "insieme/utils/typed_map.h"
 #include "insieme/utils/lazy.h"
-#include "insieme/utils/set_constraint/solver2.h"
 
 namespace insieme {
 namespace analysis {
@@ -69,7 +68,7 @@ namespace cba {
 	using std::tuple;
 	using std::map;
 
-	namespace sc = insieme::utils::set_constraint_2;
+	namespace sc = insieme::utils::constraint;
 
 
 
@@ -123,7 +122,7 @@ namespace cba {
 	class CBA : public boost::noncopyable {
 
 
-		typedef sc::SetID SetID;
+		typedef sc::ValueID SetID;
 		typedef sc::LazySolver Solver;
 
 		struct ContainerBase {
