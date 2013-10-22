@@ -83,18 +83,18 @@ namespace constraint {
 	};
 
 	template<typename T>
-	struct TypedValueID : public ValueID {
-		TypedValueID(int id = -1) : ValueID(id) { };
-		TypedValueID(const ValueID& id) : ValueID(id) { };
-		TypedValueID(const TypedValueID<T>& id) : ValueID(id) { };
+	struct default_meet_op {
+		bool operator()(T& trg, const T& src) const {
+			T old = trg;
+			trg += src;
+			return old != trg;
+		}
 	};
 
-	template<typename T> struct meet_op;
-
-	template<typename T>
-	struct less_op {
+	template<typename T, typename meet_op>
+	struct default_less_op {
 		bool operator()(const T& a, const T& b) const {
-			static const meet_op<T> meet;
+			static const meet_op meet;
 			if (a==b) return true;
 			T c = a;
 			meet(c,b);
@@ -102,15 +102,19 @@ namespace constraint {
 		}
 	};
 
-	template<typename T>
-	struct TypedSetID : public TypedValueID<std::set<T>> {
-		TypedSetID(int id = -1) : TypedValueID<std::set<T>>(id) { };
-		TypedSetID(const ValueID& id) : TypedValueID<std::set<T>>(id) { };
-		TypedSetID(const TypedSetID<T>& id) : TypedValueID<std::set<T>>(id) { };
+
+	template<typename T, typename meet_op = default_meet_op<T>, typename less_op = default_less_op<T,meet_op>>
+	struct TypedValueID : public ValueID {
+		typedef meet_op meet_op_type;
+		typedef less_op less_op_type;
+		TypedValueID(int id = -1) : ValueID(id) { };
+		TypedValueID(const ValueID& id) : ValueID(id) { };
+		TypedValueID(const TypedValueID<T,meet_op,less_op>& id) : ValueID(id) { };
 	};
 
+
 	template<typename T>
-	struct meet_op<std::set<T>> {
+	struct set_meet_op {
 		bool operator()(std::set<T>& trg, const std::set<T>& src) const {
 
 			// add values to target set
@@ -125,11 +129,21 @@ namespace constraint {
 	};
 
 	template<typename T>
-	struct less_op<std::set<T>> {
+	struct set_less_op {
 		bool operator()(const std::set<T>& a, const std::set<T>& b) const {
 			return set::isSubset(a, b);
 		}
 	};
+
+	template<typename T>
+	struct TypedSetID : public TypedValueID<std::set<T>, set_meet_op<T>, set_less_op<T>> {
+		typedef TypedValueID<std::set<T>, set_meet_op<T>, set_less_op<T>> super;
+		TypedSetID(int id = -1) : super(id) { };
+		TypedSetID(const ValueID& id) : super(id) { };
+		TypedSetID(const TypedSetID<T>& id) : super(id) { };
+	};
+
+
 
 } // end namespace constraint
 } // end namespace utils
@@ -372,37 +386,37 @@ namespace constraint {
 		protected:
 
 			// a utility function merging sets
-			template<typename A>
+			template<typename A, typename meet_op>
 			bool addAll(const A& src, A& trg) const {
-				static const meet_op<A> meet;
+				static const meet_op meet;
 				// compute meet operation and check for modification
 				return meet(trg, src);
 			};
 
 			// a utility function merging sets
-			template<typename A>
-			bool addAll(Assignment& ass, const A& srcSet, const TypedValueID<A>& trgSet) const {
-				return addAll(srcSet, ass[trgSet]);
+			template<typename A, typename M, typename L>
+			bool addAll(Assignment& ass, const A& srcSet, const TypedValueID<A,M,L>& trgSet) const {
+				return addAll<A,M>(srcSet, ass[trgSet]);
 			};
 
 			// a utility function merging sets
-			template<typename A>
-			bool addAll(Assignment& ass, const TypedValueID<A>& srcSet, const TypedValueID<A>& trgSet) const {
+			template<typename A, typename M, typename L>
+			bool addAll(Assignment& ass, const TypedValueID<A,M,L>& srcSet, const TypedValueID<A,M,L>& trgSet) const {
 				const Assignment& cass = ass;
 				return addAll(ass, cass[srcSet], trgSet);
 			};
 
 			// a utility to check whether a certain set is a subset of another set
-			template<typename A>
+			template<typename A,typename less_op>
 			bool isSubset(const A& a, const A& b) const {
-				static const less_op<A> less;
+				static const less_op less;
 				return less(a,b);
 			}
 
 			// a utility to check whether a certain set is a subset of another set
-			template<typename A>
-			bool isSubset(Assignment& ass, const TypedValueID<A>& a, const TypedValueID<A>& b) const {
-				return isSubset(ass[a], ass[b]);
+			template<typename A, typename M, typename L>
+			bool isSubset(Assignment& ass, const TypedValueID<A,M,L>& a, const TypedValueID<A,M,L>& b) const {
+				return isSubset<A,L>(ass[a], ass[b]);
 			}
 
 		};
@@ -439,12 +453,12 @@ namespace constraint {
 			}
 		};
 
-		template<typename T>
+		template<typename T, typename M, typename L>
 		class SubsetOf : public Executor {
 			T e;
-			TypedValueID<T> a;
+			TypedValueID<T,M,L> a;
 		public:
-			SubsetOf(const T& e, const TypedSetID<T>& a)
+			SubsetOf(const T& e, const TypedValueID<T,M,L>& a)
 				: e(e), a(a) {}
 			const ValueIDs& getInputs() const {
 				static const ValueIDs empty;
@@ -457,10 +471,10 @@ namespace constraint {
 				out << e << " sub " << a;
 			}
 			bool update(Assignment& ass) const {
-				return addAll(e, ass[a]);
+				return addAll<T,M>(e, ass[a]);
 			}
 			bool check(const Assignment& ass) const {
-				return isSubset(e, ass[a]);
+				return isSubset<T,L>(e, ass[a]);
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
@@ -471,12 +485,12 @@ namespace constraint {
 			}
 		};
 
-		template<typename T>
+		template<typename T, typename M, typename L>
 		class Subset : public Executor {
-			TypedValueID<T> a;
-			TypedValueID<T> b;
+			TypedValueID<T,M,L> a;
+			TypedValueID<T,M,L> b;
 		public:
-			Subset(const TypedValueID<T>& a, const TypedValueID<T>& b)
+			Subset(const TypedValueID<T,M,L>& a, const TypedValueID<T,M,L>& b)
 				: a(a), b(b) { assert(a != b); }
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
@@ -491,7 +505,7 @@ namespace constraint {
 				return addAll(ass, a, b);
 			}
 			bool check(const Assignment& ass) const {
-				return isSubset(ass[a], ass[b]);
+				return isSubset<T,L>(ass[a], ass[b]);
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << b << label;
@@ -501,17 +515,20 @@ namespace constraint {
 			}
 		};
 
-		template<typename A, typename R>
+		template<
+			typename A, typename MA, typename LA,
+			typename R, typename MR, typename LR
+		>
 		class SubsetUnary : public Executor {
 
 			typedef std::function<R(const A&)> fun_type;
 
-			TypedValueID<A> a;
-			TypedValueID<R> r;
+			TypedValueID<A,MA,LA> a;
+			TypedValueID<R,MR,LR> r;
 			fun_type f;
 
 		public:
-			SubsetUnary(const TypedValueID<A>& a, const TypedValueID<R>& r, const fun_type& f)
+			SubsetUnary(const TypedValueID<A,MA,LA>& a, const TypedValueID<R,MR,LR>& r, const fun_type& f)
 				: a(a), r(r), f(f) {}
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
@@ -526,7 +543,7 @@ namespace constraint {
 				return addAll(ass, f(ass[a]), r);
 			}
 			bool check(const Assignment& ass) const {
-				return isSubset(f(ass[a]), ass[r]);
+				return isSubset<R,LR>(f(ass[a]), ass[r]);
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label;
@@ -537,18 +554,22 @@ namespace constraint {
 		};
 
 
-		template<typename A, typename B, typename R>
+		template<
+			typename A, typename MA, typename LA,
+			typename B, typename MB, typename LB,
+			typename R, typename MR, typename LR
+		>
 		class SubsetBinary : public Executor {
 
 			typedef std::function<R(const A&, const B&)> fun_type;
 
-			TypedValueID<A> a;
-			TypedValueID<B> b;
-			TypedValueID<R> r;
+			TypedValueID<A,MA,LA> a;
+			TypedValueID<B,MB,LB> b;
+			TypedValueID<R,MR,LR> r;
 			fun_type f;
 
 		public:
-			SubsetBinary(const TypedValueID<A>& a, const TypedValueID<B>& b, const TypedValueID<R>& r, const fun_type& f)
+			SubsetBinary(const TypedValueID<A,MA,LA>& a, const TypedValueID<B,MB,LB>& b, const TypedValueID<R,MR,LR>& r, const fun_type& f)
 				: a(a), b(b), r(r), f(f) {}
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a,b);
@@ -563,7 +584,7 @@ namespace constraint {
 				return addAll(ass, f(ass[a],ass[b]), r);
 			}
 			bool check(const Assignment& ass) const {
-				return isSubset(f(ass[a],ass[b]), ass[r]);
+				return isSubset<R,LR>(f(ass[a],ass[b]), ass[r]);
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label << "\n";
@@ -598,14 +619,14 @@ namespace constraint {
 		return detail::ElementOf<E>(e,set);
 	}
 
-	template<typename E>
-	detail::SubsetOf<E> e_sub(const E& e, const TypedValueID<E>& a) {
-		return detail::SubsetOf<E>(e,a);
+	template<typename E, typename M, typename L>
+	detail::SubsetOf<E,M,L> e_sub(const E& e, const TypedValueID<E,M,L>& a) {
+		return detail::SubsetOf<E,M,L>(e,a);
 	}
 
-	template<typename E>
-	detail::Subset<E> e_sub(const TypedValueID<E>& a, const TypedValueID<E>& b) {
-		return detail::Subset<E>(a,b);
+	template<typename E, typename M, typename L>
+	detail::Subset<E,M,L> e_sub(const TypedValueID<E,M,L>& a, const TypedValueID<E,M,L>& b) {
+		return detail::Subset<E,M,L>(a,b);
 	}
 
 	// ----------------------------- Constraint Factory Functions ------------------------------
@@ -627,44 +648,44 @@ namespace constraint {
 		return combine(f_in(e,a), e_in(f,b));
 	}
 
-	template<typename A>
-	ConstraintPtr subset(const A& a, const TypedValueID<A>& b) {
+	template<typename A, typename M, typename L>
+	ConstraintPtr subset(const A& a, const TypedValueID<A,M,L>& b) {
 		return combine(detail::TrueFilter(), e_sub(a,b));
 	}
 
-	template<typename A>
-	ConstraintPtr subset(const TypedValueID<A>& a, const TypedValueID<A>& b) {
+	template<typename A, typename M, typename L>
+	ConstraintPtr subset(const TypedValueID<A,M,L>& a, const TypedValueID<A,M,L>& b) {
 		return combine(detail::TrueFilter(), e_sub(a,b));
 	}
 
-	template<typename E, typename A>
-	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedValueID<A>& b, const TypedValueID<A>& c) {
+	template<typename E, typename A, typename M, typename L>
+	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedValueID<A,M,L>& b, const TypedValueID<A,M,L>& c) {
 		return combine(f_in(e,a), e_sub(b,c));
 	}
 
-	template<typename A, typename B, typename C>
-	ConstraintPtr subsetIf(const A& a, const TypedSetID<A>& as, const B& b, const TypedSetID<B>& bs, const TypedValueID<C>& in, const TypedValueID<C>& out) {
+	template<typename A, typename B, typename C, typename CM, typename CL>
+	ConstraintPtr subsetIf(const A& a, const TypedSetID<A>& as, const B& b, const TypedSetID<B>& bs, const TypedValueID<C,CM,CL>& in, const TypedValueID<C,CM,CL>& out) {
 		return combine(f_in(a,as) && f_in(b,bs), e_sub(in, out));
 	}
 
-	template<typename A, typename B>
-	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedValueID<B>& b, const TypedValueID<B>& c) {
+	template<typename A, typename B, typename M, typename L>
+	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedValueID<B,M,L>& b, const TypedValueID<B,M,L>& c) {
 		return combine(detail::BiggerThanFilter<A>(a,s), e_sub(b,c));
 	}
 
-	template<typename E, typename A>
-	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedValueID<A>& b, const TypedValueID<A>& c) {
+	template<typename E, typename A, typename M, typename L>
+	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedValueID<A,M,L>& b, const TypedValueID<A,M,L>& c) {
 		return combine(detail::BiggerThanReducedFilter<E>(a,e,s), e_sub(b,c));
 	}
 
-	template<typename A, typename B, typename F>
-	ConstraintPtr subsetUnary(const TypedValueID<A>& in, const TypedValueID<B>& out, const F& fun) {
-		return combine(detail::TrueFilter(), detail::SubsetUnary<A,B>(in, out, fun));
+	template<typename A, typename AM, typename AL, typename R, typename RM, typename RL, typename F>
+	ConstraintPtr subsetUnary(const TypedValueID<A,AM,AL>& in, const TypedValueID<R,RM,RL>& out, const F& fun) {
+		return combine(detail::TrueFilter(), detail::SubsetUnary<A,AM,AL,R,RM,RL>(in, out, fun));
 	}
 
-	template<typename A, typename B, typename R, typename F>
-	ConstraintPtr subsetBinary(const TypedValueID<A>& a, const TypedValueID<B>& b, const TypedValueID<R>& r, const F& fun) {
-		return combine(detail::TrueFilter(), detail::SubsetBinary<A,B,R>(a, b, r, fun));
+	template<typename A, typename AM, typename AL, typename B, typename BM, typename BL, typename R, typename RM, typename RL, typename F>
+	ConstraintPtr subsetBinary(const TypedValueID<A,AM,AL>& a, const TypedValueID<B,BM,BL>& b, const TypedValueID<R,RM,RL>& r, const F& fun) {
+		return combine(detail::TrueFilter(), detail::SubsetBinary<A,AM,AL,B,BM,BL,R,RM,RL>(a, b, r, fun));
 	}
 
 	// ----------------------------- Constraint Container ------------------------------
@@ -751,13 +772,13 @@ namespace constraint {
 
 		Assignment(const Assignment& other) : data(other.data) { }
 
-		template<typename E>
-		E& get(const TypedValueID<E>& value) {
+		template<typename E, typename M, typename L>
+		E& get(const TypedValueID<E,M,L>& value) {
 			return data.get<E>()[value];
 		}
 
-		template<typename E>
-		const E& get(const TypedValueID<E>& value) const {
+		template<typename E, typename M, typename L>
+		const E& get(const TypedValueID<E,M,L>& value) const {
 			static const E empty;
 			auto& map = data.get<E>();
 			auto pos = map.find(value);
@@ -765,13 +786,13 @@ namespace constraint {
 			return empty;
 		}
 
-		template<typename E>
-		E& operator[](const TypedValueID<E>& value) {
+		template<typename E, typename M, typename L>
+		E& operator[](const TypedValueID<E,M,L>& value) {
 			return get(value);
 		}
 
-		template<typename E>
-		const E& operator[](const TypedValueID<E>& value) const {
+		template<typename E, typename M, typename L>
+		const E& operator[](const TypedValueID<E,M,L>& value) const {
 			return get(value);
 		}
 

@@ -305,35 +305,32 @@ namespace constraint {
 			Pair(int a = 10, int b = 10) : std::pair<int,int>(a,b) {}
 		};
 
+		struct pair_meet_op {
+			bool operator()(Pair& a, const Pair& b) const {
+				bool res = false;
+				if (a.first > b.first) {
+					a.first = b.first;
+					res = true;
+				}
+				if (a.second > b.second) {
+					a.second = b.second;
+					res = true;
+				}
+				return res;
+			}
+		};
+
+		struct pair_less_op {
+			bool operator()(const Pair& a, const Pair& b) const {
+				return a.first >= b.first && a.second >= b.second;
+			}
+		};
 	}
-
-	template<>
-	struct meet_op<Pair> {
-		bool operator()(Pair& a, const Pair& b) const {
-			bool res = false;
-			if (a.first > b.first) {
-				a.first = b.first;
-				res = true;
-			}
-			if (a.second > b.second) {
-				a.second = b.second;
-				res = true;
-			}
-			return res;
-		}
-	};
-
-	template<>
-	struct less_op<Pair> {
-		bool operator()(const Pair& a, const Pair& b) const {
-			return a.first >= b.first && a.second >= b.second;
-		}
-	};
 
 
 	TEST(Solver, Lattice) {
 
-		auto s = [](int id) { return TypedValueID<Pair>(id); };
+		auto s = [](int id) { return TypedValueID<Pair, pair_meet_op, pair_less_op>(id); };
 
 		Constraints problem = {
 				subset(Pair(5,8),s(1)),
