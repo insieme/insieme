@@ -46,9 +46,9 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// forward declarations of the result-set type token
-	template<typename E, template<typename C> class G>
-	struct TypedSetType;
+	// forward declarations of the analysis type token
+	template<typename L, template<typename C> class G>
+	struct AnalysisType;
 
 	/**
 	 * The main facade function for utilizing the constraint-based analysis framework (CBA).
@@ -72,8 +72,8 @@ namespace cba {
 	 * @param ctxt the optional context the given input expression should be considered in
 	 * @return a reference to a set of values representing the result of the analysis
 	 */
-	template<typename T, template<typename C> class G, typename Context = DefaultContext>
-	const std::set<T>& getValues(const core::ExpressionAddress& expr, const TypedSetType<T,G>& type, const Context& ctxt = Context()) {
+	template<typename L, template<typename C> class G, typename Context = DefaultContext>
+	const typename L::value_type& getValues(const core::ExpressionAddress& expr, const AnalysisType<L,G>& type, const Context& ctxt = Context()) {
 
 		typedef std::shared_ptr<CBA> CBA_Ptr;
 
