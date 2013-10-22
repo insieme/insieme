@@ -122,7 +122,7 @@ TEST(FunctionCall, VectorReduction) {
     EXPECT_FALSE(code.find("<?>") != string::npos);
 
     // test contracted form
-    EXPECT_PRED2(containsSubString, code, "return 0+1+2+3+4;");
+    EXPECT_PRED2(containsSubString, code, "return 0 + 1 + 2 + 3 + 4;");
 
     // try compiling the code fragment
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
@@ -340,7 +340,7 @@ TEST(Arrays, Allocation) {
 
 	string code = toString(*converted);
 	EXPECT_PRED2(containsSubString, code, "int32_t a[size];");
-	EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t)*size)");
+	EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t) * size)");
 
 	// try compiling the code fragment
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
