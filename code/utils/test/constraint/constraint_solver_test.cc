@@ -330,7 +330,8 @@ namespace constraint {
 
 	TEST(Solver, Lattice) {
 
-		auto s = [](int id) { return TypedValueID<Pair, pair_meet_op, pair_less_op>(id); };
+		typedef Lattice<Pair, pair_meet_op, pair_less_op> PairLattice;
+		auto s = [](int id) { return TypedValueID<PairLattice>(id); };
 
 		Constraints problem = {
 				subset(Pair(5,8),s(1)),
