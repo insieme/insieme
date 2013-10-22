@@ -117,6 +117,20 @@ namespace utils {
 			return !(*this == other);
 		}
 
+		TypedMap& operator=(const TypedMap& other) {
+			// delete content
+			for(auto cur : data) {
+				delete cur.second;
+			}
+			data.clear();
+
+			// copy data
+			for(auto cur : other.data) {
+				data[cur.first] = cur.second->copy();
+			}
+
+			return *this;
+		}
 	};
 
 } // end namespace utils
