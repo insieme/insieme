@@ -79,7 +79,7 @@ namespace cba {
 			std::set<T> x = cross(mA, mB);		// only need to compile => rest is checked by individual tests
 
 			// and a extract operator
-			std::vector<int> d = extract(mA, a); // only need to compile => rest is checked by individual tests
+			extract(mA, a); // only need to compile => rest is checked by individual tests
 		}
 
 
@@ -144,10 +144,10 @@ namespace cba {
 		EXPECT_EQ("{b}", toString(cross(mB, mB)));
 
 		// check the extract operator
-		EXPECT_EQ("[3]", toString(extract(mA, a)));
-		EXPECT_EQ("[]", toString(extract(mA, b)));
-		EXPECT_EQ("[]", toString(extract(mB, a)));
-		EXPECT_EQ("[5]", toString(extract(mB, b)));
+		EXPECT_EQ("3", toString(extract(mA, a)));
+		EXPECT_EQ("0", toString(extract(mA, b)));
+		EXPECT_EQ("0", toString(extract(mB, a)));
+		EXPECT_EQ("5", toString(extract(mB, b)));
 
 	}
 
@@ -178,8 +178,8 @@ namespace cba {
 		EXPECT_EQ("{}", toString(cross(mB, mB)));
 
 		// check the extract operator
-		EXPECT_EQ("[3]", toString(extract(mA, a)));
-		EXPECT_EQ("[]", toString(extract(mB, a)));
+		EXPECT_EQ("3", toString(extract(mA, a)));
+		EXPECT_EQ("0", toString(extract(mB, a)));
 	}
 
 	TEST(CBA, SingleIndex) {
@@ -220,13 +220,13 @@ namespace cba {
 		EXPECT_EQ("{2,*}", toString(cross(mB, mB)));
 
 		// check the extract operator
-		EXPECT_EQ("[3]", toString(extract(mA, i1)));
-		EXPECT_EQ("[]", toString(extract(mA, i2)));
-		EXPECT_EQ("[]", toString(extract(mA, is)));
+		EXPECT_EQ("3", toString(extract(mA, i1)));
+		EXPECT_EQ("0", toString(extract(mA, i2)));
+		EXPECT_EQ("0", toString(extract(mA, is)));
 
-		EXPECT_EQ("[7]", toString(extract(mB, i1)));
-		EXPECT_EQ("[5]", toString(extract(mB, i2)));
-		EXPECT_EQ("[7]", toString(extract(mB, is)));
+		EXPECT_EQ("7", toString(extract(mB, i1)));
+		EXPECT_EQ("5", toString(extract(mB, i2)));
+		EXPECT_EQ("7", toString(extract(mB, is)));
 	}
 
 

@@ -334,7 +334,7 @@ namespace cba {
 				// all fields must be contained
 				for(const auto& cur : b.data) {
 					// get values of of same field in current set
-					Set<ElementType> s = setUnion(extract(data, cur.first));
+					const Set<ElementType>& s = extract(data, cur.first);
 					if (!isMember(s, cur.second.getSingleEntry())) return false;
 				}
 
@@ -358,8 +358,8 @@ namespace cba {
 				for(const IndexType& cur : cross(data, b.data)) {
 
 					// extract sets of both sides and intersect those
-					Set<ElementType> sA = setUnion(extract(data, cur));
-					Set<ElementType> sB = setUnion(extract(b.data, cur));
+					const Set<ElementType>& sA = extract(data, cur);
+					const Set<ElementType>& sB = extract(b.data, cur);
 
 					// intersect element sets
 					Set<ElementType> r = setIntersect(sA, sB);

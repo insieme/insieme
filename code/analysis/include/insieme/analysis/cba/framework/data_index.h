@@ -133,7 +133,7 @@ namespace cba {
 	 */
 	template<typename E>
 	const E& extract(const std::map<NominalIndex, E>& map, const NominalIndex& i) {
-		const static E empty;
+		const static E empty = E();
 		// check whether the requested index is present
 		auto pos = map.find(i);
 		return (pos == map.end()) ? empty : pos->second;
@@ -191,7 +191,7 @@ namespace cba {
 	 */
 	template<typename E>
 	const E& extract(const std::map<UnitIndex, E>& map, const UnitIndex& i) {
-		const static E empty;
+		const static E empty = E();
 
 		// check whether the requested index is present
 		auto pos = map.find(i);
@@ -281,7 +281,7 @@ namespace cba {
 	 */
 	template<typename E>
 	const E& extract(const std::map<SingleIndex, E>& map, const SingleIndex& i) {
-		static const E empty;
+		static const E empty = E();
 
 		// check whether the requested index is present
 		auto pos = map.find(i);
