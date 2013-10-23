@@ -45,8 +45,9 @@ namespace utils {
 namespace constraint {
 
 	// forward declarations
-	template<typename T> struct default_meet_op;
-	template<typename T, typename meet_op> struct meet_based_less_op;
+	template<typename T> struct default_meet_assign_op;
+	template<typename T, typename meet_assign_op> struct meet_assign_based_meet_op;
+	template<typename T, typename meet_assign_op> struct meet_assign_based_less_op;
 
 
 	/**
@@ -61,18 +62,20 @@ namespace constraint {
 	 */
 	template<
 		typename T,
-		typename meet_op = default_meet_op<T>,
-		typename less_op = meet_based_less_op<T,meet_op>
+		typename meet_assign_op = default_meet_assign_op<T>,
+		typename less_op = meet_assign_based_less_op<T,meet_assign_op>,
+		typename meet_op = meet_assign_based_meet_op<T,meet_assign_op>
 	>
 	struct Lattice {
 		typedef T value_type;
+		typedef meet_assign_op meet_assign_op_type;
 		typedef meet_op meet_op_type;
 		typedef less_op less_op_type;
 	};
 
 
 	// forward declarations for set lattice
-	template<typename E> struct set_meet_op;
+	template<typename E> struct set_meet_assign_op;
 	template<typename E> struct set_less_op;
 
 	/**
@@ -80,7 +83,7 @@ namespace constraint {
 	 * on an element type. The partial order is defined by the sub-set relation.
 	 */
 	template<typename E>
-	struct SetLattice : public Lattice<std::set<E>, set_meet_op<E>, set_less_op<E>> {};
+	struct SetLattice : public Lattice<std::set<E>, set_meet_assign_op<E>, set_less_op<E>> {};
 
 
 	// ----------------------------------------------------------------
@@ -88,7 +91,7 @@ namespace constraint {
 	// ----------------------------------------------------------------
 
 	template<typename T>
-	struct default_meet_op {
+	struct default_meet_assign_op {
 		bool operator()(T& trg, const T& src) const {
 			T old = trg;
 			trg += src;
@@ -96,20 +99,31 @@ namespace constraint {
 		}
 	};
 
-	template<typename T, typename meet_op>
-	struct meet_based_less_op {
+	template<typename T, typename meet_assign_op>
+	struct meet_assign_based_meet_op {
+		T operator()(const T& a, const T& b) const {
+			static const meet_assign_op meet_assign;
+			T r = a;
+			meet_assign(r,b);
+			return r;
+		}
+	};
+
+	template<typename T, typename meet_assign_op>
+	struct meet_assign_based_less_op {
 		bool operator()(const T& a, const T& b) const {
-			static const meet_op meet;
+			static const meet_assign_op meet_assign;
 			if (a==b) return true;
 			T c = a;
-			meet(c,b);
+			meet_assign(c,b);
 			return c == b;
 		}
 	};
 
 
+
 	template<typename E>
-	struct set_meet_op {
+	struct set_meet_assign_op {
 		bool operator()(std::set<E>& trg, const std::set<E>& src) const {
 
 			// add values to target set

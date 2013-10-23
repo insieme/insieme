@@ -339,9 +339,9 @@ namespace constraint {
 		protected:
 
 			// a utility function merging sets
-			template<typename meet_op, typename A>
+			template<typename meet_assign_op, typename A>
 			bool addAll(const A& src, A& trg) const {
-				static const meet_op meet;
+				static const meet_assign_op meet;
 				// compute meet operation and check for modification
 				return meet(trg, src);
 			};
@@ -349,7 +349,7 @@ namespace constraint {
 			// a utility function merging sets
 			template<typename A, typename L>
 			bool addAll(Assignment& ass, const A& srcSet, const TypedValueID<L>& trgSet) const {
-				return addAll<typename L::meet_op_type>(srcSet, ass[trgSet]);
+				return addAll<typename L::meet_assign_op_type>(srcSet, ass[trgSet]);
 			};
 
 			// a utility function merging sets
@@ -425,7 +425,7 @@ namespace constraint {
 				out << e << " sub " << a;
 			}
 			bool update(Assignment& ass) const {
-				return addAll<typename L::meet_op_type>(e, ass[a]);
+				return addAll<typename L::meet_assign_op_type>(e, ass[a]);
 			}
 			bool check(const Assignment& ass) const {
 				return isSubset<typename L::less_op_type>(e, ass[a]);

@@ -305,7 +305,7 @@ namespace constraint {
 			Pair(int a = 10, int b = 10) : std::pair<int,int>(a,b) {}
 		};
 
-		struct pair_meet_op {
+		struct pair_meet_assign_op {
 			bool operator()(Pair& a, const Pair& b) const {
 				bool res = false;
 				if (a.first > b.first) {
@@ -330,7 +330,7 @@ namespace constraint {
 
 	TEST(Solver, Lattice) {
 
-		typedef Lattice<Pair, pair_meet_op, pair_less_op> PairLattice;
+		typedef Lattice<Pair, pair_meet_assign_op, pair_less_op> PairLattice;
 		auto s = [](int id) { return TypedValueID<PairLattice>(id); };
 
 		Constraints problem = {
