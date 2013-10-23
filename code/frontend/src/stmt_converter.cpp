@@ -613,24 +613,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	auto defLit = builder.literal("__insieme_default_case", gen.getUnit());
 
 	auto addStmtToOpenCases = [&caseMap, &openCases] (const core::StatementPtr& stmt){
-
-		// inspire switches implement break for each code region, we ignore it here
-		if (stmt.isa<core::BreakStmtPtr>()) {
-			openCases.clear();
-		} else{
-			// for each of the open cases, add the statement to their own stmt list
-			for (const auto& caseLit : openCases){
-				caseMap[caseLit].push_back(stmt);
-			}
-			// if is a scope closing statement, finalize all open cases
-			if ((stmt.isa<core::ReturnStmtPtr>()) || stmt.isa<core::ContinueStmtPtr>()) {
-				openCases.clear();
-			} else if (stmt.isa<core::CompoundStmtPtr>() && stmt.as<core::CompoundStmtPtr>()->back().isa<core::BreakStmtPtr>()) {
-				openCases.clear();
-			}
+		// for each of the open cases, add the statement to their own stmt list
+		for (const auto& caseLit : openCases) {
+			caseMap[caseLit].push_back(stmt);
 		}
 	};
-	
 	
 	// converts to literal the cases, 
 	auto convertCase = [this, defLit] (const clang::SwitchCase* switchCase) -> core::LiteralPtr{
@@ -678,7 +665,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// 					stmt1
 	// 					stmt2
 	// 			break
-	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt, vector<core::StatementPtr>& decls) {
+	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt) {
 		const clang::Stmt* stmt = caseStmt;
 
 		// we might find some chained stmts
@@ -686,11 +673,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			const clang::SwitchCase* inCase = llvm::cast<clang::SwitchCase>(stmt);
 			openCases.push_back(convertCase(inCase));
 			caseMap[openCases.back()] = std::vector<core::StatementPtr>();
-			
-			//take care of declarations in switch-body and add them to the case
-			for(auto d : decls) {
-				caseMap[openCases.back()].push_back(d);
-			}
 			stmt = inCase->getSubStmt();
 		}
 
@@ -709,13 +691,14 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 		// if is a case stmt, create a literal and open it
 		if ( const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt) ){
-			lookForCases (switchCaseStmt, decls);
+			lookForCases (switchCaseStmt);
 			continue;
 		} else if( const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt) ) {
-			//collect all declarations which are in de switch body and add them (without init) to
-			//the cases
+			// collect all declarations which are in de switch body and add them (without init) to
+			// the cases
 			core::DeclarationStmtPtr decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
-			//remove the init, use undefinedvar 
+			// remove the init, use undefinedvar
+			// this is what GCC does, VC simply errors out
 			decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
 			decls.push_back(decl);
 			continue;
@@ -745,6 +728,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 	// handle eventual OpenMP pragmas attached to the Clang node
 	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irSwitch, switchStmt, convFact);
+
+	// add declarations at switch scope
+	for(auto decl : decls) {
+		retStmt.push_back(decl);
+	}
 
 	retStmt.push_back(annotatedNode);
 	retStmt = tryAggregateStmts(builder, retStmt);
