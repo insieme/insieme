@@ -74,7 +74,15 @@ using namespace llvm;
  */
 std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type){
 
-	std::string fullName =  decl->getQualifiedNameAsString();
+	if(decl->getNameAsString().empty()){
+		// empty name, build an annonymous name for this fella
+		std::stringstream ss;
+		ss << "_anom";
+		ss << (unsigned long long) decl;
+		return ss.str();
+	}
+	std::string fullName = decl->getQualifiedNameAsString();
+
 	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)) {
 
 		std::string name = decl->getNameAsString();
@@ -92,6 +100,7 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 		unsigned pos = typeName.find(name);
 		boost::replace_last(fullName, name, std::string(typeName.begin()+pos, typeName.end()));
 	}
+
 	REMOVE_SYMBOLS(fullName);
 	return fullName;
 }

@@ -112,10 +112,10 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 			classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
 		}
 
-		//update name of class type
-		classType = core::transform::replaceNode(mgr,
-												 core::StructTypeAddress(classType)->getName(),
-												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+//		//update name of class type
+//		classType = core::transform::replaceNode(mgr,
+//												 core::StructTypeAddress(classType)->getName(),
+//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
 		if( !classDecl->getNameAsString().empty() ) {

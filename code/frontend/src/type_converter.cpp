@@ -373,6 +373,22 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	core::TypePtr subType = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);
+
+	// typedefs take ownership of the inner type, this way, same anonimous types along translation units will
+	// be named as the typdef if any
+	if (core::GenericTypePtr symb = subType.isa<core::GenericTypePtr>()){
+		core::TypePtr trgty;
+		auto it =  convFact.getIRTranslationUnit().getTypes().find(symb);
+		if (it != convFact.getIRTranslationUnit().getTypes().end())
+			trgty = it->second;
+
+		if (trgty.isa<core::StructTypePtr>()){
+			std::string name =  typedefType->getDecl()->getQualifiedNameAsString();
+			subType = core::transform::replaceNode(mgr, core::StructTypeAddress(trgty.as<core::StructTypePtr>())->getName(), 
+											  builder.stringValue(name)).as<core::TypePtr>();
+		}
+	}
+
     //it may happen that we have something like 'typedef enum {...} name;'
     //in this case we can forget the annotation
     if(!mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)) {
@@ -537,11 +553,10 @@ namespace {
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-	auto& cache = typeCache;
 
-	// look up type within cache
-	auto pos = cache.find(type);
-	if (pos != cache.end()) {
+	// look up type within typeCache
+	auto pos = typeCache.find(type);
+	if (pos != typeCache.end()) {
 		return pos->second;
 	}
 
@@ -552,52 +567,48 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if(convFact.program.getInterceptor().isIntercepted(type)) {
 		VLOG(2) << type << " isIntercepted";
 		res = convFact.program.getInterceptor().intercept(type, convFact);
-		cache[type] = res;
+		typeCache[type] = res;
 		return res;
 	}
 
 	// assume a recursive construct for record declarations
 	if (auto recDecl = toRecordDecl(type)) {
+		std::string name = utils::getNameForRecord(recDecl, type);
 
 		// create a (temporary) type variable for this type
-		core::GenericTypePtr symbol = builder.genericType(utils::getNameForRecord(recDecl, type));
+		core::GenericTypePtr symbol = builder.genericType(name);
 
-		// bind recursive variable within the cache
-		cache[type] = symbol;
+		// bind recursive variable within the typeCache
+		typeCache[type] = symbol;
 
 		// resolve the type recursively
 		res = convertInternal(type);
 		assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
 
-		// check cache consistency
-		assert(cache[type] == symbol); // should not change in the meantime
+		// give the type a name to structs
+		if (core::StructTypePtr strTy = res.isa<core::StructTypePtr>())
+			res = core::transform::replaceNode(mgr, core::StructTypeAddress(strTy)->getName(), builder.stringValue(name)).as<core::TypePtr>();
+
+		// check typeCache consistency
+		assert(typeCache[type] == symbol); // should not change in the meantime
 
 		// register type within resulting translation unit
-		if (!recDecl->getName().empty()) {
-			convFact.getIRTranslationUnit().addType(symbol, res);
+		convFact.getIRTranslationUnit().addType(symbol, res);
 
-			// and add it to the cache
-			cache[type] = symbol;
+		// run post-conversion actions
+		postConvertionAction(type, res);
 
-			// run post-conversion actions
-			postConvertionAction(type, res);
+		// but the result is just the symbol
+		return symbol;
 
-			// but the result is just the symbol
-			return symbol;
-
-		} else {
-
-			// anonymous structs need to be added to the cache (not as symbol)
-			cache[type] = res;
-		}
 
 	} else {
 
 		// for all others no recursive definitions need to be considered
 		res = convertInternal(type);
 
-		// update cache
-		cache[type] = res;
+		// update typeCache
+		typeCache[type] = res;
 	}
 
 	// run post-conversion actions

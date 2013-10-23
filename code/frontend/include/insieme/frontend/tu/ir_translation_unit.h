@@ -114,9 +114,9 @@ namespace tu {
 
 		// mutable getter:
 
-		TypeMap& getTypes() {
-			return types;
-		}
+	//	TypeMap& getTypes() {
+	//		return types;
+	//	}
 
 		FunctionMap& getFunctions() {
 			return functions;
@@ -137,7 +137,8 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-		//	assert(types.find(symbol) == types.end());
+			assert(symbol );
+			assert(definition);
 			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
 		}
 

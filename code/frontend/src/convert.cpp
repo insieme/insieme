@@ -230,20 +230,25 @@ tu::IRTranslationUnit Converter::convert() {
 			auto irTy = converter.convertType(typeDecl->getTypeForDecl());
 			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
 		}
-		void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
+		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
 			// extract new symbol name
-			auto symbol = converter.getIRBuilder().genericType(typeDecl->getQualifiedNameAsString());
-
-			// get contained type
-			auto res = converter.convertType(typeDecl->getUnderlyingType().getTypePtr());
-
-			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
+//
+			if (!typedefDecl->getTypeForDecl()) return;
+			
+//			// get contained type
+			auto res = converter.convertType(typedefDecl->getTypeForDecl());
+//
+//			// if the typedef maps an anonymous type, this might produce problems along the translation units
+//			// we create a type with is the actual implementation but with the typedef name;
+//
+//			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
+			auto symbol = converter.getIRBuilder().genericType(typedefDecl->getQualifiedNameAsString());
 			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
 				converter.getIRTranslationUnit().addType(symbol, res);
 			}
 
-			if (res.isa<core::StructTypePtr>())
-				utils::addHeaderForDecl(res, typeDecl, converter.getProgram().getStdLibDirs());
+	//		if (res.isa<core::StructTypePtr>())
+			utils::addHeaderForDecl(res, typedefDecl, converter.getProgram().getStdLibDirs());
 		}
 	} typeVisitor(*this);
 
@@ -258,10 +263,23 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitVarDecl(const clang::VarDecl* var) {
 			// variables to be skipped
-			if (!var->hasGlobalStorage()) return;
-			if (var->hasExternalStorage()) return;
-			if (var->isStaticLocal()) return;
-			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) return;
+			std::cout << "VAR: " << var->getQualifiedNameAsString() << std::endl;
+			if (!var->hasGlobalStorage()) {
+				std::cout << "   not global" << std::endl;
+				return;
+			}
+			if (var->hasExternalStorage()) {
+				std::cout << "   external" << std::endl;
+				return;
+			}
+			if (var->isStaticLocal()) {
+				std::cout << "   static" << std::endl;
+				return;
+			}
+			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) {
+				std::cout << "   intercepted" << std::endl;
+				return;
+			}
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -323,6 +341,11 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+
+	std::cout << "==============================  TU DUMP ================================" << std::endl;
+	std::cout << getIRTranslationUnit() << std::endl;
+	std::cout << "========================================================================" << std::endl;
+
 
 	// that's all
 	return irTranslationUnit;
@@ -621,6 +644,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			omp::addThreadPrivateAnnotation(globVar);
 		}
 
+		utils::addHeaderForDecl(globVar, valDecl, getProgram().getStdLibDirs());
 		varDeclMap.insert( { valDecl, globVar } );
 		return globVar;
 	}
