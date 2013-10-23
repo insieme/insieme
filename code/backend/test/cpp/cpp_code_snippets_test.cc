@@ -794,7 +794,7 @@ namespace backend {
 
 
 					let ctorB = B::(int x, int y, int z) {
-						ctorA(this, x, y+z);
+						ctorA(this, x, y + z);
 						this->z = z; 
 					};
 					
@@ -820,7 +820,7 @@ namespace backend {
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2, 3);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2), y(var_3) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3, int32_t var_4) : A(var_2, var_3+var_4), z(var_4) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3, int32_t var_4) : A(var_2, var_3 + var_4), z(var_4) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

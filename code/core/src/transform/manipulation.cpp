@@ -885,6 +885,21 @@ CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, un
 // ------------------------------ lambda extraction -------------------------------------------------------------------
 
 
+bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts) {
+	bool hasFree = false;
+	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+		auto curType = cur->getNodeType();
+		if(::contains(pruneStmts, curType)) {
+			return true; // do not descent here
+		}
+		if(cur->getNodeType() == controlStmt) {
+			hasFree = true;	// "bound" stmt found
+		}
+		return hasFree;
+	});
+	return hasFree;
+}
+
 bool isOutlineAble(const StatementPtr& stmt) {
 
 	// the statement must not contain a "free" return
@@ -904,16 +919,12 @@ bool isOutlineAble(const StatementPtr& stmt) {
 	}
 
 	// search for "bound" break or continue statements
-	bool hasFreeBreakOrContinue = false;
-	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
-		if (cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
-			return true; // do not decent here
-		}
-		if (cur->getNodeType() == NT_BreakStmt || cur->getNodeType() == NT_ContinueStmt) {
-			hasFreeBreakOrContinue = true;	// "bound" stmt found
-		}
-		return hasFreeBreakOrContinue;
-	});
+	vector<NodeType> pruneStmts;
+	pruneStmts.push_back(NT_ForStmt);
+	pruneStmts.push_back(NT_WhileStmt);
+	bool hasFreeBreakOrContinue = hasFreeControlStatement(stmt, NT_ContinueStmt, pruneStmts);
+	pruneStmts.push_back(NT_SwitchStmt);
+	hasFreeBreakOrContinue = hasFreeBreakOrContinue || hasFreeControlStatement(stmt, NT_BreakStmt, pruneStmts);
 
 	return !hasFreeBreakOrContinue;
 }

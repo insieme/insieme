@@ -63,6 +63,8 @@ using namespace llvm;
 		boost::replace_all(str, ">", "_"); \
 		boost::replace_all(str, "::", "_"); \
 		boost::replace_all(str, " ", "_"); \
+		boost::replace_all(str, "(", "_"); \
+		boost::replace_all(str, ")", "_"); \
 }
 
 
