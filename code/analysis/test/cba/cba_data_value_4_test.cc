@@ -38,10 +38,11 @@
 
 #include <array>
 
-#include "insieme/analysis/cba/framework/data_value_4.h"
 #include "insieme/analysis/cba/framework/data_index.h"
+#include "insieme/analysis/cba/framework/data_value_4.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/utils/unused.h"
 
 namespace insieme {
 namespace analysis {
@@ -50,568 +51,224 @@ namespace cba {
 	using namespace std;
 	using namespace core;
 
-
-	TEST(DataValue, AtomicElements) {
-
-		typedef Element<int> Element;
-		EXPECT_EQ(sizeof(int*), sizeof(Element));
-
-		DataManager<int> mgr;
-
-		Element a = mgr.atomic(1);
-		Element b = mgr.atomic(2);
-		Element c = mgr.atomic(3);
-
-		EXPECT_TRUE(a.isSingle());
-		EXPECT_TRUE(b.isSingle());
-		EXPECT_TRUE(c.isSingle());
-
-		EXPECT_EQ("1", toString(a));
-		EXPECT_EQ("2", toString(b));
-		EXPECT_EQ("3", toString(c));
-
-		EXPECT_EQ(a, mgr.atomic(1));
-		EXPECT_EQ(b, mgr.atomic(2));
-		EXPECT_EQ(c, mgr.atomic(3));
-
-		EXPECT_EQ(a.getPtr(), mgr.atomic(1).getPtr());
-		EXPECT_EQ(b.getPtr(), mgr.atomic(2).getPtr());
-		EXPECT_EQ(c.getPtr(), mgr.atomic(3).getPtr());
-	}
-
-	TEST(DataValue, DataSet) {
-
-		typedef Set<int> Set;
-		EXPECT_EQ(sizeof(int*), sizeof(Set));
-
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-
-		EXPECT_EQ("{0}", toString(Set(e0)));
-		EXPECT_EQ("{1}", toString(Set(e1)));
-
-		EXPECT_EQ("{}", toString(mgr.set()));
-		EXPECT_EQ("{0}", toString(mgr.set(e0)));
-		EXPECT_EQ("{1}", toString(mgr.set(e1)));
-		EXPECT_EQ("{0,1}", toString(mgr.set(e0,e1)));
-		EXPECT_EQ("{0,1}", toString(mgr.set(e0,e1,e0)));
-
-		// check pointer-equality
-		EXPECT_EQ(mgr.set(e0,e1).getPtr(), mgr.set(e1,e0).getPtr());
-
-		// empty check
-		EXPECT_TRUE(Set().empty());
-		EXPECT_TRUE(mgr.set().empty());
-
-		EXPECT_FALSE(mgr.set(e0).empty());
-		EXPECT_FALSE(mgr.set(e0,e1).empty());
-
-		// single check
-		EXPECT_FALSE(Set().isSingle());
-		EXPECT_TRUE(Set(e0).isSingle());
-		EXPECT_TRUE(Set(e1).isSingle());
-		EXPECT_TRUE(mgr.set(e0).isSingle());
-		EXPECT_TRUE(mgr.set(e1).isSingle());
-		EXPECT_FALSE(mgr.set(e0,e1).isSingle());
-	}
-
-
-	TEST(DataValue, CompoundElements) {
-
-		typedef Set<int> Set;
-		typedef Element<int> Element;
-
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		std::map<UnitIndex, Set> m1;
-		m1[UnitIndex()] = e1;
-
-		Element a = mgr.compound(m1);
-		Element b = mgr.compound(m1);
-
-		EXPECT_EQ(a,b);
-		EXPECT_EQ(a.getPtr(), b.getPtr());
-
-		EXPECT_EQ("[*={1}]", toString(a));
-		EXPECT_EQ("[*={1}]", toString(b));
-
-		std::map<SingleIndex, Set> m2;
-		m2[1] = e1;
-		m2[2] = mgr.set(e0,e2);
-		m2[SingleIndex()] = e2;
-
-		Element c = mgr.compound(m2);
-		EXPECT_EQ("[1={1},2={0,2},*={2}]", toString(c));
-		EXPECT_NE(a,c);
-		EXPECT_NE(b,c);
-
-
-		Element d = mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1,e2)),
-				entry(NominalIndex("b"), mgr.set(e0,e2))
-		);
-
-		EXPECT_EQ("[a={1,2},b={0,2}]", toString(d));
-
-		// empty check
-		EXPECT_FALSE(d.empty());
-
-		EXPECT_FALSE(mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1,e2)),
-				entry(NominalIndex("b"), mgr.set(e0,e2))
-		).empty());
-
-		EXPECT_TRUE(mgr.compound(
-				entry(NominalIndex("a"), mgr.set()),
-				entry(NominalIndex("b"), mgr.set(e0,e2))
-		).empty());
-
-		EXPECT_TRUE(mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1,e2)),
-				entry(NominalIndex("b"), mgr.set())
-		).empty());
-
-		EXPECT_TRUE(mgr.compound(
-				entry(NominalIndex("a"), mgr.set()),
-				entry(NominalIndex("b"), mgr.set())
-		).empty());
-
-		m1.clear();
-		EXPECT_TRUE(mgr.compound(m1).empty());
-
-
-		// single check
-		EXPECT_TRUE(a.isSingle());
-		EXPECT_TRUE(b.isSingle());
-		EXPECT_FALSE(c.isSingle());
-		EXPECT_FALSE(d.isSingle());
-
-	}
-
-	TEST(DataValue, Membership) {
-
-		typedef Set<int> Set;
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		// simple set stuff
-		Set s1;
-		Set s2 = mgr.set(e0);
-		Set s3 = mgr.set(e1);
-		Set s4 = mgr.set(e1,e2);
-
-		EXPECT_FALSE(isMember(s1, e0));
-		EXPECT_TRUE (isMember(s2, e0));
-		EXPECT_FALSE(isMember(s3, e0));
-		EXPECT_FALSE(isMember(s4, e0));
-
-		// more complex stuff
-		Set c1 = mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1,e2)),
-				entry(NominalIndex("b"), mgr.set(e0,e2))
-		);
-
-		EXPECT_TRUE(isMember(c1, mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1)),
-				entry(NominalIndex("b"), mgr.set(e0))
-		)));
-
-		EXPECT_TRUE(isMember(c1, mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e2)),
-				entry(NominalIndex("b"), mgr.set(e0))
-		)));
-
-		EXPECT_FALSE(isMember(c1, mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e2)),
-				entry(NominalIndex("b"), mgr.set(e1))
-		)));
-	}
-
-	TEST(DataValue, ArrayMemberShip) {
-
-		typedef Set<int> Set;
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		Set c1 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e1)),
-				entry(SingleIndex(2), mgr.set(e2)),
-				entry(SingleIndex(), mgr.set(e0))
-		);
-
-		std::map<SingleIndex,Set> m;
-		m[SingleIndex(0)] = mgr.atomic(0);
-		m[SingleIndex(1)] = mgr.atomic(1);
-		m[SingleIndex(2)] = mgr.atomic(2);
-		m[SingleIndex(3)] = mgr.atomic(0);
-		m[SingleIndex(4)] = mgr.atomic(0);
-		auto x = mgr.compound(m);
-
-		EXPECT_TRUE(isMember(c1, x)) << x << " in " << c1;
-
-	}
-
 	namespace {
 
-		template<int base, unsigned dim>
-		void inc(array<int,dim>& counter) {
-			for(auto it = counter.rbegin(); it != counter.rend(); it++) {
-				if (*it == base) {
-					*it = 0;
-					continue;
+		struct Pair : public std::pair<int,int> {
+			Pair(int a = 10, int b = 10) : std::pair<int,int>(a,b) {}
+		};
+
+		struct pair_meet_assign_op {
+			bool operator()(Pair& a, const Pair& b) const {
+				bool res = false;
+				if (a.first > b.first) {
+					a.first = b.first;
+					res = true;
 				}
-				(*it)++;
-				return;
+				if (a.second > b.second) {
+					a.second = b.second;
+					res = true;
+				}
+				return res;
 			}
+		};
+
+		struct pair_less_op {
+			bool operator()(const Pair& a, const Pair& b) const {
+				return a.first >= b.first && a.second >= b.second;
+			}
+		};
+	}
+
+	// define a test lattice
+	typedef utils::constraint::Lattice<Pair, pair_meet_assign_op, pair_less_op> PairLattice;
+
+
+	template<template<typename L> class S>
+	void testStructure() {
+
+		typedef S<PairLattice> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
+
+		typename Lattice::meet_assign_op_type meet_assign_op;
+		typename Lattice::meet_op_type meet_op;
+		typename Lattice::less_op_type less_op;
+		typename Lattice::projection_op_type projection_op;
+
+		// create an manager instance
+		mgr_type mgr;
+
+		// create atomic values
+		value_type a = mgr.atomic(Pair(4,6));
+		value_type b = mgr.atomic(Pair(6,4));
+
+		// check whether values can be assigned
+		value_type c = a;
+
+		// check meet operator
+		bool change = meet_assign_op(c,b);
+		EXPECT_TRUE(change);
+
+		// check equivalence between meet and meet assign operation
+		EXPECT_EQ(c, meet_op(a,b));
+
+		// check that meet is a sub-type
+		EXPECT_PRED2(less_op, a, c);
+		EXPECT_PRED2(less_op, a, c);
+
+		// check index structure - first: nominal index
+		{
+			NominalIndex nA("a");
+			NominalIndex nB("b");
+
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(6,3));
+			auto a3 = mgr.atomic(Pair(4,5));
+			auto a4 = mgr.atomic(Pair(5,2));
+
+			auto d = mgr.compound(
+					entry(nA, a1),
+					entry(nB, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(nA, a3),
+					entry(nB, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+//			std::cout << d << "\n";
+//			std::cout << e << "\n";
+//			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, nA));
+			EXPECT_PRED2(less_op, a2, projection_op(d, nB));
+			EXPECT_PRED2(less_op, a3, projection_op(e, nA));
+			EXPECT_PRED2(less_op, a4, projection_op(e, nB));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a3), projection_op(f, nA));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, nB));
 		}
 
+		// check UnitIndex
+		{
+			UnitIndex uI;
 
-		template<unsigned dim, typename F1, typename F2>
-		void empiricArrayEqualityTest(DataManager<int>& mgr, const F1& a, const F2& b, int max_value=3) {
-			array<int,dim> zero;
-			for(int& c : zero) c = 0;
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(4,5));
 
-			array<int,dim> counter = zero;
-			do {
+			auto d = mgr.compound(
+					entry(uI, a1)
+			);
 
-				// create an element
-				std::map<SingleIndex,Set<int>> m;
-				for(unsigned i=0; i<dim; i++) {
-					m[SingleIndex(i)] = mgr.atomic(counter[i]);
-				}
+			auto e = mgr.compound(
+					entry(uI, a2)
+			);
 
-				auto d = mgr.compound(m);
-				EXPECT_EQ(a(d), b(d)) << "Element: " << d;
+			auto f = meet_op(d,e);
 
-				inc<3,dim>(counter);
-			} while(counter != zero);
+//			std::cout << d << "\n";
+//			std::cout << e << "\n";
+//			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(e, uI));
+
+			EXPECT_PRED2(less_op, a1, projection_op(f, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(f, uI));
 		}
 
+		// check SingleIndex
+		{
+			SingleIndex s1(1);
+			SingleIndex s2(2);
+			SingleIndex sR;
+
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(6,3));
+			auto a3 = mgr.atomic(Pair(4,5));
+			auto a4 = mgr.atomic(Pair(5,2));
+
+			auto d = mgr.compound(
+					entry(s1, a1),
+					entry(sR, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(s2, a3),
+					entry(sR, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+//			std::cout << d << "\n";
+//			std::cout << e << "\n";
+//			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, s1));
+			EXPECT_PRED2(less_op, a2, projection_op(d, s2));
+			EXPECT_PRED2(less_op, a2, projection_op(d, sR));
+
+			EXPECT_PRED2(less_op, a4, projection_op(e, s1));
+			EXPECT_PRED2(less_op, a3, projection_op(e, s2));
+			EXPECT_PRED2(less_op, a4, projection_op(e, sR));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a4), projection_op(f, s1));
+			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, s2));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, sR));
+		}
 	}
 
 
-	TEST(DataValue, Merge) {
-
-		typedef Set<int> Set;
-		typedef Element<int> Element;
-
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		Set s1;
-		Set s2 = mgr.set(e0);
-		Set s3 = mgr.set(e1);
-		Set s4 = mgr.set(e2);
-		Set s5 = mgr.set(e0,e2);
-
-		EXPECT_EQ("{}", toString(setUnion(s1,s1)));
-		EXPECT_EQ("{0}", toString(setUnion(s1,s2)));
-		EXPECT_EQ("{1}", toString(setUnion(s1,s3)));
-		EXPECT_EQ("{0,1}", toString(setUnion(s2,s3)));
-		EXPECT_EQ("{1,2}", toString(setUnion(s3,s4)));
-		EXPECT_EQ("{0,2}", toString(setUnion(s2,s5)));
-		EXPECT_EQ("{0,1,2}", toString(setUnion(s3,s5)));
-
-		Set c1 = mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e1,e2)),
-				entry(NominalIndex("b"), mgr.set(e0,e2))
-		);
-
-		Set c2 = mgr.compound(
-				entry(NominalIndex("a"), mgr.set(e0,e1)),
-				entry(NominalIndex("b"), mgr.set(e1,e2))
-		);
-
-		EXPECT_EQ("{[a={1,2},b={0,2}]}", toString(setUnion(s1,c1)));
-		EXPECT_EQ("{[a={0,1},b={1,2}]}", toString(setUnion(s1,c2)));
-		EXPECT_EQ("{[a={0,1},b={1,2}],[a={1,2},b={0,2}]}", toString(setUnion(c1,c2)));
-		EXPECT_EQ("{[a={1,2},b={0,2}]}", toString(setUnion(c1,c1)));
-		EXPECT_EQ("{[a={0,1},b={1,2}]}", toString(setUnion(c2,c2)));
-
-		// TODO: ensure structure is identical within sets
-
-
-		// some empirical tests with arrays
-		Set c3 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e1)),
-				entry(SingleIndex(2), mgr.set(e2)),
-				entry(SingleIndex(), mgr.set(e0))
-		);
-
-		Set c4 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e2)),
-				entry(SingleIndex(), mgr.set(e0))
-		);
-
-		auto cS = setUnion(c3, c4);
-
-		empiricArrayEqualityTest<5>(mgr,
-			[&](const Element& e)->bool { return isMember(c3, e) || isMember(c4, e); },
-			[&](const Element& e)->bool { return isMember(cS, e); }
-		);
+	TEST(DataStrucuture, UnitStructure) {
+		testStructure<UnionStructureLattice>();
 	}
 
-	TEST(DataValue, Intersect) {
-
-		typedef Set<int> Set;
-
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		Set s0 = mgr.set();
-		Set s1 = mgr.set(e0);
-		Set s2 = mgr.set(e1);
-		Set s3 = mgr.set(e1, e2);
-
-		// equal sets => no change
-		EXPECT_EQ(s0, setIntersect(s0,s0));
-		EXPECT_EQ(s1, setIntersect(s1,s1));
-		EXPECT_EQ(s2, setIntersect(s2,s2));
-		EXPECT_EQ(s3, setIntersect(s3,s3));
-
-		// interacting with the empty set => empty set
-		EXPECT_EQ(s0, setIntersect(s0,s1));
-		EXPECT_EQ(s0, setIntersect(s1,s0));
-		EXPECT_EQ(s0, setIntersect(s0,s2));
-		EXPECT_EQ(s0, setIntersect(s2,s0));
-		EXPECT_EQ(s0, setIntersect(s0,s3));
-		EXPECT_EQ(s0, setIntersect(s3,s0));
-
-		// intersecting non-intersecting sets
-		EXPECT_EQ(s0, setIntersect(s1,s3));
-		EXPECT_EQ(s0, setIntersect(s3,s1));
-
-		// now something harder - intersecting elements
-		EXPECT_EQ(s2, setIntersect(s2,s3));
-		EXPECT_EQ(s2, setIntersect(s3,s2));
-
+	TEST(DataStrucuture, FirstOrderStructure) {
+		testStructure<FirstOrderStructureLattice>();
 	}
 
-	TEST(DataValue, IntersectElements) {
-
-		typedef Set<int> Set;
-		typedef Element<int> Element;
-
-		DataManager<int> mgr;
-
-		auto e0 = mgr.atomic(0);
-		auto e1 = mgr.atomic(1);
-		auto e2 = mgr.atomic(2);
-
-		Set c1 = mgr.compound(
-				entry(SingleIndex(), mgr.set(e0,e1,e2))
-		);
-
-		Set c2 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e1)),
-				entry(SingleIndex(2), mgr.set(e2)),
-				entry(SingleIndex(), mgr.set(e0))
-		);
-
-		Set c3 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e2)),
-				entry(SingleIndex(), mgr.set(e0))
-		);
-
-		// check the sets
-		EXPECT_EQ("{[*={0,1,2}]}", toString(c1));
-		EXPECT_EQ("{[1={1},2={2},*={0}]}", toString(c2));
-		EXPECT_EQ("{[1={2},*={0}]}", toString(c3));
-
-		Set s0;
-
-		// check intersecting equal sets
-		EXPECT_EQ(c1, setIntersect(c1, c1));
-		EXPECT_EQ(c2, setIntersect(c2, c2));
-		EXPECT_EQ(c3, setIntersect(c3, c3));
-
-		// check intersecting distinct sets
-		EXPECT_EQ(c2, setIntersect(c1, c2));
-		EXPECT_EQ(c2, setIntersect(c2, c1));
-		EXPECT_EQ(c3, setIntersect(c1, c3));
-		EXPECT_EQ(c3, setIntersect(c3, c3));
-
-		// check intersecting disjunct sets
-		EXPECT_EQ(s0, setIntersect(c2, c3));
-		EXPECT_EQ(s0, setIntersect(c3, c2));
-
-
-		// check intersection of two sets forming a third set
-		Set c4 = mgr.compound(
-				entry(SingleIndex(1), mgr.set(e0,e1,e2)),
-				entry(SingleIndex(), mgr.set(e0,e1))
-		);
-		Set c5 = mgr.compound(
-				entry(SingleIndex(2), mgr.set(e0,e1,e2)),
-				entry(SingleIndex(), mgr.set(e1,e2))
-		);
-
-		EXPECT_EQ("{[1={1,2},2={0,1},*={1}]}", toString(setIntersect(c4,c5)));
-		EXPECT_EQ("{[1={1,2},2={0,1},*={1}]}", toString(setIntersect(c5,c4)));
-
-		// run an empirical test
-		Set cI = setIntersect(c4,c5);
-		empiricArrayEqualityTest<5>(mgr,
-			[&](const Element& e)->bool { return isMember(c4, e) && isMember(c5, e); },
-			[&](const Element& e)->bool { return isMember(cI, e); }
-		);
-	}
-
-//	TEST(DataValue, Diff) {
-//
-//		typedef Set<int> Set;
-//
-//		DataManager<int> mgr;
-//
-//		auto e0 = mgr.atomic(0);
-//		auto e1 = mgr.atomic(1);
-//		auto e2 = mgr.atomic(2);
-//		auto e3 = mgr.atomic(3);
-//		auto e4 = mgr.atomic(4);
-//
-//		Set s0 = mgr.set();
-//		Set s1 = mgr.set(e0);
-//		Set s2 = mgr.set(e1);
-//		Set s3 = mgr.set(e1, e2);
-//		Set s4 = mgr.set(e1, e3, e4);
-//		Set s5 = mgr.set(e1, e2, e3, e4);
-//
-//		// some simple cases - involving an empty set
-//		EXPECT_EQ(s0, setDiff(s0,s0));
-//		EXPECT_EQ(s0, setDiff(s0,s1));
-//		EXPECT_EQ(s0, setDiff(s0,s2));
-//		EXPECT_EQ(s0, setDiff(s0,s3));
-//
-//		// also, the other way around
-//		EXPECT_EQ(s0, setDiff(s0,s0));
-//		EXPECT_EQ(s1, setDiff(s1,s0));
-//		EXPECT_EQ(s2, setDiff(s2,s0));
-//		EXPECT_EQ(s3, setDiff(s3,s0));
-//
-//		// subtract something that is not there
-//		EXPECT_EQ(s3, setDiff(s3,s1));
-//
-//		EXPECT_EQ("{1,2}", toString(s3));
-//		EXPECT_EQ("{1,3,4}", toString(s4));
-//		EXPECT_EQ("{1,2,3,4}", toString(s5));
-//
-//		// and now some real stuff
-//		EXPECT_EQ("{2}", toString(setDiff(s3,s2)));
-//		EXPECT_EQ("{3,4}", toString(setDiff(s4,s3)));
-//		EXPECT_EQ("{3,4}", toString(setDiff(s5,s3)));
-//
+//	TEST(DataStrucuture, SecondOrderStructure) {
+//		testStructure<SecondOrderStructureLattice>();
 //	}
-//
-//	TEST(DataValue, DiffComposed) {
-//
-//		typedef Set<int> Set;
-//		typedef Element<int> Element;
-//
-//		DataManager<int> mgr;
-//
-//		auto e0 = mgr.atomic(0);
-//		auto e1 = mgr.atomic(1);
-//		auto e2 = mgr.atomic(2);
-//
-//		Set s0;
-//		Set c1 = mgr.compound(
-//				entry(SingleIndex(), mgr.set(e0,e1,e2))
-//		);
-//
-//		Set c2 = mgr.compound(
-//				entry(SingleIndex(1), mgr.set(e1)),
-//				entry(SingleIndex(2), mgr.set(e2)),
-//				entry(SingleIndex(), mgr.set(e0))
-//		);
-//
-//		Set c3 = mgr.compound(
-//				entry(SingleIndex(1), mgr.set(e2)),
-//				entry(SingleIndex(), mgr.set(e0))
-//		);
-//
-//		Set c4 = mgr.compound(
-//				entry(SingleIndex(1), mgr.set(e2)),
-//				entry(SingleIndex(), mgr.set(e0,e1))
-//		);
-//
-//		// check complete annihilation
-//		EXPECT_EQ(s0, setDiff(c1,c1));
-//		EXPECT_EQ(s0, setDiff(c2,c2));
-//		EXPECT_EQ(s0, setDiff(c3,c3));
-//
-//		// removing a super-set from a sub-set
-//		EXPECT_EQ(s0, setDiff(c2,c1));
-//		EXPECT_EQ(s0, setDiff(c3,c1));
-//
-//		// check complex cases
-//		EXPECT_EQ("{[1={0,1,2},2={0,1},*={0,1,2}],[1={0,1,2},2={0,1,2},*={1,2}],[1={0,2},2={0,1,2},*={0,1,2}]}", toString(setDiff(c1,c2)));
-//		EXPECT_EQ("{[1={0,1},*={0,1,2}],[1={0,1,2},*={1,2}]}", toString(setDiff(c1,c3)));
-//		EXPECT_EQ("{[1={0,1},*={0,1,2}],[1={0,1,2},*={2}]}", toString(setDiff(c1,c4)));
-//
-//
-//		// some empirical tests with arrays
-//		auto cS = setDiff(c1, c2);
-//		empiricArrayEqualityTest<5>(mgr,
-//			[&](const Element& e)->bool { return isMember(c1, e) && !isMember(c2, e); },
-//			[&](const Element& e)->bool { return isMember(cS, e); }
-//		);
-//
-//		std::cout << "c1 = " << c1 << "\n";
-//		std::cout << "c2 = " << c2 << "\n";
-//		std::cout << "cS = " << cS << "\n";
-//
-////
-////		cS = setDiff(c1, c3);
-////		empiricArrayEqualityTest<5>(mgr,
-////			[&](const Element& e)->bool { return isMember(c1, e) && !isMember(c3, e); },
-////			[&](const Element& e)->bool { return isMember(cS, e); }
-////		);
-////
-////		cS = setDiff(c1, c4);
-////		empiricArrayEqualityTest<5>(mgr,
-////			[&](const Element& e)->bool { return isMember(c1, e) && !isMember(c4, e); },
-////			[&](const Element& e)->bool { return isMember(cS, e); }
-////		);
-//
-//		// -- a special case - cut out the center pice of a triple --
-//		NominalIndex na("a");
-//		NominalIndex nb("b");
-//
-//		Set n1 = mgr.compound(
-//				entry(na, mgr.set(e0,e1,e2)),
-//				entry(nb, mgr.set(e0,e1,e2))
-//		);
-//
-//		Set n2 = mgr.compound(
-//				entry(na, mgr.set(e1)),
-//				entry(nb, mgr.set(e1))
-//		);
-//
-//		EXPECT_EQ("{[a={0,1,2},b={0,1,2}]}", toString(n1));
-//		EXPECT_EQ("{[a={1},b={1}]}", toString(n2));
-//
-//		EXPECT_EQ(s0, setDiff(n2,n1));
-//		EXPECT_EQ("{[a={0,1,2},b={0,2}],[a={0,2},b={0,1,2}]}", toString(setDiff(n1,n2)));
-//	}
+
 
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
+
+namespace std {
+
+	template<>
+	struct hash<insieme::analysis::cba::Pair> {
+		std::size_t operator()(const insieme::analysis::cba::Pair& pair) const {
+			return pair.first + pair.second;
+		}
+	};
+
+	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Pair& pair) {
+		return out << "[" << pair.first << "," << pair.second << "]";
+	}
+}

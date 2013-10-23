@@ -50,6 +50,8 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/hash_utils.h"
 
+#include "insieme/utils/constraint/lattice.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -73,15 +75,28 @@ namespace cba {
 	 */
 
 	template<
-		typename value_type,			// the type used to model a value in the resulting lattice
-		typename projection_op,			// an operation to retrieve sub-values
-		typename meet_op,				//
-		typename less_op = utils::constraints::meet_based_less_op<value_type, meet_op>				//
+		// a manager handling value instances
+		typename _manager_type,
+
+		// the type used to model a value in the resulting lattice
+		typename _value_type,
+
+		// an operation to retrieve sub-values
+		typename _projection_op,
+
+		// the meet operator for the resulting lattice
+		typename _meet_assign_op_type,
+
+		// the less operator for the resulting lattice
+		typename _less_op_type = utils::constraint::meet_assign_based_less_op<_value_type, _meet_assign_op_type>,
+
+		// the meet operator for the resulting lattice
+		typename _meet_op_type = utils::constraint::meet_assign_based_meet_op<_value_type, _meet_assign_op_type>
 	>
-	struct DataStructureLattice : public utils::constraint::Lattice<value_type, meet_op, less_op> {
-		typedef L base_lattice;
-		typedef value_type value_type;
-		typedef projection_op projection_op_type;
+	struct DataStructureLattice :
+			public utils::constraint::Lattice<_value_type, _meet_assign_op_type, _less_op_type, _meet_op_type> {
+		typedef _manager_type manager_type;
+		typedef _projection_op projection_op_type;
 	};
 
 
@@ -89,774 +104,561 @@ namespace cba {
 	//									Unit Data Structure
 	// -------------------------------------------------------------------------------------------
 
+	/**
+	 * A unit data structure is representing the value of a composed data object by a single instance
+	 * of the underlying lattice. It is therefore smashing the structure of data objects and represents
+	 * its value as a single summary value (which is therefore necessarily imprecise).
+	 */
+
+	namespace unit {
+
+		template<typename BaseLattice>
+		class DataManager;
+
+		template<typename BaseLattice>
+		struct projection_op {
+			typedef typename BaseLattice::value_type value_type;
+			template<typename IndexType>
+			const value_type& operator()(const value_type& value, const IndexType& index) const {
+				return value;
+			}
+		};
+
+	}
+
+	template<typename BaseLattice>
+	struct UnionStructureLattice :
+			public DataStructureLattice<
+				unit::DataManager<BaseLattice>,
+				typename BaseLattice::value_type,
+				unit::projection_op<BaseLattice>,
+				typename BaseLattice::meet_assign_op_type,
+				typename BaseLattice::less_op_type,
+				typename BaseLattice::meet_op_type
+			> {};
+
 
 	// -------------------------------------------------------------------------------------------
 	//								First-Order Data Structure
 	// -------------------------------------------------------------------------------------------
+
+	/**
+	 * A first order data structure is representing values of composed data objects by trees
+	 * modeling the hierarchical structure of the object itself. Within the leaves an instance
+	 * of the underlying lattice set is utilized to model the abstract properties to be represented.
+	 */
+
+	namespace first_order {
+
+		template<typename BaseLattice>
+		class Data;
+
+		template<typename BaseLattice>
+		class DataManager;
+
+		template<typename BaseLattice>
+		struct projection_op;
+
+		template<typename BaseLattice>
+		struct meet_assign_op;
+
+		template<typename BaseLattice>
+		struct less_op;
+	}
+
+	template<typename BaseLattice>
+	struct FirstOrderStructureLattice :
+			public DataStructureLattice<
+				first_order::DataManager<BaseLattice>,
+				first_order::Data<BaseLattice>,
+				first_order::projection_op<BaseLattice>,
+				first_order::meet_assign_op<BaseLattice>,
+				first_order::less_op<BaseLattice>
+			> {};
 
 
 	// -------------------------------------------------------------------------------------------
 	//								Second-Order Data Structure
 	// -------------------------------------------------------------------------------------------
 
+	namespace second_order {
 
+		template<typename BaseLattice>
+		class Data;
 
-	/**
-	 * 		D ::= { E* }
-	 * 		E ::= A | { [I,D]* }
-	 *
-	 * D ... Data
-	 * E ... Elements
-	 * A ... Atomic Values
-	 * I ... Index Values
-	 */
+		template<typename BaseLattice>
+		class DataManager;
 
+		template<typename BaseLattice>
+		struct projection_op;
 
-	// some forward declarations
-	template<typename ElementType> class DataManager;
-	template<typename ElementType> class Set;
-	template<typename ElementType> class Element;
+		template<typename BaseLattice>
+		struct meet_op;
 
-
-	// some forward declarations of operations
-
-	template<typename ElementType>
-	Set<ElementType> setUnion(const Set<ElementType>& a, const Set<ElementType>& b);
-
-	template<typename ElementType>
-	Set<ElementType> setIntersect(const Set<ElementType>& a, const Set<ElementType>& b);
-
-//	template<typename ElementType>
-//	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b);
-
-	template<typename ElementType>
-	bool empty(const Set<ElementType>& a);
-
-//	template<typename ElementType>
-//	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
-//
-//	template<typename ElementType>
-//	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b);
-
-	// -------------------------------------------------------------------------------------------------
-
-	template<typename ElementType>
-	bool isMember(const Set<ElementType>& a, const Element<ElementType>& b);
-
-	// -------------------------------------------------------------------------------------------------
-
-
-	namespace {
-
-		template<typename ElementType> struct SetEntry;
-		template<typename ElementType> struct ElementEntry;
-
-		namespace {
-
-			template<typename ElementType>
-			std::size_t hash_set(const std::set<Element<ElementType>>& data) {
-				std::size_t hash = 0;
-				for(const auto& cur : data) {
-					hash += cur.hash();
-				}
-				return hash;
-			}
-
-			template<typename IndexType, typename ElementType>
-			std::size_t hash_map(const std::map<IndexType, Set<ElementType>>& map) {
-				std::size_t hash = 0;
-				for(const std::pair<IndexType, Set<ElementType>>& cur : map) {
-					hash += utils::combineHashes(cur.first, cur.second);
-				}
-				return hash;
-			}
-
-		}
-
-		template<typename ElementType, typename DerivedType>
-		struct Entry :
-				public boost::equality_comparable<DerivedType>,
-				public utils::Printable {
-
-			DataManager<ElementType>& mgr;
-			const std::size_t hash;
-			mutable std::size_t equality_class;
-
-			Entry(DataManager<ElementType>& mgr, std::size_t hash) : mgr(mgr), hash(hash), equality_class(0) {}
-			virtual ~Entry() {};
-
-		};
-
-		template<typename ElementType, typename DerivedType>
-		inline std::size_t hash_value(const Entry<ElementType, DerivedType>& entry) {
-			return entry.hash;
-		}
-
-		template<typename ElementType>
-		struct SetEntry : public Entry<ElementType, SetEntry<ElementType>> {
-
-			typedef std::set<Element<ElementType>> set_type;
-			set_type data;
-
-			SetEntry(DataManager<ElementType>& mgr, const set_type& data)
-				: Entry<ElementType, SetEntry<ElementType>>(mgr, hash_set(data)), data(data) {
-				assert(!data.empty());
-				assert(!any(data, [](const Element<ElementType>& cur) { return cur.empty(); }));
-			}
-
-			SetEntry(DataManager<ElementType>& mgr, std::size_t hash, const set_type& data)
-				: Entry<ElementType, SetEntry<ElementType>>(mgr, hash), data(data) {
-				assert_eq(hash, hash_set(data)) << "Hashes not matching!";
-				assert(!data.empty());
-				assert(!any(data, [](const Element<ElementType>& cur) { return cur.empty(); }));
-			}
-
-			virtual ~SetEntry() {};
-
-			bool isSingle() const {
-				return data.size() == 1u && data.begin()->isSingle();
-			}
-
-			bool operator==(const SetEntry<ElementType>& other) const {
-				// important: only structural equivalence
-				return this == &other || (this->hash == other.hash && data == other.data);
-			}
-
-			bool operator==(const set_type& other) const {
-				return data == other;
-			}
-
-			bool operator<(const SetEntry<ElementType>& other) const {
-				return this != &other && data < other.data;
-			}
-
-		protected:
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << data;
-			}
-
-		};
-
-		template<typename ElementType>
-		struct ElementEntry : public Entry<ElementType, ElementEntry<ElementType>> {
-
-			ElementEntry(DataManager<ElementType>& mgr, std::size_t hash)
-				: Entry<ElementType, ElementEntry<ElementType>>(mgr, hash) {}
-
-			// the equality operator is operating on the structural equality - equal to the hash
-			virtual bool operator==(const ElementEntry<ElementType>& other) const =0;
-
-			// a less-than operator regarding the structural equality - compatible to the hash and == operator
-			virtual bool operator<(const ElementEntry<ElementType>& other) const =0;
-
-			// check whether this element represents an empty cross-product
-			virtual bool empty() const =0;
-
-			// check whether this element is representing a "single" element - hence it can not be separated into multiple elements
-			virtual bool isSingle() const =0;
-
-			// check whether the set represented by this element contains the given element
-			virtual bool contains(const ElementEntry<ElementType>& other) const =0;
-
-			// implement the intersection between two element entries
-			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const =0;
-
-			// implement the set difference between two element entries (which needs to be a set of elements)
-			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const =0;
-		};
-
-		template<typename ElementType>
-		struct AtomicEntry : public ElementEntry<ElementType> {
-
-			const ElementType data;
-
-			AtomicEntry(DataManager<ElementType>& mgr, const ElementType& element)
-				: ElementEntry<ElementType>(mgr, std::hash<ElementType>()(element)), data(element) {}
-
-			AtomicEntry(DataManager<ElementType>& mgr, std::size_t hash, const ElementType& element)
-				: ElementEntry<ElementType>(mgr, hash), data(element) {
-				assert_eq(hash, std::hash<ElementType>()(element)) << "Hashes not matching!";
-			}
-
-			virtual ~AtomicEntry() {}
-
-			virtual bool operator==(const ElementEntry<ElementType>& other) const {
-				// same type, same data
-				return this == &other || (typeid(*this) == typeid(other) && data == static_cast<const AtomicEntry<ElementType>&>(other).data);
-			}
-
-			bool operator==(const ElementType& other) const {
-				return data == other;
-			}
-
-			virtual bool operator<(const ElementEntry<ElementType>& other) const {
-				return this != &other && data < cast(other).data;
-			}
-
-			virtual bool empty() const {
-				return false;
-			}
-
-			virtual bool isSingle() const {
-				return true;	// atomic elements are singles by definition
-			}
-
-			virtual bool contains(const ElementEntry<ElementType>& other) const {
-				return *this == other;	// here just an equality comparison is necessary
-			}
-
-			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
-				// unless equal, the result is empty
-				return (*this == other) ? this : nullptr;
-			}
-
-			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const {
-				// for atomic elements it is pretty simple
-				std::vector<Element<ElementType>> res;
-				if (*this != other) res.push_back(this);
-				return res;
-			}
-
-		protected:
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << data;
-			}
-
-		private:
-
-			const AtomicEntry<ElementType>& cast(const ElementEntry<ElementType>& other) const {
-				assert(dynamic_cast<const AtomicEntry<ElementType>*>(&other));
-				return static_cast<const AtomicEntry<ElementType>&>(other);
-			}
-
-		};
-
-		template<typename IndexType, typename ElementType>
-		struct CompoundEntry : public ElementEntry<ElementType> {
-
-			typedef std::map<IndexType, Set<ElementType>> map_type;
-			const map_type data;
-
-			CompoundEntry(DataManager<ElementType>& mgr, const map_type& data)
-				: ElementEntry<ElementType>(mgr, hash_map(data)), data(data) {}
-
-			CompoundEntry(DataManager<ElementType>& mgr, std::size_t hash, const map_type& data)
-				: ElementEntry<ElementType>(mgr, hash), data(data) {
-				assert_eq(hash, hash_map(data)) << "Externally computed is invalid!";
-			}
-
-			virtual ~CompoundEntry() {}
-
-			virtual bool operator==(const ElementEntry<ElementType>& other) const {
-				// same type, same content
-				return this == &other || (typeid(*this) == typeid(other) && data == static_cast<const CompoundEntry<IndexType, ElementType>&>(other).data);
-			}
-
-			bool operator==(const map_type& other) const {
-				return data == other;
-			}
-
-			virtual bool operator<(const ElementEntry<ElementType>& other) const {
-				return this != &other && data < cast(other).data;
-			}
-
-			virtual bool empty() const {
-				return data.empty() || any(data, [](const typename map_type::value_type& cur) { return cur.second.empty(); });
-			}
-
-			virtual bool isSingle() const {
-				// it is a single if all sets are singles
-				return !empty() && all(data, [](const typename map_type::value_type& cur) { return cur.second.isSingle(); });
-			}
-
-			virtual bool contains(const ElementEntry<ElementType>& other) const {
-				// the other element has to be of the same type
-				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
-
-				// cast type
-				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
-
-				// all fields must be contained
-				for(const auto& cur : b.data) {
-					// get values of of same field in current set
-					Set<ElementType> s = setUnion(extract(data, cur.first));
-					if (!isMember(s, cur.second.getSingleEntry())) return false;
-				}
-
-				// it is contained
-				return true;
-			}
-
-			virtual const ElementEntry<ElementType>* intersect(const ElementEntry<ElementType>& other) const {
-				const static ElementEntry<ElementType>* empty = nullptr;
-				// the other element has to be of the same type
-				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
-
-				// check equality
-				if (*this == other) return this;
-
-				// cast type
-				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
-
-				// intersect all elements
-				std::map<IndexType, Set<ElementType>> res;
-				for(const IndexType& cur : cross(data, b.data)) {
-
-					// extract sets of both sides and intersect those
-					Set<ElementType> sA = setUnion(extract(data, cur));
-					Set<ElementType> sB = setUnion(extract(b.data, cur));
-
-					// intersect element sets
-					Set<ElementType> r = setIntersect(sA, sB);
-
-					// check whether it is empty (we can stop in this case)
-					if (r.empty()) return empty;
-					res[cur] = r;
-				}
-
-				// build result
-				return this->mgr.compound(res).getPtr();
-			}
-
-			virtual std::vector<Element<ElementType>> diff(const ElementEntry<ElementType>& other) const {
-
-				assert_not_implemented() << "This operation is not supported!";
-				return std::vector<Element<ElementType>>();
-
-//				// start with empty result
-//				std::vector<Element<ElementType>> res;
-//
-//				// check equality
-//				if (*this == other) return res;	// an empty list
-//
-//				// check empty cases
-//				if (empty() || other.empty()) {
-//					res.push_back(this);
-//					return res;
-//				}
-//
-//				// the other element has to be of the same type
-//				assert_true((dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(&other)));
-//
-//				// cast type
-//				const CompoundEntry<IndexType, ElementType>& b = static_cast<const CompoundEntry<IndexType, ElementType>&>(other);
-//
-//				// create a copy with the full index space
-//				std::map<IndexType, Set<ElementType>> full;
-//				auto indices = cross(data, b.data);
-//				for(const IndexType& cur : indices) {
-//					full[cur] = setUnion(extract(data, cur));
-//				}
-//
-//				// now create one copy where each indexed element is reduced once
-//				for(const IndexType& cur : cross(data, b.data)) {
-//
-//					// extract sets of both sides and intersect those
-//					Set<ElementType> sA = setUnion(extract(data, cur));
-//					Set<ElementType> sB = setUnion(extract(b.data, cur));
-//
-//					// intersect element sets
-//					Set<ElementType> r = setDiff(sA, sB);
-//
-//					// if result is empty => done
-//					if (r.empty()) continue;
-//
-//					// insert current copy
-//					Set<ElementType> old = full[cur];
-//					full[cur] = r;
-//					res.push_back(this->mgr.compound(full));
-//					full[cur] = old;
-//				}
-//
-//				// done
-//				return res;
-			}
-
-		protected:
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "[" << join(",", data, [](std::ostream& out, const typename map_type::value_type& cur) {
-					out << cur.first << "=" << cur.second;
-				}) << "]";
-			}
-
-		private:
-
-			const CompoundEntry<IndexType,ElementType>& cast(const ElementEntry<ElementType>& other) const {
-				assert((dynamic_cast<const CompoundEntry<IndexType,ElementType>*>(&other)));
-				return static_cast<const CompoundEntry<IndexType,ElementType>&>(other);
-			}
-
-		};
+		template<typename BaseLattice>
+		struct less_op;
 	}
 
-	template<typename IndexType, typename ElementType>
-	std::pair<IndexType, Set<ElementType>> entry(const IndexType& i, const Set<ElementType>& e) {
+	template<typename BaseLattice>
+	struct SecondOrderStructureLattice :
+			public DataStructureLattice<
+				second_order::DataManager<BaseLattice>,
+				second_order::Data<BaseLattice>,
+				second_order::projection_op<BaseLattice>,
+				second_order::meet_op<BaseLattice>,
+				second_order::less_op<BaseLattice>
+			> {};
+
+
+
+	// ###########################################################################################
+
+	// -------------------------------------------------------------------------------------------
+	//									Utilities
+	// -------------------------------------------------------------------------------------------
+
+	template<typename IndexType, typename ValueType>
+	std::pair<IndexType, ValueType> entry(const IndexType& i, const ValueType& e) {
 		return std::make_pair(i, e);
 	}
 
-	template<typename ElementType>
-	class DataManager {
+	namespace {
 
-		typedef SetEntry<ElementType>* SetEntryPtr;
-		typedef AtomicEntry<ElementType>* AtomicEntryPtr;
-		typedef ElementEntry<ElementType>* CompoundEntryPtr;
-
-		std::unordered_map<std::size_t, std::vector<SetEntryPtr>> setCache;
-		std::unordered_map<std::size_t, std::vector<AtomicEntryPtr>> atomicCache;
-		std::unordered_map<std::size_t, std::vector<CompoundEntryPtr>> compoundCache;
-
-	public:
-
-		~DataManager() {
-			// free all cached elements
-			for(const auto& cur : setCache) {
-				for(const auto& entry : cur.second) delete entry;
+		template<typename IndexType, typename ValueType>
+		std::size_t hash_map(const std::map<IndexType, ValueType>& map) {
+			std::size_t hash = 0;
+			for(const std::pair<IndexType, ValueType>& cur : map) {
+				hash += utils::combineHashes(cur.first, cur.second);
 			}
-			for(const auto& cur : atomicCache) {
-				for(const auto& entry : cur.second) delete entry;
+			return hash;
+		}
+	}
+
+
+	namespace detail {
+
+		template<typename _value_type, typename Derived>
+		class BaseDataManager : public boost::noncopyable {
+
+		public:
+
+			typedef _value_type value_type;
+
+			template<typename IndexType, typename ... Elements>
+			value_type compound(const std::pair<IndexType, value_type>& first, const Elements& ... elements) {
+				return static_cast<Derived*>(this)->compound(utils::map::toMap(first, elements ...));
 			}
-			for(const auto& cur : compoundCache) {
-				for(const auto& entry : cur.second) delete entry;
+
+		};
+
+	}
+
+
+	// -------------------------------------------------------------------------------------------
+	//									Unit Data Structure
+	// -------------------------------------------------------------------------------------------
+
+	namespace unit {
+
+		template<typename BaseLattice>
+		class DataManager : public detail::BaseDataManager<typename BaseLattice::value_type, DataManager<BaseLattice>> {
+
+			typedef detail::BaseDataManager<typename BaseLattice::value_type, DataManager<BaseLattice>> super;
+			typedef typename BaseLattice::value_type value_type;
+			typedef typename BaseLattice::meet_assign_op_type meet_assign_op_type;
+
+		public:
+
+			using super::compound;
+
+			const value_type& atomic(const value_type& value) const {
+				return value;
 			}
+
+			template<typename IndexType>
+			value_type compound(const std::map<IndexType, value_type>& map) {
+				const static meet_assign_op_type meet_assign_op;
+				value_type res;
+				for(const auto& cur : map) {
+					meet_assign_op(res, cur.second);
+				}
+				return res;
+			}
+
+		};
+
+	}
+
+
+	// -------------------------------------------------------------------------------------------
+	//									First Order Data Structure
+	// -------------------------------------------------------------------------------------------
+
+	namespace first_order {
+
+
+		/**
+		 * 		T ::= L | I->T
+		 *
+		 * T ... Tree structure modeling structured data
+		 * L ... Lattice being extended into a hierarchy
+		 * I ... Index Values
+		 */
+
+		namespace {
+
+			template<typename BaseLattice>
+			struct Entry :
+					public boost::equality_comparable<Entry<BaseLattice>>,
+					public utils::Printable {
+
+				DataManager<BaseLattice>& mgr;
+				const std::size_t hash;
+
+				// a constructor covering a reference to responsible manager and a hash value
+				Entry(DataManager<BaseLattice>& mgr, std::size_t hash) : mgr(mgr), hash(hash) {}
+
+				// a virtual destructor
+				virtual ~Entry() {};
+
+				// the equality operator is operating on the structural equality - equal to the hash
+				virtual bool operator==(const Entry<BaseLattice>& other) const =0;
+
+				// a less-than operator regarding the structural equality - compatible to the hash and == operator
+				virtual bool operator<(const Entry<BaseLattice>& other) const =0;
+
+				// check whether the set represented by this element contains the given element
+				virtual bool contains(const Entry<BaseLattice>& other) const =0;
+
+				// compute the meet value between this and the handed in entry
+				virtual Data<BaseLattice> meet(const Entry<BaseLattice>& other) const =0;
+			};
+
+			template<typename BaseLattice>
+			inline std::size_t hash_value(const Entry<BaseLattice>& entry) {
+				return entry.hash;
+			}
+
+			template<typename BaseLattice>
+			class AtomicEntry : public Entry<BaseLattice> {
+
+				typedef typename BaseLattice::value_type value_type;
+				const value_type value;
+
+			public:
+
+				AtomicEntry(DataManager<BaseLattice>& mgr, const value_type& value)
+					: Entry<BaseLattice>(mgr, std::hash<value_type>()(value)), value(value) {}
+
+				AtomicEntry(DataManager<BaseLattice>& mgr, std::size_t hash, const value_type& value)
+					: Entry<BaseLattice>(mgr, hash), value(value) {
+					assert_eq(hash, std::hash<value_type>()(value)) << "Hashes not matching!";
+				}
+
+				virtual ~AtomicEntry() {}
+
+				virtual bool operator==(const Entry<BaseLattice>& other) const {
+					// same type, same data
+					return this == &other || (typeid(*this) == typeid(other) && value == cast(other).value);
+				}
+
+				bool operator==(const value_type& other) const {
+					return value == other;
+				}
+
+				virtual bool operator<(const Entry<BaseLattice>& other) const {
+					return this != &other && value < cast(other).value;
+				}
+
+				virtual bool contains(const Entry<BaseLattice>& other) const {
+					const typename BaseLattice::less_op_type less_op;
+					return less_op(cast(other).value, value);
+				}
+
+				virtual Data<BaseLattice> meet(const Entry<BaseLattice>& other) const {
+					const static typename BaseLattice::meet_op_type meet_op;
+					if (*this == other) return this;
+					return this->mgr.atomic(meet_op(value, cast(other).value));
+				}
+
+			protected:
+
+				virtual std::ostream& printTo(std::ostream& out) const {
+					return out << value;
+				}
+
+			private:
+
+				const AtomicEntry<BaseLattice>& cast(const Entry<BaseLattice>& other) const {
+					assert(dynamic_cast<const AtomicEntry<BaseLattice>*>(&other));
+					return static_cast<const AtomicEntry<BaseLattice>&>(other);
+				}
+
+			};
+
+
+			template<typename IndexType, typename BaseLattice>
+			class CompoundEntry : public Entry<BaseLattice> {
+
+				typedef typename BaseLattice::value_type value_type;
+				typedef std::map<IndexType, Data<BaseLattice>> map_type;
+				const map_type data;
+
+			public:
+
+				CompoundEntry(DataManager<BaseLattice>& mgr, const map_type& data)
+					: Entry<BaseLattice>(mgr, hash_map(data)), data(data) {}
+
+				CompoundEntry(DataManager<BaseLattice>& mgr, std::size_t hash, const map_type& data)
+					: Entry<BaseLattice>(mgr, hash), data(data) {
+					assert_eq(hash, hash_map(data)) << "Externally computed hash is invalid!";
+				}
+
+				virtual ~CompoundEntry() {}
+
+				virtual bool operator==(const Entry<BaseLattice>& other) const {
+					// same type, same content
+					return this == &other || (typeid(*this) == typeid(other) && data == cast(other).data);
+				}
+
+				bool operator==(const map_type& other) const {
+					return data == other;
+				}
+
+				virtual bool operator<(const Entry<BaseLattice>& other) const {
+					return this != &other && data < cast(other).data;
+				}
+
+				const Data<BaseLattice>& operator[](const IndexType& index) const {
+					return extract(data, index);
+				}
+
+				virtual bool contains(const Entry<BaseLattice>& other) const {
+					// the other element has to be of the same type
+					assert_true((dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(&other)));
+
+					// quick check
+					if (*this == other) return true;
+
+					// cast type
+					const CompoundEntry<IndexType, BaseLattice>& b = cast(other);
+
+					// all fields must be contained
+					for(const auto& cur : b.data) {
+						// get values of of same field in current set
+						const Data<BaseLattice>& sub = extract(data, cur.first);
+						if (!sub.contains(cur.second)) return false;
+					}
+
+					// it is contained
+					return true;
+				}
+
+				virtual Data<BaseLattice> meet(const Entry<BaseLattice>& other) const {
+
+					// check equality
+					if (*this == other) return this;
+
+					// cast type
+					const CompoundEntry<IndexType, BaseLattice>& b = cast(other);
+
+					// intersect all elements
+					std::map<IndexType, Data<BaseLattice>> res;
+					for(const IndexType& cur : cross(data, b.data)) {
+
+						// extract sets of both sides and meet those
+						Data<BaseLattice> sA = extract(data, cur);
+						Data<BaseLattice> sB = extract(b.data, cur);
+
+						// meet entries
+						sA.meetAssign(sB);
+
+						// collect entries
+						res[cur] = sA;
+					}
+
+					// build result
+					return this->mgr.compound(res);
+				}
+
+			protected:
+
+				virtual std::ostream& printTo(std::ostream& out) const {
+					return out << "[" << join(",", data, [](std::ostream& out, const typename map_type::value_type& cur) {
+						out << cur.first << "=" << cur.second;
+					}) << "]";
+				}
+
+			private:
+
+				const CompoundEntry<IndexType,BaseLattice>& cast(const Entry<BaseLattice>& other) const {
+					assert((dynamic_cast<const CompoundEntry<IndexType,BaseLattice>*>(&other)));
+					return static_cast<const CompoundEntry<IndexType,BaseLattice>&>(other);
+				}
+
+
+			};
+
 		}
 
-		Set<ElementType> set(const std::set<Element<ElementType>>& elements) {
+		template<typename BaseLattice>
+		class Data :
+				public boost::equality_comparable<Data<BaseLattice>> {
 
-			// handle empty sets
-			if (elements.empty()) return Set<ElementType>();
+			typedef const Entry<BaseLattice>* ptr_type;
 
-			// compute hash
-			std::size_t hash = hash_set(elements);
+			ptr_type data;
 
-			// get element list
-			auto& list = setCache[hash];
+		public:
 
-			// check whether element is already present
-			for(auto cur : list) {
-				if (*cur == elements) return cur;
+			Data(ptr_type ptr = nullptr) : data(ptr) {}
+
+			bool operator==(const Data<BaseLattice>& other) const {
+				return data == other.data || (data && other.data && *data == *other.data);
 			}
 
-			// add new element
-			auto res = new SetEntry<ElementType>(*this, hash, elements);
-			list.push_back(res);
-			return res;
-		}
-
-		template<typename ... Elements>
-		Set<ElementType> set(const Elements& ... elements) {
-			return set(utils::set::toSet<std::set<Element<ElementType>>>(elements...));
-		}
-
-		Element<ElementType> atomic(const ElementType& element) {
-
-			// compute hash
-			std::size_t hash = std::hash<ElementType>()(element);
-
-			// get element list
-			auto& list = atomicCache[hash];
-
-			// check whether element is already present
-			for(auto cur : list) {
-				if (*cur == element) return cur;
+			bool operator<(const Data<BaseLattice>& other) const {
+				return (data) ? (*data < *other.data) : (other.data != nullptr);
 			}
 
-			// add new element
-			auto res = new AtomicEntry<ElementType>(*this, hash, element);
-			list.push_back(res);
-			return res;
+			template<typename IndexType>
+			const Data<BaseLattice>& operator[](const IndexType& index) const {
+				// handle empty
+				if (!data) return *this;
+
+				// check type
+				assert_true((dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(data)));
+
+				// access field
+				return static_cast<const CompoundEntry<IndexType, BaseLattice>&>(*data)[index];
+			}
+
+			bool meetAssign(const Data<BaseLattice>& other) {
+				// compute meet data
+				auto newData = (!data) ? other.data : data->meet(*other.data).data;
+				// check whether there was a change
+				if (data == newData) return false;
+				data = newData;
+				return true;
+			}
+
+			bool contains(const Data<BaseLattice>& other) const {
+				if (!data) return true;
+				if (!other.data) return false;
+				return data->contains(*other.data);
+			}
+
+			std::ostream& printTo(std::ostream& out) const {
+				if (data == nullptr) return out << "{}";
+				return out << *data;
+			}
+
+			std::size_t hash() const {
+				return (data) ? data->hash : 0;
+			}
+
+		};
+
+		/**
+		 * Adds hashing support for the element facade.
+		 */
+		template<typename BaseLattice>
+		inline std::size_t hash_value(const Data<BaseLattice>& data) {
+			return data.hash();
 		}
 
-		template<typename IndexType>
-		Element<ElementType> compound(const std::map<IndexType, Set<ElementType>>& map) {
+		template<typename BaseLattice>
+		class DataManager : public detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> {
 
-			// compute hash
-			std::size_t hash = hash_map(map);
+			typedef detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> super;
 
-			// get element list
-			auto& list = compoundCache[hash];
+			typedef typename BaseLattice::value_type base_value_type;
+			typedef Data<BaseLattice> value_type;
 
-			// check whether element is already present
-			for(auto cur : list) {
-				if (auto entry = dynamic_cast<const CompoundEntry<IndexType, ElementType>*>(cur)) {
-					if (*entry == map) return cur;
+			typedef AtomicEntry<BaseLattice>* AtomicEntryPtr;
+			typedef Entry<BaseLattice>* CompoundEntryPtr;
+
+			std::unordered_map<std::size_t, std::vector<AtomicEntryPtr>> atomicCache;
+			std::unordered_map<std::size_t, std::vector<CompoundEntryPtr>> compoundCache;
+		public:
+
+			~DataManager() {
+				// free all cached elements
+				for(const auto& cur : atomicCache) {
+					for(const auto& entry : cur.second) delete entry;
+				}
+				for(const auto& cur : compoundCache) {
+					for(const auto& entry : cur.second) delete entry;
 				}
 			}
 
-			// add new element
-			auto res = new CompoundEntry<IndexType, ElementType>(*this, hash, map);
-			list.push_back(res);
-			return res;
-		}
+			value_type atomic(const base_value_type& value) {
 
-		template<typename IndexType, typename ... Elements>
-		Element<ElementType> compound(const std::pair<IndexType, Set<ElementType>>& first, const Elements& ... elements) {
-			return compound(utils::map::toMap(first, elements ...));
-		}
+				// compute hash
+				std::size_t hash = std::hash<base_value_type>()(value);
 
-	};
+				// get element list
+				auto& list = atomicCache[hash];
 
-
-	template<typename ElementType>
-	class Set :
-			public boost::equality_comparable<Set<ElementType>>,
-			public boost::partially_ordered<Set<ElementType>> {
-
-		typedef const SetEntry<ElementType>* ptr_type;
-		ptr_type data;
-
-	public:
-
-		Set(ptr_type ptr = nullptr) : data(ptr) {}
-
-		Set(const Element<ElementType>& cur)
-			: data(cur.getPtr()->mgr.set(cur).data) {}
-
-		ptr_type getPtr() const {
-			return data;
-		}
-
-		bool operator==(const Set<ElementType>& other) const {
-			return data == other.data || (data && other.data && *data == *other.data);
-		}
-
-		bool operator<(const Set<ElementType>& other) const {
-			return (data) ? (*data < *other.data) : (other.data == nullptr);
-		}
-
-		bool empty() const {
-			return !data;
-		}
-
-		bool isSingle() const {
-			return !empty() && data->isSingle();
-		}
-
-		const Element<ElementType>& getSingleEntry() const {
-			assert(isSingle());
-			return *data->data.begin();
-		}
-
-		bool contains(const Element<ElementType>& a) const {
-			assert(a.isSingle());
-			return !empty() && any(data->data, [&](const Element<ElementType>& cur)->bool { return cur.contains(a); });
-		}
-
-		Set merge(const Set<ElementType>& other) const {
-
-			// handle empty sets
-			if (!data) return other;
-			if (!other.data) return *this;
-
-			// merge sets and return result
-			std::set<Element<ElementType>> sum = data->data;
-			sum.insert(other.data->data.begin(), other.data->data.end());
-			return getManager().set(sum);
-		}
-
-		Set intersect(const Set<ElementType>& other) const {
-
-			// if sets are equivalent, the result is the set itself
-			if (*this == other) return other;
-
-			// if one set is empty, the result is empty
-			if (empty()) return *this;
-			if (other.empty()) return other;
-
-			// otherwise we have to compute the intersection
-			//  - since the elements represent sets, we have to intersect each element of
-			//	  this set with every element of the other set and collect the resulting non-empty pieces
-
-			std::set<Element<ElementType>> res;
-			for(const Element<ElementType>& a : data->data) {
-				for(const Element<ElementType>& b : other.data->data) {
-					Element<ElementType> i = a.intersect(b);
-					if (!i.empty()) res.insert(i);
+				// check whether element is already present
+				for(auto cur : list) {
+					if (*cur == value) return cur;
 				}
+
+				// add new element
+				auto res = new AtomicEntry<BaseLattice>(*this, hash, value);
+				list.push_back(res);
+				return res;
 			}
 
-			// return intersected set
-			return getManager().set(res);
-		}
+			template<typename IndexType>
+			value_type compound(const std::map<IndexType, value_type>& map) {
 
-		Set diff(const Set<ElementType>& other) const {
+				// compute hash
+				std::size_t hash = hash_map(map);
 
-			// handle special cases where one operator is empty
-			if (empty() || other.empty()) return *this;
+				// get element list
+				auto& list = compoundCache[hash];
 
-			// otherwise: subtract all elements of other from all elements of this set and collect the bits
-			Set<ElementType> res;
-			for(const Element<ElementType>& a : data->data) {
-				res = setUnion(res, a.diff(other));
-			}
-
-			// return the resulting set
-			return res;
-		}
-
-		Set diff(const Element<ElementType>& other) const {
-
-			// quick check - empty
-			if (empty() || other.empty()) return *this;
-
-			std::set<Element<ElementType>> res;
-			for(const Element<ElementType>& element : data->data) {
-				for(const auto& fragment : element.getPtr()->diff(*other.getPtr())) {
-					if (!fragment.empty()) res.insert(fragment);
+				// check whether element is already present
+				for(auto cur : list) {
+					if (auto entry = dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(cur)) {
+						if (*entry == map) return cur;
+					}
 				}
+
+				// add new element
+				auto res = new CompoundEntry<IndexType, BaseLattice>(*this, hash, map);
+				list.push_back(res);
+				return res;
 			}
 
-			return getManager().set(res);
-		}
+			using super::compound;
 
-		DataManager<ElementType>& getManager() const {
-			return data->mgr;
-		}
+		};
 
-		std::size_t hash() const {
-			return (data) ? data->hash : 0;
-		}
-	};
-
-	/**
-	 * Adds hashing support for the data facade.
-	 */
-	template<typename ElementType>
-	inline std::size_t hash_value(const Set<ElementType>& data) {
-		return data.hash();
-	}
-
-
-	template<typename ElementType>
-	class Element :
-			public boost::equality_comparable<Element<ElementType>>,
-			public boost::partially_ordered<Set<ElementType>> {
-
-		typedef const ElementEntry<ElementType>* ptr_type;
-		ptr_type data;
-
-	public:
-
-		Element(ptr_type ptr = nullptr) : data((!ptr || ptr->empty()) ? nullptr : ptr) {
-			assert_true(!data || !data->empty()) << "Pointer must be null or not empty!";
-		}
-
-		bool operator==(const Element<ElementType>& other) const {
-			return data == other.data || (data && other.data && *data == *other.data);
-		}
-
-		bool operator<(const Element<ElementType>& other) const {
-			return (data) ? (*data < *other.data) : (other.data == nullptr);
-		}
-
-		bool empty() const {
-			return !data;
-		}
-
-		bool isSingle() const {
-			return !empty() && data->isSingle();
-		}
-
-		bool contains(const Element<ElementType>& a) const {
-			assert(a.isSingle());
-			return !empty() && data->contains(*a.data);
-		}
-
-		Element<ElementType> intersect(const Element<ElementType>& other) const {
-			return data->intersect(*other.data);
-		}
-
-		Set<ElementType> diff(const Set<ElementType>& other) const {
-
-			// handle empty element
-			if (empty()) return Set<ElementType>();
-
-			// if there is nothing to remove => done
-			if (other.empty()) return *this;
-
-			Set<ElementType> res = *this;
-			for(const auto& cur : other.getPtr()->data) {
-				res = res.diff(Element<ElementType>(cur));
+		template<typename BaseLattice>
+		struct projection_op {
+			template<typename IndexType>
+			const Data<BaseLattice>& operator()(const Data<BaseLattice>& value, const IndexType& index) const {
+				return value[index];
 			}
+		};
 
-			// done
-			return res;
-		}
+		template<typename BaseLattice>
+		struct meet_assign_op {
+			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
+				return a.meetAssign(b);
+			}
+		};
 
-		DataManager<ElementType>& getManager() const {
-			return data->mgr;
-		}
-
-		// for unit-testing
-		ptr_type getPtr() const {
-			return data;
-		}
-
-		std::size_t hash() const {
-			return data->hash;
-		}
-	};
-
-	/**
-	 * Adds hashing support for the element facade.
-	 */
-	template<typename ElementType>
-	inline std::size_t hash_value(const Element<ElementType>& element) {
-		return element.hash();
+		template<typename BaseLattice>
+		struct less_op {
+			bool operator()(const Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
+				return b.contains(a);
+			}
+		};
 	}
-
-
-	// -------------------------------------------------------------------------------------------------
-	// 											Operations
-	// -------------------------------------------------------------------------------------------------
-
-	template<typename ElementType>
-	Set<ElementType> setUnion(const Set<ElementType>& a, const Set<ElementType>& b) {
-		return a.merge(b);
-	}
-
-	template<typename ElementType>
-	Set<ElementType> setUnion(const std::vector<Set<ElementType>>& list) {
-		Set<ElementType> res;
-		for(const auto& cur : list) res = setUnion(res, cur);
-		return res;
-	}
-
-	template<typename ElementType>
-	Set<ElementType> setIntersect(const Set<ElementType>& a, const Set<ElementType>& b) {
-		return a.intersect(b);
-	}
-
-	// this operation is not supported in general
-//	template<typename ElementType>
-//	Set<ElementType> setDiff(const Set<ElementType>& a, const Set<ElementType>& b) {
-//		return a.diff(b);
-//	}
-
-	template<typename ElementType>
-	bool empty(const Set<ElementType>& a) {
-		return a.empty();
-	}
-
-	// not supported yet
-//	template<typename ElementType>
-//	bool isSubset(const Set<ElementType>& sub, const Set<ElementType>& super);
-//
-//	template<typename ElementType>
-//	bool isEqual(const Set<ElementType>& a, const Set<ElementType>& b) {
-//		// TODO: form equality classes here!
-//		return a == b || (isSubset(a,b) && isSubset(b,a));
-//	}
-
-	template<typename ElementType>
-	bool isMember(const Set<ElementType>& a, const Element<ElementType>& e) {
-		assert(e.isSingle());
-		return a.contains(e);
-	}
-
-
 
 } // end namespace cba
 } // end namespace analysis
@@ -864,15 +666,10 @@ namespace cba {
 
 namespace std {
 
-	template<typename ElementType>
-	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Set<ElementType>& data) {
-		if (data.getPtr() == nullptr) return out << "{}";
-		return out << *data.getPtr();
-	}
-
-	template<typename ElementType>
-	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Element<ElementType>& data) {
-		return out << *data.getPtr();
+	template<typename L>
+	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::first_order::Data<L>& data) {
+		return data.printTo(out);
 	}
 
 } // end namespace std
+

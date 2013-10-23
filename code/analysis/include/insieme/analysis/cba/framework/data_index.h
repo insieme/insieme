@@ -132,13 +132,11 @@ namespace cba {
 	 * explicitly covered).
 	 */
 	template<typename E>
-	std::vector<E> extract(const std::map<NominalIndex, E>& map, const NominalIndex& i) {
+	const E& extract(const std::map<NominalIndex, E>& map, const NominalIndex& i) {
+		const static E empty;
 		// check whether the requested index is present
 		auto pos = map.find(i);
-		if (pos != map.end()) {
-			return toVector(pos->second);
-		}
-		return toVector<E>();	// no data present
+		return (pos == map.end()) ? empty : pos->second;
 	}
 
 	// -------------------------------------------------------------------------------------------------
@@ -192,13 +190,12 @@ namespace cba {
 	 * explicitly covered).
 	 */
 	template<typename E>
-	std::vector<E> extract(const std::map<UnitIndex, E>& map, const UnitIndex& i) {
+	const E& extract(const std::map<UnitIndex, E>& map, const UnitIndex& i) {
+		const static E empty;
+
 		// check whether the requested index is present
 		auto pos = map.find(i);
-		if (pos != map.end()) {
-			return toVector(pos->second);
-		}
-		return toVector<E>();	// no data present
+		return (pos == map.end()) ? empty : pos->second;
 	}
 
 	/**
@@ -283,21 +280,23 @@ namespace cba {
 	 * explicitly covered).
 	 */
 	template<typename E>
-	std::vector<E> extract(const std::map<SingleIndex, E>& map, const SingleIndex& i) {
+	const E& extract(const std::map<SingleIndex, E>& map, const SingleIndex& i) {
+		static const E empty;
+
 		// check whether the requested index is present
 		auto pos = map.find(i);
 		if (pos != map.end()) {
-			return toVector(pos->second);
+			return pos->second;
 		}
 
 		// otherwise check whether the * element is present
 		pos = map.find(SingleIndex());
 		if (pos != map.end()) {
-			return toVector(pos->second);
+			return pos->second;
 		}
 
 		// no data present
-		return toVector<E>();
+		return empty;
 	}
 
 } // end namespace cba
