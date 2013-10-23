@@ -95,6 +95,10 @@ namespace cba {
 		typename Lattice::less_op_type less_op;
 		typename Lattice::projection_op_type projection_op;
 
+		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
+			return !less_op(a,b);
+		};
+
 		// create an manager instance
 		mgr_type mgr;
 
@@ -115,6 +119,19 @@ namespace cba {
 		// check that meet is a sub-type
 		EXPECT_PRED2(less_op, a, c);
 		EXPECT_PRED2(less_op, a, c);
+
+		// create an test empty instance
+		value_type empty;
+
+		EXPECT_PRED2(less_op, empty, empty);
+
+		EXPECT_PRED2(less_op, empty, a);
+		EXPECT_PRED2(less_op, empty, b);
+		EXPECT_PRED2(less_op, empty, c);
+
+		EXPECT_PRED2(not_less_op, a, empty);
+		EXPECT_PRED2(not_less_op, b, empty);
+		EXPECT_PRED2(not_less_op, c, empty);
 
 		// check index structure - first: nominal index
 		{
@@ -138,9 +155,10 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-//			std::cout << d << "\n";
-//			std::cout << e << "\n";
-//			std::cout << f << "\n";
+			std::cout << "\nNominal:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -156,6 +174,16 @@ namespace cba {
 
 			EXPECT_PRED2(less_op, meet_op(a1, a3), projection_op(f, nA));
 			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, nB));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
 		}
 
 		// check UnitIndex
@@ -175,9 +203,10 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-//			std::cout << d << "\n";
-//			std::cout << e << "\n";
-//			std::cout << f << "\n";
+			std::cout << "\nUnitIndex:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -191,6 +220,16 @@ namespace cba {
 
 			EXPECT_PRED2(less_op, a1, projection_op(f, uI));
 			EXPECT_PRED2(less_op, a2, projection_op(f, uI));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
 		}
 
 		// check SingleIndex
@@ -216,9 +255,10 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-//			std::cout << d << "\n";
-//			std::cout << e << "\n";
-//			std::cout << f << "\n";
+			std::cout << "\nSingleIndex:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -238,22 +278,94 @@ namespace cba {
 			EXPECT_PRED2(less_op, meet_op(a1, a4), projection_op(f, s1));
 			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, s2));
 			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, sR));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+	}
+
+	template<template<typename L> class S>
+	void testDataSharing() {
+
+		typedef S<utils::constraint::SetLattice<int>> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
+
+		mgr_type mgr;
+
+		// check empty-value
+		value_type empty;
+		EXPECT_FALSE(empty.getPtr());
+
+		auto e1 = utils::set::toSet<std::set<int>>(12);
+		auto e2 = utils::set::toSet<std::set<int>>(14,16);
+
+		// check atomic-value sharing
+		{
+			value_type a = mgr.atomic(e1);
+			value_type b = mgr.atomic(e2);
+			value_type c = mgr.atomic(e2);
+
+			EXPECT_TRUE(a.getPtr());
+			EXPECT_TRUE(b.getPtr());
+			EXPECT_TRUE(c.getPtr());
+
+			EXPECT_NE(a, b);
+			EXPECT_NE(a, c);
+			EXPECT_EQ(b, c);
+
+			EXPECT_NE(a.getPtr(), b.getPtr());
+			EXPECT_NE(a.getPtr(), c.getPtr());
+			EXPECT_EQ(b.getPtr(), c.getPtr());
+		}
+
+		// check compound-value sharing
+		{
+			NominalIndex nA("a");
+			NominalIndex nB("b");
+
+			auto a1 = mgr.atomic(e1);
+			auto a2 = mgr.atomic(e2);
+
+			value_type a = mgr.compound(entry(nA, a1), entry(nB, a2));
+			value_type b = mgr.compound(entry(nA, a2), entry(nB, a1));
+			value_type c = mgr.compound(entry(nB, a2), entry(nA, a1));
+
+			EXPECT_TRUE(a.getPtr());
+			EXPECT_TRUE(b.getPtr());
+			EXPECT_TRUE(c.getPtr());
+
+			EXPECT_NE(a, b);
+			EXPECT_EQ(a, c);
+			EXPECT_NE(b, c);
+
+			EXPECT_NE(a.getPtr(), b.getPtr());
+			EXPECT_EQ(a.getPtr(), c.getPtr());
+			EXPECT_NE(b.getPtr(), c.getPtr());
 		}
 	}
 
 
-	TEST(DataStrucuture, UnitStructure) {
+	TEST(DataStructure, UnitStructure) {
 		testStructure<UnionStructureLattice>();
 	}
 
-	TEST(DataStrucuture, FirstOrderStructure) {
+	TEST(DataStructure, FirstOrderStructure) {
 		testStructure<FirstOrderStructureLattice>();
+		testDataSharing<FirstOrderStructureLattice>();
 	}
 
-//	TEST(DataStrucuture, SecondOrderStructure) {
-//		testStructure<SecondOrderStructureLattice>();
-//	}
-
+	TEST(DataStructure, SecondOrderStructure) {
+		testStructure<SecondOrderStructureLattice>();
+		testDataSharing<SecondOrderStructureLattice>();
+	}
 
 } // end namespace cba
 } // end namespace analysis
