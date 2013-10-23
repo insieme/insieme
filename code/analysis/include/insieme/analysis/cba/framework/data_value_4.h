@@ -70,8 +70,8 @@ namespace cba {
 	 *
 	 * Within this file three different implementations are offered:
 	 * 		- Unit, every field is summerized to a single value
-	 * 		- First-Order, fields are preserved, inter-field relations not
-	 * 		- Second-Order, fields and some inter-field relations are preserved
+	 * 		- First-Order, fields are preserved (to some extend), inter-field relations not
+	 * 		- Second-Order, fields are even more accurately preserved as well as some inter-field relations
 	 */
 
 	template<
