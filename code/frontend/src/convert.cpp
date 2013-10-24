@@ -1395,8 +1395,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 
     //FIXME: check if this is enough
     //or if we need further checks
-    if (core::analysis::isVolatileType(elementType))
-        return init;
+	if (core::analysis::isVolatileType(elementType)) {
+		if(!core::analysis::isVolatileType(init->getType())) {
+			return builder.makeVolatile(init);
+		}
+		return init;
+	}
 /*
     //if lhs and rhs are struct type we only have
     //to check if the types are equal
