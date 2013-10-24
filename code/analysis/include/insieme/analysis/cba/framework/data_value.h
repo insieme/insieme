@@ -398,7 +398,8 @@ namespace cba {
 					return less_op(cast(other).value, value);
 				}
 
-				virtual bool contains(const typename BaseLattice::value_type& element) const {
+				template<typename E>
+				bool contains(const E& element) const {
 					const typename BaseLattice::less_op_type less_op;
 					return less_op(element, value);
 				}
@@ -589,7 +590,8 @@ namespace cba {
 				return data->contains(*other.data);
 			}
 
-			bool contains(const typename BaseLattice::value_type& value) const {
+			template<typename E>
+			bool contains(const E& value) const {
 				// handle empty
 				if (!data) return false;
 
@@ -711,6 +713,13 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
+			template<typename E>
+			bool operator()(Data<BaseLattice>& a, const E& e) const {
+				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
+				typename BaseLattice::value_type tmp;
+				meet_assign_op(tmp, e);
+				return a.meetAssign(a.getPtr()->mgr.atomic(tmp));
+			}
 			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
 				return a.meetAssign(a.getPtr()->mgr.atomic(b));
 			}
@@ -721,8 +730,9 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
-			bool operator()(const typename BaseLattice::value_type& a, const Data<BaseLattice>& b) const {
-				return b.contains(a);
+			template<typename E>
+			bool operator()(const E& e, const Data<BaseLattice>& a) const {
+				return a.contains(e);
 			}
 			bool operator()(const Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return b.contains(a);
@@ -907,7 +917,8 @@ namespace cba {
 					return less_op(cast(other).value, value);
 				}
 
-				virtual bool contains(const typename BaseLattice::value_type& element) const {
+				template<typename E>
+				bool contains(const E& element) const {
 					const typename BaseLattice::less_op_type less_op;
 					return less_op(element, value);
 				}
@@ -1068,7 +1079,8 @@ namespace cba {
 				return data->contains(*other.data);
 			}
 
-			bool contains(const typename BaseLattice::value_type& value) const {
+			template<typename E>
+			bool contains(const E& value) const {
 				// handle empty
 				if (!data) return false;
 
@@ -1230,6 +1242,13 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
+			template<typename E>
+			bool operator()(Data<BaseLattice>& a, const E& e) const {
+				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
+				typename BaseLattice::value_type tmp;
+				meet_assign_op(tmp, e);
+				return a.meetAssign(a.getPtr()->mgr.atomic(tmp));
+			}
 			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
 				return a.meetAssign(a.getPtr()->mgr.atomic(b));
 			}
@@ -1240,8 +1259,9 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
-			bool operator()(const typename BaseLattice::value_type& a, const Data<BaseLattice>& b) const {
-				return b.contains(a);
+			template<typename E>
+			bool operator()(const E& e, const Data<BaseLattice>& a) const {
+				return a.contains(e);
 			}
 			bool operator()(const Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return b.contains(a);

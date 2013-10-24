@@ -101,6 +101,7 @@ namespace cba {
 		// check equivalence between meet and meet assign operation
 		EXPECT_EQ(c, meet_op(a,b));
 		EXPECT_EQ(c, meet_op(a,s2));		// should also work with base type directly
+		meet_op(a,2);						// and even with the base type of the base type
 
 		// check that meet is a sub-type
 		EXPECT_PRED2(less_op, a, c);
@@ -111,6 +112,8 @@ namespace cba {
 
 		EXPECT_PRED2(less_op, s1, c);
 		EXPECT_PRED2(less_op, s2, c);
+
+		EXPECT_PRED2(less_op, 1, c);		// should also work for element of element type
 
 
 		// create an test empty instance
