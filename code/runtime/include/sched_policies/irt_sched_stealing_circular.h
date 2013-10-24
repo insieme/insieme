@@ -38,7 +38,9 @@
 
 #include "declarations.h"
 
+#ifndef IRT_CWBUFFER_LENGTH
 #define IRT_CWBUFFER_LENGTH 16
+#endif
 
 #include "utils/circular_work_buffers.h"
 
