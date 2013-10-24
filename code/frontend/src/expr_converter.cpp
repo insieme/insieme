@@ -1720,6 +1720,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		return (retIr =
 				builder.literal(
                         enumDecl->getNameAsString(),
+
                         mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(
                             utils::buildNameForEnum(llvm::cast<clang::TagType>(llvm::cast<clang::TypeDecl>(enumDecl->getDeclContext())->getTypeForDecl()))
                         )

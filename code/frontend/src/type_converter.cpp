@@ -39,6 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -50,6 +51,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/annotations/c/include.h"
 #include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/lang/simd_vector.h"
@@ -564,6 +566,10 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if(convFact.program.getInterceptor().isIntercepted(type)) {
 		VLOG(2) << type << " isIntercepted";
 		res = convFact.program.getInterceptor().intercept(type, convFact);
+
+		if(annotations::c::hasIncludeAttached(res)) {
+			VLOG(2) << res << " header " << annotations::c::getAttachedInclude(res);
+		}
 		cache[type] = res;
 		return res;
 	}
@@ -584,6 +590,14 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 		// resolve the type recursively
 		res = convertInternal(type);
+		
+		//check if type is defined in a system header --> if so add includeAnnotation which is used
+		//in backend to avoid redeclaration of type
+		if( utils::isDefinedInSystemHeader(recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs()) ) {
+			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
+			utils::addHeaderForDecl(res, recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs());
+		}
+
 		assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
 
 		// check cache consistency
