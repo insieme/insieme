@@ -344,16 +344,6 @@ namespace backend {
 				return info;
 			}
 
-			// the type might not be generic but be anotated. belongs to some system header and 
-			// redeclaration has to be avoided
-			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
-				const string& name   = core::annotations::getAttachedName(type);
-				const string& header = annotations::c::getAttachedInclude(type);
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
-			}
-
 			// also test struct variant
 			name = "struct " + name;
 			pos2 = includeTable.find(name);
@@ -365,6 +355,16 @@ namespace backend {
 				return info;
 			}
 
+			// the type might not be generic but be anotated. belongs to some system header and 
+			// redeclaration has to be avoided
+			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
+				const string& name   = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				std::cout << "system header type " << name << "-" << header << " " << type << std::endl;
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type, info);
+				return info;
+			}
 
 			// try resolving it using type handlers
 			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
