@@ -87,9 +87,6 @@ namespace cba {
 		// an operation to retrieve sub-values
 		typename _projection_op,
 
-		// an operation converting a value into a base-lattice value
-		typename _ground_op,
-
 		// the meet operator for the resulting lattice
 		typename _meet_assign_op_type,
 
@@ -104,7 +101,6 @@ namespace cba {
 		typedef _base_lattice base_lattice;
 		typedef _manager_type manager_type;
 		typedef _projection_op projection_op_type;
-		typedef _ground_op ground_op_type;
 	};
 
 
@@ -141,7 +137,6 @@ namespace cba {
 				unit::DataManager<BaseLattice>,
 				typename BaseLattice::value_type,
 				unit::projection_op<BaseLattice>,
-				id<typename BaseLattice::value_type>,
 				typename BaseLattice::meet_assign_op_type,
 				typename BaseLattice::less_op_type,
 				typename BaseLattice::meet_op_type
@@ -170,9 +165,6 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
-		struct ground_op;
-
-		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -186,7 +178,6 @@ namespace cba {
 				first_order::DataManager<BaseLattice>,
 				first_order::Data<BaseLattice>,
 				first_order::projection_op<BaseLattice>,
-				first_order::ground_op<BaseLattice>,
 				first_order::meet_assign_op<BaseLattice>,
 				first_order::less_op<BaseLattice>
 			> {};
@@ -208,9 +199,6 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
-		struct ground_op;
-
-		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -224,7 +212,6 @@ namespace cba {
 				second_order::DataManager<BaseLattice>,
 				second_order::Data<BaseLattice>,
 				second_order::projection_op<BaseLattice>,
-				second_order::ground_op<BaseLattice>,
 				second_order::meet_assign_op<BaseLattice>,
 				second_order::less_op<BaseLattice>
 			> {};
@@ -561,7 +548,7 @@ namespace cba {
 				return static_cast<const internal::CompoundEntry<IndexType, BaseLattice>&>(*data)[index];
 			}
 
-			const typename BaseLattice::value_type& ground() const {
+			operator const typename BaseLattice::value_type&() const {
 				const static typename BaseLattice::value_type empty;
 
 				// handle empty
@@ -700,14 +687,6 @@ namespace cba {
 			template<typename IndexType>
 			const Data<BaseLattice>& operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
-			}
-		};
-
-		template<typename BaseLattice>
-		struct ground_op {
-			typedef typename BaseLattice::value_type base_value_type;
-			const base_value_type& operator()(const Data<BaseLattice>& value) const {
-				return value.ground();
 			}
 		};
 
@@ -1050,7 +1029,7 @@ namespace cba {
 				return res;
 			}
 
-			typename BaseLattice::value_type ground() const {
+			operator typename BaseLattice::value_type() const {
 				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
 
 				// aggregate the values of the set of atomics
@@ -1229,14 +1208,6 @@ namespace cba {
 			template<typename IndexType>
 			Data<BaseLattice> operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
-			}
-		};
-
-		template<typename BaseLattice>
-		struct ground_op {
-			typedef typename BaseLattice::value_type base_value_type;
-			base_value_type operator()(const Data<BaseLattice>& value) const {
-				return value.ground();
 			}
 		};
 

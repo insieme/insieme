@@ -71,7 +71,6 @@ namespace cba {
 		typename Lattice::meet_op_type meet_op;
 		typename Lattice::less_op_type less_op;
 		typename Lattice::projection_op_type projection_op;
-		typename Lattice::ground_op_type ground_op;
 
 		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
 			return !less_op(a,b);
@@ -87,8 +86,8 @@ namespace cba {
 		value_type a = mgr.atomic(s1);
 		value_type b = mgr.atomic(s2);
 
-		// check ground operation
-		decltype(s1) s3 = ground_op(a);
+		// check implicit conversion to value type for atomic values
+		decltype(s1) s3 = a;
 		EXPECT_PRED2(less_op, a, mgr.atomic(s3));
 
 		// check whether values can be assigned
@@ -334,7 +333,6 @@ namespace cba {
 		typename Lattice::meet_op_type meet_op;
 		typename Lattice::less_op_type less_op;
 		typename Lattice::projection_op_type projection_op;
-		typename Lattice::ground_op_type ground_op;
 
 		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
 			return !less_op(a,b);
@@ -351,7 +349,7 @@ namespace cba {
 		value_type b = mgr.atomic(p2);
 
 		// check ground operation
-		Pair p3 = ground_op(a);
+		Pair p3 = a;
 		EXPECT_PRED2(less_op, a, mgr.atomic(p3));
 
 		// check whether values can be assigned
