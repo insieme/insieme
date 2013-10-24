@@ -249,7 +249,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 			// if the variable is declared outside, we must give it a final value afer all iterations
 			if(restoreValue){
-				std::cout << originalInductionExpr << std::endl;
 				core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
 															builder.add(builder.mul(normalizedIterations, stepExpr), initValue));
 				// if the induction variable is not scope defined, and there is actualy some init value assigned, we should

@@ -231,24 +231,16 @@ tu::IRTranslationUnit Converter::convert() {
 			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
-			// extract new symbol name
-//
 			if (!typedefDecl->getTypeForDecl()) return;
 			
-//			// get contained type
+			// get contained type
 			auto res = converter.convertType(typedefDecl->getTypeForDecl());
-//
-//			// if the typedef maps an anonymous type, this might produce problems along the translation units
-//			// we create a type with is the actual implementation but with the typedef name;
-//
-//			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
+
+			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
 			auto symbol = converter.getIRBuilder().genericType(typedefDecl->getQualifiedNameAsString());
 			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
 				converter.getIRTranslationUnit().addType(symbol, res);
 			}
-
-	//		if (res.isa<core::StructTypePtr>())
-			utils::addHeaderForDecl(res, typedefDecl, converter.getProgram().getStdLibDirs());
 		}
 	} typeVisitor(*this);
 
@@ -328,6 +320,12 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+
+
+	std::cout << " ========================== DUMP ================================= "<< std::endl;
+	std::cout << irTranslationUnit << std::endl;
+	std::cout << " ================================================================= "<< std::endl;
+
 
 	// that's all
 	return irTranslationUnit;
