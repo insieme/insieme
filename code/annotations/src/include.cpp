@@ -56,11 +56,35 @@ namespace c {
 		IncludeTag(const string& include) : include(include) {}
 		bool operator==(const IncludeTag& other) const { return include == other.include; }
 		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+//   ==== this code is for the general case
 			if (hasIncludeAttached (before)) {
+				if (after.isa<core::StructTypePtr>() && after.as<core::StructTypePtr>()->getName()->getValue() == "A")
+					assert (false);
+
 				attachInclude (after,  getAttachedInclude(before));
 				return true;
 			}
 			else return false;
+//	==== this code is for an spetialized case in witch migration is only done when needed
+	//		if(before.isa<GenericTypePtr>() && after.isa<GenericTypePtr>()
+	//			//For intercepted types which are represented as generic types support migration
+	//			&& before.as<GenericTypePtr>()->getFamilyName() == after.as<GenericTypePtr>()->getFamilyName()) {
+	//			after->attachValue(IncludeTag(include)); 
+	//			return true;
+	//		}
+	//		
+	//		if( before.isa<LiteralPtr>() && after.isa<LiteralPtr>() &&
+	//			before.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() && 
+	//			after.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() && 
+	//			//For intercepted functions which are represented as literals with function types support migration
+	//			(before.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind() == after.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind())
+	//			) {
+	//			after->attachValue(IncludeTag(include)); 
+	//			std::cout << "IncludeTag " << before << " " << after << std::endl;
+	//			return true;
+	//		}
+
+	//		return false;
 		}
 	};
 
@@ -93,6 +117,8 @@ namespace c {
 	}
 
 	void attachInclude(const NodePtr& node, const string& include) {
+
+
 		node->attachValue(IncludeTag(include));
 	}
 

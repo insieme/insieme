@@ -1,1 +1,1 @@
---intercept-file ../intercept.cfg
+--interceptboost::.*

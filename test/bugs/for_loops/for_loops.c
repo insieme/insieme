@@ -27,11 +27,20 @@ int main(int argc, char** argv) {
 		printf("j: %d\n", j);
 		iterations++;
 	}
+	printf("Iterations: %d\n", iterations);
 
-	for(unsigned char i = 8, j = 7; i>-1; --i) {
+	//CAREFULL condition: -1 is int, i gets casted to int so it holds
+	//but in increment --i operates as char (underflow at 0 restart at 255)
+	//--> infinite loop as value of i in coditionExpr is always between 0 nad 255 which is greater than -1
+	//for(unsigned char i = 8, j = 7; i>=-1; --i) {
+	
+	//BUG: gcc evaluates conditionExpr as false
+	//as i==8 (as char) but promotes i and -1 to unsigned int which results in comparison of 8>=UINT_MAX
+	for(unsigned int i = 8, j = 7; i>=-1; --i) {
 		printf("j: %d\n", j);
 		iterations++;
 	}
+	printf("Iterations: %d\n", iterations);
 
 	}
 	printf("Iterations: %d\n", iterations);

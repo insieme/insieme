@@ -93,6 +93,7 @@
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/c/include.h"
 
 using namespace clang;
 using namespace insieme;
@@ -228,7 +229,7 @@ tu::IRTranslationUnit Converter::convert() {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
 			auto irTy = converter.convertType(typeDecl->getTypeForDecl());
-			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
+			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs(), converter.getProgram().getUserIncludeDirs());
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
@@ -241,6 +242,8 @@ tu::IRTranslationUnit Converter::convert() {
 			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
 				converter.getIRTranslationUnit().addType(symbol, res);
 			}
+		//	if (res.isa<core::StructTypePtr>())
+		//		utils::addHeaderForDecl(res, typedefDecl, converter.getProgram().getStdLibDirs(), converter.getProgram().getUserIncludeDirs());
 		}
 	} typeVisitor(*this);
 
@@ -615,16 +618,12 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
 		}
 
-		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
-			utils::addHeaderForDecl(globVar, varDecl, program.getStdLibDirs());
-		}
-
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
 			omp::addThreadPrivateAnnotation(globVar);
 		}
 
-		utils::addHeaderForDecl(globVar, valDecl, getProgram().getStdLibDirs());
+		utils::addHeaderForDecl(globVar, valDecl, program.getStdLibDirs());
 		varDeclMap.insert( { valDecl, globVar } );
 		return globVar;
 	}
@@ -647,7 +646,10 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	if (attr) {
 		var->addAnnotation(attr);
 	}
-
+	
+	if(annotations::c::hasIncludeAttached(irType)) {
+		VLOG(2) << " header " << annotations::c::getAttachedInclude(irType);
+	}
 	return var;
 }
 
@@ -1185,7 +1187,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
+		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs(), program.getUserIncludeDirs());
 		lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}

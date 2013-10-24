@@ -3,6 +3,7 @@
 namespace NS {
 	namespace SN{
 		typedef int A;
+		A a = 11;
 	}
 }
 
@@ -67,6 +68,8 @@ int main() {
 	c.usesGlobals(&x);	// x == 101, gloalInt == 201
 	printf("x 101 == %d\n", x);
 	printf("::globalInt 201 == %d\n", globalInt);
+
+	printf("NS::SN::a 11 == %d\n", NS::SN::a);
 
 	return 0;
 }

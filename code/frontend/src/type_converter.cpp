@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -39,6 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -50,6 +51,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/annotations/c/include.h"
 #include "insieme/core/lang/complex_extension.h"
 
 #include "insieme/core/lang/simd_vector.h"
@@ -382,6 +384,11 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		if (it != convFact.getIRTranslationUnit().getTypes().end())
 			trgty = it->second;
 
+
+		//	core::GenericTypePtr gen = builder.genericType(utils::getNameForRecord(llvm::cast<clang::RecordDecl>(typedefType->getDecl()), typedefType));
+		//	convFact.getIRTranslationUnit().addType(gen, trgty);
+		//  return gen;
+
 		if (trgty.isa<core::StructTypePtr>()){
 			std::string name =  typedefType->getDecl()->getQualifiedNameAsString();
 			subType = core::transform::replaceNode(mgr, core::StructTypeAddress(trgty.as<core::StructTypePtr>())->getName(), 
@@ -391,10 +398,15 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 
     //it may happen that we have something like 'typedef enum {...} name;'
     //in this case we can forget the annotation
-    if(!mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)) {
+    //typedef name annotation for struct/union messes with recursive type resolution
+    //as typeDef is syntactic sugar drop the name annotation
+    /* 
+    if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)
+		&& !subType.isa<core::StructTypePtr>() && !subType.isa<core::UnionTypePtr>()) {
         // Adding the name of the typedef as annotation
         core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
     }
+    */
     return  subType;
 }
 
@@ -425,7 +437,11 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	auto def = findDefinition(tagType);
 	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		return builder.genericType( tagType->getDecl()->getNameAsString() );
+		core::TypePtr retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+		if (!tagType->getDecl()->getNameAsString().empty()) {
+			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
+		}
+        return retTy;
 	}
 
 	// handle enums => always just integers
@@ -459,9 +475,9 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	core::TypePtr retTy = handleTagType(def, structElements);
 
 	// Adding the name of the C struct as annotation
-	if (!recDecl->getName().empty())
+	if (!recDecl->getNameAsString().empty()) {
         core::annotations::attachName(retTy,recDecl->getName());
-
+	}
 	return retTy;
 }
 
@@ -524,7 +540,8 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		return builder.structType( structElements );
+		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl());
+		return builder.structType( builder.stringValue(name), structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
 		return builder.unionType( structElements );
 	}
@@ -577,17 +594,28 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 		// create a (temporary) type variable for this type
 		core::GenericTypePtr symbol = builder.genericType(name);
+		if (!name.empty()) {
+			core::annotations::attachName(symbol,name);
+		}
 
 		// bind recursive variable within the typeCache
 		typeCache[type] = symbol;
 
 		// resolve the type recursively
 		res = convertInternal(type);
+		
+		//check if type is defined in a system header --> if so add includeAnnotation which is used
+		//in backend to avoid redeclaration of type
+		if( utils::isDefinedInSystemHeader(recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs()) ) {
+			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
+			utils::addHeaderForDecl(res, recDecl, convFact.getProgram().getStdLibDirs());
+		}
+
 		assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
 
-		// give the type a name to structs
-		if (core::StructTypePtr strTy = res.isa<core::StructTypePtr>())
-			res = core::transform::replaceNode(mgr, core::StructTypeAddress(strTy)->getName(), builder.stringValue(name)).as<core::TypePtr>();
+	//	// give the type a name to structs
+	//	if (core::StructTypePtr strTy = res.isa<core::StructTypePtr>())
+	//		res = core::transform::replaceNode(mgr, core::StructTypeAddress(strTy)->getName(), builder.stringValue(name)).as<core::TypePtr>();
 
 		// check typeCache consistency
 		assert(typeCache[type] == symbol); // should not change in the meantime
