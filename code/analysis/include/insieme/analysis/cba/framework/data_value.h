@@ -75,6 +75,9 @@ namespace cba {
 	 */
 
 	template<
+		// the lattice this strcuture is based on
+		typename _base_lattice,
+
 		// a manager handling value instances
 		typename _manager_type,
 
@@ -84,19 +87,24 @@ namespace cba {
 		// an operation to retrieve sub-values
 		typename _projection_op,
 
+		// an operation converting a value into a base-lattice value
+		typename _ground_op,
+
 		// the meet operator for the resulting lattice
 		typename _meet_assign_op_type,
 
 		// the less operator for the resulting lattice
-		typename _less_op_type = utils::constraint::meet_assign_based_less_op<_value_type, _meet_assign_op_type>,
+		typename _less_op_type = utils::constraint::meet_assign_based_less_op<_meet_assign_op_type>,
 
 		// the meet operator for the resulting lattice
-		typename _meet_op_type = utils::constraint::meet_assign_based_meet_op<_value_type, _meet_assign_op_type>
+		typename _meet_op_type = utils::constraint::meet_assign_based_meet_op<_meet_assign_op_type>
 	>
 	struct DataStructureLattice :
 			public utils::constraint::Lattice<_value_type, _meet_assign_op_type, _less_op_type, _meet_op_type> {
+		typedef _base_lattice base_lattice;
 		typedef _manager_type manager_type;
 		typedef _projection_op projection_op_type;
+		typedef _ground_op ground_op_type;
 	};
 
 
@@ -129,9 +137,11 @@ namespace cba {
 	template<typename BaseLattice>
 	struct UnionStructureLattice :
 			public DataStructureLattice<
+				BaseLattice,
 				unit::DataManager<BaseLattice>,
 				typename BaseLattice::value_type,
 				unit::projection_op<BaseLattice>,
+				id<typename BaseLattice::value_type>,
 				typename BaseLattice::meet_assign_op_type,
 				typename BaseLattice::less_op_type,
 				typename BaseLattice::meet_op_type
@@ -160,6 +170,9 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
+		struct ground_op;
+
+		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -169,9 +182,11 @@ namespace cba {
 	template<typename BaseLattice>
 	struct FirstOrderStructureLattice :
 			public DataStructureLattice<
+				BaseLattice,
 				first_order::DataManager<BaseLattice>,
 				first_order::Data<BaseLattice>,
 				first_order::projection_op<BaseLattice>,
+				first_order::ground_op<BaseLattice>,
 				first_order::meet_assign_op<BaseLattice>,
 				first_order::less_op<BaseLattice>
 			> {};
@@ -193,6 +208,9 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
+		struct ground_op;
+
+		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -202,9 +220,11 @@ namespace cba {
 	template<typename BaseLattice>
 	struct SecondOrderStructureLattice :
 			public DataStructureLattice<
+				BaseLattice,
 				second_order::DataManager<BaseLattice>,
 				second_order::Data<BaseLattice>,
 				second_order::projection_op<BaseLattice>,
+				second_order::ground_op<BaseLattice>,
 				second_order::meet_assign_op<BaseLattice>,
 				second_order::less_op<BaseLattice>
 			> {};
@@ -304,7 +324,7 @@ namespace cba {
 		 * I ... Index Values
 		 */
 
-		namespace {
+		namespace internal {
 
 			template<typename BaseLattice>
 			struct Entry :
@@ -356,6 +376,10 @@ namespace cba {
 
 				virtual ~AtomicEntry() {}
 
+				const value_type& getValue() const {
+					return value;
+				}
+
 				virtual bool operator==(const Entry<BaseLattice>& other) const {
 					// same type, same data
 					return this == &other || (typeid(*this) == typeid(other) && value == cast(other).value);
@@ -372,6 +396,11 @@ namespace cba {
 				virtual bool contains(const Entry<BaseLattice>& other) const {
 					const typename BaseLattice::less_op_type less_op;
 					return less_op(cast(other).value, value);
+				}
+
+				virtual bool contains(const typename BaseLattice::value_type& element) const {
+					const typename BaseLattice::less_op_type less_op;
+					return less_op(element, value);
 				}
 
 				virtual Data<BaseLattice> meet(const Entry<BaseLattice>& other) const {
@@ -503,7 +532,7 @@ namespace cba {
 		class Data :
 				public boost::equality_comparable<Data<BaseLattice>> {
 
-			typedef const Entry<BaseLattice>* ptr_type;
+			typedef const internal::Entry<BaseLattice>* ptr_type;
 
 			ptr_type data;
 
@@ -525,10 +554,23 @@ namespace cba {
 				if (!data) return *this;
 
 				// check type
-				assert_true((dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(data)));
+				assert_true((dynamic_cast<const internal::CompoundEntry<IndexType, BaseLattice>*>(data)));
 
 				// access field
-				return static_cast<const CompoundEntry<IndexType, BaseLattice>&>(*data)[index];
+				return static_cast<const internal::CompoundEntry<IndexType, BaseLattice>&>(*data)[index];
+			}
+
+			const typename BaseLattice::value_type& ground() const {
+				const static typename BaseLattice::value_type empty;
+
+				// handle empty
+				if (!data) return empty;
+
+				// check type
+				assert_true((dynamic_cast<const internal::AtomicEntry<BaseLattice>*>(data)));
+
+				// access field
+				return static_cast<const internal::AtomicEntry<BaseLattice>&>(*data).getValue();
 			}
 
 			bool meetAssign(const Data<BaseLattice>& other) {
@@ -545,6 +587,17 @@ namespace cba {
 				if (!data) return false;
 				if (!other.data) return true;
 				return data->contains(*other.data);
+			}
+
+			bool contains(const typename BaseLattice::value_type& value) const {
+				// handle empty
+				if (!data) return false;
+
+				// check type
+				assert_true((dynamic_cast<const internal::AtomicEntry<BaseLattice>*>(data)));
+
+				// check membership
+				return static_cast<const internal::AtomicEntry<BaseLattice>&>(*data).contains(value);
 			}
 
 			std::ostream& printTo(std::ostream& out) const {
@@ -578,8 +631,8 @@ namespace cba {
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
 
-			typedef AtomicEntry<BaseLattice>* AtomicEntryPtr;
-			typedef Entry<BaseLattice>* CompoundEntryPtr;
+			typedef internal::AtomicEntry<BaseLattice>* AtomicEntryPtr;
+			typedef internal::Entry<BaseLattice>* CompoundEntryPtr;
 
 			std::unordered_map<std::size_t, std::vector<AtomicEntryPtr>> atomicCache;
 			std::unordered_map<std::size_t, std::vector<CompoundEntryPtr>> compoundCache;
@@ -609,7 +662,7 @@ namespace cba {
 				}
 
 				// add new element
-				auto res = new AtomicEntry<BaseLattice>(*this, hash, value);
+				auto res = new internal::AtomicEntry<BaseLattice>(*this, hash, value);
 				list.push_back(res);
 				return res;
 			}
@@ -625,13 +678,13 @@ namespace cba {
 
 				// check whether element is already present
 				for(auto cur : list) {
-					if (auto entry = dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(cur)) {
+					if (auto entry = dynamic_cast<const internal::CompoundEntry<IndexType, BaseLattice>*>(cur)) {
 						if (*entry == map) return cur;
 					}
 				}
 
 				// add new element
-				auto res = new CompoundEntry<IndexType, BaseLattice>(*this, hash, map);
+				auto res = new internal::CompoundEntry<IndexType, BaseLattice>(*this, hash, map);
 				list.push_back(res);
 				return res;
 			}
@@ -649,7 +702,18 @@ namespace cba {
 		};
 
 		template<typename BaseLattice>
+		struct ground_op {
+			typedef typename BaseLattice::value_type base_value_type;
+			const base_value_type& operator()(const Data<BaseLattice>& value) const {
+				return value.ground();
+			}
+		};
+
+		template<typename BaseLattice>
 		struct meet_assign_op {
+			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
+				return a.meetAssign(a.getPtr()->mgr.atomic(b));
+			}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}
@@ -657,6 +721,9 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
+			bool operator()(const typename BaseLattice::value_type& a, const Data<BaseLattice>& b) const {
+				return b.contains(a);
+			}
 			bool operator()(const Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return b.contains(a);
 			}
@@ -682,7 +749,7 @@ namespace cba {
 		 * I ... Index Values
 		 */
 
-		namespace {
+		namespace internal {
 
 			template<typename BaseLattice, typename DerivedType>
 			struct Entry :
@@ -818,6 +885,10 @@ namespace cba {
 
 				virtual ~AtomicEntry() {}
 
+				const value_type& getValue() const {
+					return value;
+				}
+
 				virtual bool operator==(const TreeEntry<BaseLattice>& other) const {
 					// same type, same value
 					return this == &other || (typeid(*this) == typeid(other) && value == cast(other).value);
@@ -834,6 +905,11 @@ namespace cba {
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const {
 					const typename BaseLattice::less_op_type less_op;
 					return less_op(cast(other).value, value);
+				}
+
+				virtual bool contains(const typename BaseLattice::value_type& element) const {
+					const typename BaseLattice::less_op_type less_op;
+					return less_op(element, value);
 				}
 
 			protected:
@@ -929,7 +1005,7 @@ namespace cba {
 		template<typename BaseLattice>
 		class Data : public boost::equality_comparable<Data<BaseLattice>> {
 
-			typedef const SetEntry<BaseLattice>* ptr_type;
+			typedef const internal::SetEntry<BaseLattice>* ptr_type;
 
 			ptr_type data;
 
@@ -951,12 +1027,25 @@ namespace cba {
 				if (!data) return *this;
 
 				// check whether element types are properly typed
-				assert_true((dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(*data->begin())));
+				assert_true((dynamic_cast<const internal::CompoundEntry<IndexType, BaseLattice>*>(*data->begin())));
 
 				// collect union of all projections of all elements within the set
 				Data<BaseLattice> res;
 				for(const auto& cur : *data) {
-					res.meetAssign(static_cast<const CompoundEntry<IndexType, BaseLattice>&>(*cur)[index]);
+					res.meetAssign(static_cast<const internal::CompoundEntry<IndexType, BaseLattice>&>(*cur)[index]);
+				}
+
+				// done
+				return res;
+			}
+
+			typename BaseLattice::value_type ground() const {
+				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
+
+				// aggregate the values of the set of atomics
+				typename BaseLattice::value_type res;
+				for(const auto& cur : *data) {
+					meet_assign_op(res, static_cast<const internal::AtomicEntry<BaseLattice>&>(*cur).getValue());
 				}
 
 				// done
@@ -977,6 +1066,19 @@ namespace cba {
 				if (!data) return false;
 				if (!other.data) return true;
 				return data->contains(*other.data);
+			}
+
+			bool contains(const typename BaseLattice::value_type& value) const {
+				// handle empty
+				if (!data) return false;
+
+				// check whether value is covered by any set
+				for(const auto& cur : *data) {
+					if (static_cast<const internal::AtomicEntry<BaseLattice>&>(*cur).contains(value)) return true;
+				}
+
+				// not found
+				return false;
 			}
 
 			std::ostream& printTo(std::ostream& out) const {
@@ -1009,10 +1111,10 @@ namespace cba {
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
 
-			typedef TreeEntry<BaseLattice>* TreeEntryPtr;
-			typedef SetEntry<BaseLattice>* SetEntryPtr;
-			typedef AtomicEntry<BaseLattice>* AtomicEntryPtr;
-			typedef TreeEntry<BaseLattice>* CompoundEntryPtr;
+			typedef internal::TreeEntry<BaseLattice>* TreeEntryPtr;
+			typedef internal::SetEntry<BaseLattice>* SetEntryPtr;
+			typedef internal::AtomicEntry<BaseLattice>* AtomicEntryPtr;
+			typedef internal::TreeEntry<BaseLattice>* CompoundEntryPtr;
 
 			std::unordered_map<std::size_t, std::vector<SetEntryPtr>> setCache;
 			std::unordered_map<std::size_t, std::vector<AtomicEntryPtr>> atomicCache;
@@ -1059,7 +1161,7 @@ namespace cba {
 				}
 
 				// add new element
-				auto res = new SetEntry<BaseLattice>(*this, hash, trees);
+				auto res = new internal::SetEntry<BaseLattice>(*this, hash, trees);
 				list.push_back(res);
 				return res;
 			}
@@ -1078,7 +1180,7 @@ namespace cba {
 				}
 
 				// add new element
-				auto res = new AtomicEntry<BaseLattice>(*this, hash, value);
+				auto res = new internal::AtomicEntry<BaseLattice>(*this, hash, value);
 				list.push_back(res);
 				return set(res);
 			}
@@ -1095,13 +1197,13 @@ namespace cba {
 
 				// check whether element is already present
 				for(auto cur : list) {
-					if (auto entry = dynamic_cast<const CompoundEntry<IndexType, BaseLattice>*>(cur)) {
+					if (auto entry = dynamic_cast<const internal::CompoundEntry<IndexType, BaseLattice>*>(cur)) {
 						if (*entry == map) return set(cur);
 					}
 				}
 
 				// add new element
-				auto res = new CompoundEntry<IndexType, BaseLattice>(*this, hash, map);
+				auto res = new internal::CompoundEntry<IndexType, BaseLattice>(*this, hash, map);
 				list.push_back(res);
 				return set(res);
 			}
@@ -1119,7 +1221,18 @@ namespace cba {
 		};
 
 		template<typename BaseLattice>
+		struct ground_op {
+			typedef typename BaseLattice::value_type base_value_type;
+			base_value_type operator()(const Data<BaseLattice>& value) const {
+				return value.ground();
+			}
+		};
+
+		template<typename BaseLattice>
 		struct meet_assign_op {
+			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
+				return a.meetAssign(a.getPtr()->mgr.atomic(b));
+			}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}
@@ -1127,6 +1240,9 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
+			bool operator()(const typename BaseLattice::value_type& a, const Data<BaseLattice>& b) const {
+				return b.contains(a);
+			}
 			bool operator()(const Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return b.contains(a);
 			}

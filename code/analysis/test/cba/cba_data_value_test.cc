@@ -71,6 +71,7 @@ namespace cba {
 		typename Lattice::meet_op_type meet_op;
 		typename Lattice::less_op_type less_op;
 		typename Lattice::projection_op_type projection_op;
+		typename Lattice::ground_op_type ground_op;
 
 		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
 			return !less_op(a,b);
@@ -80,8 +81,15 @@ namespace cba {
 		mgr_type mgr;
 
 		// create atomic values
-		value_type a = mgr.atomic(toSet(1,3));
-		value_type b = mgr.atomic(toSet(2,5));
+		auto s1 = toSet(1,3);
+		auto s2 = toSet(2,5);
+
+		value_type a = mgr.atomic(s1);
+		value_type b = mgr.atomic(s2);
+
+		// check ground operation
+		decltype(s1) s3 = ground_op(a);
+		EXPECT_PRED2(less_op, a, mgr.atomic(s3));
 
 		// check whether values can be assigned
 		value_type c = a;
@@ -92,10 +100,18 @@ namespace cba {
 
 		// check equivalence between meet and meet assign operation
 		EXPECT_EQ(c, meet_op(a,b));
+		EXPECT_EQ(c, meet_op(a,s2));		// should also work with base type directly
 
 		// check that meet is a sub-type
 		EXPECT_PRED2(less_op, a, c);
-		EXPECT_PRED2(less_op, a, c);
+		EXPECT_PRED2(less_op, b, c);
+
+		EXPECT_PRED2(less_op, s1, a);
+		EXPECT_PRED2(less_op, s2, b);
+
+		EXPECT_PRED2(less_op, s1, c);
+		EXPECT_PRED2(less_op, s2, c);
+
 
 		// create an test empty instance
 		value_type empty;
@@ -315,6 +331,7 @@ namespace cba {
 		typename Lattice::meet_op_type meet_op;
 		typename Lattice::less_op_type less_op;
 		typename Lattice::projection_op_type projection_op;
+		typename Lattice::ground_op_type ground_op;
 
 		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
 			return !less_op(a,b);
@@ -323,9 +340,16 @@ namespace cba {
 		// create an manager instance
 		mgr_type mgr;
 
+		Pair p1(4,6);
+		Pair p2(6,4);
+
 		// create atomic values
-		value_type a = mgr.atomic(Pair(4,6));
-		value_type b = mgr.atomic(Pair(6,4));
+		value_type a = mgr.atomic(p1);
+		value_type b = mgr.atomic(p2);
+
+		// check ground operation
+		Pair p3 = ground_op(a);
+		EXPECT_PRED2(less_op, a, mgr.atomic(p3));
 
 		// check whether values can be assigned
 		value_type c = a;
@@ -336,10 +360,17 @@ namespace cba {
 
 		// check equivalence between meet and meet assign operation
 		EXPECT_EQ(c, meet_op(a,b));
+		EXPECT_EQ(c, meet_op(a,p2));		// should also work with base type directly
 
 		// check that meet is a sub-type
 		EXPECT_PRED2(less_op, a, c);
-		EXPECT_PRED2(less_op, a, c);
+		EXPECT_PRED2(less_op, b, c);
+
+		EXPECT_PRED2(less_op, p1, a);
+		EXPECT_PRED2(less_op, p2, b);
+
+		EXPECT_PRED2(less_op, p1, c);
+		EXPECT_PRED2(less_op, p2, c);
 
 		// create an test empty instance
 		value_type empty;
