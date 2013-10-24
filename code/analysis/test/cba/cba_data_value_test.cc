@@ -48,8 +48,229 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+#define DEBUG if(false) std::cout
+
+
 	using namespace std;
 	using namespace core;
+
+	template<typename ... Args>
+	std::set<int> toSet(Args ... args) {
+		return utils::set::toSet<std::set<int>>(args...);
+	}
+
+	template<template<typename L> class S>
+	void testSetLattice() {
+
+		typedef utils::constraint::SetLattice<int> SetLattice;
+		typedef S<SetLattice> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
+
+		typename Lattice::meet_assign_op_type meet_assign_op;
+		typename Lattice::meet_op_type meet_op;
+		typename Lattice::less_op_type less_op;
+		typename Lattice::projection_op_type projection_op;
+
+		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
+			return !less_op(a,b);
+		};
+
+		// create an manager instance
+		mgr_type mgr;
+
+		// create atomic values
+		value_type a = mgr.atomic(toSet(1,3));
+		value_type b = mgr.atomic(toSet(2,5));
+
+		// check whether values can be assigned
+		value_type c = a;
+
+		// check meet operator
+		bool change = meet_assign_op(c,b);
+		EXPECT_TRUE(change);
+
+		// check equivalence between meet and meet assign operation
+		EXPECT_EQ(c, meet_op(a,b));
+
+		// check that meet is a sub-type
+		EXPECT_PRED2(less_op, a, c);
+		EXPECT_PRED2(less_op, a, c);
+
+		// create an test empty instance
+		value_type empty;
+
+		EXPECT_PRED2(less_op, empty, empty);
+
+		EXPECT_PRED2(less_op, empty, a);
+		EXPECT_PRED2(less_op, empty, b);
+		EXPECT_PRED2(less_op, empty, c);
+
+		EXPECT_PRED2(not_less_op, a, empty);
+		EXPECT_PRED2(not_less_op, b, empty);
+		EXPECT_PRED2(not_less_op, c, empty);
+
+		// check index structure - first: nominal index
+		{
+			NominalIndex nA("a");
+			NominalIndex nB("b");
+
+			auto a1 = mgr.atomic(toSet(2));
+			auto a2 = mgr.atomic(toSet(6,3));
+			auto a3 = mgr.atomic(toSet(4,5));
+			auto a4 = mgr.atomic(toSet(5,2));
+
+			auto d = mgr.compound(
+					entry(nA, a1),
+					entry(nB, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(nA, a3),
+					entry(nB, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+			DEBUG << "\nNominal:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, nA));
+			EXPECT_PRED2(less_op, a2, projection_op(d, nB));
+			EXPECT_PRED2(less_op, a3, projection_op(e, nA));
+			EXPECT_PRED2(less_op, a4, projection_op(e, nB));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a3), projection_op(f, nA));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, nB));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+
+		// check UnitIndex
+		{
+			UnitIndex uI;
+
+			auto a1 = mgr.atomic(toSet(2));
+			auto a2 = mgr.atomic(toSet(1,4,5));
+
+			auto d = mgr.compound(
+					entry(uI, a1)
+			);
+
+			auto e = mgr.compound(
+					entry(uI, a2)
+			);
+
+			auto f = meet_op(d,e);
+
+			DEBUG << "\nUnitIndex:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(e, uI));
+
+			EXPECT_PRED2(less_op, a1, projection_op(f, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(f, uI));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+
+		// check SingleIndex
+		{
+			SingleIndex s1(1);
+			SingleIndex s2(2);
+			SingleIndex sR;
+
+			auto a1 = mgr.atomic(toSet(2));
+			auto a2 = mgr.atomic(toSet(6,3));
+			auto a3 = mgr.atomic(toSet(4,5));
+			auto a4 = mgr.atomic(toSet(5,2));
+
+			auto d = mgr.compound(
+					entry(s1, a1),
+					entry(sR, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(s2, a3),
+					entry(sR, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+			DEBUG << "\nSingleIndex:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
+			DEBUG << "1=" << projection_op(f, s1) << "\n";
+			DEBUG << "2=" << projection_op(f, s2) << "\n";
+			DEBUG << "*=" << projection_op(f, sR) << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, s1));
+			EXPECT_PRED2(less_op, a2, projection_op(d, s2));
+			EXPECT_PRED2(less_op, a2, projection_op(d, sR));
+
+			EXPECT_PRED2(less_op, a4, projection_op(e, s1));
+			EXPECT_PRED2(less_op, a3, projection_op(e, s2));
+			EXPECT_PRED2(less_op, a4, projection_op(e, sR));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a4), projection_op(f, s1));
+			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, s2));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, sR));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+	}
+
 
 	namespace {
 
@@ -84,7 +305,7 @@ namespace cba {
 
 
 	template<template<typename L> class S>
-	void testStructure() {
+	void testPairLattice() {
 
 		typedef S<PairLattice> Lattice;
 		typedef typename Lattice::manager_type mgr_type;
@@ -155,10 +376,10 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-			std::cout << "\nNominal:\n";
-			std::cout << d << "\n";
-			std::cout << e << "\n";
-			std::cout << f << "\n";
+			DEBUG << "\nNominal:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -203,10 +424,10 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-			std::cout << "\nUnitIndex:\n";
-			std::cout << d << "\n";
-			std::cout << e << "\n";
-			std::cout << f << "\n";
+			DEBUG << "\nUnitIndex:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -255,10 +476,13 @@ namespace cba {
 
 			auto f = meet_op(d,e);
 
-			std::cout << "\nSingleIndex:\n";
-			std::cout << d << "\n";
-			std::cout << e << "\n";
-			std::cout << f << "\n";
+			DEBUG << "\nSingleIndex:\n";
+			DEBUG << d << "\n";
+			DEBUG << e << "\n";
+			DEBUG << f << "\n";
+			DEBUG << "1=" << projection_op(f, s1) << "\n";
+			DEBUG << "2=" << projection_op(f, s2) << "\n";
+			DEBUG << "*=" << projection_op(f, sR) << "\n";
 
 			EXPECT_PRED2(less_op, d, d);
 			EXPECT_PRED2(less_op, e, e);
@@ -289,6 +513,12 @@ namespace cba {
 			EXPECT_PRED2(not_less_op, f, empty);
 
 		}
+	}
+
+	template<template<typename L> class S>
+	void testStructure() {
+		testSetLattice<S>();
+		testPairLattice<S>();
 	}
 
 	template<template<typename L> class S>
