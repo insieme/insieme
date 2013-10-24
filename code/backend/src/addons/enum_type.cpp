@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -64,33 +64,39 @@ namespace addons {
 				return NOT_HANDLED;	// not handled by this handler
 			}
 
-            		c_ast::CNodeManager& manager = *converter.getCNodeManager();
-            		auto fragmentManager = converter.getFragmentManager();
-            		// create constructor (C-style)
-            		core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
-            		//get name of enum
-            		string name = static_pointer_cast<const core::GenericType>(gt->getTypeParameter()[0])->getName()->getValue();
-            		//create declaration
-            		c_ast::NodePtr ctr;
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			auto fragmentManager = converter.getFragmentManager();
+			
+			// create constructor (C-style)
+			core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
+
+			//get name of enum
+			string name = static_pointer_cast<const core::GenericType>(gt->getTypeParameter()[0])->getName()->getValue();
+
+			//create declaration
+			c_ast::NodePtr ctr;
+
 			if(core::annotations::hasNameAttached(type))
-                		ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
-            		else
-                		ctr = manager.create<c_ast::EnumType>(name, "");
+				ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
+			else
+				ctr = manager.create<c_ast::EnumType>(name, "");
 
 			// add constructor (C-style)
 			TypeInfo* info = new TypeInfo();
+
 			//identifier pointer of enum
 			c_ast::IdentifierPtr idptrname = manager.create(name);
-        	    	c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(idptrname);
+			c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(idptrname);
 			info->lValueType = typeType;
 			info->rValueType = typeType;
 			info->externalType = typeType;
+
 			//set declaration and definition
 			c_ast::NodePtr typed;
 			string enumtypedef = "enum " + name;
 			c_ast::IdentifierPtr idptrenumname = manager.create(enumtypedef);
 			c_ast::TypePtr typeTypeDef = manager.create<c_ast::NamedType>(idptrenumname);
-        	    	typed = manager.create<c_ast::TypeDefinition>(typeTypeDef, idptrname);
+			typed = manager.create<c_ast::TypeDefinition>(typeTypeDef, idptrname);
 			info->declaration = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ctr, typed));
 			info->definition = info->declaration;
 
@@ -111,6 +117,34 @@ namespace addons {
 			return res;
 		}
 
+		c_ast::NodePtr EnumLiteralHandler(ConversionContext& context, const core::NodePtr& ptr) {
+
+			if( !ptr.isa<core::LiteralPtr>()) {
+				// not handled by this handler
+				return NULL;
+			}
+
+			auto literal = ptr.as<core::LiteralPtr>();
+			auto type = literal->getType();
+
+			if( !(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type)) ) {
+				// not handled by this handler
+				return NULL;
+			}
+
+
+			if( type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type) ) {
+				auto toLiteral = [&](const string& value) { return context.getConverter().getCNodeManager()->create<c_ast::Literal>(value); };
+				c_ast::ExpressionPtr res = toLiteral(ptr.as<core::LiteralPtr>()->getStringValue());
+
+				auto typeInfo = context.getConverter().getTypeManager().getTypeInfo(literal->getType());
+				context.addDependency(typeInfo.definition);
+
+				return res;
+			}
+			// not handled by this handler
+			return NULL;
+		}
 	}
 
 	void EnumTypes::installOn(Converter& converter) const {
@@ -120,6 +154,9 @@ namespace addons {
 
 		// register additional operators
 		converter.getFunctionManager().getOperatorConverterTable().insertAll(getEnumTypeOperatorTable(converter.getNodeManager()));
+
+		// register additional StatementConverter
+		converter.getStmtConverter().addStmtHandler(EnumLiteralHandler);
 
 	}
 
