@@ -46,8 +46,8 @@ namespace constraint {
 
 	// forward declarations
 	template<typename T> struct default_meet_assign_op;
-	template<typename T, typename meet_assign_op> struct meet_assign_based_meet_op;
-	template<typename T, typename meet_assign_op> struct meet_assign_based_less_op;
+	template<typename meet_assign_op> struct meet_assign_based_meet_op;
+	template<typename meet_assign_op> struct meet_assign_based_less_op;
 
 
 	/**
@@ -63,8 +63,8 @@ namespace constraint {
 	template<
 		typename T,
 		typename meet_assign_op = default_meet_assign_op<T>,
-		typename less_op = meet_assign_based_less_op<T,meet_assign_op>,
-		typename meet_op = meet_assign_based_meet_op<T,meet_assign_op>
+		typename less_op = meet_assign_based_less_op<meet_assign_op>,
+		typename meet_op = meet_assign_based_meet_op<meet_assign_op>
 	>
 	struct Lattice {
 		typedef T value_type;
@@ -99,31 +99,35 @@ namespace constraint {
 		}
 	};
 
-	template<typename T, typename meet_assign_op>
+	template<typename meet_assign_op>
 	struct meet_assign_based_meet_op {
-		T operator()(const T& a, const T& b) const {
+		template<typename A, typename B>
+		A operator()(const A& a, const B& b) const {
 			static const meet_assign_op meet_assign;
-			T r = a;
+			A r = a;
 			meet_assign(r,b);
 			return r;
 		}
 	};
 
-	template<typename T, typename meet_assign_op>
+	template<typename meet_assign_op>
 	struct meet_assign_based_less_op {
-		bool operator()(const T& a, const T& b) const {
+		template<typename A, typename B>
+		bool operator()(const A& a, const B& b) const {
 			static const meet_assign_op meet_assign;
 			if (a==b) return true;
-			T c = a;
+			A c = a;
 			meet_assign(c,b);
 			return c == b;
 		}
 	};
 
 
-
 	template<typename E>
 	struct set_meet_assign_op {
+		bool operator()(std::set<E>& trg, const E& element) const {
+			return trg.insert(element).second;
+		}
 		bool operator()(std::set<E>& trg, const std::set<E>& src) const {
 
 			// add values to target set
@@ -139,6 +143,9 @@ namespace constraint {
 
 	template<typename E>
 	struct set_less_op {
+		bool operator()(const E& e, const std::set<E>& a) const {
+			return a.find(e) != a.end();
+		}
 		bool operator()(const std::set<E>& a, const std::set<E>& b) const {
 			return set::isSubset(a, b);
 		}

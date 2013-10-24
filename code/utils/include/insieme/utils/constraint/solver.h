@@ -41,6 +41,7 @@
 #include <tuple>
 
 #include <memory>
+#include <type_traits>
 #include <initializer_list>
 
 #include "insieme/utils/printable.h"
@@ -270,14 +271,15 @@ namespace constraint {
 			}
 		};
 
-		template<typename T>
+		template<typename E, typename L>
 		struct ElementOfFilter : public Filter<>{
-			T e;
-			TypedValueID<SetLattice<T>> a;
-			ElementOfFilter(const T& e, const TypedValueID<SetLattice<T>>& a)
+			E e;
+			TypedValueID<L> a;
+			ElementOfFilter(const E& e, const TypedValueID<L>& a)
 				: e(e), a(a) {}
 			bool operator()(const Assignment& ass) const {
-				return contains(ass[a], e);
+				static const typename L::less_op_type less_op;
+				return less_op(e,ass[a]);
 			}
 			void print(std::ostream& out) const {
 				out << e << " in " << a;
@@ -339,11 +341,11 @@ namespace constraint {
 		protected:
 
 			// a utility function merging sets
-			template<typename meet_assign_op, typename A>
-			bool addAll(const A& src, A& trg) const {
-				static const meet_assign_op meet;
+			template<typename meet_assign_op, typename A, typename B>
+			bool addAll(const A& src, B& trg) const {
+				static const meet_assign_op meet_assign;
 				// compute meet operation and check for modification
-				return meet(trg, src);
+				return meet_assign(trg, src);
 			};
 
 			// a utility function merging sets
@@ -360,8 +362,8 @@ namespace constraint {
 			};
 
 			// a utility to check whether a certain set is a subset of another set
-			template<typename less_op, typename A>
-			bool isSubset(const A& a, const A& b) const {
+			template<typename less_op, typename A, typename B>
+			bool isSubset(const A& a, const B& b) const {
 				static const less_op less;
 				return less(a,b);
 			}
@@ -374,12 +376,12 @@ namespace constraint {
 
 		};
 
-		template<typename T>
+		template<typename E, typename L>
 		class ElementOf : public Executor {
-			T e;
-			TypedSetID<T> a;
+			E e;
+			TypedValueID<L> a;
 		public:
-			ElementOf(const T& e, const TypedSetID<T>& a)
+			ElementOf(const E& e, const TypedValueID<L>& a)
 				: e(e), a(a) {}
 			const ValueIDs& getInputs() const {
 				static const ValueIDs empty;
@@ -390,39 +392,6 @@ namespace constraint {
 			}
 			void print(std::ostream& out) const {
 				out << e << " in " << a;
-			}
-			bool update(Assignment& ass) const {
-				return ass[a].insert(e).second;
-			}
-			bool check(const Assignment& ass) const {
-				return contains(ass[a], e);
-			}
-			void writeDotEdge(std::ostream& out, const string& label) const {
-				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
-				out << "e" << (int*)&e << " -> " << a << " " << label;
-			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				// nothing
-			}
-		};
-
-		template<typename L>
-		class SubsetOf : public Executor {
-			typedef typename L::value_type value_type;
-			value_type e;
-			TypedValueID<L> a;
-		public:
-			SubsetOf(const value_type& e, const TypedValueID<L>& a)
-				: e(e), a(a) {}
-			const ValueIDs& getInputs() const {
-				static const ValueIDs empty;
-				return empty;
-			}
-			ValueIDs getOutputs() const {
-				return toVector<ValueID>(a);
-			}
-			void print(std::ostream& out) const {
-				out << e << " sub " << a;
 			}
 			bool update(Assignment& ass) const {
 				return addAll<typename L::meet_assign_op_type>(e, ass[a]);
@@ -554,9 +523,9 @@ namespace constraint {
 
 	// ----------------------------- Filter Factory Functions ------------------------------
 
-	template<typename E>
-	detail::ElementOfFilter<E> f_in(const E& e, const TypedValueID<SetLattice<E>>& set) {
-		return detail::ElementOfFilter<E>(e,set);
+	template<typename E, typename L>
+	detail::ElementOfFilter<E,L> f_in(const E& e, const TypedValueID<L>& set) {
+		return detail::ElementOfFilter<E,L>(e,set);
 	}
 
 	template<typename F1, typename F2>
@@ -568,14 +537,9 @@ namespace constraint {
 
 	// ----------------------------- Executor Factory Functions ------------------------------
 
-	template<typename E>
-	detail::ElementOf<E> e_in(const E& e, const TypedValueID<SetLattice<E>>& set) {
-		return detail::ElementOf<E>(e,set);
-	}
-
 	template<typename E, typename L>
-	detail::SubsetOf<L> e_sub_of(const E& e, const TypedValueID<L>& a) {
-		return detail::SubsetOf<L>(e,a);
+	detail::ElementOf<E,L> e_in(const E& e, const TypedValueID<L>& a) {
+		return detail::ElementOf<E,L>(e,a);
 	}
 
 	template<typename L>
@@ -592,19 +556,20 @@ namespace constraint {
 		return std::make_shared<detail::ComposedConstraint<F,E>>(filter, executor);
 	}
 
-	template<typename E>
-	ConstraintPtr elem(const E& e, const TypedValueID<SetLattice<E>>& a) {
-		return combine(detail::TrueFilter(), e_in(e,a));
+	template<typename A, typename L>
+	ConstraintPtr elem(const A& a, const TypedValueID<L>& b) {
+		return combine(detail::TrueFilter(), e_in(a,b));
 	}
 
-	template<typename A, typename B>
-	ConstraintPtr elemIf(const A& e, const TypedValueID<SetLattice<A>>& a, const B& f, const TypedSetID<B>& b) {
+	template<typename E, typename A, typename F, typename B>
+	ConstraintPtr elemIf(const E& e, const TypedValueID<A>& a, const F& f, const TypedValueID<B>& b) {
 		return combine(f_in(e,a), e_in(f,b));
 	}
 
 	template<typename A, typename L>
-	ConstraintPtr subset(const A& a, const TypedValueID<L>& b) {
-		return combine(detail::TrueFilter(), e_sub_of(a,b));
+	typename std::enable_if<!std::is_base_of<TypedValueID<L>,A>::value, ConstraintPtr>::type
+	subset(const A& a, const TypedValueID<L>& b) {
+		return combine(detail::TrueFilter(), e_in(a,b));
 	}
 
 	template<typename L>
@@ -612,18 +577,13 @@ namespace constraint {
 		return combine(detail::TrueFilter(), e_sub(a,b));
 	}
 
-	template<typename E>
-	ConstraintPtr subset(const TypedSetID<E>& a, const TypedSetID<E>& b) {
-		return combine(detail::TrueFilter(), e_sub(a,b));
-	}
-
-	template<typename E, typename L>
-	ConstraintPtr subsetIf(const E& e, const TypedValueID<SetLattice<E>>& a, const TypedValueID<L>& b, const TypedValueID<L>& c) {
+	template<typename E, typename A, typename B>
+	ConstraintPtr subsetIf(const E& e, const TypedValueID<A>& a, const TypedValueID<B>& b, const TypedValueID<B>& c) {
 		return combine(f_in(e,a), e_sub(b,c));
 	}
 
-	template<typename A, typename B, typename C>
-	ConstraintPtr subsetIf(const A& a, const TypedValueID<SetLattice<A>>& as, const B& b, const TypedValueID<SetLattice<B>>& bs, const TypedValueID<C>& in, const TypedValueID<C>& out) {
+	template<typename A, typename B, typename C, typename L1, typename L2>
+	ConstraintPtr subsetIf(const A& a, const TypedValueID<L1>& as, const B& b, const TypedValueID<L2>& bs, const TypedValueID<C>& in, const TypedValueID<C>& out) {
 		return combine(f_in(a,as) && f_in(b,bs), e_sub(in, out));
 	}
 
