@@ -51,10 +51,17 @@ namespace c {
 	 * the actual name.
 	 * this tag is not migratable, this means that it gets lost while translation units merge
 	 */
-	struct IncludeTag { 
+	struct IncludeTag : public value_annotation::migratable  { 
 		string include;
 		IncludeTag(const string& include) : include(include) {}
 		bool operator==(const IncludeTag& other) const { return include == other.include; }
+		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			if (hasIncludeAttached (before)) {
+				attachInclude (after,  getAttachedInclude(before));
+				return true;
+			}
+			else return false;
+		}
 	};
 
 	// ---------------- Support Dump ----------------------

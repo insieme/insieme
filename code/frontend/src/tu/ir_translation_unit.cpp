@@ -636,7 +636,7 @@ namespace tu {
 				auto type = cur.as<LiteralPtr>()->getType();
 				insieme::annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
-						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
+						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&  // not an string literal -> "hello world\n"
 						!insieme::annotations::c::hasIncludeAttached(cur) &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })

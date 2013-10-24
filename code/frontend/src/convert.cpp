@@ -263,23 +263,10 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitVarDecl(const clang::VarDecl* var) {
 			// variables to be skipped
-			std::cout << "VAR: " << var->getQualifiedNameAsString() << std::endl;
-			if (!var->hasGlobalStorage()) {
-				std::cout << "   not global" << std::endl;
-				return;
-			}
-			if (var->hasExternalStorage()) {
-				std::cout << "   external" << std::endl;
-				return;
-			}
-			if (var->isStaticLocal()) {
-				std::cout << "   static" << std::endl;
-				return;
-			}
-			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) {
-				std::cout << "   intercepted" << std::endl;
-				return;
-			}
+			if (!var->hasGlobalStorage()) { return; }
+			if (var->hasExternalStorage()) { return; }
+			if (var->isStaticLocal()) { return; }
+			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) { return; }
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -341,11 +328,6 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
-
-	std::cout << "==============================  TU DUMP ================================" << std::endl;
-	std::cout << getIRTranslationUnit() << std::endl;
-	std::cout << "========================================================================" << std::endl;
-
 
 	// that's all
 	return irTranslationUnit;
