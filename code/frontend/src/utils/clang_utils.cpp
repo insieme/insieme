@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -197,8 +197,9 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl){
 
 
 std::string buildNameForEnum (const clang::TagType* type) {
-    std::string name;
-    name = type->getDecl()->getNameAsString();
+    //std::string name = type->getDecl()->getQualifiedNameAsString();
+    std::string name = type->getDecl()->getNameAsString();
+	REMOVE_SYMBOLS(name);
     if(name.empty()) {
         name = "anonymous";
     }
