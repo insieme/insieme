@@ -36,10 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/cba/framework/data_value.h"
+#include <array>
+
 #include "insieme/analysis/cba/framework/data_index.h"
+#include "insieme/analysis/cba/framework/data_value.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/utils/unused.h"
 
 namespace insieme {
 namespace analysis {
@@ -48,104 +51,336 @@ namespace cba {
 	using namespace std;
 	using namespace core;
 
-	TEST(DataValue, AtomData) {
+	namespace {
 
-		// just some simple data path handling
+		struct Pair : public std::pair<int,int> {
+			Pair(int a = 10, int b = 10) : std::pair<int,int>(a,b) {}
+		};
 
-		typedef Data<int> Data;
+		struct pair_meet_assign_op {
+			bool operator()(Pair& a, const Pair& b) const {
+				bool res = false;
+				if (a.first > b.first) {
+					a.first = b.first;
+					res = true;
+				}
+				if (a.second > b.second) {
+					a.second = b.second;
+					res = true;
+				}
+				return res;
+			}
+		};
 
-		Data a = atomic(1);
-		Data b = atomic(2);
-		Data c = atomic(0);
-
-		EXPECT_EQ("1", toString(a));
-		EXPECT_EQ("2", toString(b));
-		EXPECT_EQ("0", toString(c));
-
-		EXPECT_EQ(a, atomic(1));
-		EXPECT_NE(a, atomic(2));
+		struct pair_less_op {
+			bool operator()(const Pair& a, const Pair& b) const {
+				return a.first >= b.first && a.second >= b.second;
+			}
+		};
 	}
 
-	TEST(DataValue, StructData) {
+	// define a test lattice
+	typedef utils::constraint::Lattice<Pair, pair_meet_assign_op, pair_less_op> PairLattice;
 
-		// just some simple data path handling
 
-		typedef Data<int> Data;
+	template<template<typename L> class S>
+	void testStructure() {
 
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+		typedef S<PairLattice> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
 
-		StringValuePtr nA = builder.stringValue("a");
-		StringValuePtr nB = builder.stringValue("b");
+		typename Lattice::meet_assign_op_type meet_assign_op;
+		typename Lattice::meet_op_type meet_op;
+		typename Lattice::less_op_type less_op;
+		typename Lattice::projection_op_type projection_op;
 
-		auto e0 = atomic(0);
-		auto e1 = atomic(1);
-		auto e2 = atomic(2);
+		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
+			return !less_op(a,b);
+		};
 
-		auto sA = toSet(e0,e1);
-		auto sB = toSet(e1,e2);
+		// create an manager instance
+		mgr_type mgr;
 
-		Data a = structData(member(nA, sA), member(nB, sB));
-		Data b = structData(member(nB, sB), member(nA, sA));
-		Data c = structData(member(nB, sA), member(nA, sB));
+		// create atomic values
+		value_type a = mgr.atomic(Pair(4,6));
+		value_type b = mgr.atomic(Pair(6,4));
 
-		EXPECT_EQ("{a={0,1},b={1,2}}", toString(a));
-		EXPECT_EQ("{a={0,1},b={1,2}}", toString(b));
-		EXPECT_EQ("{a={1,2},b={0,1}}", toString(c));
+		// check whether values can be assigned
+		value_type c = a;
 
-		EXPECT_EQ(a,b);
-		EXPECT_NE(a,c);
-		EXPECT_NE(b,c);
+		// check meet operator
+		bool change = meet_assign_op(c,b);
+		EXPECT_TRUE(change);
+
+		// check equivalence between meet and meet assign operation
+		EXPECT_EQ(c, meet_op(a,b));
+
+		// check that meet is a sub-type
+		EXPECT_PRED2(less_op, a, c);
+		EXPECT_PRED2(less_op, a, c);
+
+		// create an test empty instance
+		value_type empty;
+
+		EXPECT_PRED2(less_op, empty, empty);
+
+		EXPECT_PRED2(less_op, empty, a);
+		EXPECT_PRED2(less_op, empty, b);
+		EXPECT_PRED2(less_op, empty, c);
+
+		EXPECT_PRED2(not_less_op, a, empty);
+		EXPECT_PRED2(not_less_op, b, empty);
+		EXPECT_PRED2(not_less_op, c, empty);
+
+		// check index structure - first: nominal index
+		{
+			NominalIndex nA("a");
+			NominalIndex nB("b");
+
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(6,3));
+			auto a3 = mgr.atomic(Pair(4,5));
+			auto a4 = mgr.atomic(Pair(5,2));
+
+			auto d = mgr.compound(
+					entry(nA, a1),
+					entry(nB, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(nA, a3),
+					entry(nB, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+			std::cout << "\nNominal:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, nA));
+			EXPECT_PRED2(less_op, a2, projection_op(d, nB));
+			EXPECT_PRED2(less_op, a3, projection_op(e, nA));
+			EXPECT_PRED2(less_op, a4, projection_op(e, nB));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a3), projection_op(f, nA));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, nB));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+
+		// check UnitIndex
+		{
+			UnitIndex uI;
+
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(4,5));
+
+			auto d = mgr.compound(
+					entry(uI, a1)
+			);
+
+			auto e = mgr.compound(
+					entry(uI, a2)
+			);
+
+			auto f = meet_op(d,e);
+
+			std::cout << "\nUnitIndex:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(e, uI));
+
+			EXPECT_PRED2(less_op, a1, projection_op(f, uI));
+			EXPECT_PRED2(less_op, a2, projection_op(f, uI));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+
+		// check SingleIndex
+		{
+			SingleIndex s1(1);
+			SingleIndex s2(2);
+			SingleIndex sR;
+
+			auto a1 = mgr.atomic(Pair(2,6));
+			auto a2 = mgr.atomic(Pair(6,3));
+			auto a3 = mgr.atomic(Pair(4,5));
+			auto a4 = mgr.atomic(Pair(5,2));
+
+			auto d = mgr.compound(
+					entry(s1, a1),
+					entry(sR, a2)
+			);
+
+			auto e = mgr.compound(
+					entry(s2, a3),
+					entry(sR, a4)
+			);
+
+			auto f = meet_op(d,e);
+
+			std::cout << "\nSingleIndex:\n";
+			std::cout << d << "\n";
+			std::cout << e << "\n";
+			std::cout << f << "\n";
+
+			EXPECT_PRED2(less_op, d, d);
+			EXPECT_PRED2(less_op, e, e);
+
+			EXPECT_PRED2(less_op, d, f);
+			EXPECT_PRED2(less_op, e, f);
+
+			// test projection
+			EXPECT_PRED2(less_op, a1, projection_op(d, s1));
+			EXPECT_PRED2(less_op, a2, projection_op(d, s2));
+			EXPECT_PRED2(less_op, a2, projection_op(d, sR));
+
+			EXPECT_PRED2(less_op, a4, projection_op(e, s1));
+			EXPECT_PRED2(less_op, a3, projection_op(e, s2));
+			EXPECT_PRED2(less_op, a4, projection_op(e, sR));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a4), projection_op(f, s1));
+			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, s2));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, sR));
+
+			// empty-comparison
+			EXPECT_PRED2(less_op, empty, d);
+			EXPECT_PRED2(less_op, empty, e);
+			EXPECT_PRED2(less_op, empty, f);
+
+			EXPECT_PRED2(not_less_op, d, empty);
+			EXPECT_PRED2(not_less_op, e, empty);
+			EXPECT_PRED2(not_less_op, f, empty);
+
+		}
+	}
+
+	template<template<typename L> class S>
+	void testDataSharing() {
+
+		typedef S<utils::constraint::SetLattice<int>> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
+
+		mgr_type mgr;
+
+		// check empty-value
+		value_type empty;
+		EXPECT_FALSE(empty.getPtr());
+
+		auto e1 = utils::set::toSet<std::set<int>>(12);
+		auto e2 = utils::set::toSet<std::set<int>>(14,16);
+
+		// check atomic-value sharing
+		{
+			value_type a = mgr.atomic(e1);
+			value_type b = mgr.atomic(e2);
+			value_type c = mgr.atomic(e2);
+
+			EXPECT_TRUE(a.getPtr());
+			EXPECT_TRUE(b.getPtr());
+			EXPECT_TRUE(c.getPtr());
+
+			EXPECT_NE(a, b);
+			EXPECT_NE(a, c);
+			EXPECT_EQ(b, c);
+
+			EXPECT_NE(a.getPtr(), b.getPtr());
+			EXPECT_NE(a.getPtr(), c.getPtr());
+			EXPECT_EQ(b.getPtr(), c.getPtr());
+		}
+
+		// check compound-value sharing
+		{
+			NominalIndex nA("a");
+			NominalIndex nB("b");
+
+			auto a1 = mgr.atomic(e1);
+			auto a2 = mgr.atomic(e2);
+
+			value_type a = mgr.compound(entry(nA, a1), entry(nB, a2));
+			value_type b = mgr.compound(entry(nA, a2), entry(nB, a1));
+			value_type c = mgr.compound(entry(nB, a2), entry(nA, a1));
+
+			EXPECT_TRUE(a.getPtr());
+			EXPECT_TRUE(b.getPtr());
+			EXPECT_TRUE(c.getPtr());
+
+			EXPECT_NE(a, b);
+			EXPECT_EQ(a, c);
+			EXPECT_NE(b, c);
+
+			EXPECT_NE(a.getPtr(), b.getPtr());
+			EXPECT_EQ(a.getPtr(), c.getPtr());
+			EXPECT_NE(b.getPtr(), c.getPtr());
+		}
 	}
 
 
-	TEST(DataValue, ArrayData) {
-
-		// just some simple data path handling
-
-		typedef Data<int> Data;
-
-		auto e0 = atomic(0);
-		auto e1 = atomic(1);
-		auto e2 = atomic(2);
-
-
-		// test with the unit index
-		auto elementUA = element(UnitIndex(), toSet(e0,e1));
-		Data aU = arrayData(elementUA);
-		EXPECT_EQ("{[*]={0,1}}", toString(aU));
-
-
-		// test with the single index
-		auto elementSA = element(SingleIndex(0), toSet(e0));
-		auto elementSB = element(SingleIndex(1), toSet(e1,e2));
-		auto elementSC = element(SingleIndex(), toSet(e2));
-
-		Data aS = arrayData(elementSA, elementSB, elementSC);
-		EXPECT_EQ("{[0]={0},[1]={1,2},[*]={2}}", toString(aS));
-
+	TEST(DataStructure, UnitStructure) {
+		testStructure<UnionStructureLattice>();
 	}
 
-	TEST(DataValue, DataSet) {
+	TEST(DataStructure, FirstOrderStructure) {
+		testStructure<FirstOrderStructureLattice>();
+		testDataSharing<FirstOrderStructureLattice>();
+	}
 
-		auto e0 = atomic(0);
-		auto e1 = atomic(1);
-		auto e2 = atomic(2);
-
-		// create a simple set
-		auto s1 = toSet(e1,e0,e2,e0);
-		EXPECT_EQ("{0,1,2}", toString(s1));
-
-		// and another containing variations of arrays
-
-		auto s2 = toSet(
-			arrayData(element(UnitIndex(), toSet(e0,e2))),
-			arrayData(element(UnitIndex(), toSet(e1)))
-		);
-
-		EXPECT_EQ("{{[*]={0,2}},{[*]={1}}}", toString(s2));
+	TEST(DataStructure, SecondOrderStructure) {
+		testStructure<SecondOrderStructureLattice>();
+		testDataSharing<SecondOrderStructureLattice>();
 	}
 
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
+
+namespace std {
+
+	template<>
+	struct hash<insieme::analysis::cba::Pair> {
+		std::size_t operator()(const insieme::analysis::cba::Pair& pair) const {
+			return pair.first + pair.second;
+		}
+	};
+
+	std::ostream& operator<<(std::ostream& out, const insieme::analysis::cba::Pair& pair) {
+		return out << "[" << pair.first << "," << pair.second << "]";
+	}
+}
