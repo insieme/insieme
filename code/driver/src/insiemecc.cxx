@@ -159,9 +159,13 @@ int main(int argc, char** argv) {
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
 	cout << "Building binaries ...\n";
-	cp::Compiler compiler = cp::Compiler::getDefaultCppCompiler();
+	cp::Compiler compiler =
+			(options.job.isCxx())
+				? cp::Compiler::getDefaultCppCompilerO3()
+				: cp::Compiler::getDefaultC99CompilerO3();
+
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-//	for(auto cur : extLibs) compiler.addFlag(cur.string());			// TODO: add extra setter for libraries, not just a flag
+//	for(auto cur : extLibs) compiler.addFlag(cur.string());                 // TODO: add extra setter for libraries, not just a flag
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
