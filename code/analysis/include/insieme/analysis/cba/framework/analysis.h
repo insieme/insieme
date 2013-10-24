@@ -49,18 +49,18 @@ namespace cba {
 	// --- forward definitions of analysis utilized by the framework ---
 
 	template<typename C> class ControlFlowConstraintGenerator;
-	template<typename T> const SetBasedAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& C();
-	template<typename T> const SetBasedAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& c();
+	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& C();
+	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& c();
 
 	template<typename C> class Location;
 	template<typename C> class ReferenceConstraintGenerator;
-	template<typename C> const SetBasedAnalysisType<Location<C>,ReferenceConstraintGenerator>& R();
-	template<typename C> const SetBasedAnalysisType<Location<C>,ReferenceConstraintGenerator>& r();
+	template<typename C> const DataAnalysisType<Location<C>,ReferenceConstraintGenerator>& R();
+	template<typename C> const DataAnalysisType<Location<C>,ReferenceConstraintGenerator>& r();
 
 	class Callee;
 	template<typename C> class FunctionConstraintGenerator;
-	extern const SetBasedAnalysisType<Callee,FunctionConstraintGenerator> F;
-	extern const SetBasedAnalysisType<Callee,FunctionConstraintGenerator> f;
+	extern const DataAnalysisType<Callee,FunctionConstraintGenerator> F;
+	extern const DataAnalysisType<Callee,FunctionConstraintGenerator> f;
 
 	template<typename C> class ContextPredecessorGenerator;
 	extern const SetBasedAnalysisType<Label,ContextPredecessorGenerator> pred;
@@ -74,12 +74,12 @@ namespace cba {
 
 	class Formula;
 	template<typename C> class ArithmeticConstraintGenerator;
-	extern const SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> A;
-	extern const SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> a;
+	extern const DataAnalysisType<Formula,ArithmeticConstraintGenerator> A;
+	extern const DataAnalysisType<Formula,ArithmeticConstraintGenerator> a;
 
 	template<typename C> class BooleanConstraintGenerator;
-	extern const SetBasedAnalysisType<bool,BooleanConstraintGenerator> B;
-	extern const SetBasedAnalysisType<bool,BooleanConstraintGenerator> b;
+	extern const DataAnalysisType<bool,BooleanConstraintGenerator> B;
+	extern const DataAnalysisType<bool,BooleanConstraintGenerator> b;
 
 
 } // end namespace cba

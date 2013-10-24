@@ -79,24 +79,47 @@ namespace cba {
 	}
 
 
-	template<typename T, typename SetType, typename Context>
+	template<
+		typename T,
+		typename AnalysisType,
+		typename Context
+	>
 	class BasicDataFlowConstraintGenerator : public ConstraintGenerator<Context> {
-
 
 		typedef ConstraintGenerator<Context> super;
 
-	protected:
 
-		// the two set types to deal with
-		const SetType& A;		// the value set (labels -> values)
-		const SetType& a;		// the variable set (variables -> values)
-
-		CBA& cba;
+		typedef typename AnalysisType::lattice_type lattice_type;
+		typedef typename lattice_type::manager_type mgr_type;
 
 	public:
 
-		BasicDataFlowConstraintGenerator(CBA& cba, const SetType& A, const SetType& a)
+		typedef typename lattice_type::base_lattice::value_type base_value_type;
+		typedef typename lattice_type::value_type value_type;
+
+	private:
+
+		// the two set types to deal with
+		const AnalysisType& A;		// the value set (labels -> values)
+		const AnalysisType& a;		// the variable set (variables -> values)
+
+		CBA& cba;
+
+		// the manager/factory instance for handling data value instances
+		mgr_type valueMgr;
+
+	public:
+
+		BasicDataFlowConstraintGenerator(CBA& cba, const AnalysisType& A, const AnalysisType& a)
 			: super(cba), A(A), a(a), cba(cba) { };
+
+		mgr_type& getValueManager() {
+			return valueMgr;
+		}
+
+		value_type atomic(const base_value_type& set) {
+			return valueMgr.atomic(set);
+		}
 
 		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
 
@@ -430,6 +453,31 @@ namespace cba {
 			std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
 			assert(false);
 		}
+
+	protected:
+
+		template<typename fun_type, typename data_mgr>
+		class packer {
+
+			fun_type fun;
+			data_mgr& mgr;
+
+		public:
+
+			packer(const fun_type& fun, data_mgr& mgr)
+				: fun(fun), mgr(mgr) {}
+
+			template<typename ... Args>
+			auto operator()(const Args& ... args) -> decltype(mgr.atomic(fun(args...))) const {
+				return mgr.atomic(fun(args...));
+			}
+		};
+
+		template<typename fun_type>
+		packer<fun_type,mgr_type> pack(const fun_type& fun) {
+			return packer<fun_type,mgr_type>(fun, valueMgr);
+		}
+
 
 	private:
 

@@ -104,9 +104,9 @@ namespace cba {
 			constraints.add(subset(A, B));
 		}
 
-		template<typename E, typename SetTypeA, typename SetTypeB>
+		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
-					const E& value, const TypedValueID<SetLattice<E>>& set,
+					const E& value, const TypedValueID<L>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
@@ -150,9 +150,9 @@ namespace cba {
 			constraints.add(subset(A, B));
 		}
 
-		template<typename E, typename SetTypeA, typename SetTypeB>
+		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIf (
-					const E& value, const TypedValueID<SetLattice<E>>& set,
+					const E& value, const TypedValueID<L>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints

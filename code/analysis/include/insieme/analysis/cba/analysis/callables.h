@@ -52,23 +52,23 @@ namespace cba {
 	template<typename C> class ControlFlowConstraintGenerator;
 
 	template<typename Context>
-	const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
-		static const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
+	const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
+		static const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
 		return instance;
 	}
 
 	template<typename Context>
-	const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
-		static const SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
+	const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
+		static const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
 		return instance;
 	}
 
 
 
 	template<typename Context>
-	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
+	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Callable<Context>, SetBasedAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Callable<Context>, DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
 
 		CBA& cba;
 

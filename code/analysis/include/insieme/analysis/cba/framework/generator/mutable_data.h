@@ -82,8 +82,8 @@ namespace cba {
 
 		}
 
-		template<typename E>
-		void connectStateSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		template<typename E, typename L>
+		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 
@@ -173,8 +173,8 @@ namespace cba {
 
 		}
 
-		template<typename E>
-		void connectStateSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		template<typename E, typename L>
+		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 

@@ -92,8 +92,8 @@ namespace cba {
 			connectStateSets(a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
 		}
 
-		template<typename E, typename SetTypeA, typename SetTypeB>
-		void connectSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
+		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
+		void connectSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, constraints);
@@ -106,8 +106,8 @@ namespace cba {
 			collector.connectStateSets(a,al,ac,b,bl,bc,constraints);
 		}
 
-		template<typename E, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf(const E& value, const TypedValueID<SetLattice<E>>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
+		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
+		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			collector.connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);

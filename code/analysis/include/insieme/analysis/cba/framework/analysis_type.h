@@ -42,6 +42,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "insieme/utils/constraint/lattice.h"
+#include "insieme/analysis/cba/framework/data_value.h"
 
 namespace insieme {
 namespace analysis {
@@ -110,6 +111,20 @@ namespace cba {
 
 	};
 
+
+	template<
+		typename E,
+		template<typename C> class G,
+		template<typename L> class StructureLattice = FirstOrderStructureLattice
+	>
+	struct DataAnalysisType : public AnalysisType<StructureLattice<utils::constraint::SetLattice<E>>, G> {
+
+		/**
+		 * A simple constructor just forwarding the name of the resulting set.
+		 */
+		DataAnalysisType(const string& name) : AnalysisType<StructureLattice<utils::constraint::SetLattice<E>>, G>(name) {}
+
+	};
 
 	// TODO: remove this set based analysis type once it is no longer needed (just introduced for
 	//			refactoring)

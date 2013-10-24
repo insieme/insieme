@@ -80,7 +80,7 @@ namespace cba {
 	};
 
 	template<typename C> class ArithmeticConstraintGenerator;
-	typedef SetBasedAnalysisType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
+	typedef DataAnalysisType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
 
 	extern const ArithmeticSetType A;
 	extern const ArithmeticSetType a;
@@ -162,7 +162,6 @@ namespace cba {
 			return cartesion_product_binary_op<A,B,R>(fun);
 		}
 
-
 	}
 
 
@@ -170,6 +169,7 @@ namespace cba {
 	class ArithmeticConstraintGenerator : public BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> {
 
 		typedef BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> super;
+		typedef typename ArithmeticSetType::lattice_type::value_type value_type;
 
 		const core::lang::BasicGenerator& base;
 
@@ -183,6 +183,8 @@ namespace cba {
 			  cba(cba)
 		{ };
 
+		using super::pack;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
@@ -192,7 +194,7 @@ namespace cba {
 			if (!base.isInt(literal->getType())) return;
 
 			// add constraint literal \in A(lit)
-			Formula value = core::arithmetic::toFormula(literal);
+			auto value = core::arithmetic::toFormula(literal);
 			auto l_lit = cba.getLabel(literal);
 
 			auto A_lit = cba.getSet(A, l_lit, ctxt);
@@ -212,7 +214,7 @@ namespace cba {
 
 			// it is a iterator!
 			//	=> use symbolic value
-			Formula value = core::arithmetic::toFormula(var);
+			auto value = core::arithmetic::toFormula(var);
 
 			auto v_var = cba.getVariable(var);
 			auto l_var = cba.getLabel(var);
@@ -226,7 +228,7 @@ namespace cba {
 		}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			static const Formula unknown;
+			static const value_type unknown;
 
 			// conduct std-procedure
 			super::visitCallExpr(call, ctxt, constraints);
@@ -261,23 +263,23 @@ namespace cba {
 
 			// special handling for functions
 			if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun)) {
-				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula + *b.formula;
-				}))));
+				})))));
 				return;
 			}
 
 			if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
-				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula - *b.formula;
-				}))));
+				})))));
 				return;
 			}
 
 			if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
-				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula * *b.formula;
-				}))));
+				})))));
 				return;
 			}
 

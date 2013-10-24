@@ -53,7 +53,7 @@ namespace cba {
 	// ----------------- booleans analysis ---------------
 
 	template<typename C> class BooleanConstraintGenerator;
-	typedef SetBasedAnalysisType<bool,BooleanConstraintGenerator> BooleanSetType;
+	typedef DataAnalysisType<bool,BooleanConstraintGenerator> BooleanSetType;
 
 	extern const BooleanSetType B;
 	extern const BooleanSetType b;
@@ -148,6 +148,9 @@ namespace cba {
 			  cba(cba)
 		{ };
 
+		using super::atomic;
+		using super::pack;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
@@ -194,10 +197,10 @@ namespace cba {
 				// support negation
 				if (base.isBoolLNot(fun)) {
 					auto B_arg = cba.getSet(B, cba.getLabel(call[0]), ctxt);
-					constraints.add(subsetUnary(B_arg, B_res, [](const set<bool>& in)->set<bool> {
+					constraints.add(subsetUnary(B_arg, B_res, [&](const set<bool>& in)->typename super::value_type {
 						set<bool> out;
 						for(bool cur : in) out.insert(!cur);
-						return out;
+						return this->atomic(out);
 					}));
 					return;
 				}
@@ -223,7 +226,7 @@ namespace cba {
 					if (isBooleanSymbol(call[0]) && isBooleanSymbol(call[1])) {
 						constraints.add(elem(call[0].as<ExpressionPtr>() == call[1].as<ExpressionPtr>(), B_res));
 					} else {
-						constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pairwise([](bool a, bool b) { return a == b; })));
+						constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pack(pairwise([](bool a, bool b) { return a == b; }))));
 					}
 					return;
 				}
@@ -233,7 +236,7 @@ namespace cba {
 					if (isBooleanSymbol(call[0]) && isBooleanSymbol(call[1])) {
 						constraints.add(elem(call[0].as<ExpressionPtr>() != call[1].as<ExpressionPtr>(), B_res));
 					} else {
-						constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pairwise([](bool a, bool b) { return a != b; })));
+						constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pack(pairwise([](bool a, bool b) { return a != b; }))));
 					}
 					return;
 				}
@@ -248,56 +251,56 @@ namespace cba {
 				typedef core::arithmetic::Inequality Inequality;		// shape: formula <= 0
 
 				if(base.isSignedIntLt(fun) || base.isUnsignedIntLt(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b) {
 						// a < b  ... if !(a >= b) = !(b <= a) = !(b-a <= 0)
 						Inequality i(b-a);
 						return std::make_pair(i.isUnsatisfiable(), i.isValid());
-					})));
+					}))));
 					return;
 				}
 
 				if(base.isSignedIntLe(fun) || base.isUnsignedIntLe(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b) {
 						// a <= b ... if (a-b <= 0)
 						Inequality i(a-b);
 						return std::make_pair(i.isValid(), i.isUnsatisfiable());
-					})));
+					}))));
 					return;
 				}
 
 				if(base.isSignedIntGe(fun) || base.isUnsignedIntGe(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b){
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b){
 						// a >= b ... if (b <= a) = (b-a <= 0)
 						Inequality i(b-a);
 						return std::make_pair(i.isValid(), i.isUnsatisfiable());
-					})));
+					}))));
 					return;
 				}
 
 				if(base.isSignedIntGt(fun) || base.isUnsignedIntGt(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b){
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b){
 						// a > b ... if !(a <= b) = !(a-b <= 0)
 						Inequality i(a-b);
 						return std::make_pair(i.isUnsatisfiable(), i.isValid());
-					})));
+					}))));
 					return;
 				}
 
 				if(base.isSignedIntEq(fun) || base.isUnsignedIntEq(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b) {
 						// just compare formulas (in normal form)
 						bool equal = (a==b);
 						return std::make_pair(equal, !equal && a.isConstant() && b.isConstant());
-					})));
+					}))));
 					return;
 				}
 
 				if(base.isSignedIntNe(fun) || base.isUnsignedIntNe(fun)) {
-					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+					constraints.add(subsetBinary(A_lhs, A_rhs, B_res, pack(compareFormula([](const F& a, const F& b) {
 						// just compare formulas (in normal form)
 						bool equal = (a==b);
 						return std::make_pair(!equal && a.isConstant() && b.isConstant(), equal);
-					})));
+					}))));
 					return;
 				}
 			}

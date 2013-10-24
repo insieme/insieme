@@ -49,7 +49,7 @@ namespace cba {
 
 	template<typename Context> class ConstantConstraintGenerator;
 
-	typedef SetBasedAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
+	typedef DataAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
 	extern const SimpleConstantSetType D;
 	extern const SimpleConstantSetType d;
 
@@ -93,7 +93,8 @@ namespace cba {
 
 				// mark result as being unknown
 				auto D_call = cba.getSet(D, cba.getLabel(call), ctxt);
-				constraints.add(elem(ExpressionPtr(), D_call));
+				auto unknown = ExpressionPtr();
+				constraints.add(elem(unknown, D_call));
 
 			}
 
