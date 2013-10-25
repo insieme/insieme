@@ -571,6 +571,8 @@ namespace cba {
 			}
 
 			bool meetAssign(const Data<BaseLattice>& other) {
+				// check whether empty set is added
+				if (!other.data) return false;
 				// compute meet data
 				auto newData = (!data) ? other.data : data->meet(*other.data).data;
 				// check whether there was a change
@@ -599,7 +601,7 @@ namespace cba {
 			}
 
 			std::ostream& printTo(std::ostream& out) const {
-				if (data == nullptr) return out << "[]";
+				if (data == nullptr) return out << "{}";
 				return out << *data;
 			}
 

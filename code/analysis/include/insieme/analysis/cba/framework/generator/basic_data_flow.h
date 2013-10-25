@@ -118,8 +118,8 @@ namespace cba {
 		}
 
 		template<typename V>
-		value_type atomic(const V& set) {
-			return valueMgr.atomic(set);
+		value_type atomic(const V& value) {
+			return valueMgr.atomic(value);
 		}
 
 		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {

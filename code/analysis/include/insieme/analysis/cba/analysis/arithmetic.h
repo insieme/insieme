@@ -63,6 +63,11 @@ namespace cba {
 		Formula() : formula() {};
 		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
 
+		bool operator==(const Formula& other) const {
+			return this == &other || (!formula && !other.formula) ||
+					(formula && other.formula && *formula == *other.formula);
+		}
+
 		bool operator<(const Formula& other) const {
 			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
 		}
@@ -77,7 +82,8 @@ namespace cba {
 		}
 
 		std::size_t hash() const {
-			return utils::combineHashes(formula);
+			// TODO: implement hashing for formulas!
+			return (formula) ? 1 : 0;	// formulas can't be hashed yet ..
 		}
 	};
 
