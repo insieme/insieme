@@ -85,6 +85,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+	LOG_STMT_CONVERSION(retStmt, stmt);
 
 	if(!retStmt->getRetValue() ) {
 		//if there is no return value its an empty return "return;"
@@ -185,6 +186,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	stmtList.push_back(builder.returnStmt(retExpr));
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+
 	return stmt;
 }
 
@@ -248,12 +250,16 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::Com
 }
 
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Taken care of inside of TryStmt!");
 	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
 	//assert(false && "Try -- Currently not supported!");
@@ -289,6 +295,8 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
 	return stmtutils::StmtWrapper();

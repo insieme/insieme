@@ -324,11 +324,9 @@ tu::IRTranslationUnit Converter::convert() {
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
 
-
-	std::cout << " ========================== DUMP ================================= "<< std::endl;
-	std::cout << irTranslationUnit << std::endl;
-	std::cout << " ================================================================= "<< std::endl;
-
+	//std::cout << " ==================================== " << std::endl;
+	//std::cout << getIRTranslationUnit() << std::endl;
+	//std::cout << " ==================================== " << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -1175,10 +1173,15 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// handle external functions
 	if(!funcDecl->hasBody()) {
-		// TODO: move this to call expression handling
+		// TODO: move this to the interceptor
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
 			auto retExpr = builder.getLangBasic().getRefDelete();
+
+			// handle issue with typing of free when not including stdlib.h
+			core::FunctionTypePtr freeTy = typeCache[GET_TYPE_PTR(funcDecl)].as<core::FunctionTypePtr>();
+			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
+
 			lambdaExprCache[funcDecl] = retExpr;
 			return retExpr;
 		}
@@ -1271,13 +1274,16 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	core::TypePtr elementType = lookupTypeDetails(type);
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
+		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+		
+		// if recursive
+		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
 
 		if ( core::lang::isSIMDVector(elementType) )  {
 			auto internalVecTy = core::lang::getSIMDVectorType(elementType);
 			auto membTy = internalVecTy.as<core::SingleElementTypePtr>()->getElementType();
 			//TODO MOVE INTO SOME BUILDER HELPER
 			auto initOp = mgr.getLangExtension<core::lang::SIMDVectorExtension>().getSIMDInitPartial();
-			vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 			ExpressionList elements;
 			// get all values of the init expression
 			for (size_t i = 0; i < inits.size(); ++i) {
@@ -1291,10 +1297,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
-
-		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  ||
-			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
-		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 
 		// if array or vector
 		if (  elementType.isa<core::VectorTypePtr>() || elementType.isa<core::ArrayTypePtr>()) {
@@ -1331,6 +1333,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			retIr = builder.structExpr(structTy, members);
 			return retIr;
 		}
+
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		assert(false && "fallthrow");
@@ -1424,6 +1427,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
+
+	if (utils::isRefArray(init->getType()) && utils::isRefArray(type)){
+		return builder.refReinterpret(init, type.as<core::RefTypePtr>()->getElementType());
+	}
 
 	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
 	std::cerr << "type details: \n\t" << lookupTypeDetails(init->getType()) << std::endl;

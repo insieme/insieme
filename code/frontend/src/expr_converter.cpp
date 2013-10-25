@@ -329,8 +329,23 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 
 	assert(ident);
 
-	//core::TypePtr membType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
-	core::TypePtr membType = converter.convertType(membExpr->getType().getTypePtr());
+	core::TypePtr membType;
+	if (structTy.isa<core::GenericTypePtr>()){
+		// accessing a member of an intercepted type, nothing to do but trust clang
+		membType = converter.convertType(membExpr->getType().getTypePtr());
+	}
+	else {
+		// if we translated the object, is better to retrieve info from our struct
+		assert(structTy.isa<core::StructTypePtr>());
+		for (const auto& cur : structTy.as<core::StructTypePtr>()->getEntries()){
+			if (cur->getName() == ident){
+				membType = cur->getType();
+				break;
+			}
+		}
+		assert(membType && "queried field not found");
+	}
+
 	core::TypePtr returnType =  membType;
 	assert(returnType);
 	if (base->getType()->getNodeType() == core::NT_RefType) {
@@ -726,8 +741,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	if (callExpr->getDirectCallee()) {
 
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		const core::FunctionTypePtr funcTy = convFact.convertFunctionType(funcDecl).as<core::FunctionTypePtr>() ;
-
+		irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		const core::FunctionTypePtr funcTy = irNode->getType().as<core::FunctionTypePtr>() ;
 		const clang::FunctionDecl* definition = NULL;
 
 		// collects the type of each argument of the expression
@@ -741,33 +756,10 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 			//-----------------------------------------------------------------------------------------------------
 			//     						Handle of 'special' built-in functions
 			//-----------------------------------------------------------------------------------------------------
-			// free(): check whether this is a call to the free() function
-			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-				//FIXME remove -- deprecated  -- use normal agrument handling code
-				/*
-				// in the case the free uses an input parameter
-				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-
-					irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-							builder.getLangBasic().getRefDelete(), args.front());
-				}
-				*/
-				if (args.front()->getType()->getNodeType() != core::NT_RefType) {
-					assert(false && "free should not use byValue");
-					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
-
-					// otherwise this is not a L-Value so it needs to be wrapped into a variable
-					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
-				}
-			}
 			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
 				irNode = builder.literal("alloca", funcTy);
 				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
 			}
-
-			irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
 
 			//build callExpr
 			irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs);
@@ -795,9 +787,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		assert(definition && "No definition found for function");
 
-		auto lambdaExpr = convFact.convertFunctionDecl(definition).as<core::ExpressionPtr>();
-
-		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
+		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
 	}
 
 

@@ -142,6 +142,13 @@ namespace tu {
 			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
 		}
 
+		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
+			assert(symbol );
+			assert(definition);
+			assert(types.find(symbol) != types.end());
+			types[symbol] = definition;
+		}
+
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
 			//check if function exists, if it exists we

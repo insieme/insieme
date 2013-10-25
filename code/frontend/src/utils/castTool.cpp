@@ -434,6 +434,9 @@ switch (castExpr->getCastKind()) {
 	//
 	// IR: this is the same as out ref deref ref<a'> -> a'
 	{
+
+		std::cout << " CAST: " << expr << " : " << expr->getType() << std::endl;
+
 		// we use by value a member accessor. we have a better operation for this
 		// instead of derefing the memberRef
 		//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
@@ -676,8 +679,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
-			//std::cout << "CAST:\n" << expr << std::endl << targetTy << std::endl << core::analysis::isRefType(targetTy) << std::endl;
-
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
 
 			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {

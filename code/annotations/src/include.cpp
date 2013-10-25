@@ -117,8 +117,6 @@ namespace c {
 	}
 
 	void attachInclude(const NodePtr& node, const string& include) {
-
-
 		node->attachValue(IncludeTag(include));
 	}
 

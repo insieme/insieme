@@ -384,16 +384,20 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		if (it != convFact.getIRTranslationUnit().getTypes().end())
 			trgty = it->second;
 
-
-		//	core::GenericTypePtr gen = builder.genericType(utils::getNameForRecord(llvm::cast<clang::RecordDecl>(typedefType->getDecl()), typedefType));
-		//	convFact.getIRTranslationUnit().addType(gen, trgty);
-		//  return gen;
-
+		//  we generate a new type with the name of the typedef, 
+		//  we also move old symbol pointing to the old type to use the new renamed one
 		if (trgty.isa<core::StructTypePtr>()){
-			std::string name =  typedefType->getDecl()->getQualifiedNameAsString();
-			subType = core::transform::replaceNode(mgr, core::StructTypeAddress(trgty.as<core::StructTypePtr>())->getName(), 
-											  builder.stringValue(name)).as<core::TypePtr>();
+			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType);
+			core::GenericTypePtr gen = builder.genericType(name);
+			convFact.getIRTranslationUnit().addType(gen, symb);
+			return gen;
 		}
+//
+//		if (trgty.isa<core::StructTypePtr>()){
+//			std::string name =  typedefType->getDecl()->getQualifiedNameAsString();
+//			subType = core::transform::replaceNode(mgr, core::StructTypeAddress(trgty.as<core::StructTypePtr>())->getName(), 
+//											  builder.stringValue(name)).as<core::TypePtr>();
+//		}
 	}
 
     //it may happen that we have something like 'typedef enum {...} name;'
@@ -570,6 +574,8 @@ namespace {
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
+
+	auto& typeCache = convFact.typeCache;
 
 	// look up type within typeCache
 	auto pos = typeCache.find(type);

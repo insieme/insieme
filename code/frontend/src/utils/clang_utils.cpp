@@ -72,7 +72,7 @@ using namespace llvm;
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type){
 
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
