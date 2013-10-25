@@ -379,25 +379,22 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	// typedefs take ownership of the inner type, this way, same anonimous types along translation units will
 	// be named as the typdef if any
 	if (core::GenericTypePtr symb = subType.isa<core::GenericTypePtr>()){
-		core::TypePtr trgty;
-		auto it =  convFact.getIRTranslationUnit().getTypes().find(symb);
-		if (it != convFact.getIRTranslationUnit().getTypes().end())
-			trgty = it->second;
+		core::TypePtr trgty =  convFact.lookupTypeDetails(symb);
 
-		//  we generate a new type with the name of the typedef, 
-		//  we also move old symbol pointing to the old type to use the new renamed one
+		// a new generic type will point to the previous translation unit decl
 		if (trgty.isa<core::StructTypePtr>()){
 			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType);
 			core::GenericTypePtr gen = builder.genericType(name);
-			convFact.getIRTranslationUnit().addType(gen, symb);
+
+			core::TypePtr impl = symb;
+			// if target is an annonymous type, we create a new type with the name of the typedef
+			if (trgty.sa<core::StructTypePtr>()->getName()->getValue().substr(0,4) == "_anon"){
+				impl = builder.structType ( builder.stringValue( name), trgty.as<core::StructTypePtr>()->getParents(), trgty.as<core::StructTypePtr>()->getEntries());
+			}
+
+			convFact.getIRTranslationUnit().addType(gen, impl);
 			return gen;
 		}
-//
-//		if (trgty.isa<core::StructTypePtr>()){
-//			std::string name =  typedefType->getDecl()->getQualifiedNameAsString();
-//			subType = core::transform::replaceNode(mgr, core::StructTypeAddress(trgty.as<core::StructTypePtr>())->getName(), 
-//											  builder.stringValue(name)).as<core::TypePtr>();
-//		}
 	}
 
     //it may happen that we have something like 'typedef enum {...} name;'
