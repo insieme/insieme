@@ -202,6 +202,11 @@ namespace core {
 				  manager(0), equalityID(0) { }
 
 			/**
+			 * Make node destructor virtual since sub-types may contain extra data fields.
+			 */
+			virtual ~Node() {}
+
+			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
 			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
 			 * static factory methods and NodeManager.
