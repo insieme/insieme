@@ -50,6 +50,63 @@ namespace insieme {
 namespace utils {
 
 /**
+ * This marker class is indicating that classes extending have a hash function to be utilized
+ * for hashing operation.
+ */
+struct Hashable {
+
+	// This signature (or equivalent) is expected to be implemented.
+//	std::size_t hash() const { ... };
+
+};
+
+/**
+ * Integrates the hash code computation for nodes into the boost hash code framework.
+ *
+ * @param instance the instance for which a hash code should be obtained.
+ * @return the hash code of the given instance
+ */
+template<typename T>
+typename std::enable_if<std::is_base_of<Hashable, T>::value, std::size_t>::type
+hash_value(const T& instance) {
+	return instance.hash();
+}
+
+/**
+ * A base class for hashing mutable data objects.
+ */
+template<class Derived>
+class HashableMutableData {
+
+	/**
+	 * A flag indicating whether the currently stored hash code is valid.
+	 */
+	mutable bool accurate;
+
+	/**
+	 * A
+	 */
+	std::size_t hashCode;
+
+public:
+
+	HashableMutableData() : accurate(false) {}
+
+	void invalidateHash() {
+		accurate = false;
+	}
+
+	std::size_t hash() const {
+		if (!accurate) {
+			hashCode = static_cast<const Derived*>(this)->updateHash();
+			accurate = true;
+		}
+		return hashCode;
+	}
+
+};
+
+/**
  * A base type of plain, immutable data elements which should be maintained within a hash
  * based container.
  *
@@ -58,7 +115,7 @@ namespace utils {
  * boost or std library.
  */
 template<class Derived>
-class HashableImmutableData {
+class HashableImmutableData : public Hashable {
 
 	/**
 	 * The hash value of this data element derived once during its construction. This value will be required
@@ -69,16 +126,16 @@ class HashableImmutableData {
 
 protected:
 
-	/**
-	 * A hooker method to be implemented by sub-classes to compare instances with other
-	 * node instances.
-	 *
-	 * @param other the instance to be compared to. The handed in element will already be checked for
-	 * 				identity and its hash value. Hence, simple checks may be omitted within
-	 * 				the implementation of this method.
-	 * @return true if equivalent, false otherwise.
-	 */
-	virtual bool equals(const Derived& other) const = 0;
+//	/**
+//	 * A hooker method to be implemented by sub-classes to compare instances with other
+//	 * node instances.
+//	 *
+//	 * @param other the instance to be compared to. The handed in element will already be checked for
+//	 * 				identity and its hash value. Hence, simple checks may be omitted within
+//	 * 				the implementation of this method.
+//	 * @return true if equivalent, false otherwise.
+//	 */
+//	bool equals(const Derived& other) const = 0;
 
 public:
 
@@ -88,11 +145,6 @@ public:
 	 * @param hashCode the hash code of this immutable hashable data element
 	 */
 	HashableImmutableData(std::size_t hashCode) : hashCode(hashCode) {};
-
-	/**
-	 * A virtual destructor to clean up objects properly after usage.
-	 */
-	virtual ~HashableImmutableData() {};
 
 	/**
 	 * Computes a hash code for this node. The actual computation has to be conducted by
@@ -125,7 +177,7 @@ public:
 		}
 
 		// use virtual equals method
-		return equals(other);
+		return static_cast<const Derived*>(this)->equals(other);
 	}
 
 	/**
@@ -138,16 +190,32 @@ public:
 };
 
 /**
- * Integrates the hash code computation for nodes into the boost hash code framework.
- *
- * @param instance the instance for which a hash code should be obtained.
- * @return the hash code of the given instance
+ * An extended version of the hashable immutable data object for virtual classes.
  */
 template<typename Derived>
-inline std::size_t hash_value(const insieme::utils::HashableImmutableData<Derived>& instance) {
-	return instance.hash();
-}
+class VirtualHashableImmutableData : public HashableImmutableData<Derived> {
+protected:
 
+	/**
+	 * Creates a new instance of this base type build upon the given hash code.
+	 *
+	 * @param hashCode the hash code of this immutable hashable data element
+	 */
+	VirtualHashableImmutableData(std::size_t hashCode) : HashableImmutableData<Derived>(hashCode) {};
+
+public:
+
+	/**
+	 * A hooker method to be implemented by sub-classes to compare instances with other
+	 * node instances.
+	 *
+	 * @param other the instance to be compared to. The handed in element will already be checked for
+	 * 				identity and its hash value. Hence, simple checks may be omitted within
+	 * 				the implementation of this method.
+	 * @return true if equivalent, false otherwise.
+	 */
+	virtual bool equals(const Derived& other) const = 0;
+};
 
 /**
  * The terminal case for the hash combine operation (where no values are left).
@@ -289,14 +357,15 @@ namespace std
 {
 
 	/**
-	 * Integrates the exposition of hashable immutable data into the std::hash infrastrcuture.
+	 * Integrates the exposition of hashable immutable data into the std::hash infrastructure.
 	 *
 	 * @param instance the instance for which a hash code should be obtained.
 	 * @return the hash code of the given instance
 	 */
-	template<typename T>
-	struct hash<insieme::utils::HashableImmutableData<T>> {
-		size_t operator()(const insieme::utils::HashableImmutableData<T>& instance) const {
+	template<>
+	struct hash<insieme::utils::Hashable> {
+		template<typename T>
+		size_t operator()(const T& instance) const {
 			return instance.hash();
 		}
 	};
