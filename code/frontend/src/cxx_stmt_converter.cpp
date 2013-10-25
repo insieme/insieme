@@ -196,57 +196,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
 	return StmtConverter::VisitCompoundStmt(compStmt);
-
-	/*
-	//START_LOG_STMT_CONVERSION(compStmt);
-	core::StatementPtr retIr;
-	LOG_STMT_CONVERSION(retIr);
-
-	CXXConverter::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
-	while (!cxxConvFact.cxxCtx.scopeObjects.empty()) {
-		cxxConvFact.cxxCtx.scopeObjects.pop();
-	}
-
-	bool hasReturn = false;
-
-	vector<core::StatementPtr> stmtList;
-	std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &stmtList, this, &hasReturn ] (Stmt* stmt) {
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// A compoundstmt can contain declaration statements.This means that a clang
-		// DeclStmt can be converted in multiple  StatementPtr because an initialization
-		// list such as: int a,b=1; is converted into the following sequence of statements:
-		//
-		// 		int<a> a = 0; int<4> b = 1;
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			stmtutils::StmtWrapper convertedStmt;
-
-			if(dyn_cast<clang::ReturnStmt>(stmt)) {
-				hasReturn = true;
-			}
-
-			convertedStmt = Visit(stmt);
-			copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
-
-		});
-
-	if (!hasReturn) {
-
-		tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.cxxCtx.scopeObjects,
-				parentScopeObjects, false);
-	} else {
-
-		tempHandler.handleTemporariesinScope(cxxConvFact.cxxCtx.scopeObjects, parentScopeObjects);
-	}
-
-	retIr = cxxConvFact.builder.compoundStmt(stmtList);
-
-	cxxConvFact.cxxCtx.scopeObjects = parentScopeObjects;
-
-	// check for datarange pragma
-	attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
-
-	return retIr;
-	*/
 }
 
 
@@ -254,7 +203,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::Com
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Taken care of inside of TryStmt!");
-	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 

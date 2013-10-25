@@ -297,20 +297,21 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 		base = getCArrayElemRef(builder, base);
 	}
 
-	core::TypePtr structTy = converter.lookupTypeDetails(base->getType());
+	core::TypePtr baseTy = converter.lookupTypeDetails(base->getType());
 	core::ExpressionPtr op = gen.getCompositeMemberAccess();
 
-	if (structTy->getNodeType() == core::NT_RefType) {
+	if (baseTy->getNodeType() == core::NT_RefType) {
 		// skip over reference wrapper
-		structTy = converter.lookupTypeDetails(core::analysis::getReferencedType( structTy ));
+		baseTy = converter.lookupTypeDetails(core::analysis::getReferencedType( baseTy ));
 		op = gen.getCompositeRefElem();
 	}
 
 	// if the inner type is a RecType then we need to unroll it to get the contained composite type
-	if ( structTy->getNodeType() == core::NT_RecType ) {
-		structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(builder.getNodeManager());
+	if ( baseTy->getNodeType() == core::NT_RecType ) {
+		assert(false && "who is using rec types in the frontend?");
+		baseTy = core::static_pointer_cast<const core::RecType>(baseTy)->unroll(builder.getNodeManager());
 	}
-	assert(structTy && "Struct Type not being initialized");
+	assert(baseTy && "Struct Type not being initialized");
 
 	//identifier of the member
 	core::StringValuePtr ident;
@@ -330,14 +331,14 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 	assert(ident);
 
 	core::TypePtr membType;
-	if (structTy.isa<core::GenericTypePtr>()){
+	if (baseTy.isa<core::GenericTypePtr>()){
 		// accessing a member of an intercepted type, nothing to do but trust clang
 		membType = converter.convertType(membExpr->getType().getTypePtr());
 	}
 	else {
-		// if we translated the object, is better to retrieve info from our struct
-		assert(structTy.isa<core::StructTypePtr>());
-		for (const auto& cur : structTy.as<core::StructTypePtr>()->getEntries()){
+		// if we translated the object, is better to retrieve info from our struct or union
+		assert(baseTy.isa<core::NamedCompositeTypePtr>());
+		for (const auto& cur : baseTy.as<core::NamedCompositeTypePtr>()->getEntries()){
 			if (cur->getName() == ident){
 				membType = cur->getType();
 				break;
