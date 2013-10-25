@@ -308,9 +308,7 @@ namespace prototype {
 					: definition.as<core::LambdaExprAddress>()->getBody().as<core::StatementAddress>();
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (auto lit = definition.isa<core::LiteralPtr>()) return out << *lit;
 			return out << "(" << definition->getNodeType() << "@" << definition << "," << context << ")";
 		}
@@ -355,9 +353,7 @@ namespace prototype {
 			return formula;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (formula) return out << *formula;
 			return out << "-unknown-";
 		}

@@ -233,8 +233,8 @@ namespace cba {
 					// this should not be the end
 					assert(!parent.isRoot());
 
-					// obtain the set containing all the potential predecessor of the current call in the cba
-					auto predecessor_ctxt = cba.getSet(pred, ctxt.callContext.back());
+//					// obtain the set containing all the potential predecessor of the current call in the cba
+//					auto predecessor_ctxt = cba.getSet(pred, ctxt.callContext.back());
 
 					// get containing callee (lambda or bind)
 					Callee callee(parent.getParentAddress());

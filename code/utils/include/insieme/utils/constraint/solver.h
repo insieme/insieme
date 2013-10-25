@@ -123,7 +123,7 @@ namespace constraint {
 
 	// a common base type for all kind of constraints
 
-	class Constraint : public Printable {
+	class Constraint : public VirtualPrintable {
 
 		std::vector<ValueID> inputs;
 		std::vector<ValueID> outputs;
@@ -656,7 +656,7 @@ namespace constraint {
 
 	class Assignment : public Printable {
 
-		struct Container : public Printable {
+		struct Container : public VirtualPrintable {
 			virtual ~Container() {};
 			virtual void append(std::map<ValueID,string>& res) const =0;
 			virtual Container* copy() const =0;
@@ -722,7 +722,7 @@ namespace constraint {
 			return data == other.data;
 		}
 
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << data;
 		}
 

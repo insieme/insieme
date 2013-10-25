@@ -175,7 +175,7 @@ namespace c_ast {
 	 * An abstract base class for various kinds of specialized code fragments. This base class
 	 * defines an interface for code fragments to be handled uniformly.
 	 */
-	class CodeFragment : public utils::Printable, private boost::noncopyable {
+	class CodeFragment : public utils::VirtualPrintable, private boost::noncopyable {
 
 		/**
 		 * The set of code fragments this fragment is depending on. The dependencies should form

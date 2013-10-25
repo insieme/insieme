@@ -195,9 +195,7 @@ namespace tu {
 
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

@@ -76,7 +76,7 @@ namespace core {
 	 */
 	class Node :
 			public utils::HashableImmutableData<Node>,			// Nodes are immutable data objects!
-			public utils::Printable {							// Allows instances to be printed
+			public utils::VirtualPrintable {					// Allows instances to be printed
 
 			/**
 			 * Allow the instance manager to access private methods to create / destroy nodes.
@@ -457,7 +457,7 @@ namespace core {
 			 * @param other the node to be compared with
 			 * @return true if equal, false otherwise
 			 */
-			virtual bool equals(const Node& other) const {
+			bool equals(const Node& other) const {
 				// use equal operator
 				return *this == other;
 			}

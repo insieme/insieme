@@ -56,7 +56,7 @@ namespace cba {
 
 	// ----------------- arithmetic analysis ---------------
 
-	struct Formula : public utils::Printable {
+	struct Formula : public utils::Printable, public utils::Hashable {
 		typedef boost::optional<core::arithmetic::Formula> formula_type;
 		formula_type formula;
 
@@ -71,11 +71,13 @@ namespace cba {
 			return formula;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (formula) return out << *formula;
 			return out << "-unknown-";
+		}
+
+		std::size_t hash() const {
+			return utils::combineHashes(formula);
 		}
 	};
 

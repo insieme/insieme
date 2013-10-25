@@ -55,7 +55,8 @@ namespace cba {
 	struct Index :
 			public boost::equality_comparable<DerivedIndex>,
 			public boost::partially_ordered<DerivedIndex>,
-			public utils::Printable
+			public utils::Printable,
+			public utils::Hashable
 	{};
 
 	/**
@@ -97,20 +98,11 @@ namespace cba {
 			return hashCode;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << name;
 		}
 
 	};
-
-	/**
-	 * Adds hashing support for the nominal index class.
-	 */
-	inline std::size_t hash_value(const NominalIndex& index) {
-		return index.hash();
-	}
 
 	/**
 	 * The cross operator computing the ranges to be included when combining two indexed structures.
@@ -160,20 +152,15 @@ namespace cba {
 			return false;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << "*";
 		}
 
-	};
+		std::size_t hash() const {
+			return 0;	// all the same
+		}
 
-	/**
-	 * Adds hashing support for the unit index class.
-	 */
-	inline std::size_t hash_value(const UnitIndex& index) {
-		return 0;	// all the same
-	}
+	};
 
 	/**
 	 * The cross operator computing the ranges to be included when combining two indexed structures.
@@ -244,21 +231,15 @@ namespace cba {
 			return index;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (!concrete) return out << "*";
 			return out << index;
 		}
 
+		std::size_t hash() const {
+			return (isConcrete()) ? std::hash<std::uint64_t>()(getIndex()) : 743;
+		}
 	};
-
-	/**
-	 * Adds hashing support for the single index class.
-	 */
-	inline std::size_t hash_value(const SingleIndex& index) {
-		return (index.isConcrete()) ? std::hash<std::uint64_t>()(index.getIndex()) : 743;
-	}
 
 	/**
 	 * The cross operator computing the ranges to be included when combining two indexed structures.

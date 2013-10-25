@@ -129,7 +129,7 @@ namespace cba {
 		template<typename ElementType, typename DerivedType>
 		struct Entry :
 				public boost::equality_comparable<DerivedType>,
-				public utils::Printable {
+				public utils::VirtualPrintable {
 
 			DataManager<ElementType>& mgr;
 			const std::size_t hash;

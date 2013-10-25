@@ -316,7 +316,7 @@ namespace cba {
 			template<typename BaseLattice>
 			struct Entry :
 					public boost::equality_comparable<Entry<BaseLattice>>,
-					public utils::Printable {
+					public utils::VirtualPrintable {
 
 				DataManager<BaseLattice>& mgr;
 				const std::size_t hash;
@@ -743,7 +743,7 @@ namespace cba {
 			template<typename BaseLattice, typename DerivedType>
 			struct Entry :
 					public boost::equality_comparable<DerivedType>,
-					public utils::Printable {
+					public utils::VirtualPrintable {
 
 				DataManager<BaseLattice>& mgr;
 				const std::size_t hash;

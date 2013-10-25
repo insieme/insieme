@@ -53,7 +53,7 @@ namespace cba {
 
 	// the type used to represent functions / closures
 	template<typename Context>
-	struct Callable : public utils::Printable {
+	struct Callable : public utils::Printable, public utils::Hashable {
 		Callee callee;
 		Context context;
 
@@ -96,11 +96,13 @@ namespace cba {
 			return callee.getBody();
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (callee.isLiteral()) return out << callee;
 			return out << "(" << callee << "," << context << ")";
+		}
+
+		size_t hash() const {
+			return utils::combineHashes(callee, context);
 		}
 	};
 

@@ -168,7 +168,7 @@ namespace pattern {
 		/**
 		 * Prints a string-representation of this path to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << path;
 		}
 
@@ -319,7 +319,7 @@ namespace pattern {
 			}
 		}
 
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			// check for terminal case
 			if (depth == 0) {
 				if (tree) {

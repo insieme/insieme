@@ -66,15 +66,13 @@ namespace printer {
 		 */
 		LuaPrinter(const StatementPtr& stmt) : stmt(stmt) {}
 
-	protected:
-
 		/**
 		 * The internal implementation realizing the actual
 		 * conversion into the Lua script language.
 		 *
 		 * @param out the stream to be printed to
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

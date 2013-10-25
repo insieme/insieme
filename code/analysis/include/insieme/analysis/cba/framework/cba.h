@@ -618,7 +618,7 @@ namespace cba {
 
 		template<unsigned size>
 		bool isValid(const Sequence<Label, size>& seq) {
-			return isValid(seq.sequence);
+			return isValid(seq.getSequence());
 		}
 
 		template<unsigned a, unsigned b, unsigned c>

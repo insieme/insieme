@@ -43,6 +43,7 @@
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
@@ -56,13 +57,19 @@ namespace cba {
 	 * @tparam s the size of the sequence
 	 */
 	template<typename T, unsigned s>
-	struct Sequence : public utils::Printable {
+	struct Sequence :
+			public utils::Printable,
+			public utils::HashableMutableData<Sequence<T,s>> {
 
 		// some constants
 		enum { size = s, empty = (s==0) };
 
+	private:
+
 		// the actual sequence
 		std::array<T, s> sequence;
+
+	public:
 
 		// -- constructors -----------
 
@@ -93,6 +100,10 @@ namespace cba {
 			return s == 0 || sequence.back() == e;
 		}
 
+		const std::array<T,s>& getSequence() const {
+			return sequence;
+		}
+
 		// -- operators -----------
 
 		bool operator==(const Sequence& other) const {
@@ -114,6 +125,7 @@ namespace cba {
 
 		Sequence<T,s>& operator<<=(const Label& label) {
 			if (empty) return *this;
+			this->invalidateHash();
 			for(unsigned i=0; i<(s-1); ++i) {
 				sequence[i] = sequence[i+1];
 			}
@@ -123,6 +135,7 @@ namespace cba {
 
 		Sequence<T,s>& operator>>=(const Label& label) {
 			if (empty) return *this;
+			this->invalidateHash();
 			for(int i=(s-1); i>=0; --i) {
 				sequence[i] = sequence[i-1];
 			}
@@ -141,6 +154,10 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const {
 			return out << sequence;
 		};
+
+		std::size_t computeHash() const {
+			return utils::hashList(sequence);
+		}
 	};
 
 
@@ -201,7 +218,7 @@ namespace cba {
 	 * The class representing threads.
 	 */
 	template<unsigned s>
-	class ThreadID : public utils::Printable {
+	class ThreadID : public utils::Printable, public utils::HashableMutableData<ThreadID<s>> {
 
 		Label spawn;
 		Sequence<Label, s> spawnContext;
@@ -224,6 +241,10 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const {
 			return out << "<" << spawn << "," << spawnContext << "," << id << ">";
 		};
+
+		std::size_t computeHash() const {
+			return utils::combineHashes(spawn, spawnContext, id);
+		}
 	};
 
 	/**
@@ -234,7 +255,9 @@ namespace cba {
 		unsigned thread_context_size = 2,
 		unsigned thread_spawn_context_size = 0
 	>
-	struct Context : public utils::Printable {
+	struct Context :
+			public utils::Printable,
+			public utils::HashableMutableData<Context<call_context_size, thread_context_size, thread_spawn_context_size>> {
 
 		enum {
 			call_ctxt_size 			= call_context_size,
@@ -283,6 +306,10 @@ namespace cba {
 			if (thread_context::size > 0) out << threadContext;
 			return out << "]";
 		};
+
+		std::size_t computeHash() const {
+			return utils::combineHashes(callContext, threadContext);
+		}
 	};
 
 	typedef Context<0,0,0> NoContext;

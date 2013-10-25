@@ -56,7 +56,7 @@ namespace pattern {
 	class ListGenerator;
 	typedef std::shared_ptr<ListGenerator> ListGeneratorPtr;
 
-	class Generator : public utils::Printable {
+	class Generator : public utils::VirtualPrintable {
 	public:
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
@@ -103,7 +103,7 @@ namespace pattern {
 	};
 
 	template<typename T>
-	class MatchExpression : public utils::Printable {
+	class MatchExpression : public utils::VirtualPrintable {
 	public:
 		virtual MatchValue<T> eval(const Match<T>& match) const = 0;
 		unsigned getNestingLevel(const Match<T>& match) const { return eval(match).getDepth(); }

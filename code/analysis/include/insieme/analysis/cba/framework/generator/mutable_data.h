@@ -101,6 +101,45 @@ namespace cba {
 		}
 	};
 
+	namespace {
+
+		/**
+		 * A constraint filter checking whether the current assignment of a given set is exceeding a given
+		 * element.
+		 */
+		template<
+			typename StructLattice,
+			typename Element
+		>
+		class ExceedingElementsFilter : public utils::constraint::detail::Filter<false> {
+			TypedValueID<StructLattice> a;
+			const Element& e;
+		public:
+			ExceedingElementsFilter(const TypedValueID<StructLattice>& a, const Element& e)
+				: a(a), e(e) {}
+			bool operator()(const Assignment& ass) const {
+				typedef typename StructLattice::base_lattice::value_type base_value_type;
+				const base_value_type& set = ass[a];
+				return (set.size() - (contains(set, e)?1:0)) > 0;
+			}
+			void print(std::ostream& out) const {
+				out << "|" << a << " - {" << e << "}| > 0";
+			}
+			utils::constraint::detail::ValueIDs getInputs() const {
+				return toVector<ValueID>(a);
+			}
+			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+				used.insert(a);
+			}
+		};
+
+		template<typename StructLattice, typename Element, typename InSet, typename OutSet>
+		utils::constraint::ConstraintPtr subsetIfExceeding(const TypedValueID<StructLattice>& set, const Element& e, const InSet& a, const OutSet& b) {
+			return combine(ExceedingElementsFilter<StructLattice,Element>(set,e), e_sub(a,b));
+		}
+
+	}
+
 
 	template<typename Context, typename ElementSetType>
 	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> {
@@ -138,8 +177,8 @@ namespace cba {
 				auto S_out_rhs = cba.getSet(Sout, l_rhs, ctxt, location, dataSet);
 				auto S_out_lhs = cba.getSet(Sout, l_lhs, ctxt, location, dataSet);
 				auto S_tmp = cba.getSet(Stmp, l_call, ctxt, location, dataSet);
-				constraints.add(subsetIfReducedBigger(R_rhs, location, 0, S_out_rhs, S_tmp));
-				constraints.add(subsetIfReducedBigger(R_rhs, location, 0, S_out_lhs, S_tmp));
+				constraints.add(subsetIfExceeding(R_rhs, location, S_out_rhs, S_tmp));
+				constraints.add(subsetIfExceeding(R_rhs, location, S_out_lhs, S_tmp));
 
 				// ---- combine S_tmp to S_out ...
 
@@ -149,7 +188,7 @@ namespace cba {
 				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
 
 				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
-				constraints.add(subsetIfReducedBigger(R_rhs, location, 0, S_tmp, S_out));
+				constraints.add(subsetIfExceeding(R_rhs, location, S_tmp, S_out));
 
 				// done
 				return;

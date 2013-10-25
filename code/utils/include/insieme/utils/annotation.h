@@ -65,13 +65,14 @@ namespace utils {
  * @see SimpleKey<T>
  * @see StringKey
  */
-class AnnotationKey : public HashableImmutableData<AnnotationKey>, public utils::Printable {
+class AnnotationKey : public VirtualHashableImmutableData<AnnotationKey>, public utils::VirtualPrintable {
 protected:
 
 	/**
 	 * A simple default constructor which is protected to avoid instances of this class.
 	 */
-	AnnotationKey(std::size_t hashCode) : HashableImmutableData(hashCode) {};
+	AnnotationKey(std::size_t hashCode) : VirtualHashableImmutableData(hashCode) {};
+
 };
 
 /**
@@ -83,7 +84,7 @@ typedef const AnnotationKey* AnnotationKeyPtr;
 /**
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
-class Annotation : public utils::Printable {
+class Annotation : public utils::VirtualPrintable {
 
 public:
 

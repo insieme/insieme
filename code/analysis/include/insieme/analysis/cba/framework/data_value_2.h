@@ -128,9 +128,7 @@ namespace cba {
 			return data->empty();
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << *data;
 		}
 
@@ -162,7 +160,7 @@ namespace cba {
 	};
 
 	template<typename ElementType>
-	class DataBase : public utils::Printable {
+	class DataBase : public utils::VirtualPrintable {
 
 	public:
 

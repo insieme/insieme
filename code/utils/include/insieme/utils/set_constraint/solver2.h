@@ -113,7 +113,7 @@ namespace set_constraint_2 {
 
 	// a common base type for all kind of constraints
 
-	class Constraint : public Printable {
+	class Constraint : public VirtualPrintable {
 
 		std::vector<SetID> inputs;
 		std::vector<SetID> outputs;
@@ -643,7 +643,7 @@ namespace set_constraint_2 {
 
 	class Assignment : public Printable {
 
-		struct Container : public Printable {
+		struct Container : public VirtualPrintable {
 			virtual ~Container() {};
 			virtual void append(std::map<SetID,string>& res) const =0;
 			virtual Container* copy() const =0;
@@ -706,7 +706,7 @@ namespace set_constraint_2 {
 			return data == other.data;
 		}
 
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << data;
 		}
 

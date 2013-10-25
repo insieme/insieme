@@ -104,12 +104,10 @@ namespace inductive {
 		MemoryLocation component(unsigned index) const;
 
 
-	protected:
-
 		/**
 		 * Prints instances of this object to the output stream in a user-friendly format.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

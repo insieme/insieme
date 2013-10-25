@@ -76,7 +76,7 @@ hash_value(const T& instance) {
  * A base class for hashing mutable data objects.
  */
 template<class Derived>
-class HashableMutableData {
+class HashableMutableData : public Hashable {
 
 	/**
 	 * A flag indicating whether the currently stored hash code is valid.
@@ -84,9 +84,9 @@ class HashableMutableData {
 	mutable bool accurate;
 
 	/**
-	 * A
+	 * The cached hash code.
 	 */
-	std::size_t hashCode;
+	mutable std::size_t hashCode;
 
 public:
 
@@ -98,7 +98,7 @@ public:
 
 	std::size_t hash() const {
 		if (!accurate) {
-			hashCode = static_cast<const Derived*>(this)->updateHash();
+			hashCode = static_cast<const Derived*>(this)->computeHash();
 			accurate = true;
 		}
 		return hashCode;

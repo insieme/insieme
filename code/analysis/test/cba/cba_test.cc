@@ -539,7 +539,7 @@ namespace cba {
 		std::set<ExpressionPtr> should;
 		should.insert(builder.intLit(2));
 		should.insert(builder.intLit(3));
-		EXPECT_EQ(should, analysis.getValuesOf(code.getAddressOfChild(3).as<ExpressionAddress>(), D));
+		EXPECT_EQ(should, std::set<ExpressionPtr>(analysis.getValuesOf(code.getAddressOfChild(3).as<ExpressionAddress>(), D)));
 
 	}
 
@@ -575,7 +575,7 @@ namespace cba {
 		std::set<ExpressionPtr> should;
 		should.insert(ExpressionPtr());
 		should.insert(builder.intLit(1));
-		EXPECT_EQ(should, analysis.getValuesOf(code.getAddressOfChild(3).as<ExpressionAddress>(), D));
+		EXPECT_EQ(should, std::set<ExpressionPtr>(analysis.getValuesOf(code.getAddressOfChild(3).as<ExpressionAddress>(), D)));
 
 	}
 
@@ -684,11 +684,13 @@ namespace cba {
 		EXPECT_EQ("{v1}", toString(analysis.getValuesOf(body[0].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2*v1+3}", toString(analysis.getValuesOf(body[1].as<ExpressionAddress>(), A)));
 
+		ArithmeticSetType::lattice_type::less_op_type less_op;
+
 		// the value of x should be unknown within the loop (although some examples are recorded)
-		EXPECT_TRUE(contains(analysis.getValuesOf(body[3].as<ExpressionAddress>(), A), Formula()));
+		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(body[3].as<ExpressionAddress>(), A));
 
 		// after the loop
-		EXPECT_TRUE(contains(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A), Formula()));
+		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[3].as<ExpressionAddress>(), A));
 
 //		createDotDump(analysis);
 	}
@@ -791,7 +793,9 @@ namespace cba {
 		Formula unknown;
 
 		CBA analysis(code);
-		EXPECT_TRUE(contains(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A), unknown));
+		ArithmeticSetType::lattice_type::less_op_type less_op;
+		EXPECT_PRED2(less_op, unknown, analysis.getValuesOf(code[2].as<ExpressionAddress>(), A));
+
 //		createDotDump(analysis);
 	}
 
@@ -1538,13 +1542,14 @@ namespace cba {
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
 
 		// the analysis of code[3] should contain the unknown value
-		EXPECT_TRUE(contains(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A), Formula()));
+		ArithmeticSetType::lattice_type::less_op_type less_op;
+		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[3].as<ExpressionAddress>(), A));
 
 		// but if the accuracy is increased by using a longer call-string it should work
 		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A, Context<3,0,0>())));
 
 		// yet still not for larger recursive functions
-		EXPECT_TRUE(contains(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()), Formula()));
+		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()));
 
 //		createDotDump(analysis);
 	}

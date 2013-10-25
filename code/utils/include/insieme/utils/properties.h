@@ -341,7 +341,7 @@ namespace properties {
 	 * The abstract base class for all kind of properties.
 	 */
 	template<typename Value>
-	class Property : public utils::Printable, boost::noncopyable  {
+	class Property : public utils::VirtualPrintable, boost::noncopyable  {
 	public:
 
 		/**

@@ -105,9 +105,7 @@ namespace cba {
 			return *this != other && *data < *other.data;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << *data;
 		}
 
@@ -143,9 +141,7 @@ namespace cba {
 			return this == &other || std::includes(data.begin(), data.end(), other.data.begin(), other.data.end());
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << data;
 		}
 
@@ -162,7 +158,7 @@ namespace cba {
 	// ------------------------------------------------------------------------
 
 	template<typename ElementType>
-	class DataBase : public utils::Printable {
+	class DataBase : public utils::VirtualPrintable {
 
 	public:
 

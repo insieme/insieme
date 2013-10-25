@@ -60,7 +60,7 @@ namespace cba {
 
 	using namespace core;
 
-	class Caller : public utils::Printable {
+	class Caller : public utils::Printable, public utils::Hashable {
 
 		CallExprAddress call;
 
@@ -94,15 +94,17 @@ namespace cba {
 			return call.size();
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (!call) return out << "-unknown-";
 			return out << "(" << call << ")";
 		}
+
+		std::size_t hash() const {
+			return (call) ? call->getNodeHashValue() : 0;
+		}
 	};
 
-	class Callee : public utils::Printable {
+	class Callee : public utils::Printable, public utils::Hashable {
 
 		NodeAddress definition;
 
@@ -183,12 +185,14 @@ namespace cba {
 			return definition.getParentNode().as<LambdaBindingPtr>()->getVariable();
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			if (!definition) return out << "-unknown-";
 			if (auto lit = definition.isa<LiteralPtr>()) return out << *lit;
 			return out << "(" << definition->getNodeType() << "@" << definition << ")";
+		}
+
+		std::size_t hash() const {
+			return (definition) ? definition->getNodeHashValue() : 0;
 		}
 	};
 
