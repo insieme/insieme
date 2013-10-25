@@ -68,6 +68,8 @@ namespace cba {
 		FunctionConstraintGenerator(CBA& cba)
 			: super(cba, F, f), cba(cba) { };
 
+		using super::elem;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling

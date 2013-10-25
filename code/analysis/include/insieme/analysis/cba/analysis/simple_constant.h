@@ -65,6 +65,8 @@ namespace cba {
 		ConstantConstraintGenerator(CBA& cba)
 			: super(cba, D, d), cba(cba) { };
 
+		using super::elem;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling

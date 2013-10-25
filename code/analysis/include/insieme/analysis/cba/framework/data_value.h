@@ -244,12 +244,20 @@ namespace cba {
 
 	namespace detail {
 
-		template<typename _value_type, typename Derived>
+		template<typename _value_type, typename BaseLattice, typename Derived>
 		class BaseDataManager : public boost::noncopyable {
 
 		public:
 
 			typedef _value_type value_type;
+			typedef typename BaseLattice::value_type base_value_type;
+
+			template<typename E>
+			typename std::enable_if<!std::is_same<E,base_value_type>::value,value_type>::type
+			atomic(const E& value) {
+				static const typename BaseLattice::meet_op_type meet_op;
+				return static_cast<Derived*>(this)->atomic(meet_op(base_value_type(), value));
+			}
 
 			template<typename IndexType, typename ... Elements>
 			value_type compound(const std::pair<IndexType, value_type>& first, const Elements& ... elements) {
@@ -268,14 +276,15 @@ namespace cba {
 	namespace unit {
 
 		template<typename BaseLattice>
-		class DataManager : public detail::BaseDataManager<typename BaseLattice::value_type, DataManager<BaseLattice>> {
+		class DataManager : public detail::BaseDataManager<typename BaseLattice::value_type, BaseLattice, DataManager<BaseLattice>> {
 
-			typedef detail::BaseDataManager<typename BaseLattice::value_type, DataManager<BaseLattice>> super;
+			typedef detail::BaseDataManager<typename BaseLattice::value_type, BaseLattice, DataManager<BaseLattice>> super;
 			typedef typename BaseLattice::value_type value_type;
 			typedef typename BaseLattice::meet_assign_op_type meet_assign_op_type;
 
 		public:
 
+			using super::atomic;
 			using super::compound;
 
 			const value_type& atomic(const value_type& value) const {
@@ -613,9 +622,9 @@ namespace cba {
 		}
 
 		template<typename BaseLattice>
-		class DataManager : public detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> {
+		class DataManager : public detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> {
 
-			typedef detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> super;
+			typedef detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> super;
 
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
@@ -636,6 +645,9 @@ namespace cba {
 					for(const auto& entry : cur.second) delete entry;
 				}
 			}
+
+			using super::atomic;
+			using super::compound;
 
 			value_type atomic(const base_value_type& value) {
 
@@ -678,8 +690,6 @@ namespace cba {
 				return res;
 			}
 
-			using super::compound;
-
 		};
 
 		template<typename BaseLattice>
@@ -692,16 +702,6 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
-			template<typename E>
-			bool operator()(Data<BaseLattice>& a, const E& e) const {
-				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
-				typename BaseLattice::value_type tmp;
-				meet_assign_op(tmp, e);
-				return a.meetAssign(a.getPtr()->mgr.atomic(tmp));
-			}
-			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
-				return a.meetAssign(a.getPtr()->mgr.atomic(b));
-			}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}
@@ -1095,9 +1095,9 @@ namespace cba {
 		}
 
 		template<typename BaseLattice>
-		class DataManager : public detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> {
+		class DataManager : public detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> {
 
-			typedef detail::BaseDataManager<Data<BaseLattice>, DataManager<BaseLattice>> super;
+			typedef detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> super;
 
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
@@ -1125,6 +1125,9 @@ namespace cba {
 					for(const auto& entry : cur.second) delete entry;
 				}
 			}
+
+			using super::atomic;
+			using super::compound;
 
 			value_type set() {
 				return value_type();
@@ -1199,8 +1202,6 @@ namespace cba {
 				return set(res);
 			}
 
-			using super::compound;
-
 		};
 
 		template<typename BaseLattice>
@@ -1213,16 +1214,6 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
-			template<typename E>
-			bool operator()(Data<BaseLattice>& a, const E& e) const {
-				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
-				typename BaseLattice::value_type tmp;
-				meet_assign_op(tmp, e);
-				return a.meetAssign(a.getPtr()->mgr.atomic(tmp));
-			}
-			bool operator()(Data<BaseLattice>& a, const typename BaseLattice::value_type& b) const {
-				return a.meetAssign(a.getPtr()->mgr.atomic(b));
-			}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}

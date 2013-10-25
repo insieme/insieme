@@ -185,6 +185,7 @@ namespace cba {
 			  cba(cba)
 		{ };
 
+		using super::elem;
 		using super::pack;
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {

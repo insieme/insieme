@@ -78,6 +78,8 @@ namespace cba {
 
 		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba) { };
 
+		using super::elem;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling

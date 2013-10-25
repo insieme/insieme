@@ -117,7 +117,8 @@ namespace cba {
 			return valueMgr;
 		}
 
-		value_type atomic(const base_value_type& set) {
+		template<typename V>
+		value_type atomic(const V& set) {
 			return valueMgr.atomic(set);
 		}
 
@@ -456,7 +457,7 @@ namespace cba {
 
 	protected:
 
-		template<typename fun_type, typename data_mgr>
+		template<typename value_type, typename fun_type, typename data_mgr>
 		class packer {
 
 			fun_type fun;
@@ -468,14 +469,19 @@ namespace cba {
 				: fun(fun), mgr(mgr) {}
 
 			template<typename ... Args>
-			auto operator()(const Args& ... args) -> decltype(mgr.atomic(fun(args...))) const {
+			value_type operator()(const Args& ... args) const {
 				return mgr.atomic(fun(args...));
 			}
 		};
 
 		template<typename fun_type>
-		packer<fun_type,mgr_type> pack(const fun_type& fun) {
-			return packer<fun_type,mgr_type>(fun, valueMgr);
+		packer<value_type,fun_type,mgr_type> pack(const fun_type& fun) {
+			return packer<value_type,fun_type,mgr_type>(fun, valueMgr);
+		}
+
+		template<typename E>
+		ConstraintPtr elem(const E& e, const TypedValueID<lattice_type>& set) {
+			return subset(atomic(e), set);
 		}
 
 

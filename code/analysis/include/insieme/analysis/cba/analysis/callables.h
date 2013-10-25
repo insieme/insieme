@@ -77,6 +77,8 @@ namespace cba {
 		ControlFlowConstraintGenerator(CBA& cba)
 			: super(cba, C<Context>(), c<Context>()), cba(cba) { };
 
+		using super::elem;
+
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
