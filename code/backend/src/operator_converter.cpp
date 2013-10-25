@@ -460,7 +460,6 @@ namespace backend {
 				
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
-			std::cout << initValue << std::endl;
 			core::TypePtr type = initValue->getType();
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 

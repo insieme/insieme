@@ -388,7 +388,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 
 			core::TypePtr impl = symb;
 			// if target is an annonymous type, we create a new type with the name of the typedef
-			if (trgty.sa<core::StructTypePtr>()->getName()->getValue().substr(0,4) == "_anon"){
+			if (trgty.as<core::StructTypePtr>()->getName()->getValue().substr(0,4) == "_anon"){
 				impl = builder.structType ( builder.stringValue( name), trgty.as<core::StructTypePtr>()->getParents(), trgty.as<core::StructTypePtr>()->getEntries());
 			}
 
