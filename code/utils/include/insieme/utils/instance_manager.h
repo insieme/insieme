@@ -190,7 +190,7 @@ public:
 		assert ( instance != newElement );
 
 		// ensure the element has really been added (hash and equals is properly implemented)
-		assert ( *check.first == newElement && check.second );
+		assert ( *check.first == newElement || check.second );
 
 		// ensure the element can be found again
 		assert ( check.first == storage.find(instance) && "Unable to add clone - value already present!" );
