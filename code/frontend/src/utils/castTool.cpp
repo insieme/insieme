@@ -434,9 +434,6 @@ switch (castExpr->getCastKind()) {
 	//
 	// IR: this is the same as out ref deref ref<a'> -> a'
 	{
-
-		std::cout << " CAST: " << expr << " : " << expr->getType() << std::endl;
-
 		// we use by value a member accessor. we have a better operation for this
 		// instead of derefing the memberRef
 		//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref

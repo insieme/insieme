@@ -317,13 +317,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                 AUTO TYPE -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
-    return convert(autoTy->getDeducedType().getTypePtr());
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                 MEMBER POINTER TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
@@ -331,22 +324,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     LOG_TYPE_CONVERSION( memPointerTy, retTy );
     retTy = convert(memPointerTy->getPointeeType().getTypePtr());
     return retTy;
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DECLTYPE TYPE -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/**
- * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations. 
- *	   If you just need the type for a variable that you are about to initialize auto is often a simpler choice. 
- *	   You really need decltype if you need a type for something that is not a variable, such as a return type. 
- */
-core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
-	core::TypePtr retTy;
-    LOG_TYPE_CONVERSION( declTy, retTy );
-	assert(declTy->getUnderlyingExpr());
-	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
-	return retTy;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

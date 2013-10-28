@@ -96,6 +96,7 @@
 #include "insieme/annotations/c/include.h"
 
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
+#include "insieme/frontend/extensions/cpp11_extension.h"
 
 using namespace clang;
 using namespace insieme;
@@ -181,6 +182,8 @@ tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, cons
 	Program program(manager, unit, setup);
 	conversion::Converter c(manager, program);
 	c.registerClangHandler<VariadicArgumentsPlugin>();
+
+	c.registerClangHandler<Cpp11Plugin>();
 	// add them and fire the conversion
 	return c.convert();
 }
