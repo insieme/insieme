@@ -83,7 +83,7 @@ namespace frontend {
 		 * A list of supported standards.
 		 */
 		enum Standard {
-			Auto, C99, Cxx03
+			Auto, C99, Cxx03, Cxx11
 		};
 
 		/**

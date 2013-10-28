@@ -155,10 +155,13 @@ namespace cmd {
 
 		// update standard
 		job.setStandard(frontend::ConversionSetup::Auto);
-		if (STD == "c99") {
+
+		if (Standard == "c99") {
 			job.setStandard(frontend::ConversionSetup::C99);
-		} else if (STD == "c++03") {
+		} else if (Standard == "c++03") {
 			job.setStandard(frontend::ConversionSetup::Cxx03);
+		} else if (Standard == "c++11") {
+			job.setStandard(frontend::ConversionSetup::Cxx11);
 		}
 
 		// forward flags

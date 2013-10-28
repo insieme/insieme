@@ -196,6 +196,9 @@ namespace cmd {
 					res.job.setStandard(frontend::ConversionSetup::C99);
 				} else if (selected == "c++03") {
 					res.job.setStandard(frontend::ConversionSetup::Cxx03);
+				} else if (selected == "c++11") {
+					assert(false);
+					res.job.setStandard(frontend::ConversionSetup::Cxx11);
 				} else {
 					cout << "Unsupported standard: " << selected << " - supported: auto, c99, c++03";
 					res.valid=false;
