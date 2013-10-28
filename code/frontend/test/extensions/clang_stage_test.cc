@@ -108,9 +108,11 @@ TEST(ClangStage, Conversion) {
 
 	// register the clang stage plugin
 	conv.registerClangHandler<ClangTestPlugin>();
+{
 
 	//lets create a clang expression and pass it to the converter
-	insieme::core::TypePtr convertedTy = conv.convertType(new clang::BuiltinType(clang::BuiltinType::Kind::NullPtr));
+	clang::Type* ty = new clang::BuiltinType(clang::BuiltinType::Kind::NullPtr);
+	insieme::core::TypePtr convertedTy = conv.convertType(ty);
 
 	//this should now be a generic type that contains the name GenericTypeCreator
 	EXPECT_TRUE(convertedTy.isa<insieme::core::GenericTypePtr>());
@@ -118,7 +120,8 @@ TEST(ClangStage, Conversion) {
 		std::string s = static_pointer_cast<insieme::core::GenericTypePtr>(convertedTy)->getName()->getValue();
 		EXPECT_EQ("GenericTypeCreator", s);
 	}
-
+	delete ty;
+}
 	//check if the decl visitors is visited correctly
 /*	EXPECT_FALSE(declVisited);
 	conv.convert();
