@@ -538,6 +538,14 @@ namespace {
 
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
+	//iterate clang handler list and check if a handler wants to convert the type
+	for(auto plugin : convFact.getClangHandlers()) {
+		core::TypePtr retIr = plugin->Visit(type, convFact);
+		if(retIr)
+			return retIr;
+	}
+
+
 	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
 	auto& cache = typeCache;
 

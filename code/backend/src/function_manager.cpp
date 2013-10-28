@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -264,10 +264,10 @@ namespace backend {
 
 				// add new call if required
 				if (isOnHeap) {
-					res = c_ast::newCall(res); 
+					res = c_ast::newCall(res);
 				} else if (!loc) {
 					// if it is not an in-place construction => add a & operation
-					res = c_ast::ref(res); 
+					res = c_ast::ref(res);
 				}
 			}
 
@@ -882,13 +882,13 @@ namespace backend {
 
 						classDecl->members.push_back(decl);
 					}
-					
+
 					// add dependencies to class declaration
 					info->prototype->addDependencies(codeInfo.prototypeDependencies);
 
 					// add includes
 					info->prototype->addIncludes(codeInfo.includes);
-					
+
 				} else {
 					// ... to prototype block
 					declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
@@ -1251,7 +1251,8 @@ namespace backend {
 						paramName = "this";
 						nameManager.setName(lambda->getParameterList()[counter], paramName);
 					} else {
-						paramName = nameManager.getName(lambda->getParameterList()[counter]);
+                        if(!converter.getNodeManager().getLangBasic().isVarList(cur) || !counter >= lambda->getParameterList().size())
+                            paramName = nameManager.getName(lambda->getParameterList()[counter]);
 					}
 				} else {
 					paramName = format("p%d", counter+1);

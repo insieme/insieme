@@ -200,7 +200,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					TEMPLATE SPECIALIZATION TYPE 
+//					TEMPLATE SPECIALIZATION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
 
@@ -214,50 +214,50 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		//so we don't use the converted type/expr directly
 		switch(templTy->getArg(argId).getKind()){
 			case clang::TemplateArgument::Expression: {
-				VLOG(2) << "arg: expression"; 
+				VLOG(2) << "arg: expression";
 				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType().getTypePtr());
 				break;
 			}
 			case clang::TemplateArgument::Type: {
-				VLOG(2) << "arg: TYPE"; 
+				VLOG(2) << "arg: TYPE";
 				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
 				break;
 			}
 												// NON IMPLEMENTED ONES
 			case clang::TemplateArgument::Null: {
-				VLOG(2) << "arg: NULL"; 
+				VLOG(2) << "arg: NULL";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
-				VLOG(2) << "arg: DECL"; 
+				VLOG(2) << "arg: DECL";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
-				 VLOG(2) << "arg: nullptr"; 
+				 VLOG(2) << "arg: nullptr";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Integral:  {
-				VLOG(2) << "arg: integral"; 
+				VLOG(2) << "arg: integral";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Template: {
-				VLOG(2) << "arg: template"; 
+				VLOG(2) << "arg: template";
 				// no need to do anything
 				//templTy->getArg(argId).getAsTemplate().dump();
 
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
-				VLOG(2) << "arg: template expansion"; 
+				VLOG(2) << "arg: template expansion";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
-				VLOG(2) << "arg: pack"; 
+				VLOG(2) << "arg: pack";
 				assert(false);
 				break;
 			}
@@ -269,7 +269,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DEPENDENT TEMPLATE SPECIALIZATION TYPE 
+//					DEPENDENT TEMPLATE SPECIALIZATION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
@@ -486,6 +486,13 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 }
 
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
+    //iterate clang handler list and check if a handler wants to convert the type
+	for(auto plugin : convFact.getClangHandlers()) {
+		core::TypePtr retIr = plugin->Visit(type, convFact);
+		if(retIr)
+			return retIr;
+	}
+
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }

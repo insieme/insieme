@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,7 +60,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include <algorithm> 
+#include <algorithm>
 
 using namespace clang;
 
@@ -272,7 +272,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 				});
 
 		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
-		
+
 		core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
 		assert(forIr && "Created for statement is not valid");
 
@@ -609,7 +609,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
 	std::map <core::LiteralPtr, std::vector<core::StatementPtr> > caseMap;
-	std::vector <core::LiteralPtr> openCases;  
+	std::vector <core::LiteralPtr> openCases;
 	auto defLit = builder.literal("__insieme_default_case", gen.getUnit());
 
 	auto addStmtToOpenCases = [&caseMap, &openCases] (const core::StatementPtr& stmt){
@@ -630,16 +630,16 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			}
 		}
 	};
-	
-	
-	// converts to literal the cases, 
+
+
+	// converts to literal the cases,
 	auto convertCase = [this, defLit] (const clang::SwitchCase* switchCase) -> core::LiteralPtr{
 
 		assert(switchCase);
 		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
 			return defLit;
 		}
-		
+
 		core::LiteralPtr caseLiteral;
 		const clang::Expr* caseExpr = llvm::cast<clang::CaseStmt>(switchCase)->getLHS();
 
@@ -657,7 +657,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 				if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
 					core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
 					caseExprIr = builder.literal(cast->getType(), literal->getValue());
-				} 
+				}
 			}
 
 			if (!caseExprIr.isa<core::LiteralPtr>()){
@@ -673,7 +673,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	};
 
 	// looks for inner cases inside of cases stmt, and returns the compound attached
-	// 			case A 
+	// 			case A
 	// 				case B
 	// 					stmt1
 	// 					stmt2
@@ -686,7 +686,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			const clang::SwitchCase* inCase = llvm::cast<clang::SwitchCase>(stmt);
 			openCases.push_back(convertCase(inCase));
 			caseMap[openCases.back()] = std::vector<core::StatementPtr>();
-			
+
 			//take care of declarations in switch-body and add them to the case
 			for(auto d : decls) {
 				caseMap[openCases.back()].push_back(d);
@@ -715,12 +715,12 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			//collect all declarations which are in de switch body and add them (without init) to
 			//the cases
 			core::DeclarationStmtPtr decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
-			//remove the init, use undefinedvar 
+			//remove the init, use undefinedvar
 			decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
 			decls.push_back(decl);
 			continue;
 		}
-		
+
 		// if is whatever other kind of stmt append it to each of the open cases list
 		addStmtToOpenCases(convFact.convertStmt(currStmt));
 	}
@@ -877,7 +877,15 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "C";
 
-	stmtutils::StmtWrapper retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+    //iterate clang handler list and check if a handler wants to convert the stmt
+    stmtutils::StmtWrapper retStmt;
+	for(auto plugin : convFact.getClangHandlers()) {
+        retStmt = plugin->Visit(stmt, convFact);
+		if(retStmt.size())
+			break;
+	}
+    if(retStmt.size()==0)
+        retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());

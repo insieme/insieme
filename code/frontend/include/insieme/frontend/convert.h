@@ -50,6 +50,8 @@
 
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/frontend/extensions/clang_stage_plugin.h"
+
 // FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
 namespace clang {
@@ -67,6 +69,10 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 namespace insieme {
 namespace frontend {
 
+namespace extensions {
+class ClangStagePlugin;
+}
+
 /**
  * This function converts a clang translation unit into an IR translation unit.
  *
@@ -76,7 +82,6 @@ namespace frontend {
  * @return the resulting translation unit
  */
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
-
 
 namespace conversion {
 
@@ -193,6 +198,12 @@ class Converter :  boost::noncopyable {
 	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
+	/**
+	 *  A map that contains all user provided visitors
+	 */
+	 typedef std::shared_ptr<insieme::frontend::extensions::ClangStagePlugin> clangStagePluginPtr;
+	 std::list<clangStagePluginPtr> userProvidedConv;
+
 	const Program& program;
 
 	/**
@@ -215,6 +226,15 @@ class Converter :  boost::noncopyable {
 public:
 
 	Converter(core::NodeManager& mgr, const Program& program);
+
+	// we can add user provided visitors
+	template <class T, class ... Args>
+	void registerClangHandler(const Args& ... args) {
+        userProvidedConv.push_back(std::make_shared<T>(args ...));
+	};
+
+	// get the list of user provided visitors
+	const std::list<clangStagePluginPtr> getClangHandlers() const;
 
 	// should only be run once
 	tu::IRTranslationUnit convert();
@@ -249,6 +269,18 @@ public:
 	const tu::IRTranslationUnit& getIRTranslationUnit() const {
 		return irTranslationUnit;
 	}
+
+    std::shared_ptr<ExprConverter> getExprConverter() const {
+        return exprConvPtr;
+    }
+
+    std::shared_ptr<StmtConverter> getStmtConverter() const {
+        return stmtConvPtr;
+    }
+
+    std::shared_ptr<TypeConverter> getTypeConverter() const {
+        return typeConvPtr;
+    }
 
 	/**
 	 * Determines the definition of the given generic type pointer within the

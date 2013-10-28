@@ -300,7 +300,16 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
-	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+
+    //iterate clang handler list and check if a handler wants to convert the stmt
+    stmtutils::StmtWrapper retStmt;
+	for(auto plugin : convFact.getClangHandlers()) {
+        retStmt = plugin->Visit(stmt, convFact);
+		if(retStmt.size())
+			break;
+	}
+    if(retStmt.size()==0)
+        retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());

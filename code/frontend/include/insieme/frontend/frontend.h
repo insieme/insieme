@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -116,7 +116,7 @@ namespace frontend {
 
 		/**
 		 * A list of string representing the regular expression to be intercepted
-		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted 
+		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted
 		 */
 		set<string> interceptions;
 
@@ -224,7 +224,7 @@ namespace frontend {
 		}
 
 		/**
-		 * Adds an additional user defined header serach path 
+		 * Adds an additional user defined header serach path
 		 */
 		void addSystemHeadersDirectory(const path& directory) {
 			this->systemHeaderSearchPath.push_back(directory);
@@ -242,7 +242,7 @@ namespace frontend {
 		 */
 		void setInterception(const string& toIntercept) {
 			this->interceptions.insert(toIntercept);
-		}	
+		}
 
 		/**
 		 * Obtains a reference to the currently defined interceptions.

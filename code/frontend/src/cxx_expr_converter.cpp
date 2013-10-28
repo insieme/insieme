@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -884,7 +884,15 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) {
 
-	core::ExpressionPtr&& retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
+	//iterate clang handler list and check if a handler wants to convert the expr
+	core::ExpressionPtr retIr;
+	for(auto plugin : convFact.getClangHandlers()) {
+		retIr = plugin->Visit(expr, convFact);
+		if(retIr)
+			break;
+    }
+    if(!retIr)
+        retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
