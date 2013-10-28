@@ -69,6 +69,8 @@ namespace extensions {
      */
 	class ClangStagePlugin {
 	public:
+		virtual ~ClangStagePlugin(){}
+
 		virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact);
         virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact);
 		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact);
