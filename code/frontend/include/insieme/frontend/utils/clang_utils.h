@@ -78,7 +78,7 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
  * the record provides que qualified name, the type the spetialization for the type
  * we merge both strings in a safe string for the output
  */
-std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type);
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type);
 
 /**
  * build a string to identify a function

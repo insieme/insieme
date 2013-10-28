@@ -9,6 +9,7 @@ int main()
 
 	switch(a) {
 		int x = 1;
+		int z = 500;
 		x++;
 		y++;
 		y=x;
@@ -43,6 +44,7 @@ int main()
 			xy++;
 			y=x+xy+yx;
 			result = -2;
+			printf("%d\n", z);
 	}
 
 	switch(a) {

@@ -113,10 +113,10 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 			classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
 		}
 
-		//update name of class type
-		classType = core::transform::replaceNode(mgr,
-												 core::StructTypeAddress(classType)->getName(),
-												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+//		//update name of class type
+//		classType = core::transform::replaceNode(mgr,
+//												 core::StructTypeAddress(classType)->getName(),
+//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
 		if( !classDecl->getNameAsString().empty() ) {
@@ -139,17 +139,6 @@ vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRec
 		bases.insert(bases.end(), subBases.begin(), subBases.end());
 	}
 	return bases;
-}
-
-
-core::TypePtr Converter::CXXTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		return convFact.builder.structType( structElements );
-	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-		return convFact.builder.unionType( structElements );
-	}
-	assert(false && "TagType not supported");
-	return core::TypePtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -211,7 +200,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-			
+		//we trigger the conversion of the inner type,
+		//so we don't use the converted type/expr directly
 		switch(templTy->getArg(argId).getKind()){
 			case clang::TemplateArgument::Expression: {
 				VLOG(2) << "arg: expression"; 

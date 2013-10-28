@@ -349,6 +349,11 @@ public:
     //                  StmtExpr EXPRESSION
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     core::ExpressionPtr VisitStmtExpr(const clang::StmtExpr* stmtExpr);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                  ImplicitValueInit EXPRESSION
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    core::ExpressionPtr VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr);
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -392,6 +397,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr);
 };
@@ -427,6 +433,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++

@@ -255,6 +255,16 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
  */
 StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& call);
 
+
+/**
+ * Tests whether the given statement contains a free node of type controlStmt.
+ * A node is free if it is not enclosed by any node of the types listed in pruneStmts.
+ *
+ * @param stmt the statement to be tested
+ * @return true it has free control stmts, false otherwise
+ */
+bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts);
+
 /**
  * Tests whether the given statement can be outlined. Statements can only be outlined if they
  * do not contain any 'free' return, break or continue statements. Hence, every return, break

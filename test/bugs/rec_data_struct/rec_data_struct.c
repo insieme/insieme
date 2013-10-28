@@ -3,7 +3,10 @@
 struct rec_data_struct_1_s;
 
 typedef struct rec_data_struct_2_s {
-        void (*destroy)(struct rec_data_struct_1_s *pxform);
+	//BUGGY:
+	struct rec_data_struct_1_s * (*destroy)(struct rec_data_struct_1_s *pxform);
+	//WORKAROUND:
+	//void (*destroy)(void *pxform);
 } rec_data_struct_2_t;
 
 typedef struct rec_data_struct_3_s {
@@ -23,7 +26,8 @@ typedef struct rec_data_struct_1_s {
 
 int main()
 {
-	rec_data_struct_2_t test;
+	rec_data_struct_1_t t1;
+	rec_data_struct_2_t test = {0};
 
 	return 0;
 }

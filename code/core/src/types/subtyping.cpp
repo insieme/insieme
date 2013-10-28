@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
 namespace insieme {
@@ -228,7 +229,8 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		auto trgElement = superType.as<RefTypePtr>()->getElementType();
 
 		// if element types are identical => it is fine
-		if (srcElement == trgElement) return true;
+		//if (srcElement == trgElement) return true;
+		if(core::analysis::compareTypes(srcElement, trgElement)) return true;
 
 		// if sub-type is ref<any> it is ok
 		if (basic.isAny(trgElement)) {

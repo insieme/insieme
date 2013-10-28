@@ -127,6 +127,11 @@ namespace core {
 		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
 		assert(checkObjectType(function.getImplementation()));
 
+		// check that there are not duplicates
+		assert(!hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst()) &&
+				"Member functions may not exhibit the same name, type and const-flag state.");
+
+		// add new member function
 		this->memberFunctions.push_back(function);
 
 		// invalidate child list

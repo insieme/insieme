@@ -56,6 +56,7 @@ namespace utils {
 //
 //	TEST(Tasks, SimpleTest) {
 //
+
 //		// test the function type wrapper handling
 //		auto l = []() { std::cout << "Hello"; };
 //		EXPECT_EQ(typeid(std::function<void()>), typeid(fun_type<decltype(l)>::type));
@@ -177,12 +178,15 @@ namespace utils {
 //		int v = 0;
 //		{
 //			auto tn = task([&](int x) { v=x; }, 3);
+//			tn();
 //		}
 //		EXPECT_EQ(v,3);
 //
 //		{
 //			auto t1 = task([&]() { v++; });
 //			auto t2 = task(t1);
+//			t1();
+//			t2();
 //		}
 //		EXPECT_EQ(v,4);
 //

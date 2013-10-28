@@ -326,6 +326,10 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 			}
 		}
 
+		if (!core::analysis::isCallOf(originalInductionExpr, convFact.getNodeManager().getLangBasic().getRefDeref())){
+			throw LoopNormalizationError("could not determine number of iterations, please simply the for loop condition to see it as a for loop");
+		}
+
 		inductionVar =  convFact.getIRBuilder().variable(originalInductionExpr->getType());
 	}
 	else throw LoopNormalizationError("Not supported condition");
@@ -439,7 +443,6 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 		auto cond = convFact.convertExpr(binOp);
 		visitDepthFirst(cond, [this, &vars] (const core::VariablePtr& var){ vars.push_back(var);});
 		conditionVars = vars;
-	
 		return;
 	}
 	throw LoopNormalizationError("unable to identify the upper bonduary for this loop");

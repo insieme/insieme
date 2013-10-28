@@ -289,20 +289,6 @@ namespace core {
 		}
 
 		/**
-		 * Obtains a list of member functions which are called as the given name
-		 *  @param name: the name of the overload function 
-		 *  @return a new vector of memberFunction wich are called as the given name, may be empty
-		 */
-		vector<MemberFunctionPtr> getMemberFunctionOverloads(const std::string& name) const{
-			vector<MemberFunctionPtr> res;
-			for (const auto& cur : memberFunctions){
-				if (cur.getName() == name)
-					res.push_back(&cur);
-			}
-			return res;
-		}
-
-		/**
 		 * Exchanges the list of member functions maintained by this meta-info object.
 		 *
 		 * @param functions the new list of functions
@@ -339,12 +325,7 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool hasMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
-
-			for ( const auto& cur : memberFunctions){
-				if ((cur.getName() == name) &&  (cur.getType() == type) && (cur.isConst() == _const))
-					return true;
-			}
-			return false;
+			return getMemberFunction(name, type, _const);
 		}
 
 		/**
@@ -361,7 +342,6 @@ namespace core {
 					return true;
 			}
 			return false;
-			//return hasMemberFunction(name, type, true) || hasMemberFunction(name, type, false);
 		}
 
 		/**
@@ -395,8 +375,21 @@ namespace core {
 					return &cur;
 			}
 			return nullptr;
-//			auto res = getMemberFunction(name, type, true);
-//			return (res)?res:getMemberFunction(name, type, false);
+		}
+
+		/** 
+		 * Obtains all functions with same name, the possible overloads
+		 *
+		 * @param name the name of the function
+		 * @return a vector with all matches
+		 */
+		vector<MemberFunctionPtr> getMemberFunctionOverloads(const string& name) const {
+			vector<MemberFunctionPtr> res;
+			for (auto& cur : memberFunctions){
+				if (cur.getName() == name) 
+					res.push_back(&cur);
+			}
+			return res;
 		}
 
 		// ----- derived operations ------

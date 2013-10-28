@@ -457,6 +457,16 @@ namespace backend {
 		});
 
 		res[basic.getRefAssign()] = OP_CONVERTER({
+				
+			// extract type
+			core::ExpressionPtr initValue = call->getArgument(0);
+			core::TypePtr type = initValue->getType();
+			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
+
+			// fix dependency
+			context.getDependencies().insert(valueTypeInfo.definition);
+
+
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		});
 

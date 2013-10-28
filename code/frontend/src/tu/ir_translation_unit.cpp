@@ -63,10 +63,6 @@ namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
 		assert(newGlobal.first && newGlobal.first->getType().isa<core::RefTypePtr>());
-	//	std::cout << "new Global : " << newGlobal.first << " : " << newGlobal.first->getType() << std::endl;
-	//	if (newGlobal.second)
-	//	std::cout << "   init: " << newGlobal.second << " : " << newGlobal.second->getType() << std::endl;
-		//assert(!newGlobal.second || core::types::isSubTypeOf(newGlobal.second->getType(), newGlobal.first->getType().as<core::RefTypePtr>()->getElementType()));
 
 		auto git = std::find_if(globals.begin(), globals.end(), [&](const Global& cur)->bool { return *newGlobal.first == *cur.first; });
 		if( git == globals.end() ) {
@@ -226,9 +222,6 @@ namespace tu {
 				auto pos = symbolMap.find(ptr);
 				if (pos != symbolMap.end()) {
 
-					// result will be the substitution
-					res = pos->second;
-
 					// enter a recursive substitute into the cache
 					recVar = recVarMap[ptr];
 					if (recVar) {
@@ -256,7 +249,11 @@ namespace tu {
 
 					// update cache for current element
 					cache[ptr] = recVar;
+
+					// result will be the substitution
+					res = map(pos->second);
 				}
+
 
 				// resolve result recursively
 				res = res->substitute(mgr, *this);
@@ -320,7 +317,6 @@ namespace tu {
 						}
 
 					} else {
-						std::cout << res->getNodeType();
 						assert(false && "Unsupported recursive structure encountered!");
 					}
 				}
@@ -404,7 +400,7 @@ namespace tu {
 				IRBuilder builder(mgr);
 
 				// make sure it is handling a struct or union type
-				assert(type.isa<StructTypePtr>() || type.isa<UnionTypePtr>());
+				if(!type.isa<StructTypePtr>() && !type.isa<UnionTypePtr>())return type;
 
 				// see whether there is any free type variable
 				if (!hasFreeTypeVariables(type)) return type;
@@ -444,7 +440,8 @@ namespace tu {
 				// create de-normalized recursive bindings
 				vector<RecTypeBindingPtr> bindings;
 				for(auto cur : structs) {
-					bindings.push_back(builder.recTypeBinding(builder.typeVariable(insieme::core::annotations::getAttachedName(cur)), cur));
+					bindings.push_back(builder.recTypeBinding(builder.typeVariable(cur.as<core::StructTypePtr>()->getName()), cur));
+								//builder.typeVariable(insieme::core::annotations::getAttachedName(cur)), cur));
 				}
 
 				// sort according to variable names
@@ -636,7 +633,7 @@ namespace tu {
 				auto type = cur.as<LiteralPtr>()->getType();
 				insieme::annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
-						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
+						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&  // not an string literal -> "hello world\n"
 						!insieme::annotations::c::hasIncludeAttached(cur) &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })

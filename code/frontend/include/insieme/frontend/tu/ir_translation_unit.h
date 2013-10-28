@@ -114,9 +114,9 @@ namespace tu {
 
 		// mutable getter:
 
-		TypeMap& getTypes() {
-			return types;
-		}
+	//	TypeMap& getTypes() {
+	//		return types;
+	//	}
 
 		FunctionMap& getFunctions() {
 			return functions;
@@ -137,8 +137,16 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-		//	assert(types.find(symbol) == types.end());
+			assert(symbol );
+			assert(definition);
 			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
+		}
+
+		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
+			assert(symbol );
+			assert(definition);
+			assert(types.find(symbol) != types.end());
+			types[symbol] = definition;
 		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
@@ -152,13 +160,14 @@ namespace tu {
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
-		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
-			assert(symbol);
-			assert(definition);
-
+		/**
+		 * replaces a previous definition by a new one
+		 */
+		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition){
+			assert_eq(*symbol->getType(), *definition->getType());
+			assert(functions.find(symbol) != functions.end());
 			functions[symbol] = definition;
 		}
-
 
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
 			addGlobal(Global(symbol, definition));
