@@ -838,7 +838,7 @@ namespace {
 		}
 
 		// check for correct member type
-		if (elementType != resultType) {
+		if (!core::analysis::compareTypes(elementType, resultType)) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_MEMBER,
 					format("Invalid type of extracted member '%s' - expected '%s'",

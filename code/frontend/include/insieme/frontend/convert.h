@@ -44,13 +44,12 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/utils/interceptor.h"
 #include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/extensions/clang_stage_plugin.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
-
-#include "insieme/frontend/extensions/clang_stage_plugin.h"
 
 // FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
@@ -68,10 +67,6 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
-
-namespace extensions {
-class ClangStagePlugin;
-}
 
 /**
  * This function converts a clang translation unit into an IR translation unit.
@@ -106,6 +101,12 @@ class Converter :  boost::noncopyable {
 	 */
 	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
+
+	/**
+	 * stores converted types
+	 */
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	TypeCache typeCache;
 
     /**
      * Stores static variable names
@@ -201,7 +202,7 @@ class Converter :  boost::noncopyable {
 	/**
 	 *  A map that contains all user provided visitors
 	 */
-	 typedef std::shared_ptr<insieme::frontend::extensions::ClangStagePlugin> clangStagePluginPtr;
+	 typedef std::shared_ptr<extensions::ClangStagePlugin> clangStagePluginPtr;
 	 std::list<clangStagePluginPtr> userProvidedConv;
 
 	const Program& program;
@@ -222,6 +223,7 @@ class Converter :  boost::noncopyable {
 	 */
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
+
 
 public:
 
@@ -289,7 +291,11 @@ public:
 	 */
 	const core::TypePtr lookupTypeDetails(const core::GenericTypePtr& type) const {
 		core::TypePtr res = getIRTranslationUnit()[type];
-		return (res)?res:type;
+		if (!res) return type;
+		if (res.isa<core::GenericTypePtr>() && type != res){
+			return lookupTypeDetails(res);
+		}
+		return res;
 	}
 
 	/**
@@ -334,12 +340,6 @@ public:
 		return pragmaMap;
 	}
 
-	/**
-	 * Entry point for converting function to the right type
-	 * @param dcl declaration of the function
-	 * @return the corresponding IR type
-	 */
-	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -377,6 +377,13 @@ public:
 	 * @return Converted lambda
 	 */
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+
+	/**
+	 * Entry point for converting function to the right type
+	 * @param dcl declaration of the function
+	 * @return the corresponding IR type
+	 */
+	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl);
 
 	/**
 	 * this function takes care of the initialization expression of variables.

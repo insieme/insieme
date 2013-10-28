@@ -56,8 +56,6 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Converter::TypeConverter {
 
-	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
-	TypeCache typeCache;
 
 protected:
 	Converter& 							convFact;
@@ -96,8 +94,7 @@ protected:
 
 	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
-	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl,
-			const core::NamedCompositeType::Entries& structElements);
+	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 };
 
 
@@ -138,9 +135,6 @@ protected:
 
 	// main entry point
 	virtual core::TypePtr convertInternal(const clang::Type* type);
-
-	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
-
 };
 
 
@@ -152,9 +146,6 @@ protected:
 class Converter::CXXTypeConverter :
 	public Converter::TypeConverter,
 	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr>{
-
-protected:
-	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
 	CXXTypeConverter(Converter& fact)

@@ -453,11 +453,11 @@ namespace c_ast {
 				string op = "";
 				switch (node->operation) {
 					case BinaryOperation::Assignment: 				op = " = "; break;
-					case BinaryOperation::Additon: 					op = "+"; break;
-					case BinaryOperation::Subtraction: 				op = "-"; break;
-					case BinaryOperation::Multiplication: 			op = "*"; break;
-					case BinaryOperation::Division: 				op = "/"; break;
-					case BinaryOperation::Modulo: 					op = "%"; break;
+					case BinaryOperation::Additon: 					op = " + "; break;
+					case BinaryOperation::Subtraction: 				op = " - "; break;
+					case BinaryOperation::Multiplication: 			op = " * "; break;
+					case BinaryOperation::Division: 				op = " / "; break;
+					case BinaryOperation::Modulo: 					op = " % "; break;
 					case BinaryOperation::Equal: 					op = " == "; break;
 					case BinaryOperation::NotEqual: 				op = " != "; break;
 					case BinaryOperation::GreaterThan: 				op = " > "; break;
@@ -611,7 +611,7 @@ namespace c_ast {
 			}
 
 			PRINT(GlobalVarDecl) {
-				return out << (node->external?"extern ":"") << print(node->type) << " " << node->name << ";\n";
+				return out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name)) << ";\n";
 			}
 
 			PRINT(Parent) {

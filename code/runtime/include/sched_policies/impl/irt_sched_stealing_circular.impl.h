@@ -62,8 +62,13 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	irt_cwb_push_front(&target->sched_data.pool, wi);
-	irt_signal_worker(target);
+	if(irt_cwb_size(&target->sched_data.pool) >= IRT_CWBUFFER_LENGTH-2) {
+		irt_cwb_push_front(&irt_worker_get_current()->sched_data.pool, wi);
+		// TODO run immediate if self also full
+	} else {
+		irt_cwb_push_front(&target->sched_data.pool, wi);
+		irt_signal_worker(target);
+	}
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
@@ -167,7 +172,11 @@ int irt_scheduling_iteration(irt_worker* self) {
 #if 1
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
+#ifdef IRT_STEAL_SELF_PUSH_FRONT
 	irt_cwb_push_front(&target->sched_data.queue, wi);
+#else
+	irt_cwb_push_back(&target->sched_data.queue, wi);
+#endif
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
@@ -182,8 +191,11 @@ int irt_scheduling_iteration(irt_worker* self) {
 	}
 	
 	// if that failed, try to take a work item from the queue
-	//if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
+#ifdef IRT_STEAL_SELF_POP_FRONT
+	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
+#else
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
+#endif
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
@@ -192,7 +204,11 @@ int irt_scheduling_iteration(irt_worker* self) {
 	// try to steal a work item from random
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
 	irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
+#ifdef IRT_STEAL_OTHER_POP_FRONT
+	if((wi = irt_cwb_pop_front(&wo->sched_data.queue))) {
+#else
 	if((wi = irt_cwb_pop_back(&wo->sched_data.queue))) {
+#endif
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
@@ -204,7 +220,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 	}
 
 	// if that failed as well, look in the IPC message queue
-	//if(_irt_sched_check_ipc_queue(self)) return 1;
+#ifndef IRT_MIN_MODE
+	if(_irt_sched_check_ipc_queue(self)) return 1;
+#endif
 
 	// didn't find any work
 	return 0;

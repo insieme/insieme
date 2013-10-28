@@ -168,6 +168,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	}
 
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
+
+	// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
+	if (retIr->getType().isa<core::RefTypePtr>() && IS_CPP_REF(retIr->getType().as<core::RefTypePtr>()->getElementType()))
+		retIr = builder.deref(retIr);
+
 	return retIr;
 }
 

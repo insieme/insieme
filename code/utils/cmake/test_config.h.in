@@ -36,4 +36,4 @@
 
 #pragma once
 #define SRC_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../"
-#define TEST_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../test"
+#define TEST_ROOT_DIR "${insieme_code_dir}/../test"

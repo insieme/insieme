@@ -333,6 +333,15 @@ namespace frontend {
 		}
 
 		/**
+		 * Determines whether this conversion job is processing a C++ file or not.
+		 */
+		bool isCxx() const {
+			return any(files, [&](const path& cur) {
+				return static_cast<const ConversionSetup&>(*this).isCxx(cur);
+			});
+		}
+
+		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
 		 *
 		 * @param manager the node manager to be used for building the IR

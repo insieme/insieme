@@ -126,10 +126,6 @@ class PrunableDeclVisitor{
 	 */
 	void dispatchDecl(const clang::Decl* decl){
 		static_cast<BASE*>(this)->echocallback(decl);
-		//check here for user provided decl visitor plugins
-	    for( auto visitor : static_cast<BASE*>(this)->getConverter().getClangHandlers() ) {
-            visitor->Visit(decl, static_cast<BASE*>(this)->getConverter());
-	    }
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{

@@ -39,9 +39,14 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/convert.h"
-
 using namespace insieme;
+
+namespace clang {
+    class Expr;
+    class Stmt;
+    class Decl;
+    class Type;
+}
 
 namespace stmtutils {
     class StmtWrapper;
@@ -49,6 +54,11 @@ namespace stmtutils {
 
 namespace insieme {
 namespace frontend {
+
+namespace conversion {
+    class Converter;
+}
+
 namespace extensions {
 
     /**

@@ -63,9 +63,10 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			const vector<boost::filesystem::path>& stdLibDirs,
+			const vector<boost::filesystem::path>& systemHeaderDirs,
+			const vector<boost::filesystem::path>& userIncludeDirs,
 			const std::set<std::string>& interceptSet)
-		: builder(mgr), stdLibDirs(stdLibDirs),
+		: builder(mgr), systemHeaderDirs(systemHeaderDirs), userIncludeDirs(userIncludeDirs),
 		
 		// by default intercept std:: and __gnu_cxx:: namespaces
 		// __gnu_cxx is needed for the iterator of std::vector for example
@@ -73,7 +74,10 @@ public:
 	
 		//joins all the strings in the toIntercept-set to one big regEx
 		rx("("+toString(join(")|(", toIntercept))+")")
-	{}
+	{	
+		this->includeDirs.insert(this->includeDirs.end(), userIncludeDirs.begin(), userIncludeDirs.end());
+		this->includeDirs.insert(this->includeDirs.end(), systemHeaderDirs.begin(), systemHeaderDirs.end()); 
+	}
 
 	void loadConfigSet(std::set<std::string> toIntercept);	
 	
@@ -84,14 +88,27 @@ public:
 	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
 	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
 
-	const vector<boost::filesystem::path>& getStdLibDirectories() const {
-		return stdLibDirs;
+	const vector<boost::filesystem::path>& getAllIncludeDirs() const {
+		return includeDirs;
+	}
+
+	const vector<boost::filesystem::path>& getStdLibDirs() const {
+		return systemHeaderDirs;
+	}
+
+	const vector<boost::filesystem::path>& getUserIncludeDirs() const {
+		return userIncludeDirs;
 	}
 
 private:
 	insieme::core::IRBuilder builder;
 
-	const vector<boost::filesystem::path> stdLibDirs;
+	//FIXME: needs init from stdLib and userIncludeDirs --> headerTagger needs to use "includeDirs" to
+	//look for headers 
+	vector<boost::filesystem::path> includeDirs;
+
+	const vector<boost::filesystem::path> systemHeaderDirs;
+	const vector<boost::filesystem::path> userIncludeDirs;
 
 	// set of strings representing the regEx to be intercepted
 	std::set<std::string> toIntercept;

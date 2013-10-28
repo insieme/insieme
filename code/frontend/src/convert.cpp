@@ -93,6 +93,7 @@
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/c/include.h"
 
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 
@@ -249,22 +250,21 @@ tu::IRTranslationUnit Converter::convert() {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
 			auto irTy = converter.convertType(typeDecl->getTypeForDecl());
-			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs());
+			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs(), converter.getProgram().getUserIncludeDirs());
 		}
-		void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
-			// extract new symbol name
-			auto symbol = converter.getIRBuilder().genericType(typeDecl->getQualifiedNameAsString());
-
+		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
+			if (!typedefDecl->getTypeForDecl()) return;
+			
 			// get contained type
-			auto res = converter.convertType(typeDecl->getUnderlyingType().getTypePtr());
+			auto res = converter.convertType(typedefDecl->getTypeForDecl());
 
 			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
+			auto symbol = converter.getIRBuilder().genericType(typedefDecl->getQualifiedNameAsString());
 			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
 				converter.getIRTranslationUnit().addType(symbol, res);
 			}
-
-			if (res.isa<core::StructTypePtr>())
-				utils::addHeaderForDecl(res, typeDecl, converter.getProgram().getStdLibDirs());
+		//	if (res.isa<core::StructTypePtr>())
+		//		utils::addHeaderForDecl(res, typedefDecl, converter.getProgram().getStdLibDirs(), converter.getProgram().getUserIncludeDirs());
 		}
 	} typeVisitor(*this);
 
@@ -283,10 +283,10 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitVarDecl(const clang::VarDecl* var) {
 			// variables to be skipped
-			if (!var->hasGlobalStorage()) return;
-			if (var->hasExternalStorage()) return;
-			if (var->isStaticLocal()) return;
-			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) return;
+			if (!var->hasGlobalStorage()) { return; }
+			if (var->hasExternalStorage()) { return; }
+			if (var->isStaticLocal()) { return; }
+			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) { return; }
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -352,6 +352,10 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+
+	//std::cout << " ==================================== " << std::endl;
+	//std::cout << getIRTranslationUnit() << std::endl;
+	//std::cout << " ==================================== " << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -641,15 +645,12 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
 		}
 
-		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
-			utils::addHeaderForDecl(globVar, varDecl, program.getStdLibDirs());
-		}
-
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
 			omp::addThreadPrivateAnnotation(globVar);
 		}
 
+		utils::addHeaderForDecl(globVar, valDecl, program.getStdLibDirs());
 		varDeclMap.insert( { valDecl, globVar } );
 		return globVar;
 	}
@@ -672,7 +673,10 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	if (attr) {
 		var->addAnnotation(attr);
 	}
-
+	
+	if(annotations::c::hasIncludeAttached(irType)) {
+		VLOG(2) << " header " << annotations::c::getAttachedInclude(irType);
+	}
 	return var;
 }
 
@@ -1198,10 +1202,15 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// handle external functions
 	if(!funcDecl->hasBody()) {
-		// TODO: move this to call expression handling
+		// TODO: move this to the interceptor
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
 			auto retExpr = builder.getLangBasic().getRefDelete();
+
+			// handle issue with typing of free when not including stdlib.h
+			core::FunctionTypePtr freeTy = typeCache[GET_TYPE_PTR(funcDecl)].as<core::FunctionTypePtr>();
+			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
+
 			lambdaExprCache[funcDecl] = retExpr;
 			return retExpr;
 		}
@@ -1210,7 +1219,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
+		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs(), program.getUserIncludeDirs());
 		lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}
@@ -1294,13 +1303,16 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	core::TypePtr elementType = lookupTypeDetails(type);
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
+		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+		
+		// if recursive
+		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
 
 		if ( core::lang::isSIMDVector(elementType) )  {
 			auto internalVecTy = core::lang::getSIMDVectorType(elementType);
 			auto membTy = internalVecTy.as<core::SingleElementTypePtr>()->getElementType();
 			//TODO MOVE INTO SOME BUILDER HELPER
 			auto initOp = mgr.getLangExtension<core::lang::SIMDVectorExtension>().getSIMDInitPartial();
-			vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 			ExpressionList elements;
 			// get all values of the init expression
 			for (size_t i = 0; i < inits.size(); ++i) {
@@ -1314,10 +1326,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
-
-		assert(elementType.isa<core::StructTypePtr>() || elementType.isa<core::ArrayTypePtr>()  ||
-			   elementType.isa<core::VectorTypePtr>() || elementType.isa<core::UnionTypePtr>()  );
-		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 
 		// if array or vector
 		if (  elementType.isa<core::VectorTypePtr>() || elementType.isa<core::ArrayTypePtr>()) {
@@ -1354,6 +1362,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			retIr = builder.structExpr(structTy, members);
 			return retIr;
 		}
+
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		assert(false && "fallthrow");
@@ -1424,8 +1433,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 
     //FIXME: check if this is enough
     //or if we need further checks
-    if (core::analysis::isVolatileType(elementType))
-        return init;
+	if (core::analysis::isVolatileType(elementType)) {
+		if(!core::analysis::isVolatileType(init->getType())) {
+			return builder.makeVolatile(init);
+		}
+		return init;
+	}
 /*
     //if lhs and rhs are struct type we only have
     //to check if the types are equal
@@ -1443,6 +1456,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
+
+	if (utils::isRefArray(init->getType()) && utils::isRefArray(type)){
+		return builder.refReinterpret(init, type.as<core::RefTypePtr>()->getElementType());
+	}
 
 	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
 	std::cerr << "type details: \n\t" << lookupTypeDetails(init->getType()) << std::endl;
