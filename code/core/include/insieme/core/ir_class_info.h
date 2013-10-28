@@ -113,6 +113,13 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the type of the member function
+		 */
+		TypePtr getType() const{
+			return impl->getType();
+		}
+
+		/**
 		 * Updates the implementation of this member function.
 		 */
 		void setImplementation(const ExpressionPtr& newImpl) {
@@ -165,7 +172,7 @@ namespace core {
 	/**
 	 * A type definition for pointers referencing managed member functions.
 	 */
-	typedef MemberFunction* MemberFunctionPtr;
+	typedef const MemberFunction* MemberFunctionPtr;
 
 	/**
 	 * A class aggregating meta-information regarding class types.
@@ -197,13 +204,6 @@ namespace core {
 		 * attached to the class annoated by this info-collection.
 		 */
 		vector<MemberFunction> memberFunctions;
-
-		/**
-		 * An index structure kept synchronized with the member function list to ensure
-		 * that no duplicates collisions are present. Also, this index is used for looking
-		 * up implementations.
-		 */
-		map<tuple<string, FunctionTypePtr, bool>, MemberFunctionPtr> memberFunctionIndex;
 
 		/**
 		 * A lazy-evaluated list of child nodes required to be accessible
@@ -289,6 +289,20 @@ namespace core {
 		}
 
 		/**
+		 * Obtains a list of member functions which are called as the given name
+		 *  @param name: the name of the overload function 
+		 *  @return a new vector of memberFunction wich are called as the given name, may be empty
+		 */
+		vector<MemberFunctionPtr> getMemberFunctionOverloads(const std::string& name) const{
+			vector<MemberFunctionPtr> res;
+			for (const auto& cur : memberFunctions){
+				if (cur.getName() == name)
+					res.push_back(&cur);
+			}
+			return res;
+		}
+
+		/**
 		 * Exchanges the list of member functions maintained by this meta-info object.
 		 *
 		 * @param functions the new list of functions
@@ -325,7 +339,12 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool hasMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
-			return memberFunctionIndex.find(std::make_tuple(name, type, _const)) != memberFunctionIndex.end();
+
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type) && (cur.isConst() == _const))
+					return true;
+			}
+			return false;
 		}
 
 		/**
@@ -337,7 +356,12 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool hasMemberFunction(const string& name, const FunctionTypePtr& type) const {
-			return hasMemberFunction(name, type, true) || hasMemberFunction(name, type, false);
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type ))
+					return true;
+			}
+			return false;
+			//return hasMemberFunction(name, type, true) || hasMemberFunction(name, type, false);
 		}
 
 		/**
@@ -349,9 +373,12 @@ namespace core {
 		 * @param _const the const-state of the function to be looking for
 		 * @return a pointer to the requested function or null if there is no such function
 		 */
-		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
-			auto res = memberFunctionIndex.find(std::make_tuple(name, type, _const));
-			return (res == memberFunctionIndex.end())?NULL:res->second;
+		MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type) && (cur.isConst() == _const))
+					return &cur;
+			}
+			return nullptr;
 		}
 
 		/**
@@ -362,9 +389,14 @@ namespace core {
 		 * @param type the type of the function to be looking for
 		 * @return a pointer to the requested function or null if there is no such function
 		 */
-		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type) const {
-			auto res = getMemberFunction(name, type, true);
-			return (res)?res:getMemberFunction(name, type, false);
+		MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type) const {
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type))
+					return &cur;
+			}
+			return nullptr;
+//			auto res = getMemberFunction(name, type, true);
+//			return (res)?res:getMemberFunction(name, type, false);
 		}
 
 		// ----- derived operations ------
