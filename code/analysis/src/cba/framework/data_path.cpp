@@ -42,82 +42,82 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
-
-	// --------------------------------------------------------------------------------
-	// 									Data Path Elements
-	// --------------------------------------------------------------------------------
-
-
-	enum DataPathElementKind {
-		DPEK_MemberAccess,
-		DPEK_ElementAccess,
-		DPEK_ParentAccess
-	};
-
-
-	class DataPathElement {
-
-		friend class DataPath;
-
-		const DataPathElement* next;
-
-		DataPathElementKind kind;
-
-		mutable std::size_t refCount;
-
-	public:
-
-		DataPathElement(const DataPathElement* next) : next(next), refCount(0) {
-			if (next) next->incRefCount();
-		}
-
-		~DataPathElement() {
-			if (next) next->decRefCount();
-		}
-
-	private:
-
-		void incRefCount() const {
-			++refCount;
-		}
-
-		void decRefCount() const {
-			assert_gt(refCount, 0);
-			--refCount;
-			if (refCount == 0) {
-				delete this;
-			}
-		}
-	};
-
-
-	std::ostream& operator<<(std::ostream& out, const DataPathElement* element) {
-		if (!element) {
-			return out << "#";
-		}
-		assert_fail() << "Not implemented";
-		return out << " - not implemented - ";
-		// print recursively
-//		return out << element->next << *element;
-	}
-
-
-	// --------------------------------------------------------------------------------
-	// 										Data Path
-	// --------------------------------------------------------------------------------
-
-	DataPath::DataPath(DataPathElement* path) : path(path) {
-		if (path) path->incRefCount();
-	}
-
-	DataPath::~DataPath() {
-		if (path) path->decRefCount();
-	}
-
-
-	std::ostream& DataPath::printTo(std::ostream& out) const {
-		return out << path;
-	}
+//
+//	// --------------------------------------------------------------------------------
+//	// 									Data Path Elements
+//	// --------------------------------------------------------------------------------
+//
+//
+//	enum DataPathElementKind {
+//		DPEK_MemberAccess,
+//		DPEK_ElementAccess,
+//		DPEK_ParentAccess
+//	};
+//
+//
+//	class DataPathElement {
+//
+//		friend class DataPath;
+//
+//		const DataPathElement* next;
+//
+//		DataPathElementKind kind;
+//
+//		mutable std::size_t refCount;
+//
+//	public:
+//
+//		DataPathElement(const DataPathElement* next) : next(next), refCount(0) {
+//			if (next) next->incRefCount();
+//		}
+//
+//		~DataPathElement() {
+//			if (next) next->decRefCount();
+//		}
+//
+//	private:
+//
+//		void incRefCount() const {
+//			++refCount;
+//		}
+//
+//		void decRefCount() const {
+//			assert_gt(refCount, 0);
+//			--refCount;
+//			if (refCount == 0) {
+//				delete this;
+//			}
+//		}
+//	};
+//
+//
+//	std::ostream& operator<<(std::ostream& out, const DataPathElement* element) {
+//		if (!element) {
+//			return out << "#";
+//		}
+//		assert_fail() << "Not implemented";
+//		return out << " - not implemented - ";
+//		// print recursively
+////		return out << element->next << *element;
+//	}
+//
+//
+//	// --------------------------------------------------------------------------------
+//	// 										Data Path
+//	// --------------------------------------------------------------------------------
+//
+//	DataPath::DataPath(DataPathElement* path) : path(path) {
+//		if (path) path->incRefCount();
+//	}
+//
+//	DataPath::~DataPath() {
+//		if (path) path->decRefCount();
+//	}
+//
+//
+//	std::ostream& DataPath::printTo(std::ostream& out) const {
+//		return out << path;
+//	}
 
 
 } // end namespace cba

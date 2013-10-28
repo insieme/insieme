@@ -45,8 +45,35 @@ namespace cba {
 
 	TEST(CBA, DataPath) {
 
+		typedef NominalIndex<string> NominalIndex;
+
 		// just some simple data path handling
 		DataPath dp;
+		EXPECT_EQ("#", toString(dp));
+
+		dp <<= NominalIndex("a");
+		EXPECT_EQ("#.a", toString(dp));
+
+		dp <<= SingleIndex(4);
+		EXPECT_EQ("#.a.4", toString(dp));
+
+		// check pop function
+		EXPECT_EQ("#.a", toString(dp.pop()));
+		EXPECT_EQ("#", toString(dp.pop(2)));
+
+
+		// check equals and hash functions
+		DataPath root;
+		DataPath a = root << NominalIndex("T");
+		DataPath b = root << NominalIndex("T");
+		DataPath c = root << NominalIndex("S");
+
+		EXPECT_NE(&a,&b);
+		EXPECT_EQ(a,b);
+		EXPECT_EQ(a.hash(), b.hash());
+
+		EXPECT_NE(a,c);
+		EXPECT_NE(a.hash(), c.hash());
 
 
 	}

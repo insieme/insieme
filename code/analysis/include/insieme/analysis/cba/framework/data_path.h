@@ -36,39 +36,193 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/data_index.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
+
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-
+	// forward declarations
+	class DataPath;
 	class DataPathElement;
 
+	typedef const DataPathElement* DataPathElementPtr;
 
-	class DataPath : public utils::Printable {
+	// -------------------------------------------------------------------------------------------------
 
-		DataPathElement* path;
 
-	public:
-
-		DataPath() : path(nullptr) {}
-
-		~DataPath();
+	class DataPathElement :
+			public utils::VirtualPrintable,
+			public utils::HashableImmutableData<DataPathElement>,
+			public boost::equality_comparable<DataPathElement> {
 
 	private:
 
-		DataPath(DataPathElement* path);
-
-	public:
-
-		bool operator==(const DataPath& other) const;
+		mutable std::size_t refCount;
 
 	protected:
 
-		virtual std::ostream& printTo(std::ostream& out) const;
+		typedef DataPathElementPtr ptr_type;
+		const ptr_type head;
+
+	public:
+
+		DataPathElement(ptr_type head, std::size_t hash)
+			: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {}
+
+		~DataPathElement() {
+			assert_eq(refCount, 0) << "Destroyed with invalid ref counter!";
+			if (head) head->decRefCount();
+		}
+
+		void incRefCount() const {
+			refCount++;
+		}
+
+		void decRefCount() const {
+			--refCount;
+			if (refCount == 0) delete this;
+		}
+
+		DataPathElementPtr getParent(unsigned levels = 1) const {
+			if (levels == 0) return this;
+			if (levels == 1) return head;
+			assert_true(head) << "No parent level " << levels << " present!";
+			return head->getParent(levels-1);
+		}
+
+		bool operator==(const DataPathElement& other) const {
+
+			// check identity
+			if (this == &other) return true;
+
+			// check hashes
+			if (this->hash() != other.hash()) return false;
+
+			// check index part
+			if (!equalIndex(other)) return false;
+
+			// check head part
+			return equalTarget(head, other.head);
+		}
+
+		virtual bool equalIndex(const DataPathElement& other) const =0;
+	};
+
+
+	template<typename Index>
+	class ConcreteDataPathElement : public DataPathElement {
+
+		Index index;
+
+	public:
+
+		ConcreteDataPathElement(DataPathElementPtr head, const Index& index)
+			: DataPathElement(head, utils::combineHashes((head)?hash_value(*head):0, hash_value(index))), index(index) {}
+
+		std::ostream& printTo(std::ostream& out) const {
+			if (head) {
+				out << *head << ".";
+			} else {
+				out << "#.";
+			}
+			return out << index;
+		}
+
+		virtual bool equalIndex(const DataPathElement& other) const {
+			// check type and identical index
+			return typeid(this) == typeid(&other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
+		}
 
 	};
+
+
+	class DataPath :
+			public utils::Printable, public utils::Hashable,
+			public boost::equality_comparable<DataPath> {
+
+		typedef const DataPathElement* ptr_type;
+		ptr_type path;
+
+	public:
+
+		DataPath(ptr_type ptr = nullptr) : path(ptr) {
+			if (path) path->incRefCount();
+		}
+
+		DataPath(DataPath&& other) : path(other.path) {
+			other.path = nullptr;
+		}
+
+		DataPath(const DataPath& other) : path(other.path) {
+			if (path) path->incRefCount();
+		}
+
+		~DataPath() {
+			if (path) path->decRefCount();
+		}
+
+		DataPath& operator=(const DataPath& other) {
+			if (path == other.path) return *this;
+			if (path) path->decRefCount();
+			path = other.path;
+			if (path) path->incRefCount();
+			return *this;
+		}
+
+		bool operator==(const DataPath& other) const {
+			// check identity
+			if (this == &other) return true;
+
+			// check for equal path element
+			if (path == other.path) return true;
+
+			// check whether one of the paths is null (both null handled above)
+			if ((!path && other.path) || (path && !other.path)) return false;
+
+			// check hash
+			if (this->hash() != other.hash()) return false;
+
+			// compare the represented paths
+			return equalTarget(path, other.path);
+		}
+
+		template<typename Index>
+		DataPath& operator<<=(const Index& index) {
+			return *this <<= static_cast<DataPathElementPtr>(new ConcreteDataPathElement<Index>(path, index));
+		}
+
+		DataPath& operator<<=(const DataPathElementPtr& element) {
+			path = element;
+			return *this;
+		}
+
+		template<typename Element>
+		DataPath operator<<(const Element& element) const {
+			return DataPath(*this) <<= element;
+		}
+
+		DataPath pop(unsigned levels = 1) const {
+			if (levels == 0) return *this;
+			assert_true(path) << "No such parent!";
+			return DataPath(path->getParent(levels));
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			if (!path) return out << "#";
+			return out << *path;
+		}
+
+		std::size_t hash() const {
+			return (path) ? path->hash() : 0;
+		}
+
+	};
+
 
 
 } // end namespace cba

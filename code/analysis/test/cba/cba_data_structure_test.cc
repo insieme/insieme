@@ -149,6 +149,139 @@ namespace cba {
 
 	}
 
+	TEST(CBA, MutableStruct) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let point = struct { int a; int b; };"
+				"	"
+				"	auto p1 = var((point){ 1, 2 });"
+				"	auto p2 = var((point){ 3, 4 });"
+				"	ref<ref<point>> p3 = var(p1);"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3->a;"
+				"	*p3->b;"
+				"	"
+				"	p1.a = 5;"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3->a;"
+				"	*p3->b;"
+				"	"
+				"	p1.b = 6;"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3->a;"
+				"	*p3->b;"
+				"	"
+				"	p3 = p2;"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3->a;"
+				"	*p3->b;"
+				"	"
+				"	p1 = *p2;"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3->a;"
+				"	*p3->b;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		int pos = 3;
+		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		createDotDump(analysis);
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos++;
+
+	}
+
+//	TEST(CBA, SimpleArray) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	let list = arra<int,1>;"
+//				"	"
+//				"	point p1 = (point){ 1, 2 };"
+//				"	point p2 = (point){ 3, 4 };"
+//				"	"
+//				"	p1;"
+//				"	p2;"
+//				"	p1.a;"
+//				"	p1.b;"
+//				"	p2.a;"
+//				"	p2.b;"
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//
+//		CBA analysis(code);
+//
+//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+//
+//	}
+
 
 } // end namespace cba
 } // end namespace analysis
