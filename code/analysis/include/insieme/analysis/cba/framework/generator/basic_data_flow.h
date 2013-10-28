@@ -36,8 +36,12 @@
 
 #pragma once
 
+#include <map>
+
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
+#include "insieme/analysis/cba/framework/data_index.h"
+#include "insieme/analysis/cba/framework/data_value.h"
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
@@ -52,6 +56,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/basic.h"
 
+#include "insieme/utils/functional_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -65,6 +71,8 @@ namespace cba {
 
 	namespace {
 
+		typedef NominalIndex<core::StringValuePtr, hash_target<core::StringValuePtr>, print<deref<core::StringValuePtr>>> FieldIndex;
+
 		StatementAddress getBody(const ContextFreeCallable& fun) {
 			if (auto lambda = fun.isa<LambdaExprAddress>()) {
 				return lambda->getBody();
@@ -75,6 +83,95 @@ namespace cba {
 			assert_fail() << "Unsupported function type encountered: " << fun->getNodeType();
 			return StatementAddress();
 		}
+
+		template<typename Lattice>
+		struct StructBuilder : public utils::constraint::detail::Executor {
+			typedef std::map<FieldIndex, TypedValueID<Lattice>> element_map;
+			typedef typename Lattice::manager_type manager_type;
+			typedef typename Lattice::value_type value_type;
+
+			manager_type& mgr;
+			element_map elements;
+			TypedValueID<Lattice> res;
+		public:
+			StructBuilder(manager_type& mgr, const element_map& elements, const TypedValueID<Lattice>& res)
+				: mgr(mgr), elements(elements), res(res) {}
+			utils::constraint::detail::ValueIDs getInputs() const {
+				utils::constraint::detail::ValueIDs res;
+				for (const auto& cur : elements) res.push_back(cur.second);
+				return res;
+			}
+			utils::constraint::detail::ValueIDs getOutputs() const {
+				return toVector<ValueID>(res);
+			}
+			void print(std::ostream& out) const {
+				out << "struct {" << join(",", elements, [](std::ostream& out, const typename element_map::value_type& cur) {
+					out << *cur.first.getName() << "=" << cur.second;
+				}) << "} in " << res;
+			}
+			value_type extract(const Assignment& ass) const {
+				std::map<FieldIndex, value_type> data;
+				for (const auto& cur : elements) {
+					data[cur.first] = ass[cur.second];
+				}
+				return mgr.compound(data);
+			}
+			bool update(Assignment& ass) const {
+				return addAll<typename Lattice::meet_assign_op_type>(extract(ass), ass[res]);
+			}
+			bool check(const Assignment& ass) const {
+				return isSubset<typename Lattice::less_op_type>(extract(ass), ass[res]);
+			}
+			void writeDotEdge(std::ostream& out, const string& label) const {
+				out << join("\n", elements, [&](std::ostream& out, const typename element_map::value_type& cur) {
+					out << cur.second << " -> " << res << label;
+				});
+			}
+			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+				for(const auto& cur : elements) {
+					used.insert(cur.second);
+				}
+			}
+		};
+
+		template<typename Lattice>
+		struct StructProject : public utils::constraint::detail::Executor {
+			typedef std::map<FieldIndex, TypedValueID<Lattice>> element_map;
+			typedef typename Lattice::manager_type manager_type;
+			typedef typename Lattice::value_type value_type;
+
+			TypedValueID<Lattice> in;
+			FieldIndex field;
+			TypedValueID<Lattice> res;
+		public:
+			StructProject(const TypedValueID<Lattice>& in, const FieldIndex& field, const TypedValueID<Lattice>& res)
+				: in(in), field(field), res(res) {}
+			utils::constraint::detail::ValueIDs getInputs() const {
+				return toVector<ValueID>(in);
+			}
+			utils::constraint::detail::ValueIDs getOutputs() const {
+				return toVector<ValueID>(res);
+			}
+			void print(std::ostream& out) const {
+				out << in << "." << field << " in " << res;
+			}
+			value_type extract(const Assignment& ass) const {
+				static const typename Lattice::projection_op_type projection_op;
+				return projection_op(ass[in], field);
+			}
+			bool update(Assignment& ass) const {
+				return addAll<typename Lattice::meet_assign_op_type>(extract(ass), ass[res]);
+			}
+			bool check(const Assignment& ass) const {
+				return isSubset<typename Lattice::less_op_type>(extract(ass), ass[res]);
+			}
+			void writeDotEdge(std::ostream& out, const string& label) const {
+				out << in << " -> " << res << label;
+			}
+			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+				used.insert(in);
+			}
+		};
 
 	}
 
@@ -361,7 +458,22 @@ namespace cba {
 				}
 			}
 
+		}
 
+		void visitStructExpr(const StructExprAddress& expr, const Context& ctxt, Constraints& constraints) {
+
+			// collect values of all fields
+			std::map<FieldIndex, TypedValueID<lattice_type>> elements;
+			for(const core::NamedValueAddress& cur : expr->getMembers()) {
+				elements[cur.getAddressedNode()->getName()] = cba.getSet(A, cur->getValue(), ctxt);
+			}
+
+			// combine it
+			constraints.add(
+					utils::constraint::build(
+							StructBuilder<lattice_type>(valueMgr, elements, cba.getSet(A, expr, ctxt))
+					)
+			);
 
 		}
 
@@ -412,6 +524,23 @@ namespace cba {
 							auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
 							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
 						}
+					}
+
+					// another case: accessing struct members
+					if (base.isCompositeMemberAccess(targets[0].getDefinition())) {
+
+						// get input struct value
+						auto A_in = this->cba.getSet(A, call[0], ctxt);
+
+						// get field name
+						auto field = call[1].as<core::LiteralPtr>()->getValue();
+
+						// project value of field from input struct to output struct
+						constraints.add(
+								utils::constraint::build(
+									StructProject<lattice_type>(A_in, field, A_call)
+								)
+						);
 					}
 
 					// no other literals supported by default - overloads may add more

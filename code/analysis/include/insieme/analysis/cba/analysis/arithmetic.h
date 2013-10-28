@@ -261,8 +261,7 @@ namespace cba {
 
 			// and binary operators
 			if (call.size() != 2u) {
-				// this value is unknown
-				constraints.add(elem(unknown, A_res));
+				// this value is unknown (by default)
 				return;
 			}
 

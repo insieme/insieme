@@ -109,6 +109,8 @@ namespace cba {
 
 	TEST(CBA, NominalIndex) {
 
+		typedef NominalIndex<string> NominalIndex;
+
 		testIndexTypeConcepts<NominalIndex>();
 
 		string s1 = "a";

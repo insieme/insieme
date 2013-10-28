@@ -41,6 +41,8 @@
 #include <boost/operators.hpp>
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/functional_utils.h"
+
 #include "insieme/core/arithmetic/arithmetic.h"
 
 namespace insieme {
@@ -71,26 +73,31 @@ namespace cba {
 	/**
 	 * An index distinguishing different named fields.
 	 */
-	class NominalIndex : public Index<NominalIndex> {
+	template<typename Key = string, typename hash_op = std::hash<Key>, typename print_op = print<id<Key>>>
+	class NominalIndex : public Index<NominalIndex<Key, hash_op, print_op>> {
 
 		/**
 		 * The name to be represented - as a reference to save the copy-overhead.
 		 */
-		string name;
+		Key name;
 
 		std::size_t hashCode;
 
 	public:
 
-		NominalIndex(const string& name = "") : name(name), hashCode(std::hash<string>()(name)) {};
+		NominalIndex(const Key& name = Key()) : name(name), hashCode(hash_op()(name)) {};
 
-		NominalIndex(const NominalIndex& other) : name(other.name), hashCode(other.hashCode) {}
+		NominalIndex(const NominalIndex<Key,hash_op,print_op>& other) : name(other.name), hashCode(other.hashCode) {}
 
-		bool operator==(const NominalIndex& other) const {
+		const Key& getName() const {
+			return name;
+		}
+
+		bool operator==(const NominalIndex<Key,hash_op,print_op>& other) const {
 			return this == &other || name == other.name;
 		}
 
-		bool operator<(const NominalIndex& other) const {
+		bool operator<(const NominalIndex<Key,hash_op,print_op>& other) const {
 			return name < other.name;
 		}
 
@@ -99,7 +106,7 @@ namespace cba {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << name;
+			return print_op()(out, name);
 		}
 
 	};
@@ -107,9 +114,9 @@ namespace cba {
 	/**
 	 * The cross operator computing the ranges to be included when combining two indexed structures.
 	 */
-	template<typename E>
-	std::set<NominalIndex> cross(const std::map<NominalIndex, E>& mapA, const std::map<NominalIndex, E>& mapB) {
-		std::set<NominalIndex> res;
+	template<typename K, typename H, typename P, typename E>
+	std::set<NominalIndex<K,H,P>> cross(const std::map<NominalIndex<K,H,P>, E>& mapA, const std::map<NominalIndex<K,H,P>, E>& mapB) {
+		std::set<NominalIndex<K,H,P>> res;
 		for(const auto& cur : mapA) {
 			res.insert(cur.first);
 		}
@@ -123,8 +130,8 @@ namespace cba {
 	 * The extract operator obtaining the values for a given index within a map (the index might not be present or
 	 * explicitly covered).
 	 */
-	template<typename E>
-	const E& extract(const std::map<NominalIndex, E>& map, const NominalIndex& i) {
+	template<typename K, typename H, typename P, typename E>
+	const E& extract(const std::map<NominalIndex<K,H,P>, E>& map, const NominalIndex<K,H,P>& i) {
 		const static E empty = E();
 		// check whether the requested index is present
 		auto pos = map.find(i);

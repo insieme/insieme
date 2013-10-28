@@ -135,6 +135,8 @@ namespace cba {
 
 		// check index structure - first: nominal index
 		{
+			typedef NominalIndex<string> NominalIndex;
+
 			NominalIndex nA("a");
 			NominalIndex nB("b");
 
@@ -393,6 +395,8 @@ namespace cba {
 
 		// check index structure - first: nominal index
 		{
+			typedef NominalIndex<string> NominalIndex;
+
 			NominalIndex nA("a");
 			NominalIndex nB("b");
 
@@ -595,6 +599,8 @@ namespace cba {
 
 		// check compound-value sharing
 		{
+			typedef NominalIndex<string> NominalIndex;
+
 			NominalIndex nA("a");
 			NominalIndex nB("b");
 

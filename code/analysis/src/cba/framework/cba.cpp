@@ -38,6 +38,8 @@
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
+#include "insieme/core/checks/full_check.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -68,7 +70,9 @@ namespace cba {
 		  }),
 		  setCounter(0), idCounter(0), callSiteMgr(root),
 		  callStringFilter(*this), set2container()
-	{ };
+	{
+		assert_true(core::checks::check(root).empty()) << core::checks::check(root);
+	};
 
 	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
 

@@ -489,8 +489,8 @@ namespace cba {
 			return res;
 		}
 
-		template<typename L, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, const core::StatementAddress& stmt, const Context& context = Context()) {
+		template<typename L, typename Address, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, const Address& stmt, const Context& context = Context()) {
 			return getSet(type, getLabel(stmt), context);
 		}
 
@@ -502,8 +502,8 @@ namespace cba {
 			return res;
 		}
 
-		template<typename L, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const StateSetType& type, const core::StatementAddress& stmt, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
+		template<typename L, typename Address, template<typename C> class G, typename Context = DefaultContext>
+		sc::TypedValueID<L> getSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
 			return getSet(type, getLabel(stmt), context, loc, type_loc);
 		}
 

@@ -151,6 +151,7 @@ namespace cba {
 		EXPECT_NE(a,c);
 		EXPECT_NE(b,c);
 
+		typedef NominalIndex<string> NominalIndex;
 
 		Element d = mgr.compound(
 				entry(NominalIndex("a"), mgr.set(e1,e2)),
@@ -213,6 +214,8 @@ namespace cba {
 		EXPECT_TRUE (isMember(s2, e0));
 		EXPECT_FALSE(isMember(s3, e0));
 		EXPECT_FALSE(isMember(s4, e0));
+
+		typedef NominalIndex<string> NominalIndex;
 
 		// more complex stuff
 		Set c1 = mgr.compound(
@@ -326,6 +329,8 @@ namespace cba {
 		EXPECT_EQ("{1,2}", toString(setUnion(s3,s4)));
 		EXPECT_EQ("{0,2}", toString(setUnion(s2,s5)));
 		EXPECT_EQ("{0,1,2}", toString(setUnion(s3,s5)));
+
+		typedef NominalIndex<string> NominalIndex;
 
 		Set c1 = mgr.compound(
 				entry(NominalIndex("a"), mgr.set(e1,e2)),

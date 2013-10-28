@@ -556,6 +556,12 @@ namespace constraint {
 		return std::make_shared<detail::ComposedConstraint<F,E>>(filter, executor);
 	}
 
+	template< typename E>
+	typename std::enable_if<std::is_base_of<detail::Executor, E>::value, ConstraintPtr>::type
+	build(const E& executor) {
+		return combine(detail::TrueFilter(), executor);
+	}
+
 	template<typename A, typename L>
 	ConstraintPtr elem(const A& a, const TypedValueID<L>& b) {
 		return combine(detail::TrueFilter(), e_in(a,b));
