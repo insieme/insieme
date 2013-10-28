@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -94,6 +94,8 @@
 #include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
+
+#include "insieme/frontend/extensions/variadic_arguments_extension.h"
 
 using namespace clang;
 using namespace insieme;
@@ -174,11 +176,13 @@ namespace frontend {
 
 // ----------- conversion ------------
 
-
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 	// just delegate operation to converter
 	Program program(manager, unit, setup);
-	return conversion::Converter(manager, program).convert();
+	conversion::Converter c(manager, program);
+	c.registerClangHandler<VariadicArgumentsPlugin>();
+	// add them and fire the conversion
+	return c.convert();
 }
 
 
@@ -205,8 +209,17 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 			exprConvPtr = std::make_shared<CExprConverter>(*this);
 			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 		}
-}
 
+}
+/*
+template <class T>
+void Converter::registerClangHandler(const T& plugin) {
+	userProvidedConv.push_back(std::make_shared<T>(plugin));
+}
+*/
+const std::list<std::shared_ptr<extensions::ClangStagePlugin>> Converter::getClangHandlers() const {
+	return userProvidedConv;
+}
 
 tu::IRTranslationUnit Converter::convert() {
 	assert(!used && "This one must only be used once!");
@@ -224,6 +237,14 @@ tu::IRTranslationUnit Converter::convert() {
 
 		Converter& converter;
 		TypeVisitor(Converter& converter) : converter(converter) {}
+
+        Converter& getConverter() {
+            return converter;
+        }
+
+        void VisitTypeDecl(const clang::TypeDecl* typeDecl) {
+            std::cout << "filtered out type decls...\n";
+        }
 
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			// we do not convert templates or partial spetialized classes/functions, the full
@@ -255,6 +276,10 @@ tu::IRTranslationUnit Converter::convert() {
 
 		Converter& converter;
 		GlobalVisitor(Converter& converter) : converter(converter) {}
+
+        Converter& getConverter() {
+            return converter;
+        }
 
 		void VisitVarDecl(const clang::VarDecl* var) {
 			// variables to be skipped
@@ -291,6 +316,10 @@ tu::IRTranslationUnit Converter::convert() {
 		Converter& converter;
 		bool externC;
 		FunctionVisitor(Converter& converter, bool Ccode) : converter(converter), externC(Ccode) {}
+
+        Converter& getConverter() {
+            return converter;
+        }
 
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
 			bool isC =  link->getLanguage () == clang::LinkageSpecDecl::lang_c;

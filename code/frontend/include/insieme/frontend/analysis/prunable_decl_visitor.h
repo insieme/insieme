@@ -30,8 +30,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,13 +41,13 @@ namespace frontend{
 namespace analysis{
 
 
-/** 
+/**
  *		This is our own implementation of the a clang::Decl tree for the insieme compiler,
- *		it is a prunable visitor, which means that we can prune branches but continue the 
+ *		it is a prunable visitor, which means that we can prune branches but continue the
  *		traversal in other. This fucntionality was not found on clang 3.2
  *
  * we need to do spetial enfasis on:
- * 	for types definition	
+ * 	for types definition
  * 		- TypeDefs
  * 		- Classes
  *	for globas collection
@@ -58,10 +58,17 @@ namespace analysis{
  *
  *	NOTES:
  *		- non named declarations will be completelly ignored
- *		- 
+ *		-
  */
 template <typename BASE, bool visitTemplates=false>
 class PrunableDeclVisitor{
+
+    /**
+     * Default converter getter method
+     */
+    frontend::conversion::Converter& getConverter() {
+        return nullptr;
+    }
 
 	/**
 	 * Default implementation, overide to add functionality
@@ -211,7 +218,7 @@ public:
 	 * entry point, we allways want to explore a declaration context.
 	 */
 	void traverseDeclCtx (const clang::DeclContext* declCtx){
-		// iterate throw the declarations inside and dispattch 
+		// iterate throw the declarations inside and dispattch
 		clang::DeclContext::decl_iterator it = declCtx->decls_begin();
 		clang::DeclContext::decl_iterator end = declCtx->decls_end();
 		for (; it!=end; ++it){
