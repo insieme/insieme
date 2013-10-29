@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -108,6 +108,14 @@ TEST(LangBasic, Derived) {
 	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref.deref(v1); ref.assign(v1, array.view(ref.deref(v1), 1)); return v2;}}",
 			toString(*nm.getLangBasic().getArrayViewPostInc()));
 
+}
+
+TEST(LangBasic, DerivedMembership) {
+	NodeManager nm;
+	const BasicGenerator& gen = nm.getLangBasic();
+
+	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeMemberAccess()));
+	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeRefElem()));
 }
 
 TEST(LangBasic, DefinitionTest) {

@@ -694,6 +694,9 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 //		return tryFixRecursive(manager, lambda, index, value);
 //	}
 
+	// do not touch derived operator definitions
+	if (lang::isDerived(lambda)) return lambda;
+
 	// check parameters
 	const FunctionTypePtr& funType = lambda->getFunctionType();
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();

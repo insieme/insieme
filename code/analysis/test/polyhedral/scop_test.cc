@@ -268,8 +268,8 @@ TEST(ScopRegion, ForStmt3) {
 	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
-	EXPECT_EQ("(v0,v11|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v11 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v14|v2,v3,v4|1)", toString(iterVec));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v14 + -v3 == 0))", toString(ann.getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -308,8 +308,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v9,v10,v11|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v9 + -v10 + 5 == 0) ^ (v10 + -2 < 0)) ^ (v10 >= 0)) ^ (v0 + -v9 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v9 + -5*v11 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v12,v13,v14|v2|1)",toString(iterVec));
+	EXPECT_EQ("((((((-2*v12 + -v13 + 5 == 0) ^ (v13 + -2 < 0)) ^ (v13 >= 0)) ^ (v0 + -v12 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v12 + -5*v14 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -356,8 +356,8 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v11,v12,v13|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v11 + v12 + v4 == 0) ^ (v12 + -3 < 0)) ^ (v12 >= 0)) ^ (v0 + -v11 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v11 + -5*v13 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v14,v15,v16|v2,v4,v3|1)", toString(iterVec));
+	EXPECT_EQ("((((((-3*v14 + v15 + v4 == 0) ^ (v15 + -3 < 0)) ^ (v15 >= 0)) ^ (v0 + -v14 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v14 + -5*v16 == 0))", toString(ann.getDomainConstraints()));
 }
 
 /*

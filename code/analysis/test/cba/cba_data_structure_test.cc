@@ -149,6 +149,51 @@ namespace cba {
 
 	}
 
+	TEST(CBA, TowardMutableStructs) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let point = struct { int a; int b; };"
+				"	let cycle = struct { point c; int r; };"
+				"	"
+				"	ref<int> a = var(4);"
+				"	ref<point> p = var((point){ 2, 3 });"
+				"	ref<cycle> c = var((cycle){ *p, 4 });"
+				"	"
+				"	a;"
+				"	p;"
+				"	c;"
+				"	"
+				"	p->a;"
+				"	p->b;"
+				"	"
+				"	c->c;"
+				"	c->c->a;"
+				"	c->c->b;"
+				"	c->r;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R<DefaultContext>())));
+//		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), R<DefaultContext>())));
+//		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>())));
+
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.a)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.b)}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), R<DefaultContext>())));
+		createDotDump(analysis);
+
+	}
+
 	TEST(CBA, MutableStruct) {
 
 		// a simple test cases checking the handling of simple value structs

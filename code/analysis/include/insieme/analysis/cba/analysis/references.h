@@ -103,14 +103,18 @@ namespace cba {
 			super::visitCallExpr(call, ctxt, constraints);
 
 			// introduce memory location in some cases
-			if (!isMemoryConstructor(call)) return;
+			if (isMemoryConstructor(call)) {
 
-			// add constraint location \in R(call)
-			auto value = cba.getLocation<Context>(call, ctxt);
-			auto l_lit = cba.getLabel(call);
+				// add constraint location \in R(call)
+				auto value = cba.getLocation<Context>(call, ctxt);
+				auto l_lit = cba.getLabel(call);
 
-			auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
-			constraints.add(elem(value, R_lit));
+				auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
+				constraints.add(elem(value, R_lit));
+
+				// done
+				return;
+			}
 		}
 
 	};
