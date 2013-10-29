@@ -46,103 +46,120 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// forward declarations
-	class DataPath;
-	class DataPathElement;
+	namespace {
 
-	typedef const DataPathElement* DataPathElementPtr;
+		/**
+		 * An abstract base class forming elements along data paths - all elements are immutable
+		 * and shared if possible. The memory management is handled internally using reference
+		 * counting.
+		 *
+		 * This class is a base class for all kind of elements - which are specialized depending
+		 * on the index to be utilized for navigating data objects.
+		 */
+		class DataPathElement :
+				public utils::VirtualPrintable,
+				public utils::HashableImmutableData<DataPathElement>,
+				public boost::equality_comparable<DataPathElement> {
 
-	// -------------------------------------------------------------------------------------------------
+		private:
 
+			// ref-counting variable
+			mutable std::size_t refCount;
 
-	class DataPathElement :
-			public utils::VirtualPrintable,
-			public utils::HashableImmutableData<DataPathElement>,
-			public boost::equality_comparable<DataPathElement> {
+		protected:
 
-	private:
+			typedef const DataPathElement* ptr_type;
+			const ptr_type head;
 
-		mutable std::size_t refCount;
+		public:
 
-	protected:
-
-		typedef DataPathElementPtr ptr_type;
-		const ptr_type head;
-
-	public:
-
-		DataPathElement(ptr_type head, std::size_t hash)
-			: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {
-			if(head) head->incRefCount();
-		}
-
-		virtual ~DataPathElement() {
-			assert_eq(refCount, 0) << "Destroyed with invalid ref counter!";
-			if (head) head->decRefCount();
-		}
-
-		void incRefCount() const {
-			refCount++;
-		}
-
-		void decRefCount() const {
-			--refCount;
-			if (refCount == 0) delete this;
-		}
-
-		DataPathElementPtr getParent(unsigned levels = 1) const {
-			if (levels == 0) return this;
-			if (levels == 1) return head;
-			assert_true(head) << "No parent level " << levels << " present!";
-			return head->getParent(levels-1);
-		}
-
-		bool operator==(const DataPathElement& other) const {
-
-			// check identity
-			if (this == &other) return true;
-
-			// check hashes
-			if (this->hash() != other.hash()) return false;
-
-			// check index part
-			if (!equalIndex(other)) return false;
-
-			// check head part
-			return equalTarget(head, other.head);
-		}
-
-		virtual bool equalIndex(const DataPathElement& other) const =0;
-	};
-
-
-	template<typename Index>
-	class ConcreteDataPathElement : public DataPathElement {
-
-		Index index;
-
-	public:
-
-		ConcreteDataPathElement(DataPathElementPtr head, const Index& index)
-			: DataPathElement(head, utils::combineHashes((head)?hash_value(*head):0, hash_value(index))), index(index) {}
-
-		std::ostream& printTo(std::ostream& out) const {
-			if (head) {
-				out << *head << ".";
-			} else {
-				out << "#.";
+			DataPathElement(ptr_type head, std::size_t hash)
+				: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {
+				if(head) head->incRefCount();
 			}
-			return out << index;
-		}
 
-		virtual bool equalIndex(const DataPathElement& other) const {
-			// check type and identical index
-			return typeid(*this) == typeid(other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
-		}
+			virtual ~DataPathElement() {
+				assert_eq(refCount, 0) << "Destroyed with invalid ref counter!";
+				if (head) head->decRefCount();
+			}
 
-	};
+			void incRefCount() const {
+				refCount++;
+			}
+
+			void decRefCount() const {
+				--refCount;
+				if (refCount == 0) delete this;
+			}
+
+			ptr_type getParent(unsigned levels = 1) const {
+				if (levels == 0) return this;
+				if (levels == 1) return head;
+				assert_true(head) << "No parent level " << levels << " present!";
+				return head->getParent(levels-1);
+			}
+
+			bool operator==(const DataPathElement& other) const {
+
+				// check identity
+				if (this == &other) return true;
+
+				// check hashes
+				if (this->hash() != other.hash()) return false;
+
+				// check index part
+				if (!equalIndex(other)) return false;
+
+				// check head part
+				return equalTarget(head, other.head);
+			}
+
+			virtual bool equalIndex(const DataPathElement& other) const =0;
+		};
 
 
+		/**
+		 * A template for concrete data path element types. Each data path step
+		 * is represented by an instance of this class which is encapsulating the index
+		 * step to be taken along the path.
+		 *
+		 * @tparem Index the type of index to be followed within a data object
+		 */
+		template<typename Index>
+		class ConcreteDataPathElement : public DataPathElement {
+
+			Index index;
+
+		public:
+
+			ConcreteDataPathElement(ptr_type head, const Index& index)
+				: DataPathElement(head, utils::combineHashes((head)?hash_value(*head):0, hash_value(index))), index(index) {}
+
+			std::ostream& printTo(std::ostream& out) const {
+				if (head) {
+					out << *head << ".";
+				} else {
+					out << "#.";
+				}
+				return out << index;
+			}
+
+			virtual bool equalIndex(const DataPathElement& other) const {
+				// check type and identical index
+				return typeid(*this) == typeid(other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
+			}
+
+		};
+
+	} // end anonymous namespace
+
+
+	/**
+	 * A class representing data paths within data objects. Every allocated object possess an
+	 * internal data structure (e.g. it is a simple scalar, a struct of scalars, a struct with
+	 * nested structs, an array of structs, ...). A data path is describing the abstract path
+	 * from the root of this representation to a sub-structure or even an individual element.
+	 */
 	class DataPath :
 			public utils::Printable, public utils::Hashable,
 			public boost::equality_comparable<DataPath> {
@@ -193,16 +210,25 @@ namespace cba {
 			return equalTarget(path, other.path);
 		}
 
+		// path concatenation
 		template<typename Index>
 		DataPath& operator<<=(const Index& index) {
-			return *this <<= static_cast<DataPathElementPtr>(new ConcreteDataPathElement<Index>(path, index));
+			// the memory allocated here is managed by its own reference counting
+			auto element = new ConcreteDataPathElement<Index>(path, index);
+			assert_ne(path, element);
+			element->incRefCount();
+			if(path) path->decRefCount();
+			path = element;
+			return *this;
 		}
 
+		// path concatenation
 		template<typename Element>
 		DataPath operator<<(const Element& element) const {
 			return DataPath(*this) <<= element;
 		}
 
+		// eliminating tailing elements from this path
 		DataPath pop(unsigned levels = 1) const {
 			if (levels == 0) return *this;
 			assert_true(path) << "No such parent!";
@@ -218,18 +244,7 @@ namespace cba {
 			return (path) ? path->hash() : 0;
 		}
 
-	private:
-
-		DataPath& operator<<=(const DataPathElementPtr& element) {
-			assert_ne(path, element);
-			element->incRefCount();
-			if(path) path->decRefCount();
-			path = element;
-			return *this;
-		}
 	};
-
-
 
 } // end namespace cba
 } // end namespace analysis
