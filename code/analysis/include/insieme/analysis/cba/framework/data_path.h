@@ -37,16 +37,16 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/data_index.h"
-#include "insieme/utils/printable.h"
-#include "insieme/utils/hash_utils.h"
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	namespace {
+	namespace detail {
 
 		/**
 		 * An abstract base class forming elements along data paths - all elements are immutable
@@ -71,10 +71,13 @@ namespace cba {
 			typedef const DataPathElement* ptr_type;
 			const ptr_type head;
 
+			// the length of this path
+			std::size_t length;
+
 		public:
 
 			DataPathElement(ptr_type head, std::size_t hash)
-				: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {
+				: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head), length((head)?head->length+1:1) {
 				if(head) head->incRefCount();
 			}
 
@@ -114,7 +117,32 @@ namespace cba {
 				return equalTarget(head, other.head);
 			}
 
+			bool operator<(const DataPathElement& other) const {
+				// quick test - equality
+				if (this==&other) {
+					return false;
+				}
+
+				// make sure this one is the shorter path
+				if (length > other.length) {
+					return !(other < *this);
+				}
+
+				// reduce length to equal size
+				if (length < other.length) {
+					return (*this == *other.head) || (*this < *(other.head));
+				}
+
+				// now the length is equally long
+				assert(length == other.length);
+
+				// implement lexicographical order
+				return *head < *other.head || (*head == *other.head && lessIndex(other));
+			}
+
 			virtual bool equalIndex(const DataPathElement& other) const =0;
+			virtual bool lessIndex(const DataPathElement& ohter) const =0;
+
 		};
 
 
@@ -149,7 +177,25 @@ namespace cba {
 				return typeid(*this) == typeid(other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
 			}
 
+			virtual bool lessIndex(const DataPathElement& other) const {
+				// check type and compare index
+				return typeid(*this) == typeid(other) && index < static_cast<const ConcreteDataPathElement&>(other).index;
+			}
 		};
+
+		inline bool less_than(const DataPathElement* a, const DataPathElement* b) {
+			// if equal => not less
+			if (a == b) return false;
+
+			// if a is null, it is less
+			if (!a && b) return true;
+
+			// if b is null, it is not bigger
+			if (!b) return false;
+
+			// now both should be not null
+			return *a < *b;
+		}
 
 	} // end anonymous namespace
 
@@ -164,7 +210,7 @@ namespace cba {
 			public utils::Printable, public utils::Hashable,
 			public boost::equality_comparable<DataPath> {
 
-		typedef const DataPathElement* ptr_type;
+		typedef const detail::DataPathElement* ptr_type;
 		ptr_type path;
 
 	public:
@@ -210,11 +256,16 @@ namespace cba {
 			return equalTarget(path, other.path);
 		}
 
+		bool operator<(const DataPath& other) const {
+			// compare paths
+			return detail::less_than(path, other.path);
+		}
+
 		// path concatenation
 		template<typename Index>
 		DataPath& operator<<=(const Index& index) {
 			// the memory allocated here is managed by its own reference counting
-			auto element = new ConcreteDataPathElement<Index>(path, index);
+			auto element = new detail::ConcreteDataPathElement<Index>(path, index);
 			assert_ne(path, element);
 			element->incRefCount();
 			if(path) path->decRefCount();

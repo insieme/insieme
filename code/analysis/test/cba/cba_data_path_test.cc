@@ -101,6 +101,34 @@ namespace cba {
 		EXPECT_EQ("#.1.2", toString(x));
 	}
 
+	TEST(CBA, DataPathComparison) {
+
+		// simply check whether data paths can be sorted lexicographically
+		typedef NominalIndex<string> NominalIndex;
+
+		DataPath root;
+
+		DataPath a = root << SingleIndex(1) << SingleIndex(3);
+		DataPath b = root << SingleIndex(2) << SingleIndex(3);
+		DataPath c = root << SingleIndex(1) << SingleIndex(4);
+		DataPath d = a << SingleIndex(1);
+
+		EXPECT_LT(root, a);
+		EXPECT_LT(root, b);
+		EXPECT_LT(root, c);
+		EXPECT_LT(root, d);
+
+		EXPECT_LT(a, b);
+		EXPECT_LT(a, c);
+		EXPECT_LT(a, d);
+
+		EXPECT_LT(c, b);
+
+		EXPECT_LT(d, c);
+		EXPECT_LT(d, b);
+
+	}
+
 
 } // end namespace cba
 } // end namespace analysis
