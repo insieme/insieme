@@ -43,6 +43,16 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	namespace {
+
+		DataPath seq(int x) {
+			if (x == 0) return DataPath();
+			return seq(x-1) << SingleIndex(x);
+		}
+
+	}
+
+
 	TEST(CBA, DataPath) {
 
 		typedef NominalIndex<string> NominalIndex;
@@ -68,6 +78,10 @@ namespace cba {
 		DataPath b = root << NominalIndex("T");
 		DataPath c = root << NominalIndex("S");
 
+		EXPECT_EQ(root, root);
+		EXPECT_NE(root, a);
+		EXPECT_NE(root, b);
+
 		EXPECT_NE(&a,&b);
 		EXPECT_EQ(a,b);
 		EXPECT_EQ(a.hash(), b.hash());
@@ -75,7 +89,16 @@ namespace cba {
 		EXPECT_NE(a,c);
 		EXPECT_NE(a.hash(), c.hash());
 
+		// stress reference counting when treating DataPaths as values
+		DataPath x;
+		{
+			DataPath y = seq(5);
+			EXPECT_EQ("#.1.2.3.4.5", toString(y));
 
+			x = y.pop(3);
+		}
+
+		EXPECT_EQ("#.1.2", toString(x));
 	}
 
 

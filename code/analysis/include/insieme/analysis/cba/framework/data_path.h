@@ -72,9 +72,11 @@ namespace cba {
 	public:
 
 		DataPathElement(ptr_type head, std::size_t hash)
-			: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {}
+			: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head) {
+			if(head) head->incRefCount();
+		}
 
-		~DataPathElement() {
+		virtual ~DataPathElement() {
 			assert_eq(refCount, 0) << "Destroyed with invalid ref counter!";
 			if (head) head->decRefCount();
 		}
@@ -135,7 +137,7 @@ namespace cba {
 
 		virtual bool equalIndex(const DataPathElement& other) const {
 			// check type and identical index
-			return typeid(this) == typeid(&other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
+			return typeid(*this) == typeid(other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
 		}
 
 	};
@@ -196,11 +198,6 @@ namespace cba {
 			return *this <<= static_cast<DataPathElementPtr>(new ConcreteDataPathElement<Index>(path, index));
 		}
 
-		DataPath& operator<<=(const DataPathElementPtr& element) {
-			path = element;
-			return *this;
-		}
-
 		template<typename Element>
 		DataPath operator<<(const Element& element) const {
 			return DataPath(*this) <<= element;
@@ -221,6 +218,15 @@ namespace cba {
 			return (path) ? path->hash() : 0;
 		}
 
+	private:
+
+		DataPath& operator<<=(const DataPathElementPtr& element) {
+			assert_ne(path, element);
+			element->incRefCount();
+			if(path) path->decRefCount();
+			path = element;
+			return *this;
+		}
 	};
 
 
