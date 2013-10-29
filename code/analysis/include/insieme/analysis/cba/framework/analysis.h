@@ -52,10 +52,10 @@ namespace cba {
 	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& C();
 	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& c();
 
-	template<typename C> class Location;
+	template<typename C> class Reference;
 	template<typename C> class ReferenceConstraintGenerator;
-	template<typename C> const DataAnalysisType<Location<C>,ReferenceConstraintGenerator>& R();
-	template<typename C> const DataAnalysisType<Location<C>,ReferenceConstraintGenerator>& r();
+	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& R();
+	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& r();
 
 	class Callee;
 	template<typename C> class FunctionConstraintGenerator;

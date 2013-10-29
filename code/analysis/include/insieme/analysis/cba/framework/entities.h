@@ -106,18 +106,6 @@ namespace cba {
 		}
 	};
 
-
-	// the type to represent memory locations
-	template<typename Context>
-	struct Location : public std::pair<core::ExpressionAddress, Context> {
-		const core::ExpressionAddress& getAddress() const { return this->first; }
-		const Context& getContext() const { return this->second; }
-		Location() : std::pair<core::ExpressionAddress, Context>() {}
-		Location(const core::ExpressionAddress& def, const Context& context)
-			: std::pair<core::ExpressionAddress, Context>(def, context) {}
-	};
-
-
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

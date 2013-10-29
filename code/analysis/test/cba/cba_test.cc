@@ -1630,11 +1630,11 @@ namespace cba {
 		CBA analysis(code);
 
 		EXPECT_EQ(
-				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[],0>,<0,[],0>]])}",
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[],0>,<0,[],0>]],#)}",
 				toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>()))
 		);
 		EXPECT_EQ(
-				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[],0>,<0,[],0>]])}",
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[],0>,<0,[],0>]],#)}",
 				toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R<DefaultContext>()))
 		);
 

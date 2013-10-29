@@ -47,6 +47,7 @@
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities.h"
+#include "insieme/analysis/cba/framework/location.h"
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/call_site_manager.h"
 #include "insieme/analysis/cba/framework/call_string_filter.h"
