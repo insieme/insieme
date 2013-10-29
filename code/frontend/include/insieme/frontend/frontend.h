@@ -336,6 +336,8 @@ namespace frontend {
 		 * Determines whether this conversion job is processing a C++ file or not.
 		 */
 		bool isCxx() const {
+			if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
+			if (getStandard() == Standard::C99) return false;
 			return any(files, [&](const path& cur) {
 				return static_cast<const ConversionSetup&>(*this).isCxx(cur);
 			});
