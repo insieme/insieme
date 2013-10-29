@@ -113,6 +113,13 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the type of the member function
+		 */
+		TypePtr getType() const{
+			return impl->getType();
+		}
+
+		/**
 		 * Updates the implementation of this member function.
 		 */
 		void setImplementation(const ExpressionPtr& newImpl) {
@@ -330,7 +337,11 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool hasMemberFunction(const string& name, const FunctionTypePtr& type) const {
-			return hasMemberFunction(name, type, true) || hasMemberFunction(name, type, false);
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type ))
+					return true;
+			}
+			return false;
 		}
 
 		/**
@@ -342,13 +353,12 @@ namespace core {
 		 * @param _const the const-state of the function to be looking for
 		 * @return a pointer to the requested function or null if there is no such function
 		 */
-		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
-			MemberFunctionPtr res(nullptr);
-			for (auto& cur : memberFunctions){
-				if ((cur.getName() == name) &&( cur.getImplementation()->getType() == type) && (cur.isConst() == _const))
-					res = &cur;
+		MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type) && (cur.isConst() == _const))
+					return &cur;
 			}
-			return res;
+			return nullptr;
 		}
 
 		/**
@@ -359,9 +369,12 @@ namespace core {
 		 * @param type the type of the function to be looking for
 		 * @return a pointer to the requested function or null if there is no such function
 		 */
-		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type) const {
-			auto res = getMemberFunction(name, type, true);
-			return (res)?res:getMemberFunction(name, type, false);
+		MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type) const {
+			for ( const auto& cur : memberFunctions){
+				if ((cur.getName() == name) &&  (cur.getType() == type))
+					return &cur;
+			}
+			return nullptr;
 		}
 
 		/** 
@@ -370,7 +383,7 @@ namespace core {
 		 * @param name the name of the function
 		 * @return a vector with all matches
 		 */
-		const vector<MemberFunctionPtr> getMemberFunctionOverloads(const string& name) const {
+		vector<MemberFunctionPtr> getMemberFunctionOverloads(const string& name) const {
 			vector<MemberFunctionPtr> res;
 			for (auto& cur : memberFunctions){
 				if (cur.getName() == name) 

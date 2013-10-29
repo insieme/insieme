@@ -48,6 +48,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -314,20 +315,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	return retTy;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DECLTYPE TYPE (TODO) -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
-	assert(false && "DeclType not supported");
-	return core::TypePtr();
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                 AUTO TYPE -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
-    return convert(autoTy->getDeducedType().getTypePtr());
-}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                 MEMBER POINTER TYPE
@@ -339,7 +326,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     return retTy;
 }
 
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                 post convertion action for functions
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
 
 	// now attach meta-info (only for record type definitios)
@@ -369,28 +358,23 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 	for (; ctorIt != ctorEnd; ctorIt ++){
 		const CXXConstructorDecl* ctorDecl = *ctorIt;
-		if (ctorDecl->isDefaultConstructor() ||
-			ctorDecl->isCopyConstructor() ||
-			ctorDecl->isMoveConstructor() ){
+		if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
 
-			if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
+			// the function is a template spetialization, but if it has no body, we wont
+			// convert it, it was never instanciated
+			if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+					continue;
+			}
 
-				// the function is a template spetialization, but if it has no body, we wont
-				// convert it, it was never instanciated
-				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-						continue;
-				}
-
-				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-				if (ctorLambda){
-					assert(ctorLambda);
-					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
-					// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
-					// by the complete implementation
-					if (!ctorLambda.isa<core::LiteralPtr>()){
-						if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-					}
+			core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+			if (ctorLambda){
+				assert(ctorLambda);
+				ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
+				// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
+				// by the complete implementation
+				if (!ctorLambda.isa<core::LiteralPtr>()){
+					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
+					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
 		}
@@ -419,18 +403,18 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			continue;
 		}
 
-		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME: for now ignore CopyAssignmentOperator
-			// -- backendCompiler should take care of it
-			continue;
-		}
+//		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME: for now ignore CopyAssignmentOperator
+//			// -- backendCompiler should take care of it
+//			continue;
+//		}
 
-		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME for non-userProvided moveAssign ops find solution,
-			//maybe leave them to be handled by the backendCompiler or something else
-			//currently are left over for be-compiler
-			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
-		}
+//		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME for non-userProvided moveAssign ops find solution,
+//			//maybe leave them to be handled by the backendCompiler or something else
+//			//currently are left over for be-compiler
+//			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
+//		}
 
 		const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 
@@ -474,6 +458,9 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	core::setMetaInfo(irAliasType, core::merge(classInfo, core::getMetaInfo(irAliasType)));
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			The visitor itself
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
     //iterate clang handler list and check if a handler wants to convert the type
 	for(auto plugin : convFact.getClangHandlers()) {

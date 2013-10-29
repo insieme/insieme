@@ -86,6 +86,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
 
+#include "insieme/core/encoder/lists.h"
 
 using namespace clang;
 using namespace insieme;
@@ -321,7 +322,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
-
 	const core::IRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
@@ -339,7 +339,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
-	if (callExpr->isElidable () && ctorDecl->isCopyConstructor()){
+	if (callExpr->isElidable () && (ctorDecl->isCopyConstructor() || ctorDecl->isMoveConstructor())){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
@@ -433,6 +433,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		if(callExpr->hasInitializer()) {
             const clang::Expr * initializer = callExpr->getInitializer();
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
+			assert(initializerExpr);
             placeHolder = initializerExpr;
 		}
         else {
@@ -882,6 +883,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 	return retIr;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//			C++ 11
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically

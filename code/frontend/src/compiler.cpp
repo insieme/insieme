@@ -317,34 +317,23 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	LO.POSIXThreads = 1;
 	*/
 
+	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {
-		//set default values for C -- default results in values for LangStandard::lang_gnu99
-		CompilerInvocation::setLangDefaults(LO, clang::IK_C /*, clang::LangStandard::Kind=unspecified*/);
-		// set by langDefaults
-		//LO.C99 = 1; 		// set c99
+		//set default values for C -- 
+		//langStandard is defined in include/clang/Frontend/LangStandards.de
+		CompilerInvocation::setLangDefaults(LO, clang::IK_C, clang::LangStandard::lang_c99);
 	}
 
-	if(config.isCxx(file)) {
-		pimpl->m_isCXX = true;
-		//langStandard is defined in include/clang/Frontend/LangStandards.def
-		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
-		// set cxx standard to c++98 (+GNUMode)
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx98);
+	if (config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) pimpl->m_isCXX = true;
+	if (config.getStandard() == ConversionSetup::Cxx03 || config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
 
+	if (pimpl->m_isCXX){
 		// set cxx standard to c++98
-		//--> DOES _NOT_ sets LanguageOption::GNUMode
-		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
-		// set cxx standard to c++11 (+GNUMode)
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx11);
+		if (config.getStandard() == ConversionSetup::Cxx11)
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11); 
+		else
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03); 
 
-		//should be set already by langdefaults
-		//LO.CPlusPlus = 1; 	// set C++ 98 support
-		//LO.WChar     = 1; 	// setup wchar support: C++ 3.9.1p5
-
-		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
-		// prompted, no side efects detected
-		//LO.CPlusPlus0x = 1;  //C++ 0x
 		// use the cxx header of the backend c++ compiler
 		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0;
@@ -357,10 +346,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, true, false, false);
 		}
 
-		// FIXME: decide if we need this or not
-		//	LO.RTTI = 1;
-			LO.Exceptions = 1;
-			LO.CXXExceptions = 1;
+		LO.Exceptions = 1;
+		LO.CXXExceptions = 1;
+
+		// FIXME:  if we need this or not
 		//	LO.CXXOperatorNames = 1;
 	}
 	else{

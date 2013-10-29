@@ -317,9 +317,7 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 	core::StringValuePtr ident;
 
 	if (!membExpr->getMemberDecl()->getIdentifier()) {
-
 		clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(membExpr->getMemberDecl());
-		assert(field && field->isAnonymousStructOrUnion());
 
 		// Union may have anonymous member which have been tagged with a '__m' name by the type
 		// convert
