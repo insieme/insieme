@@ -56,8 +56,8 @@ namespace extensions {
         return stmtutils::StmtWrapper();
     }
 
-    void ClangStagePlugin::Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
-
+    bool ClangStagePlugin::Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+        return false;
     }
 }
 }

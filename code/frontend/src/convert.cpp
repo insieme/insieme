@@ -211,12 +211,7 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 		}
 
 }
-/*
-template <class T>
-void Converter::registerClangHandler(const T& plugin) {
-	userProvidedConv.push_back(std::make_shared<T>(plugin));
-}
-*/
+
 const std::list<std::shared_ptr<extensions::ClangStagePlugin>> Converter::getClangHandlers() const {
 	return userProvidedConv;
 }
@@ -242,10 +237,6 @@ tu::IRTranslationUnit Converter::convert() {
             return converter;
         }
 
-        void VisitTypeDecl(const clang::TypeDecl* typeDecl) {
-            std::cout << "filtered out type decls...\n";
-        }
-
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
@@ -254,7 +245,7 @@ tu::IRTranslationUnit Converter::convert() {
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
-			
+
 			// get contained type
 			auto res = converter.convertType(typedefDecl->getTypeForDecl());
 
@@ -673,7 +664,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	if (attr) {
 		var->addAnnotation(attr);
 	}
-	
+
 	if(annotations::c::hasIncludeAttached(irType)) {
 		VLOG(2) << " header " << annotations::c::getAttachedInclude(irType);
 	}
@@ -1304,7 +1295,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
-		
+
 		// if recursive
 		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
 

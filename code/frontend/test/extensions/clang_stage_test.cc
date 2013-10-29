@@ -69,11 +69,12 @@ class ClangTestPlugin : public insieme::frontend::extensions::ClangStagePlugin {
 	    }
         return nullptr;
 	}
-/*
-	virtual void Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+
+	virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
         declVisited = true;
+        return false;
 	}
-*/
+
 };
 
 /**
@@ -89,7 +90,6 @@ TEST(ClangStage, Initialization) {
 	// register the clang stage plugin
 	conv.registerClangHandler<ClangTestPlugin>();
 	EXPECT_EQ(1, conv.getClangHandlers().size());
-	conv.convert();
 }
 
 /**
@@ -108,23 +108,23 @@ TEST(ClangStage, Conversion) {
 
 	// register the clang stage plugin
 	conv.registerClangHandler<ClangTestPlugin>();
-{
+    {
 
-	//lets create a clang expression and pass it to the converter
-	clang::Type* ty = new clang::BuiltinType(clang::BuiltinType::Kind::NullPtr);
-	insieme::core::TypePtr convertedTy = conv.convertType(ty);
+        //lets create a clang expression and pass it to the converter
+        clang::Type* ty = new clang::BuiltinType(clang::BuiltinType::Kind::NullPtr);
+        insieme::core::TypePtr convertedTy = conv.convertType(ty);
 
-	//this should now be a generic type that contains the name GenericTypeCreator
-	EXPECT_TRUE(convertedTy.isa<insieme::core::GenericTypePtr>());
-	if(convertedTy.isa<insieme::core::GenericTypePtr>()) {
-		std::string s = static_pointer_cast<insieme::core::GenericTypePtr>(convertedTy)->getName()->getValue();
-		EXPECT_EQ("GenericTypeCreator", s);
-	}
-	delete ty;
-}
+        //this should now be a generic type that contains the name GenericTypeCreator
+        EXPECT_TRUE(convertedTy.isa<insieme::core::GenericTypePtr>());
+        if(convertedTy.isa<insieme::core::GenericTypePtr>()) {
+            std::string s = static_pointer_cast<insieme::core::GenericTypePtr>(convertedTy)->getName()->getValue();
+            EXPECT_EQ("GenericTypeCreator", s);
+        }
+        delete ty;
+    }
 	//check if the decl visitors is visited correctly
-/*	EXPECT_FALSE(declVisited);
+	EXPECT_FALSE(declVisited);
 	conv.convert();
-	EXPECT_TRUE(declVisited);*/
+	EXPECT_TRUE(declVisited);
 
 }

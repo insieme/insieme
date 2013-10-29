@@ -72,7 +72,7 @@ namespace extensions {
 		virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact);
         virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact);
 		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact);
-		virtual void Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact);
+		virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact);
 	};
 
 }
