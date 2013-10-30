@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -1672,50 +1672,20 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		}
 		return fit->second;
 	}
-	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {
 
+	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {
 		retIr = convFact.lookUpVariable( varDecl );
 		return retIr;
 	}
-	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
-		return (retIr =
-				core::static_pointer_cast<const core::Expression>(
-						convFact.convertFunctionDecl(funcDecl)
-				)
-		);
-	}
-	if (const clang::EnumConstantDecl* enumDecl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
-        core::TypePtr enumTy =  mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(
-                                    utils::buildNameForEnum(llvm::cast<clang::TagType>(llvm::cast<clang::TypeDecl>(enumDecl->getDeclContext())->getTypeForDecl()))
-                                );
-        //attach enum element to enum type, but only if it is not defined in a system header
-        bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getCanonicalDecl()->getSourceRange().getBegin());
-        if(!systemHeaderOrigin) {
-            if(!core::annotations::hasNameAttached(enumTy)) {
-                core::annotations::attachName(enumTy, enumDecl->getNameAsString()+"="+enumDecl->getInitVal().toString(10));
-            }
-            else {
-                std::stringstream annotation;
-                annotation << core::annotations::getAttachedName(enumTy);
-                std::stringstream attachment;
-                attachment << enumDecl->getNameAsString() << "=" << enumDecl->getInitVal().toString(10);
-                //check if element is already in enum list
-                if(annotation.str().find(attachment.str()) == std::string::npos) {
-                    annotation << ", " << attachment.str();
-                    core::annotations::attachName(enumTy, annotation.str());
-                }
-            }
-        }
-		return (retIr =
-				builder.literal(
-                        enumDecl->getNameAsString(),
 
-                        mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(
-                            utils::buildNameForEnum(llvm::cast<clang::TagType>(llvm::cast<clang::TypeDecl>(enumDecl->getDeclContext())->getTypeForDecl()))
-                        )
-                )
-		);
+	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
+		return (retIr = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>());
 	}
+
+	if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
+		return (retIr = convFact.convertEnumConstantDecl(enumConstant));
+	}
+
 	assert(false && "clang::DeclRefExpr not supported!");
 	return core::ExpressionPtr();
 }

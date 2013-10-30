@@ -447,8 +447,61 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	// handle enums => always just integers
 	if(def->getTagKind() == clang::TTK_Enum) {
-        //return enum type
-        return mgr.getLangExtension<core::lang::EnumExtension>().getEnumType(utils::buildNameForEnum(tagType));
+		//TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
+
+		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
+		assert(enumDecl && "TagType decl is a EnumDecl type!");
+       	
+       	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
+       	
+
+        const string& enumTypeName = utils::buildNameForEnum(enumDecl);
+		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
+		
+		core::TypePtr enumTy = ext.getEnumType(enumTypeName); 
+		LOG_TYPE_CONVERSION( tagType, enumTy );
+
+		if(systemHeaderOrigin) {
+			//if the enumType comes from a system provided header we don't convert it
+			//TODO let interceptor take care of
+       		return enumTy;
+		}
+		
+		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream 
+		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
+					const string& enumConstantName = utils::buildNameForEnumConstant(ecd);
+					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
+					out << enumConstantName << "=" << enumConstantInitVal;
+				};
+
+		//enumTypes can be shadowed if redeclared in different scope (similar to variables)
+		//we add all enumTypes to the global scope so the enumconstants need a distinguishable name
+		//(delivered by buildNameForEnumConstant)
+		if(!core::annotations::hasNameAttached(enumTy)) {
+			std::stringstream ss;
+			ss << join(", ", enumDecl->enumerator_begin(), enumDecl->enumerator_end(), enumConstantPrinter);
+			core::annotations::attachName(enumTy, ss.str());
+		} else {
+			std::stringstream annotation;
+			annotation << core::annotations::getAttachedName(enumTy);
+			// go through all possible enumConstants and attach them to the enumTy, if they aren't
+			// there already
+			for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
+				const clang::EnumConstantDecl* enumConstant = *it;
+				std::stringstream attachment;
+                enumConstantPrinter(attachment, enumConstant);
+
+                //check if element is already in enum list
+                if(annotation.str().find(attachment.str()) == std::string::npos) {
+                    annotation << ", " << attachment.str();
+                }
+			}
+			core::annotations::attachName(enumTy, annotation.str());
+		}
+		VLOG(2) << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")";
+
+		//return enum type
+        return enumTy;
    	}
 
 	// handle struct/union/class
