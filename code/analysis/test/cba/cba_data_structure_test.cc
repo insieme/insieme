@@ -47,6 +47,7 @@
 #include "insieme/analysis/cba/analysis/callables.h"
 #include "insieme/analysis/cba/analysis/call_context.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
+#include "insieme/analysis/cba/analysis/data_paths.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -147,6 +148,48 @@ namespace cba {
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), A)));
 
+	}
+
+	TEST(CBA, DataPaths) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = dp.root;"
+				"	auto b = dp.member(a, lit(\"a\")); "
+				"	"
+				"	a;"
+				"	b;"
+				"	"
+				"	dp.element(b, 17u+4u);"
+				"	dp.element(b, 17u+4u+lit(\"c\":uint<4>));"
+				"	"
+				"	ref<datapath> x = var(dp.root);"
+				"	if (lit(\"?\":bool)) {"
+				"		x = dp.member(*x, lit(\"a\")); "
+				"	}"
+				"	*x;"
+				"	dp.member(*x, lit(\"b\"));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{#}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), DP)));
+		EXPECT_EQ("{#.a}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), DP)));
+		EXPECT_EQ("{#.a.21}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), DP)));
+		EXPECT_EQ("{#.a.*}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), DP)));
+
+		EXPECT_EQ("{#,#.a}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), DP)));
+		EXPECT_EQ("{#.a.b,#.b}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), DP)));
+
+//		createDotDump(analysis);
 	}
 
 	TEST(CBA, TowardMutableStructs) {

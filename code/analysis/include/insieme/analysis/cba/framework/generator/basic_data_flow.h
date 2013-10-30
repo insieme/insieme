@@ -185,11 +185,10 @@ namespace cba {
 
 		typedef ConstraintGenerator<Context> super;
 
+	public:
 
 		typedef typename AnalysisType::lattice_type lattice_type;
 		typedef typename lattice_type::manager_type mgr_type;
-
-	public:
 
 		typedef typename lattice_type::base_lattice::value_type base_value_type;
 		typedef typename lattice_type::value_type value_type;
