@@ -273,7 +273,8 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 	// add user provided headers
 	for (const path& cur : config.getIncludeDirectories()){
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::System, true, false, false);
+		//instead "Angled" was "System"
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, true, false, false);
 	}
 
 	// set -D macros
