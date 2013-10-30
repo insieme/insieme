@@ -194,9 +194,9 @@ void mem_alloc() {
 enum E{ ON, OFF=10 };
 
 void test_enum() {
-	#pragma test "decl ref<enum<E>> v0 =  var(ON)"
+	#pragma test "decl ref<enum<E>> v0 =  var(__insieme_enum_constant_E_ON)"
 	enum E a = ON;
-	#pragma test "decl ref<enum<E>> v0 =  var(OFF)"
+	#pragma test "decl ref<enum<E>> v0 =  var(__insieme_enum_constant_E_OFF)"
 	enum E b = OFF;
 }
 
