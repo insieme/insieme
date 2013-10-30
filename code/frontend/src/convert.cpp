@@ -204,18 +204,19 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
 		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
 		irTranslationUnit(mgr), used(false)
-		{
+	{
 
-		if (prog.isCxx()){
-			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
-			exprConvPtr = std::make_shared<CXXExprConverter>(*this);
-			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
-		} else{
-			typeConvPtr = std::make_shared<CTypeConverter>(*this);
-			exprConvPtr = std::make_shared<CExprConverter>(*this);
-			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
-		}
-
+	if (prog.isCxx()){
+		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
+		exprConvPtr = std::make_shared<CXXExprConverter>(*this);
+		stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
+	} else{
+		typeConvPtr = std::make_shared<CTypeConverter>(*this);
+		exprConvPtr = std::make_shared<CExprConverter>(*this);
+		stmtConvPtr = std::make_shared<CStmtConverter>(*this);
+	}
+	// tag the translation unit with as C++ if case
+	irTranslationUnit.setCXX(prog.isCxx());
 }
 
 const std::list<std::shared_ptr<extensions::ClangStagePlugin>> Converter::getClangHandlers() const {
@@ -353,7 +354,7 @@ tu::IRTranslationUnit Converter::convert() {
 	//std::cout << " ==================================== " << std::endl;
 	//std::cout << getIRTranslationUnit() << std::endl;
 	//std::cout << " ==================================== " << std::endl;
-
+	
 	// that's all
 	return irTranslationUnit;
 }

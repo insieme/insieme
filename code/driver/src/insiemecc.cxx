@@ -158,6 +158,8 @@ int main(int argc, char** argv) {
 	// Step 4: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
+	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
+	//		cpp compiler, C otherwise
 	cout << "Building binaries ...\n";
 	cp::Compiler compiler =
 			(options.job.isCxx())
