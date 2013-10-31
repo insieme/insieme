@@ -166,6 +166,7 @@ void setDiagnosticClient(clang::CompilerInstance& clang, bool printDiagToConsole
 	// check why, it might be a double insert in list, or a isolated delete somewhere
 	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ),
 													options, diagClient, true);
+	diags->setSuppressSystemWarnings (true);
 	clang.setDiagnostics(diags);
 }
 

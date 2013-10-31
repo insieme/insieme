@@ -80,15 +80,17 @@ namespace tu {
 
 		EntryPointList entryPoints;
 
+		bool isCppCode;
+
 	public:
 
-		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr) {}
+		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr), isCppCode(false) {}
 
-		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints)
-			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints) {}
+		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints, bool cppCode)
+			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), isCppCode(isCppCode) {}
 
 		IRTranslationUnit(const IRTranslationUnit& other)
-			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints) {}
+			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints), isCppCode(other.isCppCode) {}
 
 		// getter:
 
@@ -211,6 +213,14 @@ namespace tu {
 		IRTranslationUnit toManager(core::NodeManager& manager) const;
 
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
+
+		bool isCXX() const{
+			return isCppCode;
+		}
+
+		void setCXX(bool flag = true) {
+			isCppCode =  flag;
+		}
 
 	protected:
 
