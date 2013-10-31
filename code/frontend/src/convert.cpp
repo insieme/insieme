@@ -1051,8 +1051,13 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 		funcKind = core::FK_DESTRUCTOR;
 		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
 	} else if (const auto* decl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
-		funcKind = core::FK_MEMBER_FUNCTION;
-		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		if (decl->isStatic()){
+			return funcType;
+		}
+		else{
+			funcKind = core::FK_MEMBER_FUNCTION;
+			ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		}
 	} else {
 		// it is not a member function => just take the plain function
 		assert(funcType->isPlain());

@@ -425,6 +425,10 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		}
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
+
+		if (methodLambda->getType().as<core::FunctionTypePtr>()->isPlain())
+			continue;
+
 		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irCompleteType, irAliasType, true);
 
 		if( method->isPure() ) {

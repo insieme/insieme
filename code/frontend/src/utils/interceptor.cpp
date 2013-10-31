@@ -329,14 +329,14 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
 			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
 		} else {
-			literalName = methodDecl->getNameAsString();
+			if (!methodDecl->isStatic())
+				literalName = methodDecl->getNameAsString();
 		}
 		type = convFact.convertFunctionType(methodDecl);
 	}
 
 	literalName = fixQualifiedName(literalName);
 	core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
-
 	addHeaderForDecl(interceptExpr, decl, getStdLibDirs(), getUserIncludeDirs());
 
 	VLOG(2) << interceptExpr << " " << interceptExpr->getType();
