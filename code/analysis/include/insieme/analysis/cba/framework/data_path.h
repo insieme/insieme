@@ -140,8 +140,26 @@ namespace cba {
 				return *head < *other.head || (*head == *other.head && lessIndex(other));
 			}
 
+			ptr_type operator<<(const ptr_type& other) const {
+				// if there is nothing to append we are done
+				if (!other) return this;
+
+				// append recursively parent-list
+				ptr_type res = this->operator<<(other->head);
+
+				// build new node with updated header list and current index
+				return other->createCopyWith(res);
+			}
+
+			template<typename Op>
+			void visit(const Op& op) const {
+				if (head) head->visit(op);
+				op(*this);
+			}
+
 			virtual bool equalIndex(const DataPathElement& other) const =0;
 			virtual bool lessIndex(const DataPathElement& ohter) const =0;
+			virtual ptr_type createCopyWith(const ptr_type& head) const =0;
 
 		};
 
@@ -172,6 +190,10 @@ namespace cba {
 				return out << index;
 			}
 
+			const Index& getIndex() const {
+				return index;
+			}
+
 			virtual bool equalIndex(const DataPathElement& other) const {
 				// check type and identical index
 				return typeid(*this) == typeid(other) && index == static_cast<const ConcreteDataPathElement&>(other).index;
@@ -180,6 +202,10 @@ namespace cba {
 			virtual bool lessIndex(const DataPathElement& other) const {
 				// check type and compare index
 				return typeid(*this) == typeid(other) && index < static_cast<const ConcreteDataPathElement&>(other).index;
+			}
+
+			virtual ptr_type createCopyWith(const ptr_type& head) const {
+				return new ConcreteDataPathElement<Index>(head, index);
 			}
 		};
 
@@ -273,10 +299,35 @@ namespace cba {
 			return *this;
 		}
 
+		DataPath& operator<<=(const DataPath& extension) {
+
+			// deal with empty extension
+			if (!extension.path) return *this;
+
+			// deal with empty local state
+			if (!path) {
+				path = extension.path;
+				path->incRefCount();
+				return *this;
+			}
+
+			// compute new path
+			auto newPath = (*path) << extension.path;
+			assert_ne(path, newPath);
+			newPath->incRefCount();
+			path->decRefCount();
+			path = newPath;
+			return *this;
+		}
+
 		// path concatenation
 		template<typename Element>
 		DataPath operator<<(const Element& element) const {
 			return DataPath(*this) <<= element;
+		}
+
+		DataPath operator<<(const DataPath& path) const {
+			return DataPath(*this) <<= path;
 		}
 
 		// eliminating tailing elements from this path
@@ -284,6 +335,12 @@ namespace cba {
 			if (levels == 0) return *this;
 			assert_true(path) << "No such parent!";
 			return DataPath(path->getParent(levels));
+		}
+
+		template<typename Op>
+		void visit(const Op& op) const {
+			if (!path) return;
+			path->visit(op);
 		}
 
 		std::ostream& printTo(std::ostream& out) const {

@@ -129,6 +129,41 @@ namespace cba {
 
 	}
 
+	TEST(CBA, DataPathConcatenation) {
+
+		// simply check whether data paths can be sorted lexicographically
+		typedef NominalIndex<string> NominalIndex;
+
+		DataPath a;
+		DataPath b = DataPath() << NominalIndex("a");
+		DataPath c = DataPath() << NominalIndex("b");
+		DataPath d = DataPath() << NominalIndex("c") << NominalIndex("d");
+
+		EXPECT_EQ("#", 			toString(a));
+		EXPECT_EQ("#.a", 		toString(a << b));
+		EXPECT_EQ("#.a.b", 		toString(a << b << c));
+		EXPECT_EQ("#.a.b.c.d", 	toString(a << b << c << d));
+		EXPECT_EQ("#.a.b", 		toString(b << c));
+		EXPECT_EQ("#.a.c.d", 	toString(b << d));
+		EXPECT_EQ("#.c.d.c.d", 	toString(d << d));
+
+		EXPECT_EQ(a<<b<<c<<d, a<<b<<c<<d);
+	}
+
+	TEST(CBA, DataPathVisit) {
+
+		typedef NominalIndex<string> NominalIndex;
+
+		DataPath a = DataPath() << NominalIndex("a") << NominalIndex("b") << NominalIndex("c");
+
+		std::stringstream out;
+		a.visit([&](const detail::DataPathElement& cur) {
+			out << cur << " ";
+		});
+		EXPECT_EQ("#.a #.a.b #.a.b.c ", out.str());
+
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

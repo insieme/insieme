@@ -284,6 +284,24 @@ namespace cba {
 			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, s2));
 			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, sR));
 
+			// access data using path
+			EXPECT_EQ(d, projection_op(d, DataPath()));
+			EXPECT_EQ(e, projection_op(e, DataPath()));
+			EXPECT_EQ(f, projection_op(f, DataPath()));
+
+			EXPECT_PRED2(less_op, a1, projection_op(d, DataPath() << s1));
+			EXPECT_PRED2(less_op, a2, projection_op(d, DataPath() << s2));
+			EXPECT_PRED2(less_op, a2, projection_op(d, DataPath() << sR));
+
+			EXPECT_PRED2(less_op, a4, projection_op(e, DataPath() << s1));
+			EXPECT_PRED2(less_op, a3, projection_op(e, DataPath() << s2));
+			EXPECT_PRED2(less_op, a4, projection_op(e, DataPath() << sR));
+
+			EXPECT_PRED2(less_op, meet_op(a1, a4), projection_op(f, DataPath() << s1));
+			EXPECT_PRED2(less_op, meet_op(a2, a3), projection_op(f, DataPath() << s2));
+			EXPECT_PRED2(less_op, meet_op(a2, a4), projection_op(f, DataPath() << sR));
+
+
 			// empty-comparison
 			EXPECT_PRED2(less_op, empty, d);
 			EXPECT_PRED2(less_op, empty, e);

@@ -45,6 +45,7 @@
 #include "insieme/analysis/cba/analysis/arithmetic.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
+#include "insieme/analysis/cba/utils/constraint_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
@@ -55,60 +56,15 @@ namespace cba {
 
 	// ----------------- references ---------------
 
-	template<typename Context> class DataPathConstraintGenerator;
+	template<typename Context> class ConstantConstraintGenerator;
+	typedef DataAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
+	extern const SimpleConstantSetType D;
+	extern const SimpleConstantSetType d;
 
+	template<typename Context> class DataPathConstraintGenerator;
 	typedef DataAnalysisType<DataPath,DataPathConstraintGenerator> DataPathAnalysisType;
 	extern const DataPathAnalysisType DP;
 	extern const DataPathAnalysisType dp;
-
-	namespace {
-
-		template<typename DataPathLattice, typename StepLattice, typename Op>
-		struct data_path_builder {
-
-			typedef typename DataPathLattice::manager_type mgr_type;
-			typedef typename DataPathLattice::value_type value_type;
-			typedef typename DataPathLattice::base_lattice::value_type set_type;
-
-			typedef typename StepLattice::value_type step_value_type;
-			typedef typename StepLattice::base_lattice::value_type step_set_type;
-
-			mgr_type& mgr;
-			Op op;
-
-			data_path_builder(mgr_type& mgr, const Op& op) : mgr(mgr), op(op) {}
-
-			value_type operator()(const value_type& heads, const step_value_type& steps) const {
-
-				// convert to set
-				const set_type& head_set = heads;
-				const step_set_type& steps_set = steps;
-
-				// compute result
-				set_type res;
-				for(const auto& head : head_set) {
-					for(const auto& step : steps_set) {
-						res.insert(op(head, step));
-					}
-				}
-
-				// build result set
-				return mgr.atomic(res);
-			}
-		};
-
-		template<typename DataPathLattice, typename StepLattice, typename Op>
-		data_path_builder<DataPathLattice, StepLattice, Op> concat(typename DataPathLattice::manager_type& mgr, const Op& op) {
-			return data_path_builder<DataPathLattice, StepLattice, Op>(mgr, op);
-		}
-
-		template<typename PathValue, typename StepValue, typename Op>
-		ConstraintPtr concat(typename PathValue::lattice_type::manager_type& mgr, const PathValue& head, const StepValue& step, const PathValue& res, const Op& op) {
-			typedef typename PathValue::lattice_type head_lattice;
-			typedef typename StepValue::lattice_type step_lattice;
-			return subsetBinary(head, step, res, concat<head_lattice, step_lattice>(mgr, op));
-		}
-	}
 
 
 	template<typename Context>
@@ -162,8 +118,8 @@ namespace cba {
 				// get set containing value of identifier
 				auto D_field = cba.getSet(D, call[1], ctxt);	// we use the simple-constant analyses to get the identifier
 
-				constraints.add(concat(this->getValueManager(), DP_src, D_field, DP_trg,
-						[=](const DataPath& head, const ExpressionPtr& field)->DataPath {
+				constraints.add(combine(this->getValueManager(), DP_src, D_field, DP_trg,
+						[](const DataPath& head, const ExpressionPtr& field)->DataPath {
 							assert_true(field.isa<LiteralPtr>());
 							return head << FieldIndex(field.as<LiteralPtr>()->getValue());
 						})
@@ -174,8 +130,8 @@ namespace cba {
 				// get set containing value of identifier
 				auto A_index = cba.getSet(A, call[1], ctxt);	// we use the arithmetic analyses to obtain the index
 
-				constraints.add(concat(this->getValueManager(), DP_src, A_index, DP_trg,
-						[=](const DataPath& head, const Formula& index)->DataPath {
+				constraints.add(combine(this->getValueManager(), DP_src, A_index, DP_trg,
+						[](const DataPath& head, const Formula& index)->DataPath {
 							assert_true(index);
 							return head << ElementIndex(*index.formula);
 						})

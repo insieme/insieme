@@ -40,7 +40,10 @@
 #include "insieme/analysis/cba/framework/location.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
+#include "insieme/analysis/cba/analysis/data_paths.h"
+
 #include "insieme/analysis/cba/utils/cba_utils.h"
+#include "insieme/analysis/cba/utils/constraint_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
@@ -48,6 +51,12 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
+
+	// forward declarations
+	template<typename Context> class DataPathConstraintGenerator;
+	typedef DataAnalysisType<DataPath,DataPathConstraintGenerator> DataPathAnalysisType;
+	extern const DataPathAnalysisType DP;
+	extern const DataPathAnalysisType dp;
 
 	// ----------------- references ---------------
 
@@ -74,9 +83,11 @@ namespace cba {
 
 		CBA& cba;
 
+		const core::lang::BasicGenerator& base;
+
 	public:
 
-		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba) { };
+		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
@@ -114,6 +125,24 @@ namespace cba {
 
 				// done
 				return;
+			}
+
+			// check whether the operation is a narrow or expand (data path operation)
+			const auto& fun = call->getFunctionExpr();
+			if (base.isRefNarrow(fun)) {
+
+				// obtain involved sets
+				auto R_in  = cba.getSet(R<Context>(), call[0], ctxt);	// the input reference
+				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
+				auto R_out = cba.getSet(R<Context>(), call, ctxt);		// the resulting context
+
+				// add constraint linking in and out values
+				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,
+						[](const Reference<Context>& ref, const DataPath& path)->Reference<Context> {
+							return Reference<Context>(ref.getLocation(), ref.getDataPath() << path);
+						}
+				));
+
 			}
 		}
 

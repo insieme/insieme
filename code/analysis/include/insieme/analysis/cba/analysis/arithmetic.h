@@ -42,7 +42,6 @@
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/lang/basic.h"
 
@@ -55,37 +54,6 @@ namespace cba {
 	using std::set;
 
 	// ----------------- arithmetic analysis ---------------
-
-	struct Formula : public utils::Printable, public utils::Hashable {
-		typedef boost::optional<core::arithmetic::Formula> formula_type;
-		formula_type formula;
-
-		Formula() : formula() {};
-		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
-
-		bool operator==(const Formula& other) const {
-			return this == &other || (!formula && !other.formula) ||
-					(formula && other.formula && *formula == *other.formula);
-		}
-
-		bool operator<(const Formula& other) const {
-			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
-		}
-
-		operator bool() const {
-			return formula;
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			if (formula) return out << *formula;
-			return out << "-unknown-";
-		}
-
-		std::size_t hash() const {
-			// TODO: implement hashing for formulas!
-			return (formula) ? 1 : 0;	// formulas can't be hashed yet ..
-		}
-	};
 
 	template<typename C> class ArithmeticConstraintGenerator;
 	typedef DataAnalysisType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;

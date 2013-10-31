@@ -45,7 +45,10 @@
 
 #include <boost/operators.hpp>
 
+#include "insieme/analysis/cba/framework/data_path.h"
+
 #include "insieme/core/ir.h"
+
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/hash_utils.h"
@@ -339,6 +342,9 @@ namespace cba {
 				// the equality operator is operating on the structural equality - equal to the hash
 				virtual bool operator==(const Entry<BaseLattice>& other) const =0;
 
+				// an operation following a data path step
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const =0;
+
 				// a less-than operator regarding the structural equality - compatible to the hash and == operator
 				virtual bool operator<(const Entry<BaseLattice>& other) const =0;
 
@@ -387,6 +393,12 @@ namespace cba {
 
 				virtual bool operator<(const Entry<BaseLattice>& other) const {
 					return this != &other && value < cast(other).value;
+				}
+
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+					static const Data<BaseLattice> empty;
+					assert_fail() << "Not applicable!";
+					return empty;
 				}
 
 				virtual bool contains(const Entry<BaseLattice>& other) const {
@@ -456,6 +468,11 @@ namespace cba {
 
 				const Data<BaseLattice>& operator[](const IndexType& index) const {
 					return extract(data, index);
+				}
+
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&cur));
+					return (*this)[static_cast<const detail::ConcreteDataPathElement<IndexType>&>(cur).getIndex()];
 				}
 
 				virtual bool contains(const Entry<BaseLattice>& other) const {
@@ -555,6 +572,20 @@ namespace cba {
 
 				// access field
 				return static_cast<const internal::CompoundEntry<IndexType, BaseLattice>&>(*data)[index];
+			}
+
+			const Data<BaseLattice>& operator[](const DataPath& path) const {
+				const Data<BaseLattice>* res = this;
+				path.visit([&](const detail::DataPathElement& cur) {
+					res = &((*res)[cur]);
+				});
+				return *res;
+ 			}
+
+			const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+				static const Data<BaseLattice> empty;
+				if (!data) return empty;
+				return (*data)[cur];
 			}
 
 			operator const typename BaseLattice::value_type&() const {
@@ -853,6 +884,9 @@ namespace cba {
 				// a less-than operator regarding the structural equality - compatible to the hash and == operator
 				virtual bool operator<(const TreeEntry<BaseLattice>& other) const =0;
 
+				// an operation following a data path step
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const =0;
+
 				// check whether the set represented by this element contains the given element
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const =0;
 
@@ -891,6 +925,12 @@ namespace cba {
 
 				virtual bool operator<(const TreeEntry<BaseLattice>& other) const {
 					return this != &other && value < cast(other).value;
+				}
+
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+					static const Data<BaseLattice> empty;
+					assert_fail() << "Not applicable!";
+					return empty;
 				}
 
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const {
@@ -953,6 +993,11 @@ namespace cba {
 
 				const Data<BaseLattice>& operator[](const IndexType& index) const {
 					return extract(data, index);
+				}
+
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&cur));
+					return (*this)[static_cast<const detail::ConcreteDataPathElement<IndexType>&>(cur).getIndex()];
 				}
 
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const {
@@ -1025,6 +1070,28 @@ namespace cba {
 				Data<BaseLattice> res;
 				for(const auto& cur : *data) {
 					res.meetAssign(static_cast<const internal::CompoundEntry<IndexType, BaseLattice>&>(*cur)[index]);
+				}
+
+				// done
+				return res;
+			}
+
+			Data<BaseLattice> operator[](const DataPath& path) const {
+				Data<BaseLattice> res = *this;
+				path.visit([&](const detail::DataPathElement& cur) {
+					res = res[cur];
+				});
+				return res;
+			}
+
+			Data<BaseLattice> operator[](const detail::DataPathElement& index) const {
+				// handle empty
+				if (!data) return *this;
+
+				// collect union of all projections of all elements within the set
+				Data<BaseLattice> res;
+				for(const auto& cur : *data) {
+					res.meetAssign((*cur)[index]);
 				}
 
 				// done

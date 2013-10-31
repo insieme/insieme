@@ -173,6 +173,123 @@ namespace cba {
 			}
 		};
 
+		/**
+		 * A custom constraint for the data flow equation solver obtaining the value
+		 * from a location in case a given reference is pointing to it.
+		 */
+		template<typename ValueLattice, typename RefLattice, typename Context>
+		struct ReadConstraint : public Constraint {
+
+			typedef typename RefLattice::base_lattice::value_type ref_set_type;
+			typedef typename ref_set_type::value_type ref_type;
+
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::projection_op_type projection_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			// the location the location state value is referencing to.
+			Location<Context> loc;
+
+			// the value covering the read reference
+			TypedValueID<RefLattice> ref;
+
+			// the value to be potentially read
+			TypedValueID<ValueLattice> loc_value;
+
+			// the set to be updated
+			TypedValueID<ValueLattice> res;
+
+		public:
+
+			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
+				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res)),
+				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
+
+			virtual bool update(Assignment& ass) const {
+				// read input data and add it to result value
+				meet_assign_op_type meet_assign_op;
+				return meet_assign_op(ass[res], getReadData(ass));
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				// check whether data to be read is in result set
+				less_op_type less_op;
+				return less_op(getReadData(ass), ass[res]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				return out << loc_value << " -> " << res << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				out << loc_value << " -> " << res << "[label=\"" << *this << "\"";
+				if (!isReferenced(ass)) out << " style=dotted";
+				return out << "]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
+			}
+
+			virtual bool hasAssignmentDependentDependencies() const {
+				return true;
+			}
+
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::set<ValueID> res;
+				res.insert(ref);
+				if (isReferenced(ass)) res.insert(loc_value);
+				return res;
+			}
+
+		private:
+
+			bool isReferenced(const Assignment& ass) const {
+				// obtain set of references
+				const ref_set_type& ref_set = ass[ref];
+				for(const auto& cur : ref_set) {
+					if (cur.getLocation() == loc) return true;
+				}
+				return false;
+			}
+
+			value_type getReadData(const Assignment& ass) const {
+				// check whether location is present in reference set
+				const ref_set_type& ref_set = ass[ref];
+
+				// get list of accessed data paths in memory location
+				vector<DataPath> paths;
+				for(const auto& cur : ref_set) {
+					if (cur.getLocation() == loc) {
+						paths.push_back(cur.getDataPath());
+					}
+				}
+
+				// check whether something is referenced
+				value_type res;
+				if (paths.empty()) return res;
+
+				// get current value of location
+				const value_type& mem_value = ass[loc_value];
+
+				// collect all values from the loc_value referenced by the paths
+				meet_assign_op_type meet_assign_op;
+				projection_op_type projection_op;
+
+				for(const auto& cur : paths) {
+					meet_assign_op(res, projection_op(mem_value, cur));
+				}
+				return res;
+			}
+
+		};
+
+		template<typename ValueLattice, typename RefLattice, typename Context>
+		ConstraintPtr read(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<ReadConstraint<ValueLattice,RefLattice,Context>>(loc, ref, loc_value, res);
+		}
+
 	}
 
 
@@ -521,7 +638,7 @@ namespace cba {
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
 							auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
-							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+							constraints.add(read(loc, R_trg, S_in, A_call));
 						}
 					}
 

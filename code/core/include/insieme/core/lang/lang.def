@@ -555,7 +555,7 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, Ar
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
-DERIVED(CompositeRefElem,      "composite.ref.elem",      "(ref<'a> s, identifier i, type<'b> t) -> ref<'b> { ref.narrow(s, dp.member(dp.root, i), t); }")
+DERIVED(CompositeRefElem,      "composite.ref.elem",      "(ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.member(dp.root, i), t); }")
 LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
 
 // Tuple --------------------------------------------------------------------------------------------------------------

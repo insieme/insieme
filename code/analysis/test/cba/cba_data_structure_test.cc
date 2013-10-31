@@ -168,7 +168,7 @@ namespace cba {
 				"	dp.element(b, 17u+4u+lit(\"c\":uint<4>));"
 				"	"
 				"	ref<datapath> x = var(dp.root);"
-				"	if (lit(\"?\":bool)) {"
+				"	if (lit(\"?\":bool)) {"					// to bring in some confusion
 				"		x = dp.member(*x, lit(\"a\")); "
 				"	}"
 				"	*x;"
@@ -227,14 +227,19 @@ namespace cba {
 
 		CBA analysis(code);
 
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R<DefaultContext>())));
-//		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), R<DefaultContext>())));
-//		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>())));
 
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.a)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R<DefaultContext>())));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.b)}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), R<DefaultContext>())));
-		createDotDump(analysis);
 
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c)}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c.a)}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c.b)}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), R<DefaultContext>())));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.r)}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), R<DefaultContext>())));
+
+//		createDotDump(analysis);
 	}
 
 	TEST(CBA, MutableStruct) {
@@ -250,65 +255,70 @@ namespace cba {
 				"	"
 				"	auto p1 = var((point){ 1, 2 });"
 				"	auto p2 = var((point){ 3, 4 });"
-				"	ref<ref<point>> p3 = var(p1);"
+				"	ref<point> p3 = p1;"				// an alias
+				"	ref<ref<point>> p4 = var(p1);"		// a pointer
 				"	"
 				"	*p1;"
 				"	*p2;"
 				"	*p3;"
+				"	**p4;"
 				"	*p1.a;"
 				"	*p1.b;"
 				"	*p2.a;"
 				"	*p2.b;"
+				"	*p3.a;"
+				"	*p3.b;"
 				"	*p3->a;"
 				"	*p3->b;"
+				"	"
 				"	"
 				"	p1.a = 5;"
 				"	"
-				"	*p1;"
-				"	*p2;"
-				"	*p3;"
-				"	*p1.a;"
-				"	*p1.b;"
-				"	*p2.a;"
-				"	*p2.b;"
-				"	*p3->a;"
-				"	*p3->b;"
-				"	"
-				"	p1.b = 6;"
-				"	"
-				"	*p1;"
-				"	*p2;"
-				"	*p3;"
-				"	*p1.a;"
-				"	*p1.b;"
-				"	*p2.a;"
-				"	*p2.b;"
-				"	*p3->a;"
-				"	*p3->b;"
-				"	"
-				"	p3 = p2;"
-				"	"
-				"	*p1;"
-				"	*p2;"
-				"	*p3;"
-				"	*p1.a;"
-				"	*p1.b;"
-				"	*p2.a;"
-				"	*p2.b;"
-				"	*p3->a;"
-				"	*p3->b;"
-				"	"
-				"	p1 = *p2;"
-				"	"
-				"	*p1;"
-				"	*p2;"
-				"	*p3;"
-				"	*p1.a;"
-				"	*p1.b;"
-				"	*p2.a;"
-				"	*p2.b;"
-				"	*p3->a;"
-				"	*p3->b;"
+//				"	*p1;"
+//				"	*p2;"
+//				"	**p3;"
+//				"	*p1.a;"
+//				"	*p1.b;"
+//				"	*p2.a;"
+//				"	*p2.b;"
+//				"	*p3->a;"
+//				"	*p3->b;"
+//				"	"
+//				"	p1.b = 6;"
+//				"	"
+//				"	*p1;"
+//				"	*p2;"
+//				"	*p3;"
+//				"	*p1.a;"
+//				"	*p1.b;"
+//				"	*p2.a;"
+//				"	*p2.b;"
+//				"	*p3->a;"
+//				"	*p3->b;"
+//				"	"
+//				"	p3 = p2;"
+//				"	"
+//				"	*p1;"
+//				"	*p2;"
+//				"	*p3;"
+//				"	*p1.a;"
+//				"	*p1.b;"
+//				"	*p2.a;"
+//				"	*p2.b;"
+//				"	*p3->a;"
+//				"	*p3->b;"
+//				"	"
+//				"	p1 = *p2;"
+//				"	"
+//				"	*p1;"
+//				"	*p2;"
+//				"	*p3;"
+//				"	*p1.a;"
+//				"	*p1.b;"
+//				"	*p2.a;"
+//				"	*p2.b;"
+//				"	*p3->a;"
+//				"	*p3->b;"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -317,17 +327,21 @@ namespace cba {
 
 		CBA analysis(code);
 
-		int pos = 3;
-		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		int pos = 4;
+//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos = 8;
+		std::cout << code[pos] << " - " << *(code[pos]) << "\n";
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
 		createDotDump(analysis);
-		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
 
 		pos++;
 
