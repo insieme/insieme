@@ -51,8 +51,6 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
-
 namespace insieme {
 namespace frontend {
 
