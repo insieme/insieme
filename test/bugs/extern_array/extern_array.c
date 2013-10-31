@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "extern_arr.h"
 
 /*
@@ -12,6 +13,9 @@
 int main()
 {
 	extern_array[10];
-	extern_array2[10];
+	extern_array2[10] = 10;
+	printf("%d\n", extern_array[10]);
+	printf("%d\n", extern_array2[10]);
+	
 	return extern_array[10];
 }
