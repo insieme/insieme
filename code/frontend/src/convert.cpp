@@ -1124,6 +1124,8 @@ namespace {
 					} else { assert(false); }
 				}
 				else{
+					// magic tryDeref if not a pointer.... because!
+					if (!utils::isRefArray(expr->getType()))
 						expr = builder.tryDeref(expr);
 				}
 				initList.push_back(builder.assign( init, expr));
