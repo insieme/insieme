@@ -196,6 +196,9 @@ namespace cmd {
 					res.job.setStandard(frontend::ConversionSetup::C99);
 				} else if (selected == "c++03") {
 					res.job.setStandard(frontend::ConversionSetup::Cxx03);
+				} else if (selected == "c++0x") {
+					res.job.setStandard(frontend::ConversionSetup::Cxx11);
+					assert(res.job.isCxx());
 				} else if (selected == "c++11") {
 					res.job.setStandard(frontend::ConversionSetup::Cxx11);
 					assert(res.job.isCxx());

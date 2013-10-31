@@ -706,8 +706,6 @@ namespace tu {
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
 		
-		std::cout << "toProgram: " << a << std::endl;
-
 		// search for entry point
 		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {
