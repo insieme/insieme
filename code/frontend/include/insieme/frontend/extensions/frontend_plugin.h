@@ -39,8 +39,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_program.h"
 
-using namespace insieme;
-
 namespace clang {
     class Expr;
     class Stmt;
@@ -67,14 +65,14 @@ namespace extensions {
      *  or more of the methods to provide a visitor for clang types,
      *  expression or statements.
      */
-	class ClangStagePlugin {
+	class FrontendPlugin {
 	public:
-		virtual ~ClangStagePlugin(){}
+		virtual ~FrontendPlugin(){}
 
-		virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact);
-        virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact);
-		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact);
-		virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact);
+		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+        virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
+		virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
 	};
 
 }

@@ -66,31 +66,31 @@ using namespace insieme::frontend;
 /**
  *			Cxx11 null pointer
  */
-core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr, 
-												 frontend::conversion::Converter& convFact){
+insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
+												 insieme::frontend::conversion::Converter& convFact){
 	auto builder = convFact.getIRBuilder();
-	core::ExpressionPtr retIr;
-	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullPtrExpr));
-	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
+	insieme::core::ExpressionPtr retIr;
+	insieme::core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullPtrExpr));
+	assert(type->getNodeType() != insieme::core::NT_ArrayType && "C pointer type must of type array<'a,1>");
 	return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
 }
 
 /**
  *  			Cxx11 lambda expression
  */
-core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
 	auto builder = convFact.getIRBuilder();
 	auto& mgr = convFact.getNodeManager();
-	core::ExpressionPtr retIr;
+	insieme::core::ExpressionPtr retIr;
 
 	// convert the enclosing class
 	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
-	core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
+	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
 
 	// convert the captures
 	auto captureIt  = lambdaExpr->capture_init_begin();
 	auto captureEnd = lambdaExpr->capture_init_end();
-	std::vector<core::ExpressionPtr> captures; 
+	std::vector<insieme::core::ExpressionPtr> captures;
 	for (;captureIt != captureEnd; ++captureIt){
 		captures.push_back(convFact.convertExpr(*captureIt));
 	}
@@ -100,42 +100,42 @@ core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambd
 	// 		- retrieve the operator() (.. )  func
 	// 		- create this->_mX access for captured vars
 	// 		- substitute every usage by member access
-	const core::ClassMetaInfo&  metainfo = core::getMetaInfo(lambdaClassIR);
-	std::vector<core::MemberFunctionPtr> functionals = metainfo.getMemberFunctionOverloads("operator()");
+	const insieme::core::ClassMetaInfo&  metainfo = insieme::core::getMetaInfo(lambdaClassIR);
+	std::vector<insieme::core::MemberFunctionPtr> functionals = metainfo.getMemberFunctionOverloads("operator()");
 
 	for (auto cur : functionals){
 		if(cur->isVirtual()){
 			continue;
 		}
 		// in the meta information we only store a symbol, the actual implementation is stored in the translation unit
-		core::ExpressionPtr symb = cur->getImplementation();
+		insieme::core::ExpressionPtr symb = cur->getImplementation();
 		assert(symb);
-		core::LambdaExprPtr membFunction;
-		if  (symb.isa<core::LiteralPtr>()){
-			 membFunction = convFact.getIRTranslationUnit()[symb.as<core::LiteralPtr>()];
+		insieme::core::LambdaExprPtr membFunction;
+		if  (symb.isa<insieme::core::LiteralPtr>()){
+			 membFunction = convFact.getIRTranslationUnit()[symb.as<insieme::core::LiteralPtr>()];
 		}
-		else if (symb.isa<core::LambdaExprPtr>()){
-			membFunction = symb.as<core::LambdaExprPtr>();
+		else if (symb.isa<insieme::core::LambdaExprPtr>()){
+			membFunction = symb.as<insieme::core::LambdaExprPtr>();
 			assert(false);
 		}
 		else {
 			assert(false && "not a func, not a literal, u tell me what is this" );
 		}
-		core::ExpressionPtr thisExpr = membFunction->getParameterList()[0];
+		insieme::core::ExpressionPtr thisExpr = membFunction->getParameterList()[0];
 
 		// for each capture, prepare a substitute
-		core::NodeMap replacements;
+		insieme::core::NodeMap replacements;
 		unsigned id(0);
 		for (auto capExpr : captures){
 
-			core::VariableList vars;
-			visitDepthFirstOnce(capExpr, [this, &vars] (const core::VariablePtr& var){ vars.push_back(var);});
+			insieme::core::VariableList vars;
+			visitDepthFirstOnce(capExpr, [this, &vars] (const insieme::core::VariablePtr& var){ vars.push_back(var);});
 			assert(vars.size() ==1 && "more than one variable in expression?");
-			core::VariablePtr var = vars[0];
+			insieme::core::VariablePtr var = vars[0];
 
 			// build anonymous member access
-			core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
-			core::ExpressionPtr access =  builder.callExpr (var->getType(),
+			insieme::core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
+			insieme::core::ExpressionPtr access =  builder.callExpr (var->getType(),
 													  builder.getLangBasic().getCompositeRefElem(), thisExpr,
 													  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
 			replacements[var] = access;
@@ -143,16 +143,16 @@ core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambd
 		}
 
 		// replace variables usage and update function implementation in the TU
-		membFunction = core::transform::replaceAllGen(builder.getNodeManager(), membFunction, replacements, false );
+		membFunction = insieme::core::transform::replaceAllGen(builder.getNodeManager(), membFunction, replacements, false );
 
-		if  (symb.isa<core::LiteralPtr>()){
-			convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), membFunction);
+		if  (symb.isa<insieme::core::LiteralPtr>()){
+			convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), membFunction);
 		}
 		//core::setMetaInfo(lambdaClassIR, metainfo);
 	}
 	// restore new meta info
 
-	core::ExpressionPtr init = core::encoder::toIR(mgr, captures);
+	insieme::core::ExpressionPtr init = insieme::core::encoder::toIR(mgr, captures);
 	return retIr = convFact.getInitExpr (lambdaClassIR, init);
 ;
 }
@@ -163,15 +163,15 @@ core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambd
 /**
  * auto type
  */
-core::TypePtr Cpp11Plugin::VisitAutoType(const clang::AutoType* autoTy, frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr Cpp11Plugin::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
 	return convFact.convertType(autoTy->getDeducedType().getTypePtr());
 }
 
 /**
- * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations. 
+ * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
  */
-core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType* declTy, frontend::conversion::Converter& convFact) {
-	core::TypePtr retTy;
+insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::TypePtr retTy;
 	assert(declTy->getUnderlyingExpr());
 	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
 	return retTy;

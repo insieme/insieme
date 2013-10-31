@@ -259,7 +259,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 
     //iterate clang handler list and check if a handler wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
-	for(auto plugin : convFact.getClangHandlers()) {
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retStmt = plugin->Visit(stmt, convFact);
 		if(retStmt.size())
 			break;

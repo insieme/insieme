@@ -463,7 +463,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
     //iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getClangHandlers()) {
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
 		core::TypePtr retIr = plugin->Visit(type, convFact);
 		if(retIr)
 			return retIr;

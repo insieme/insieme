@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -401,7 +401,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
     //in this case we can forget the annotation
     //typedef name annotation for struct/union messes with recursive type resolution
     //as typeDef is syntactic sugar drop the name annotation
-    /* 
+    /*
     if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)
 		&& !subType.isa<core::StructTypePtr>() && !subType.isa<core::UnionTypePtr>()) {
         // Adding the name of the typedef as annotation
@@ -451,14 +451,14 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
 		assert(enumDecl && "TagType decl is a EnumDecl type!");
-       	
+
        	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
-       	
+
 
         const string& enumTypeName = utils::buildNameForEnum(enumDecl);
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-		
-		core::TypePtr enumTy = ext.getEnumType(enumTypeName); 
+
+		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
 		LOG_TYPE_CONVERSION( tagType, enumTy );
 
 		if(systemHeaderOrigin) {
@@ -466,8 +466,8 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 			//TODO let interceptor take care of
        		return enumTy;
 		}
-		
-		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream 
+
+		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream
 		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
 					const string& enumConstantName = utils::buildNameForEnumConstant(ecd);
 					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
@@ -624,7 +624,7 @@ namespace {
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	//iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getClangHandlers()) {
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
 		core::TypePtr retIr = plugin->Visit(type, convFact);
 		if(retIr)
 			return retIr;
@@ -667,7 +667,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 		// resolve the type recursively
 		res = convertInternal(type);
-		
+
 		//check if type is defined in a system header --> if so add includeAnnotation which is used
 		//in backend to avoid redeclaration of type
 		if( utils::isDefinedInSystemHeader(recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs()) ) {

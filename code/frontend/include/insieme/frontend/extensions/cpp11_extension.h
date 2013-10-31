@@ -35,47 +35,47 @@
  */
 
 
-#include "insieme/frontend/extensions/clang_stage_plugin.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 
-class Cpp11Plugin : public insieme::frontend::extensions::ClangStagePlugin {
+class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
-	
+
 	/**
 	 *			Cxx11 null pointer
 	 *	Cxx11 introduces a null pointer value called nullptr, it avoids typing problems
 	 */
-	core::ExpressionPtr VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr, 
-													 frontend::conversion::Converter& convFact);
+	insieme::core::ExpressionPtr VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
+													 insieme::frontend::conversion::Converter& convFact);
 
 	/**
 	 *  			Cxx11 lambda expression
 	 *  		we could convert the body, encapsulate it into a function and pas all the captures
 	 *  		as parameters, but this will ruin compatibility. We need a class with the operator() overload
 	 */
-	core::ExpressionPtr VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, frontend::conversion::Converter& convFact) ;
+	insieme::core::ExpressionPtr VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) ;
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
-	
+
 	/**
 	 * auto type
 	 */
-	core::TypePtr VisitAutoType(const clang::AutoType* autoTy, frontend::conversion::Converter& convFact) ;
+	insieme::core::TypePtr VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) ;
 
 	/**
-	 * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations. 
-	 *	   If you just need the type for a variable that you are about to initialize auto is often a simpler choice. 
-	 *	   You really need decltype if you need a type for something that is not a variable, such as a return type. 
+	 * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
+	 *	   If you just need the type for a variable that you are about to initialize auto is often a simpler choice.
+	 *	   You really need decltype if you need a type for something that is not a variable, such as a return type.
 	 */
-	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy, frontend::conversion::Converter& convFact) ;
+	insieme::core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) ;
 
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               Plugin Hooks
-	virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact) {
+	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 		if (const clang::LambdaExpr* lambda =  llvm::dyn_cast<clang::LambdaExpr>(expr))
 			return VisitLambdaExpr(lambda, convFact);
 		if (const clang::CXXNullPtrLiteralExpr* nullExpr =  llvm::dyn_cast<clang::CXXNullPtrLiteralExpr>(expr))
@@ -83,7 +83,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::ClangStagePlugin {
 		return nullptr;
 	}
 
-	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
+	virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
 		if (const clang::AutoType* autoTy =  llvm::dyn_cast<clang::AutoType>(type))
 			return VisitAutoType(autoTy, convFact);
 		if (const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type))

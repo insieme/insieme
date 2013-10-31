@@ -53,6 +53,9 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
 
+#include "insieme/frontend/extensions/cpp11_extension.h"
+#include "insieme/frontend/extensions/variadic_arguments_extension.h"
+
 namespace insieme {
 namespace frontend {
 
@@ -65,13 +68,25 @@ namespace frontend {
 		  standard(Auto),
 		  definitions(),
 		  interceptions( { "std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*" } ),
-		  flags(DEFAULT_FLAGS) {};
+		  flags(DEFAULT_FLAGS) {
+    };
 
 
 	bool ConversionSetup::isCxx(const path& file) const {
 		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
 		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
+
+    //register frontend plugins
+    void ConversionSetup::frontendPluginInit() {
+        registerFrontendPlugin<VariadicArgumentsPlugin>();
+    }
+
+    void ConversionSetup::setStandard(const Standard& standard) {
+        this->standard = standard;
+        if(standard == Cxx11)
+                registerFrontendPlugin<Cpp11Plugin>();
+    }
 
 
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
