@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -94,9 +94,6 @@
 #include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
-
-#include "insieme/frontend/extensions/variadic_arguments_extension.h"
-#include "insieme/frontend/extensions/cpp11_extension.h"
 
 using namespace clang;
 using namespace insieme;
@@ -180,17 +177,10 @@ namespace frontend {
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 	// just delegate operation to converter
 	Program program(manager, unit, setup);
-	conversion::Converter c(manager, program);
-	c.registerClangHandler<VariadicArgumentsPlugin>();
-
-	// enable cpp11 if needed
-	if (setup.getStandard() ==  ConversionSetup::Cxx11)
-		c.registerClangHandler<Cpp11Plugin>();
-
+	conversion::Converter c(manager, program, setup);
 	// add them and fire the conversion
 	return c.convert();
 }
-
 
 namespace conversion {
 
@@ -200,12 +190,11 @@ namespace conversion {
 
 //////////////////////////////////////////////////////////////////
 ///
-Converter::Converter(core::NodeManager& mgr, const Program& prog) :
+Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		program(prog), convSetup(setup), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
 		irTranslationUnit(mgr), used(false)
-	{
-
+{
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 		exprConvPtr = std::make_shared<CXXExprConverter>(*this);
@@ -217,10 +206,6 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 	}
 	// tag the translation unit with as C++ if case
 	irTranslationUnit.setCXX(prog.isCxx());
-}
-
-const std::list<std::shared_ptr<extensions::ClangStagePlugin>> Converter::getClangHandlers() const {
-	return userProvidedConv;
 }
 
 tu::IRTranslationUnit Converter::convert() {
@@ -354,7 +339,7 @@ tu::IRTranslationUnit Converter::convert() {
 	//std::cout << " ==================================== " << std::endl;
 	//std::cout << getIRTranslationUnit() << std::endl;
 	//std::cout << " ==================================== " << std::endl;
-	
+
 	// that's all
 	return irTranslationUnit;
 }
@@ -891,15 +876,15 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
 		string typeName = enumDecl->getNameAsString();
 		string constantName = enumConstant->getNameAsString();
-		
+
 		//remove typeName from qualifiedTypeName and append enumConstantName
 		size_t pos = qualifiedTypeName.find(typeName);
 		assert(pos!= std::string::npos);
 		string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
-		
-		VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName; 
+
+		VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
 		VLOG(2) << fixedQualifiedName;
-		
+
 		enumConstantName = fixedQualifiedName;
 	} else {
 		enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));

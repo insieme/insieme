@@ -129,7 +129,7 @@ class PrunableDeclVisitor{
 		//check if a user provided decl visitor wants
 		//to do something with the declaration
 		bool wasVisited = false;
-		for(auto plugin : static_cast<BASE*>(this)->getConverter().getClangHandlers()) {
+		for(auto plugin : static_cast<BASE*>(this)->getConverter().getConversionSetup().getPlugins()) {
             wasVisited = plugin->Visit(decl, static_cast<BASE*>(this)->getConverter());
 		}
 		switch (decl->getKind()){

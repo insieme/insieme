@@ -39,6 +39,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <list>
+#include <memory>
 
 #include <boost/filesystem/path.hpp>
 
@@ -47,11 +49,15 @@
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
+#include "insieme/frontend/extensions/frontend_plugin.h"
+
 namespace insieme {
 namespace frontend {
 
 	using std::map;
 	using std::set;
+	using std::list;
+	using std::shared_ptr;
 	using std::vector;
 	using std::string;
 
@@ -125,6 +131,12 @@ namespace frontend {
 		 */
 		unsigned flags;
 
+        /**
+         *  A map that contains all user plugins
+         */
+         typedef std::shared_ptr<extensions::FrontendPlugin> frontendPluginPtr;
+         std::list<frontendPluginPtr> plugins;
+
 	public:
 
 		/**
@@ -163,9 +175,7 @@ namespace frontend {
 		/**
 		 * Updates the standard to be used for parsing input files.
 		 */
-		void setStandard(const Standard& standard) {
-			this->standard = standard;
-		}
+		void setStandard(const Standard& standard);
 
 		/**
 		 * Obtains a reference to the currently defined definitions.
@@ -259,6 +269,25 @@ namespace frontend {
 		 */
 		bool isCxx(const path& file) const;
 
+        /**
+         *  Frontend plugin initialization method
+         */
+        void frontendPluginInit();
+
+        /**
+         *  Register a new frontend plugin
+         */
+        template <class T, class ... Args>
+        void registerFrontendPlugin(const Args& ... args) {
+            plugins.push_back(std::make_shared<T>(args ...));
+        };
+
+        /**
+         *  Return the list of frontend plugins
+         */
+        const std::list<frontendPluginPtr> getPlugins() const {
+            return plugins;
+        };
 	};
 
 
@@ -280,7 +309,8 @@ namespace frontend {
 		 * Creates a new conversion job covering a single file.
 		 */
 		ConversionJob(const path& file, const vector<path>& includeDirs = vector<path>())
-			: ConversionSetup(includeDirs), files(toVector(file)) {}
+			: ConversionSetup(includeDirs), files(toVector(file)) {
+        }
 
 		/**
 		 * Creates a new conversion job covering the given files.
@@ -338,7 +368,7 @@ namespace frontend {
 		bool isCxx() const {
 			if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
 			if (getStandard() == Standard::C99) return false;
-			
+
 			bool cppFile = any(files, [&](const path& cur) {
 				return static_cast<const ConversionSetup&>(*this).isCxx(cur);
 			});

@@ -903,7 +903,7 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-	for(auto plugin : convFact.getClangHandlers()) {
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
 		retIr = plugin->Visit(expr, convFact);
 		if(retIr)
 			break;

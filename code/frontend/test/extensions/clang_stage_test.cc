@@ -50,23 +50,17 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
-#include "insieme/frontend/extensions/clang_stage_plugin.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
+
+using namespace insieme;
 
 bool declVisited = false;
+bool typeVisited = false;
 
-/**
- *  This is a user provided clang stage plugin that converts
- *  every clang type to a generic type with the name value
- *  GenericTypeCreator.
- */
-class ClangTestPlugin : public insieme::frontend::extensions::ClangStagePlugin {
+class ClangTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
-	    if(llvm::isa<clang::BuiltinType>(type)) {
-            core::IRBuilder builder = convFact.getIRBuilder();
-            if(llvm::cast<clang::BuiltinType>(type)->getKind() == clang::BuiltinType::Kind::NullPtr)
-                return builder.genericType("GenericTypeCreator");
-	    }
+        typeVisited=true;
         return nullptr;
 	}
 
@@ -84,47 +78,29 @@ class ClangTestPlugin : public insieme::frontend::extensions::ClangStagePlugin {
 TEST(ClangStage, Initialization) {
 	//initialization
 	insieme::core::NodeManager mgr;
-	insieme::frontend::Program p(mgr, SRC_DIR "/inputs/simple.c");
-	insieme::frontend::conversion::Converter conv(mgr, p);
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>();
 
-	// register the clang stage plugin
-	conv.registerClangHandler<ClangTestPlugin>();
-	EXPECT_EQ(1, conv.getClangHandlers().size());
+	// register the frontend plugin
+	EXPECT_EQ(1, job.getPlugins().size());
 }
 
 /**
  *  This test checks if the user provided
- *  clang plugin works correctly. A clang
- *  type is created and should be converted
- *  with the user provided visitor instead
- *  of the insieme type visitor.
+ *  clang plugin works correctly.
  */
-
 TEST(ClangStage, Conversion) {
 	//initialization
 	insieme::core::NodeManager mgr;
-	insieme::frontend::Program p(mgr, SRC_DIR "/inputs/simple.c");
-	insieme::frontend::conversion::Converter conv(mgr, p);
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>();
 
-	// register the clang stage plugin
-	conv.registerClangHandler<ClangTestPlugin>();
-    {
-
-        //lets create a clang expression and pass it to the converter
-        clang::Type* ty = new clang::BuiltinType(clang::BuiltinType::Kind::NullPtr);
-        insieme::core::TypePtr convertedTy = conv.convertType(ty);
-
-        //this should now be a generic type that contains the name GenericTypeCreator
-        EXPECT_TRUE(convertedTy.isa<insieme::core::GenericTypePtr>());
-        if(convertedTy.isa<insieme::core::GenericTypePtr>()) {
-            std::string s = static_pointer_cast<insieme::core::GenericTypePtr>(convertedTy)->getName()->getValue();
-            EXPECT_EQ("GenericTypeCreator", s);
-        }
-        delete ty;
-    }
-	//check if the decl visitors is visited correctly
+    //check if the decl visitor and
+    //the type visitor is visited correctly
 	EXPECT_FALSE(declVisited);
-	conv.convert();
+	EXPECT_FALSE(typeVisited);
+	job.execute(mgr);
+	EXPECT_TRUE(typeVisited);
 	EXPECT_TRUE(declVisited);
 
 }

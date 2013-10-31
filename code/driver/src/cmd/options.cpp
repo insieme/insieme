@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -214,12 +214,15 @@ namespace cmd {
 				for(auto i : map["intercept"].as<vector<string>>()) {
 					res.job.setInterception(i);
 				}
-            } 
+            }
 
 			// extra flags
 			for(auto cur : parser_steps) {
 				res.valid = cur(map) && res.valid;
 			}
+
+			// plugin initialization
+            res.job.frontendPluginInit();
 
 			// done
 			return res;

@@ -34,29 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/clang_stage_plugin.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 #include "insieme/frontend/stmt_converter.h"
-
-using namespace insieme;
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-    core::ExpressionPtr ClangStagePlugin::Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact) {
+    insieme::core::ExpressionPtr FrontendPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
         return nullptr;
     }
 
-    core::TypePtr ClangStagePlugin::Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
+    insieme::core::TypePtr FrontendPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
         return nullptr;
     }
 
-    stmtutils::StmtWrapper ClangStagePlugin::Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) {
+    stmtutils::StmtWrapper FrontendPlugin::Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
         return stmtutils::StmtWrapper();
     }
 
-    bool ClangStagePlugin::Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+    bool FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
         return false;
     }
 }

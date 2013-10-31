@@ -588,9 +588,11 @@ namespace tu {
 
 		core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc, Resolver& resolver){
 
+			core::LambdaExprPtr internalMainFunc = mainFunc;
+
 			// we only want to init what we use, so we check it
 			core::NodeSet usedLiterals;
-			core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
+			core::visitDepthFirstOnce (internalMainFunc, [&] (const core::LiteralPtr& literal){
 				usedLiterals.insert(literal);
 			});
 
@@ -604,21 +606,60 @@ namespace tu {
 					});
 				}
 			}
-
-			core::IRBuilder builder(mainFunc->getNodeManager());	
+			
+			core::IRBuilder builder(internalMainFunc->getNodeManager());	
 			core::StatementList inits;
+
+			// check all usedliterals if they are used as global and the global type is vector
+			// and the usedLiteral type is array, if so replace the usedliteral type to vector and
+			// us ref.vector.to.ref.array
+			core::NodeMap replacements;
+			for (auto cur : unit.getGlobals()) {
+				auto findLit = [&](const NodePtr& node) { 
+					const LiteralPtr& usedLit = node.as<LiteralPtr>();
+					const TypePtr& usedLitTy = usedLit->getType();
+
+					const LiteralPtr& global = resolver.map(cur.first).as<LiteralPtr>();
+					const TypePtr& globalTy= global->getType();
+
+					return usedLit->getStringValue() == global->getStringValue() &&
+						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&						
+						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&							
+						types::isSubTypeOf(globalTy, usedLitTy); 
+				};
+
+				if(any(usedLiterals,findLit)) {
+					// get the literal
+					LiteralPtr toReplace = (*std::find_if(usedLiterals.begin(), usedLiterals.end(), findLit)).as<LiteralPtr>();
+					LiteralPtr global = cur.first;
+
+					//update usedLiterals to the "new" literal
+					usedLiterals.erase(toReplace);
+					usedLiterals.insert(global);
+
+					//fix the access 
+					ExpressionPtr replacement = builder.callExpr( toReplace.getType(), builder.getLangBasic().getRefVectorToRefArray(), global);
+
+					replacements.insert( {toReplace, replacement} );
+				}
+			}
+			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), internalMainFunc, replacements, false).as<LambdaExprPtr>();
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			for (auto cur : unit.getGlobals()) {
+
 				// only consider having an initialization value
 				if (!cur.second) continue;
+
 				core::LiteralPtr newLit = resolver.map(cur.first);
+
 				if (!contains(usedLiterals, newLit)) continue;
+
 				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+			const lang::StaticVariableExtension& ext = internalMainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
 			for (auto cur : usedLiterals) {
 				auto lit = cur.as<LiteralPtr>();
 				// only consider static variables
@@ -641,9 +682,9 @@ namespace tu {
 			}
 
 			// build resulting lambda
-			if (inits.empty()) return mainFunc;
+			if (inits.empty()) return internalMainFunc;
 
-			return core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0).as<core::LambdaExprPtr>();
+			return core::transform::insert ( internalMainFunc->getNodeManager(), core::LambdaExprAddress(internalMainFunc)->getBody(), inits, 0).as<core::LambdaExprPtr>();
 		}
 
 		core::LambdaExprPtr addInitializer(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc) {
@@ -664,6 +705,8 @@ namespace tu {
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
+		
+		std::cout << "toProgram: " << a << std::endl;
 
 		// search for entry point
 		core::IRBuilder builder(mgr);
@@ -687,6 +730,7 @@ namespace tu {
 				return builder.program(toVector<core::ExpressionPtr>(lambda));
 			}
 		}
+
 
 		assert(false && "No such entry point!");
 		return core::ProgramPtr();
