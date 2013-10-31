@@ -49,8 +49,8 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
-
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/core/lang/enum_extension.h"
 		
 namespace insieme {
 namespace frontend { 
@@ -146,10 +146,11 @@ namespace {
 		
 		// obtain type name
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+
 		core::TypePtr retTy;
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
-				// Enums are converted into integer
-			retTy = builder.getLangBasic().getInt4();
+			// for intercepted 3rdparty stuff we need to use the actual enum
+			retTy = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
 		}
 		else{
 			retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());

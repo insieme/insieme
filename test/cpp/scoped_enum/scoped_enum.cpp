@@ -11,10 +11,21 @@ struct Source {
 
 enum {ZERO, ONE, TWO} var1;
 
+enum Clash { CLASHX=10};
+
 namespace ns {
 	enum ScopedEnum { X=0, Y };
 	ScopedEnum sc = X;
 	Kind k = Linear;
+
+	enum NSClash { CLASHX=100};
+}
+
+enum Shadowing { SHADOW=10, LIGHT=100};
+int f() {
+	enum Shadowing { SHADOW=100, LIGHT=10};
+	Shadowing s = SHADOW;
+	return s;
 }
 int main() {
 	//enum used in struct
@@ -35,7 +46,8 @@ int main() {
 	var1 = ONE;
 	std::cout << k1 << std::endl;
 	std::cout << var1 << std::endl;	
-	
+
+	//scoped in namespace
 	std::cout << ns::X << std::endl;	
 	
 	Kind Y;
@@ -43,5 +55,16 @@ int main() {
 	std::cout << y << std::endl;	
 	std::cout << ns::k << std::endl;	
 	std::cout << ns::sc << std::endl;	
+
+	//enum clash
+	Clash clash = CLASHX;
+	ns::NSClash nsclash = ns::CLASHX;
+
+	//enum shadowing
+	int shadow = SHADOW;
+	std::cout << shadow << std::endl;
+	shadow = f();
+	std::cout << shadow << std::endl;
+
 	return 0;
 }

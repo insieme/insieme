@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -875,7 +875,40 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 	return retStmt;
 }
 
+
 //////////////////////////////////////////////////////////////////
+///
+core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
+	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
+	assert(enumType);
+	core::TypePtr enumTy = convertType(enumType);
+
+	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
+	string enumConstantName;
+	if( getProgram().getInterceptor().isIntercepted(enumType) ) {
+		//TODO move name mangling into interceptor
+		auto enumDecl = enumType->getDecl();
+		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
+		string typeName = enumDecl->getNameAsString();
+		string constantName = enumConstant->getNameAsString();
+		
+		//remove typeName from qualifiedTypeName and append enumConstantName
+		size_t pos = qualifiedTypeName.find(typeName);
+		assert(pos!= std::string::npos);
+		string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+		
+		VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName; 
+		VLOG(2) << fixedQualifiedName;
+		
+		enumConstantName = fixedQualifiedName;
+	} else {
+		enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
+	}
+
+	return builder.literal(enumConstantName, enumTy);
+}
+
+	//////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------

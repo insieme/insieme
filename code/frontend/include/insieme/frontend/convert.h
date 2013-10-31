@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -413,6 +413,15 @@ public:
 	 * @return The IR translation of the variable declaration
 	 */
 	core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Converts a enumConstant declaration into an IR literal with the correct enumType, checks if
+	 * the enumType is intercepted, from a system header or user provided.
+	 * @param enumConstantDecl a clang enumConstantDecl
+	 * @return the IR translation of the enumeration constant -- a literal
+	 */
+	core::ExpressionPtr convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstantDecl);
+
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.

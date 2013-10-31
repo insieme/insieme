@@ -205,13 +205,20 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl){
 }
 
 
-std::string buildNameForEnum (const clang::TagType* type) {
-    //std::string name = type->getDecl()->getQualifiedNameAsString();
-    std::string name = type->getDecl()->getNameAsString();
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl) {
+    std::string name = enumDecl->getQualifiedNameAsString();
+    //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
     if(name.empty()) {
         name = "anonymous";
     }
+    return name;
+}
+
+std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd) {
+    std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
+	REMOVE_SYMBOLS(name);
+    assert(!name.empty() && "what kind of enumconstant has no name?");
     return name;
 }
 

@@ -100,7 +100,15 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl);
  * @param tagType clang TagType pointer
  * @return name for enumeration
  */
-std::string buildNameForEnum (const clang::TagType* type);
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl);
+
+/**
+ * build names for enumeration constants. 
+ * anonymous enumerationconstant will fail!
+ * @param ecd enumConstantDecl pointer
+ * @return name for enumeration
+ */
+std::string buildNameForEnumConstant (const clang::EnumConstantDecl* ecd);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace
