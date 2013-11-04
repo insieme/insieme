@@ -37,6 +37,10 @@
 
 #include <gtest/gtest.h>
 
+#include <sstream>
+
+#include "insieme/backend/sequential/sequential_backend.h"
+
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
@@ -58,6 +62,16 @@ bool declVisited = false;
 bool typeVisited = false;
 
 class ClangTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
+public:
+    ClangTestPlugin() {
+        macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
+        injectedHeaders.push_back("injectedHeader.h");
+    }
+
+    ClangTestPlugin(bool kidnapping) {
+        macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
+        kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
+    }
 
 	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
         typeVisited=true;
@@ -87,7 +101,7 @@ TEST(ClangStage, Initialization) {
 
 /**
  *  This test checks if the user provided
- *  clang plugin works correctly.
+ *  clang visitors are working correctly.
  */
 TEST(ClangStage, Conversion) {
 	//initialization
@@ -99,8 +113,68 @@ TEST(ClangStage, Conversion) {
     //the type visitor is visited correctly
 	EXPECT_FALSE(declVisited);
 	EXPECT_FALSE(typeVisited);
-	job.execute(mgr);
+	auto program = job.execute(mgr);
 	EXPECT_TRUE(typeVisited);
 	EXPECT_TRUE(declVisited);
 
 }
+
+/**
+ *  This test checks if the user provided
+ *  macros are working correctly.
+ */
+TEST(PreClangStage, Macros) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>();
+    //execute job
+    auto program = job.execute(mgr);
+  	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
+  	std::stringstream code;
+  	code << (*targetCode);
+  	EXPECT_TRUE(code.str().find("MOOSI_FOR_PRESIDENT") != std::string::npos);
+  	EXPECT_TRUE(code.str().find("char* rule_one") != std::string::npos);
+}
+
+/**
+ *  This test checks if the user plugin
+ *  header injection is working correctly.
+ */
+TEST(PreClangStage, HeaderInjection) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>();
+    //execute job
+    auto program = job.execute(mgr);
+  	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
+  	std::stringstream code;
+  	code << (*targetCode);
+ 	EXPECT_TRUE(code.str().find("int32_t magicFunction()") != std::string::npos);
+ 	EXPECT_TRUE(code.str().find("return 42;") != std::string::npos);
+}
+
+/**
+ *  This test checks if the user plugin
+ *  header injection is working correctly.
+ *  We try to kidnap stdio.h and provide our
+ *  implementation, that defines the magicFunction
+ */
+TEST(PreClangStage, HeaderKidnapping) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>(true);
+    //execute job
+    auto program = job.execute(mgr);
+  	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
+  	std::stringstream code;
+  	code << (*targetCode);
+ 	EXPECT_TRUE(code.str().find("int32_t magicFunction()") != std::string::npos);
+ 	EXPECT_TRUE(code.str().find("return -42;") != std::string::npos);
+}
+
+
+
+
