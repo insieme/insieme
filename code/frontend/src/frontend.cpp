@@ -90,9 +90,9 @@ namespace frontend {
 
 
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
+	    ConversionSetup setup = *this;
 
 		// add definitions needed by the OpenCL frontend
-		ConversionSetup setup = *this;
 		if(hasOption(OpenCL)) {
 			setup.addIncludeDirectory(SRC_DIR);
 			setup.addIncludeDirectory(SRC_DIR "inputs");
