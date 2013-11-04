@@ -115,16 +115,20 @@ namespace frontend {
 				res = cilk::applySema(res, manager);
 			}
 
+            // maybe a visitor wants to manipulate the IR program
+            for(auto plugin : setup.getPlugins())
+                res = plugin->IRVisit(res);
+
 			// done
 			return res;
 		});
 
 		// merge the translation units
 		return tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
-
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
+	    ConversionSetup setup = *this;
 
 		// create a temporary manager
 		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
@@ -145,6 +149,10 @@ namespace frontend {
 		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
 			cur->remAnnotation(omp::BaseAnnotation::KEY);
 		});
+
+        // maybe a visitor wants to manipulate the IR translation unit
+        for(auto plugin : setup.getPlugins())
+            res = plugin->IRVisit(res);
 
 		// return instance within global manager
 		return core::transform::utils::migrate(res, manager);

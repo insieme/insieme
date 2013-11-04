@@ -71,6 +71,16 @@ namespace extensions {
     const FrontendPlugin::headerVec& FrontendPlugin::getKidnappedHeaderList() const {
         return kidnappedHeaders;
     }
+
+    // ############ POST CLANG STAGE ############ //
+    insieme::core::ProgramPtr FrontendPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+        return prog;
+    }
+
+    insieme::frontend::tu::IRTranslationUnit FrontendPlugin::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+        return tu;
+    }
+
 }
 }
 }

@@ -57,6 +57,10 @@ namespace stmtutils {
 namespace insieme {
 namespace frontend {
 
+namespace tu {
+    class IRTranslationUnit;
+}
+
 namespace conversion {
     class Converter;
 }
@@ -86,6 +90,8 @@ namespace extensions {
 		const macroMap& getMacroList() const;
 		const headerVec& getInjectedHeaderList() const;
 		const headerVec& getKidnappedHeaderList() const;
+		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 	};
 
 }

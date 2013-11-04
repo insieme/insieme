@@ -60,6 +60,8 @@ using namespace insieme;
 
 bool declVisited = false;
 bool typeVisited = false;
+bool tuVisited = false;
+bool progVisited = false;
 
 class ClangTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
 public:
@@ -81,6 +83,16 @@ public:
 	virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
         declVisited = true;
         return false;
+	}
+
+	virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog) {
+        progVisited = true;
+        return prog;
+	}
+
+    virtual frontend::tu::IRTranslationUnit IRVisit(frontend::tu::IRTranslationUnit& tu) {
+        tuVisited = true;
+        return tu;
 	}
 
 };
@@ -173,6 +185,26 @@ TEST(PreClangStage, HeaderKidnapping) {
   	code << (*targetCode);
  	EXPECT_TRUE(code.str().find("int32_t magicFunction()") != std::string::npos);
  	EXPECT_TRUE(code.str().find("return -42;") != std::string::npos);
+}
+
+/**
+ *  This test checks if the user plugin
+ *  IR visitor (tu and program) is working
+ *  correctly.
+ */
+TEST(PostClangStage, IRVisit) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>();
+    //execute job
+    progVisited = false;
+    tuVisited = false;
+    EXPECT_FALSE(progVisited);
+ 	EXPECT_FALSE(tuVisited);
+    auto program = job.execute(mgr);
+ 	EXPECT_TRUE(progVisited);
+ 	EXPECT_TRUE(tuVisited);
 }
 
 
