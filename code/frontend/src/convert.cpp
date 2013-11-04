@@ -784,7 +784,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		varDecl->dump();
 	}
-
 	core::StatementPtr retStmt;
 	if ( const VarDecl* definition = varDecl->getDefinition()) {
 		// lookup for the variable in the map
@@ -1374,7 +1373,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 		}
 
 		// if struct
-		if ( core::StructTypePtr&& structTy = elementType.isa<core::StructTypePtr>() ) {
+		if (core::StructTypePtr&& structTy = elementType.isa<core::StructTypePtr>() ) {
 			core::StructExpr::Members members;
 			for (size_t i = 0; i < inits.size(); ++i) {
 				const core::NamedTypePtr& curr = structTy->getEntries()[i];
@@ -1386,8 +1385,19 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			return retIr;
 		}
 
+		// desperate times call for desperate measures
+		if (core::GenericTypePtr&& gen = elementType.isa<core::GenericTypePtr>()){
+			// TODO: this might require some more work
+			// this is a blind initialization of a generic type we know nothing about
+			vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
+			return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
+		}
+
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
+		std::cerr << "type to init: " << type << std::endl;
+		std::cerr << "init expression: " << init << " : " << init->getType() << std::endl;
+
 		assert(false && "fallthrow");
 	}
 

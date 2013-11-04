@@ -393,7 +393,8 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				return out << "(" << print(node->type) << "){"
+				if (node->explicitType) out << "(" << print(node->type) << ")";
+				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
 				}) << "}";

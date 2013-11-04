@@ -213,7 +213,14 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
 				break;
 			}
-												// NON IMPLEMENTED ONES
+				// -------------------   NON IMPLEMENTED ONES ------------------------ 
+			case clang::TemplateArgument::Integral:  {
+			// templated parameters are values wich spetialize the template, because of their value nature, 
+			// they should be encapsulated as types to fit in the typing of the parent type
+				VLOG(2) << "arg: integral";
+				assert(false);
+				break;
+			}
 			case clang::TemplateArgument::Null: {
 				VLOG(2) << "arg: NULL";
 				assert(false);
@@ -226,11 +233,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 			}
 			case clang::TemplateArgument::NullPtr: {
 				 VLOG(2) << "arg: nullptr";
-				assert(false);
-				break;
-			}
-			case clang::TemplateArgument::Integral:  {
-				VLOG(2) << "arg: integral";
 				assert(false);
 				break;
 			}

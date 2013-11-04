@@ -552,6 +552,12 @@ namespace backend {
 				return res;
 			}
 
+			if (ptr->getName()->getValue() == "__insieme_IntTempParam"){
+				if (core::ConcreteIntTypeParamPtr param =  ptr->getIntTypeParameter()[0].isa<core::ConcreteIntTypeParamPtr>()){
+					return type_info_utils::createInfo(manager, boost::lexical_cast<string>(param->getValue()) );
+				}
+			}
+
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));

@@ -130,10 +130,12 @@ namespace {
 					case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
 					case clang::TemplateArgument::ArgKind::Integral: 	
 						{
-							string integral = args[i].getAsIntegral().toString(10);
-							VLOG(2) << builder.genericType(integral);
-							typeList.insert(typeList.end(),builder.genericType(integral));
-							VLOG(2) << "ArgKind::Integral not supported " << integral; 
+							// the idea is to generate a generic type with a intParamList where we store
+							// the value of the init expression
+							//
+							auto Ilist = insieme::core::IntParamList();
+							Ilist.push_back( builder.concreteIntTypeParam(args[i].getAsIntegral().getLimitedValue()));
+							typeList.insert(typeList.end(),builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
 							break;
 						}
 					case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
