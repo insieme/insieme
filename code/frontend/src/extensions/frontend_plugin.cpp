@@ -42,6 +42,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
+    // ############ CLANG STAGE ############ //
     insieme::core::ExpressionPtr FrontendPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
         return nullptr;
     }
@@ -57,6 +58,29 @@ namespace extensions {
     bool FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
         return false;
     }
+
+    // ############ PRE CLANG STAGE ############ //
+    const FrontendPlugin::macroMap& FrontendPlugin::getMacroList() const {
+        return macros;
+    }
+
+    const FrontendPlugin::headerVec& FrontendPlugin::getInjectedHeaderList() const {
+        return injectedHeaders;
+    }
+
+    const FrontendPlugin::headerVec& FrontendPlugin::getKidnappedHeaderList() const {
+        return kidnappedHeaders;
+    }
+
+    // ############ POST CLANG STAGE ############ //
+    insieme::core::ProgramPtr FrontendPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+        return prog;
+    }
+
+    insieme::frontend::tu::IRTranslationUnit FrontendPlugin::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+        return tu;
+    }
+
 }
 }
 }

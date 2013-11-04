@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <map>
+#include <vector>
+#include <string>
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_program.h"
 
@@ -53,6 +57,10 @@ namespace stmtutils {
 namespace insieme {
 namespace frontend {
 
+namespace tu {
+    class IRTranslationUnit;
+}
+
 namespace conversion {
     class Converter;
 }
@@ -66,13 +74,24 @@ namespace extensions {
      *  expression or statements.
      */
 	class FrontendPlugin {
+    protected:
+        typedef std::map<std::string,std::string> macroMap;
+        macroMap macros;
+        typedef std::vector<std::string> headerVec;
+        headerVec injectedHeaders;
+        headerVec kidnappedHeaders;
+
 	public:
 		virtual ~FrontendPlugin(){}
-
 		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
 		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
 		virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+		const macroMap& getMacroList() const;
+		const headerVec& getInjectedHeaderList() const;
+		const headerVec& getKidnappedHeaderList() const;
+		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 	};
 
 }
