@@ -751,7 +751,7 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 
 	// handle arrays initialization
 	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(refType->getElementType())) {
-		return builder.getZero(arrTy);
+		return builder.refReinterpret(mgr.getLangBasic().getRefNull(), arrTy);
 	}
 
 	// handle refs initialization

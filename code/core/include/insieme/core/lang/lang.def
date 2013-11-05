@@ -203,8 +203,7 @@ OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod,
-IncrementOp)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, IncrementOp)
 //      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
@@ -217,6 +216,19 @@ OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
 // OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
+
+GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod, IncrementOp)
+
+OPERATION(Char, Add,  "char.add", "(char,char) -> char")
+OPERATION(Char, Sub,  "char.sub", "(char,char) -> char")
+OPERATION(Char, Mul,  "char.mul", "(char,char) -> char")
+OPERATION(Char, Div,  "char.div", "(char,char) -> char")
+OPERATION(Char, Mod,  "char.mod", "(char,char) -> char")
+
+// OPERATION(Char, PreInc,  "char.preInc",  "(ref<char>) -> char")
+// OPERATION(Char, PostInc, "char.postInc", "(ref<char>) -> char")
+OPERATION(Char, PreDec,  "char.preDec",  "(ref<char>) -> char")
+OPERATION(Char, PostDec, "char.postDec", "(ref<char>) -> char")
 
 GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
 IncrementOp)
