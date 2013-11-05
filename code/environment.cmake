@@ -48,6 +48,9 @@ set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
 
+set ( insieme_plugins_include_dir  		${insieme_code_dir}/plugins/include )
+
+
 # -------------------------------------------------------------- determines insieme version
 
 find_package(Git)

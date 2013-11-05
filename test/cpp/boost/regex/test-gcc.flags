@@ -1,0 +1,1 @@
+-I$BOOST_ROOT/include -L$BOOST_ROOT/lib  -lboost_regex

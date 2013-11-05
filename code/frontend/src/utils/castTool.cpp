@@ -676,8 +676,6 @@ switch (castExpr->getCastKind()) {
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
-			//std::cout << "CAST:\n" << expr << std::endl << targetTy << std::endl << core::analysis::isRefType(targetTy) << std::endl;
-
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
 
 			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {

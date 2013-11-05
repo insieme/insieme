@@ -49,8 +49,8 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
-
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/core/lang/enum_extension.h"
 		
 namespace insieme {
 namespace frontend { 
@@ -111,7 +111,6 @@ namespace {
 	*/
 	core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
 		const clang::TagDecl* tagDecl = tagType->getDecl();
-		VLOG(2) << tagDecl;
 
 		insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
 		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
@@ -122,12 +121,23 @@ namespace {
 					case clang::TemplateArgument::ArgKind::Type:
 						{
 							const clang::Type* argType = args[i].getAsType().getTypePtr();
-							typeList.insert( typeList.end(), convFact.convertType(argType) );
+							auto ty =  convFact.convertType(argType);
+							typeList.insert( typeList.end(), ty );
+							//typeList.insert( typeList.end(), convFact.convertType(argType) );
 						}
 						break;
 					case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
 					case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
-					case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
+					case clang::TemplateArgument::ArgKind::Integral: 	
+						{
+							// the idea is to generate a generic type with a intParamList where we store
+							// the value of the init expression
+							//
+							auto Ilist = insieme::core::IntParamList();
+							Ilist.push_back( builder.concreteIntTypeParam(args[i].getAsIntegral().getLimitedValue()));
+							typeList.insert(typeList.end(),builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
+							break;
+						}
 					case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
 					case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
 					case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
@@ -135,18 +145,20 @@ namespace {
 				}
 			}
 		}
+		
 		// obtain type name
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+
 		core::TypePtr retTy;
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
-				// Enums are converted into integer
-			retTy = builder.getLangBasic().getInt4();
+			// for intercepted 3rdparty stuff we need to use the actual enum
+			retTy = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
 		}
 		else{
 			retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
 
-		addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
+		addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
 		return retTy;
 	}
 
@@ -187,7 +199,7 @@ namespace {
 
 		// build resulting type
 		core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-		addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirectories());
+		addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
 		return retTy;
 	}
 
@@ -196,7 +208,7 @@ namespace {
 			string typeName = fixQualifiedName(tD->getNameAsString());
 			VLOG(2) << typeName;
 			core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
-			addHeaderForDecl(retTy, tD, interceptor.getStdLibDirectories());
+			addHeaderForDecl(retTy, tD, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
 			return retTy;
 		}
 		assert(false && "TemplateTypeParmType intercepted");
@@ -211,7 +223,7 @@ namespace {
 		if (res && res->getNodeType() == core::NT_GenericType) {
 			const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
 			if (interceptor.isIntercepted(name)) {
-				addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirectories());
+				addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
 			}
 		}
 
@@ -241,8 +253,13 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 	assert(irType && "irType");
 
 	// add header file
-	addHeaderForDecl(irType, typeDecl, stdLibDirs);
+	addHeaderForDecl(irType, typeDecl, getStdLibDirs(), getUserIncludeDirs());
 	VLOG(1) << "build interceptedType " << type << " ## " << irType;
+	
+	if(insieme::annotations::c::hasIncludeAttached(irType)) {
+		VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(irType);
+	}
+
 	return irType;
 }
 
@@ -314,15 +331,15 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
 			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
 		} else {
-			literalName = methodDecl->getNameAsString();
+			if (!methodDecl->isStatic())
+				literalName = methodDecl->getNameAsString();
 		}
 		type = convFact.convertFunctionType(methodDecl);
 	}
 
 	literalName = fixQualifiedName(literalName);
 	core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
-
-	addHeaderForDecl(interceptExpr, decl, stdLibDirs);
+	addHeaderForDecl(interceptExpr, decl, getStdLibDirs(), getUserIncludeDirs());
 
 	VLOG(2) << interceptExpr << " " << interceptExpr->getType();
 

@@ -1,13 +1,10 @@
 #include <libgen.h>
 #include <stdio.h>
 
-char g_my_string[256];
-
+char path[256] = "/foo/bar/test/basename";
 
 int main(int argc, char** argv) {
 
-
-	strcpy(g_my_string, basename(argv[0]));
-	printf("%s\n", g_my_string);
-
+	printf("%s\n", basename(path));
+	return 0;
 }

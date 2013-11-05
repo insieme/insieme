@@ -46,7 +46,7 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs= vector<boost::filesystem::path>());
+	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs= vector<boost::filesystem::path>(), const vector<boost::filesystem::path>& userIncludeDirs=vector<boost::filesystem::path>());
 
 	/**
 	 * Attaches a header annotation to the given node which is supposed to be
@@ -54,9 +54,12 @@ namespace utils {
 	 *
 	 * @param node the node to be annotated
 	 * @param decl the declaration this node has been derived from
-	 * @param stdLibDirs libraries to be considered within the library path (to keep lib header paths short)
+	 * @param stdLibDirs libraries to be considered within the library path (to keep lib header paths short trims "/foo/bar/vector" to "vector")
+	 * @param userIncludeDirs are not considered when trimming the path (/foo/bar/headeFile.h stays that way)
 	 */
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs = vector<boost::filesystem::path>());
+	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, 
+			const vector<boost::filesystem::path>& stdLibDirs = vector<boost::filesystem::path>(),
+			const vector<boost::filesystem::path>& userIncludeDirs = vector<boost::filesystem::path>());
 
 } // end namespace utils
 } // end namespace frontend

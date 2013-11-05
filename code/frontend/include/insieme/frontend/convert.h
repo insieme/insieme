@@ -75,8 +75,7 @@ namespace frontend {
  * @param setup the setup for the conversion process to be respected
  * @return the resulting translation unit
  */
-tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
-
+tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup=ConversionSetup());
 
 namespace conversion {
 
@@ -101,6 +100,12 @@ class Converter :  boost::noncopyable {
 	 */
 	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
+
+	/**
+	 * stores converted types
+	 */
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	TypeCache typeCache;
 
     /**
      * Stores static variable names
@@ -194,6 +199,7 @@ class Converter :  boost::noncopyable {
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
 	const Program& program;
+	const ConversionSetup& convSetup;
 
 	/**
 	 * Maps of statements to pragmas.
@@ -212,9 +218,10 @@ class Converter :  boost::noncopyable {
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
+
 public:
 
-	Converter(core::NodeManager& mgr, const Program& program);
+	Converter(core::NodeManager& mgr, const Program& program, const ConversionSetup& setup = ConversionSetup());
 
 	// should only be run once
 	tu::IRTranslationUnit convert();
@@ -250,6 +257,22 @@ public:
 		return irTranslationUnit;
 	}
 
+    std::shared_ptr<ExprConverter> getExprConverter() const {
+        return exprConvPtr;
+    }
+
+    std::shared_ptr<StmtConverter> getStmtConverter() const {
+        return stmtConvPtr;
+    }
+
+    std::shared_ptr<TypeConverter> getTypeConverter() const {
+        return typeConvPtr;
+    }
+
+    const ConversionSetup& getConversionSetup() const {
+        return convSetup;
+    }
+
 	/**
 	 * Determines the definition of the given generic type pointer within the
 	 * internally maintained IR Translation Unit. If non is present, the given
@@ -257,7 +280,11 @@ public:
 	 */
 	const core::TypePtr lookupTypeDetails(const core::GenericTypePtr& type) const {
 		core::TypePtr res = getIRTranslationUnit()[type];
-		return (res)?res:type;
+		if (!res) return type;
+		if (res.isa<core::GenericTypePtr>() && type != res){
+			return lookupTypeDetails(res);
+		}
+		return res;
 	}
 
 	/**
@@ -302,12 +329,6 @@ public:
 		return pragmaMap;
 	}
 
-	/**
-	 * Entry point for converting function to the right type
-	 * @param dcl declaration of the function
-	 * @return the corresponding IR type
-	 */
-	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -347,6 +368,13 @@ public:
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
+	 * Entry point for converting function to the right type
+	 * @param dcl declaration of the function
+	 * @return the corresponding IR type
+	 */
+	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl);
+
+	/**
 	 * this function takes care of the initialization expression of variables.
 	 * it recursively descends the type tree to match everithing very carefully, like a grandma
 	 * it handles several differen cases:
@@ -374,6 +402,15 @@ public:
 	 * @return The IR translation of the variable declaration
 	 */
 	core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Converts a enumConstant declaration into an IR literal with the correct enumType, checks if
+	 * the enumType is intercepted, from a system header or user provided.
+	 * @param enumConstantDecl a clang enumConstantDecl
+	 * @return the IR translation of the enumeration constant -- a literal
+	 */
+	core::ExpressionPtr convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstantDecl);
+
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.

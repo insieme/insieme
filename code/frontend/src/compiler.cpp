@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -166,6 +166,7 @@ void setDiagnosticClient(clang::CompilerInstance& clang, bool printDiagToConsole
 	// check why, it might be a double insert in list, or a isolated delete somewhere
 	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ),
 													options, diagClient, true);
+	diags->setSuppressSystemWarnings (true);
 	clang.setDiagnostics(diags);
 }
 
@@ -246,6 +247,16 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 1;  // Includes system includes, usually  /usr/include
 	pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 
+    // ******************** FRONTEND PLUGIN ********************
+	// THIS MUST BE THE FIRST CALL OF AddPath OTHERWISE
+	// THE USER KIDNAPPED HEADER FILES WON'T BE RECOGNIZED
+	for(auto plugin : config.getPlugins()) {
+        for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
+            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::Angled, true, false, false);
+        }
+	}
+
+
 	// Add default header, for non-Windows target
 	if(!config.hasOption(ConversionJob::WinCrossCompile)) {
 		//FIXME: check if this is still valid
@@ -273,8 +284,17 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 	// add user provided headers
 	for (const path& cur : config.getIncludeDirectories()){
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::System, true, false, false);
+		//instead "Angled" was "System"
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, true, false, false);
 	}
+
+    // ******************** FRONTEND PLUGIN ********************
+    // ADD INJECTED HEADERS
+    for (auto plugin : config.getPlugins()) {
+        for(auto header : plugin->getInjectedHeaderList()) {
+            this->pimpl->clang.getPreprocessorOpts().Includes.push_back(header);
+        }
+    }
 
 	// set -D macros
 	for (const std::pair<string,string>& cur : config.getDefinitions()){
@@ -282,6 +302,16 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		if (!cur.second.empty()) def = def + "=" + cur.second;
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef(def);
 	}
+
+    // ******************** FRONTEND PLUGIN ********************
+	// ADD FRONTEND PLUGIN PROVIDED MACRO DEFINITIONS
+    for(auto plugin : config.getPlugins()) {
+        for (auto it = plugin->getMacroList().cbegin(); it != plugin->getMacroList().cend(); ++it) {
+            string def = (*it).first;
+            if (!(*it).second.empty()) def = def + "=" + (*it).second;
+            this->pimpl->clang.getPreprocessorOpts().addMacroDef(def);
+        }
+    }
 
 	/*** VECTOR EXTENSION STUFF ***/
 	// Enable OpenCL
@@ -293,10 +323,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	//	+	for some not builtins which are NOT supported by CLANG we give the signature (taken from GCC) as extern
 	//		functiondefinition
 	//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
-	//		intrinsic to use depending on the used compiler the correct casts 
+	//		intrinsic to use depending on the used compiler the correct casts
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, true, false, false);
 	/*** VECTOR EXTENSION STUFF END ***/
-	
+
 	// Set OMP define if compiling with OpenMP
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/",
 		clang::frontend::System, true, false, false);
@@ -317,34 +347,23 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	LO.POSIXThreads = 1;
 	*/
 
+	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {
-		//set default values for C -- default results in values for LangStandard::lang_gnu99
-		CompilerInvocation::setLangDefaults(LO, clang::IK_C /*, clang::LangStandard::Kind=unspecified*/);
-		// set by langDefaults
-		//LO.C99 = 1; 		// set c99
+		//set default values for C --
+		//langStandard is defined in include/clang/Frontend/LangStandards.de
+		CompilerInvocation::setLangDefaults(LO, clang::IK_C, clang::LangStandard::lang_c99);
 	}
 
-	if(config.isCxx(file)) {
-		pimpl->m_isCXX = true;
-		//langStandard is defined in include/clang/Frontend/LangStandards.def
-		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
-		// set cxx standard to c++98 (+GNUMode)
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx98);
+	if (config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) pimpl->m_isCXX = true;
+	if (config.getStandard() == ConversionSetup::Cxx03 || config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
 
+	if (pimpl->m_isCXX){
 		// set cxx standard to c++98
-		//--> DOES _NOT_ sets LanguageOption::GNUMode
-		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
-		// set cxx standard to c++11 (+GNUMode)
-		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx11);
+		if (config.getStandard() == ConversionSetup::Cxx11)
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
+		else
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 
-		//should be set already by langdefaults
-		//LO.CPlusPlus = 1; 	// set C++ 98 support
-		//LO.WChar     = 1; 	// setup wchar support: C++ 3.9.1p5
-
-		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
-		// prompted, no side efects detected
-		//LO.CPlusPlus0x = 1;  //C++ 0x
 		// use the cxx header of the backend c++ compiler
 		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0;
@@ -357,10 +376,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, true, false, false);
 		}
 
-		// FIXME: decide if we need this or not
-		//	LO.RTTI = 1;
-			LO.Exceptions = 1;
-			LO.CXXExceptions = 1;
+		LO.Exceptions = 1;
+		LO.CXXExceptions = 1;
+
+		// FIXME:  if we need this or not
 		//	LO.CXXOperatorNames = 1;
 	}
 	else{
@@ -372,7 +391,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
 	}
-	
+
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
@@ -385,8 +404,8 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 	const FileEntry* fileID = pimpl->clang.getFileManager().getFile(file.string());
-	if(!fileID){ 
-		std::cerr << " file: " << file.string() << " does not exist" << std::endl; 
+	if(!fileID){
+		std::cerr << " file: " << file.string() << " does not exist" << std::endl;
 		throw  ClangParsingError(file);
 	}
 	pimpl->clang.getSourceManager().createMainFileID(fileID);

@@ -14,7 +14,17 @@ act.seq:		Conf(Flag("-b seq"), "Seq. Backend")
 act.run:		Conf(Flag("-b run"), "Run. Backend")
 act.ocl:		Conf(Flag("-b ocl"), "Ocl Backend")
 
-front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"), 
+front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"),
+									     Flag("--col-wrap=120"),
+										 Flag("--show-line-no"),
+										 Flag("--log-level=INFO")]
+									  )
+front.insieme++: %(comp.insieme)s + Conf([ Flag("--std=c++03"), 
+									     Flag("--col-wrap=120"),
+										 Flag("--show-line-no"),
+										 Flag("--log-level=INFO")]
+									  )
+front.insieme++11: %(comp.insieme)s + Conf([ Flag("--std=c++11"), 
 									     Flag("--col-wrap=120"),
 										 Flag("--show-line-no"),
 										 Flag("--log-level=INFO")]
@@ -68,13 +78,21 @@ pass.01.mpi: 		Pass(None,None,%(comp.mpicc)s+%(back.c.opt)s+%(back.gcc)s,'ref.mp
 
 pass.02.g++:		Pass(None,None,%(comp.g++)s+%(back.c.opt)s+%(back.g++)s,'ref',%(execute.seq)s)
 
+# semantic checks
 pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s)
+
+pass.05.sema++:		Pass(%(front.insieme++)s+%(act.sema)s+%(act.ir)s)
+
+pass.05.sema++11:	Pass(%(front.insieme++11)s+%(act.sema)s+%(act.ir)s)
 
 # Sequential backend passes
 pass.07.c_seq:   	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
 					)
-pass.07.cxx_seq:   	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.cpp', 
+pass.07.cxx_seq:   	Pass(%(front.insieme++)s+%(act.seq)s, 'insieme.seq.cpp', 
+					 %(comp.g++)s+%(back.g++)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
+					)
+pass.07.cxx11_seq:  Pass(%(front.insieme++11)s+%(act.seq)s, 'insieme.seq.cpp', 
 					 %(comp.g++)s+%(back.g++)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
 					)
 pass.07.mpi_seq: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
@@ -85,7 +103,10 @@ pass.07.mpi_seq: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c',
 pass.09.c_run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
-pass.09.cxx_run:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.cpp', 
+pass.09.cxx_run:	Pass(%(front.insieme++)s+%(act.run)s, 'insieme.run.cpp', 
+					 %(comp.g++)s+%(back.g++)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
+					)
+pass.09.cxx11_run:	Pass(%(front.insieme++11)s+%(act.run)s, 'insieme.run.cpp', 
 					 %(comp.g++)s+%(back.g++)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
 pass.09.win_run:	Pass(None, 'insieme.run.ref.c', 

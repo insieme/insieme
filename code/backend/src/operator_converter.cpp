@@ -457,6 +457,16 @@ namespace backend {
 		});
 
 		res[basic.getRefAssign()] = OP_CONVERTER({
+				
+			// extract type
+			core::ExpressionPtr initValue = call->getArgument(0);
+			core::TypePtr type = initValue->getType();
+			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
+
+			// fix dependency
+			context.getDependencies().insert(valueTypeInfo.definition);
+
+
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		});
 
@@ -1061,13 +1071,29 @@ namespace backend {
 			return c_ast::call( C_NODE_MANAGER->create("exit"), CONVERT_ARG(0));
 		});
 
+		res[basic.getGenInit()] = OP_CONVERTER({
+			// this is a blind initialization, used to initialize intercepted objects
+		
+				// we need a little introspection over whatever we find inside, it might be that we find another expression list.
+				// the last thing we want to do is to cast those into any type (clasical compound initializer: (type){...} ) 
+				// since we know NOTHING about inner types, we'll create a compound without 
+			auto tupleExpr = ARG(1).as<core::TupleExprPtr>();
 
+			vector<c_ast::NodePtr> v;
+			for (auto cur : tupleExpr->getExpressions()){
+				v.push_back(CONVERT_EXPR(cur));
+			}
+			
+			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v );
+		});
+
+		// ----------------------------  Attribute extension --------------------------
+		
 		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
 		res[attrExt.getAttr()] = OP_CONVERTER({
 			// just skip this attribute
 			return CONVERT_ARG(0);
 		});
-
 
 
 		// ---------------------------- IR++ / C++ --------------------------

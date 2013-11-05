@@ -10,7 +10,8 @@ static const boost::regex zeroValueFilter  ("([0]+)(\\.[0]+)?([ufl]*)");
 
 int main (){
 
-	boost::regex_match ("asfdaf", numberFilter);
+	std::cout << "NotANumber " << boost::regex_match ("NotANumber", numberFilter,boost::match_default) << std::endl;
+	std::cout << "1000 " << boost::regex_match ("1000", numberFilter) << std::endl;
 
 	return 0;
 }

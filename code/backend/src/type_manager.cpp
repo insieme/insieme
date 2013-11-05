@@ -344,16 +344,6 @@ namespace backend {
 				return info;
 			}
 
-			// the type might not be generic but be anotated. belongs to some system header and 
-			// redeclaration has to be avoided
-			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
-				const string& name   = core::annotations::getAttachedName(type);
-				const string& header = annotations::c::getAttachedInclude(type);
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
-			}
-
 			// also test struct variant
 			name = "struct " + name;
 			pos2 = includeTable.find(name);
@@ -365,6 +355,16 @@ namespace backend {
 				return info;
 			}
 
+			// the type might not be generic but be anotated. belongs to some system header and 
+			// redeclaration has to be avoided
+			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
+				const string& name   = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				std::cout << "system header type " << name << "-" << header << " " << type << std::endl;
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type, info);
+				return info;
+			}
 
 			// try resolving it using type handlers
 			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
@@ -550,6 +550,12 @@ namespace backend {
 				res->declaration = subType->declaration;
 				res->definition = subType->definition;
 				return res;
+			}
+
+			if (ptr->getName()->getValue() == "__insieme_IntTempParam"){
+				if (core::ConcreteIntTypeParamPtr param =  ptr->getIntTypeParameter()[0].isa<core::ConcreteIntTypeParamPtr>()){
+					return type_info_utils::createInfo(manager, boost::lexical_cast<string>(param->getValue()) );
+				}
 			}
 
 			// no match found => return unsupported type info
@@ -743,8 +749,13 @@ namespace backend {
 				auto impl = cur.getImplementation();
 				if (!core::analysis::isPureVirtual(impl)) {
 
+					// might be than there is no implementation for the function? 
+					// what about ignoring it and allow backend compiler to synthetize it?
+					if(impl.isa<core::LiteralPtr>())
+						continue;
+
 					// generate code for member function
-					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
 
 				} else {
 

@@ -561,8 +561,11 @@ LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b
 
 GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
 
+// Generic type initialization ----------------------------------------------------------------------------------------
 
-// Accuracy defining functions
+LITERAL(GenInit, "gen.init", "(type<'a>, 'b) -> 'a")
+
+// Accuracy defining functions ----------------------------------------------------------------------------------------
 GROUP(Accuracy, AccuracyHighBinary, AccuracyBestEffortBinary, AccuracyFastBinary, AccuracyHighUnary, AccuracyBestEffortUnary, AccuracyFastUnary)
 
 LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")

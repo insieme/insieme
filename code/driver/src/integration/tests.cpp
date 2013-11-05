@@ -61,6 +61,8 @@ namespace integration {
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 
+			if (testCase.isCXX11()) job.setStandard(frontend::ConversionSetup::Cxx11);
+
 			// add pre-processor definitions
 			for_each(testCase.getDefinitions(), [&](const std::pair<string,string>& def) {
 				job.setDefinition(def.first, def.second);
@@ -127,6 +129,10 @@ namespace integration {
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
 				const string& cur = *it;
 
+				bool enableOpenMP = false;
+				bool enableOpenCL = false;
+				bool enableCXX11 = false;
+
 				// check test case directory
 				const fs::path testCaseDir = testDir / cur;
 				if (!fs::exists(testCaseDir)) {
@@ -188,12 +194,14 @@ namespace integration {
 						// this must be a c++ test case
 						assert(fs::exists(testCaseDir / (cur + ".cpp")));
 						files.push_back((testCaseDir / (cur + ".cpp")).string());
+
+						// if test is located in apropiate folder, activate CXX11 standard
+						std::size_t found = testCaseDir.string().find("cpp11");
+						enableCXX11 = (found!=std::string::npos);
 					}
 				}
 
 				// collect flags
-				bool enableOpenMP = false;
-				bool enableOpenCL = false;
 				map<string,string> definitions;
 				auto flagsFile = testCaseDir / "insieme.flags";
 				if (fs::exists(flagsFile)) {
@@ -269,7 +277,7 @@ namespace integration {
 
 
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, definitions, compilerFlags));
+				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags));
 			}
 
 			return res;
