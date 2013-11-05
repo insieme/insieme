@@ -70,6 +70,8 @@ if(MSVC)   # Windows Visual Studio
 
   # Therefore Boost needs to be linked statically
   set(Boost_USE_STATIC_LIBS ON)
+  # Use MT Boost
+  set(Boost_USE_MULTITHREADED ON)
 
   set(DO_INSTALL FALSE)
 
@@ -104,7 +106,6 @@ if ( NOT DEFINED BOOST_ROOT )
 		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
 	endif()
 endif()
-set(Boost_USE_MULTITHREADED Off)
 find_package( Boost 1.48 COMPONENTS program_options system filesystem regex serialization )
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
