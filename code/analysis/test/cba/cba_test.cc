@@ -449,6 +449,36 @@ namespace cba {
 
 	}
 
+	TEST(CBA, References4) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	x = 2;"
+				"	x = 3;"
+				"	x = 4;"
+				"	x = 5;"
+				"	*x;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(code);
+
+		CompoundStmtAddress root(code);
+		CBA analysis(root);
+
+		// the easy part - x should be correct
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(root[5].as<ExpressionAddress>(), A)));
+
+		// the tricky part - there should only be a small number of sets involved
+		EXPECT_LE(analysis.getNumSets(), 35);
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, IfStmt1) {
 
 		NodeManager mgr;
