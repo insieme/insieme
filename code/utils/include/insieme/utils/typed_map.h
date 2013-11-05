@@ -41,6 +41,8 @@
 #include <typeindex>
 #include <type_traits>
 
+#include "insieme/utils/assert.h"
+
 namespace insieme {
 namespace utils {
 
@@ -131,6 +133,55 @@ namespace utils {
 
 			return *this;
 		}
+	};
+
+	/**
+	 * A container for handling heterogeneous collections of objects.
+	 */
+	class HeterogenousContainer {
+
+		struct HandlerBase {
+			virtual ~HandlerBase() {};
+		};
+
+		template<typename T>
+		struct Handler : public HandlerBase {
+			T t;
+			template<typename ... Args>
+			Handler(const Args& ... args) : t(args...) {}
+			operator T&() { return t; }
+			operator const T&() const { return t; }
+		};
+
+		std::map<std::type_index, HandlerBase*> content;
+
+	public:
+
+		~HeterogenousContainer() {
+			for(auto cur : content) {
+				delete cur.second;
+			}
+		}
+
+		template<typename T, typename ... Args>
+		T& getInstance(Args ... args) {
+			std::type_index key = typeid(T);
+			auto pos = content.find(key);
+			if (pos != content.end()) return static_cast<Handler<T>&>(*(pos->second));
+
+			// insert element
+			content[key] = new Handler<T>(args...);
+			return getInstance<T>();
+		}
+
+		template<typename T>
+		const T& getInstance() const {
+			std::type_index key = typeid(T);
+			auto pos = content.find(key);
+			assert_true(pos != content.end());
+			return static_cast<Handler<T>&>(*(pos->second));
+		}
+
 	};
 
 } // end namespace utils
