@@ -682,6 +682,9 @@ std::cout << "After:  " << r << "\n";
 
 	template<template<typename L> class S>
 	void testStructure() {
+
+		EXPECT_TRUE(is_data_struct_lattice<S<utils::constraint::SetLattice<int>>>::value);
+
 		testSetLattice<S>();
 		testPairLattice<S>();
 		testMutationOp<S>();

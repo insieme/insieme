@@ -51,6 +51,7 @@
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/call_site_manager.h"
 #include "insieme/analysis/cba/framework/call_string_filter.h"
+#include "insieme/analysis/cba/framework/data_path.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
@@ -119,6 +120,15 @@ namespace cba {
 	extern const StateSetType Sin;		// in-state of statements
 	extern const StateSetType Sout;		// out-state of statements
 	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
+
+
+
+	// fix the types of indices utilized for fields, elements and tuple-components
+	// TODO: make index types generic!
+	typedef NominalIndex<core::StringValuePtr, hash_target<core::StringValuePtr>, print<deref<core::StringValuePtr>>> FieldIndex;
+	typedef SingleIndex ElementIndex; 		// for arrays / vectors
+	typedef FieldIndex ComponentIndex; 		// for tuples
+
 
 	class CBA : public boost::noncopyable {
 
@@ -228,6 +238,15 @@ namespace cba {
 				settype2generator[&type] = res;
 
 				// also location generator instances
+				registerLocationConstraintGenerators(cba, type);
+
+				return *res;
+			}
+
+			template<typename L, template<typename C> class G>
+			typename std::enable_if<is_data_struct_lattice<L>::value,void>::type
+			registerLocationConstraintGenerators(CBA& cba, const AnalysisType<L,G>& type) {
+				// also location generator instances
 				for(const auto& loc : getLocations(cba)) {
 					auto in  = new ImperativeInStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
 					auto out = new ImperativeOutStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
@@ -236,9 +255,12 @@ namespace cba {
 					locationGenerator[LocationSetKey(&Sin,  &type, loc)] = in;
 					locationGenerator[LocationSetKey(&Sout, &type, loc)] = out;
 				}
-
-				return *res;
 			}
+
+			template<typename L, template<typename C> class G>
+			typename std::enable_if<!is_data_struct_lattice<L>::value,void>::type
+			registerLocationConstraintGenerators(CBA& cba, const AnalysisType<L,G>& type) { }
+
 
 			ConstraintGeneratorPtr getGenerator(const AnalysisTypeBase& type) const {
 				auto pos = settype2generator.find(&type);
@@ -722,6 +744,29 @@ namespace cba {
 			return getNestedContexts(in, levels);
 		}
 
+
+		// ------------------------ data manager handling -----------------------------
+
+	private:
+
+		utils::HeterogenousContainer dataManagers;
+
+	public:
+
+		template<typename L>
+		typename L::manager_type& getDataManager() {
+			bool fresh = !dataManagers.contains<typename L::manager_type>();
+			typename L::manager_type& res = dataManagers.getInstance<typename L::manager_type>();
+
+			if (fresh) {
+				// register the utilized index types within the given manager
+				res.template registerIndexType<FieldIndex>();
+				res.template registerIndexType<ElementIndex>();
+				res.template registerIndexType<ComponentIndex>();
+			}
+
+			return res;
+		}
 
 		// ----------------------- some debugging utilities ---------------------------
 

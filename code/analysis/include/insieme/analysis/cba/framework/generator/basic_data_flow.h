@@ -318,13 +318,12 @@ namespace cba {
 
 		CBA& cba;
 
-		// the manager/factory instance for handling data value instances
-		mgr_type valueMgr;
+		mgr_type& valueMgr;
 
 	public:
 
 		BasicDataFlowConstraintGenerator(CBA& cba, const AnalysisType& A, const AnalysisType& a)
-			: super(cba), A(A), a(a), cba(cba) { };
+			: super(cba), A(A), a(a), cba(cba), valueMgr(cba.getDataManager<lattice_type>()) { };
 
 		mgr_type& getValueManager() {
 			return valueMgr;
@@ -332,7 +331,7 @@ namespace cba {
 
 		template<typename V>
 		value_type atomic(const V& value) {
-			return valueMgr.atomic(value);
+			return getValueManager().atomic(value);
 		}
 
 		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
@@ -587,7 +586,7 @@ namespace cba {
 			// combine it
 			constraints.add(
 					utils::constraint::build(
-							StructBuilder<lattice_type>(valueMgr, elements, cba.getSet(A, expr, ctxt))
+							StructBuilder<lattice_type>(this->getValueManager(), elements, cba.getSet(A, expr, ctxt))
 					)
 			);
 
@@ -721,7 +720,7 @@ namespace cba {
 
 		template<typename fun_type>
 		packer<value_type,fun_type,mgr_type> pack(const fun_type& fun) {
-			return packer<value_type,fun_type,mgr_type>(fun, valueMgr);
+			return packer<value_type,fun_type,mgr_type>(fun, this->getValueManager());
 		}
 
 		template<typename E>

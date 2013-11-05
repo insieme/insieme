@@ -72,12 +72,6 @@ namespace cba {
 
 		typedef BasicDataFlowConstraintGenerator<DataPath,DataPathAnalysisType, Context> super;
 
-		typedef NominalIndex<core::StringValuePtr, hash_target<core::StringValuePtr>, print<deref<core::StringValuePtr>>> FieldIndex;
-
-		// TODO: make index type generic!
-		typedef SingleIndex ElementIndex; 		// for arrays / vectors
-		typedef FieldIndex ComponentIndex; 		// for tuples
-
 		CBA& cba;
 
 		const core::lang::BasicGenerator& base;

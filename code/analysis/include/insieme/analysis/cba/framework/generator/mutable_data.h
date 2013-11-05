@@ -41,6 +41,8 @@
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
+#include "insieme/analysis/cba/analysis/data_paths.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -138,6 +140,162 @@ namespace cba {
 			return combine(ExceedingElementsFilter<StructLattice,Element>(set,e), e_sub(a,b));
 		}
 
+		/**
+		 * A custom constraint for the data flow equation solver updating the value
+		 * of a memory location when conducting a write operation.
+		 */
+		template<typename ValueLattice, typename RefLattice, typename Context>
+		struct WriteConstraint : public Constraint {
+
+			typedef typename RefLattice::base_lattice::value_type ref_set_type;
+			typedef typename ref_set_type::value_type ref_type;
+
+			typedef typename ValueLattice::manager_type mgr_type;
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::projection_op_type projection_op_type;
+			typedef typename ValueLattice::mutation_op_type mutation_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			// the manager used for data value objects
+			mgr_type& mgr;
+
+			// the location this write operation is working on
+			Location<Context> loc;
+
+			// the value covering the read reference
+			TypedValueID<RefLattice> ref;
+
+			// the value to be assigned within this operation
+			TypedValueID<ValueLattice> in_value;
+
+			// the old state of the memory location before the assignment
+			TypedValueID<ValueLattice> old_state;
+
+			// the new state of the memory location after the assignment
+			TypedValueID<ValueLattice> new_state;
+
+		public:
+
+			WriteConstraint(
+					mgr_type& mgr,
+					const Location<Context> loc,
+					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& in_value,
+					const TypedValueID<ValueLattice>& old_state, const TypedValueID<ValueLattice>& new_state)
+				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state)),
+				  mgr(mgr), loc(loc), ref(ref), in_value(in_value), old_state(old_state), new_state(new_state) {}
+
+			virtual bool update(Assignment& ass) const {
+				// compute updated value and add it to the result value
+				meet_assign_op_type meet_assign_op;
+				return meet_assign_op(ass[new_state], getUpdatedData(ass));
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				less_op_type less_op;
+				return less_op(getUpdatedData(ass), ass[new_state]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				return
+					out << ref << " -> " << new_state << "[label=\"" << *this << "\"]\n"
+					    << in_value << " -> " << new_state << "[label=\"" << *this << "\"]\n"
+					    << old_state << " -> " << new_state << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				return
+					out << ref << " -> " << new_state << "[label=\"" << loc << " touched by " << ref << "\"" << ((isReferenced(ass))?"":" style=dotted") << "]\n"
+					    << in_value << " -> " << new_state << "[label=\"write " << in_value << " to " << new_state << "\"" << ((isReferenced(ass))?"":" style=dotted") << "]\n"
+					    << old_state << " -> " << new_state << "[label=\"" << old_state << " in " << new_state << "\"" << ((!isUniquelyReferenced(ass))?"":" style=dotted") << "]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
+			}
+
+			virtual bool hasAssignmentDependentDependencies() const {
+				return true;
+			}
+
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::set<ValueID> res;
+				res.insert(ref);
+
+				// the old state is needed if reference is not unique
+				if (!isUniquelyReferenced(ass)) {
+					res.insert(old_state);
+				}
+
+				// the in value is required in case the covered location is referenced
+				if (isReferenced(ass)) {
+					res.insert(in_value);
+				}
+
+				return res;
+			}
+
+		private:
+
+			bool isUniquelyReferenced(const Assignment& ass) const {
+				const ref_set_type& ref_set = ass[ref];
+				return (ref_set.empty() || (ref_set.size() == 1u && *ref_set.begin() == loc));		// important: here path of reference must be root!
+			}
+
+			bool isReferenced(const Assignment& ass) const {
+				// obtain set of references
+				const ref_set_type& ref_set = ass[ref];
+				for(const auto& cur : ref_set) {
+					if (cur.getLocation() == loc) return true;
+				}
+				return false;
+			}
+
+			value_type getUpdatedData(const Assignment& ass) const {
+
+				// get list of accessed data paths in memory location
+				const ref_set_type& ref_set = ass[ref];
+
+				// if no reference is yet fixed, no operation can be conducted
+				if (ref_set.empty()) return value_type();
+
+				// get list of data paths
+				vector<DataPath> paths;
+				for(const auto& cur : ref_set) {
+					if (cur.getLocation() == loc) {
+						paths.push_back(cur.getDataPath());
+					}
+				}
+
+				// if covered location is not referenced => no update
+				if (paths.empty()) return ass[old_state];
+
+				// get current value of location
+				const value_type& mem_value = ass[old_state];
+
+				// get value written to the mem_location
+				const value_type& input = ass[in_value];
+
+				// get all variations of the memory location that could result when updating the paths
+				meet_assign_op_type meet_assign_op;
+				mutation_op_type mutation_op;
+
+				value_type res;
+				for(const auto& cur : paths) {
+					meet_assign_op(res, mutation_op(mgr, mem_value, cur, input));
+				}
+
+				// done
+				return res;
+			}
+
+		};
+
+		template<typename ValueLattice, typename RefLattice, typename Context>
+		ConstraintPtr write(typename ValueLattice::manager_type& mgr, const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& in_value, const TypedValueID<ValueLattice>& old_state, const TypedValueID<ValueLattice>& new_state) {
+			return std::make_shared<WriteConstraint<ValueLattice,RefLattice, Context>>(mgr, loc, ref, in_value, old_state, new_state);
+		}
+
 	}
 
 
@@ -145,6 +303,9 @@ namespace cba {
 	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> {
 
 		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> super;
+
+		typedef typename ElementSetType::lattice_type lattice_type;
+		typedef typename lattice_type::manager_type mgr_type;
 
 		const ElementSetType& dataSet;
 
@@ -159,6 +320,10 @@ namespace cba {
 			: super(cba, Sin, Sout, *this), dataSet(dataSet), location(location), cba(cba) {
 		}
 
+		mgr_type& getDataManager() {
+			return cba.getDataManager<lattice_type>();
+		}
+
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
 
@@ -171,24 +336,27 @@ namespace cba {
 				auto l_rhs = cba.getLabel(call[0]);
 				auto l_lhs = cba.getLabel(call[1]);
 
-				// ---- S_out of args => S_tmp of call (only if other location is possible)
-
+//				// ---- S_out of args => S_tmp of call (only if other location is possible)
+//
 				auto R_rhs = cba.getSet(R<Context>(), l_rhs, ctxt);
 				auto S_out_rhs = cba.getSet(Sout, l_rhs, ctxt, location, dataSet);
 				auto S_out_lhs = cba.getSet(Sout, l_lhs, ctxt, location, dataSet);
 				auto S_tmp = cba.getSet(Stmp, l_call, ctxt, location, dataSet);
 				constraints.add(subsetIfExceeding(R_rhs, location, S_out_rhs, S_tmp));
 				constraints.add(subsetIfExceeding(R_rhs, location, S_out_lhs, S_tmp));
-
-				// ---- combine S_tmp to S_out ...
-
-				// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
+//
+//				// ---- combine S_tmp to S_out ...
+//
+//				// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
 				auto A_value = cba.getSet(dataSet, l_lhs, ctxt);
 				auto S_out = cba.getSet(Sout, l_call, ctxt, location, dataSet);
-				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
+//				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
+//
+//				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
+//				constraints.add(subsetIfExceeding(R_rhs, location, S_tmp, S_out));
 
-				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
-				constraints.add(subsetIfExceeding(R_rhs, location, S_tmp, S_out));
+				// ---- add assignment rule ----
+				constraints.add(write(getDataManager(), this->location, R_rhs, A_value, S_tmp, S_out));
 
 				// done
 				return;

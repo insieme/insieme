@@ -43,6 +43,7 @@
 #include <vector>
 #include <memory>
 #include <typeindex>
+#include <type_traits>
 
 #include <boost/operators.hpp>
 
@@ -111,6 +112,9 @@ namespace cba {
 		typedef _mutation_op mutation_op_type;
 	};
 
+	// a type trait to identify data structure lattices
+	template<typename L> struct is_data_struct_lattice : public std::false_type {};
+
 
 	// -------------------------------------------------------------------------------------------
 	//									Unit Data Structure
@@ -163,6 +167,9 @@ namespace cba {
 				typename BaseLattice::meet_op_type
 			> {};
 
+	template<typename L>
+	struct is_data_struct_lattice<UnionStructureLattice<L>> : public std::true_type {};
+
 
 	// -------------------------------------------------------------------------------------------
 	//								First-Order Data Structure
@@ -207,6 +214,9 @@ namespace cba {
 				first_order::less_op<BaseLattice>
 			> {};
 
+	template<typename L>
+	struct is_data_struct_lattice<FirstOrderStructureLattice<L>> : public std::true_type {};
+
 
 	// -------------------------------------------------------------------------------------------
 	//								Second-Order Data Structure
@@ -244,6 +254,9 @@ namespace cba {
 				second_order::meet_assign_op<BaseLattice>,
 				second_order::less_op<BaseLattice>
 			> {};
+
+	template<typename L>
+	struct is_data_struct_lattice<SecondOrderStructureLattice<L>> : public std::true_type {};
 
 
 
@@ -303,6 +316,8 @@ namespace cba {
 			}
 
 			value_type createEmpty(const std::type_index& indexType) {
+				assert_true(emptyCompoundCreators.find(indexType) != emptyCompoundCreators.end())
+						<< "Trying to instantiate element for unregistered index type " << indexType.name() << "\n";
 				return emptyCompoundCreators[indexType]();
 			}
 		};

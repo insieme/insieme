@@ -182,6 +182,11 @@ namespace utils {
 			return static_cast<Handler<T>&>(*(pos->second));
 		}
 
+		template<typename T>
+		bool contains() const {
+			return content.find(typeid(T)) != content.end();
+		}
+
 	};
 
 } // end namespace utils

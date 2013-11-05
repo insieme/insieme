@@ -187,7 +187,11 @@ namespace cba {
 		EXPECT_EQ("{#.a.*}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), DP)));
 
 		EXPECT_EQ("{#,#.a}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), DP)));
-		EXPECT_EQ("{#.a.b,#.b}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), DP)));
+
+		EXPECT_TRUE(
+				"{#.a.b,#.b}" == toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), DP)) ||
+				"{#.b,#.a.b}" == toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), DP))
+		);
 
 //		createDotDump(analysis);
 	}
@@ -268,57 +272,73 @@ namespace cba {
 				"	*p2.b;"
 				"	*p3.a;"
 				"	*p3.b;"
-				"	*p3->a;"
-				"	*p3->b;"
+				"	*(*p4).a;"
+				"	*(*p4).b;"
 				"	"
 				"	"
 				"	p1.a = 5;"
 				"	"
-//				"	*p1;"
-//				"	*p2;"
-//				"	**p3;"
-//				"	*p1.a;"
-//				"	*p1.b;"
-//				"	*p2.a;"
-//				"	*p2.b;"
-//				"	*p3->a;"
-//				"	*p3->b;"
-//				"	"
-//				"	p1.b = 6;"
-//				"	"
-//				"	*p1;"
-//				"	*p2;"
-//				"	*p3;"
-//				"	*p1.a;"
-//				"	*p1.b;"
-//				"	*p2.a;"
-//				"	*p2.b;"
-//				"	*p3->a;"
-//				"	*p3->b;"
-//				"	"
-//				"	p3 = p2;"
-//				"	"
-//				"	*p1;"
-//				"	*p2;"
-//				"	*p3;"
-//				"	*p1.a;"
-//				"	*p1.b;"
-//				"	*p2.a;"
-//				"	*p2.b;"
-//				"	*p3->a;"
-//				"	*p3->b;"
-//				"	"
-//				"	p1 = *p2;"
-//				"	"
-//				"	*p1;"
-//				"	*p2;"
-//				"	*p3;"
-//				"	*p1.a;"
-//				"	*p1.b;"
-//				"	*p2.a;"
-//				"	*p2.b;"
-//				"	*p3->a;"
-//				"	*p3->b;"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	**p4;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3.a;"
+				"	*p3.b;"
+				"	*(*p4).a;"
+				"	*(*p4).b;"
+				"	"
+				"	"
+				"	p3.b = 6;"
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	**p4;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3.a;"
+				"	*p3.b;"
+				"	*(*p4).a;"
+				"	*(*p4).b;"
+				"	"
+				"	"
+				"	p4 = p2;"				// updating the pointer
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	**p4;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3.a;"
+				"	*p3.b;"
+				"	*(*p4).a;"
+				"	*(*p4).b;"
+				"	"
+				"	"
+				"	*p4 = (point){ 7, 8 };"				// updating the values
+				"	"
+				"	*p1;"
+				"	*p2;"
+				"	*p3;"
+				"	**p4;"
+				"	*p1.a;"
+				"	*p1.b;"
+				"	*p2.a;"
+				"	*p2.b;"
+				"	*p3.a;"
+				"	*p3.b;"
+				"	*(*p4).a;"
+				"	*(*p4).b;"
+				"	"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -328,20 +348,76 @@ namespace cba {
 		CBA analysis(code);
 
 		int pos = 4;
-//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-
-		pos = 8;
-		std::cout << code[pos] << " - " << *(code[pos]) << "\n";
+		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-		createDotDump(analysis);
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos++;
+		EXPECT_EQ("[a={5},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={2}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos++;
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos++;
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+		pos++;
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={7},b={8}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={5},b={6}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[a={7},b={8}]", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{7}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{8}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{7}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{8}", toString(analysis.getValuesOf(code[pos++].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
 
 		pos++;
 
