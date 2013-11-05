@@ -575,9 +575,116 @@ namespace cba {
 	}
 
 	template<template<typename L> class S>
+	void testMutationOp() {
+
+		typedef utils::constraint::SetLattice<int> SetLattice;
+		typedef S<SetLattice> Lattice;
+		typedef typename Lattice::manager_type mgr_type;
+		typedef typename Lattice::value_type value_type;
+
+		typename Lattice::less_op_type less_op;
+		typename Lattice::projection_op_type projection_op;
+		typename Lattice::mutation_op_type mutation_op;
+
+		auto not_less_op = [&](const value_type& a, const value_type& b)->bool {
+			return !less_op(a,b);
+		};
+
+		typedef NominalIndex<string> NominalIndex;
+
+		NominalIndex nA("a");
+		NominalIndex nB("b");
+
+		mgr_type mgr;
+		mgr.template registerIndexType<NominalIndex>();
+		mgr.template registerIndexType<SingleIndex>();
+
+		value_type e;
+		value_type s1 = mgr.atomic(toSet(1));
+		value_type s2 = mgr.atomic(toSet(2,3));
+		value_type s3 = mgr.atomic(toSet(3,4,5));
+
+		auto c1 = mgr.compound(
+			entry(nA, s1),
+			entry(nB, s2)
+		);
+
+		auto c2 = mgr.compound(
+			entry(nA, s2),
+			entry(nB, s3)
+		);
+
+		// a root level update
+		{
+			auto r = mutation_op(mgr, c1, DataPath(), c2);
+			EXPECT_EQ(c2, r);		// if it is the root, it should be completely replaced
+
+			// also for empty
+			r = mutation_op(mgr, e, DataPath(), c2);
+			EXPECT_EQ(c2, r);
+		}
+
+		// update an element
+		{
+			// check pre-condition
+			EXPECT_PRED2(less_op, s1, projection_op(c1, nA));
+			EXPECT_PRED2(not_less_op, s3, projection_op(c1, nA));
+
+			// update component
+			auto r = mutation_op(mgr, c1, DataPath() << nA, s3);
+std::cout << "\n";
+std::cout << "Before: " << c1 << "\n";
+std::cout << "After:  " << r << "\n";
+			// check post-condition
+			EXPECT_PRED2(less_op, s3, projection_op(r, nA));		// a should be updated
+			EXPECT_PRED2(less_op, s2, projection_op(r, nB));		// b remain the same
+		}
+
+		// write into an empty value
+		{
+			// update component of an empty structure
+			auto r = mutation_op(mgr, e, DataPath() << nA, s3);
+std::cout << "\n";
+std::cout << "Before: " << e << "\n";
+std::cout << "After:  " << r << "\n";
+			// check post-condition
+			EXPECT_PRED2(less_op, s3, projection_op(r, nA));		// a should be updated
+		}
+
+		// a more nested example
+		auto c3 = mgr.compound(
+			entry(nA, c1),
+			entry(nB, mgr.compound(
+					entry(nA, c1),
+					entry(nB, s1)
+				)
+			)
+		);
+
+		// update elements in c3
+		{
+			DataPath pA = DataPath() << nB << nA;
+			DataPath pB = DataPath() << nB << nB;
+
+			// check pre-condition
+			EXPECT_PRED2(less_op, c1, projection_op(c3, pA));
+			EXPECT_PRED2(less_op, s1, projection_op(c3, pB));
+
+			auto r = mutation_op(mgr, c3, pA, c2);
+std::cout << "\n";
+std::cout << "Before: " << c3 << "\n";
+std::cout << "After:  " << r << "\n";
+			EXPECT_PRED2(less_op, c2, projection_op(r, pA));
+			EXPECT_PRED2(less_op, s1, projection_op(r, pB));
+		}
+	}
+
+
+	template<template<typename L> class S>
 	void testStructure() {
 		testSetLattice<S>();
 		testPairLattice<S>();
+		testMutationOp<S>();
 	}
 
 	template<template<typename L> class S>

@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <set>
+#include <map>
 #include <utility>
 #include <vector>
 #include <memory>
@@ -90,6 +91,9 @@ namespace cba {
 		// an operation to retrieve sub-values
 		typename _projection_op,
 
+		// an operation to modify (sub-)values
+		typename _mutation_op,
+
 		// the meet operator for the resulting lattice
 		typename _meet_assign_op_type,
 
@@ -104,6 +108,7 @@ namespace cba {
 		typedef _base_lattice base_lattice;
 		typedef _manager_type manager_type;
 		typedef _projection_op projection_op_type;
+		typedef _mutation_op mutation_op_type;
 	};
 
 
@@ -131,6 +136,18 @@ namespace cba {
 			}
 		};
 
+		template<typename BaseLattice>
+		struct mutation_op {
+			typedef typename BaseLattice::value_type value_type;
+			value_type operator()(DataManager<BaseLattice>&, const value_type& cur_value, const DataPath& path, const value_type& new_value) const {
+				// if path is root, update full value
+				if (path.isRoot()) return new_value;
+				// if path is not root, we have to combine the input value with the current state
+				typename BaseLattice::meet_op_type meet_op;
+				return meet_op(cur_value, new_value);
+			}
+		};
+
 	}
 
 	template<typename BaseLattice>
@@ -140,6 +157,7 @@ namespace cba {
 				unit::DataManager<BaseLattice>,
 				typename BaseLattice::value_type,
 				unit::projection_op<BaseLattice>,
+				unit::mutation_op<BaseLattice>,
 				typename BaseLattice::meet_assign_op_type,
 				typename BaseLattice::less_op_type,
 				typename BaseLattice::meet_op_type
@@ -168,6 +186,9 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
+		struct mutation_op;
+
+		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -181,6 +202,7 @@ namespace cba {
 				first_order::DataManager<BaseLattice>,
 				first_order::Data<BaseLattice>,
 				first_order::projection_op<BaseLattice>,
+				first_order::mutation_op<BaseLattice>,
 				first_order::meet_assign_op<BaseLattice>,
 				first_order::less_op<BaseLattice>
 			> {};
@@ -202,6 +224,9 @@ namespace cba {
 		struct projection_op;
 
 		template<typename BaseLattice>
+		struct mutation_op;
+
+		template<typename BaseLattice>
 		struct meet_assign_op;
 
 		template<typename BaseLattice>
@@ -215,6 +240,7 @@ namespace cba {
 				second_order::DataManager<BaseLattice>,
 				second_order::Data<BaseLattice>,
 				second_order::projection_op<BaseLattice>,
+				second_order::mutation_op<BaseLattice>,
 				second_order::meet_assign_op<BaseLattice>,
 				second_order::less_op<BaseLattice>
 			> {};
@@ -250,6 +276,8 @@ namespace cba {
 		template<typename _value_type, typename BaseLattice, typename Derived>
 		class BaseDataManager : public boost::noncopyable {
 
+			std::map<std::type_index, std::function<_value_type()>> emptyCompoundCreators;
+
 		public:
 
 			typedef _value_type value_type;
@@ -267,6 +295,16 @@ namespace cba {
 				return static_cast<Derived*>(this)->compound(utils::map::toMap(first, elements ...));
 			}
 
+			template<typename IndexType>
+			void registerIndexType() {
+				emptyCompoundCreators[typeid(IndexType)] = [&]()->value_type {
+					return static_cast<Derived*>(this)->template compound<IndexType>();
+				};
+			}
+
+			value_type createEmpty(const std::type_index& indexType) {
+				return emptyCompoundCreators[indexType]();
+			}
 		};
 
 	}
@@ -295,7 +333,7 @@ namespace cba {
 			}
 
 			template<typename IndexType>
-			value_type compound(const std::map<IndexType, value_type>& map) {
+			value_type compound(const std::map<IndexType, value_type>& map = std::map<IndexType, value_type>()) {
 				const static meet_assign_op_type meet_assign_op;
 				value_type res;
 				for(const auto& cur : map) {
@@ -344,6 +382,9 @@ namespace cba {
 
 				// an operation following a data path step
 				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const =0;
+
+				// an operation conducting an update
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const =0;
 
 				// a less-than operator regarding the structural equality - compatible to the hash and == operator
 				virtual bool operator<(const Entry<BaseLattice>& other) const =0;
@@ -395,10 +436,15 @@ namespace cba {
 					return this != &other && value < cast(other).value;
 				}
 
-				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
+				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement&) const {
 					static const Data<BaseLattice> empty;
 					assert_fail() << "Not applicable!";
 					return empty;
+				}
+
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+					assert_true(begin == end);		// we should be at the end of the path
+					return new_value;
 				}
 
 				virtual bool contains(const Entry<BaseLattice>& other) const {
@@ -473,6 +519,29 @@ namespace cba {
 				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
 					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&cur));
 					return (*this)[static_cast<const detail::ConcreteDataPathElement<IndexType>&>(cur).getIndex()];
+				}
+
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+
+					// check whether we are at the end of the path
+					if (begin == end) return new_value;
+
+					// obtain index of field to be updated
+					const detail::DataPathElement& elem = **begin;
+					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem));
+					IndexType index = static_cast<const detail::ConcreteDataPathElement<IndexType>&>(elem).getIndex();
+
+					// obtain sub-value
+					auto pos = data.find(index);
+					auto sub = (pos != data.end()) ? pos->second : (*begin)->createEmpty(mgr);
+
+					// modify sub-value
+					auto new_sub = sub.mutate(mgr, begin+1, end, new_value);
+
+					// update data and return modified value
+					auto mod_data = data;
+					mod_data[index] = new_sub;
+					return mgr.compound(mod_data);
 				}
 
 				virtual bool contains(const Entry<BaseLattice>& other) const {
@@ -588,6 +657,34 @@ namespace cba {
 				return (*data)[cur];
 			}
 
+			Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const DataPath& path, const Data<BaseLattice>& new_value) const {
+				// short-cut for updates targeting the root node
+				if (path.isRoot()) return new_value;
+
+				// get all steps along the path
+				auto steps = path.getSteps();
+
+				// apply mutation using iterator based signature
+				return mutate(mgr, steps.begin(), steps.end(), new_value);
+			}
+
+			Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+
+				// shortcut for end of path
+				if (begin == end) return new_value;
+
+				// obtain entry node
+				auto subData = data;
+				if (!subData) {
+					// create an empty sub-structure of the proper type
+					subData = (*begin)->createEmpty(mgr).data;
+				}
+				assert_true(subData);
+
+				// compute transformed tree recursively within node
+				return subData->mutate(mgr, begin, end, new_value);
+			}
+
 			operator const typename BaseLattice::value_type&() const {
 				const static typename BaseLattice::value_type empty;
 
@@ -659,8 +756,12 @@ namespace cba {
 
 			typedef detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> super;
 
+		public:
+
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
+
+		private:
 
 			typedef internal::AtomicEntry<BaseLattice>* AtomicEntryPtr;
 			typedef internal::Entry<BaseLattice>* CompoundEntryPtr;
@@ -702,7 +803,7 @@ namespace cba {
 			}
 
 			template<typename IndexType>
-			value_type compound(const std::map<IndexType, value_type>& map) {
+			value_type compound(const std::map<IndexType, value_type>& map = std::map<IndexType, value_type>()) {
 
 				// compute hash
 				std::size_t hash = hash_map(map);
@@ -730,6 +831,14 @@ namespace cba {
 			template<typename IndexType>
 			const Data<BaseLattice>& operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
+			}
+		};
+
+		template<typename BaseLattice>
+		struct mutation_op {
+			Data<BaseLattice> operator()(DataManager<BaseLattice>& mgr, const Data<BaseLattice>& cur_state, const DataPath& path, const Data<BaseLattice>& new_value) const {
+				// forward request to data object
+				return cur_state.mutate(mgr, path, new_value);
 			}
 		};
 
@@ -864,6 +973,10 @@ namespace cba {
 					return data.end();
 				}
 
+				bool isEmpty() const {
+					return data.empty();
+				}
+
 			protected:
 
 				virtual std::ostream& printTo(std::ostream& out) const {
@@ -886,6 +999,9 @@ namespace cba {
 
 				// an operation following a data path step
 				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const =0;
+
+				// an operation computing a modified version of this tree entry
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const =0;
 
 				// check whether the set represented by this element contains the given element
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const =0;
@@ -931,6 +1047,11 @@ namespace cba {
 					static const Data<BaseLattice> empty;
 					assert_fail() << "Not applicable!";
 					return empty;
+				}
+
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+					assert_true(begin == end);		// we should be at the end of the path
+					return new_value;
 				}
 
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const {
@@ -998,6 +1119,29 @@ namespace cba {
 				virtual const Data<BaseLattice>& operator[](const detail::DataPathElement& cur) const {
 					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&cur));
 					return (*this)[static_cast<const detail::ConcreteDataPathElement<IndexType>&>(cur).getIndex()];
+				}
+
+				virtual Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+
+					// check whether we are at the end of the path
+					if (begin == end) return new_value;
+
+					// obtain index of field to be updated
+					const detail::DataPathElement& elem = **begin;
+					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem));
+					IndexType index = static_cast<const detail::ConcreteDataPathElement<IndexType>&>(elem).getIndex();
+
+					// obtain sub-value
+					auto pos = data.find(index);
+					auto sub = (pos != data.end()) ? pos->second : (*begin)->createEmpty(mgr);
+
+					// modify sub-value
+					auto new_sub = sub.mutate(mgr, begin+1, end, new_value);
+
+					// update data and return modified value
+					auto mod_data = data;
+					mod_data[index] = new_sub;
+					return mgr.compound(mod_data);
 				}
 
 				virtual bool contains(const TreeEntry<BaseLattice>& other) const {
@@ -1098,6 +1242,35 @@ namespace cba {
 				return res;
 			}
 
+			Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const DataPath& path, const Data<BaseLattice>& new_value) const {
+				// short-cut for updates targeting the root node
+				if (path.isRoot()) return new_value;
+
+				// get all steps along the path
+				auto steps = path.getSteps();
+
+				// use alternative mutation method
+				return mutate(mgr, steps.begin(), steps.end(), new_value);
+			}
+
+			Data<BaseLattice> mutate(DataManager<BaseLattice>& mgr, const data_path_iterator& begin, const data_path_iterator& end, const Data<BaseLattice>& new_value) const {
+
+				// handle empty set
+				if (!data) {
+					// create an empty tree and apply update on this tree
+					return (*begin)->createEmpty(mgr).mutate(mgr, begin, end, new_value);
+				}
+
+				// otherwise: apply mutation on all sub-trees and collect partial results
+				Data<BaseLattice> res;
+				for(const auto& cur : *data) {
+					res.meetAssign(cur->mutate(mgr, begin, end, new_value));
+				}
+
+				// done
+				return res;
+			}
+
 			operator typename BaseLattice::value_type() const {
 				static const typename BaseLattice::meet_assign_op_type meet_assign_op;
 
@@ -1168,8 +1341,12 @@ namespace cba {
 
 			typedef detail::BaseDataManager<Data<BaseLattice>, BaseLattice, DataManager<BaseLattice>> super;
 
+		public:
+
 			typedef typename BaseLattice::value_type base_value_type;
 			typedef Data<BaseLattice> value_type;
+
+		private:
 
 			typedef internal::TreeEntry<BaseLattice>* TreeEntryPtr;
 			typedef internal::SetEntry<BaseLattice>* SetEntryPtr;
@@ -1250,7 +1427,7 @@ namespace cba {
 
 
 			template<typename IndexType>
-			value_type compound(const std::map<IndexType, value_type>& map) {
+			value_type compound(const std::map<IndexType, value_type>& map = std::map<IndexType, value_type>()) {
 
 				// compute hash
 				std::size_t hash = hash_map(map);
@@ -1278,6 +1455,13 @@ namespace cba {
 			template<typename IndexType>
 			Data<BaseLattice> operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
+			}
+		};
+
+		template<typename BaseLattice>
+		struct mutation_op {
+			Data<BaseLattice> operator()(DataManager<BaseLattice>& mgr, const Data<BaseLattice>& cur_state, const DataPath& path, const Data<BaseLattice>& new_value) const {
+				return cur_state.mutate(mgr, path, new_value);
 			}
 		};
 

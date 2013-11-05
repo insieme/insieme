@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <typeindex>
+
 #include "insieme/analysis/cba/framework/data_index.h"
 
 #include "insieme/utils/assert.h"
@@ -63,6 +65,9 @@ namespace cba {
 
 		private:
 
+			// the type of index used by the sub-class
+			std::type_index index_type;
+
 			// ref-counting variable
 			mutable std::size_t refCount;
 
@@ -76,8 +81,8 @@ namespace cba {
 
 		public:
 
-			DataPathElement(ptr_type head, std::size_t hash)
-				: HashableImmutableData<DataPathElement>(hash), refCount(0), head(head), length((head)?head->length+1:1) {
+			DataPathElement(std::type_index index_type, ptr_type head, std::size_t hash)
+				: HashableImmutableData<DataPathElement>(hash), index_type(index_type), refCount(0), head(head), length((head)?head->length+1:1) {
 				if(head) head->incRefCount();
 			}
 
@@ -109,6 +114,9 @@ namespace cba {
 
 				// check hashes
 				if (this->hash() != other.hash()) return false;
+
+				// check index type
+				if (index_type != other.index_type) return false;
 
 				// check index part
 				if (!equalIndex(other)) return false;
@@ -157,6 +165,11 @@ namespace cba {
 				op(*this);
 			}
 
+			template<typename Manager>
+			typename Manager::value_type createEmpty(Manager& mgr) const {
+				return mgr.createEmpty(index_type);
+			}
+
 			virtual bool equalIndex(const DataPathElement& other) const =0;
 			virtual bool lessIndex(const DataPathElement& ohter) const =0;
 			virtual ptr_type createCopyWith(const ptr_type& head) const =0;
@@ -179,7 +192,7 @@ namespace cba {
 		public:
 
 			ConcreteDataPathElement(ptr_type head, const Index& index)
-				: DataPathElement(head, utils::combineHashes((head)?hash_value(*head):0, hash_value(index))), index(index) {}
+				: DataPathElement(typeid(Index), head, utils::combineHashes((head)?hash_value(*head):0, hash_value(index))), index(index) {}
 
 			std::ostream& printTo(std::ostream& out) const {
 				if (head) {
@@ -222,6 +235,9 @@ namespace cba {
 			// now both should be not null
 			return *a < *b;
 		}
+
+		// a type-definition for a managed data path element
+		typedef const detail::DataPathElement* DataPathElementPtr;
 
 	} // end anonymous namespace
 
@@ -337,10 +353,25 @@ namespace cba {
 			return DataPath(path->getParent(levels));
 		}
 
+		bool isRoot() const {
+			return !path;
+		}
+
 		template<typename Op>
 		void visit(const Op& op) const {
 			if (!path) return;
 			path->visit(op);
+		}
+
+		template<typename Manager>
+		typename Manager::value_type createEmpty(Manager& mgr) const {
+			return path->createEmpty(mgr);
+		}
+
+		vector<detail::DataPathElementPtr> getSteps() const {
+			vector<detail::DataPathElementPtr> res;
+			visit([&](const detail::DataPathElement& cur) { res.push_back(&cur); });
+			return res;
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
@@ -353,6 +384,8 @@ namespace cba {
 		}
 
 	};
+
+	typedef typename vector<detail::DataPathElementPtr>::const_iterator data_path_iterator;
 
 } // end namespace cba
 } // end namespace analysis
