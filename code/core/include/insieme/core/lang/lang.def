@@ -490,7 +490,7 @@ LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>)
 LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
 LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+DERIVED(ArrayRefElem1D,     "array.ref.elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
 LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
@@ -531,7 +531,7 @@ LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<
 LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
-LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+DERIVED(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref.narrow(v, dp.element(dp.root, i), lit('elem)); }")
 
 LITERAL(VectorPointwise,      	"vector.pointwise",
 								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")

@@ -423,42 +423,52 @@ namespace cba {
 
 	}
 
-//	TEST(CBA, SimpleArray) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	let int = int<4>;"
-//				"	let list = arra<int,1>;"
-//				"	"
-//				"	point p1 = (point){ 1, 2 };"
-//				"	point p2 = (point){ 3, 4 };"
-//				"	"
-//				"	p1;"
-//				"	p2;"
-//				"	p1.a;"
-//				"	p1.b;"
-//				"	p2.a;"
-//				"	p2.b;"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
-//
-//	}
+	TEST(CBA, SimpleArray) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<array<int,1>> a = var(array.create.1D(lit(int), 10u));"
+				"	"
+				"	a[0] = 10;"
+				"	a[1] = 12;"
+				"	*a[0];"	// = 10
+				"	*a[1];" // = 12
+				"	"
+				"	for(int i = 0 .. 10 ) {"
+				"		a[i] = i;"
+				"	}"
+				"	"
+				"	*a[7];"	// = i (=v7)
+				"	"
+				"	a[3] = 14;"
+				"	*a[3];" // = 14
+				"	"
+				"	*a[0];"
+				"	a[0] = 16;"
+				"	*a[0];" // = 16
+
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{10}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{v7}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{v7,10}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{16}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
 
 
 } // end namespace cba

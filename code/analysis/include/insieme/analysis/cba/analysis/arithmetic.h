@@ -263,6 +263,17 @@ namespace cba {
 			constraints.add(elem(unknown, A_res));
 		}
 
+		void visitCastExpr(const CastExprAddress& cast, const Context& ctxt, Constraints& constraints) {
+			// for this analysis we are ignoring casts
+			constraints.add(subset(
+					cba.getSet(A, cast->getSubExpression(), ctxt),
+					cba.getSet(A, cast, ctxt)
+			));
+
+			// also run standard operations
+			super::visitCastExpr(cast, ctxt, constraints);
+		}
+
 	};
 
 } // end namespace cba

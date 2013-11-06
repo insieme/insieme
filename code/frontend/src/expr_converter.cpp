@@ -1555,7 +1555,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	core::ExpressionPtr base = Visit( baseExpr );
 
 	core::TypePtr opType;
-	core::LiteralPtr op;
+	core::ExpressionPtr op;
 
 	if ( base->getType()->getNodeType() == core::NT_RefType ) {
 		// The vector/array is an L-Value so we use the array.ref.elem
