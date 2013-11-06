@@ -273,6 +273,10 @@ public:
         return convSetup;
     }
 
+    void addToTypeCache(const clang::Type* type, core::TypePtr ptr) {
+        typeCache[type] = ptr;
+    }
+
 	/**
 	 * Determines the definition of the given generic type pointer within the
 	 * internally maintained IR Translation Unit. If non is present, the given
