@@ -416,6 +416,12 @@ namespace c_ast {
 		return *expression==*other.expression;
 	}
 
+	bool OpaqueExpr::equals(const Node& node) const {
+		assert(dynamic_cast<const OpaqueExpr*>(&node));
+		auto other = static_cast<const OpaqueExpr&>(node);
+		return value==other.value;
+	}
+
 	bool TypeDeclaration::equals(const Node& node) const {
 		assert(dynamic_cast<const TypeDeclaration*>(&node));
 		auto other = static_cast<const TypeDeclaration&>(node);

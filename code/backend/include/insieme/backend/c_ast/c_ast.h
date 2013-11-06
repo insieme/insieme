@@ -572,6 +572,12 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct OpaqueExpr : public Expression {
+		std::string value;
+		OpaqueExpr(const std::string& val) : Expression(NT_OpaqueExpr), value(val) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- TopLevelElement -------------------------
 
 	struct TopLevelElement : public Node {

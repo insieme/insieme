@@ -567,6 +567,10 @@ namespace c_ast {
 				return out << "(" << print(node->expression) << ")";
 			}
 
+			PRINT(OpaqueExpr) {
+				return out << node->value;
+			}
+
 			PRINT(TypeDeclaration) {
 				// forward declaration + type definition
 				bool isStruct = (node->type->getNodeType() == NT_StructType);

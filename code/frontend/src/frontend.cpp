@@ -55,6 +55,7 @@
 
 #include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
+#include "insieme/frontend/extensions/asm_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -80,6 +81,7 @@ namespace frontend {
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
+        registerFrontendPlugin<ASMExtension>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
