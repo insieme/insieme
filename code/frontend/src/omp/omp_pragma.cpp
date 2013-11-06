@@ -171,6 +171,15 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	// lastprivate(list)
 	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> var_list["lastprivate"] >> r_paren;
 
+	// shared(list)
+	auto shared_clause = kwd("shared") >> l_paren >> var_list["shared"] >> r_paren;
+
+	// copyin(list)
+	auto copyin_clause = kwd("copyin") >> l_paren >> var_list["copyin"] >> r_paren;
+
+	// num_threads(list)
+	auto num_threads_clause = kwd("num_threads") >> l_paren >> expr["num_threads"] >> r_paren;
+
 	// + or - or * or & or | or ^ or && or ||
 	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp |
 							  tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
@@ -182,7 +191,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 	auto parallel_clause =  ( 	// if(scalar-expression)
 								if_expr
 							| 	// num_threads(integer-expression)
-								(kwd("num_threads") >> l_paren >> expr["num_threads"] >> r_paren)
+								num_threads_clause
 							|	// default(shared | none)
 								def
 							|	// private(list)
@@ -190,9 +199,9 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							|	// firstprivate(list)
 								firstprivate_clause
 							|	// shared(list)
-								(kwd("shared") >> l_paren >> var_list["shared"] >> r_paren)
+								shared_clause
 							|	// copyin(list)
-								(kwd("copyin") >> l_paren >> var_list["copyin"] >> r_paren)
+								copyin_clause
 							|	// reduction(operator: list)
 								reduction_clause
 							);
