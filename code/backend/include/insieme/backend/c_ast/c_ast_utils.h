@@ -108,14 +108,15 @@ namespace c_ast {
 		case BinaryOperation::BitwiseXOrAssign: 		return 2;
 		case BinaryOperation::BitwiseLeftShiftAssign: 	return 2;
 		case BinaryOperation::BitwiseRightShiftAssign: 	return 2;
-		case BinaryOperation::MemberAccess: 			return 15;
-		case BinaryOperation::IndirectMemberAccess: 	return 15;
-		case BinaryOperation::Subscript: 				return 15;
-		case BinaryOperation::Cast: 					return 14;
+		case BinaryOperation::MemberAccess: 			return 16;
+		case BinaryOperation::IndirectMemberAccess: 	return 16;
+		case BinaryOperation::Subscript: 				return 16;
+		case BinaryOperation::Cast: 					return 15;
 		case BinaryOperation::Comma:					return 1;
-		case BinaryOperation::StaticCast: 				return 14;
-		case BinaryOperation::DynamicCast: 				return 14;
-		case BinaryOperation::ScopeResolution:			return 16;
+		case BinaryOperation::StaticCast: 				return 15;
+		case BinaryOperation::DynamicCast: 				return 15;
+		case BinaryOperation::ScopeResolution:			return 17;
+		case BinaryOperation::PointerToMember:			return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -488,6 +489,10 @@ namespace c_ast {
 
 	inline ExpressionPtr scope(NodePtr a, NodePtr b) {
 		return binaryOp(BinaryOperation::ScopeResolution, a, b);
+	}
+
+	inline ExpressionPtr pointerToMember(NodePtr a, NodePtr b) {
+		return binaryOp(BinaryOperation::PointerToMember, a, b);
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {

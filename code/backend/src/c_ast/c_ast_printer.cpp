@@ -496,6 +496,7 @@ namespace c_ast {
 					case BinaryOperation::DynamicCast: return out << "dynamic_cast<" << print(node->operandA) << ">(" << print(node->operandB) << ")";
 
 					case BinaryOperation::ScopeResolution:			op = "::"; break;
+					case BinaryOperation::PointerToMember:			op = "->*"; break;
 				}
 
 				assert(op != "" && "Invalid binary operation encountered!");

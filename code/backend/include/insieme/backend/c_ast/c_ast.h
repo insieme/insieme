@@ -491,7 +491,8 @@ namespace c_ast {
 			// C++ operators
 			StaticCast,
 			DynamicCast,
-			ScopeResolution    //  the scope resolution operator is: "::" 
+			ScopeResolution,    //  the scope resolution operator is: "::" 
+			PointerToMember		//	pointer to member operator. "->*"
 		};
 
 		BinaryOp operation;
