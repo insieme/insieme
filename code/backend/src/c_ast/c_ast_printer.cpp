@@ -160,6 +160,8 @@ namespace c_ast {
 			}
 
 			PRINT(PointerType) {
+				// to print a pointer type we just use the variable facility but we trick it by using a
+				// variable with no name so it will never show off
 				return out << ParameterPrinter(node, node->getManager()->create(""));
 			}
 
@@ -808,6 +810,7 @@ namespace c_ast {
 			vector<Pointer> pointers; // true is a const pointer, false a standard pointer
 			vector<ExpressionPtr> subscripts;
 			vector<TypePtr> parameters;
+			StructTypePtr owner;
 			bool hasParameters;
 			TypeLevel() : pointers(), hasParameters(false) {}
 		};
@@ -833,6 +836,7 @@ namespace c_ast {
 
 			// collect function parameters
 			if (cur->getType() == NT_FunctionType) {
+
 				// if vectors have already been processed => continue with next level
 				if (!res.subscripts.empty()) {
 					auto innermost = computeNesting(data, cur);
@@ -843,6 +847,8 @@ namespace c_ast {
 				FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
 				copy(funType->parameterTypes, std::back_inserter(res.parameters));
 				res.hasParameters = true;
+
+				res.owner = static_pointer_cast<StructType>(static_pointer_cast<FunctionType>(cur)->classType);
 
 				cur = funType->returnType;
 			}
@@ -870,24 +876,31 @@ namespace c_ast {
 			return out << " " << CPrint(name);
 		}
 
-		std::ostream& printTypeNest(std::ostream& out, NestIterator start, NestIterator end, const IdentifierPtr& name) {
+		std::ostream& printTypeNest(std::ostream& out, NestIterator level_it, NestIterator end, const IdentifierPtr& name) {
+
 			// terminal case ...
-			if (start == end) {
+			if (level_it == end) {
 				return printName(out, name);
 			}
 
 			// print pointers ...
-			const TypeLevel& cur = *start;
+			const TypeLevel& cur = *level_it;
 			for(auto it = cur.pointers.rbegin(); it != cur.pointers.rend(); it++) {
 				out << ((*it) ? "*const" : "*");
 			}
 
-			++start;
-			if (start != end) {
+			++level_it;
+			if (level_it != end) {
 				out << "(";
 
+				// here is the place to print any membership of a function pointer
+				if(cur.owner){
+					out << CPrint(static_pointer_cast<StructType>(cur.owner)->name);	
+					out << "::";
+				}
+
 				// print nested recursively
-				printTypeNest(out, start, end, name);
+				printTypeNest(out, level_it, end, name);
 
 				out << ")";
 			} else {
@@ -918,6 +931,7 @@ namespace c_ast {
 
 	std::ostream& ParameterPrinter::printTo(std::ostream& out) const {
 		c_ast::VariablePtr var;
+
 		return out << join(", ", params, [](std::ostream& out, const c_ast::VariablePtr& var) {
 
 			// special handling for varargs

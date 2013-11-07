@@ -165,6 +165,7 @@ namespace backend {
 
 			const FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
 			const FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveMemberFunctionType(const core::FunctionTypePtr& ptr);
 			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
 			const RefTypeInfo* resolveRefType(const core::RefTypePtr& ptr);
@@ -1121,6 +1122,9 @@ namespace backend {
 			if (ptr->isPlain()) {
 				return resolvePlainFunctionType(ptr);
 			}
+			if (ptr->isMemberFunction()) {
+				return resolveMemberFunctionType(ptr);
+			}
 			return resolveThickFunctionType(ptr);
 		}
 
@@ -1174,6 +1178,64 @@ namespace backend {
 
 			// done
 			return res;
+
+		}
+
+		const FunctionTypeInfo* TypeInfoStore::resolveMemberFunctionType(const core::FunctionTypePtr& ptr) {
+			assert(ptr->isMemberFunction() && "Only supported for Member function types!");
+
+			auto manager = converter.getCNodeManager();
+
+			// get name for function type
+			auto params = ptr->getParameterTypes();
+
+			FunctionTypeInfo* res = new FunctionTypeInfo();
+			res->plain = true;
+
+			// construct the C AST function type token, since is a member function, we need to provide the this class type
+			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			const TypeInfo* ownerType   = resolveType(params[0].as<core::RefTypePtr>()->getElementType());
+			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType, ownerType->rValueType );
+
+			// add result type dependencies
+			vector<c_ast::CodeFragmentPtr> declDependencies;
+			declDependencies.push_back(retTypeInfo->declaration);
+			declDependencies.push_back(ownerType->declaration);
+
+			// add remaining parameters
+			auto param_it = params.begin() +1;
+			auto param_end = params.end();
+			for(; param_it != param_end; ++param_it){
+				const TypeInfo* info = resolveType(*param_it);
+				functionType->parameterTypes.push_back(info->rValueType);
+				declDependencies.push_back(info->declaration);
+			}
+
+
+			// construct a dummy fragment combining all dependencies
+			res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+			res->declaration->addDependencies(declDependencies);
+			res->definition = res->declaration;
+
+			// R / L value names
+			res->rValueType = c_ast::ptr(functionType);
+			res->lValueType = res->rValueType;
+
+			// external type handling
+			res->externalType = res->rValueType;
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
+
+			// ------------ Initialize the rest ------------------
+
+			res->callerName = c_ast::IdentifierPtr();
+			res->caller = c_ast::CodeFragmentPtr();
+			res->constructorName = c_ast::IdentifierPtr();
+			res->constructor = c_ast::CodeFragmentPtr();
+
+			// done
+			return res;
+
 
 		}
 

@@ -177,7 +177,11 @@ namespace c_ast {
 	}
 
 	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {
-		return returnType->getManager()->create<c_ast::FunctionType>(returnType, params);
+		return returnType->getManager()->create<c_ast::FunctionType>(returnType, TypePtr(),  params);
+	}
+
+	inline FunctionTypePtr fun(const TypePtr& returnType, const TypePtr& classTy, const vector<c_ast::TypePtr>& params) {
+		return returnType->getManager()->create<c_ast::FunctionType>(returnType, classTy,  params);
 	}
 
 	template<typename ... P>

@@ -325,6 +325,16 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     core::TypePtr retTy;
     LOG_TYPE_CONVERSION( memPointerTy, retTy );
     retTy = convert(memPointerTy->getPointeeType().getTypePtr());
+	core::TypePtr classTy = convert(memPointerTy->getClass ());
+
+	// prepend this obj to the param list
+	core::TypeList paramTypes = retTy.as<core::FunctionTypePtr>()->getParameterTypes();
+	paramTypes.push_back(builder.refType(classTy));
+	core::TypePtr  returnTy      = retTy.as<core::FunctionTypePtr>()->getReturnType();
+
+	// generate new member function type
+	retTy =  builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
+	assert( retTy.as<core::FunctionTypePtr>()->isMemberFunction() );
     return retTy;
 }
 

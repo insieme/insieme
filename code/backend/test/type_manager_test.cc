@@ -651,7 +651,6 @@ TEST(TypeManager, FunctionTypes) {
 	core::TypePtr typeB = basic.getBool();
 	core::TypePtr typeC = basic.getFloat();
 
-
 	core::FunctionTypePtr type;
 
 	// -- test a thick function pointer first => should generate closure, constructor and caller --
@@ -731,7 +730,40 @@ TEST(TypeManager, FunctionTypes) {
 	));
 	EXPECT_EQ("int32_t(* var)()", toC(decl));
 
+
+	// -- test a member function type --
+
+	core::TypePtr classTy = builder.refType( builder.structType(toVector(builder.namedType("a", typeA), builder.namedType("b", typeA)) ));
+
+	type = builder.functionType(toVector(classTy, typeA), typeC, core::FK_MEMBER_FUNCTION);
+	info = typeManager.getTypeInfo(type);
+
+
+	EXPECT_EQ("(struct<a:int<4>,b:int<4>>::(int<4>)->real<4>)", toString(*type));
+	EXPECT_TRUE(info.plain);
+	EXPECT_EQ("float(name::*)(int32_t)", toC(info.lValueType));
+	EXPECT_EQ("float(name::*)(int32_t)", toC(info.rValueType));
+	EXPECT_EQ("float(name::*)(int32_t)", toC(info.externalType));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_FALSE((bool)info.callerName);
+	EXPECT_FALSE((bool)info.caller);
+	EXPECT_FALSE((bool)info.constructorName);
+	EXPECT_FALSE((bool)info.constructor);
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+	// check variable declaration
+	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
+			info.lValueType, cManager->create("var")
+	));
+	EXPECT_EQ("float(name::* var)(int32_t)", toC(decl));
 }
+
 
 TEST(TypeManager, RecursiveTypes) {
 

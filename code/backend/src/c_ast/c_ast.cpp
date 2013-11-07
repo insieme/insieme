@@ -224,7 +224,7 @@ namespace c_ast {
 	bool FunctionType::equals(const Node& node) const {
 		assert(dynamic_cast<const FunctionType*>(&node));
 		auto other = static_cast<const FunctionType&>(node);
-		return *returnType == *other.returnType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
+		return *returnType == *other.returnType && *classType == *other.classType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
 	}
 
 	bool VarArgsType::equals(const Node& node) const {
