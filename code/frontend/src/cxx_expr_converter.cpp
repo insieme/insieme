@@ -913,9 +913,9 @@ namespace {
 		core::ExpressionPtr papa    = convFact.convertExpr(clangExpr->getLHS());
 		core::ExpressionPtr funcPtr = convFact.convertExpr(clangExpr->getRHS());
 
+		// unwrap pointer kind
 		if (clangExpr->getOpcode() == clang::BO_PtrMemI)
 			papa = getCArrayElemRef(convFact.getIRBuilder(), papa);
-
 
 		assert(funcPtr->getType().isa<core::FunctionTypePtr>());
 		return convFact.getIRBuilder().callExpr(funcPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), funcPtr, toVector(papa));
@@ -946,11 +946,11 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-//	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-//		retIr = plugin->Visit(expr, convFact);
-//		if(retIr)
-//			break;
-//    }
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+		retIr = plugin->Visit(expr, convFact);
+		if(retIr)
+			break;
+    }
     if(!retIr)
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
