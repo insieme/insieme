@@ -93,7 +93,7 @@ TEST(EntityExtract, VariableExtractor) {
 	{ 
 		int v;
 		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg, v);
-		EXPECT_EQ(4u, dom.size());
+		EXPECT_EQ(7u, dom.size());
 	}
 
 	// Extract VariableAddress
@@ -125,7 +125,7 @@ TEST(EntityExtract, ExpressionExtractor) {
 	int v;
 	auto dom = extract(dfa::Entity<elem<ExpressionPtr>>(), *cfg, v);
 
-	EXPECT_EQ(13u, dom.size());
+	EXPECT_EQ(22u, dom.size());
 	EXPECT_TRUE(dfa::isBounded(dom));
 
 	// filter out all builtin literal
@@ -133,7 +133,7 @@ TEST(EntityExtract, ExpressionExtractor) {
 			return mgr.getLangBasic().isBuiltIn(cur); 
 		} );
 
-	EXPECT_EQ(11u, std::distance(twin.first, twin.second));
+	EXPECT_EQ(17u, std::distance(twin.first, twin.second));
 }
 
 TEST(EntityExtract, GenLiteralExtractor) {
@@ -183,7 +183,7 @@ TEST(EntityExtract, TypeExtractor) {
 
 	int v;
 	auto dom = extract(dfa::Entity<elem<TypePtr>>(), *cfg, v);
-	EXPECT_EQ(12u, dom.size());
+	EXPECT_EQ(21u, dom.size());
 
 	std::cout << dom << std::endl;
 }

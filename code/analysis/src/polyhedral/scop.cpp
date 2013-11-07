@@ -484,6 +484,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if ( addr->getNodeType() == NT_CallExpr) {
 			CallExprAddress callExpr = static_address_cast<const CallExpr>(addr);
+
 			ExpressionPtr func = callExpr->getFunctionExpr();
 			bool isBuiltIn = addr->getNodeManager().getLangBasic().isBuiltIn(func);
 
@@ -1033,8 +1034,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		return visit( mark->getSubExpression() );
 	}
 
-	IterationVector visitLambda(const LambdaAddress& lambda) {	
+	IterationVector visitLambda(const LambdaAddress& lambda) {
 		STACK_SIZE_GUARD;
+
 		//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
 		assert( subScops.empty() );
 
@@ -1082,9 +1084,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
-		bool isBuiltIn = gen.isBuiltIn(func);
 		
-		if ( func->getNodeType() == NT_Literal && !isBuiltIn ) {
+		// do not look into built-in functions
+		if (gen.isBuiltIn(func)) {
+			return IterationVector();
+		}
+
+		if ( func->getNodeType() == NT_Literal && !gen.isBuiltIn(func) ) {
 
 			FunctionSema&& usage = extractSemantics(callExpr);
 			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function
@@ -1112,13 +1118,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// Visit the body of the function 
 		iterVec = visitNode(func);
 
-		if ( !isBuiltIn && func->getNodeType() == NT_LambdaExpr ) {
+		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( subScops.size() == 1 );
 
 			lambdaScop = subScops.front();
 		}
 	
-		if ( !isBuiltIn && func->getNodeType() == NT_LambdaExpr ) {
+		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
 			// check if called function has multiple returns

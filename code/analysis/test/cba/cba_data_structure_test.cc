@@ -455,6 +455,7 @@ namespace cba {
 				"}"
 		).as<CompoundStmtPtr>();
 
+
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
 

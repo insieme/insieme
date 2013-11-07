@@ -92,11 +92,11 @@ using namespace core;
 		EXPECT_EQ(1600,  features::getValue<double>(values.at(0)));
 		EXPECT_EQ(5,     features::getValue<double>(values.at(1)));
 		EXPECT_EQ(0,     features::getValue<double>(values.at(2)));
-		EXPECT_EQ(40100, features::getValue<double>(values.at(3)));
-		EXPECT_EQ(17,    features::getValue<double>(values.at(4)));
+		EXPECT_EQ(80300, features::getValue<double>(values.at(3)));
+		EXPECT_EQ(47,    features::getValue<double>(values.at(4)));
 		EXPECT_EQ(800,   features::getValue<double>(values.at(5)));
 		EXPECT_EQ(1600,  features::getValue<double>(values.at(6)));
-		EXPECT_EQ(3240,  features::getValue<double>(values.at(7)));
+		EXPECT_EQ(6520,  features::getValue<double>(values.at(7)));
 	}
 
 } // end namespace features
