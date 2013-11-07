@@ -17,9 +17,11 @@ int main (){
 
 
 	Obj a;
-
 	(a.*ptr)();
 
+	Obj* b;
+	(b->*ptr)();
 
-	return 0;
+
+//	return 0;
 }
