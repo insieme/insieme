@@ -490,7 +490,8 @@ namespace c_ast {
 
 			// C++ operators
 			StaticCast,
-			DynamicCast
+			DynamicCast,
+			ScopeResolution    //  the scope resolution operator is: "::" 
 		};
 
 		BinaryOp operation;

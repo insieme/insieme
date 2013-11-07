@@ -427,8 +427,15 @@ namespace backend {
 			return c_ast::ref(info.lambdaWrapperName);
 		}
 		case core::NT_LambdaExpr: {
-			const FunctionInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 			context.getDependencies().insert(info.prototype);
+
+			// FIXME: hack to support member function pointers intialization
+			c_ast::NodePtr thing = static_pointer_cast<c_ast::CCodeFragment>(info.definition)->getCode()[1];
+			if (c_ast::MemberFunctionPtr mem = thing.isa<c_ast::MemberFunctionPtr>()){
+				return c_ast::ref ( c_ast::scope( mem->className,     info.function->name));
+			}
+
 			return c_ast::ref(info.function->name);
 		}
 		case core::NT_Variable:

@@ -115,6 +115,7 @@ namespace c_ast {
 		case BinaryOperation::Comma:					return 1;
 		case BinaryOperation::StaticCast: 				return 14;
 		case BinaryOperation::DynamicCast: 				return 14;
+		case BinaryOperation::ScopeResolution:			return 16;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -483,6 +484,10 @@ namespace c_ast {
 
 	inline ExpressionPtr dynamicCast(TypePtr type, NodePtr expr) {
 		return binaryOp(BinaryOperation::DynamicCast, type, expr);
+	}
+
+	inline ExpressionPtr scope(NodePtr a, NodePtr b) {
+		return binaryOp(BinaryOperation::ScopeResolution, a, b);
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {

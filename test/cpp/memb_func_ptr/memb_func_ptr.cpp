@@ -18,6 +18,7 @@ int main (){
 
 	Obj a;
 
+	(a.*ptr)();
 
 
 	return 0;
