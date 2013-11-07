@@ -72,7 +72,7 @@ OPTION("backend,b",			"backend",				Backend,		std::string,		"Backend Selection: 
 OPTION("log-level,L",		"log-level",			LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<path>, 			"input file(s)")
 OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<path>, 			"Add directory to include search path")
-OPTION("std,std", 			"std-compatibility",	STD, 			std::string, 				"Set compatibility mode")
+OPTION("std",	 			"std",					Standard, 		std::string, 				"Set compatibility mode")
 OPTION("definitions,D",	 	"definitions", 			Defs, 			std::vector<std::string>, 	"Add a preprocessor definition")
 OPTION("show-ir", 			"show-ir", 				ShowIR, 		std::string, 				"Print a dot representation of the IR")
 OPTION("dump-xml", 			"dump-xml", 			DumpXML, 		std::string, 				"Print the xml representation of the IR")

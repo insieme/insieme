@@ -393,7 +393,8 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				return out << "(" << print(node->type) << "){"
+				if (node->explicitType) out << "(" << print(node->type) << ")";
+				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
 				}) << "}";
@@ -566,6 +567,10 @@ namespace c_ast {
 				return out << "(" << print(node->expression) << ")";
 			}
 
+			PRINT(OpaqueExpr) {
+				return out << node->value;
+			}
+
 			PRINT(TypeDeclaration) {
 				// forward declaration + type definition
 				bool isStruct = (node->type->getNodeType() == NT_StructType);
@@ -611,7 +616,7 @@ namespace c_ast {
 			}
 
 			PRINT(GlobalVarDecl) {
-				return out << (node->external?"extern ":"") << print(node->type) << " " << node->name << ";\n";
+				return out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name)) << ";\n";
 			}
 
 			PRINT(Parent) {

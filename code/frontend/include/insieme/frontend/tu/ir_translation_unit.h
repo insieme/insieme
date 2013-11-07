@@ -80,15 +80,17 @@ namespace tu {
 
 		EntryPointList entryPoints;
 
+		bool isCppCode;
+
 	public:
 
-		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr) {}
+		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr), isCppCode(false) {}
 
-		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints)
-			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints) {}
+		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints, bool cppCode)
+			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), isCppCode(isCppCode) {}
 
 		IRTranslationUnit(const IRTranslationUnit& other)
-			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints) {}
+			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints), isCppCode(other.isCppCode) {}
 
 		// getter:
 
@@ -114,9 +116,9 @@ namespace tu {
 
 		// mutable getter:
 
-		TypeMap& getTypes() {
-			return types;
-		}
+	//	TypeMap& getTypes() {
+	//		return types;
+	//	}
 
 		FunctionMap& getFunctions() {
 			return functions;
@@ -137,8 +139,16 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-		//	assert(types.find(symbol) == types.end());
+			assert(symbol );
+			assert(definition);
 			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
+		}
+
+		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
+			assert(symbol );
+			assert(definition);
+			assert(types.find(symbol) != types.end());
+			types[symbol] = definition;
 		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
@@ -150,6 +160,15 @@ namespace tu {
                 assert(core::analysis::equalNormalize ( definition, functions[symbol] ));
 			}
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
+		}
+
+		/**
+		 * replaces a previous definition by a new one
+		 */
+		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition){
+			assert_eq(*symbol->getType(), *definition->getType());
+			assert(functions.find(symbol) != functions.end());
+			functions[symbol] = definition;
 		}
 
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
@@ -194,6 +213,14 @@ namespace tu {
 		IRTranslationUnit toManager(core::NodeManager& manager) const;
 
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
+
+		bool isCXX() const{
+			return isCppCode;
+		}
+
+		void setCXX(bool flag = true) {
+			isCppCode =  flag;
+		}
 
 		std::ostream& printTo(std::ostream& out) const;
 

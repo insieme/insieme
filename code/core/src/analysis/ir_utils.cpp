@@ -913,6 +913,104 @@ bool isStaticVar (const ExpressionPtr& var){
 		return false;
 }
 
+bool compareTypes(const TypePtr& a, const TypePtr& b) {
+	if( *a == *b) { return true; }
+	
+	//FunctionType
+	if (a->getNodeType() == NT_FunctionType && b->getNodeType() == NT_FunctionType) {
+		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(a);
+		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(b);
+
+		// check kind of functions
+		if (funTypeA->getKind() != funTypeB->getKind()) { return false; }
+
+		bool res = true;
+		res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
+		res = res && compareTypes(funTypeA->getReturnType(), funTypeB->getReturnType());
+		for(std::size_t i = 0; res && i<funTypeB->getParameterTypes().size(); i++) {
+			res = res && compareTypes(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
+		}
+		return res;
+	}
+	
+	//RecType
+	if (a->getNodeType() == NT_RecType || b->getNodeType() == NT_RecType) {
+
+		// if both are they have to be equivalent
+		if (a->getNodeType() == NT_RecType && b->getNodeType() == NT_RecType) { return a == b; }
+
+		// if only one is, it needs to be unrolled
+		if (a->getNodeType() == NT_RecType) {
+			assert(b->getNodeType() != NT_RecType);
+			return compareTypes(a.as<RecTypePtr>()->unroll(), b);
+		}
+
+		if (b->getNodeType() == NT_RecType) {
+			assert(a->getNodeType() != NT_RecType);
+			return compareTypes(a, b.as<RecTypePtr>()->unroll());
+		}
+		assert(false && "How could you get here?");
+	}	
+	
+	//RefType
+	if(a.isa<RefTypePtr>() && b.isa<RefTypePtr>()) {
+		return	compareTypes(a.as<RefTypePtr>()->getElementType(), b.as<RefTypePtr>()->getElementType());
+	}
+
+	//ArrayType
+	if(a.isa<ArrayTypePtr>() && b.isa<ArrayTypePtr>()) {
+		return	(a.as<ArrayTypePtr>()->getDimension() == b.as<ArrayTypePtr>()->getDimension()) &&
+				compareTypes(a.as<ArrayTypePtr>()->getElementType(), b.as<ArrayTypePtr>()->getElementType());
+	}
+
+	//VectorType
+	if(a.isa<VectorTypePtr>() && b.isa<VectorTypePtr>()) {
+		return	(a.as<VectorTypePtr>()->getSize() == b.as<VectorTypePtr>()->getSize()) &&
+				compareTypes(a.as<VectorTypePtr>()->getElementType(), b.as<VectorTypePtr>()->getElementType());
+	}
+	
+	//TypeVariable
+	if(a.isa<TypeVariablePtr>() || b.isa<TypeVariablePtr>() ) { return a == b; }
+
+	//GenericType
+	if(a.isa<GenericTypePtr>() && b.isa<GenericTypePtr>()) { return a == b; }
+	
+	//ChannelType
+	if(a.isa<ChannelTypePtr>() && b.isa<ChannelTypePtr>()) { return a==b; }
+
+	//TupleType
+	if(a.isa<TupleTypePtr>() && b.isa<TupleTypePtr>()) { return a==b; }
+	//StructType
+	//if(a.isa<StructTypePtr>() && b.isa<StructTypePtr>()) { return a==b; }
+	//UnionType
+	//if(a.isa<UnionTypePtr>() && b.isa<UnionTypePtr>()) { return a==b; }
+
+	//StructType
+	//UnionType
+	if(a.isa<NamedCompositeTypePtr>() && b.isa<NamedCompositeTypePtr>()) { 
+		// names and sub-types have to be checked
+		auto entriesA = static_pointer_cast<const NamedCompositeType>(a)->getEntries();
+		auto entriesB = static_pointer_cast<const NamedCompositeType>(b)->getEntries();
+
+		// check number of entries
+		if (entriesA.size() != entriesB.size()) { return false; }
+
+		// check all child nodes
+		bool res = true;
+		for (auto it = make_paired_iterator(entriesA.begin(), entriesB.begin());
+				it != make_paired_iterator(entriesA.end(), entriesB.end()); ++it) {
+
+			auto entryA = (*it).first;
+			auto entryB = (*it).second;
+			if (*entryA->getName() != *entryB->getName()) { return false; }
+
+			res = res && compareTypes(entryA->getType(), entryB->getType());
+		}
+		return res;
+	}
+
+	return false;
+}
 
 } // end namespace utils
 } // end namespace core

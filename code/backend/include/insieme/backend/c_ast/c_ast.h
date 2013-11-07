@@ -381,8 +381,10 @@ namespace c_ast {
 	struct Initializer : public Expression {
 		TypePtr type;
 		vector<NodePtr> values;
-		Initializer(TypePtr type) : Expression(NT_Initializer), type(type) {};
-		Initializer(TypePtr type, const vector<NodePtr>& values) : Expression(NT_Initializer), type(type), values(values) {};
+		bool explicitType;
+		Initializer(TypePtr type) : Expression(NT_Initializer), type(type), explicitType(true) {};
+		Initializer(TypePtr type, const vector<NodePtr>& values, bool explicitType = true)
+			: Expression(NT_Initializer), type(type), values(values), explicitType(explicitType){};
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -567,6 +569,12 @@ namespace c_ast {
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct OpaqueExpr : public Expression {
+		std::string value;
+		OpaqueExpr(const std::string& val) : Expression(NT_OpaqueExpr), value(val) {}
 		virtual bool equals(const Node& node) const;
 	};
 

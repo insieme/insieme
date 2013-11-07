@@ -196,8 +196,14 @@ namespace cmd {
 					res.job.setStandard(frontend::ConversionSetup::C99);
 				} else if (selected == "c++03") {
 					res.job.setStandard(frontend::ConversionSetup::Cxx03);
+				} else if (selected == "c++0x") {
+					res.job.setStandard(frontend::ConversionSetup::Cxx11);
+					assert(res.job.isCxx());
+				} else if (selected == "c++11") {
+					res.job.setStandard(frontend::ConversionSetup::Cxx11);
+					assert(res.job.isCxx());
 				} else {
-					cout << "Unsupported standard: " << selected << " - supported: auto, c99, c++03";
+					cout << "Unsupported standard: " << selected << " - supported: auto, c99, c++03, c++11";
 					res.valid=false;
 				}
 			}
@@ -211,12 +217,15 @@ namespace cmd {
 				for(auto i : map["intercept"].as<vector<string>>()) {
 					res.job.setInterception(i);
 				}
-            } 
+            }
 
 			// extra flags
 			for(auto cur : parser_steps) {
 				res.valid = cur(map) && res.valid;
 			}
+
+			// plugin initialization
+            res.job.frontendPluginInit();
 
 			// done
 			return res;

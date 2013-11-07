@@ -1,1 +1,1 @@
-all ^g++ ^cxx_seq ^ocl ^mpi ^mpi_seq ^mpi_ocl ^win_run ^c_run ^cxx_run
+all ^g++ ^cxx_seq ^ocl ^mpi ^mpi_seq ^mpi_ocl ^win_run ^c_run ^cxx_run ^sema++ ^sema++11 ^cxx11_seq ^cxx11_run

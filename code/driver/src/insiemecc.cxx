@@ -158,10 +158,16 @@ int main(int argc, char** argv) {
 	// Step 4: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
+	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
+	//		cpp compiler, C otherwise
 	cout << "Building binaries ...\n";
-	cp::Compiler compiler = cp::Compiler::getDefaultCppCompiler();
+	cp::Compiler compiler =
+			(options.job.isCxx())
+				? cp::Compiler::getDefaultCppCompilerO3()
+				: cp::Compiler::getDefaultC99CompilerO3();
+
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-//	for(auto cur : extLibs) compiler.addFlag(cur.string());			// TODO: add extra setter for libraries, not just a flag
+//	for(auto cur : extLibs) compiler.addFlag(cur.string());                 // TODO: add extra setter for libraries, not just a flag
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done

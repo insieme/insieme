@@ -78,7 +78,7 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
  * the record provides que qualified name, the type the spetialization for the type
  * we merge both strings in a safe string for the output
  */
-std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type);
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type);
 
 /**
  * build a string to identify a function
@@ -100,7 +100,15 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl);
  * @param tagType clang TagType pointer
  * @return name for enumeration
  */
-std::string buildNameForEnum (const clang::TagType* type);
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl);
+
+/**
+ * build names for enumeration constants. 
+ * anonymous enumerationconstant will fail!
+ * @param ecd enumConstantDecl pointer
+ * @return name for enumeration
+ */
+std::string buildNameForEnumConstant (const clang::EnumConstantDecl* ecd);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

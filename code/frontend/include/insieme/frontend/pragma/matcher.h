@@ -39,6 +39,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/printable.h"
 
 #include <memory>
 #include <algorithm>
@@ -188,7 +189,7 @@ template<clang::tok::TokenKind T> struct Tok;
  * A node is a abstract class representing a generic node of the matching tree
  * composed to parse a determined pragma.
  */
-struct node {
+struct node : public insieme::utils::Printable {
 
 	/**
 	 * This method consumes token from the input stream (using the clang lexer and tokenizer) and
@@ -234,6 +235,8 @@ struct node {
 	}
 
 	virtual ~node() { }
+
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -286,6 +289,8 @@ struct concat: public val_pair<concat> {
 	concat(node const& n1, node const& n2) : val_pair<concat>::val_pair(n1.copy(), n2.copy()) {	}
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -304,6 +309,8 @@ struct option: public val_single<option> {
 	option(node const& n): val_single<option>(n.copy()) { }
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -313,6 +320,8 @@ struct star: public val_single<star> {
 	star(node const& n) : val_single<star>(n.copy()) { }
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -376,10 +385,11 @@ std::string TokenToStr(const clang::Token& token);
 template<clang::tok::TokenKind T>
 struct Tok: public MappableNode<Tok<T>> {
 	bool resolve;
+	std::string tok;
 
 	Tok() { }
 	Tok(std::string const& str, bool addToMap = true, bool resolve=false) : 
-		MappableNode<Tok<T>>(str, addToMap), resolve(resolve) { }
+		MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) { }
 	
 	node* copy() const { 
 		return new Tok<T>( 
@@ -399,6 +409,8 @@ struct Tok: public MappableNode<Tok<T>> {
 		errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
 		return false;
 	}
+
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -414,6 +426,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
 	kwd operator~() const { return kwd(kw, getMapName(), false); }
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**

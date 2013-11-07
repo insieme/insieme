@@ -43,16 +43,19 @@
 
 namespace insieme {
 namespace utils {
-
-	void testFun() {
-		std::cout << "Function Pointer Works!\n";
-	}
-
-	void testFun2(int x) {
-		std::cout << "Another test function - with parameters: " << x << "\n";
-	}
-
 	TEST(Tasks, SimpleTest) {
+	}
+
+//	void testFun() {
+//		std::cout << "Function Pointer Works!\n";
+//	}
+//
+//	void testFun2(int x) {
+//		std::cout << "Another test function - with parameters: " << x << "\n";
+//	}
+//
+//	TEST(Tasks, SimpleTest) {
+//
 
 //		// test the function type wrapper handling
 //		auto l = []() { std::cout << "Hello"; };
@@ -188,6 +191,6 @@ namespace utils {
 //		EXPECT_EQ(v,4);
 //
 //		insieme::utils::TaskManager::finalize();
-	}
+//	}
 } // end namespace analysis
 } // end namespace insieme

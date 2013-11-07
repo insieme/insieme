@@ -37,7 +37,7 @@
 /**
  * A macro file defining relations between functions and types defined within various
  * headers.
- * 
+ *
  * FUN(x,y)  ... states that header file x contains a declaration of y
  * TYPE(x,y) ... states that header file x contains a definition of type y
  */
@@ -55,6 +55,13 @@
 // -----------------------------------
 
 FUN("assert.h", __assert_fail)
+
+FUN("stdarg.h", va_start)
+FUN("stdarg.h", va_end)
+FUN("stdarg.h", va_copy)
+FUN("stdarg.h", va_arg)
+TYPE("stdarg.h", "va_list")
+TYPE("stdarg.h", "__va_list_tag")
 
 FUN("stdio.h", printf)
 FUN("stdio.h", par_printf) // a lie

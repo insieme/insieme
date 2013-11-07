@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -85,6 +85,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+	LOG_STMT_CONVERSION(retStmt, stmt);
 
 	if(!retStmt->getRetValue() ) {
 		//if there is no return value its an empty return "return;"
@@ -185,6 +186,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	stmtList.push_back(builder.returnStmt(retExpr));
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+
 	return stmt;
 }
 
@@ -194,66 +196,18 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
 	return StmtConverter::VisitCompoundStmt(compStmt);
-
-	/*
-	//START_LOG_STMT_CONVERSION(compStmt);
-	core::StatementPtr retIr;
-	LOG_STMT_CONVERSION(retIr);
-
-	CXXConverter::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
-	while (!cxxConvFact.cxxCtx.scopeObjects.empty()) {
-		cxxConvFact.cxxCtx.scopeObjects.pop();
-	}
-
-	bool hasReturn = false;
-
-	vector<core::StatementPtr> stmtList;
-	std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &stmtList, this, &hasReturn ] (Stmt* stmt) {
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// A compoundstmt can contain declaration statements.This means that a clang
-		// DeclStmt can be converted in multiple  StatementPtr because an initialization
-		// list such as: int a,b=1; is converted into the following sequence of statements:
-		//
-		// 		int<a> a = 0; int<4> b = 1;
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			stmtutils::StmtWrapper convertedStmt;
-
-			if(dyn_cast<clang::ReturnStmt>(stmt)) {
-				hasReturn = true;
-			}
-
-			convertedStmt = Visit(stmt);
-			copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
-
-		});
-
-	if (!hasReturn) {
-
-		tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.cxxCtx.scopeObjects,
-				parentScopeObjects, false);
-	} else {
-
-		tempHandler.handleTemporariesinScope(cxxConvFact.cxxCtx.scopeObjects, parentScopeObjects);
-	}
-
-	retIr = cxxConvFact.builder.compoundStmt(stmtList);
-
-	cxxConvFact.cxxCtx.scopeObjects = parentScopeObjects;
-
-	// check for datarange pragma
-	attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
-
-	return retIr;
-	*/
 }
 
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Taken care of inside of TryStmt!");
-	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
 	//assert(false && "Try -- Currently not supported!");
@@ -289,6 +243,8 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
 	return stmtutils::StmtWrapper();
@@ -300,7 +256,16 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
-	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+
+    //iterate clang handler list and check if a handler wants to convert the stmt
+    stmtutils::StmtWrapper retStmt;
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->Visit(stmt, convFact);
+		if(retStmt.size())
+			break;
+	}
+    if(retStmt.size()==0)
+        retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());

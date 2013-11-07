@@ -68,7 +68,7 @@ namespace utils {
 	struct TaskBase;
 	typedef std::shared_ptr<TaskBase>  TaskPtr;
 
-	struct TaskBase { //: public std::enable_shared_from_this<TaskBase> {
+	struct TaskBase { 
 
 		mutable std::vector<TaskPtr> dependencies;
 
@@ -148,7 +148,7 @@ namespace utils {
 	 */
 	class TaskManager{
 
-		int numThreads;
+		unsigned numThreads;
 		std::list<TaskBase*> submitted;
 		std::list<TaskBase*> ran;
 		std::mutex lock;
@@ -161,6 +161,7 @@ namespace utils {
 		public:
 			Worker(TaskManager& m, int& done) : mgr(m), done(done){
 				// start the thread!
+				GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " starting worker" << std::endl);
 				thread = new std::thread(*this);
 			}
 			Worker(Worker&& o)
@@ -170,7 +171,6 @@ namespace utils {
 				: mgr(o.mgr), thread(o.thread), done (o.done){
 			}
 
-			// to store it in a vector we need copy assigment operator... WTF?
 			Worker& operator=(const Worker& o) {
 				thread = o.thread;
 				done = o.done;
@@ -195,7 +195,6 @@ namespace utils {
 
 			void finish (){
 				GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " signaled to finish " << this << " = " << done << std::endl);
-				assert(false);
 				done =true;
 				thread->join();
 				delete thread;
@@ -210,9 +209,10 @@ namespace utils {
 		//
 		////////////////////////////////////////////////
 
-		TaskManager(int nth)
+		TaskManager(unsigned nth)
 			:numThreads(nth), workers(), workFlags(numThreads, false) {
-			for (int i = 0; i < numThreads; ++i)
+			GLOBAL_LOCK(std::cerr <<  std::this_thread::get_id() <<  " start " << numThreads << " workers " << std::endl);
+			for (unsigned i = 0; i < numThreads; ++i)
 				workers.push_back(Worker(*this, workFlags[i]));
 		}
 
@@ -245,25 +245,8 @@ namespace utils {
 			TaskManager& mgr = getInstance();
 
 			GLOBAL_LOCK(std::cerr << " wait task: "  << t->id  << " [" << t << "]" << std::endl);
-
-			std::list<TaskBase*>::iterator it;
-
-			// while the task is scheduled but not executing 
-			mgr.lock.lock();
-			while ((it =std::find (mgr.ran.begin(), mgr.ran.end(), t)) == mgr.ran.end()){
-				mgr.lock.unlock();
-				// work a little...
-				auto tsk = mgr.getTask();
-				if (tsk){
-					GLOBAL_LOCK(std::cerr << "  activeWait: " << tsk->id << std::endl);
-					(*tsk)();
-				}
-				mgr.lock.lock();
-			}
-			mgr.lock.unlock();
-
 			// once the task is not waiting anymore, it might be running (by someone else right now) or it might be that we ran it before
-			while (!(*it)->done){
+			while (!t->done){
 				auto tsk = mgr.getTask();
 				if (tsk){
 					GLOBAL_LOCK(std::cerr << "  activeWait2: " << tsk->id << std::endl);
@@ -273,8 +256,12 @@ namespace utils {
 			}
 
 		}
-		static void configure (int nth){
-			getInstance(nth);
+		static void configure (unsigned nth){
+			getInstance(nth-1);
+		}
+
+		static unsigned getNumWorkers(){
+			return getInstance().numThreads+1;
 		}
 
 		static void finalize (){
@@ -331,16 +318,12 @@ namespace utils {
 			// make sure it hasn't been processed before and is only processed once (DAG)
 			if(done) return;
 
-
 			// avoid concurrent executions
 			if(!running.try_lock()) return;
 
 			// process dependencies concurrently
-			//std::vector<std::future<void>> futures;
 			for(auto cur : dependencies) {
 				TaskManager::addTask(cur.get());
-		//		futures.push_back(std::async(std::launch::async, [cur](){ (*cur)(); }));
-//				futures.push_back(std::async([cur](){ (*cur)(); }));
 			}
 
 			// wait for dependencies

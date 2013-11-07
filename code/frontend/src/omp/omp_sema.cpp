@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -311,6 +311,7 @@ protected:
 				else if(funName == "omp_init_lock") {
 					ExpressionPtr arg = callExp->getArgument(0);
 					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
+					std::cout << "build lock " <<  arg << ":" << arg->getType()<< std::endl;
 					return build.initLock(arg);
 				} else if(funName == "omp_set_lock") {
 					ExpressionPtr arg = callExp->getArgument(0);
@@ -335,20 +336,25 @@ protected:
 		return newNode;
 	}
 
-	bool isLockStructType(const TypePtr& type) {
-		// true if it is a struct with a special member
-		return type->getNodeType() == NT_StructType && type.as<StructTypePtr>()->getNamedTypeEntryOf("insieme_omp_lock_struct_marker");
+	bool isLockStructType( TypePtr type) {
+		if (type.isa<core::GenericTypePtr>() && type.as<core::GenericTypePtr>()->getName()->getValue() =="omp_lock_t"){
+			return true;
+		}
+		return false;
 	}
 
 	// implements OpenMP built-in types by replacing them with the correct IR constructs
 	NodePtr handleTypes(const NodePtr& newNode) {
-		if(TypePtr type = dynamic_pointer_cast<TypePtr>(newNode)) {
-			//std::cout << "-- Type: " << *type << "\n";
-			//if(analysis::isRefType(type)) {
-			//	TypePtr sub = analysis::getReferencedType(type);
-				if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
-				if (isLockStructType(type)) return basic.getLock();
-			//}
+		if(TypePtr type = newNode.isa<core::TypePtr>()) {
+
+			if (RefTypePtr  ref = type.isa<core::RefTypePtr>() )
+				if (isLockStructType(ref->getElementType()))
+					return build.refType(basic.getLock());
+
+			if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
+			if (isLockStructType(type)) {
+				return basic.getLock();
+			}
 		}
 		return newNode;
 	}

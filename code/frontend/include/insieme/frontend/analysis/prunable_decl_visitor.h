@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -35,19 +34,18 @@
  * regarding third party software licenses.
  */
 
-
 namespace insieme{
 namespace frontend{
 namespace analysis{
 
 
-/** 
+/**
  *		This is our own implementation of the a clang::Decl tree for the insieme compiler,
- *		it is a prunable visitor, which means that we can prune branches but continue the 
+ *		it is a prunable visitor, which means that we can prune branches but continue the
  *		traversal in other. This fucntionality was not found on clang 3.2
  *
  * we need to do spetial enfasis on:
- * 	for types definition	
+ * 	for types definition
  * 		- TypeDefs
  * 		- Classes
  *	for globas collection
@@ -58,10 +56,17 @@ namespace analysis{
  *
  *	NOTES:
  *		- non named declarations will be completelly ignored
- *		- 
+ *		-
  */
 template <typename BASE, bool visitTemplates=false>
 class PrunableDeclVisitor{
+
+    /**
+     * Default converter getter method
+     */
+    frontend::conversion::Converter& getConverter() {
+        return nullptr;
+    }
 
 	/**
 	 * Default implementation, overide to add functionality
@@ -119,6 +124,12 @@ class PrunableDeclVisitor{
 	 */
 	void dispatchDecl(const clang::Decl* decl){
 		static_cast<BASE*>(this)->echocallback(decl);
+		//check if a user provided decl visitor wants
+		//to do something with the declaration
+		bool wasVisited = false;
+		for(auto plugin : static_cast<BASE*>(this)->getConverter().getConversionSetup().getPlugins()) {
+            wasVisited = plugin->Visit(decl, static_cast<BASE*>(this)->getConverter());
+		}
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{
@@ -127,15 +138,17 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Record:
 				{
-					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+				    if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 
 					break;
 				}
 			case clang::Decl::CXXRecord:
 				{
-					if(llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
-					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
+					if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 
 					break;
@@ -143,7 +156,8 @@ class PrunableDeclVisitor{
 			case clang::Decl::Var:
 				{
 					if (llvm::cast<clang::VarDecl>(decl)->getType().getTypePtr()->isDependentType() && !visitTemplates) break;
-					static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
+					if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
 			case clang::Decl::CXXDestructor:
@@ -151,38 +165,42 @@ class PrunableDeclVisitor{
 			case clang::Decl::CXXMethod:
 			case clang::Decl::CXXConversion:
 				{
-				if (llvm::cast<clang::DeclContext>(decl)->isDependentContext()) break;
+                    if (llvm::cast<clang::DeclContext>(decl)->isDependentContext()) break;
 				}
 			case clang::Decl::Function:
 				{
-					static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
+				    if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
 			case clang::Decl::Typedef:
 				{
-					if(llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
-					static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
+					if (llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
+					if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
 					break;
 				}
 			case clang::Decl::LinkageSpec:
 				{
-					static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
+				    if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplate:
 				{
-					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
+					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
-					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+				    if (!wasVisited)
+                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;
 				}
 			case clang::Decl::FunctionTemplate:
 				{
-					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
+					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
 					break;
 				}
 
@@ -211,7 +229,7 @@ public:
 	 * entry point, we allways want to explore a declaration context.
 	 */
 	void traverseDeclCtx (const clang::DeclContext* declCtx){
-		// iterate throw the declarations inside and dispattch 
+		// iterate throw the declarations inside and dispattch
 		clang::DeclContext::decl_iterator it = declCtx->decls_begin();
 		clang::DeclContext::decl_iterator end = declCtx->decls_end();
 		for (; it!=end; ++it){

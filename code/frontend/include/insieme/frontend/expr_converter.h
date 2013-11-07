@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -459,6 +459,10 @@ public:
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
+
+	//  C++ 11
+	//core::ExpressionPtr VisitLambdaExpr 				(const clang::LambdaExpr* substExpr);
+	//core::ExpressionPtr VisitCXXNullPtrLiteralExpr		(const clang::CXXNullPtrLiteralExpr* nullPtrExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  default visitor call

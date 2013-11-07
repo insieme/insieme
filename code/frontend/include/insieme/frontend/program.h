@@ -131,6 +131,7 @@ public:
 	utils::Interceptor& getInterceptor() const;
 
 	const vector<boost::filesystem::path>& getStdLibDirs() const;
+	const vector<boost::filesystem::path>& getUserIncludeDirs() const;
 
 	bool isCxx() const;
 

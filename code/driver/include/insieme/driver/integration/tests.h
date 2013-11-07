@@ -86,6 +86,11 @@ namespace integration {
 		bool enableOpenCL;
 
 		/**
+		 * A flag indicating whether OpenCL should be enabled within the frontend or not.
+		 */
+		bool enableCXX11;
+
+		/**
 		 * A list of macro definitions to be forwarded to the frontend.
 		 */
 		map<string, string> definitions;
@@ -100,8 +105,12 @@ namespace integration {
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<frontend::path>& files, const vector<frontend::path>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions, const vector<string>& arguments)
-			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), definitions(definitions), compilerArguments(arguments) {}
+		IntegrationTestCase(const string& name, const vector<frontend::path>& files, 
+							const vector<frontend::path>& includeDirs, 
+							bool enableOpenMP, bool enableOpenCL, bool enableCXX11, 
+							const map<string,string>& definitions, const vector<string>& arguments)
+			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), 
+			  enableCXX11(enableCXX11), definitions(definitions), compilerArguments(arguments) {}
 
 		/**
 		 * Obtains the name of this test case.
@@ -136,6 +145,13 @@ namespace integration {
 		 */
 		bool isEnableOpenCL() const {
 			return enableOpenCL;
+		}
+
+		/**
+		 * Determines whether the standard to use is C++11.
+		 */
+		bool isCXX11() const {
+			return enableCXX11;
 		}
 
 		/**

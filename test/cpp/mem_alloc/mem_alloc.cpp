@@ -9,6 +9,11 @@ public:
 };
 
 int main() {
+	{
+		int i= 7;
+		int* pi = new int(i);
+		delete pi;
+	}
 
 	{
 		int* pi = new int;

@@ -90,7 +90,14 @@ namespace backend {
 		// use attached name if present
 		if (name.empty() || isUsed(name)) {
 			// use default name
-			name = string("var_") + toString(var->getId());
+			string prefix = string("var_") + toString(var->getId());
+			name = prefix;
+
+			int c = 1;
+
+			while(isUsed(name)) {
+				name = prefix + format("%s_%d", prefix, c++);
+			}
 		}
 
 		// register name

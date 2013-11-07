@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -48,6 +48,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -112,10 +113,10 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 			classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
 		}
 
-		//update name of class type
-		classType = core::transform::replaceNode(mgr,
-												 core::StructTypeAddress(classType)->getName(),
-												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+//		//update name of class type
+//		classType = core::transform::replaceNode(mgr,
+//												 core::StructTypeAddress(classType)->getName(),
+//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
 		if( !classDecl->getNameAsString().empty() ) {
@@ -138,17 +139,6 @@ vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRec
 		bases.insert(bases.end(), subBases.begin(), subBases.end());
 	}
 	return bases;
-}
-
-
-core::TypePtr Converter::CXXTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		return convFact.builder.structType( structElements );
-	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-		return convFact.builder.unionType( structElements );
-	}
-	assert(false && "TagType not supported");
-	return core::TypePtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,7 +190,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					TEMPLATE SPECIALIZATION TYPE 
+//					TEMPLATE SPECIALIZATION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
 
@@ -214,50 +204,52 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		//so we don't use the converted type/expr directly
 		switch(templTy->getArg(argId).getKind()){
 			case clang::TemplateArgument::Expression: {
-				VLOG(2) << "arg: expression"; 
+				VLOG(2) << "arg: expression";
 				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType().getTypePtr());
 				break;
 			}
 			case clang::TemplateArgument::Type: {
-				VLOG(2) << "arg: TYPE"; 
+				VLOG(2) << "arg: TYPE";
 				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
 				break;
 			}
-												// NON IMPLEMENTED ONES
+				// -------------------   NON IMPLEMENTED ONES ------------------------ 
+			case clang::TemplateArgument::Integral:  {
+			// templated parameters are values wich spetialize the template, because of their value nature, 
+			// they should be encapsulated as types to fit in the typing of the parent type
+				VLOG(2) << "arg: integral";
+				assert(false);
+				break;
+			}
 			case clang::TemplateArgument::Null: {
-				VLOG(2) << "arg: NULL"; 
+				VLOG(2) << "arg: NULL";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
-				VLOG(2) << "arg: DECL"; 
+				VLOG(2) << "arg: DECL";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
-				 VLOG(2) << "arg: nullptr"; 
-				assert(false);
-				break;
-			}
-			case clang::TemplateArgument::Integral:  {
-				VLOG(2) << "arg: integral"; 
+				 VLOG(2) << "arg: nullptr";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Template: {
-				VLOG(2) << "arg: template"; 
+				VLOG(2) << "arg: template";
 				// no need to do anything
 				//templTy->getArg(argId).getAsTemplate().dump();
 
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
-				VLOG(2) << "arg: template expansion"; 
+				VLOG(2) << "arg: template expansion";
 				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
-				VLOG(2) << "arg: pack"; 
+				VLOG(2) << "arg: pack";
 				assert(false);
 				break;
 			}
@@ -269,7 +261,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DEPENDENT TEMPLATE SPECIALIZATION TYPE 
+//					DEPENDENT TEMPLATE SPECIALIZATION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
@@ -325,20 +317,6 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	return retTy;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//					DECLTYPE TYPE (TODO) -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
-	assert(false && "DeclType not supported");
-	return core::TypePtr();
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                 AUTO TYPE -- a CXX0x feature
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
-    return convert(autoTy->getDeducedType().getTypePtr());
-}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                 MEMBER POINTER TYPE
@@ -350,7 +328,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     return retTy;
 }
 
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                 post convertion action for functions
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
 
 	// now attach meta-info (only for record type definitios)
@@ -380,28 +360,23 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 	for (; ctorIt != ctorEnd; ctorIt ++){
 		const CXXConstructorDecl* ctorDecl = *ctorIt;
-		if (ctorDecl->isDefaultConstructor() ||
-			ctorDecl->isCopyConstructor() ||
-			ctorDecl->isMoveConstructor() ){
+		if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
 
-			if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
+			// the function is a template spetialization, but if it has no body, we wont
+			// convert it, it was never instanciated
+			if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+					continue;
+			}
 
-				// the function is a template spetialization, but if it has no body, we wont
-				// convert it, it was never instanciated
-				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-						continue;
-				}
-
-				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-				if (ctorLambda){
-					assert(ctorLambda);
-					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
-					// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
-					// by the complete implementation
-					if (!ctorLambda.isa<core::LiteralPtr>()){
-						if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-					}
+			core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+			if (ctorLambda){
+				assert(ctorLambda);
+				ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
+				// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
+				// by the complete implementation
+				if (!ctorLambda.isa<core::LiteralPtr>()){
+					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
+					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
 		}
@@ -430,18 +405,18 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			continue;
 		}
 
-		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME: for now ignore CopyAssignmentOperator
-			// -- backendCompiler should take care of it
-			continue;
-		}
+//		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME: for now ignore CopyAssignmentOperator
+//			// -- backendCompiler should take care of it
+//			continue;
+//		}
 
-		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-			//FIXME for non-userProvided moveAssign ops find solution,
-			//maybe leave them to be handled by the backendCompiler or something else
-			//currently are left over for be-compiler
-			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
-		}
+//		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+//			//FIXME for non-userProvided moveAssign ops find solution,
+//			//maybe leave them to be handled by the backendCompiler or something else
+//			//currently are left over for be-compiler
+//			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
+//		}
 
 		const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 
@@ -452,6 +427,10 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		}
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
+
+		if (methodLambda->getType().as<core::FunctionTypePtr>()->isPlain())
+			continue;
+
 		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irCompleteType, irAliasType, true);
 
 		if( method->isPure() ) {
@@ -485,7 +464,17 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	core::setMetaInfo(irAliasType, core::merge(classInfo, core::getMetaInfo(irAliasType)));
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			The visitor itself
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
+    //iterate clang handler list and check if a handler wants to convert the type
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+		core::TypePtr retIr = plugin->Visit(type, convFact);
+		if(retIr)
+			return retIr;
+	}
+
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }

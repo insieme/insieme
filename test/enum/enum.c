@@ -10,6 +10,20 @@ typedef struct Source Source;
 struct Source {
     Kind type;
 };
+struct EnumStruct;
+typedef struct EnumStruct EnumStruct;
+
+enum Enum { E=1 }; 
+void f() {
+	//Shadows the outside enum
+	enum Enum { E=10 };
+	enum Enum e = E;
+	printf("f %i\n",e);
+}
+
+struct EnumStruct {
+	enum Enum e;
+};
 
 enum {ZERO, ONE, TWO} var1;
 
@@ -32,5 +46,15 @@ int main() {
 	var1 = ONE;
 	printf("%i\n", k1);
 	printf("%i\n", var1);	
+
+	//enum in struct
+	EnumStruct es;
+	es.e = E;
+	printf("%i\n", es.e);
+	
+	//enum shadowing
+	enum Enum e = E;
+	printf("%i\n", e);
+	f();
 	return 0;
 }

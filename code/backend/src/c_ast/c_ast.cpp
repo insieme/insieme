@@ -339,7 +339,7 @@ namespace c_ast {
 	bool Initializer::equals(const Node& node) const {
 		assert(dynamic_cast<const Initializer*>(&node));
 		auto other = static_cast<const Initializer&>(node);
-		return *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
+		return explicitType==other.explicitType && *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
 	bool DesignatedInitializer::equals(const Node& node) const {
@@ -414,6 +414,12 @@ namespace c_ast {
 		assert(dynamic_cast<const Parentheses*>(&node));
 		auto other = static_cast<const Parentheses&>(node);
 		return *expression==*other.expression;
+	}
+
+	bool OpaqueExpr::equals(const Node& node) const {
+		assert(dynamic_cast<const OpaqueExpr*>(&node));
+		auto other = static_cast<const OpaqueExpr&>(node);
+		return value==other.value;
 	}
 
 	bool TypeDeclaration::equals(const Node& node) const {

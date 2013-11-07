@@ -72,9 +72,17 @@ using namespace llvm;
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type){
 
-	std::string fullName =  decl->getQualifiedNameAsString();
+	if(decl->getNameAsString().empty()){
+		// empty name, build an annonymous name for this fella
+		std::stringstream ss;
+		ss << "_anom";
+		ss << (unsigned long long) decl;
+		return ss.str();
+	}
+	std::string fullName = decl->getQualifiedNameAsString();
+
 	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)) {
 
 		std::string name = decl->getNameAsString();
@@ -92,6 +100,7 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 		unsigned pos = typeName.find(name);
 		boost::replace_last(fullName, name, std::string(typeName.begin()+pos, typeName.end()));
 	}
+
 	REMOVE_SYMBOLS(fullName);
 	return fullName;
 }
@@ -196,12 +205,20 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl){
 }
 
 
-std::string buildNameForEnum (const clang::TagType* type) {
-    std::string name;
-    name = type->getDecl()->getNameAsString();
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl) {
+    std::string name = enumDecl->getQualifiedNameAsString();
+    //std::string name = type->getDecl()->getNameAsString();
+	REMOVE_SYMBOLS(name);
     if(name.empty()) {
         name = "anonymous";
     }
+    return name;
+}
+
+std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd) {
+    std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
+	REMOVE_SYMBOLS(name);
+    assert(!name.empty() && "what kind of enumconstant has no name?");
     return name;
 }
 

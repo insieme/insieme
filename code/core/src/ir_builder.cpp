@@ -622,6 +622,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return getZero (type.as<core::RecTypePtr>()->unroll());
 	}
 
+	// FIXME: this might be a little dangerous, but at least right typed
+	if (type->getNodeType() == core::NT_ArrayType) {
+		return (undefined(type));
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");

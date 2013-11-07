@@ -62,6 +62,7 @@
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/simd_vector.h"
+#include "insieme/backend/addons/asm_stmt.h"
 
 namespace insieme {
 namespace backend {
@@ -73,6 +74,7 @@ namespace sequential {
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::SIMDVector>();
+		res->addAddOn<addons::AsmStmt>();
 		return res;
 	}
 

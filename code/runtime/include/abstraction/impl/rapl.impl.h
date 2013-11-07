@@ -54,6 +54,12 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 
         bool sockets[16] = { false };
 
+	for(uint32 i = 0; i < data->number_of_cpus; ++i) {
+		data->package[i] = 0;
+		data->cores[i] = 0;
+		data->mc[i] = 0;
+	}
+
 	// mark sockets that should be measured (i.e. that have cores which have workers running on them)
         for(uint32 i = 0; i < irt_g_worker_count; ++i)
         	sockets[irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity)/8] = true;
