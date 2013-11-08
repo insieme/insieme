@@ -263,6 +263,60 @@ namespace cba {
 
 	}
 
+	TEST(CBA_Analysis, AliasesStructured) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<string,core::NodePtr> symbols;
+
+		auto code = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let point = struct { int x; int y; };"
+				"	let cycle = struct { point c; int r; };"
+				"	"
+				"	ref<cycle> o = var((cycle) { (point) { 1, 2 }, 3 });"
+				"	"
+				"	o;"
+				"	o.c;"
+				"	o.c.x;"
+				"	o.c.y;"
+				"	o.r;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(code);
+		auto root = CompoundStmtAddress(code);
+
+		auto a = root[1].as<ExpressionAddress>();
+		auto b = root[2].as<ExpressionAddress>();
+		auto c = root[3].as<ExpressionAddress>();
+		auto d = root[4].as<ExpressionAddress>();
+		auto e = root[5].as<ExpressionAddress>();
+
+		// check a
+		EXPECT_TRUE (isAlias(a,a));
+		EXPECT_TRUE (isAlias(a,b));
+		EXPECT_TRUE (isAlias(a,c));
+		EXPECT_TRUE (isAlias(a,d));
+		EXPECT_TRUE (isAlias(a,e));
+
+		EXPECT_TRUE (isAlias(b,b));
+		EXPECT_TRUE (isAlias(b,c));
+		EXPECT_TRUE (isAlias(b,d));
+		EXPECT_FALSE(isAlias(b,e));
+
+		EXPECT_TRUE (isAlias(c,c));
+		EXPECT_FALSE(isAlias(c,d));
+		EXPECT_FALSE(isAlias(c,e));
+
+		EXPECT_TRUE (isAlias(d,d));
+		EXPECT_FALSE(isAlias(d,e));
+
+		EXPECT_TRUE (isAlias(e,e));
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
