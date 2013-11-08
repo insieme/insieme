@@ -173,7 +173,7 @@ namespace cba {
 			virtual bool equalIndex(const DataPathElement& other) const =0;
 			virtual bool lessIndex(const DataPathElement& ohter) const =0;
 			virtual ptr_type createCopyWith(const ptr_type& head) const =0;
-
+			virtual bool isOverlapping(const DataPathElement& other) const =0;
 		};
 
 
@@ -219,6 +219,11 @@ namespace cba {
 
 			virtual ptr_type createCopyWith(const ptr_type& head) const {
 				return new ConcreteDataPathElement<Index>(head, index);
+			}
+
+			virtual bool isOverlapping(const DataPathElement& other) const {
+				// it is a different type (conservative) or overlapping indices
+				return typeid(*this) != typeid(other) || overlap(index, static_cast<const ConcreteDataPathElement&>(other).index);
 			}
 		};
 
@@ -372,6 +377,21 @@ namespace cba {
 			vector<detail::DataPathElementPtr> res;
 			visit([&](const detail::DataPathElement& cur) { res.push_back(&cur); });
 			return res;
+		}
+
+		bool isOverlapping(const DataPath& other) const {
+
+			auto stepsA = getSteps();
+			auto stepsB = getSteps();
+
+			// check common path for divergences
+			size_t steps = std::min(stepsA.size(), stepsB.size());
+			for(size_t i=0; i<steps; i++) {
+				if (!stepsA[i]->isOverlapping(*(stepsB[i]))) return false;
+			}
+
+			// it is overlapping
+			return true;
 		}
 
 		std::ostream& printTo(std::ostream& out) const {

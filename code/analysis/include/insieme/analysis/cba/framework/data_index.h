@@ -73,8 +73,8 @@ namespace cba {
 	/**
 	 * An index distinguishing different named fields.
 	 */
-	template<typename Key = string, typename hash_op = std::hash<Key>, typename print_op = print<id<Key>>>
-	class NominalIndex : public Index<NominalIndex<Key, hash_op, print_op>> {
+	template<typename Key = string, typename less_op = std::less<Key>, typename equal_op = std::equal_to<Key>, typename hash_op = std::hash<Key>, typename print_op = print<id<Key>>>
+	class NominalIndex : public Index<NominalIndex<Key, less_op, equal_op, hash_op, print_op>> {
 
 		/**
 		 * The name to be represented - as a reference to save the copy-overhead.
@@ -87,18 +87,18 @@ namespace cba {
 
 		NominalIndex(const Key& name = Key()) : name(name), hashCode(hash_op()(name)) {};
 
-		NominalIndex(const NominalIndex<Key,hash_op,print_op>& other) : name(other.name), hashCode(other.hashCode) {}
+		NominalIndex(const NominalIndex<Key,less_op,equal_op,hash_op,print_op>& other) : name(other.name), hashCode(other.hashCode) {}
 
 		const Key& getName() const {
 			return name;
 		}
 
-		bool operator==(const NominalIndex<Key,hash_op,print_op>& other) const {
-			return this == &other || name == other.name;
+		bool operator==(const NominalIndex<Key,less_op,equal_op,hash_op,print_op>& other) const {
+			return this == &other || equal_op()(name, other.name);
 		}
 
-		bool operator<(const NominalIndex<Key,hash_op,print_op>& other) const {
-			return name < other.name;
+		bool operator<(const NominalIndex<Key,less_op,equal_op,hash_op,print_op>& other) const {
+			return less_op()(name, other.name);
 		}
 
 		std::size_t hash() const {
@@ -114,9 +114,9 @@ namespace cba {
 	/**
 	 * The cross operator computing the ranges to be included when combining two indexed structures.
 	 */
-	template<typename K, typename H, typename P, typename E>
-	std::set<NominalIndex<K,H,P>> cross(const std::map<NominalIndex<K,H,P>, E>& mapA, const std::map<NominalIndex<K,H,P>, E>& mapB) {
-		std::set<NominalIndex<K,H,P>> res;
+	template<typename K, typename L, typename E, typename H, typename P, typename I>
+	std::set<NominalIndex<K,L,E,H,P>> cross(const std::map<NominalIndex<K,L,E,H,P>, I>& mapA, const std::map<NominalIndex<K,L,E,H,P>, I>& mapB) {
+		std::set<NominalIndex<K,L,E,H,P>> res;
 		for(const auto& cur : mapA) {
 			res.insert(cur.first);
 		}
@@ -130,12 +130,20 @@ namespace cba {
 	 * The extract operator obtaining the values for a given index within a map (the index might not be present or
 	 * explicitly covered).
 	 */
-	template<typename K, typename H, typename P, typename E>
-	const E& extract(const std::map<NominalIndex<K,H,P>, E>& map, const NominalIndex<K,H,P>& i) {
-		const static E empty = E();
+	template<typename K, typename L, typename E, typename H, typename P, typename I>
+	const I& extract(const std::map<NominalIndex<K,L,E,H,P>, I>& map, const NominalIndex<K,L,E,H,P>& i) {
+		const static I empty = I();
 		// check whether the requested index is present
 		auto pos = map.find(i);
 		return (pos == map.end()) ? empty : pos->second;
+	}
+
+	/**
+	 * Checks whether the indices are covering overlapping areas
+	 */
+	template<typename K, typename L, typename E, typename H, typename P>
+	bool overlap(const NominalIndex<K,L,E,H,P>& a, const NominalIndex<K,L,E,H,P>& b) {
+		return a.getName() == b.getName();
 	}
 
 	// -------------------------------------------------------------------------------------------------
@@ -190,6 +198,14 @@ namespace cba {
 		// check whether the requested index is present
 		auto pos = map.find(i);
 		return (pos == map.end()) ? empty : pos->second;
+	}
+
+
+	/**
+	 * Checks whether the indices are covering overlapping areas
+	 */
+	inline bool overlap(const UnitIndex& a, const UnitIndex& b) {
+		return true;
 	}
 
 	/**
@@ -285,6 +301,13 @@ namespace cba {
 
 		// no data present
 		return empty;
+	}
+
+	/**
+	 * Checks whether the indices are covering overlapping areas
+	 */
+	inline bool overlap(const SingleIndex& a, const SingleIndex& b) {
+		return a == b || !a.isConcrete() || !b.isConcrete();
 	}
 
 } // end namespace cba

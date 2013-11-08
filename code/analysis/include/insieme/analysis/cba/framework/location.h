@@ -129,6 +129,14 @@ namespace cba {
 			return path;
 		}
 
+		bool isAlias(const Reference& other) const {
+			// it needs to be the same location
+			if (location != other.location) return false;
+
+			// and the path must be overlapping
+			return path.isOverlapping(other.path);
+		}
+
 		bool operator==(const Reference<Context>& other) const {
 			if (this == &other) return true;
 			if (this->hash() != other.hash()) return false;

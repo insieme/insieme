@@ -80,6 +80,9 @@ namespace cba {
 
 			// and a extract operator
 			extract(mA, a); // only need to compile => rest is checked by individual tests
+
+			// and an overlap operator
+			overlap(a, b);
 		}
 
 

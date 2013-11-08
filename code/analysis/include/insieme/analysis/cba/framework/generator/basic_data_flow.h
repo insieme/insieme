@@ -71,8 +71,6 @@ namespace cba {
 
 	namespace {
 
-		typedef NominalIndex<core::StringValuePtr, hash_target<core::StringValuePtr>, print<deref<core::StringValuePtr>>> FieldIndex;
-
 		StatementAddress getBody(const ContextFreeCallable& fun) {
 			if (auto lambda = fun.isa<LambdaExprAddress>()) {
 				return lambda->getBody();

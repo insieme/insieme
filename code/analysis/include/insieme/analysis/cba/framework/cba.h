@@ -125,7 +125,14 @@ namespace cba {
 
 	// fix the types of indices utilized for fields, elements and tuple-components
 	// TODO: make index types generic!
-	typedef NominalIndex<core::StringValuePtr, hash_target<core::StringValuePtr>, print<deref<core::StringValuePtr>>> FieldIndex;
+	typedef NominalIndex<
+			core::StringValuePtr,
+			compare_target<core::StringValuePtr>,
+			equal_target<core::StringValuePtr>,
+			hash_target<core::StringValuePtr>,
+			print<deref<core::StringValuePtr>>
+	> FieldIndex;
+
 	typedef SingleIndex ElementIndex; 		// for arrays / vectors
 	typedef FieldIndex ComponentIndex; 		// for tuples
 
