@@ -264,7 +264,8 @@ TEST(ConstraintTest, fromAndToIR) {
 	Constraint c = f > one && f < two;
 	EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
 
-	EXPECT_EQ("bool.and(bool.not(int.le(int.sub(v0, 1), 0)), bind(){rec v0.{v0=fun(int<4> v1) {return bool.not(int.le(int.add(int.mul(-1, v1), 2), 0));}}(v0)})", toString(*builder.normalize(toIR(mgr, c))));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(bool.not(int.le(int.sub(v0, 1), 0)), bind(){rec v0.{v0=fun(int<4> v1) {return bool.not(int.le(int.add(int.mul(-1, v1), 2), 0));}}(v0)})",
+			toString(*builder.normalize(toIR(mgr, c))));
 	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
 
 	// some valid formula

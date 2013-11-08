@@ -67,7 +67,7 @@ typedef std::shared_ptr<Ref> RefPtr;
  * a Ref can be either a scalar variable, an array or a vector (having a ref type), a struct/class
  * member or the return value of a call expression returning a ref. 
  *************************************************************************************************/
-struct Ref : public utils::Printable {
+struct Ref : public utils::VirtualPrintable {
 
 	/**********************************************************************************************
 	 * possible usage of a variable can be of three types: 

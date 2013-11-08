@@ -521,7 +521,9 @@ VariableList getFreeVariables(const NodePtr& code) {
 	auto set = FreeVariableCollector<Pointer>().run(code);
 
 	// convert result into list
-	return VariableList(set.begin(), set.end());
+	VariableList res(set.begin(), set.end());
+	std::sort(res.begin(), res.end(), compare_target<VariablePtr>());
+	return res;
 }
 
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {

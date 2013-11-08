@@ -49,7 +49,6 @@ namespace c {
 	/**
 	 * The value annotation type to be attached to nodes to store
 	 * the actual name.
-	 * this tag is not migratable, this means that it gets lost while translation units merge
 	 */
 	struct IncludeTag : public value_annotation::migratable  { 
 		string include;

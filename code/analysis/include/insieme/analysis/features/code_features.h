@@ -70,7 +70,7 @@ namespace features {
 
 
 	// just for experimenting
-	simple_feature_value_type countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+	simple_feature_value_type countOps(const core::NodePtr& root, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
 	class CodeFeatureSpec {
 	protected:
@@ -189,7 +189,7 @@ namespace features {
 
 	// -- a generic feature counting individual operators --
 
-	struct OperatorStatistic : public utils::map::PointerMap<core::LiteralPtr, unsigned> {
+	struct OperatorStatistic : public utils::map::PointerMap<core::ExpressionPtr, unsigned> {
 
 		OperatorStatistic operator+(const OperatorStatistic& other) const;
 		OperatorStatistic operator*(double factor) const;

@@ -164,12 +164,10 @@ namespace datapath {
 			return path;
 		}
 
-	protected:
-
 		/**
 		 * Allows this data path to be printed in a human readable format.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

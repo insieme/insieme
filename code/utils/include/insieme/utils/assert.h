@@ -51,6 +51,9 @@
 	#define assert_eq(_a,_b) _assert_ignore
 	#define assert_ne(_a,_b) _assert_ignore
 	#define assert_lt(_a,_b) _assert_ignore
+	#define assert_le(_a,_b) _assert_ignore
+	#define assert_gt(_a,_b) _assert_ignore
+	#define assert_ge(_a,_b) _assert_ignore
 
 #else
 
@@ -87,4 +90,16 @@
 
 	#define assert_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) < (_B))) std::cerr << "\nAssertion " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
+	#define assert_le(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) <= (_B))) std::cerr << "\nAssertion " #_A " <= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+
+	#define assert_gt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) > (_B))) std::cerr << "\nAssertion " #_A " > " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+
+	#define assert_ge(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) >= (_B))) std::cerr << "\nAssertion " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+
+
 #endif
+
+// ------ derived definitions ------
+
+#define assert_fail() assert_true(false)
+#define assert_not_implemented() assert_fail() << "Not implemented!"

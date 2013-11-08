@@ -36,8 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/cmake_config.h"
-
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"

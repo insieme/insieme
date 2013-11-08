@@ -122,6 +122,35 @@ inline PointerMap<Key,Value> toPointerMap(const Key& key, const Value& value, co
 	return addMappings<Key, Value>(res, key, value, rest ...);
 }
 
+namespace {
+
+	/**
+	 * The base case for a function filing a map.
+	 */
+	template<typename Key, typename Value>
+	void addMappings(std::map<Key,Value>& map) {}
+
+	/**
+	 * The step case for a function filing a map.
+	 */
+	template<typename Key, typename Value, typename ... Rest>
+	void addMappings(std::map<Key,Value>& map, const std::pair<Key,Value>& first, const Rest& ... rest) {
+		map.insert(first);
+		addMappings(map, rest...);
+	}
+}
+
+/**
+ * A function capable of converting an arbitrary number of pairs into a map containing
+ * the given list of key/value pairs.
+ */
+template<typename Key, typename Value, typename ... Elements>
+inline std::map<Key, Value> toMap(const std::pair<Key,Value>& first, const Elements& ... rest) {
+	std::map<Key,Value> res;
+	addMappings(res, first, rest...);
+	return res;
+}
+
 /**
  * Compares whether the two given maps are equal, hence they contain
  * the same set of keys and to each key, equivalent values are attacked.
@@ -284,8 +313,6 @@ struct hash<boost::unordered_map<K,T,H,KE,A>> {
 	}
 };
 
-} // end namespace std
-
 /**
  * Allows to print unordered maps including printable elements.
  *
@@ -334,4 +361,5 @@ std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare,
 	}) << "}";
 }
 
+} // end namespace std
 

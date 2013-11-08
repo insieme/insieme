@@ -799,7 +799,8 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		// LOG(INFO) << *callExpr->getFunctionExpr();
 		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 
-		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
+		auto fun = callExpr->getFunctionExpr();
+		if ( !gen.isBuiltIn(fun) && fun->getNodeType() == NT_LambdaExpr ) {
 			const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
 			if ( !cfg->hasSubGraph(lambdaExpr) ) {

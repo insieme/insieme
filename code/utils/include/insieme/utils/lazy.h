@@ -63,7 +63,15 @@ namespace utils {
 		Lazy() : evaluated(false) {}
 
 		/**
-		 * Obtains a reference to represented value in case it has been evaluated.
+		 * Obtains a reference to the represented value in case it has been evaluated.
+		 */
+		V& getValue() {
+			assert(evaluated && "Unsupported access to unevaluated value!");
+			return value;
+		}
+
+		/**
+		 * Obtains a reference to the represented value in case it has been evaluated.
 		 */
 		const V& getValue() const {
 			assert(evaluated && "Unsupported access to unevaluated value!");
@@ -101,10 +109,45 @@ namespace utils {
 		}
 
 		/**
+		 * Get access to value using indirection operator.
+		 */
+		V& operator*() {
+			return getValue();
+		}
+
+		/**
+		 * Get access to value using indirection operator.
+		 */
+		const V& operator*() const {
+			return getValue();
+		}
+
+		/**
+		 * An implicit conversion to the value type.
+		 */
+		operator V&() {
+			return getValue();
+		}
+
+		/**
 		 * An implicit conversion to the value type.
 		 */
 		operator const V&() const {
 			return getValue();
+		}
+
+		/**
+		 * Provides access to the represented value.
+		 */
+		V* operator->() {
+			return &getValue();
+		}
+
+		/**
+		 * Provides access to the represented value.
+		 */
+		const V* operator->() const {
+			return &getValue();
 		}
 
 		/**

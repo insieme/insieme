@@ -414,7 +414,8 @@ TEST(Constraint, Combiner) {
 	AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
-	EXPECT_EQ("bool.or(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), "
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return true;} else {}; return v2();}}"
+			  "(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), "
 			  "bind(){rec v0.{v0=fun(int<4> v4, int<4> v5) {"
 			  	"return bool.not(int.le(int.add(int.add(int.mul(2, v4), int.mul(3, v5)), 10), 0));"
 			  "}}(v1, v2)})", toString(*expr));
@@ -729,7 +730,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// get the iterator i used in the if condition 
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v13 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v39 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
@@ -738,7 +739,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v13 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v39 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -772,7 +773,7 @@ TEST(IterationDomain, FromVariable5) {
 	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 	EXPECT_TRUE(dom.second);
 
-	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v12 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v38 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
 	//auto pw = cardinality(mgr,*dom);
 	//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 }
@@ -804,7 +805,7 @@ TEST(IterationDomain, FromVariable6) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v12 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v38 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -903,9 +904,9 @@ TEST(Transformations, Interchange) {
 
 	NodePtr ir = scop.toIR(mgr);
 	
-	EXPECT_EQ( "for(int<4> v5 = 0 .. int.add(100, 1) : 1) {"
-				 "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {"
-				 	"ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v5), v6));"
+	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
+				 "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
+				 	"ref.assign(v3, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v7), v8));"
 				  "};"
 			   "}", toString(*ir));
 
@@ -915,9 +916,9 @@ TEST(Transformations, Interchange) {
 					{ 1, 0, 0} } );
 
 	ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
-					"for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v8), v7));"
+	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
+					"for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
+						"ref.assign(v3, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v10), v9));"
 					"};"
 				"}", toString(*ir));
 }
@@ -964,9 +965,9 @@ TEST(Transformations, Tiling) {
 	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
 
 	NodePtr ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {"
-					"for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v6), v7));"
+	EXPECT_EQ( "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
+					"for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
+						"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v8), v9));"
 					"};"
 				"}", toString(*ir));
 
@@ -1008,10 +1009,10 @@ TEST(Transformations, Tiling) {
 	schedule[1].setCoeff(iter2, 0);
 
 	ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 25) {"
-					"for(int<4> v10 = v9 .. int.add(select(int.add(cast<int<4>>(v9), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
-						"for(int<4> v11 = 0 .. int.add(100, 1) : 1) {"
-							"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v10), v11));"
+	EXPECT_EQ( "for(int<4> v11 = 0 .. int.add(100, 1) : 25) {"
+					"for(int<4> v12 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
+						"for(int<4> v13 = 0 .. int.add(100, 1) : 1) {"
+							"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v12), v13));"
 						"};"
 					"};"
 				"}", toString(*ir));
@@ -1106,12 +1107,14 @@ TEST(Transformations, Fusion) {
 	scop.push_back( Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
 
 	NodePtr ir = scop.toIR(mgr);
+
+
 	EXPECT_EQ("{"
-				"for(int<4> v7 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v7), 0));"
+				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
+					"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v9), 0));"
 			   "}; "
-			   "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v8), 0)));"
+			   "for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
+					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v10), 0)));"
 				"};"
 			  "}", toString(*ir));
 
@@ -1149,12 +1152,12 @@ TEST(Transformations, Fusion) {
 	ir = scop.toIR(mgr);
 
 	EXPECT_EQ("{"
-				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); "
-					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));"
+				"for(int<4> v11 = 0 .. int.add(90, 1) : 1) {"
+					"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v11), 0)); "
+					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v11), 0)));"
 				"}; "
-				"for(int<4> v10 = 91 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));"
+				"for(int<4> v12 = 91 .. int.add(100, 1) : 1) {"
+					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v12), 0)));"
 				"};"
 			  "}", toString(*ir));
 }

@@ -94,8 +94,11 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	std::map<std::string, derivedFunPtr> derivedMap;
 
 	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
-	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, litFunPtr>> OperationMap;
-	OperationMap operationMap;
+	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, litFunPtr>> LiteralOperationMap;
+	LiteralOperationMap literalOperationMap;
+
+	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, derivedFunPtr>> DerivedOperationMap;
+	DerivedOperationMap derivedOperationMap;
 
 	#define ADD_IS_AND_GET(_id) \
 	struct _id { \
@@ -115,6 +118,9 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr ptr##_type##_op; \
 	ADD_IS_AND_GET(_type##_op)
+	#define DERIVED_OP(_type, _op, _name, _spec) \
+	ExpressionPtr ptr##_type##_op; \
+	ADD_IS_AND_GET(_type##_op)
 	#define GROUP(_id, ...) \
 	struct _id { \
 		static bool isInstance(const BasicGenerator& bg, const NodePtr& p) { return bg.is##_id(p); } \
@@ -132,7 +138,10 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 		derivedMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
 		#define OPERATION(_type, _op, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_type##_op)); \
-		operationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
+		literalOperationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
+		#define DERIVED_OP(_type, _op, _name, _spec) \
+		derivedMap.insert(std::make_pair(_name, &BasicGenerator::get##_type##_op)); \
+		derivedOperationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
 		#include "insieme/core/lang/lang.def"
 	}
 	
@@ -225,6 +234,16 @@ LiteralPtr BasicGenerator::get##_type##_op() const { \
 bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 	return *p == *get##_type##_op(); };
 
+#define DERIVED_OP(_type, _op, _name, _spec) \
+ExpressionPtr BasicGenerator::get##_type##_op() const { \
+	if(!pimpl->ptr##_type##_op) { \
+		pimpl->ptr##_type##_op = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+		markAsDerived(pimpl->ptr##_type##_op, _name); \
+	} \
+	return pimpl->ptr##_type##_op; }; \
+bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
+	return *p == *get##_type##_op(); };
+
 #define GROUP(_id, ...) \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return pimpl->is##_id(p); } \
@@ -246,11 +265,14 @@ bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 		#define DERIVED(_id, _name, _spec) // skip
 		#define OPERATION(_type, _op, _name, _spec) \
 		if(*node == *get##_type##_op()) return true;
+		#define DERIVED_OP(_type, _op, _name, _spec) // skip
 		#include "insieme/core/lang/lang.def"
 	}
 	else if(auto eN = dynamic_pointer_cast<const Expression>(node)) {
 		#define DERIVED(_id, _name, _spec) \
 		if(*node == *get##_id()) return true;
+		#define DERIVED_OP(_type, _op, _name, _spec) \
+		if(*node == *get##_type##_op()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
 	return false;
@@ -295,11 +317,22 @@ bool BasicGenerator::isGen(const NodePtr& type) const {
 
 
 ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
-	auto fit = pimpl->operationMap.equal_range(op);
-	for(BasicGeneratorImpl::OperationMap::const_iterator it = fit.first, end = fit.second; it != end; ++it) {
-		const BasicGeneratorImpl::OperationMap::value_type& curr = *it;
-		if(((*this).*curr.second.first)(type))
-			return ((*this).*curr.second.second)();
+	{ // try literals
+		auto fit = pimpl->literalOperationMap.equal_range(op);
+		for(auto it = fit.first, end = fit.second; it != end; ++it) {
+			const auto& curr = *it;
+			if(((*this).*curr.second.first)(type))
+				return ((*this).*curr.second.second)();
+		}
+	}
+
+	{ // try derived
+		auto fit = pimpl->derivedOperationMap.equal_range(op);
+		for(auto it = fit.first, end = fit.second; it != end; ++it) {
+			const auto& curr = *it;
+			if(((*this).*curr.second.first)(type))
+				return ((*this).*curr.second.second)();
+		}
 	}
 
 	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)){
@@ -320,17 +353,27 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 	return 0;
 }
 
-BasicGenerator::Operator BasicGenerator::getOperator(const LiteralPtr& lit) const {
+BasicGenerator::Operator BasicGenerator::getOperator(const ExpressionPtr& lit) const {
 	// We have to scan the multimap operationMap and find the operation which
 	// has this literal as second argument.
-	BasicGeneratorImpl::OperationMap& opMap = pimpl->operationMap;
-	auto fit = std::find_if(opMap.begin(), opMap.end(), 
-		[&](const BasicGeneratorImpl::OperationMap::value_type& cur) { 
-			if (*((*this).*cur.second.second)() == *lit) { return true; }
-			return false;
-		}
-	);
-	if (fit != opMap.end()) { return fit->first; }
+	{ // try literals
+ 		auto& opMap = pimpl->literalOperationMap;
+		auto fit = std::find_if(opMap.begin(), opMap.end(),
+			[&](const BasicGeneratorImpl::LiteralOperationMap::value_type& cur) {
+				return *((*this).*cur.second.second)() == *lit;
+			}
+		);
+		if (fit != opMap.end()) { return fit->first; }
+	}
+	{ // try derived
+		auto& opMap = pimpl->derivedOperationMap;
+		auto fit = std::find_if(opMap.begin(), opMap.end(),
+			[&](const BasicGeneratorImpl::DerivedOperationMap::value_type& cur) {
+				return *((*this).*cur.second.second)() == *lit;
+			}
+		);
+		if (fit != opMap.end()) { return fit->first; }
+	}
 	assert(false && "Literal not found within the OperationMap, therefore not a valid IR literal expression");
 	// should never happen, but eliminates compiler warning in release mode
 	return BasicGenerator::Operator::Not;

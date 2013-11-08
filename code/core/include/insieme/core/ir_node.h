@@ -76,7 +76,7 @@ namespace core {
 	 */
 	class Node :
 			public utils::HashableImmutableData<Node>,			// Nodes are immutable data objects!
-			public utils::Printable {							// Allows instances to be printed
+			public utils::VirtualPrintable {					// Allows instances to be printed
 
 			/**
 			 * Allow the instance manager to access private methods to create / destroy nodes.
@@ -200,6 +200,11 @@ namespace core {
 				: HashableImmutableData(hashNodes(nodeType, children)),
 				  nodeType(nodeType), children(children), nodeCategory(nodeCategory),
 				  manager(0), equalityID(0) { }
+
+			/**
+			 * Make node destructor virtual since sub-types may contain extra data fields.
+			 */
+			virtual ~Node() {}
 
 			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -457,7 +462,7 @@ namespace core {
 			 * @param other the node to be compared with
 			 * @return true if equal, false otherwise
 			 */
-			virtual bool equals(const Node& other) const {
+			bool equals(const Node& other) const {
 				// use equal operator
 				return *this == other;
 			}
@@ -986,7 +991,7 @@ namespace core {
 		 * Obtains access to an element within this list.
 		 */
 		const Ptr<const ElementType>& getElement(std::size_t index) const {
-			assert(index < size() && "Element index out of bound!");
+			assert_lt(index, size()) << "Element index " << index << " is out of bound: [0.." << size() << ")";
 			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList())[offset + index];
 		}
 

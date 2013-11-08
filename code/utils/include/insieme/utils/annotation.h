@@ -65,13 +65,14 @@ namespace utils {
  * @see SimpleKey<T>
  * @see StringKey
  */
-class AnnotationKey : public HashableImmutableData<AnnotationKey>, public utils::Printable {
+class AnnotationKey : public VirtualHashableImmutableData<AnnotationKey>, public utils::VirtualPrintable {
 protected:
 
 	/**
 	 * A simple default constructor which is protected to avoid instances of this class.
 	 */
-	AnnotationKey(std::size_t hashCode) : HashableImmutableData(hashCode) {};
+	AnnotationKey(std::size_t hashCode) : VirtualHashableImmutableData(hashCode) {};
+
 };
 
 /**
@@ -83,7 +84,7 @@ typedef const AnnotationKey* AnnotationKeyPtr;
 /**
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
-class Annotation : public utils::Printable {
+class Annotation : public utils::VirtualPrintable {
 
 public:
 
@@ -314,7 +315,8 @@ namespace detail {
 		 *
 		 * @param value the value to be represented
 		 */
-		ValueAnnotationBase(const V& value) : value(value) {}
+		template<typename ... Args>
+		ValueAnnotationBase(const Args& ... args) : value(args...) {}
 
 		/**
 		 * Obtains the key to be used to identify this annotation within an annotatable object.
@@ -404,7 +406,8 @@ namespace detail {
 	template<typename V, typename AnnotationType, typename KeyType>
 	class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
 	public:
-		ValueAnnotation(const V& value) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(value) {}
+		template<typename ... Args>
+		ValueAnnotation(const Args& ... args) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(args...) {}
 	};
 
 }
@@ -677,10 +680,10 @@ public:
 	 * @tparam V the key and the type of the value to be attached
 	 * @param value the value to be attached
 	 */
-	template<typename V>
-	void attachValue(const V& value = V()) const {
+	template<typename V, typename ... Args>
+	void attachValue(const Args&  ... args) const {
 		std::shared_ptr<detail::ValueAnnotation<V,AnnotationType,KeyType>> annotation
-			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(value);
+			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(args...);
 		addAnnotation(annotation);
 	}
 

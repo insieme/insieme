@@ -52,6 +52,9 @@
 #ifndef OPERATION
 #define OPERATION(_type, _op, _name, _spec)
 #endif
+#ifndef DERIVED_OP
+#define DERIVED_OP(_type, _op, _name, _spec)
+#endif
 #ifndef SUB_TYPE
 #define SUB_TYPE(_subtype, _supertype)
 #endif
@@ -191,8 +194,6 @@ OPERATOR(Ge,	">=")  // 25
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
@@ -200,6 +201,9 @@ OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
 OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
 OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
 OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
+
+DERIVED_OP(Bool, LAnd, "bool.and", "(bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
+DERIVED_OP(Bool, LOr,  "bool.or",  "(bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
@@ -499,7 +503,7 @@ LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>)
 LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
 LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+DERIVED(ArrayRefElem1D,     "array.ref.elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
 LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
@@ -540,7 +544,7 @@ LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<
 LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
-LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+DERIVED(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref.narrow(v, dp.element(dp.root, i), lit('elem)); }")
 
 LITERAL(VectorPointwise,      	"vector.pointwise",
 								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
@@ -564,7 +568,7 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, Ar
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
-LITERAL(CompositeRefElem,      "composite.ref.elem",      "(ref<'a>, identifier, type<'b>) -> ref<'b>")
+DERIVED(CompositeRefElem,      "composite.ref.elem",      "(ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.member(dp.root, i), t); }")
 LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
 
 // Tuple --------------------------------------------------------------------------------------------------------------
@@ -771,4 +775,5 @@ GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
 #undef GROUP
 #undef OPERATOR
 #undef OPERATION
+#undef DERIVED_OP
 #undef SUB_TYPE

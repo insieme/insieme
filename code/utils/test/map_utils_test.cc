@@ -137,3 +137,14 @@ TEST(MapUtilsTest, toPointerMap) {
 	EXPECT_EQ("World", map[&a]);
 
 }
+
+TEST(MapUtilsTest, toMap) {
+
+	typedef std::pair<int,string> entry;
+
+	EXPECT_EQ("{1=Hello, 2=World}", toString(toMap(
+			entry(1,"Hello"),
+			entry(2,"World")
+	)));
+
+}

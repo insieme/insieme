@@ -423,6 +423,11 @@ namespace core {
 			return getNode().getAnnotationContainer().attachValue<V>(value);
 		}
 
+		template<typename V, typename ... Args>
+		void attachValue(const Args& ... args) const {
+			return getNode().getAnnotationContainer().attachValue<V>(args...);
+		}
+
 		template<typename V>
 		void detachValue() const {
 			getNode().getAnnotationContainer().detachValue<V>();
@@ -431,6 +436,10 @@ namespace core {
 		template<typename V>
 		const V& getAttachedValue() const {
 			return getNode().getAnnotationContainer().getAttachedValue<V>();
+		}
+
+		std::size_t getNodeHashValue() const {
+			return getNode().hash();
 		}
 
 	};

@@ -485,7 +485,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( addr->getNodeType() == NT_CallExpr) {
 			CallExprAddress callExpr = static_address_cast<const CallExpr>(addr);
 
-			if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
+			ExpressionPtr func = callExpr->getFunctionExpr();
+			bool isBuiltIn = addr->getNodeManager().getLangBasic().isBuiltIn(func);
+
+			if( !isBuiltIn && !callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 				return ret;
 			}
 
@@ -493,8 +496,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			assert(subScops.empty());
 
 			// We have to make sure this is a call to a literal which is not a builtin literal
-			ExpressionPtr func = callExpr->getFunctionExpr();
-			if ( func->getNodeType() == NT_Literal && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
+			if ( func->getNodeType() == NT_Literal && !isBuiltIn ) {
 
 				FunctionSema&& sema = extractSemantics(callExpr);
 				if (sema.containsReferenceAccesses()) {
@@ -1032,8 +1034,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		return visit( mark->getSubExpression() );
 	}
 
-	IterationVector visitLambda(const LambdaAddress& lambda) {	
+	IterationVector visitLambda(const LambdaAddress& lambda) {
 		STACK_SIZE_GUARD;
+
 		//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
 		assert( subScops.empty() );
 
@@ -1082,6 +1085,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
+		// do not look into built-in functions
+		if (gen.isBuiltIn(func)) {
+			return IterationVector();
+		}
+
 		if ( func->getNodeType() == NT_Literal && !gen.isBuiltIn(func) ) {
 
 			FunctionSema&& usage = extractSemantics(callExpr);
@@ -1331,7 +1339,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
-			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr() );
 
 		switch (op) {
 		case BasicGenerator::LOr:

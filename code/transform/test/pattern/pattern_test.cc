@@ -985,7 +985,6 @@ namespace pattern {
 		auto spawn = atom(makeTree('s'));
 		auto merge = atom(makeTree('m'));
 
-//		auto unsynced = spawn | rT(node(*any << (spawn | aT(recurse)) << *!aT(merge)));
 		auto unsynced = rT(spawn | node(*any << aT(recurse) << *!merge));
 		auto synced = !unsynced;
 
@@ -1017,6 +1016,9 @@ namespace pattern {
 		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,a,m)"));
 		EXPECT_PRED2(noMatch, p, parseTree("c(c(s),c(s),a,m,s,m)"));
 		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,s,m,a,m)"));
+
+		EXPECT_PRED2(noMatch, p, parseTree("c(s,s,c(m))"));
+		EXPECT_PRED2(noMatch, p, parseTree("c(s,s,c(m),m)"));
 
 	}
 

@@ -330,9 +330,8 @@ using insieme::transform::pattern::any;
 			};
 			lambdas["builtinFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
-					if(const core::LiteralPtr literal = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
-						if(basic.isBuiltIn(literal))
-							return 1;
+					if (basic.isBuiltIn(call->getFunctionExpr())) {
+						return 1;
 					}
 				}
 				return 0;

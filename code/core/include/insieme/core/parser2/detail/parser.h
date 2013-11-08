@@ -525,9 +525,7 @@ namespace detail {
 			return TokenSet(*this) += other;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	private:
 
@@ -551,7 +549,7 @@ namespace detail {
 	 * A base class for all grammar terms. A term could be a terminal, a non-terminal,
 	 * a repetition or an alternative .
 	 */
-	class Term : public utils::Printable {
+	class Term : public utils::VirtualPrintable {
 
 		/**
 		 * The range limits of this term.
@@ -921,9 +919,7 @@ namespace detail {
 			return pattern < other.pattern;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << *pattern << " => ...";
 		}
 	};
@@ -981,8 +977,7 @@ namespace detail {
 				return !parenthesePairs.empty();
 			}
 
-		protected:
-			virtual std::ostream& printTo(std::ostream& out) const;
+			std::ostream& printTo(std::ostream& out) const;
 		};
 
 	private:
@@ -1082,11 +1077,11 @@ namespace detail {
 			return getSets(nonTerminal).followSet;
 		}
 
+		std::ostream& printTo(std::ostream& out) const;
+
 	protected:
 
 		NodePtr matchInternal(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const;
-
-		virtual std::ostream& printTo(std::ostream& out) const;
 
 	private:
 

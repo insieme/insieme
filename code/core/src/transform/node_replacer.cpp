@@ -994,34 +994,34 @@ namespace {
 	ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 
 		// check whether target of call is a literal
-		if (call->getFunctionExpr()->getNodeType() == NT_Literal) {
-			NodeManager& manager = call->getNodeManager();
+		NodeManager& manager = call->getNodeManager();
+		const auto& basic = manager.getLangBasic();
+		if (basic.isBuiltIn(call->getFunctionExpr())) {
 			IRBuilder builder(manager);
-			const auto& basic = manager.getLangBasic();
 
 			auto args = call->getArguments();
 
-			const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
+			const ExpressionPtr& fun = call->getFunctionExpr().as<ExpressionPtr>();
 
-			// deal with standard build-in literals
-			if (basic.isCompositeRefElem(literal) && 
+			// deal with standard build-in funs
+			if (basic.isCompositeRefElem(fun) &&
 				args[0]->getType().isa<RefTypePtr>() &&
 				args[0]->getType().as<RefTypePtr>()->getElementType().isa<NamedCompositeTypePtr>()) {
 				return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
-			if (basic.isCompositeMemberAccess(literal) && 
+			if (basic.isCompositeMemberAccess(fun) &&
 				args[0]->getType().isa<NamedCompositeTypePtr>()) {
 				return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
-			if (basic.isTupleRefElem(literal)) {
+			if (basic.isTupleRefElem(fun)) {
 				return builder.refComponent(args[0], args[1]);
 			}
-			if (basic.isTupleMemberAccess(literal)) {
+			if (basic.isTupleMemberAccess(fun)) {
 				return builder.accessComponent(args[0], args[1]);
 			}
 
 			// eliminate unnecessary dereferencing
-			if (basic.isRefDeref(literal) && !analysis::isRefType(args[0]->getType())) {
+			if (basic.isRefDeref(fun) && !analysis::isRefType(args[0]->getType())) {
 				return args[0];
 			}
 		}

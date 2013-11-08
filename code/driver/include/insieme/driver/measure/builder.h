@@ -65,11 +65,18 @@ namespace measure {
 		utils::net::NetworkPath getTempDir() const { return utils::net::NetworkPath(hostname, username, tmpdir); }
 	};
 
-
 	boost::optional<utils::net::NetworkPath> buildRemote(
-			const utils::Printable& source, const Host& targetHost,
+			const utils::VirtualPrintable& source, const Host& targetHost,
 			const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
 	);
+
+	template<typename Printable>
+	boost::optional<utils::net::NetworkPath> buildRemote(
+			const Printable& source, const Host& targetHost,
+			const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
+	) {
+		return buildRemote(utils::toVirtualPrintable(source), targetHost, compiler);
+	}
 
 	/**
 	 * Compiles the given source file using the given compiler setup  to the given target file.
@@ -79,7 +86,6 @@ namespace measure {
 			const vector<utils::net::NetworkPath>& sources, const string& targetFileName, const Host& targetHost,
 			const utils::compiler::Compiler& compilerSetup = utils::compiler::Compiler::getDefaultC99Compiler()
 	);
-
 
 } // end namespace measure
 } // end namespace driver

@@ -91,10 +91,14 @@ namespace irp {
 	inline TreePatternPtr literal(const TreePatternPtr& type, const string& str) {
 		return literal(type, value(str));
 	}
+
 	inline TreePatternPtr literal(const string& str) {
 		return literal(any, str);
 	}
 
+	inline TreePatternPtr literal() {
+		return literal(any, any);
+	}
 
 	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
 		return node(core::NT_TupleType, pattern);

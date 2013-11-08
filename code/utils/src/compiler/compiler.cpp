@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -200,7 +200,7 @@ namespace compiler {
 	}
 
 
-	bool compile(const Printable& source, const Compiler& compiler) {
+	bool compile(const VirtualPrintable& source, const Compiler& compiler) {
 
 		string target = compileToBinary(source, compiler);
 
@@ -214,7 +214,7 @@ namespace compiler {
 		return true;
 	}
 
-	string compileToBinary(const Printable& source, const Compiler& compiler) {
+	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
 
 		// create temporary target file name
 		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "trg%%%%%%%%");
@@ -228,7 +228,7 @@ namespace compiler {
 	}
 
 
-	bool compileToBinary(const Printable& source, const string& targetFile, const Compiler& compiler) {
+	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler) {
 
 		// create a temporary source file
 		fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%");

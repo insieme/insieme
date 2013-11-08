@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -266,10 +266,9 @@ namespace backend {
 
 		// handle C string literals (which are of type ref<vector<...>>)
 		if (ptr->getStringValue()[0] == '"') {
-			core::IRBuilder builder(ptr->getNodeManager());
 			assert(ptr->getType().isa<core::RefTypePtr>());
 			core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
-			if(type.isa<core::VectorTypePtr>() && builder.getLangBasic().isWChar(type.as<core::VectorTypePtr>()->getElementType())){
+			if(type.isa<core::VectorTypePtr>() && basic.isWChar(type.as<core::VectorTypePtr>()->getElementType())){
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
 				res = toLiteral("L"+ptr->getStringValue());
 			}

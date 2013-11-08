@@ -657,12 +657,12 @@ TEST(Access, ArrayAccess) {
 		auto subscript = cast<Subscript>(access);
 		EXPECT_TRUE(subscript->getContext());
 
-		EXPECT_EQ("(((-v16 + 19 >= 0) ^ (v15 + -1 >= 0)) ^ (v4294967295 + -v15 + -v16 == 0))", 
+		EXPECT_EQ("(((-v23 + 19 >= 0) ^ (v22 + -1 >= 0)) ^ (v4294967295 + -v22 + -v23 == 0))",
 				  toString(*subscript->getRange()));
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(subscript->getRange()));
-		EXPECT_EQ("[v15, v16] -> { [v15 + v16] : v16 <= 19 and v15 >= 1 }", toString(*set));
+		EXPECT_EQ("[v22, v23] -> { [v22 + v23] : v23 <= 19 and v22 >= 1 }", toString(*set));
 	}
 }
 
@@ -835,7 +835,7 @@ TEST(Access, CommonSubset) {
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("(((-v4 + 9 >= 0) ^ (v4 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+	EXPECT_EQ("(((-v6 + 9 >= 0) ^ (v6 >= 0)) ^ (-v6 + v4294967295 + -1 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
@@ -922,7 +922,7 @@ TEST(Access, EmptySubset) {
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("(((-v4 + 8 >= 0) ^ (v4 + -4 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+	EXPECT_EQ("(((-v6 + 8 >= 0) ^ (v6 + -4 >= 0)) ^ (-v6 + v4294967295 + -1 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
@@ -997,7 +997,7 @@ TEST(Access, CommonSubSubset) {
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("(((-v4 + 2 >= 0) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 == 0))", 
+	EXPECT_EQ("(((-v6 + 2 >= 0) ^ (v6 + -1 >= 0)) ^ (-v6 + v4294967295 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
@@ -1108,7 +1108,7 @@ TEST(Access, CommonInnerSubset) {
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("(((-v4 + 7 >= 0) ^ (v4 + -4 >= 0)) ^ (-v4 + v4294967295 == 0))", 
+	EXPECT_EQ("(((-v6 + 7 >= 0) ^ (v6 + -4 >= 0)) ^ (-v6 + v4294967295 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
@@ -1213,13 +1213,13 @@ TEST(Access, StridedSubset) {
 	auto rAccess1 = cast<Subscript>(access1);
 	EXPECT_TRUE(rAccess1->getContext());
 	EXPECT_EQ(rAccess1->getContext(), rootNode);
-	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v12 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", 
+	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v36 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))",
 			toString(*rAccess1->getRange()));
 
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("((((-v4 + 8 >= 0) ^ (v4 + -2*v13 + -1 == 0)) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+	EXPECT_EQ("((((-v6 + 8 >= 0) ^ (v6 + -2*v39 + -1 == 0)) ^ (v6 + -1 >= 0)) ^ (-v6 + v4294967295 + -1 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
