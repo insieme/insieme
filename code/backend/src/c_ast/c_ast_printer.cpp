@@ -578,7 +578,7 @@ namespace c_ast {
 
 			PRINT(TypeDeclaration) {
 				// forward declaration + type definition
-				bool isStruct = (node->type->getNodeType() == NT_StructType);
+				bool isStruct   = (node->type->getNodeType() == NT_StructType);
 
 				// forward declaration
 				out << ((isStruct)?"struct ":"union ") << print(node->type) << ";\n";
@@ -632,7 +632,12 @@ namespace c_ast {
 
 				// handle type definitions
 				if ((bool)(node->name)) {
-					return out << "typedef " << print(node->type) << " " << print(node->name) << ";\n";
+					// since here is the only place where we have type + name, we have to take care of 
+					// function type declarations
+
+					// function type declaration need to be parametrized
+				//	if (node->type->getNodeType() == NT_FunctionType  || node->type->getNodeType() == NT_PointerType ){
+					return out << "typedef " << ParameterPrinter(node->type, node->name) << ";\n";
 				}
 
 				// handle struct / union types

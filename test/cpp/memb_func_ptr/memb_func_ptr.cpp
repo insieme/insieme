@@ -5,13 +5,21 @@ class Obj{
 		void f1 ( void) {std::cout << "f1" << std::endl;}
 		void f2 ( void) {std::cout << "f2" << std::endl;}
 		void f3 ( void) {std::cout << "f3" << std::endl;}
-
 };
 
 
-typedef void (Obj::*memb_ptr_t) ( void);
+typedef void (Obj::*memb_func_ptr_t) ( void);
 
-memb_ptr_t getNull(){
+memb_func_ptr_t getNull(){
+	return  0;
+}
+
+
+typedef void (*func_ptr_t) ( void);
+void func(){
+}
+
+func_ptr_t getNull2(){
 	return 0;
 }
 
@@ -19,8 +27,7 @@ memb_ptr_t getNull(){
 
 int main (){
 
-
-	memb_ptr_t ptr = &Obj::f1;
+	memb_func_ptr_t ptr = &Obj::f1;
 
 	{
 		Obj a;
@@ -47,6 +54,12 @@ int main (){
 	}
 	{
 		ptr = getNull();
+	}
+
+	// plain function pointer
+	{
+		func_ptr_t ptr2 = &func;
+		ptr2 = getNull2();
 	}
 
 	return 0;

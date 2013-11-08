@@ -698,9 +698,9 @@ TEST(TypeManager, FunctionTypes) {
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 	EXPECT_TRUE(info.plain);
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.lValueType));
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.rValueType));
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.externalType));  // should this be this way?
+	EXPECT_EQ("name*", toC(info.lValueType));  // there is an implicit typedef, therefore the type is used with a symbol name
+	EXPECT_EQ("name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.externalType));  // should this be this way?
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_FALSE((bool)info.callerName);
@@ -718,7 +718,7 @@ TEST(TypeManager, FunctionTypes) {
 	auto decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
 			info.lValueType, cManager->create("var")
 	));
-	EXPECT_EQ("float(* var)(int32_t,bool)", toC(decl));
+	EXPECT_EQ("name* var", toC(decl));
 
 	// test the same with a function not accepting any arguments
 	type = builder.functionType(core::TypeList(), typeA);
@@ -728,7 +728,7 @@ TEST(TypeManager, FunctionTypes) {
 	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
 			info.lValueType, cManager->create("var")
 	));
-	EXPECT_EQ("int32_t(* var)()", toC(decl));
+	EXPECT_EQ("name* var", toC(decl));
 
 
 	// -- test a member function type --
@@ -741,9 +741,9 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_EQ("(struct<a:int<4>,b:int<4>>::(int<4>)->real<4>)", toString(*type));
 	EXPECT_TRUE(info.plain);
-	EXPECT_EQ("float(name::*)(int32_t)", toC(info.lValueType));
-	EXPECT_EQ("float(name::*)(int32_t)", toC(info.rValueType));
-	EXPECT_EQ("float(name::*)(int32_t)", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));// there is an implicit typedef, therefore the type is used with a symbol name
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_FALSE((bool)info.callerName);
@@ -761,7 +761,7 @@ TEST(TypeManager, FunctionTypes) {
 	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
 			info.lValueType, cManager->create("var")
 	));
-	EXPECT_EQ("float(name::* var)(int32_t)", toC(decl));
+	EXPECT_EQ("name var", toC(decl));
 }
 
 

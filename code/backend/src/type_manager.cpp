@@ -1154,14 +1154,19 @@ namespace backend {
 				declDependencies.push_back(info->declaration);
 			});
 
+			// get the name and create a typedef
+			c_ast::IdentifierPtr funcTypeName = manager->create(converter.getNameManager().getName(ptr));
+			c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(functionType, funcTypeName);
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
 
 			// construct a dummy fragment combining all dependencies
-			res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+			//res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 			res->declaration->addDependencies(declDependencies);
 			res->definition = res->declaration;
 
 			// R / L value names
-			res->rValueType = c_ast::ptr(functionType);
+			c_ast::TypePtr funcType = manager->create<c_ast::NamedType> (funcTypeName);
+			res->rValueType = c_ast::ptr(funcType);
 			res->lValueType = res->rValueType;
 
 			// external type handling
@@ -1211,14 +1216,19 @@ namespace backend {
 				declDependencies.push_back(info->declaration);
 			}
 
+			// get the name and create a typedef  (member functions pointers NEED to be defined with the pointer itself
+			// we can not define a member function type and add an * later on.
+			c_ast::IdentifierPtr funcTypeName = manager->create(converter.getNameManager().getName(ptr));
+			c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(c_ast::ptr(functionType), funcTypeName);
 
-			// construct a dummy fragment combining all dependencies
-			res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+			// construct a the code fragment corresponding to the declaration
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
 			res->declaration->addDependencies(declDependencies);
 			res->definition = res->declaration;
 
 			// R / L value names
-			res->rValueType = c_ast::ptr(functionType);
+			c_ast::TypePtr funcType = manager->create<c_ast::NamedType> (funcTypeName);
+			res->rValueType = funcType;
 			res->lValueType = res->rValueType;
 
 			// external type handling

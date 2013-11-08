@@ -680,8 +680,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
 
 			//if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {
-			if( targetTy.isa<core::FunctionTypePtr>() && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) ) {
-				return builder.getZero(targetTy);
+			if( targetTy.isa<core::FunctionTypePtr>()){
+				return builder.callExpr(targetTy, gen.getNullFunc(), builder.getTypeLiteral(targetTy));
 			}
 
 			// cast NULL to anything else
@@ -885,13 +885,20 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		 * int A::*mptr = 0; int (A::*fptr)(int) = nullptr;
 		* */
 		{
-			castExpr->dump();
+			return builder.callExpr(targetTy, gen.getNullFunc(), builder.getTypeLiteral(targetTy));
+		}
+		case clang::CK_BaseToDerivedMemberPointer 	:
+		/*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
+		 * int B::*mptr = &A::member;
+		* */
 
-			std::cout << " expr: " << expr << " : " << expr->getType() << std::endl;
-			std::cout << " to type: " << targetTy << std::endl;
+		case clang::CK_DerivedToBaseMemberPointer 	:
+		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
+		* int A::*mptr = static_cast<int A::*>(&B::member);
+		* */
 
-        	std::cout  << "-> at location: (" <<  utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << "); " << std::endl;
-			assert (false);
+		{
+			assert(false);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -910,15 +917,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 
-		case clang::CK_BaseToDerivedMemberPointer 	:
-		/*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
-		 * int B::*mptr = &A::member;
-		* */
-
-		case clang::CK_DerivedToBaseMemberPointer 	:
-		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
-		* int A::*mptr = static_cast<int A::*>(&B::member);
-		* */
 
 		case clang::CK_ReinterpretMemberPointer 	:
 		/*case clang::CK_ReinterpretMemberPointer - Reinterpret a member pointer as a different kind of member pointer.
