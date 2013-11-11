@@ -109,5 +109,11 @@ int main (){
 	loopREV (10, 0, -3);
 	}
 
+	//example of a loop using pointers
+	const char* str = "test";
+	for (char* p = &str[0]; *p != '\0'; ++p) {
+		printf("%c\n",*p);
+	}
+
 	return 0;
 }
