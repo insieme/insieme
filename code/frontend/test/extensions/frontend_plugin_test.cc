@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -59,6 +59,11 @@ using namespace insieme;
 
 bool declVisited = false;
 bool typeVisited = false;
+bool exprVisited = false;
+bool stmtVisited = false;
+bool postTypeVisited = false;
+bool postExprVisited = false;
+bool postStmtVisited = false;
 bool tuVisited = false;
 bool progVisited = false;
 
@@ -74,9 +79,40 @@ public:
         kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
     }
 
+    //TYPE VISITOR
 	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
         typeVisited=true;
         return nullptr;
+	}
+
+    virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+                                             frontend::conversion::Converter& convFact) {
+        postTypeVisited=true;
+        return irType;
+	}
+
+	//EXPR VISITOR
+	virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact) {
+        exprVisited=true;
+        return nullptr;
+	}
+
+    virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                             frontend::conversion::Converter& convFact) {
+        postExprVisited=true;
+        return irExpr;
+	}
+
+	//STMT VISITOR
+    virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+        stmtVisited=true;
+        return stmtutils::StmtWrapper();
+    }
+
+    virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+                                             frontend::conversion::Converter& convFact) {
+        postStmtVisited=true;
+        return irStmt;
 	}
 
 	virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
@@ -120,12 +156,20 @@ TEST(ClangStage, Conversion) {
     insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
 
-    //check if the decl visitor and
-    //the type visitor is visited correctly
 	EXPECT_FALSE(declVisited);
 	EXPECT_FALSE(typeVisited);
+	EXPECT_FALSE(stmtVisited);
+	EXPECT_FALSE(exprVisited);
+	EXPECT_FALSE(postTypeVisited);
+	EXPECT_FALSE(postStmtVisited);
+	EXPECT_FALSE(postExprVisited);
 	auto program = job.execute(mgr);
 	EXPECT_TRUE(typeVisited);
+	EXPECT_TRUE(stmtVisited);
+	EXPECT_TRUE(exprVisited);
+	EXPECT_TRUE(postTypeVisited);
+	EXPECT_TRUE(postStmtVisited);
+	EXPECT_TRUE(postExprVisited);
 	EXPECT_TRUE(declVisited);
 
 }

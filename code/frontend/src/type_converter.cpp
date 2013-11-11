@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -117,6 +117,13 @@ namespace conversion {
 
 Converter::TypeConverter::TypeConverter(Converter& fact):
 	convFact( fact ), mgr(fact.mgr), builder(fact.builder), gen(fact.mgr.getLangBasic()) { }
+
+core::TypePtr Converter::TypeConverter::pluginPostTypeVisit(const clang::Type* type, core::TypePtr& irType) {
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        irType = plugin->PostVisit(type, irType, convFact);
+    }
+    return irType;
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								BUILTIN TYPES
@@ -604,7 +611,20 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 }
 
 core::TypePtr Converter::CTypeConverter::convertInternal(const clang::Type* type) {
-	return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
+   	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
+   	core::TypePtr retIr;
+   	//iterate clang handler list and check if a handler wants to convert the type
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+		retIr = plugin->Visit(type, convFact);
+		if(retIr)
+			return pluginPostTypeVisit(type, retIr);
+	}
+	//check if the insieme type converter should be called
+	if(!retIr) {
+        retIr = TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
+	}
+    //return post visited type
+	return pluginPostTypeVisit(type, retIr);
 }
 
 
@@ -623,16 +643,6 @@ namespace {
 
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
-	//iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		core::TypePtr retIr = plugin->Visit(type, convFact);
-		if(retIr)
-			return retIr;
-	}
-
-
-	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-
 	auto& typeCache = convFact.typeCache;
 
 	// look up type within typeCache
