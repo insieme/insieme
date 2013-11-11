@@ -175,6 +175,23 @@ namespace analysis {
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
+	// --------------------------- data member pointer -----------------------------------
+	
+	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy){
+			NodeManager& manager = classType.getNodeManager();
+			IRBuilder builder(manager);
+			return builder.structType(toVector(
+					builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
+					builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
+					builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))
+			));
+	}
+
+	TypePtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy){
+		assert(false && "dont mess with this");
+		return nullptr;
+	}
+
 	// --------------------------- C++ calls ---------------------------------------------
 
 	bool isConstructorCall(const core::ExpressionPtr& expr){

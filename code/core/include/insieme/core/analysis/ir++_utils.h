@@ -155,6 +155,22 @@ namespace analysis {
 	 */
 	TypePtr getCppRefElementType(const TypePtr& cppRefType);
 
+	// --------------------------- data member pointer -----------------------------------
+	
+	/**
+	 * constructs a member pointer type
+	 * @param the class of the owner object
+	 * @param the identifier for the 
+	 */
+	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy);
+
+	/**
+	 * initializes a value of type member pointer
+	 * @param 
+	 * @param
+	 * @param
+	 */
+	TypePtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy);
 
 	// ---------------------------- Constructors --------------------------------------
 

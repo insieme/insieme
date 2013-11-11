@@ -1269,8 +1269,12 @@ LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const
 	return literal(type, toString(*param));
 }
 
+TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
+	return genericType("type", toVector(type));
+}
+
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
-	auto literalType = genericType("type", toVector(type));
+	auto literalType = getTypeLiteralType(type);
 	return literal(literalType, toString(*type));
 }
 
