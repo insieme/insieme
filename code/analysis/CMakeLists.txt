@@ -17,7 +17,6 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
-include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
 
 # Build the core library

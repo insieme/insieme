@@ -41,8 +41,6 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/analysis/cfg.h"
 
-#include "insieme/frontend/program.h"
-
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include <boost/graph/breadth_first_search.hpp>
