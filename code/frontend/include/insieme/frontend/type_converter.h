@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -95,6 +95,8 @@ protected:
 	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
+
+	core::TypePtr pluginPostTypeVisit(const clang::Type* type, core::TypePtr& irType);
 };
 
 

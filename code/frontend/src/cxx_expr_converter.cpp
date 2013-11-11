@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -225,7 +225,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 		// now we have the function to call, we create the call expression with the right paramenters
 		// the member pointer executor operator will return to us a fucntion call with the "this" parameter
 		// as first param
-		assert(callExpr->getCallee ());
+		frontend_assert(callExpr->getCallee ());
 		core::CallExprPtr inner = convFact.convertExpr(callExpr->getCallee()).as<core::CallExprPtr>();
 		ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, inner->getFunctionExpr()->getType().as<core::FunctionTypePtr>());
 		core::ExpressionPtr thisArg =  inner->getArgument(0);
@@ -431,7 +431,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		dumpPretty(retIr);
 	}
 
-    assert(retIr && "ConstructExpr could not be translated");
+    frontend_assert(retIr) << "ConstructExpr could not be translated\n";
 	return retIr;
 }
 
@@ -452,7 +452,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		if(callExpr->hasInitializer()) {
             const clang::Expr * initializer = callExpr->getInitializer();
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
-			assert(initializerExpr);
+			frontend_assert(initializerExpr);
             placeHolder = initializerExpr;
 		}
         else {
@@ -487,7 +487,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 				}
 			}
 		}
-		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
+		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint no constructor call in here, no way to translate NEW\n";
+
 
 		core::TypePtr type = ctorCall->getType();
 		core::ExpressionPtr newCall = builder.undefinedNew(type);
@@ -499,7 +500,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
 
-			assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size() > 0 && "not default ctor used in array construction");
+			frontend_assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size()) << "not default ctor used in array construction\n";
 
 			retExpr = ( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
 			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
@@ -559,7 +560,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		if(dtor){
 
 			//FIXME: why mem_alloc dtor has being marked as virtual????
-			assert(!core::getMetaInfo(desTy).isDestructorVirtual() && "no virtual dtor allowed for array dtor");
+			frontend_assert(!core::getMetaInfo(desTy).isDestructorVirtual()) << "no virtual dtor allowed for array dtor\n";
 
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);
@@ -596,7 +597,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 	//figure out the type of the expression
 	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
-	assert(irType.isa<core::GenericTypePtr>() && "for convention, all this operators deal with generic types");
+	frontend_assert(irType.isa<core::GenericTypePtr>() ) << "for convention, all this operators deal with generic types\n";
 	irType = builder.refType(irType);
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
@@ -795,8 +796,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 				core::visitDepthFirstOnce (lambdaBody, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						assert(anno);
+						const auto& anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						frontend_assert(anno);
 						anno->replaceUsage (var, newParam);
 					}
 				});
@@ -897,7 +898,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr) {
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(substExpr, retIr);
-	assert(substExpr->getReplacement() && "template parameter cannot be substituted by nothing");
+	frontend_assert(substExpr->getReplacement()) << "template parameter cannot be substituted by nothing\n";
 	retIr = Visit(substExpr->getReplacement());
 	return retIr;
 }
@@ -917,7 +918,7 @@ namespace {
 		if (clangExpr->getOpcode() == clang::BO_PtrMemI)
 			papa = getCArrayElemRef(convFact.getIRBuilder(), papa);
 
-		assert(funcPtr->getType().isa<core::FunctionTypePtr>());
+		frontend_assert(funcPtr->getType().isa<core::FunctionTypePtr>());
 		return convFact.getIRBuilder().callExpr(funcPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), funcPtr, toVector(papa));
 	}
 
@@ -946,16 +947,25 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
+	//call frontend plugin visitors
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
 		retIr = plugin->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
-    if(!retIr)
+    if(!retIr){
+		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
+	}
 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
+
+    // call frontend plugin post visitors
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retIr = plugin->PostVisit(expr, retIr, convFact);
+	}
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);

@@ -115,7 +115,6 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
             if(d->getNameAsString().find("va_list") != std::string::npos)
             {
                 convFact.addToTypeCache(d->getTypeForDecl(), convFact.getIRBuilder().genericType("va_list"));
-                std::cout << "DECL VISITOR:\n" << d->getNameAsString() << std::endl;
                 return true;
             }
         }
