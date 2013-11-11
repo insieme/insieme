@@ -232,14 +232,17 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
+			converter.trackSourceLocation (typeDecl->getLocStart());
 			auto irTy = converter.convertType(typeDecl->getTypeForDecl());
-			//utils::addHeaderForDecl(irTy, typeDecl, converter.getProgram().getStdLibDirs(), converter.getProgram().getUserIncludeDirs());
+			converter.untrackSourceLocation ();
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
 
 			// get contained type
+			converter.trackSourceLocation (typedefDecl->getLocStart());
 			auto res = converter.convertType(typedefDecl->getTypeForDecl());
+			converter.untrackSourceLocation ();
 
 			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
 			auto symbol = converter.getIRBuilder().genericType(typedefDecl->getQualifiedNameAsString());
@@ -273,6 +276,7 @@ tu::IRTranslationUnit Converter::convert() {
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
+			converter.trackSourceLocation (var->getLocStart());
 			auto type = converter.convertType(var->getType().getTypePtr());
 
 			// all globals are mutable ..
@@ -287,6 +291,8 @@ tu::IRTranslationUnit Converter::convert() {
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
 			auto initValue = convertInitForGlobal(converter, var, type);
+			converter.untrackSourceLocation();
+
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
 	} varVisitor(*this);
@@ -313,7 +319,9 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
 			//if (!funcDecl->doesThisDeclarationHaveABody()) return;
+			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
+			converter.untrackSourceLocation ();
 			if (externC) {
 				annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
 			}
@@ -396,7 +404,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 
 //////////////////////////////////////////////////////////////////
 ///
-void Converter::printDiagnosis(const clang::SourceLocation& loc){
+void Converter::printDiagnosis(const clang::SourceLocation& loc) {
 
 	clang::Preprocessor& pp = getPreprocessor();
 	// print warnings and errors:
@@ -1023,6 +1031,7 @@ core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 //
 core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* funcDecl){
 	const clang::Type* type= GET_TYPE_PTR(funcDecl);
+	trackSourceLocation(funcDecl->getLocStart());
 	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
 
 	// check whether it is actually a member function
@@ -1047,6 +1056,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 		assert(funcType->isPlain());
 		return funcType;
 	}
+	untrackSourceLocation();
 
 	core::TypePtr thisType = builder.refType(ownerClassType);
 

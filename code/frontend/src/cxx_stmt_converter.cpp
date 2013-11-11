@@ -202,7 +202,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::Com
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
-	assert(false && "Catch -- Taken care of inside of TryStmt!");
+	frontend_assert(false && "Catch -- Taken care of inside of TryStmt!");
 	return stmtutils::StmtWrapper();
 }
 
@@ -210,7 +210,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXX
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
-	//assert(false && "Try -- Currently not supported!");
+	//frontend_assert(false && "Try -- Currently not supported!");
 	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
 
 	vector<core::CatchClausePtr> catchClauses;
@@ -225,7 +225,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 			var = builder.variable(exceptionTy);
 
 			//we assume that exceptionVarDecl is not in the varDeclMap
-			assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
+			frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
 					&& "excepionVarDecl already in vardeclmap");
 			//insert var to be used in conversion of handlerBlock
 			convFact.varDeclMap.insert( { exceptionVarDecl, var } );
@@ -246,7 +246,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
-	assert(false && "ForRange -- Currently not supported!");
+	frontend_assert(false && "ForRange -- Currently not supported!");
 	return stmtutils::StmtWrapper();
 }
 
@@ -264,8 +264,11 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 		if(retStmt.size())
 			break;
 	}
-    if(retStmt.size()==0)
+    if(retStmt.size()==0){
+		convFact.trackSourceLocation(stmt->getLocStart());
         retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+		convFact.untrackSourceLocation();
+	}
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());

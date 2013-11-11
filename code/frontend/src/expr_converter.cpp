@@ -133,7 +133,7 @@ vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::Functi
 
 	// check if the function type ends with a VAR_LIST type
 	const core::TypeList& argsTy = funcTy->getParameterTypes()->getElements();
-	// assert(argsTy && "Function argument is of not type TupleType");
+	// frontend_assert(argsTy ) <<  "Function argument is of not type TupleType\n";
 
 	// if the tuple type is empty it means we cannot pack any of the arguments
 	if (argsTy.empty()) {
@@ -193,8 +193,7 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			}
 
 			assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) ||
-				    (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) &&
-					"malloc() and calloc() takes respectively 1 and 2 arguments");
+				    (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) && "malloc() and calloc() takes respectively 1 and 2 arguments");
 
 			const core::lang::BasicGenerator& gen = builder.getLangBasic();
 			// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
@@ -289,7 +288,7 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& converter, const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr){
+core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFact, const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr){
 	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 
 	if(membExpr->isArrow()) {
@@ -297,21 +296,21 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 		base = getCArrayElemRef(builder, base);
 	}
 
-	core::TypePtr baseTy = converter.lookupTypeDetails(base->getType());
+	core::TypePtr baseTy = convFact.lookupTypeDetails(base->getType());
 	core::ExpressionPtr op = gen.getCompositeMemberAccess();
 
 	if (baseTy->getNodeType() == core::NT_RefType) {
 		// skip over reference wrapper
-		baseTy = converter.lookupTypeDetails(core::analysis::getReferencedType( baseTy ));
+		baseTy = convFact.lookupTypeDetails(core::analysis::getReferencedType( baseTy ));
 		op = gen.getCompositeRefElem();
 	}
 
 	// if the inner type is a RecType then we need to unroll it to get the contained composite type
 	if ( baseTy->getNodeType() == core::NT_RecType ) {
-		assert(false && "who is using rec types in the frontend?");
+		frontend_assert(false ) <<  "who is using rec types in the frontend?\n";
 		baseTy = core::static_pointer_cast<const core::RecType>(baseTy)->unroll(builder.getNodeManager());
 	}
-	assert(baseTy && "Struct Type not being initialized");
+	frontend_assert(baseTy ) <<  "Struct Type not being initialized\n";
 
 	//identifier of the member
 	core::StringValuePtr ident;
@@ -326,27 +325,27 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 	}
 
-	assert(ident);
+	frontend_assert(ident);
 
 	core::TypePtr membType;
 	if (baseTy.isa<core::GenericTypePtr>()){
 		// accessing a member of an intercepted type, nothing to do but trust clang
-		membType = converter.convertType(membExpr->getType().getTypePtr());
+		membType = convFact.convertType(membExpr->getType().getTypePtr());
 	}
 	else {
 		// if we translated the object, is better to retrieve info from our struct or union
-		assert(baseTy.isa<core::NamedCompositeTypePtr>());
+		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>());
 		for (const auto& cur : baseTy.as<core::NamedCompositeTypePtr>()->getEntries()){
 			if (cur->getName() == ident){
 				membType = cur->getType();
 				break;
 			}
 		}
-		assert(membType && "queried field not found");
+		frontend_assert(membType) << "queried field not found while building member access\n";
 	}
 
 	core::TypePtr returnType =  membType;
-	assert(returnType);
+	frontend_assert(returnType);
 	if (base->getType()->getNodeType() == core::NT_RefType) {
 		returnType = builder.refType(returnType);
 	}
@@ -396,7 +395,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			return builder.toIRRef(builder.deref(value));
 		}
 		if (core::analysis::isConstCppRef(refTy->getElementType())) {
-			assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
+			frontend_assert(false) << " a const cpp might be a left side, but it is constant, can not be assigned\n";
 		}
 	}
 
@@ -449,7 +448,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 		}
 	}
 
-	assert(irType->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
+	frontend_assert(irType->getNodeType() == core::NT_RefType) <<" it is not a ref, what is this?\n";
 	// there is nothing to do
 	return value;
 }
@@ -459,12 +458,12 @@ core::ExpressionPtr Converter::ExprConverter::asRValue(const core::ExpressionPtr
 	// CPP ref are not Right values, return a ref
 	core::TypePtr irType = value->getType();
 	if (core::analysis::isCppRef(irType)) {
-		assert(false && "check if ever used!");
+		frontend_assert(false) << "check if ever used!\n";
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
 	}
 
 	if (core::analysis::isConstCppRef(irType)) {
-		assert(false && "check if ever used!");
+		frontend_assert(false) << "check if ever used!\n";
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
 	}
 
@@ -473,7 +472,7 @@ core::ExpressionPtr Converter::ExprConverter::asRValue(const core::ExpressionPtr
 		auto var = value.as<core::VariablePtr>();
 		if (convFact.curParameter && contains(*convFact.curParameter, var)) {
 			// => parameters are always r-values
-			assert(false && "Just to see that this is never used!");
+			frontend_assert(false ) << "Just to see that this is never used!\n";
 			return var;
 		}
 	}
@@ -516,7 +515,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 			type = builder.getLangBasic().getInt16();
 			break;
 		default:
-			assert(false && "unknow integer literal width");
+			frontend_assert(false ) << "unknow integer literal width\n";
 	}
 
     retExpr =  builder.literal(type, toString(value));
@@ -538,7 +537,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitFloatingLiteral(const clang::
 	else if (llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble))
 		retExpr = builder.doubleLit (floatLit->getValue().convertToDouble());
 	else
-		assert (false &&"no idea how you got here, but only single/double precission literals are allowed in insieme");
+		frontend_assert (false ) <<"no idea how you got here, but only single/double precission literals are allowed in insieme\n";
 
 	return retExpr;
 }
@@ -569,7 +568,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCharacterLiteral(const clang:
 				convFact.warnings.insert("Insieme widechar support is experimental");
 				break;
 	}
-	assert(elemType);
+	frontend_assert(elemType);
 
 	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
 		value.append("\'");
@@ -636,13 +635,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 				memcpy (buff, stringLit->getBytes().data(), size);
 				iconv_t cd = iconv_open ("UTF-8","UTF-32");
 				iconv (cd, &rptr, &size, &wptr, &outSize);
-				assert(size == 0 && "encoding modification failed.... ");
+				frontend_assert(size == 0) << "encoding modification failed.... \n";
 				strValue = std::string(out, vectorLenght);
 				convFact.warnings.insert("Insieme widechar support is experimental");
 				break;
 				}
 	}
-	assert(elemType);
+	frontend_assert(elemType);
 	vectorLenght += 1; // add the null char
 
 	auto expand = [&](char lookup, const char *replacement) {
@@ -708,7 +707,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUN
 
     core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(nullExpr, retIr);
-	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
+	frontend_assert(type->getNodeType() != core::NT_ArrayType) <<"C pointer type must of type array<'a,1>\n";
 	return (retIr = builder.refReinterpret(BASIC.getRefNull(), type));
 }
 
@@ -784,7 +783,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		// =====  We found a definition for funcion, need to be translated ======
 
-		assert(definition && "No definition found for function");
+		frontend_assert(definition) << "No definition found for function\n";
 
 		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
 	}
@@ -803,7 +802,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		}
 
-		assert( subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
+		frontend_assert( subTy->getNodeType() == core::NT_FunctionType) << "Using () operator on a non function object\n";
 
 		auto funcTy = subTy.as<core::FunctionTypePtr>();
 
@@ -812,7 +811,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 		return irNode;
 	}
 
-	assert( false && "Call expression not referring a function");
+	frontend_assert( false ) << "Call expression not referring a function\n";
 	return core::ExpressionPtr();
 }
 
@@ -833,11 +832,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::P
 		lit = "__PRETTY_FUNCTION__"; break;
 	case clang::PredefinedExpr::PrettyFunctionNoVirtual:
 	default:
-		assert(false && "Handle for predefined function not defined");
+		frontend_assert(false ) << "Handle for predefined function not defined\n";
 	}
 
 	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(preExpr));
-	assert(type->getNodeType() == core::NT_VectorType);
+	frontend_assert(type->getNodeType() == core::NT_VectorType);
 	core::TypePtr elemType = type.as<core::VectorTypePtr>()->getElementType();
 	return builder.literal(lit, builder.refType(builder.arrayType(elemType)));
 }
@@ -857,7 +856,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::P
 //convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
 //return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
 //}
-//assert(false && "SizeOfAlignOfExpr not yet supported");
+//frontend_assert(false && "SizeOfAlignOfExpr not yet supported");
 //}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -880,7 +879,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 	case clang::UETT_AlignOf:
 	case clang::UETT_VecStep:
 	default:
-	assert(false && "Kind of expressions not handled");
+	frontend_assert(false)<< "Kind of expressions not handled\n";
 	return core::ExpressionPtr();
 }
 
@@ -971,17 +970,16 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		// LHS must be a ref<array<'a>>
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
 
-		assert( core::analysis::isRefType(lhs->getType()) );
+		frontend_assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
 
 		// Capture pointer arithmetics
 		// 	Base op must be either a + or a -
-		assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub) &&
-				"Operators allowed in pointer arithmetic are + and - only");
+		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n";
 
 		// LOG(INFO) << rhs->getType();
-		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
+		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be a signed int\n";
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
 
@@ -1009,7 +1007,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType)
 		{
 			// FIXME: if this does not create errors..  delete it
-			assert(false && "who uses this?");
+			frontend_assert(false) << "who uses this?\n";
 			lhs = wrapVariable(binOp->getLHS());
 		}
 
@@ -1044,7 +1042,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	switch ( binOp->getOpcode() ) {
 		case clang::BO_PtrMemD:
 		case clang::BO_PtrMemI:
-		assert(false && "Operator not yet supported!");
+		frontend_assert(false) << "Operator not yet supported!\n";
 
 		// a * b
 		case clang::BO_Mul: op = core::lang::BasicGenerator::Mul; break;
@@ -1118,7 +1116,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			break;
 		}
 		default:
-		assert(false && "Operator not supported");
+		frontend_assert(false) << "Operator not supported\n";
 	}
 
 	// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
@@ -1159,7 +1157,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 					return (retIr = builder.callExpr(opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				}
 			else {
-				assert(false && "old stuff needed, tell Klaus");
+				frontend_assert(false) << "old stuff needed, tell Klaus\n";
 				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
 			}
 		} else if((binOp->getLHS()->getType().getUnqualifiedType()->isVectorType() ||
@@ -1170,7 +1168,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			auto type = lhs->getType();
-			assert(core::lang::isSIMDVector(type));
+			frontend_assert(core::lang::isSIMDVector(type));
 
 			core::LiteralPtr simdOp;
 			switch ( binOp->getOpcode() ) {
@@ -1190,8 +1188,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 				case clang::BO_GT: simdOp = ext.getSIMDGt(); break;
 				case clang::BO_GE: simdOp = ext.getSIMDGe(); break;
 
-				default:
-				assert(false && "Operator for simd-vectortypes not supported");
+				default:{
+				frontend_assert(false) << "Operator for simd-vectortypes not supported\n";
+				}
 			}
 
 			auto retTy = lhs->getType();
@@ -1249,7 +1248,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			opFunc = gen.getOperator(lhs->getType(), op);
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
-			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
+			frontend_assert((*lhsTy == *rhsTy)) << "Comparing incompatible types\n";
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << lhsTy;
 			opFunc = gen.getOperator(lhsTy, op);
 		}
@@ -1259,7 +1258,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
-	assert(opFunc && "no operation code set");
+	frontend_assert(opFunc) << "no operation code set\n";
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
@@ -1289,7 +1288,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
             subExpr = builder.toIRRef(subExpr);
             type = subExpr->getType();
         }
-		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
+		frontend_assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 
 		if ( core::analysis::isRefType(elementType) &&
@@ -1305,7 +1304,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			case core::lang::BasicGenerator::PreDec:  opLit = gen.getArrayViewPreDec();		break;
 			case core::lang::BasicGenerator::PostDec: opLit = gen.getArrayViewPostDec();	break;
 			default:
-				assert(false && "Operator not handled for pointer arithmetic");
+				frontend_assert(false) << "Operator not handled for pointer arithmetic\n";
 			}
 			return builder.callExpr(elementType, opLit, subExpr);
 		}
@@ -1316,7 +1315,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		case core::lang::BasicGenerator::PreDec:	return builder.preDec(subExpr);
 		case core::lang::BasicGenerator::PostDec:	return builder.postDec(subExpr);
 		default :
-			assert(false);
+			frontend_assert(false);
 		}
 		return core::ExpressionPtr(); // should not be reachable
 	};
@@ -1347,7 +1346,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			// make sure it is a L-Value
 			retIr = asLValue(retIr);
 
-			assert(retIr->getType()->getNodeType() == core::NT_RefType);
+			frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType);
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
 	// *a
@@ -1355,8 +1354,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			// make sure it is a L-Value
 			retIr = asLValue(subExpr);
 
-			assert(retIr->getType()->getNodeType() == core::NT_RefType &&
-					"Impossible to apply * operator to an R-Value");
+			frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType ) << "Impossible to apply * operator to an R-Value\n";
 
 			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(retIr->getType());
 
@@ -1393,7 +1391,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		if( !gen.isBool(subExpr->getType()) ) {
 			subExpr = utils::cast(subExpr, gen.getBool());
 		}
-		assert( gen.isBool(subExpr->getType()) );
+		frontend_assert( gen.isBool(subExpr->getType()) );
 
 		return (retIr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr ) );
 
@@ -1407,7 +1405,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
         return mgr.getLangExtension<core::lang::ComplexExtension>().getImg(subExpr);
 
     default:
-		assert(false && "Unary operator not supported");
+		frontend_assert(false && "Unary operator not supported");
 	}
 	return core::ExpressionPtr();	// should not be reachable
 }
@@ -1552,7 +1550,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 		core::TypePtr refSubTy = GET_REF_ELEM_TYPE(base->getType());
 
 		// TODO: we need better checking for vector type
-		assert( (refSubTy->getNodeType() == core::NT_VectorType ||
+		frontend_assert( (refSubTy->getNodeType() == core::NT_VectorType ||
 						refSubTy->getNodeType() == core::NT_ArrayType) &&
 				"Base expression of array subscript is not a vector/array type.");
 
@@ -1567,7 +1565,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 		 * the array.subscript operator must be used
 		 */
 		// TODO: we need better checking for vector type
-		assert( (base->getType()->getNodeType() == core::NT_VectorType ||
+		frontend_assert( (base->getType()->getNodeType() == core::NT_VectorType ||
 						base->getType()->getNodeType() == core::NT_ArrayType) &&
 				"Base expression of array subscript is not a vector/array type.");
 
@@ -1611,7 +1609,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const cl
 		else if(posStr.at(0) <= 'e')
 		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
 		else
-		assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
+		frontend_assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
 	} else if ( accessor.size() <= 16 ) { // opencl vector permutation
 		vector<core::ExpressionPtr> args;
 
@@ -1627,7 +1625,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const cl
 				else if(*I <= 'e')
 				pos = (10 + (*I)-'a');//convert a .. e to 10 .. 15
 				else
-				assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
+				frontend_assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
 
 				args.push_back(builder.uintLit(pos));
 			}
@@ -1640,7 +1638,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const cl
 		}
 
 	} else {
-		assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
+		frontend_assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
 	}
 
 	// The type of the index is always uint<4>
@@ -1686,7 +1684,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		return (retIr = convFact.convertEnumConstantDecl(enumConstant));
 	}
 
-	assert(false && "clang::DeclRefExpr not supported!");
+	frontend_assert(false ) <<"clang::DeclRefExpr not supported!\n";
 	return core::ExpressionPtr();
 }
 
@@ -1699,14 +1697,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::Ini
 	LOG_EXPR_CONVERSION(initList, retIr);
 
 	if (initList->isStringLiteralInit () )
-		assert(false && "string literal" ) ;
+		frontend_assert(false) << "string literal\n";
 
 //	if (initList->hasArrayFiller ())
-//		assert(false && "array filler");
+//		frontend_assert(false && "array filler");
 
 	// if is a union initilization we build the field assigment, later we wont have it
 	if (const clang::FieldDecl *field = initList->getInitializedFieldInUnion ()){
-		assert(initList->getNumInits() == 1);
+		frontend_assert(initList->getNumInits() == 1);
 		// AHA!! here is the trick, magic trick. we hide the union initialization into an expression
 		// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!!
 		// the name of the literal is the field !!! hahaha isn't it briliant???
@@ -1799,7 +1797,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitImplicitValueInitExpr(const c
     core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(initExpr, retIr);
     core::TypePtr elementType = convFact.convertType ( initExpr->getType().getTypePtr() );
-    assert(elementType && "IR type creation failed (given element type not supported)");
+    frontend_assert(elementType) << "IR type creation failed (given element type not supported)\n";
     retIr = convFact.defaultInitVal(elementType);
     return retIr;
 }
@@ -1821,8 +1819,11 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		if(retIr)
 			break;
     }
-    if(!retIr)
+    if(!retIr){
+		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
+	}
 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());

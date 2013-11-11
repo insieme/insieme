@@ -43,6 +43,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/utils/interceptor.h"
+#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/pragma/handler.h"
 
 #include "insieme/core/ir_program.h"
@@ -218,6 +219,10 @@ class Converter :  boost::noncopyable {
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
+	/**
+	 *  keeps track of the last point a source location to the input code could be found
+	 */
+	 const clang::SourceLocation* lastTrackableLocation;
 
 public:
 
@@ -492,6 +497,29 @@ public:
 	 * @param loc: the location this warning will be attached to
 	 */
 	void printDiagnosis(const clang::SourceLocation& loc);
+	
+	/**
+	 *  keeps track of the last point a source location to the input code could be found
+	 */
+	void trackSourceLocation (const clang::SourceLocation& sl){
+		lastTrackableLocation = &sl;
+	}
+
+	void untrackSourceLocation (){
+		lastTrackableLocation = nullptr;
+	}
+	
+	/**
+	 *  prints location of the last registered source location
+	 */
+	std::string getLastTrackableLocation() const{
+		if (lastTrackableLocation){
+			return utils::location(*lastTrackableLocation, getSourceManager());
+		}
+		else{
+			return " << unable to identify last input code location >>";
+		}
+	}
 
 };
 
