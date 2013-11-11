@@ -268,8 +268,8 @@ TEST(ScopRegion, ForStmt3) {
 	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
-	EXPECT_EQ("(v0,v49|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v49 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v52|v2,v3,v4|1)", toString(iterVec));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v52 + -v3 == 0))", toString(ann.getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -308,8 +308,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v47,v48,v49|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v47 + -v48 + 5 == 0) ^ (v48 + -2 < 0)) ^ (v48 >= 0)) ^ (v0 + -v47 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v47 + -5*v49 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v50,v51,v52|v2|1)",toString(iterVec));
+	EXPECT_EQ("((((((-2*v50 + -v51 + 5 == 0) ^ (v51 + -2 < 0)) ^ (v51 >= 0)) ^ (v0 + -v50 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v50 + -5*v52 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -356,8 +356,8 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v49,v50,v51|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v49 + v50 + v4 == 0) ^ (v50 + -3 < 0)) ^ (v50 >= 0)) ^ (v0 + -v49 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v49 + -5*v51 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v52,v53,v54|v2,v4,v3|1)", toString(iterVec));
+	EXPECT_EQ("((((((-3*v52 + v53 + v4 == 0) ^ (v53 + -3 < 0)) ^ (v53 >= 0)) ^ (v0 + -v52 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v52 + -5*v54 == 0))", toString(ann.getDomainConstraints()));
 }
 
 /*

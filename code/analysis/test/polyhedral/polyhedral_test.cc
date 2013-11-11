@@ -730,7 +730,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// get the iterator i used in the if condition 
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v39 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v42 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
@@ -739,7 +739,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v39 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v42 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -773,7 +773,7 @@ TEST(IterationDomain, FromVariable5) {
 	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 	EXPECT_TRUE(dom.second);
 
-	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v38 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v41 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
 	//auto pw = cardinality(mgr,*dom);
 	//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 }
@@ -805,7 +805,7 @@ TEST(IterationDomain, FromVariable6) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v38 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v41 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
