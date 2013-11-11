@@ -382,12 +382,29 @@ namespace backend {
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
-
 		// 5) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));
 			appendAsArguments(context, res, call->getArguments(), false);
+			return res;
+		}
+
+		// 6) if is a member function pointer
+		if (funType->isMemberFunction()) {
+			// add call to function pointer (which is the value)
+
+			// extract first parameter of the function, it is the target object
+			c_ast::ExpressionPtr trgObj =  converter.getStmtConverter().convertExpression(context, call[0]);
+
+			// make a call to the member pointer executor binary operator 
+			c_ast::ExpressionPtr funcExpr = c_ast::parenthese(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
+
+			// the call is a call to the binary operation al the n-1 tail arguments
+			c_ast::CallPtr res = c_ast::call(funcExpr);
+			vector<core::ExpressionPtr> args = call->getArguments();
+			args.erase(args.begin());
+			appendAsArguments(context, res, args, false);
 			return res;
 		}
 
@@ -427,8 +444,15 @@ namespace backend {
 			return c_ast::ref(info.lambdaWrapperName);
 		}
 		case core::NT_LambdaExpr: {
-			const FunctionInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 			context.getDependencies().insert(info.prototype);
+
+			// FIXME: hack to support member function pointers intialization
+			c_ast::NodePtr thing = static_pointer_cast<c_ast::CCodeFragment>(info.definition)->getCode()[1];
+			if (c_ast::MemberFunctionPtr mem = thing.isa<c_ast::MemberFunctionPtr>()){
+				return c_ast::ref ( c_ast::scope( mem->className,     info.function->name));
+			}
+
 			return c_ast::ref(info.function->name);
 		}
 		case core::NT_Variable:

@@ -210,39 +210,58 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBoolLiteralExpr(const c
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
-	core::CallExprPtr ret;
+	core::ExpressionPtr ret;
 	LOG_EXPR_CONVERSION(callExpr, ret);
 	// TODO: static methods
 
 	const core::IRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
-	// to begin with we translate the constructor as a regular function
-	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
-	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
+	if (!methodDecl){
+		// no method declaration... this is call to something else. 
+		// what else is callable??? just a pointer, 
+		//  INTRODUCING: member function pointer!
 
-	// get the this-Object
-	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
-	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
-	// index the first element
-	ownerObj = getCArrayElemRef(builder, ownerObj);
-	if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
-		ownerObj = builder.toIRRef(ownerObj);
+		// now we have the function to call, we create the call expression with the right paramenters
+		// the member pointer executor operator will return to us a fucntion call with the "this" parameter
+		// as first param
+		assert(callExpr->getCallee ());
+		core::CallExprPtr inner = convFact.convertExpr(callExpr->getCallee()).as<core::CallExprPtr>();
+		ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, inner->getFunctionExpr()->getType().as<core::FunctionTypePtr>());
+		core::ExpressionPtr thisArg =  inner->getArgument(0);
+		args.insert (args.begin(), thisArg);
 
-	// if owner object is not a ref is the case of a call on a return value which has not
-	// being identified as temporary expression, because in IR classes are always a left side
-	// we have to materialize
-	if(!ownerObj.getType().isa<core::RefTypePtr>()){
-		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+		ret = builder.callExpr( inner->getType() , inner->getFunctionExpr(), args);
 	}
+	else{
+		// to begin with we translate the constructor as a regular function
+		auto func = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
+		core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
 
-	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
-	args.insert (args.begin(), ownerObj);
-	core::TypePtr retTy = funcTy.getReturnType();
+		// get the this-Object
+		core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
+		// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
+		// index the first element
+		ownerObj = getCArrayElemRef(builder, ownerObj);
+		if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
+			ownerObj = builder.toIRRef(ownerObj);
 
-	// build expression and we are done!!!
-	ret = builder.callExpr(retTy, newFunc, args);
+		// if owner object is not a ref is the case of a call on a return value which has not
+		// being identified as temporary expression, because in IR classes are always a left side
+		// we have to materialize
+		if(!ownerObj.getType().isa<core::RefTypePtr>()){
+			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+		}
+
+		// reconstruct Arguments list, fist one is a scope location for the object
+		ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
+		args.insert (args.begin(), ownerObj);
+		core::TypePtr retTy = funcTy.getReturnType();
+
+		// build expression and we are done!!!
+		ret = builder.callExpr(retTy, func, args);
+
+	}
 	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -285,7 +304,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
+	args = getFunctionArguments(callExpr, funcTy);
 
 		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
@@ -883,12 +902,36 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmEx
 	return retIr;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//			C++ 11
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			memeber function pointer executors
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+namespace {
+
+	core::ExpressionPtr convertMemberFuncExecutor (const clang::BinaryOperator* clangExpr,  const frontend::conversion::Converter& convFact){
+		core::ExpressionPtr papa    = convFact.convertExpr(clangExpr->getLHS());
+		core::ExpressionPtr funcPtr = convFact.convertExpr(clangExpr->getRHS());
+
+		// unwrap pointer kind
+		if (clangExpr->getOpcode() == clang::BO_PtrMemI)
+			papa = getCArrayElemRef(convFact.getIRBuilder(), papa);
+
+		assert(funcPtr->getType().isa<core::FunctionTypePtr>());
+		return convFact.getIRBuilder().callExpr(funcPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), funcPtr, toVector(papa));
+	}
+
+}
+
+core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemD(const clang::BinaryOperator* exprD) {
+	// direct, ->*
+	return convertMemberFuncExecutor(exprD,convFact);
+}
+
+core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemI(const clang::BinaryOperator* exprI) {
+	// indirect, ->*
+	return convertMemberFuncExecutor(exprI,convFact);
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

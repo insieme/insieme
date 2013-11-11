@@ -846,6 +846,10 @@ namespace backend {
 			return CONVERT_EXPR(res);
 		});
 
+		res[basic.getNullFunc()] = OP_CONVERTER({
+			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
+			return  c_ast::lit(intType, "0");
+		});
 
 		// -- structs --
 
@@ -1262,6 +1266,8 @@ namespace backend {
 				}
 			});
 		}
+
+
 
 		#include "insieme/backend/operator_converter_end.inc"
 

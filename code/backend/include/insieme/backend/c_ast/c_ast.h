@@ -217,11 +217,10 @@ namespace c_ast {
 
 	struct FunctionType : public Type {
 		TypePtr returnType;
+		TypePtr classType;
 		vector<TypePtr> parameterTypes;
-		FunctionType(const TypePtr& returnType)
-					: Type(NT_FunctionType), returnType(returnType), parameterTypes() {}
-		FunctionType(const TypePtr& returnType, const vector<TypePtr>& parameter)
-			: Type(NT_FunctionType), returnType(returnType), parameterTypes(parameter) {}
+		FunctionType(const TypePtr& returnType, const TypePtr& classTy = TypePtr(), const vector<TypePtr>& parameter = vector<TypePtr>())
+			: Type(NT_FunctionType), returnType(returnType), classType(classTy), parameterTypes(parameter) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -491,7 +490,9 @@ namespace c_ast {
 
 			// C++ operators
 			StaticCast,
-			DynamicCast
+			DynamicCast,
+			ScopeResolution,    //  the scope resolution operator is: "::" 
+			PointerToMember		//	pointer to member operator. "->*"
 		};
 
 		BinaryOp operation;

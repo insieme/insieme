@@ -129,13 +129,12 @@ template<class ClangExprTy>
 ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 									const clang::FunctionDecl* declaration){
 	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
-	return getFunctionArguments(callExpr, funcTy, declaration);
+	return getFunctionArguments(callExpr, funcTy);
 }
 
 template<class ClangExprTy>
 ExpressionList getFunctionArguments(ClangExprTy* callExpr,
-									const core::FunctionTypePtr& funcTy,
-									const clang::FunctionDecl* declaration = NULL){
+									const core::FunctionTypePtr& funcTy){
 	ExpressionList args;
 
 	// if member function, need to skip one arg (the local scope arg)
@@ -154,19 +153,9 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 		if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
 			argIdOffSet = 1;
 			off=0;
-			VLOG(2) << "opcall";
+			VLOG(2) << " == Operator call == ";
 		}
 	}
-
-//	// if needed, globals are the leftmost argument (after the memory storage in ctors)
-//	// NOTE: functions being captured with a pointer CAN NOT USE globals
-//	if (declaration){
-//		convFact.getTranslationUnitForDefinition(declaration);
-//		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
-//			args.push_back(convFact.ctx.globalVar);
-//			off ++;
-//		}
-//	}
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
@@ -425,7 +414,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
@@ -434,6 +422,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++
@@ -460,9 +449,9 @@ public:
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
 
-	//  C++ 11
-	//core::ExpressionPtr VisitLambdaExpr 				(const clang::LambdaExpr* substExpr);
-	//core::ExpressionPtr VisitCXXNullPtrLiteralExpr		(const clang::CXXNullPtrLiteralExpr* nullPtrExpr);
+	core::ExpressionPtr VisitBinPtrMemD					(const clang::BinaryOperator* binPtrMemDexpr);
+	core::ExpressionPtr VisitBinPtrMemI					(const clang::BinaryOperator* binPtrMemIexpr);
+
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  default visitor call

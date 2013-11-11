@@ -110,7 +110,7 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	type = manager.create<VectorType>(type, manager.create<Literal>("7"));
 	structType->elements.push_back(var(type, "x9"));
 
-	type = manager.create<PointerType>(manager.create<FunctionType>(intType, toVector(intType)));
+	type = manager.create<PointerType>(manager.create<FunctionType>(intType, TypePtr(), toVector(intType)));
 	structType->elements.push_back(var(type, "x10"));
 
 	NodePtr def = manager.create<TypeDefinition>(structType);
