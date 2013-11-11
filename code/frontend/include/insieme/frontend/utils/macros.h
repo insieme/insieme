@@ -132,15 +132,21 @@
 
 #include "insieme/utils/assert.h"
 
+#ifdef NDEBUG
 
-/**
- * this macro is ment to be used in the visitors ( stmt, expr and type) it requires the object convFact to be pressent
- * in the scope to able to print the current translating location
- */
-#define frontend_assert(_COND) \
-	if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)(_COND))) \
-		std::cerr \
-		<< "\nAssertion " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"\
-		<< " ==> last Trackable location: " << convFact.getLastTrackableLocation() << "\n"\
-		<< "Message: "
+	#define frontend_assert(_COND) _assert_ignore
 
+#else
+
+	/**
+	 * this macro is ment to be used in the visitors ( stmt, expr and type) it requires the object convFact to be pressent
+	 * in the scope to able to print the current translating location
+	 */
+	#define frontend_assert(_COND) \
+		if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)(_COND))) \
+			std::cerr \
+			<< "\nAssertion " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"\
+			<< " ==> last Trackable location: " << convFact.getLastTrackableLocation() << "\n"\
+			<< "Message: "
+
+#endif
