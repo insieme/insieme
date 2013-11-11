@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -285,9 +285,15 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 
 		// Deal with omp pragmas
 		if ( irStmt->getAnnotations().empty() )
-		return omp::attachOmpAnnotation(irStmt, stmt, convFact);
+            retStmt = omp::attachOmpAnnotation(irStmt, stmt, convFact);
 	}
-	return retStmt;
+
+    // call frontend plugin post visitors
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    }
+
+	return  retStmt;
 }
 
 }

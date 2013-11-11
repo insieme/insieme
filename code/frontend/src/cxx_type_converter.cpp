@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -213,9 +213,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
 				break;
 			}
-				// -------------------   NON IMPLEMENTED ONES ------------------------ 
+				// -------------------   NON IMPLEMENTED ONES ------------------------
 			case clang::TemplateArgument::Integral:  {
-			// templated parameters are values wich spetialize the template, because of their value nature, 
+			// templated parameters are values wich spetialize the template, because of their value nature,
 			// they should be encapsulated as types to fit in the typing of the parent type
 				VLOG(2) << "arg: integral";
 				assert(false);
@@ -490,15 +490,20 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 //			The visitor itself
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
+	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
+    core::TypePtr retIr;
     //iterate clang handler list and check if a handler wants to convert the type
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		core::TypePtr retIr = plugin->Visit(type, convFact);
+		retIr = plugin->Visit(type, convFact);
 		if(retIr)
-			return retIr;
+			return pluginPostTypeVisit(type, retIr);
 	}
-
-	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
+	//check if the insieme type converter should be called
+	if(!retIr) {
+        retIr = TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
+	}
+	//return post visited type
+	return pluginPostTypeVisit(type, retIr);
 }
 
 } // End conversion namespace

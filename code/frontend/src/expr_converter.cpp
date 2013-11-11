@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1827,6 +1827,11 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
+
+    // call frontend plugin post visitors
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retIr = plugin->PostVisit(expr, retIr, convFact);
+	}
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);

@@ -195,8 +195,9 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 		
 		// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
 		const core::IRBuilder& builder = convFact.getIRBuilder();
-		if (frontend::utils::isRefArray(inductionVar->getType())){
-			
+		if (frontend::utils::isRefArray(inductionVar->getType()) 
+				|| frontend::utils::isRefArray(endValue->getType()) 
+				|| frontend::utils::isRefArray(initValue->getType()) ){
 		throw LoopNormalizationError(" pointer for loop not supported yet!"); 
 			//// build the thing for pointers
 			//inductionVar =  convFact.getIRBuilder().variable(builder.getLangBasic().getUInt8());

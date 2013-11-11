@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -866,7 +866,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "C";
 
-    //iterate clang handler list and check if a handler wants to convert the stmt
+    //iterate frontend plugin list and check if a plugin wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retStmt = plugin->Visit(stmt, convFact);
@@ -895,10 +895,15 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 
 		// Deal with omp pragmas
 		if ( irStmt->getAnnotations().empty() )
-			return omp::attachOmpAnnotation(irStmt, stmt, convFact);
-
-		return stmtutils::StmtWrapper(irStmt);
+			retStmt = omp::attachOmpAnnotation(irStmt, stmt, convFact);
+        else
+            retStmt = stmtutils::StmtWrapper(irStmt);
 	}
+
+    // call frontend plugin post visitors
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    }
 	return retStmt;
 }
 
