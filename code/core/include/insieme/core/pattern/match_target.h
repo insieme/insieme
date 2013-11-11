@@ -36,45 +36,52 @@
 
 #pragma once
 
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/generator.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_types.h"
 
-#include "insieme/utils/printable.h"
+#include "insieme/core/pattern/structure.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
-	/**
-	 * A rule consisting of a pattern to be matched and a generator rule
-	 * producing the replacement for the matched structure.
-	 */
-	class Rule : public utils::Printable {
+	namespace details {
 
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
+		struct target_info {};
 
-	public:
+		template<
+			typename TargetType,
+			typename ValueType,
+			typename IDType,
+			typename AtomType
+		>
+		struct match_target_info_helper : public target_info {
 
-		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
-			: pattern(pattern), generator(generator) {}
+			typedef TargetType target_type;
+			typedef ValueType value_type;
+			typedef IDType id_type;
+			typedef AtomType atom_type;
 
-		core::NodePtr applyTo(const core::NodePtr& tree) const;
+			typedef vector<ValueType> list_type;
+			typedef typename list_type::const_iterator list_iterator;
 
-		// for testing only ...
-		TreePtr applyTo(const TreePtr& tree) const;
+		};
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return pattern->printTo(out) << " -> " << *generator;
-		}
-	};
+	}
 
-    inline core::NodePtr apply(const core::NodePtr& node, const TreePatternPtr& pattern, const TreeGeneratorPtr& generator) {
-        return Rule(pattern, generator).applyTo(node);
-    }
+	struct ptr_target
+		: public details::match_target_info_helper<ptr_target, core::NodePtr, core::NodeType, core::NodePtr> {};
+	struct address_target
+		: public details::match_target_info_helper<address_target, core::NodeAddress, core::NodeType, core::NodePtr> {};
+	struct tree_target
+		: public details::match_target_info_helper<tree_target, TreePtr, unsigned, TreePtr> {};
+
+	template<typename T> struct match_target_info;
+	template<> struct match_target_info<core::NodePtr> : public ptr_target {};
+	template<> struct match_target_info<core::NodeAddress> : public address_target {};
+	template<> struct match_target_info<TreePtr> : public tree_target {};
 
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

@@ -40,29 +40,29 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
-#include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/generator.h"
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/generator.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 namespace insieme {
 namespace transform {
 namespace rulebased {
 
-	using namespace pattern;
-	using namespace pattern::generator;
-	using namespace pattern::generator::irg;
+	using namespace core::pattern;
+	using namespace core::pattern::generator;
+	using namespace core::pattern::generator::irg;
 
 
-	namespace p = pattern;
-	namespace g = pattern::generator;
-	namespace irp = pattern::irp;
-	namespace irg = pattern::generator::irg;
+	namespace p = core::pattern;
+	namespace g = core::pattern::generator;
+	namespace irp = core::pattern::irp;
+	namespace irg = core::pattern::generator::irg;
 
 
 	// --- Abstract base class of rule-based transformation ----
 
-	RuleBasedTransformation::RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<pattern::Rule>& rules)
+	RuleBasedTransformation::RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<Rule>& rules)
 		: Transformation(type, param), rules(rules) {}
 
 
@@ -83,15 +83,15 @@ namespace rulebased {
 			: RuleBasedTransformation(
 					CompoundEliminationType::getInstance(), value,
 
-					pattern::Rule(  		// {{x}} => {x}
+					Rule(  		// {{x}} => {x}
 							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
 							irg::compoundStmt(g::listVar("stmts"))
 					),
-					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
+					Rule(			// {x...x {} y...y} => {x...x,y...y}
 							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
 							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
 					),
-					pattern::Rule()   		// otherwise do nothing
+					Rule()   		// otherwise do nothing
 			) {};
 
 
@@ -99,7 +99,7 @@ namespace rulebased {
 		: RuleBasedTransformation(
 			LoopUnrollingType::getInstance(), params,
 
-			pattern::Rule(
+			Rule(
 
 				// for[V.L.U.S.BODY]
 
@@ -244,7 +244,7 @@ namespace rulebased {
 		: RuleBasedTransformation(
 			TotalLoopUnrollingType::getInstance(), params,
 
-			pattern::Rule(
+			Rule(
 
 				// match the for-loop
 				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
@@ -272,7 +272,7 @@ namespace rulebased {
 		: RuleBasedTransformation(
 			SimpleLoopTiling2DType::getInstance(), params,
 
-			pattern::Rule(
+			Rule(
 
 				// match the 2 nested for-loops
 				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
@@ -308,7 +308,7 @@ namespace rulebased {
 		: RuleBasedTransformation(
 			SimpleLoopTiling3DType::getInstance(), params,
 
-			pattern::Rule(
+			Rule(
 
 				// match the 2 nested for-loops
 				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1", irp::literal("1")),

@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/transform/pattern/match.h"
+#include "insieme/core/pattern/match.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
@@ -45,7 +45,7 @@
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	class Generator;
@@ -745,12 +745,12 @@ namespace generator {
 
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator);
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::TreeGeneratorPtr& generator);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::ListGeneratorPtr& generator);
 
 } // end namespace std

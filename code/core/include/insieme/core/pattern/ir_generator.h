@@ -43,10 +43,10 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/transform/pattern/generator.h"
+#include "insieme/core/pattern/generator.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 namespace generator {
 namespace irg {
@@ -239,5 +239,5 @@ namespace irg {
 } // end namespace irg
 } // end namespace generator
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

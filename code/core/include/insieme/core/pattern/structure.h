@@ -48,7 +48,7 @@
 #include "insieme/utils/annotation.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 
@@ -122,5 +122,5 @@ namespace pattern {
 	std::ostream& operator<<(std::ostream& out, const TreePtr& tree);
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

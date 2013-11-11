@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/match.h"
+#include "insieme/core/pattern/match.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	TEST(Match, MatchPath) {
@@ -207,6 +207,6 @@ namespace pattern {
 
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 

@@ -43,10 +43,10 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/transform/pattern/pattern.h"
+#include "insieme/core/pattern/pattern.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 namespace irp {
 	using std::make_shared;
@@ -263,5 +263,5 @@ namespace irp {
 
 } // end namespace irp
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

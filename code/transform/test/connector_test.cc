@@ -40,17 +40,17 @@
 
 #include "insieme/transform/primitives.h"
 #include "insieme/transform/filter/filter.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace transform {
 
-	namespace p = pattern;
-	namespace irp = pattern::irp;
+	namespace p = core::pattern;
+	namespace irp = core::pattern::irp;
 
 
 	TEST(ForAll, Basic) {

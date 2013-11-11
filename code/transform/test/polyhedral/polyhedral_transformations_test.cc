@@ -38,8 +38,9 @@
 
 #include "insieme/transform/polyhedral/transformations.h"
 
+#include "insieme/core/pattern/ir_pattern.h"
+
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ir_builder.h"
@@ -54,9 +55,9 @@ TEST(Transform, InterchangeManual) {
 	Logger::get(std::cerr, DEBUG);
 
 	using namespace insieme::core;
+	using namespace insieme::core::pattern;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -115,8 +116,8 @@ void checkSCoPCorrectness(const insieme::core::NodePtr& node) {
 TEST(Transform, InterchangeAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 
@@ -148,8 +149,8 @@ TEST(Transform, InterchangeAuto) {
 TEST(Transform, InterchangeAuto2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 
@@ -188,8 +189,8 @@ TEST(Transform, InterchangeAuto2) {
 TEST(Transform, StripMiningAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -229,8 +230,8 @@ TEST(Transform, StripMiningAuto) {
 TEST(Transform, LoopFusionAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -262,8 +263,8 @@ TEST(Transform, LoopFusionAuto) {
 TEST(Transform, TilingManual) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -300,8 +301,8 @@ TEST(Transform, TilingManual) {
 TEST(Transform, TilingAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -330,8 +331,8 @@ TEST(Transform, TilingAuto) {
 TEST(Transform, TilingAuto2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -362,8 +363,8 @@ TEST(Transform, TilingAuto2) {
 TEST(Transform, TilingAuto21) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -392,8 +393,8 @@ TEST(Transform, TilingAuto21) {
 TEST(Transform, TilingAuto3) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -424,8 +425,8 @@ TEST(Transform, TilingAuto3) {
 TEST(Transform, LoopStamping) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -455,8 +456,8 @@ TEST(Transform, LoopStamping) {
 TEST(Transform, LoopStamping2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	
 	NodeManager mgr;
@@ -487,8 +488,8 @@ TEST(Transform, LoopStamping2) {
 TEST(Transform, LoopStamping3) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	
 	NodeManager mgr;
@@ -521,8 +522,8 @@ TEST(Transform, LoopStamping3) {
 TEST(Transform, LoopStamping4) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);

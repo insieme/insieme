@@ -34,44 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/pattern.h"
+#include "insieme/core/pattern/rule.h"
 
-#include "insieme/utils/container_utils.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/generator.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
-namespace irp {
 
-	namespace {
-
-		template<typename T>
-		vector<T> collectAll(const TreePatternPtr& pattern, const T& root, bool matchTypes) {
-
-			// just iterate through the tree and search for matches
-			vector<T> res;
-			core::visitDepthFirst(root, [&](const T& cur) {
-				if (pattern->match(cur)) {
-					res.push_back(cur);
-				}
-			}, true, matchTypes);
-
-			return res;
-
-		}
-
+	core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
+		auto match = pattern->matchPointer(tree);
+		if (!match) return core::NodePtr();
+		return generator->generate(*match);
 	}
 
-	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes) {
-		return collectAll<core::NodePtr>(pattern, root, matchTypes);
+	TreePtr Rule::applyTo(const TreePtr& tree) const {
+		auto match = pattern->matchTree(tree);
+		if (!match) return TreePtr();
+		return generator->generate(*match);
 	}
 
-	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes) {
-		return collectAll<core::NodeAddress>(pattern, root, matchTypes);
-	}
-
-} // end namespace irp
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

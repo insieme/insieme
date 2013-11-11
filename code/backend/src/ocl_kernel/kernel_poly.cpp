@@ -45,8 +45,8 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 /*
 #include "insieme/transform/polyhedral/transform.h"
@@ -65,8 +65,8 @@ namespace ocl_kernel {
 //using namespace insieme::transform::polyhedral;
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
-using namespace insieme::transform::pattern;
-namespace irg = insieme::transform::pattern::generator::irg;
+using namespace insieme::core::pattern;
+namespace irg = insieme::core::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()

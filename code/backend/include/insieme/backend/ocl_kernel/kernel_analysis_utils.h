@@ -39,7 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
@@ -106,9 +106,9 @@ class IndexExprEvaluator : public IRVisitor<void> {
 	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
 	AccessMap& accesses;
 	// pattern that describes an subscript access to an opencl global variable
-	insieme::transform::pattern::TreePatternPtr globalAccess;
+	insieme::core::pattern::TreePatternPtr globalAccess;
 	// pattern that describes a use of an opencl global variable
-	insieme::transform::pattern::TreePatternPtr globalUsed;
+	insieme::core::pattern::TreePatternPtr globalUsed;
 	// list of aliases of global variables
 	utils::map::PointerMap<ExpressionPtr, VariablePtr> globalAliases;
 

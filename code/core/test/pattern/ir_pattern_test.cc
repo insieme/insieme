@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/logging.h"
@@ -51,9 +51,7 @@
 using namespace insieme::utils::log;
 
 namespace insieme {
-using namespace core;
-	
-namespace transform {
+namespace core {
 namespace pattern {
 
 bool isMatch(const TreePatternPtr& pattern, const NodePtr& node) {
@@ -660,6 +658,6 @@ TEST(PatternTests, VarUsage) {
 }
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 

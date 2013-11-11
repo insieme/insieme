@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/core/pattern/structure.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	TEST(Tree, Basic) {
@@ -123,6 +123,6 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 

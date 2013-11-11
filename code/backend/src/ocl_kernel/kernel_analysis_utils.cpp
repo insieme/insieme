@@ -38,7 +38,7 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
@@ -51,8 +51,8 @@ namespace ocl_kernel {
 
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
-using namespace insieme::transform::pattern;
-namespace irg = insieme::transform::pattern::generator::irg;
+using namespace insieme::core::pattern;
+namespace irg = insieme::core::pattern::generator::irg;
 
 
 /*

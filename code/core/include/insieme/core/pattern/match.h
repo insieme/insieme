@@ -41,13 +41,13 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/assert.h"
 
-#include "insieme/transform/pattern/match_target.h"
+#include "insieme/core/pattern/match_target.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	using std::vector;
@@ -621,5 +621,5 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

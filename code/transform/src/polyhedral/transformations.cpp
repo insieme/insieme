@@ -39,9 +39,9 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/transform/connectors.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/filter/standard_filter.h"
 
@@ -56,8 +56,8 @@ namespace insieme { namespace transform { namespace polyhedral {
 using namespace analysis;
 using namespace analysis::polyhedral;
 
-using namespace insieme::transform::pattern;
-using insieme::transform::pattern::any;
+using namespace insieme::core::pattern;
+using insieme::core::pattern::any;
 
 #define AS_EXPR(node) core::static_pointer_cast<const core::Expression>(node)
 

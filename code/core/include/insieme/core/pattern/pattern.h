@@ -46,15 +46,15 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/match.h"
-#include "insieme/transform/pattern/match_target.h"
+#include "insieme/core/pattern/structure.h"
+#include "insieme/core/pattern/match.h"
+#include "insieme/core/pattern/match_target.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/math.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	class Pattern;
@@ -593,13 +593,13 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::PatternPtr& pattern);
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreePatternPtr& pattern);
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListPatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::PatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::TreePatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::ListPatternPtr& pattern);
 
 } // end namespace std

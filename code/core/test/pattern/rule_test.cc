@@ -36,10 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/rule.h"
+#include "insieme/core/pattern/rule.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	namespace p = pattern;
@@ -140,7 +140,7 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 
 

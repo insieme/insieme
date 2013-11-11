@@ -40,14 +40,14 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace transform {
 namespace filter {
 
-	namespace p = pattern;
-	namespace irp = pattern::irp;
+	namespace p = core::pattern;
+	namespace irp = core::pattern::irp;
 
 
 	TEST(TargetFilter, Basic) {

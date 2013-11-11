@@ -60,7 +60,8 @@
 namespace insieme {
 namespace backend {
 namespace runtime {
-using namespace insieme::transform::pattern;
+
+	using namespace insieme::core::pattern;
 
 	namespace {
 

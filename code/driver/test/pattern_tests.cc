@@ -38,7 +38,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
@@ -53,8 +53,8 @@
 
 namespace insieme {
 
-using namespace transform::pattern;
 using namespace core;
+using namespace core::pattern;
 using namespace driver::integration;
 
 

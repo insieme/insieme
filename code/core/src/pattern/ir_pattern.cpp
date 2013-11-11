@@ -34,54 +34,44 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/pattern/pattern.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_node_types.h"
-
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
+namespace irp {
 
-	namespace details {
+	namespace {
 
-		struct target_info {};
+		template<typename T>
+		vector<T> collectAll(const TreePatternPtr& pattern, const T& root, bool matchTypes) {
 
-		template<
-			typename TargetType,
-			typename ValueType,
-			typename IDType,
-			typename AtomType
-		>
-		struct match_target_info_helper : public target_info {
+			// just iterate through the tree and search for matches
+			vector<T> res;
+			core::visitDepthFirst(root, [&](const T& cur) {
+				if (pattern->match(cur)) {
+					res.push_back(cur);
+				}
+			}, true, matchTypes);
 
-			typedef TargetType target_type;
-			typedef ValueType value_type;
-			typedef IDType id_type;
-			typedef AtomType atom_type;
+			return res;
 
-			typedef vector<ValueType> list_type;
-			typedef typename list_type::const_iterator list_iterator;
-
-		};
+		}
 
 	}
 
-	struct ptr_target
-		: public details::match_target_info_helper<ptr_target, core::NodePtr, core::NodeType, core::NodePtr> {};
-	struct address_target
-		: public details::match_target_info_helper<address_target, core::NodeAddress, core::NodeType, core::NodePtr> {};
-	struct tree_target
-		: public details::match_target_info_helper<tree_target, TreePtr, unsigned, TreePtr> {};
+	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes) {
+		return collectAll<core::NodePtr>(pattern, root, matchTypes);
+	}
 
-	template<typename T> struct match_target_info;
-	template<> struct match_target_info<core::NodePtr> : public ptr_target {};
-	template<> struct match_target_info<core::NodeAddress> : public address_target {};
-	template<> struct match_target_info<TreePtr> : public tree_target {};
+	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes) {
+		return collectAll<core::NodeAddress>(pattern, root, matchTypes);
+	}
 
-
+} // end namespace irp
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

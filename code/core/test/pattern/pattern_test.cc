@@ -36,11 +36,11 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/structure.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	bool isMatch(const TreePatternPtr& pattern, const TreePtr& tree) {
@@ -1091,6 +1091,6 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 

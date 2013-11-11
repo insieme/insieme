@@ -34,31 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/generator.h"
+#include <gtest/gtest.h>
 
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/pattern/ir_generator.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 namespace generator {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
-	const ListGeneratorPtr empty = std::make_shared<list::Empty>();
+	TEST(IRGenerator, StringValue) {
+
+		core::NodeManager manager;
+
+		// create some dummy match
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
+
+		TreeGeneratorPtr gen = irg::stringValue("Hello");
+		core::NodePtr res = gen->generate(match);
+
+		EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
+
+	}
+
+	TEST(IRGenerator, IntType) {
+
+		core::NodeManager manager;
+
+		// create some dummy match
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
+
+		TreeGeneratorPtr gen = irg::int4();
+		core::NodePtr res = gen->generate(match);
+
+		EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
+
+	}
 
 } // end namespace generator
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std

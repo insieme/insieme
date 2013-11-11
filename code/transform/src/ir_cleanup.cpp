@@ -44,6 +44,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/simplify.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -51,7 +52,6 @@
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/transform/connectors.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/transform/dfabased/dead_variables.h"

@@ -34,12 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_generator.h"
 
-#include "insieme/transform/sequential/constant_folding.h"
+#include "insieme/core/transform/simplify.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 namespace generator {
 namespace irg {
@@ -205,7 +205,7 @@ namespace irg {
 			assert(a);
 
 			// simplify
-			return sequential::foldConstants(a->getNodeManager(), a);
+			return transform::simplify(a->getNodeManager(), a.as<NodePtr>());
 
 		}, "simplify");
 
@@ -216,5 +216,5 @@ namespace irg {
 } // end namespace irg
 } // end namespace generator
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

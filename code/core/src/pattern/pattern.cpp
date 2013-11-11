@@ -36,7 +36,7 @@
 
 #include <algorithm>
 
-#include "insieme/transform/pattern/pattern.h"
+#include "insieme/core/pattern/pattern.h"
 
 #include "insieme/core/ir.h"
 
@@ -62,7 +62,7 @@ namespace core {
 } // end namespace core
 
 
-namespace transform {
+namespace core {
 namespace pattern {
 
 	namespace details {
@@ -822,7 +822,7 @@ namespace pattern {
 
 				// special case: repetition of a wildcard
 				if (pattern.pattern->type == ListPattern::Single &&
-						static_pointer_cast<insieme::transform::pattern::list::Single>(pattern.pattern)->element->type == TreePattern::Wildcard) {
+						static_pointer_cast<insieme::core::pattern::list::Single>(pattern.pattern)->element->type == TreePattern::Wildcard) {
 					assert(std::distance(begin, end) >= pattern.minRep);
 					return delayedCheck(context);
 				}
@@ -979,20 +979,20 @@ namespace pattern {
 
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::PatternPtr& pattern) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::PatternPtr& pattern) {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
 	}
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreePatternPtr& pattern) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::TreePatternPtr& pattern) {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
 	}
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListPatternPtr& pattern) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::ListPatternPtr& pattern) {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
 	}
 

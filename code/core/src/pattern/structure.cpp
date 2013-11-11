@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/core/pattern/structure.h"
 
 #include <boost/lexical_cast.hpp>
 
 #include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
 	const char Tree::VALUE_ID = 'v';
@@ -181,5 +181,5 @@ namespace pattern {
 	}
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

@@ -34,27 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/rule.h"
+#pragma once
 
-#include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/generator.h"
+#include "insieme/core/pattern/structure.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/generator.h"
+
+#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace transform {
+namespace core {
 namespace pattern {
 
-	core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
-		auto match = pattern->matchPointer(tree);
-		if (!match) return core::NodePtr();
-		return generator->generate(*match);
-	}
+	/**
+	 * A rule consisting of a pattern to be matched and a generator rule
+	 * producing the replacement for the matched structure.
+	 */
+	class Rule : public utils::Printable {
 
-	TreePtr Rule::applyTo(const TreePtr& tree) const {
-		auto match = pattern->matchTree(tree);
-		if (!match) return TreePtr();
-		return generator->generate(*match);
-	}
+		TreePatternPtr pattern;
+		TreeGeneratorPtr generator;
+
+	public:
+
+		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
+			: pattern(pattern), generator(generator) {}
+
+		core::NodePtr applyTo(const core::NodePtr& tree) const;
+
+		// for testing only ...
+		TreePtr applyTo(const TreePtr& tree) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return pattern->printTo(out) << " -> " << *generator;
+		}
+	};
+
+    inline core::NodePtr apply(const core::NodePtr& node, const TreePatternPtr& pattern, const TreeGeneratorPtr& generator) {
+        return Rule(pattern, generator).applyTo(node);
+    }
+
 
 } // end namespace pattern
-} // end namespace transform
+} // end namespace core
 } // end namespace insieme

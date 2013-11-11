@@ -39,7 +39,7 @@
 #include <vector>
 #include "insieme/transform/transformation.h"
 
-#include "insieme/transform/pattern/rule.h"
+#include "insieme/core/pattern/rule.h"
 
 namespace insieme {
 namespace transform {
@@ -56,7 +56,7 @@ namespace rulebased {
 		/**
 		 * The set of rules to be tested.
 		 */
-		vector<pattern::Rule> rules;
+		vector<core::pattern::Rule> rules;
 
 	public:
 
@@ -69,7 +69,7 @@ namespace rulebased {
 		 */
 		template<typename ... Rules>
 		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const Rules& ... rules)
-			: Transformation(type, param), rules(toVector<pattern::Rule>(rules...)) {}
+			: Transformation(type, param), rules(toVector<core::pattern::Rule>(rules...)) {}
 
 		/**
 		 * A constructor accepting a list of rules.
@@ -78,7 +78,7 @@ namespace rulebased {
 		 * @param param the parameters specifying details of this transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
-		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<pattern::Rule>& rules);
+		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<core::pattern::Rule>& rules);
 
 		/**
 		 * Implements the actual transformation by scanning through the internally
@@ -91,7 +91,7 @@ namespace rulebased {
 		/**
 		 * Obtains a reference to the internally used rules.
 		 */
-		const vector<pattern::Rule>& getRules() const {
+		const vector<core::pattern::Rule>& getRules() const {
 			return rules;
 		}
 	};
