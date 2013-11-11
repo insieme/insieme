@@ -105,6 +105,9 @@ namespace cba {
 		assert_true(a->getType().isa<core::RefTypePtr>()) << "Expected reference value - got value of type: " << *a->getType() << "\n";
 		assert_true(b->getType().isa<core::RefTypePtr>()) << "Expected reference value - got value of type: " << *b->getType() << "\n";
 
+		// shortcut for the simple stuff
+		if (a == b) return true;
+
 		typedef Reference<DefaultContext> Reference;
 
 		// compute references set
@@ -124,6 +127,9 @@ namespace cba {
 		assert_eq(a.getRootNode(), b.getRootNode());
 		assert_true(a->getType().isa<core::RefTypePtr>()) << "Expected reference value - got value of type: " << *a->getType() << "\n";
 		assert_true(b->getType().isa<core::RefTypePtr>()) << "Expected reference value - got value of type: " << *b->getType() << "\n";
+
+		// shortcut for the simple stuff
+		if (a == b) return true;
 
 		typedef Reference<DefaultContext> Reference;
 

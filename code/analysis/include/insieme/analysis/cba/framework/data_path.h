@@ -382,7 +382,7 @@ namespace cba {
 		bool isOverlapping(const DataPath& other) const {
 
 			auto stepsA = getSteps();
-			auto stepsB = getSteps();
+			auto stepsB = other.getSteps();
 
 			// check common path for divergences
 			size_t steps = std::min(stepsA.size(), stepsB.size());
