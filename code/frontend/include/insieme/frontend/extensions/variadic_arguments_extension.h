@@ -121,6 +121,4 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
         }
         return false;
     }
-
->>>>>>> c2f4de8e0fee6de91407a46b6aad7055a0c2df5a
 };
