@@ -1,14 +1,16 @@
-//#include <iostream>
+#include <iostream>
 
 
 
 class Obj{
 	public:
+		Obj() : a(0), b(1) {}
+
 		int a;
-		float b;
+		int b;
 };
 
-typedef (Obj::*mem_ptr_t);
+typedef int (Obj::*mem_ptr_t);
 
 
 int main (){
@@ -16,10 +18,10 @@ int main (){
 	mem_ptr_t ptr = 0;
 
 	Obj object;
-	ptr = &(object.a);
+	ptr = &Obj::a;
 
 
-
+	std::cout << "ptr: " << object.*ptr << std::endl;
 
 
 	return 0;

@@ -253,6 +253,11 @@ namespace core {
 		LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
 
 		/**
+		 * build type tokens (metatypes.... one of those => type<'a>  when 'a is a bounded to an specific type)
+		 */
+		TypePtr getTypeLiteralType(const TypePtr& type) const;
+
+		/**
 		 * A factory method for a type literals.
 		 */
 		LiteralPtr getTypeLiteral(const TypePtr& type) const;

@@ -251,6 +251,35 @@ namespace lang {
 			"('a)->struct { ref<std::type_info>  _const_cpp_ref; }"
 		);
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//	member pointer (only for data member pointers)
+	
+
+		/**
+		 * a member pointer needs to keep track of:
+		 *  - the type the member belongs to
+		 *  - the name of the field
+		 *  - the field type
+		 */
+	//	LANG_EXT_LITERAL(MemberPointer, "memb_ptr", "struct { type<'a> objType; identifier id; type<'b> membType; };" );
+
+		/**
+		 * to construct a member pointer we provide the tree elements listed above to initialize the struct
+		 */
+		LANG_EXT_DERIVED(MemberPointerCtor, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; } in "
+											"(type<'a> obj, identifier id, type<'b> field) -> mem_ptr { " 
+												"return (mem_ptr) { obj, id, field };" 
+											"}");
+
+		/**
+		 * the access is done by narrowing the given object to the defined element
+		 */
+		LANG_EXT_DERIVED(MemberPointerAccess, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; } in "
+											  "(ref<'a> obj, memb_ptr m) -> ref<'b> { "
+											  	"return ref.narrow(obj, db.member(db.root, m.id), m.membType);"
+											  " }");
+					 
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////

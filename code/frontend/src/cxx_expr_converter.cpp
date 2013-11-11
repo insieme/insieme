@@ -190,6 +190,30 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 			return retIr;
 		}
 	}
+
+	if (const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl() ) ) {
+		declRef->dump();
+		field->dump();
+//		unsigned offset = field->getFieldIndex ();
+//		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl());
+//		core::TypePtr membType = convFact.convertType(declRef->getType().getTypePtr());
+//
+//		std::cout << field->getNameAsString() << std::endl;
+//
+		
+
+
+
+		// this is the direct access to a member field in a generic way: something like Obj::a
+
+
+
+
+
+		frontend_assert(false ) <<" building!\n";
+	}
+
+
 	return retIr = Converter::ExprConverter::VisitDeclRefExpr (declRef);
 }
 

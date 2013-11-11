@@ -342,11 +342,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
 	}
 	else {
 		frontend_assert (memPointerTy->isMemberDataPointer());
-
-		frontend_assert(false) << "to implement\n";
-
-		return nullptr;
-
+    	return retTy = core::analysis::getMemberPointer(classTy, memTy);
 	}
 }
 
