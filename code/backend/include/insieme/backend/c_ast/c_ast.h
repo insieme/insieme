@@ -244,6 +244,14 @@ namespace c_ast {
         virtual bool equals(const Node& node) const;
     };
 
+    struct MemberFieldPointer : public Type {
+		TypePtr parentType;
+		TypePtr type;
+        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy) 
+			: Type(NT_MemberFieldPointer), parentType(parentTy), type(fieldTy) {}
+        virtual bool equals(const Node& node) const;
+    };
+
 	// -- Statements -----------------------------
 
 	struct Statement : public Node {
@@ -430,8 +438,8 @@ namespace c_ast {
 			PostfixDec,
 			LogicNot,
 			BitwiseNot,
-			Indirection,
-			Reference,
+			Indirection,   // *
+			Reference,	   // &
 			SizeOf,
 			Typeid,
 			ComplexReal,

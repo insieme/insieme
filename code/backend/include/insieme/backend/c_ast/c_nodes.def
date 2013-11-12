@@ -268,11 +268,13 @@ AST_TERMINAL(MemberFunction, Definition)
 
 AST_TERMINAL(ComplexType, Type)
 
-
 // --- Enum Extensions ---
-//
 
 AST_TERMINAL(EnumType, Type)
+
+// --- member pointer Extensions ---
+
+AST_TERMINAL(MemberFieldPointer, Type)
 
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------

@@ -10,7 +10,7 @@ class Obj{
 		int b;
 };
 
-typedef int (Obj::*mem_ptr_t);
+typedef int (Obj::* mem_ptr_t);
 
 
 int main (){

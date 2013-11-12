@@ -61,6 +61,7 @@
 #include "insieme/backend/c_ast/c_code.h"
 
 #include "insieme/backend/addons/cpp_references.h"
+#include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/simd_vector.h"
@@ -83,6 +84,7 @@ namespace runtime {
 	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation) {
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation);
 		res->addAddOn<addons::CppReferences>();
+		res->addAddOn<addons::CppMembAddon>();
         res->addAddOn<addons::ComplexType>();
         res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::SIMDVector>();
