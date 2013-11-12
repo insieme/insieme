@@ -123,7 +123,8 @@ namespace addons {
 				});
 
 			res[ext.getMemberPointerAccess()] 	  = OP_CONVERTER({ 
-					return pointerToMember(CONVERT_ARG(0), CONVERT_ARG(1)); 
+					// FIXME: is this right?
+					return c_ast::ref(pointerToMember(CONVERT_ARG(0), CONVERT_ARG(1))); 
 				});
 
 			#include "insieme/backend/operator_converter_end.inc"

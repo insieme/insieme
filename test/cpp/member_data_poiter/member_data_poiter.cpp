@@ -20,9 +20,9 @@ int main (){
 	Obj object;
 	ptr = &Obj::a;
 
-
 	std::cout << "ptr: " << object.*ptr << std::endl;
-
+	object.*ptr = 4;
+	std::cout << "ptr: " << object.*ptr << std::endl;
 
 	return 0;
 }
