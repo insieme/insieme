@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -334,7 +334,7 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 	}
 	else {
 		// if we translated the object, is better to retrieve info from our struct or union
-		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>());
+		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>()) << baseTy << "is not a NamedCompositeType";
 		for (const auto& cur : baseTy.as<core::NamedCompositeTypePtr>()->getEntries()){
 			if (cur->getName() == ident){
 				membType = cur->getType();
@@ -1666,9 +1666,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		auto fit = convFact.wrapRefMap.find(retIr.as<core::VariablePtr>());
 		if (fit == convFact.wrapRefMap.end()) {
 			fit = convFact.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(),
-													   builder.variable(builder.refType(retIr->getType())))).first;
+												builder.variable(builder.refType(retIr->getType())))).first;
+
+			VLOG(2) << "parmVar wrapped from " << retIr << " (" << retIr->getType() << ")" << " to " << fit->second << "(" << fit->second->getType();
 		}
-		return fit->second;
+		return (retIr = fit->second);
 	}
 
 	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {

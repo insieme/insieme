@@ -566,20 +566,9 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	}
 	else{
 		// beware of const pointers
-		if (utils::isRefArray(irType) && varTy.isConstQualified())
+		if (utils::isRefArray(irType) && varTy.isConstQualified()) {
 			irType = builder.refType(irType);
-
-        // if is a constant obj:
-        // might be intercepted
-        // might be generic
-        if (varTy.isConstQualified()) {
-            if((lookupTypeDetails(irType)->getNodeType() == core::NT_StructType) ||
-               (getProgram().getInterceptor().isIntercepted(valDecl->getQualifiedNameAsString()))) {
-                irType = builder.refType(irType);
-            }
-        }
-
-
+		}
 	}
 
 	// if is a global variable, a literal will be generated, with the qualified name
@@ -649,8 +638,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
 	// the IR variable and insert it into the map for future lookups
 	core::VariablePtr&& var = builder.variable( irType );
-	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
-	VLOG(2) << "IR var type" << var.getType();
+	VLOG(2) << "IR variable " << var.getType()->getNodeType() << " " << var<<":"<<varDecl->getNameAsString();
+	VLOG(2) << "IR var type " << var.getType();
 
 	varDeclMap.insert( { valDecl, var } );
 
