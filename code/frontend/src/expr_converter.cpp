@@ -1343,8 +1343,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		{
 			retIr = subExpr;
 
-			unOp->dump();
-
 			// in the case we are getting the address of a function the & operator
 			// has no effects, therefore we return
 			if (retIr->getType()->getNodeType() == core::NT_FunctionType) {
