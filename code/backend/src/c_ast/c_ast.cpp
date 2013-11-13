@@ -244,6 +244,11 @@ namespace c_ast {
         return ((name == other.name) && (annotation == other.annotation));
     }
 
+    bool MemberFieldPointer::equals(const Node& node) const {
+        assert(dynamic_cast<const MemberFieldPointer*>(&node));
+        auto other = static_cast<const MemberFieldPointer&>(node);
+        return ((*parentType == *other.parentType) && (*type == *other.type));
+    }
 
 	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
 				: Statement(NT_VarDecl), varInit(initList) {

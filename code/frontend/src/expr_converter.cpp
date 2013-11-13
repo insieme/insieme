@@ -1352,7 +1352,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			// make sure it is a L-Value
 			retIr = asLValue(retIr);
 
-			frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType);
+			frontend_assert(retIr->getType().isa<core::RefTypePtr>()) << "not a ref? " << retIr << " : " << retIr->getType();
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
 	// *a

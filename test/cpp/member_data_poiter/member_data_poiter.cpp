@@ -10,7 +10,7 @@ class Obj{
 		int b;
 };
 
-typedef int (Obj::*mem_ptr_t);
+typedef int (Obj::* mem_ptr_t);
 
 
 int main (){
@@ -20,9 +20,9 @@ int main (){
 	Obj object;
 	ptr = &Obj::a;
 
-
 	std::cout << "ptr: " << object.*ptr << std::endl;
-
+	object.*ptr = 4;
+	std::cout << "ptr: " << object.*ptr << std::endl;
 
 	return 0;
 }

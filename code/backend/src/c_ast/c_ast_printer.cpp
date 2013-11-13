@@ -205,6 +205,12 @@ namespace c_ast {
                 return out  << "enum " << node->name << " { " << node->annotation << " };";
             }
 
+            PRINT(MemberFieldPointer) {
+				assert(false && "this should never be reached, we can not define a member pointer without name");
+                return out  << " /* this type should not be here*/ ";
+            }
+
+
 			PRINT(VarDecl) {
 				// handle single-variable declaration ...
 				if (node->varInit.size() == 1u) {
@@ -828,7 +834,10 @@ namespace c_ast {
 
 		TypePtr computeNesting(TypeNesting& data, const TypePtr& type) {
 			// check whether there is something to do
-			if (type->getType() != NT_PointerType && type->getType() != NT_VectorType && type->getType() != NT_FunctionType) {
+			if (type->getType() != NT_PointerType && 
+				type->getType() != NT_VectorType && 
+				type->getType() != NT_FunctionType && 
+				type->getType() != NT_MemberFieldPointer ){
 				return type;
 			}
 
@@ -843,7 +852,7 @@ namespace c_ast {
 			}
 
 			// collect function parameters
-			if (cur->getType() == NT_FunctionType) {
+			if ((cur->getType() == NT_FunctionType) || (cur->getType() == NT_MemberFieldPointer)){
 
 				// if vectors have already been processed => continue with next level
 				if (!res.subscripts.empty()) {
@@ -852,13 +861,20 @@ namespace c_ast {
 					return innermost;
 				}
 
-				FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
-				copy(funType->parameterTypes, std::back_inserter(res.parameters));
-				res.hasParameters = true;
-
-				res.owner = static_pointer_cast<StructType>(static_pointer_cast<FunctionType>(cur)->classType);
-
-				cur = funType->returnType;
+				if (cur->getType() == NT_FunctionType){
+					FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
+					copy(funType->parameterTypes, std::back_inserter(res.parameters));
+					res.hasParameters = true;
+					res.owner = static_pointer_cast<StructType>(static_pointer_cast<FunctionType>(cur)->classType);
+					cur = funType->returnType;
+				}
+				if (cur->getType() == NT_MemberFieldPointer){
+					res.hasParameters = false;
+					res.owner = static_pointer_cast<StructType>(static_pointer_cast<MemberFieldPointer>(cur)->parentType);
+					cur = static_pointer_cast<MemberFieldPointer>(cur)->type;
+					data.push_back(res);
+					res.pointers.push_back(false);
+				}
 			}
 
 			// count pointers
@@ -941,7 +957,6 @@ namespace c_ast {
 		c_ast::VariablePtr var;
 
 		return out << join(", ", params, [](std::ostream& out, const c_ast::VariablePtr& var) {
-
 			// special handling for varargs
 			if (var->type->getType() == c_ast::NT_VarArgsType) {
 				out << "...";
