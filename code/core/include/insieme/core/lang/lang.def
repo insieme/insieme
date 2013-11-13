@@ -67,8 +67,8 @@ TYPE(Any, "any")
 TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
-TYPE(WChar16,  "wchar16")
-TYPE(WChar32,  "wchar32")
+TYPE(WChar16,  "wchar<16>")
+TYPE(WChar32,  "wchar<32>")
 TYPE(String, "ref<array<char,1>>")
 TYPE(Identifier, "identifier")
 
@@ -313,20 +313,31 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
       // TO INT
-GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
+GROUP( ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
 LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (WCharToInt,	"wchar.to.int",   "(wchar<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
 LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
 LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
 
       // TO UINT
-GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
+GROUP( ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
 LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (WCharToUnsigned,	"wchar.to.uint","(wchar<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
 LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
 LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
+
+	  // TO WCHAR
+GROUP( ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
+LITERAL (SignedToWChar,	    "int.to.wchar" ,	"(int<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (UnsignedToWChar,	"uint.to.wchar",    "(uint<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (RealToWChar,		"real.to.wchar",    "(real<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (CharToWChar,		"char.to.wchar",    "(char,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (BoolToWChar,		"bool.to.wchar",    "(bool,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (WCharPrecisionFix, "wchar.precision",  "(wchar<#a>,intTypeParam<#b>) -> wchar<#b>")
 
       // TO REAL
 GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)

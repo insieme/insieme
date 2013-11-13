@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -505,6 +505,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 	core::TypePtr type;
 	int width = intLit->getValue().getBitWidth()/8;
 	switch(width){
+		case 1:
+			type = builder.getLangBasic().getInt1();
+			break;
+		case 2:
+			type = builder.getLangBasic().getInt2();
+			break;
 		case 4:
 			type = builder.getLangBasic().getInt4();
 			break;
@@ -515,7 +521,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 			type = builder.getLangBasic().getInt16();
 			break;
 		default:
-			frontend_assert(false ) << "unknow integer literal width\n";
+			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
 	}
 
     retExpr =  builder.literal(type, toString(value));
