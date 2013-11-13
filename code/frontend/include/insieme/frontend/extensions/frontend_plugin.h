@@ -48,6 +48,7 @@ namespace clang {
     class Stmt;
     class Decl;
     class Type;
+    class FunctionDecl;
 }
 
 namespace stmtutils {
@@ -96,12 +97,15 @@ namespace extensions {
         virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
         virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+
         virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                        insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
                                                  insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
                                                  insieme::frontend::conversion::Converter& convFact);
+        virtual void PostVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+
         // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);

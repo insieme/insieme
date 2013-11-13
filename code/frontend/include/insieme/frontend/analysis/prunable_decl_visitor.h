@@ -124,12 +124,7 @@ class PrunableDeclVisitor{
 	 */
 	void dispatchDecl(const clang::Decl* decl){
 		static_cast<BASE*>(this)->echocallback(decl);
-		//check if a user provided decl visitor wants
-		//to do something with the declaration
-		bool wasVisited = false;
-		for(auto plugin : static_cast<BASE*>(this)->getConverter().getConversionSetup().getPlugins()) {
-            wasVisited = plugin->Visit(decl, static_cast<BASE*>(this)->getConverter());
-		}
+		
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{
@@ -138,8 +133,7 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Record:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 
 					break;
@@ -147,8 +141,7 @@ class PrunableDeclVisitor{
 			case clang::Decl::CXXRecord:
 				{
 					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 
 					break;
@@ -156,8 +149,7 @@ class PrunableDeclVisitor{
 			case clang::Decl::Var:
 				{
 					if (llvm::cast<clang::VarDecl>(decl)->getType().getTypePtr()->isDependentType() && !visitTemplates) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
+                    static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
 			case clang::Decl::CXXDestructor:
@@ -169,38 +161,34 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Function:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
+                    static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
 			case clang::Decl::Typedef:
 				{
 					if (llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
+                    static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
 					break;
 				}
 			case clang::Decl::LinkageSpec:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
+                    static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplate:
 				{
-					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
+					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;
 				}
 			case clang::Decl::FunctionTemplate:
 				{
-					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
+					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
 					break;
 				}
 
