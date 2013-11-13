@@ -505,6 +505,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 	core::TypePtr type;
 	int width = intLit->getValue().getBitWidth()/8;
 	switch(width){
+		case 1:
+			type = builder.getLangBasic().getInt1();
+			break;
+		case 2:
+			type = builder.getLangBasic().getInt2();
+			break;
 		case 4:
 			type = builder.getLangBasic().getInt4();
 			break;
@@ -515,7 +521,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 			type = builder.getLangBasic().getInt16();
 			break;
 		default:
-			frontend_assert(false ) << "unknow integer literal width\n";
+			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
 	}
 
     retExpr =  builder.literal(type, toString(value));
@@ -1346,7 +1352,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			// make sure it is a L-Value
 			retIr = asLValue(retIr);
 
-			frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType);
+			frontend_assert(retIr->getType().isa<core::RefTypePtr>()) << "not a ref? " << retIr << " : " << retIr->getType();
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
 	// *a

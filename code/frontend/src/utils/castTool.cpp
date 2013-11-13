@@ -228,6 +228,10 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 		else if (gen.isUInt8(type)) return 8;
 		else if (gen.isUInt16(type))return 16;
 	}
+	else if (gen.isWChar(type)){
+		if 		(gen.isWChar16(type)) return 16;
+		else if (gen.isWChar32(type)) return 32;
+	}
 	else if (gen.isBool(type) || gen.isChar(type))
 		return 1;
     else if (type.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))
@@ -278,7 +282,8 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (exprTy))		code = 3;
 	if (gen.isChar (exprTy))		code = 4;
 	if (gen.isBool (exprTy))		code = 5;
-    if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(exprTy)) code = 6;
+    if (gen.isWChar(exprTy))		code = 6;
+    if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(exprTy)) code = 7;
 
 	// identify target type
 	if (gen.isSignedInt (targetTy)) 	code += 10;
@@ -286,7 +291,8 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (gen.isReal (targetTy))			code += 30;
 	if (gen.isChar (targetTy))			code += 40;
 	if (gen.isBool (targetTy))			code += 50;
-	if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)) code += 60;
+	if (gen.isWChar(targetTy))			code += 60;
+	if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)) code += 70;
 
 	core::ExpressionPtr op;
 	bool precision = true;
@@ -296,12 +302,12 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 			// only if target precission is smaller, we may have a precission loosse.
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
-        case 16:
+        case 17:
             return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
 		case 22:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
-        case 26:
+        case 27:
             return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
@@ -312,17 +318,21 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 			// is a preccision adjust, if is on the same type,
 			// no need to adjust anything
 			return expr;
+		case 66:
+			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getWCharPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			else return expr;
 
-			break;
 		case 12: op = gen.getUnsignedToInt(); break;
 		case 13: op = gen.getRealToInt(); break;
 		case 14: op = gen.getCharToInt(); break;
 		case 15: op = gen.getBoolToInt(); break;
+		case 16: op = gen.getWCharToInt(); break;
 
 		case 21: op = gen.getSignedToUnsigned(); break;
 		case 23: op = gen.getRealToUnsigned(); break;
 		case 24: op = gen.getCharToUnsigned(); break;
 		case 25: op = gen.getBoolToUnsigned(); break;
+		case 26: op = gen.getWCharToUnsigned(); break;
 
 		case 31: op = gen.getSignedToReal(); break;
 		case 32: op = gen.getUnsignedToReal(); break;
@@ -339,12 +349,20 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		case 53: op = gen.getRealToBool();    precision=false; break;
 		case 54: op = gen.getCharToBool();    precision=false; break;
 
-		case 61: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+		case 57: return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsBool(), expr);
+
+		case 61: op = gen.getSignedToWChar(); break;
+		case 62: op = gen.getUnsignedToWChar(); break;
+		case 63: op = gen.getRealToWChar(); break;
+		case 64: op = gen.getCharToWChar(); break;
+		case 65: op = gen.getBoolToWChar(); break;
+
+		case 71: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
                                      builder.refVar(expr), builder.getTypeLiteral(targetTy)));
-		case 62: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+		case 72: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
                                      builder.refVar(expr), builder.getTypeLiteral(targetTy)));
 
-        case 66: return expr;
+        case 77: return expr;
 
 		default:
 				 std::cerr << "expr type: " << exprTy << std::endl;

@@ -157,6 +157,11 @@ namespace analysis {
 
 	// --------------------------- data member pointer -----------------------------------
 	
+	/** 
+	 * queries whenever this is or not a member pointer type
+	 */
+	bool isMemberPointer (const TypePtr& type);
+
 	/**
 	 * constructs a member pointer type
 	 * @param the class of the owner object
@@ -170,7 +175,14 @@ namespace analysis {
 	 * @param
 	 * @param
 	 */
-	TypePtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy);
+	ExpressionPtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy);
+
+	/**
+	 * access of a member pointer
+	 * @param
+	 * @param
+	 */
+	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& parent, const ExpressionPtr& expr);
 
 	// ---------------------------- Constructors --------------------------------------
 

@@ -42,6 +42,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
 
+#include "insieme/core/datapath/datapath.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -177,19 +179,59 @@ namespace analysis {
 
 	// --------------------------- data member pointer -----------------------------------
 	
-	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy){
-			NodeManager& manager = classType.getNodeManager();
-			IRBuilder builder(manager);
-			return builder.structType(toVector(
-					builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
-					builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
-					builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))
-			));
+	bool isMemberPointer (const TypePtr& type){
+
+		// filter out null-pointer
+		if (!type) return false;
+
+		// must be a struct type
+		StructTypePtr structType = type.isa<StructTypePtr>();
+		if (!structType) return false;
+
+		// has 3 elements
+		if (structType.size() != 3u) return false;
+
+		NamedTypePtr element = structType[0];
+		if ( !isTypeLiteralType(element->getType())) 	return false;
+		if (element->getName().getValue() != "objType") return false;
+
+		element = structType[1];
+		//if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
+		if (element->getName().getValue() != "id") return false;
+
+		element = structType[2];
+		if ( !isTypeLiteralType(element->getType())) 	 return false;
+		if (element->getName().getValue() != "membType") return false;
+
+		return true;
 	}
 
-	TypePtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy){
-		assert(false && "dont mess with this");
-		return nullptr;
+	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy){
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+		return builder.structType(toVector(
+				builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
+				builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
+				builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))
+		));
+	}
+
+	ExpressionPtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membType){
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired member pointer struct
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCtor();
+		return builder.callExpr(access, toVector<core::ExpressionPtr>(builder.getTypeLiteral(classType), builder.getIdentifierLiteral(fieldName), builder.getTypeLiteral(membType)));
+	}
+
+	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& base, const ExpressionPtr& expr){
+		NodeManager& manager = base.getNodeManager();
+		IRBuilder builder(manager);
+		
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
+		return builder.callExpr(access,  toVector(base, expr));
 	}
 
 	// --------------------------- C++ calls ---------------------------------------------

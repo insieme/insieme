@@ -1185,7 +1185,7 @@ namespace {
 
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
-core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 
@@ -1263,11 +1263,11 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		});
 
-		// convert function body
 		//   - set up context to contain current list of parameters and convert body
 		Converter::ParameterList oldList = curParameter;
 		curParameter = &params;
 
+		// convert function body
 		core::StatementPtr body = convertStmt( funcDecl->getBody() );
 		curParameter = oldList;
 
@@ -1312,6 +1312,35 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// annotate and return results
 	return symbol;
+}
+
+core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, const bool visitByPlugin) {
+
+    if(!visitByPlugin) {
+            return convertFunctionDeclImpl(funcDecl);
+    }
+
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        plugin->Visit(funcDecl, *this);
+    }
+
+    convertFunctionDeclImpl(funcDecl);
+
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        plugin->PostVisit(funcDecl, *this);
+    }
+
+    // the function has already been converted
+    return convertFunctionDeclImpl(funcDecl);
+
+    //auto pos = lambdaExprCache.find(funcDecl);
+    //if (pos != lambdaExprCache.end()) {
+    //    return pos->second;		// done
+    //}
+    //else {
+    //    assert(false && "The function declaration was not converted!");
+    //    return nullptr;
+    //}
 }
 
 //////////////////////////////////////////////////////////////////

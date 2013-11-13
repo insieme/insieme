@@ -89,9 +89,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "wchar16");
+	CHECK_BUILTIN_TYPE(Char16, "wchar<16>");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "wchar32");
+	CHECK_BUILTIN_TYPE(Char32, "wchar<32>");
 	// WChar
 	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
 

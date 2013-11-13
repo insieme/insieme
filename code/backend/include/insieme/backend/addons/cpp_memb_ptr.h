@@ -29,19 +29,39 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/frontend/expr_converter.h"
+#include "insieme/backend/addon.h"
 
-using namespace insieme;
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ member pointer
+ */
+namespace insieme {
+namespace backend {
+namespace addons {
 
-class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin
-{        
 
-};
+	/**
+	 * An Add-On realizing support for C++ member pointer
+	 */
+	struct CppMembAddon : public AddOn {
+
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+
+	};
+
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme
