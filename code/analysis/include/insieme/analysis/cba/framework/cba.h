@@ -373,7 +373,7 @@ namespace cba {
 					if (isMemoryConstructor(cur)) {
 						for(const auto& ctxt : this->getContexts(cba)) {
 							// TODO: move location creation utility to location constructor
-							auto loc = cba.getLocation<Context>(cur, ctxt);
+							auto loc = getLocation<Context>(cur, ctxt);
 							if (!contains(*locations, loc)) {
 								locations->push_back(loc);
 							}
@@ -599,25 +599,6 @@ namespace cba {
 		template<typename Context>
 		const std::vector<Location<Context>>& getLocations() {
 			return getContainer<Context>().getLocations(*this);
-		}
-
-		// TODO: remove default values
-		// TODO: think about moving this to the reference analysis module
-		template<typename Context>
-		Location<Context> getLocation(const core::ExpressionAddress& ctor, const Context& ctxt) {
-
-			assert(isMemoryConstructor(ctor));
-
-			// obtain address of definition point
-			auto def = getLocationDefinitionPoint(ctor);
-
-			// for globals the call context and thread context is not relevant
-			if (ctor.isa<core::LiteralPtr>()) {
-				return Location<Context>(def, Context());
-			}
-
-			// create the location instance
-			return Location<Context>(def, ctxt);
 		}
 
 		template<typename Context>
