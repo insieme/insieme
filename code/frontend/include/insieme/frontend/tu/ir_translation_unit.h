@@ -156,13 +156,11 @@ namespace tu {
 			assert_eq(*symbol->getType(), *definition->getType());
 			//check if function exists, if it exists we
 			//have to check if they are really the same.
-			//assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
-			if(functions.find(symbol) != functions.end()) {
-                assert_true(core::analysis::equalNormalize ( definition, functions[symbol] ))
-                		<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
-                		<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
+			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
+					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
+					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
+					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
 
-			}
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
