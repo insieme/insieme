@@ -656,14 +656,7 @@ namespace backend {
 			try {
 				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
 				if(form.isConstant() || form.isValue()) return true;
-			} catch(const core::arithmetic::NotAFormulaException&) { }
-			return false;
-		}
-		bool isConstant(const core::ExpressionPtr& exp) {
-			try {
-				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
-				if(form.isInteger()) return true;
-			} catch(const core::arithmetic::NotAFormulaException&) { }
+			} catch(core::arithmetic::NotAFormulaException e) { }
 			return false;
 		}
 	}
@@ -689,26 +682,16 @@ namespace backend {
 		// - if simple: use directly
 		// - if not: build variables to store results
 
-		// handle end
-		core::ExpressionPtr end = ptr->getEnd();
-		c_ast::ExpressionPtr end_value = convertExpression(context, end);
-		if(!isSimple(end)) {
-			// create variable storing end
-			c_ast::VariablePtr end_var = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
-			initVector.push_back(std::make_pair(end_var, end_value));
-			end_value = end_var;
-		}
-
 		// handle step
 		core::ExpressionPtr step = ptr->getStep();
-		c_ast::ExpressionPtr step_value = convertExpression(context, step);
-		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, step_value);
+		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
 		if(!isSimple(step)) {
 			// create variable storing step
 			c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
-			initVector.push_back(std::make_pair(var_step, step_value));
+			initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
 			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
-		} else { // use pre(inc/dec) if abs(step) == 1
+		}
+		else { // use pre(inc/dec) if abs(step) == 1
 			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
 			if(form.isConstant()) {
 				if(form.isOne()) cStep = c_ast::preInc(info_iter.var);
@@ -716,24 +699,16 @@ namespace backend {
 			}
 		}
 
-		// build end-value check (depending on step direction)
-		c_ast::ExpressionPtr cCheck;
-		if (step.isa<core::LiteralPtr>() && isConstant(step)) {
-			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
-			if (form.isInteger() && form.getIntegerValue() > 0) {
-				cCheck = c_ast::lt(info_iter.var, end_value);
-			} else {
-				cCheck = c_ast::gt(info_iter.var, end_value);
-			}
-		} else {
-			// create a new boolean variable determining the iteration direction
-			auto up_value = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_up"));
-			initVector.push_back(std::make_pair(up_value, c_ast::gt(step_value, manager->create<c_ast::Literal>("0"))));
-			cCheck = c_ast::logicOr(
-						c_ast::logicAnd(                up_value,  c_ast::lt(info_iter.var, end_value)),
-						c_ast::logicAnd(c_ast::logicNot(up_value), c_ast::gt(info_iter.var, end_value))
-			);
+		// handle end
+		core::ExpressionPtr end = ptr->getEnd();
+		c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
+		if(!isSimple(end)) {
+			// create variable storing end
+			c_ast::VariablePtr var_end = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
+			initVector.push_back(std::make_pair(var_end, convertExpression(context, end)));
+			cCheck = c_ast::lt(info_iter.var, var_end);
 		}
+
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());

@@ -99,10 +99,6 @@ class LoopAnalyzer {
 
 private:
 
-	enum loopDir{ 
-		LOOP_UP,
-		LOOP_DOWN,
-	};
 	Converter& 	convFact;
 
 	insieme::core::VariableList		conditionVars;			// variables used in conditions
@@ -110,25 +106,23 @@ private:
 	insieme::core::ExpressionPtr	originalInductionExpr;  // old induction expressio
 	insieme::core::VariablePtr		inductionVar;  			// New read only induction var
 
-	insieme::core::ExpressionPtr	normalizedInductionExpr; // Expression to use as iterator (normalized)
-	insieme::core::ExpressionPtr	normalizedIterations; 	// normalized number of iterations
+	insieme::core::ExpressionPtr	newInductionExpr; // Expression to use as iterator (normalized)
 
-	insieme::core::ExpressionPtr 	incrExpr;				// normalized increment ( +1 )
+	insieme::core::ExpressionPtr 	incrExpr;				// increment
 	insieme::core::ExpressionPtr    stepExpr; 				// step of each iteration
 
-	insieme::core::ExpressionPtr    initValue;				// lowe bonduary for real iteration
-	insieme::core::ExpressionPtr    endValue;				// upper bonduary
+	insieme::core::ExpressionPtr    initValue;				// lower boundary for real iteration
+	insieme::core::ExpressionPtr    endValue;				// upper boundary
 
 	insieme::core::StatementList	preStmts;  				// statements that need to be reproduced BEFORE the loop
 	insieme::core::StatementList	postStmts;  			// statements that need to be reproduced AFTER the loop
 	insieme::core::StatementList	firstStmts;				// statements that need to be reproduced at the BEGINNING of loop body
-	insieme::core::StatementList	lastStmts;				// statements that need to be reproduced at the END of loop body
 
-	loopDir direction;			// loop up or loop down, not used
-	bool    loopToBounduary;    // whenever to loop until value is equal, or until value is less than
-	bool    whileLessThan;       // if induction variable is compared while less than
-	bool    conditionLeft;       // if induction variable is compared while less than
-	bool    restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
+	bool	invertComparisonOp;			// loop up or loop down, not used
+	bool	loopToBoundary;    // whenever to loop until value is equal, or until value is less than
+	bool	whileLessThan;       // if induction variable is compared while less than
+	bool	conditionLeft;       // if induction variable is compared while less than
+	bool	restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
 
 
 	void findConditionVariables(const clang::ForStmt* forStmt);
@@ -150,7 +144,7 @@ public:
 	/**
 	 * retrieve the current induction expression used in the normalized loop
 	 */
-	const insieme::core::ExpressionPtr 	getInductionExpr() const { return normalizedInductionExpr; }
+	const insieme::core::ExpressionPtr 	getInductionExpr() const { return newInductionExpr; }
 
 	/**
 	 * retrieve the list of previous statements to be inserted BEFORE the loop
