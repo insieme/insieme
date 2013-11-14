@@ -882,10 +882,9 @@ public:
             return element;//->substitute(builder.getNodeManager(), *this);
         }
 
-        if(element->getNodeType() == core::NT_MarkerExpr) {
+        if(element->getNodeType() == core::NT_LambdaExpr) {
         	// check if we are at a function node
-            if(const core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(
-        	        static_pointer_cast<const core::MarkerExpr>(element)->getSubExpression())) {
+            if(const core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(element)) {
 
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
 //            return builder.lambdaExpr(func->getType(), func->getParams(), builder.compoundStmt());
@@ -893,7 +892,7 @@ public:
                 bool isKernelFunction = false;
                 bool workGroupSizeDefined = false;
 
-                auto cName = insieme::core::annotations::getAttachedName(func);
+                const string& cName = insieme::core::annotations::hasNameAttached(func) ? insieme::core::annotations::getAttachedName(func) : "";
                 auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
 
@@ -903,6 +902,7 @@ public:
                 size_t wgs[3] = {0};
                 for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
+
                     annotations::ocl::AnnotationPtr annot = (*I);
 
                     if(annotations::ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<annotations::ocl::WorkGroupSizeAnnotation>(annot)) {
@@ -915,7 +915,7 @@ public:
                         assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
                     }
                     if(annotations::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annotations::ocl::KernelFctAnnotation>(annot)) {
-                        isKernelFunction = kf->isKernelFct();
+						isKernelFunction = kf->isKernelFct();
                     }
 
                 }
@@ -1162,6 +1162,7 @@ public:
                     	datarange->replace(builder.getNodeManager(), params, newParams);
                     	newFunc->addAnnotation(datarange);
                     }
+
 
                     return newFunc;
                 }
