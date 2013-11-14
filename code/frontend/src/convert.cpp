@@ -918,7 +918,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 		}
 	}
 
-	pragma::attachPragma(node,funcDecl,*this).as<core::StatementPtr>();
+	pragma::attachPragma(node,funcDecl,*this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -952,10 +952,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // ---------------------------------------------------- OPENCL ----------------------------------------------------
 // if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
 	if (!kernelAnnotation.empty()) {
-		// create new marker node
-		core::MarkerExprPtr&& marker = builder.markerExpr(node);
-		marker->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
-		return marker;
+		node->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
 	}
 
 	return node;
