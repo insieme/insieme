@@ -57,6 +57,11 @@ namespace cba {
 	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& R();
 	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& r();
 
+	template<typename C> class Channel;
+	template<typename C> class ChannelConstraintGenerator;
+	template<typename C> const DataAnalysisType<Channel<C>,ChannelConstraintGenerator>& Ch();
+	template<typename C> const DataAnalysisType<Channel<C>,ChannelConstraintGenerator>& ch();
+
 	class Callee;
 	template<typename C> class FunctionConstraintGenerator;
 	extern const DataAnalysisType<Callee,FunctionConstraintGenerator> F;

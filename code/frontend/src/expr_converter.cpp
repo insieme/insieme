@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -334,7 +334,7 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 	}
 	else {
 		// if we translated the object, is better to retrieve info from our struct or union
-		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>());
+		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>()) << baseTy << "is not a NamedCompositeType";
 		for (const auto& cur : baseTy.as<core::NamedCompositeTypePtr>()->getEntries()){
 			if (cur->getName() == ident){
 				membType = cur->getType();
@@ -505,6 +505,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 	core::TypePtr type;
 	int width = intLit->getValue().getBitWidth()/8;
 	switch(width){
+		case 1:
+			type = builder.getLangBasic().getInt1();
+			break;
+		case 2:
+			type = builder.getLangBasic().getInt2();
+			break;
 		case 4:
 			type = builder.getLangBasic().getInt4();
 			break;
@@ -515,7 +521,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 			type = builder.getLangBasic().getInt16();
 			break;
 		default:
-			frontend_assert(false ) << "unknow integer literal width\n";
+			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
 	}
 
     retExpr =  builder.literal(type, toString(value));
@@ -1346,7 +1352,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			// make sure it is a L-Value
 			retIr = asLValue(retIr);
 
-			frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType);
+			frontend_assert(retIr->getType().isa<core::RefTypePtr>()) << "not a ref? " << retIr << " : " << retIr->getType();
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
 	// *a
@@ -1666,9 +1672,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		auto fit = convFact.wrapRefMap.find(retIr.as<core::VariablePtr>());
 		if (fit == convFact.wrapRefMap.end()) {
 			fit = convFact.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(),
-													   builder.variable(builder.refType(retIr->getType())))).first;
+												builder.variable(builder.refType(retIr->getType())))).first;
+
+			VLOG(2) << "parmVar wrapped from " << retIr << " (" << retIr->getType() << ")" << " to " << fit->second << "(" << fit->second->getType();
 		}
-		return fit->second;
+		return (retIr = fit->second);
 	}
 
 	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {

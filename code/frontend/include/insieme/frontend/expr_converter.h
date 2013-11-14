@@ -414,7 +414,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
@@ -448,6 +447,8 @@ public:
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
+
+	core::ExpressionPtr VisitUnaryOperator 				(const clang::UnaryOperator* unaryOp);
 
 	core::ExpressionPtr VisitBinPtrMemD					(const clang::BinaryOperator* binPtrMemDexpr);
 	core::ExpressionPtr VisitBinPtrMemI					(const clang::BinaryOperator* binPtrMemIexpr);

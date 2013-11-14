@@ -154,6 +154,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::Call
 	return irCall;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						  Unarty operator EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang::UnaryOperator *unOp) {
+	core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(unOp, retIr);
+
+	// member pointers are a spetial kind of expression that needs to be handled differently.
+	// we do not retreieve the address of it since there is no address
+	if ( unOp->getOpcode() == clang::UO_AddrOf) {
+		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
+		if(	core::analysis:: isMemberPointer (subExpr->getType()))
+			return subExpr;
+	}
+
+	return retIr = Converter::ExprConverter::VisitUnaryOperator (unOp);
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  MEMBER EXPRESSION
@@ -192,27 +209,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 	}
 
 	if (const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl() ) ) {
-		declRef->dump();
-		field->dump();
-//		unsigned offset = field->getFieldIndex ();
-//		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl());
-//		core::TypePtr membType = convFact.convertType(declRef->getType().getTypePtr());
-//
-//		std::cout << field->getNameAsString() << std::endl;
-//
-		
-
-
-
 		// this is the direct access to a member field in a generic way: something like Obj::a
-
-
-
-
-
-		frontend_assert(false ) <<" building!\n";
+		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl());
+		core::TypePtr membType = convFact.convertType(declRef->getType().getTypePtr());
+    	return retIr = core::analysis::getMemberPointerValue(classTy, field->getNameAsString(), membType);
 	}
-
 
 	return retIr = Converter::ExprConverter::VisitDeclRefExpr (declRef);
 }
@@ -936,14 +937,19 @@ namespace {
 
 	core::ExpressionPtr convertMemberFuncExecutor (const clang::BinaryOperator* clangExpr,  const frontend::conversion::Converter& convFact){
 		core::ExpressionPtr papa    = convFact.convertExpr(clangExpr->getLHS());
-		core::ExpressionPtr funcPtr = convFact.convertExpr(clangExpr->getRHS());
+		core::ExpressionPtr trgPtr = convFact.convertExpr(clangExpr->getRHS());
 
 		// unwrap pointer kind
 		if (clangExpr->getOpcode() == clang::BO_PtrMemI)
 			papa = getCArrayElemRef(convFact.getIRBuilder(), papa);
 
-		frontend_assert(funcPtr->getType().isa<core::FunctionTypePtr>());
-		return convFact.getIRBuilder().callExpr(funcPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), funcPtr, toVector(papa));
+		// check whenever function of member data pointer
+		if (trgPtr->getType().isa<core::FunctionTypePtr>())
+			return convFact.getIRBuilder().callExpr(trgPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), trgPtr, toVector(papa));
+		else{
+			frontend_assert(core::analysis::isMemberPointer (trgPtr->getType()) ) << " not a memberPointer? " << trgPtr << " : " << trgPtr->getType();
+			return core::analysis::getMemberPointerAccess(papa,trgPtr);
+		}
 	}
 
 }

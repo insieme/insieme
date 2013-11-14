@@ -220,31 +220,6 @@ namespace cba {
 	}
 
 
-	bool isMemoryConstructor(const StatementAddress& address) {
-		StatementPtr stmt = address;
-
-		// literals of a reference type are memory locations
-		if (auto lit = stmt.isa<LiteralPtr>()) {
-			return lit->getType().isa<RefTypePtr>();
-		}
-
-		// memory allocation calls are
-		return core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAlloc());
-	}
-
-	ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt) {
-		assert(isMemoryConstructor(stmt));
-
-		// globals are globals => always the same
-		if (auto lit = stmt.isa<LiteralPtr>()) {
-			return LiteralAddress(lit);
-		}
-
-		// locations created by ref.alloc calls are created at the call side
-		assert(stmt.isa<CallExprAddress>());
-		return stmt.as<CallExprAddress>();
-	}
-
 	StatementPtr getRootStmt(const NodeAddress& node) {
 		auto stmt = node.as<StatementPtr>();
 		if (node.isRoot()) return stmt;

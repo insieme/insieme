@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace frontend {
@@ -155,10 +156,11 @@ namespace tu {
 			assert_eq(*symbol->getType(), *definition->getType());
 			//check if function exists, if it exists we
 			//have to check if they are really the same.
-			//assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
-			if(functions.find(symbol) != functions.end()) {
-                assert(core::analysis::equalNormalize ( definition, functions[symbol] ));
-			}
+			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
+					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
+					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
+					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
+
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 

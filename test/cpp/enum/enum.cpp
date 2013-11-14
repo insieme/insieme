@@ -30,5 +30,12 @@ int main() {
 	var1 = ONE;
 	std::cout << k1 << std::endl;
 	std::cout << var1 << std::endl;	
+
+
+	// enum casts
+	int a = ZERO;
+	unsigned b = ZERO;
+	bool c = ZERO;
+
 	return 0;
 }

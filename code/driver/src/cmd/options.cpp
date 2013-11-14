@@ -63,7 +63,7 @@ namespace cmd {
 					("library-path,L", bpo::value<vector<frontend::path>>(), "library paths - optional")
 					("include-path,I", bpo::value<vector<frontend::path>>(), "include files - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
-					("std,s", bpo::value<string>()->default_value("auto"), "determines the language standard")
+					("std", bpo::value<string>()->default_value("auto"), "determines the language standard")
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
