@@ -146,6 +146,7 @@ namespace c_ast {
 				case PrimitiveType::UInt64 : return out << "uint64_t";
 				case PrimitiveType::Float : return out << "float";
 				case PrimitiveType::Double : return out << "double";
+				case PrimitiveType::LongLong : return out << "long long";
 				}
 				assert(false && "Unsupported primitive type!");
 				return out << "/* unsupported primitive type */";

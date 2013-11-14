@@ -209,6 +209,23 @@ namespace analysis {
 	 */
 	bool isDefaultConstructor(const LambdaExprPtr& lambda);
 
+	// ------------------------------- Long Long ---------------------------------------
+
+	/**
+	 * checks whenever the inner implementation of the type represents a long long
+	 */
+	bool isLongLong(const TypePtr& type);
+
+	/**
+	 * cast to long long
+	 */
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr);
+
+	/**
+	 * cast from long long
+	 */
+	ExpressionPtr castFromLongLong( const ExpressionPtr& expr);
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

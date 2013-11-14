@@ -43,7 +43,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/annotations/c/include.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"

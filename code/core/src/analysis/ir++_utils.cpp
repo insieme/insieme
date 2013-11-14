@@ -276,6 +276,42 @@ namespace analysis {
 		return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
 	}
 
+	// ------------------------------- Long Long ---------------------------------------
+	//
+	bool isLongLong(const TypePtr& type){
+
+		// filter out null-pointer
+		if (!type) return false;
+
+		// must be a struct type
+		StructTypePtr structType = type.isa<StructTypePtr>();
+		if (!structType) return false;
+
+		// only one member
+		if (structType.size() != 1u) return false;
+
+		// check the one member element
+		IRBuilder builder(type->getNodeManager());
+		NamedTypePtr element = structType[0];
+		if (element->getType() != builder.getLangBasic().getInt8()) return false;
+		if (element->getName().getValue() != "longlong_val") return false;
+
+		return true;
+	}
+
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		core::ExpressionPtr cast = manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong();
+		return builder.callExpr(cast, expr);
+	}
+
+	ExpressionPtr castFromLongLong( const ExpressionPtr& expr){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		core::ExpressionPtr cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToLong();
+		return builder.callExpr(cast, expr);
+	}
 
 } // end namespace analysis
 } // end namespace core

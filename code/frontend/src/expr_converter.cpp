@@ -46,7 +46,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
@@ -502,29 +502,34 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 		value = toString(intLit->getValue().getSExtValue());
 	}
 
-	core::TypePtr type;
-	int width = intLit->getValue().getBitWidth()/8;
-	switch(width){
-		case 1:
-			type = builder.getLangBasic().getInt1();
-			break;
-		case 2:
-			type = builder.getLangBasic().getInt2();
-			break;
-		case 4:
-			type = builder.getLangBasic().getInt4();
-			break;
-		case 8:
-			type = builder.getLangBasic().getInt8();
-			break;
-		case 16:
-			type = builder.getLangBasic().getInt16();
-			break;
-		default:
-			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
-	}
+	core::TypePtr type = convFact.convertType(intLit->getType().getTypePtr());
 
+//
+//	core::TypePtr type;
+//	int width = intLit->getValue().getBitWidth()/8;
+//	switch(width){
+//		case 1:
+//			type = builder.getLangBasic().getInt1();
+//			break;
+//		case 2:
+//			type = builder.getLangBasic().getInt2();
+//			break;
+//		case 4:
+//			type = builder.getLangBasic().getInt4();
+//			break;
+//		case 8:
+//			type = builder.getLangBasic().getInt8();
+//			break;
+//		case 16:
+//			type = builder.getLangBasic().getInt16();
+//			break;
+//		default:
+//			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
+//	}
+
+	frontend_assert(!value.empty()) << "literal con not be an empty string";
     retExpr =  builder.literal(type, toString(value));
+	std::cout << "literal: " << retExpr << " : " << retExpr->getType() << std::endl;
 	return retExpr;
 
 }

@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/printer/pretty_printer.h"

@@ -245,8 +245,8 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::ExpressionPtr& expr){
-	const core::TypePtr& exprTy = expr->getType();
+core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPtr expr){
+	core::TypePtr exprTy = expr->getType();
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::NodeManager& mgr = exprTy.getNodeManager();
@@ -265,15 +265,28 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		return expr;
 	}
 
+	// magic casts between longlong and long
+	if (core::analysis::isLongLong (targetTy)){
+		assert(gen.isSignedInt(expr->getType())  && "this cast needs to be improved");
+		return core::analysis::castToLongLong(expr);
+	}
+	
+	// cast from long long
+	if (core::analysis::isLongLong (exprTy)){
+		expr = core::analysis::castFromLongLong( expr);
+		exprTy = expr->getType();
+	}
+
 	// is this the cast of a literal: to simplify code we'll return
 	// a literal of the spected type
 	if (expr->getNodeType() == core::NT_Literal){
 		try{
-		return castLiteral ( expr.as<core::LiteralPtr>(), targetTy);
+			return castLiteral ( expr.as<core::LiteralPtr>(), targetTy);
 		}catch (std::exception& e){
 			// literal upgrade not supported, continue with regular cast
 		}
 	}
+
 
    	unsigned char code;
 	// identify source type, to write right cast
@@ -501,9 +514,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// Casting between floating types of different size. (double) f (float) ld
 		{
 		    assert(builder.getLangBasic().isPrimitive(expr->getType())
-                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType()));
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType())
+				|| core::analysis::isLongLong (expr->getType()));
 			assert(builder.getLangBasic().isPrimitive(targetTy)
-                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy));
+                || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)
+				|| core::analysis::isLongLong (targetTy));
 			return castScalar( targetTy, expr);
 		}
 
