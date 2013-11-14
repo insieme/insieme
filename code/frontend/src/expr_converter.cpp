@@ -1114,9 +1114,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// some casts are not pressent in IR
 			if (gen.isPrimitive(rhs->getType())) {
                 if(core::analysis::isVolatileType(GET_REF_ELEM_TYPE(lhs->getType()))) {
-                    rhs = builder.makeVolatile(utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
+                    rhs = builder.makeVolatile(frontend::utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
                 } else {
-                    rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
+                    rhs = frontend::utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
                 }
 			}
 
@@ -1546,7 +1546,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx =  utils::castScalar(gen.getUInt4(), idx);
+		idx =  frontend::utils::castScalar(gen.getUInt4(), idx);
 	}
 
 	// BASE

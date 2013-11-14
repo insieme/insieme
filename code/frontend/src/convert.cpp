@@ -1465,7 +1465,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 
 	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType()))
-		return utils::castScalar(elementType, init);
+		return frontend::utils::castScalar(elementType, init);
 
 	if ( elementType.isa<core::VectorTypePtr>() ){
 		core::ExpressionPtr initVal = init;
@@ -1497,7 +1497,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
     // the case of enum type initializations
     if(mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(init->getType())) {
-        return utils::castScalar(elementType, init);
+        return frontend::utils::castScalar(elementType, init);
     }
 
 	// the case of the Null pointer:
