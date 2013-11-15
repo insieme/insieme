@@ -537,6 +537,12 @@ vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
 	return res;
 }
 
+bool hasFreeVariable(const NodePtr& code, const std::function<bool(VariablePtr)>& filter) {
+	if (!code.isa<StatementPtr>()) return false;
+	// TODO: improve this implementation by forwarding filter to visitor
+	return any(getFreeVariables(code), filter);
+}
+
 vector<StatementAddress> getExitPoints(const StatementPtr& stmt) {
 	// delegate request to address-based implementation
 	return getExitPoints(StatementAddress(stmt));
