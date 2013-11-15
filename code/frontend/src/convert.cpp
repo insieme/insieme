@@ -893,30 +893,6 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 ///
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
-// check Attributes of the function definition
-	annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
-
-	if (funcDecl->hasAttrs()) {
-		const clang::AttrVec attrVec = funcDecl->getAttrs();
-
-		for (AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-			if (AnnotateAttr * attr = dyn_cast<AnnotateAttr>(*I)) {
-				//get annotate string
-				llvm::StringRef&& sr = attr->getAnnotation();
-
-				//check if it is an OpenCL kernel function
-				if ( sr == "__kernel" ) {
-					VLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
-				}
-			}
-			else if ( ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I) ) {
-				kernelAnnotation.push_back(
-						std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
-				);
-			}
-		}
-	}
 
 	pragma::attachPragma(node,funcDecl,*this);
 
@@ -948,12 +924,6 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 			std::make_shared < annotations::c::CLocAnnotation
 					> (convertClangSrcLoc(getSourceManager(), loc.first), convertClangSrcLoc(
 							getSourceManager(), loc.second)));
-
-// ---------------------------------------------------- OPENCL ----------------------------------------------------
-// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
-	if (!kernelAnnotation.empty()) {
-		node->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
-	}
 
 	return node;
 }
