@@ -50,7 +50,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/types/subtyping.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 
 
 #define CAST(expr, type) convertExprToType(builder, expr, type)

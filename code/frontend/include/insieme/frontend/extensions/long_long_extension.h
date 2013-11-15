@@ -34,43 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/timer.h"
+#pragma once
 
-#include <sstream>
-#include <cassert>
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
-#include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/string_utils.h"
+ namespace insieme {
+ namespace frontend {
 
-namespace insieme {
-namespace utils {
+/**
+ * 		Long long cleanup
+ * 		=================
+ *
+ * 		during the translation, long long behaves like a built in type, but in the backend it is mapped into the same bitwith as a long
+ * 		the problem comes when we pass it as paramenter to functions, because it produces overload, even when in the backend both functions
+ * 		are going to have the same parameter type
+ *
+ * 		after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and staticaly 
+ * 		resolved, so we wont find any problem related with typing.
+ *
+ * 		The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit 
+ * 		overloads in 3rd party libraries (they do not make much sense anyway, do they? )
+ *
+ */
+class LongLongExtension : public insieme::frontend::extensions::FrontendPlugin {
+		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+};
 
-double Timer::stop() {
-	mElapsed = elapsed();
-	isStopped = true;
-	return mElapsed;
-}
-
-double Timer::step() {
-	double cur = elapsed();
-	double res = cur - lastStep;
-	lastStep = cur;
-	return res;
-}
-
-double Timer::getTime() const {
-	assert(isStopped && "Cannnot read time of a running timer.");
-	return mElapsed;
-}
-
-std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	std::string&& time = format("%.3f", timer.getTime());
-
-	std::string&& frame =  std::string(timer.mName.size() + time.size() + 14, '*');
-	out << std::endl << frame << std::endl;
-	out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-	return out << frame << std::endl;
-}
-
-} // end utils namespace
-} // end insieme namespace
+} // frontend
+} // insieme

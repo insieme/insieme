@@ -56,6 +56,7 @@
 #include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
+#include "insieme/frontend/extensions/long_long_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -82,6 +83,7 @@ namespace frontend {
     void ConversionSetup::frontendPluginInit() {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<ASMExtension>();
+        registerFrontendPlugin<LongLongExtension>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
@@ -93,6 +95,9 @@ namespace frontend {
 
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
+
+			// plugin initialization
+            setup.frontendPluginInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
@@ -131,9 +136,15 @@ namespace frontend {
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
+			
+		
+		// plugin initialization
+            setup.frontendPluginInit();
+
 
 		// create a temporary manager
-		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
+	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
+//		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
 
 		// load and merge all files into a single translation unit
 		auto unit = toTranslationUnit(tmpMgr);

@@ -34,43 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/timer.h"
+#pragma once
 
-#include <sstream>
-#include <cassert>
-
-#include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/string_utils.h"
+// forwared declaration
+namespace clang { class CastExpr; }
 
 namespace insieme {
+namespace frontend {
+
+
+//FORWARD DECLARATION
+namespace conversion {
+	class Converter;
+}
+
 namespace utils {
 
-double Timer::stop() {
-	mElapsed = elapsed();
-	isStopped = true;
-	return mElapsed;
-}
+	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
 
-double Timer::step() {
-	double cur = elapsed();
-	double res = cur - lastStep;
-	lastStep = cur;
-	return res;
-}
+	/**
+	 * casts to bool an expression
+	 */
+	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
 
-double Timer::getTime() const {
-	assert(isStopped && "Cannnot read time of a running timer.");
-	return mElapsed;
-}
+	/**
+	 * cast between 2 scalar types an IR expression
+	 */
+	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
+								   core::ExpressionPtr expr);
 
-std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	std::string&& time = format("%.3f", timer.getTime());
+	/**
+	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
+	 *
+	 * @param convFact, conversionFactor holding all converters and helpers
+	 * @param castExpr the clang cast expression
+	 * return right typed expression
+	 */
+	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
+											  const clang::CastExpr* castExpr);
 
-	std::string&& frame =  std::string(timer.mName.size() + time.size() + 14, '*');
-	out << std::endl << frame << std::endl;
-	out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-	return out << frame << std::endl;
-}
-
-} // end utils namespace
-} // end insieme namespace
+} // end utils namespace 
+} // end frontend namespace
+} // end insisme namespace

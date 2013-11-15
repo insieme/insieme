@@ -48,6 +48,7 @@ namespace utils {
 	 * Simple timer used to measured time.
 	 */
 	class Timer: public boost::timer {
+		double lastStep;
 		double mElapsed;
 		std::string mName;
 		bool isStopped;
@@ -55,11 +56,16 @@ namespace utils {
 		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
 	public:
 		Timer(const std::string& name = "Time"): 
-			boost::timer(), mName(name), isStopped(false) { }
+			boost::timer(), lastStep(0.0), mName(name), isStopped(false) { }
 		/**
 		 * Stops the timer returning the elapsed amount of seconds
 		 */
 		double stop();
+
+		/**
+		 * Obtains time since start or last lap time.
+		 */
+		double step();
 
 		/**
 		 * Return the elapsed amount of seconds

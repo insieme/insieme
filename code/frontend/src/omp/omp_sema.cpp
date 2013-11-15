@@ -55,7 +55,7 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include <stack>

@@ -2,7 +2,6 @@
 
 using namespace std;
 
-namespace ayuso {
 
 	class Timer {
 
@@ -30,4 +29,3 @@ namespace ayuso {
 
 	};
 
-}// namespace ayuso
