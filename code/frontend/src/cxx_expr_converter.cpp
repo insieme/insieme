@@ -57,8 +57,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/temporariesLookup.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/temporaries_lookup.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/utils/debug.h"

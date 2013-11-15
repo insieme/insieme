@@ -161,13 +161,18 @@ int main(int argc, char** argv) {
 	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
 	//		cpp compiler, C otherwise
 	cout << "Building binaries ...\n";
+
 	cp::Compiler compiler =
 			(options.job.isCxx())
 				? cp::Compiler::getDefaultCppCompilerO3()
 				: cp::Compiler::getDefaultC99CompilerO3();
 
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-//	for(auto cur : extLibs) compiler.addFlag(cur.string());                 // TODO: add extra setter for libraries, not just a flag
+	for(auto cur : extLibs) {
+		string libname = cur.filename().string();
+		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
+		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3,libname.find(".")-3));
+	}
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done

@@ -8,7 +8,6 @@
 #include <float.h>
 #include <iostream>
 
-#include "timer.h"
 
 using namespace std;
 

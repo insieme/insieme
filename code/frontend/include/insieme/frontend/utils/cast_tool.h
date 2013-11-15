@@ -36,20 +36,43 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
-
-#include "insieme/frontend/stmt_converter.h"
+// forwared declaration
+namespace clang { class CastExpr; }
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
 
-using namespace insieme;
 
-class ASMExtension : public insieme::frontend::extensions::FrontendPlugin {
-    virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
-};
+//FORWARD DECLARATION
+namespace conversion {
+	class Converter;
+}
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+namespace utils {
+
+	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+
+	/**
+	 * casts to bool an expression
+	 */
+	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
+
+	/**
+	 * cast between 2 scalar types an IR expression
+	 */
+	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
+								   core::ExpressionPtr expr);
+
+	/**
+	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
+	 *
+	 * @param convFact, conversionFactor holding all converters and helpers
+	 * @param castExpr the clang cast expression
+	 * return right typed expression
+	 */
+	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
+											  const clang::CastExpr* castExpr);
+
+} // end utils namespace 
+} // end frontend namespace
+} // end insisme namespace

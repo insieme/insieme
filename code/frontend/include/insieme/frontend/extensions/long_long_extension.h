@@ -38,18 +38,27 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
-#include "insieme/frontend/stmt_converter.h"
+ namespace insieme {
+ namespace frontend {
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
-
-using namespace insieme;
-
-class ASMExtension : public insieme::frontend::extensions::FrontendPlugin {
-    virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
+/**
+ * 		Long long cleanup
+ * 		=================
+ *
+ * 		during the translation, long long behaves like a built in type, but in the backend it is mapped into the same bitwith as a long
+ * 		the problem comes when we pass it as paramenter to functions, because it produces overload, even when in the backend both functions
+ * 		are going to have the same parameter type
+ *
+ * 		after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and staticaly 
+ * 		resolved, so we wont find any problem related with typing.
+ *
+ * 		The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit 
+ * 		overloads in 3rd party libraries (they do not make much sense anyway, do they? )
+ *
+ */
+class LongLongExtension : public insieme::frontend::extensions::FrontendPlugin {
+		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 };
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+} // frontend
+} // insieme

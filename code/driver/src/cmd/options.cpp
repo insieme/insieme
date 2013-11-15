@@ -224,9 +224,6 @@ namespace cmd {
 				res.valid = cur(map) && res.valid;
 			}
 
-			// plugin initialization
-            res.job.frontendPluginInit();
-
 			// done
 			return res;
 

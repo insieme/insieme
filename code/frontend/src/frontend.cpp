@@ -56,6 +56,8 @@
 #include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
+#include "insieme/frontend/extensions/long_long_extension.h"
+
 
 namespace insieme {
 namespace frontend {
@@ -81,18 +83,22 @@ namespace frontend {
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
-        registerFrontendPlugin<ASMExtension>();
+        registerFrontendPlugin<extensions::ASMExtension>();
+        registerFrontendPlugin<LongLongExtension>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
         if(standard == Cxx11)
-                registerFrontendPlugin<Cpp11Plugin>();
+                registerFrontendPlugin<extensions::Cpp11Plugin>();
     }
 
 
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
+
+			// plugin initialization
+            setup.frontendPluginInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
@@ -131,6 +137,11 @@ namespace frontend {
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
+			
+		
+		// plugin initialization
+            setup.frontendPluginInit();
+
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -159,6 +170,19 @@ namespace frontend {
 
 		// return instance within global manager
 		return core::transform::utils::migrate(res, manager);
+	}
+
+	bool ConversionJob::isCxx() const {
+		if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
+		if (getStandard() == Standard::C99) return false;
+
+		bool cppFile = any(files, [&](const path& cur) {
+			return static_cast<const ConversionSetup&>(*this).isCxx(cur);
+		});
+
+		bool cppLibs = any(libs, [&](const tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); } );
+
+		return cppFile || cppLibs;
 	}
 
 } // end namespace frontend

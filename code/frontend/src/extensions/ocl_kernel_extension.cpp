@@ -45,10 +45,14 @@
 	#include <clang/Basic/FileManager.h>
 #pragma GCC diagnostic pop
 
+#include "insieme/frontend/clang.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/stmt_converter.h"
+
+
 
 
 using namespace insieme::frontend;
@@ -57,9 +61,46 @@ namespace {
 
 
 }
+
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               adding OpenCL kernel annotation
-void OclKernelPlugin::PostVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact) {
+void OclKernelPlugin::PostVisit(const clang::FunctionDecl* funcDecl, conversion::Converter& convFact) {
+	// check Attributes of the function definition
+	annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
+
+	if (funcDecl->hasAttrs()) {
+		const clang::AttrVec attrVec = funcDecl->getAttrs();
+
+		for (clang::AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+			if (clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
+				//get annotate string
+				llvm::StringRef&& sr = attr->getAnnotation();
+
+				//check if it is an OpenCL kernel function
+				if ( sr == "__kernel" ) {
+					VLOG(1) << "is OpenCL kernel function";
+					kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
+				}
+			}
+			else if ( clang::ReqdWorkGroupSizeAttr* attr = llvm::dyn_cast<clang::ReqdWorkGroupSizeAttr>(*I) ) {
+				kernelAnnotation.push_back(
+						std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
+				);
+			}
+		}
+	}
+
+// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
+	if (!kernelAnnotation.empty()) {
+		core::ExpressionPtr lambda = convFact.getLambdaFromCache(funcDecl);
+		lambda->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
+		convFact.addToLambdaCache(funcDecl, lambda);
+	}
 }
 
 stmtutils::StmtWrapper OclKernelPlugin::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
@@ -103,3 +144,6 @@ insieme::core::ProgramPtr OclKernelPlugin::IRVisit(insieme::core::ProgramPtr& pr
 	return oclCompiler.lookForOclAnnotations();
 }
 
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions

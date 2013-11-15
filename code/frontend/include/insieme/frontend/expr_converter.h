@@ -48,7 +48,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"

@@ -38,7 +38,12 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
-// extension for opencl kernel files
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
+
+// extension for OpenCl kernel files
 
 class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
@@ -52,3 +57,7 @@ class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 };
+
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions

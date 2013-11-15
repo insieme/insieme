@@ -289,7 +289,11 @@ public:
         lambdaExprCache[decl] = ptr;
     }
 
-	/**
+    core::ExpressionPtr getLambdaFromCache(const clang::FunctionDecl* decl) {
+        return lambdaExprCache[decl];
+    }
+
+    /**
 	 * Determines the definition of the given generic type pointer within the
 	 * internally maintained IR Translation Unit. If non is present, the given
 	 * type will be returned.

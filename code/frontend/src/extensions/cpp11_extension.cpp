@@ -60,6 +60,10 @@
 
 using namespace insieme::frontend;
 
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
 
@@ -176,3 +180,7 @@ insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType*
 	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
 	return retTy;
 }
+
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions

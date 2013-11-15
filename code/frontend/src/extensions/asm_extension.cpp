@@ -59,6 +59,9 @@
 
 using namespace insieme::frontend;
 
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
 //
 //	To IR:
@@ -131,3 +134,7 @@ stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::co
 
 	return ret;
 }
+
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions
