@@ -144,7 +144,8 @@ struct MemberRef: public Ref {
 	typedef boost::variant<
 		core::StructTypePtr, 
 		core::UnionTypePtr,
-		core::RecTypePtr
+		core::RecTypePtr,
+		core::GenericTypePtr
 	> MemberType;
 
 	MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage);
