@@ -281,7 +281,8 @@ namespace {
 			addAll(res, this->check->visit(node));
 
 			// check annotations of current node
-			for (const auto& cur : node->getAnnotations()) {
+			auto annotations = node->getAnnotations();		// annotations might mutate while iterating through them
+			for (const auto& cur : annotations) {
 				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
 					assert(innerNode && "Nodes must not be null!");
 

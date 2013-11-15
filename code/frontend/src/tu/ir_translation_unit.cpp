@@ -421,6 +421,12 @@ namespace tu {
 				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
 					cache[ptr] = res;
+				} else if (ptr.isa<TypePtr>() && !hasFreeTypeVariables(res)) {
+					// cache closed types
+					cache[ptr] = res;
+				} else if (ptr.isa<StatementPtr>() && !analysis::hasFreeVariable(res, [&](const VariablePtr& var)->bool { return recVars.find(var) != recVars.end(); })) {
+					// cache closed statements
+					cache[ptr] = res;
 				}
 
 				// simply migrate annotations
@@ -535,7 +541,6 @@ namespace tu {
 				auto res = builder.recType(var, def);
 				return hasFreeTypeVariables(res.as<TypePtr>())?type:res;
 			}
-
 
 			/**
 			 * The conversion of recursive function is conducted lazily - first recursive

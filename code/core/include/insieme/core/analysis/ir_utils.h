@@ -336,6 +336,11 @@ VariableList getFreeVariables(const NodePtr& code);
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code);
 
 /**
+ * Tests whether the given code fragment has a free variable satisfying the given filter.
+ */
+bool hasFreeVariable(const NodePtr& code, const std::function<bool(VariablePtr)>& filter);
+
+/**
  * Extracts a list of exit point addresses within the given statement. All
  * exit points are either break, continue or return statements.
  *

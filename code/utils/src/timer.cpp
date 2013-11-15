@@ -51,6 +51,13 @@ double Timer::stop() {
 	return mElapsed;
 }
 
+double Timer::step() {
+	double cur = elapsed();
+	double res = cur - lastStep;
+	lastStep = cur;
+	return res;
+}
+
 double Timer::getTime() const {
 	assert(isStopped && "Cannnot read time of a running timer.");
 	return mElapsed;
