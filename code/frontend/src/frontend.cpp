@@ -96,6 +96,9 @@ namespace frontend {
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
+			// plugin initialization
+            setup.frontendPluginInit();
+
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
 			setup.addIncludeDirectory(SRC_DIR);
@@ -133,6 +136,11 @@ namespace frontend {
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
+			
+		
+		// plugin initialization
+            setup.frontendPluginInit();
+
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
