@@ -224,6 +224,9 @@ class Converter :  boost::noncopyable {
 	 */
 	 const clang::SourceLocation* lastTrackableLocation;
 
+
+     core::ExpressionPtr convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
+
 public:
 
 	Converter(core::NodeManager& mgr, const Program& program, const ConversionSetup& setup = ConversionSetup());
@@ -280,6 +283,10 @@ public:
 
     void addToTypeCache(const clang::Type* type, core::TypePtr ptr) {
         typeCache[type] = ptr;
+    }
+
+    void addToLambdaCache(const clang::FunctionDecl* decl, core::ExpressionPtr ptr) {
+        lambdaExprCache[decl] = ptr;
     }
 
 	/**
@@ -371,10 +378,10 @@ public:
 	/**
 	 * Converts a function declaration into an IR lambda.
 	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-	 * @param isEntryPoint determine if this function is an entry point of the generated IR
+	 * @param visitByPlugin determines if pre- and post-plugin visitors should be executed
 	 * @return Converted lambda
 	 */
-	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, const bool visitByPlugin = true);
 
 	/**
 	 * Entry point for converting function to the right type

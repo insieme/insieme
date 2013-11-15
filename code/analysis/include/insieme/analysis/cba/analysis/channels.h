@@ -37,48 +37,41 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/location.h"
+#include "insieme/analysis/cba/framework/channel.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
-
-#include "insieme/analysis/cba/analysis/data_paths.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/utils/constraint_utils.h"
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// forward declarations
-	template<typename Context> class DataPathConstraintGenerator;
-	typedef DataAnalysisType<DataPath,DataPathConstraintGenerator> DataPathAnalysisType;
-	extern const DataPathAnalysisType DP;
-	extern const DataPathAnalysisType dp;
+	// ----------------- channels ---------------
 
-	// ----------------- references ---------------
-
-	template<typename Context> class ReferenceConstraintGenerator;
+	template<typename Context> class ChannelConstraintGenerator;
 
 	template<typename Context>
-	const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>& R() {
-		static const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator> instance("R");
+	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& Ch() {
+		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("Ch");
 		return instance;
 	}
 
 	template<typename Context>
-	const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>& r() {
-		static const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator> instance("r");
+	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& ch() {
+		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("ch");
 		return instance;
 	}
 
 
 	template<typename Context>
-	class ReferenceConstraintGenerator : public BasicDataFlowConstraintGenerator<Reference<Context>,DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>, Context> {
+	class ChannelConstraintGenerator : public BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Reference<Context>,DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> super;
 
 		CBA& cba;
 
@@ -86,7 +79,7 @@ namespace cba {
 
 	public:
 
-		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ChannelConstraintGenerator(CBA& cba) : super(cba, Ch<Context>(), ch<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
@@ -96,14 +89,14 @@ namespace cba {
 			super::visitLiteral(literal, ctxt, constraints);
 
 			// only interested in memory location constructors
-			if (!isMemoryConstructor(literal)) return;
+			if (!isChannelConstructor(literal)) return;
 
 			// add constraint literal \in R(lit)
-			auto value = getLocation(literal, ctxt);
+			auto value = getChannelFromConstructor(literal, ctxt);
 			auto l_lit = cba.getLabel(literal);
 
-			auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
-			constraints.add(elem(value, R_lit));
+			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
+			constraints.add(elem(value, C_lit));
 
 		}
 
@@ -112,37 +105,16 @@ namespace cba {
 			// and default handling
 			super::visitCallExpr(call, ctxt, constraints);
 
-			// introduce memory location in some cases
-			if (isMemoryConstructor(call)) {
+			// introduce channels in case the constructor is called
+			if (!isChannelConstructor(call)) return;
 
-				// add constraint location \in R(call)
-				auto value = getLocation(call, ctxt);
-				auto l_lit = cba.getLabel(call);
+			// add constraint location \in R(call)
+			auto value = getChannelFromConstructor(call, ctxt);
+			auto l_lit = cba.getLabel(call);
 
-				auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
-				constraints.add(elem(value, R_lit));
+			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
+			constraints.add(elem(value, C_lit));
 
-				// done
-				return;
-			}
-
-			// check whether the operation is a narrow or expand (data path operation)
-			const auto& fun = call->getFunctionExpr();
-			if (base.isRefNarrow(fun)) {
-
-				// obtain involved sets
-				auto R_in  = cba.getSet(R<Context>(), call[0], ctxt);	// the input reference
-				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
-				auto R_out = cba.getSet(R<Context>(), call, ctxt);		// the resulting context
-
-				// add constraint linking in and out values
-				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,
-						[](const Reference<Context>& ref, const DataPath& path)->Reference<Context> {
-							return Reference<Context>(ref.getLocation(), ref.getDataPath() << path);
-						}
-				));
-
-			}
 		}
 
 	};

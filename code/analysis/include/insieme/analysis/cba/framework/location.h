@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/hash_utils.h"
@@ -152,6 +153,49 @@ namespace cba {
 			return out << "(" << location.getAddress() << "," << location.getContext() << "," << path << ")";
 		}
 	};
+
+	inline bool isMemoryConstructor(const core::StatementAddress& address) {
+		core::StatementPtr stmt = address;
+
+		// literals of a reference type are memory locations
+		if (auto lit = stmt.isa<core::LiteralPtr>()) {
+			return lit->getType().isa<RefTypePtr>();
+		}
+
+		// memory allocation calls are
+		return core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAlloc());
+	}
+
+	inline core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt) {
+		assert(isMemoryConstructor(stmt));
+
+		// globals are globals => always the same
+		if (auto lit = stmt.isa<core::LiteralPtr>()) {
+			return core::LiteralAddress(lit);
+		}
+
+		// locations created by ref.alloc calls are created at the call side
+		assert(stmt.isa<core::CallExprAddress>());
+		return stmt.as<core::CallExprAddress>();
+	}
+
+
+	template<typename Context>
+	Location<Context> getLocation(const core::ExpressionAddress& ctor, const Context& ctxt) {
+
+		assert(isMemoryConstructor(ctor));
+
+		// obtain address of definition point
+		auto def = getLocationDefinitionPoint(ctor);
+
+		// for globals the call context and thread context is not relevant
+		if (ctor.isa<core::LiteralPtr>()) {
+			return Location<Context>(def, Context());
+		}
+
+		// create the location instance
+		return Location<Context>(def, ctxt);
+	}
 
 } // end namespace cba
 } // end namespace analysis

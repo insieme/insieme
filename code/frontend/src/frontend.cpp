@@ -135,7 +135,8 @@ namespace frontend {
 	    ConversionSetup setup = *this;
 
 		// create a temporary manager
-		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
+	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
+//		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
 
 		// load and merge all files into a single translation unit
 		auto unit = toTranslationUnit(tmpMgr);

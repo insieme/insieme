@@ -177,7 +177,7 @@ namespace tu {
 		 * The class converting a IR-translation-unit into an actual IR program by
 		 * realizing recursive definitions.
 		 */
-		class Resolver : public core::NodeMapping {
+		class Resolver : private core::NodeMapping {
 
 			NodeManager& mgr;
 			IRBuilder builder;
@@ -187,6 +187,10 @@ namespace tu {
 			NodeMap recVarMap;
 			NodeMap recVarResolutions;
 			NodeSet recVars;
+
+			// a map collecting class-meta-info values for lazy integration
+			typedef utils::map::PointerMap<TypePtr, core::ClassMetaInfo> MetaInfoMap;
+			MetaInfoMap metaInfos;
 
 		public:
 
@@ -204,6 +208,39 @@ namespace tu {
 				}
 			}
 
+			template<typename T>
+			Pointer<T> apply(const Pointer<T>& ptr) {
+				return apply(NodePtr(ptr)).as<Pointer<T>>();
+			}
+
+			NodePtr apply(const NodePtr& node) {
+
+				// check whether meta-infos are empty
+				assert(metaInfos.empty());
+
+				// convert node itself
+				auto res = map(node);
+
+				// re-add meta information
+				for(const auto& cur : metaInfos) {
+
+					// encode meta info into pure IR
+					auto encoded = core::toIR(mgr, cur.second);
+
+					// resolve meta info
+					auto resolved = map(encoded);
+
+					// restore resolved meta info for resolved type
+					setMetaInfo(map(cur.first), core::fromIR(resolved));
+				}
+
+				// clear meta-infos for next run
+				metaInfos.clear();
+
+				// done
+				return res;
+			}
+
 			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 
 				// check whether value is already cached
@@ -211,6 +248,14 @@ namespace tu {
 					auto pos = cache.find(ptr);
 					if (pos != cache.end()) {
 						return pos->second;
+					}
+				}
+
+				// strip off class-meta-information
+				if (auto type = ptr.isa<TypePtr>()) {
+					if (hasMetaInfo(type)) {
+						metaInfos[type] = getMetaInfo(type);
+						removeMetaInfo(type);
 					}
 				}
 
@@ -223,18 +268,12 @@ namespace tu {
 				if (pos != symbolMap.end()) {
 
 					// enter a recursive substitute into the cache
+
+					// first check whether this ptr has already been mapped to a recursive variable
 					recVar = recVarMap[ptr];
-					if (recVar) {
-						// check whether the recursive variable has already been completely resolved
-						auto pos = recVarResolutions.find(recVar);
-						if (pos != recVarResolutions.end()) {
-							// migrate annotations
-							core::transform::utils::migrateAnnotations(ptr, pos->second);
-							return pos->second;
-						}
 
-					} else {
-
+					// if not, create one of the proper type
+					if (!recVar) {
 						// create a fresh recursive variable
 						if (const GenericTypePtr& symbol = ptr.isa<GenericTypePtr>()) {
 							recVar = builder.typeVariable(symbol->getFamilyName());
@@ -247,16 +286,33 @@ namespace tu {
 						recVars.insert(recVar);
 					}
 
+					// now the recursive variable should be fixed
+					assert(recVar);
+
+					// check whether the recursive variable has already been completely resolved
+					{
+						auto pos = recVarResolutions.find(recVar);
+						if (pos != recVarResolutions.end()) {
+							// migrate annotations
+							core::transform::utils::migrateAnnotations(ptr, pos->second);
+							cache[ptr] = pos->second;				// for future references
+							return pos->second;
+						}
+					}
+
 					// update cache for current element
 					cache[ptr] = recVar;
 
 					// result will be the substitution
 					res = map(pos->second);
+
+				} else {
+
+					// resolve result recursively
+					res = res->substitute(mgr, *this);
+
 				}
 
-
-				// resolve result recursively
-				res = res->substitute(mgr, *this);
 
 				// fix recursions
 				if (recVar) {
@@ -274,7 +330,6 @@ namespace tu {
 
 						// migrate annotations
 						core::transform::utils::migrateAnnotations(pos->second, res);
-
 						if (!hasFreeTypeVariables(res)) {
 							cache[ptr] = res;
 
@@ -363,22 +418,19 @@ namespace tu {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
 				}
 
-				// add result to cache if it does not contain recursive parts
+				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
+					cache[ptr] = res;
+				} else if (ptr.isa<TypePtr>() && !hasFreeTypeVariables(res)) {
+					// cache closed types
+					cache[ptr] = res;
+				} else if (ptr.isa<StatementPtr>() && !analysis::hasFreeVariable(res, [&](const VariablePtr& var)->bool { return recVars.find(var) != recVars.end(); })) {
+					// cache closed statements
 					cache[ptr] = res;
 				}
 
 				// simply migrate annotations
 				core::transform::utils::migrateAnnotations(ptr, res);
-
-				// special handling for meta-info
-				if (ptr != res && core::hasMetaInfo(ptr.isa<TypePtr>())) {
-					TypePtr srcType = ptr.as<TypePtr>();
-					TypePtr trgType = res.as<TypePtr>();
-
-					// migrate meta info
-					core::setMetaInfo(trgType, resolveClassMetaInfo(core::getMetaInfo(srcType)));
-				}
 
 				// done
 				return res;
@@ -490,7 +542,6 @@ namespace tu {
 				return hasFreeTypeVariables(res.as<TypePtr>())?type:res;
 			}
 
-
 			/**
 			 * The conversion of recursive function is conducted lazily - first recursive
 			 * functions are build in an unrolled way before they are closed (by combining
@@ -568,21 +619,6 @@ namespace tu {
 				return res;
 			}
 
-
-			core::ClassMetaInfo resolveClassMetaInfo(const core::ClassMetaInfo& info) {
-
-				// resolve meta info
-				auto encoded = core::toIR(mgr, info);
-
-				// resolve meta info
-				auto resolved = map(encoded);
-
-				// restore resolved meta info
-				return core::fromIR(resolved);
-			}
-
-
-
 		};
 
 
@@ -619,8 +655,11 @@ namespace tu {
 					const LiteralPtr& usedLit = node.as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
-					const LiteralPtr& global = resolver.map(cur.first).as<LiteralPtr>();
+					const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
 					const TypePtr& globalTy= global->getType();
+
+					if (!usedLitTy.isa<RefTypePtr>()) return false;
+					if (!globalTy.isa<RefTypePtr>()) return false;
 
 					return usedLit->getStringValue() == global->getStringValue() &&
 						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&						
@@ -651,11 +690,11 @@ namespace tu {
 				// only consider having an initialization value
 				if (!cur.second) continue;
 
-				core::LiteralPtr newLit = resolver.map(cur.first);
+				core::LiteralPtr newLit = resolver.apply(cur.first);
 
 				if (!contains(usedLiterals, newLit)) continue;
 
-				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
+				inits.push_back(builder.assign(resolver.apply(newLit), resolver.apply(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -677,7 +716,7 @@ namespace tu {
 						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&  // not an string literal -> "hello world\n"
 						!insieme::annotations::c::hasIncludeAttached(cur) &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
-						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })
+						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.apply(global.first) == *cur; })
 				);
 			}
 
@@ -701,7 +740,7 @@ namespace tu {
 
 
 	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
-		return Resolver(getNodeManager(), *this).map(node);
+		return Resolver(getNodeManager(), *this).apply(node);
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
@@ -716,7 +755,7 @@ namespace tu {
 
 				// extract lambda expression
 				Resolver resolver(mgr, a);
-				core::LambdaExprPtr lambda = resolver.map(symbol).as<core::LambdaExprPtr>();
+				core::LambdaExprPtr lambda = resolver.apply(symbol).as<core::LambdaExprPtr>();
 
 				// add initializer
 				lambda = addInitializer(a, lambda);
@@ -740,7 +779,7 @@ namespace tu {
 		core::ExpressionList entryPoints;
 		Resolver creator(mgr, a);
 		for(auto cur : a.getEntryPoints()) {
-			entryPoints.push_back(creator.map(cur.as<core::ExpressionPtr>()));
+			entryPoints.push_back(creator.apply(cur.as<core::ExpressionPtr>()));
 		}
 		return core::IRBuilder(mgr).program(entryPoints);
 	}

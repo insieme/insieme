@@ -648,7 +648,16 @@ DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<arr
 DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array.reduce(data, size, op, init) ); }")
 
 
-// Atomics -----------------------------------------------------------------------------------------------------
+// Channels -----------------------------------------------------------------------------------------------------------
+
+LITERAL(ChannelCreate, 		"channel.create", 		"(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
+LITERAL(ChannelRelease, 	"channel.release", 		"(channel<'a,#n>) -> unit")
+
+LITERAL(ChannelSend, 		"channel.send", 		"(channel<'a,#n>, 'a) -> unit")
+LITERAL(ChannelRecv, 		"channel.recv", 		"(channel<'a,#n>) -> 'a")
+LITERAL(ChannelProbe, 		"channel.probe", 		"(channel<'a,#n>) -> bool")
+
+// Atomics ------------------------------------------------------------------------------------------------------------
 
 DERIVED(Atomic, "atomic",
 		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "

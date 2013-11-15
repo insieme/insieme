@@ -7,11 +7,22 @@ int i;
 int func(int k) {
 
 	for(k; k<10; k++) {
-		printf("1: k=%d\n", k);
+		printf("1a: k=%d\n", k);
 	}
+	printf("%d\n", k);
+
+	for(k; k<=10; k++) {
+		printf("1b: k=%d\n", k);
+	}
+	printf("%d\n", k);
+
+	for(k=10; k>5; k--) {
+		printf("2a: k=%d\n", k);
+	}
+	printf("%d\n", k);
 
 	for(k=10; k>=5; k--) {
-		printf("2: k=%d\n", k);
+		printf("2b: k=%d\n", k);
 	}
 	printf("%d\n", k);
 
@@ -56,6 +67,26 @@ void func4() {
 			if(i==1)
 				continue;
 		} while(i<2);
+	}
+}
+
+void func5(int s) {
+	int x = s;
+
+	for(int i = x - 1; i >= 0; i--) {
+		printf("17: i = %d\n", i);
+	}
+
+	int y = 20;
+
+	for(int i = y - x; i <= y+x; i++) {
+		printf("18: i = %d\n", i);
+	}
+}
+
+void func6() {
+	for(unsigned i = 20; i > 10; --i) {
+		printf("19: i = %d\n", i);
 	}
 }
 
@@ -109,4 +140,6 @@ int main(int argc, char* argv[]) {
 	func2();
 	func3();
 	func4();
+	func5(a);
+	func6();
 }

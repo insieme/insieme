@@ -29,19 +29,26 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
-#include "insieme/frontend/expr_converter.h"
+// extension for opencl kernel files
 
-using namespace insieme;
+class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin
-{        
+	void PostVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact);
 
+
+//    void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+
+	virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+                                                     insieme::frontend::conversion::Converter& convFact);
+
+	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 };

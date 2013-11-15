@@ -566,20 +566,9 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	}
 	else{
 		// beware of const pointers
-		if (utils::isRefArray(irType) && varTy.isConstQualified())
+		if (utils::isRefArray(irType) && varTy.isConstQualified()) {
 			irType = builder.refType(irType);
-
-        // if is a constant obj:
-        // might be intercepted
-        // might be generic
-        if (varTy.isConstQualified()) {
-            if((lookupTypeDetails(irType)->getNodeType() == core::NT_StructType) ||
-               (getProgram().getInterceptor().isIntercepted(valDecl->getQualifiedNameAsString()))) {
-                irType = builder.refType(irType);
-            }
-        }
-
-
+		}
 	}
 
 	// if is a global variable, a literal will be generated, with the qualified name
@@ -649,8 +638,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
 	// the IR variable and insert it into the map for future lookups
 	core::VariablePtr&& var = builder.variable( irType );
-	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
-	VLOG(2) << "IR var type" << var.getType();
+	VLOG(2) << "IR variable " << var.getType()->getNodeType() << " " << var<<":"<<varDecl->getNameAsString();
+	VLOG(2) << "IR var type " << var.getType();
 
 	varDeclMap.insert( { valDecl, var } );
 
@@ -929,7 +918,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 		}
 	}
 
-	pragma::attachPragma(node,funcDecl,*this).as<core::StatementPtr>();
+	pragma::attachPragma(node,funcDecl,*this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -963,10 +952,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // ---------------------------------------------------- OPENCL ----------------------------------------------------
 // if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
 	if (!kernelAnnotation.empty()) {
-		// create new marker node
-		core::MarkerExprPtr&& marker = builder.markerExpr(node);
-		marker->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
-		return marker;
+		node->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
 	}
 
 	return node;
@@ -1196,7 +1182,7 @@ namespace {
 
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
-core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 
@@ -1274,11 +1260,11 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		});
 
-		// convert function body
 		//   - set up context to contain current list of parameters and convert body
 		Converter::ParameterList oldList = curParameter;
 		curParameter = &params;
 
+		// convert function body
 		core::StatementPtr body = convertStmt( funcDecl->getBody() );
 		curParameter = oldList;
 
@@ -1323,6 +1309,35 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// annotate and return results
 	return symbol;
+}
+
+core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, const bool visitByPlugin) {
+
+    if(!visitByPlugin) {
+            return convertFunctionDeclImpl(funcDecl);
+    }
+
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        plugin->Visit(funcDecl, *this);
+    }
+
+    convertFunctionDeclImpl(funcDecl);
+
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        plugin->PostVisit(funcDecl, *this);
+    }
+
+    // the function has already been converted
+    return convertFunctionDeclImpl(funcDecl);
+
+    //auto pos = lambdaExprCache.find(funcDecl);
+    //if (pos != lambdaExprCache.end()) {
+    //    return pos->second;		// done
+    //}
+    //else {
+    //    assert(false && "The function declaration was not converted!");
+    //    return nullptr;
+    //}
 }
 
 //////////////////////////////////////////////////////////////////

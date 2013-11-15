@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <vector>
 
 #include "insieme/core/transform/node_replacer.h"

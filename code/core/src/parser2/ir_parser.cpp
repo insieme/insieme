@@ -843,6 +843,23 @@ namespace parser {
 					}
 			));
 
+			g.addRule("E", rule(
+					seq("type(", T, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding type literal
+						return cur.getTypeLiteral(cur.getTerm(0).as<TypePtr>());
+					}
+			));
+
+			// type parameter literals
+			g.addRule("E", rule(
+					seq("param(", P, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding int-type parameter literal
+						return cur.getIntTypeParamLiteral(cur.getTerm(0).as<IntTypeParamPtr>());
+					}
+			));
+
 			// identifier literals
 			g.addRule("E", rule(
 					seq("lit(", cap(any(Token::String_Literal)), ")"),
