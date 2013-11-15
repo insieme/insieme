@@ -197,24 +197,24 @@ void for_stmt_test() {
 
 	// standard for loop
 	#pragma test \
-	"{ decl int<4> v0 = ((100-0)-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { { }; };}"
+	"for(decl int<4> v0 = 0 .. 100 : 1) { { };}"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ decl int<4> v0 = ((100-0)-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { (v100 := v1); (v101 := ((v1*1)+0)); }; (v100 := ((((v0/abs(1))+1)*1)+0));}"
+	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); (v101 := v0); }; (v100 := 100);}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ decl int<4> v0 = ((100-( *v100))-1); for(decl int<4> v1 = 0 .. ((v0/abs(6))+1) : 1) { (v101 := v1); (v100 := ((v1*6)+( *v100))); }; (v101 := ((((v0/abs(6))+1)*6)+( *v100)));}"
+	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v101 := v0); (v100 := v0); }; (v101 := 100);}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
-	"{ decl int<4> v0 = ((100-( *v100))-1); for(decl int<4> v1 = 0 .. ((v0/abs(1))+1) : 1) { { }; };}"
+	"for(decl int<4> v0 = ( *v100) .. 100 : 1) { { };}"
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl ref<int<4>> v0 = ( var(1)); decl ref<int<4>> v1 = ( var(2)); decl int<4> v2 = ((100-0)-1); for(decl int<4> v3 = 0 .. ((v2/abs(1))+1) : 1) { (v100 := ((v3*1)+0)); };}"
+	"{ decl ref<int<4>> v0 = ( var(1)); decl ref<int<4>> v1 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v100 := v2); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	// divission is not supported as for loop increment
