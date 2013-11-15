@@ -73,7 +73,7 @@ namespace functions {
 		 *
 		 * @param target the node to be transformed
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		/**
 		 * Prints a readable representation of this transformation to the given output stream

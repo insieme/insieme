@@ -72,7 +72,7 @@ namespace transform {
 		 * @param target the target to be transformed
 		 * @return the transformed code segment
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		/**
 		 * Compares this connector with the given transformation. It will only be the same

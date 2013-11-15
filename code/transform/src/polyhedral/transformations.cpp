@@ -117,8 +117,8 @@ LoopInterchange::LoopInterchange(unsigned src, unsigned dest)
 	}
 }
 
-core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
-
+core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
 
 	TreePatternPtr pattern = 
 		rT (
@@ -169,7 +169,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	VLOG(1) << "//@ polyhedral.loop.interchange Done";
 	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
@@ -193,7 +193,8 @@ LoopStripMining::LoopStripMining(unsigned idx, unsigned tileSize)
 	  ),
 	  loopIdx(idx), tileSize(tileSize) { }
 
-core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
 
 	if (tileSize < 2 ) {
 		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
@@ -241,7 +242,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
 
 	assert( transformedIR && "Generated code for loop strip mining not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
@@ -343,7 +344,8 @@ LoopTiling::LoopTiling(const TileVect& tiles, const LoopIndexVect& idxs) :
 	if (tileSizes.empty()) throw InvalidParametersException("Tile-size vector must not be empty!");
 }
 
-core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
 
 	// find the application point for the transformation
 	core::NodePtr trg = target;
@@ -427,7 +429,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// std::cout << *transformedIR << std::endl;
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 //=================================================================================================
@@ -447,7 +449,9 @@ LoopFusion::LoopFusion(const LoopIndexVect& idxs) :
 	}
 }
 
-core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopFusion::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
@@ -498,7 +502,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	core::NodePtr&& transformedIR = scop.toIR( mgr );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 //=================================================================================================
@@ -516,7 +520,9 @@ LoopFission::LoopFission(const StmtIndexVect& idxs) :
 		throw InvalidParametersException("Fission of loops requires at least one splitting point!");
 }
 
-core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopFission::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
@@ -550,7 +556,7 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 
 	core::NodePtr&& transformedIR = scop.toIR( mgr );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 //=================================================================================================
@@ -562,7 +568,9 @@ LoopReschedule::LoopReschedule(const parameter::Value& value)
 LoopReschedule::LoopReschedule() : 
 	Transformation(LoopRescheduleType::getInstance(), parameter::emptyValue) {}
 
-core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopReschedule::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// The application point of this transformation satisfies the preconditions, continue
@@ -573,7 +581,7 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 		core::IRBuilder(mgr).compoundStmt( scop.optimizeSchedule( mgr ).as<core::StatementPtr>() );
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 //=================================================================================================
@@ -589,7 +597,9 @@ LoopStamping::LoopStamping(const unsigned& tileSize, const LoopStamping::LoopInd
 	  parameter::combineValues(tileSize, encodeTileVec(index)) ),
 	  tileSize(tileSize), idx(index) { }
 
-core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+
 	core::NodeManager& mgr = target->getNodeManager();
 
 	if (target->getNodeType() != core::NT_ForStmt) {
@@ -639,7 +649,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 
 	core::NodePtr transformedIR = scop.toIR(mgr);
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 
@@ -651,7 +661,9 @@ LoopParallelize::LoopParallelize(const parameter::Value& value)
 
 LoopParallelize::LoopParallelize() : Transformation(LoopParallelizeType::getInstance(), parameter::emptyValue) {}
 
-core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
+core::NodeAddress LoopParallelize::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// Exactly match a single loop statement 
@@ -665,7 +677,8 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 	if (!scop.isParallel(mgr)) {
 		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
 	}
-	return core::IRBuilder(mgr).pfor(forStmt);
+	auto transformedIR = core::IRBuilder(mgr).pfor(forStmt);
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 
@@ -680,7 +693,8 @@ RegionStripMining::RegionStripMining(unsigned tileSize)
 	: Transformation(LoopInterchangeType::getInstance(), parameter::makeValue(tileSize) ),
 	  tileSize(tileSize) { }
 
-core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
+core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
 
 	if (tileSize < 2 ) {
 		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
@@ -694,7 +708,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	
 	// Region strip mining applied to a for stmt resolves as a normal strip mining 
 	if (target->getNodeType() == core::NT_ForStmt) {
-		return makeLoopStripMining(0, tileSize)->apply(target);
+		return makeLoopStripMining(0, tileSize)->apply(targetAddress);
 	}
 
 	core::NodeManager& mgr = target->getNodeManager();
@@ -765,7 +779,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	transformedIR = core::IRBuilder(mgr).compoundStmt( scop2.toIR( mgr ).as<core::StatementPtr>() );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// LOG(DEBUG) << *transformedIR;
-	return transformedIR;
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
 } } } // end insieme::transform::polyhedral namespace 

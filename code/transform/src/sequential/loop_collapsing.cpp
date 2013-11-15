@@ -151,7 +151,8 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 				throw InvalidParametersException("Loop collapsing level has to be >= 1!");
 	}
 
-	core::NodePtr LoopCollapsing::apply(const core::NodePtr& target) const {
+	core::NodeAddress LoopCollapsing::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
 		ForStmtPtr forPtr = dynamic_pointer_cast<ForStmtPtr>(target);
 		if(!forPtr) throw InvalidTargetException("Loop collapsing can only be applied to a for loop. Surprise!");
 		unsigned reqLevels = parameter::getValue<unsigned>(getParameters(), 0);
@@ -161,7 +162,8 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 		}
 		if(maxLevels < reqLevels) 
 			throw InvalidTargetException(format("Loop collapsing only possible up to %u levels, %u levels requested", maxLevels, reqLevels));
-		return collapseFor(forPtr, reqLevels);
+		auto res = collapseFor(forPtr, reqLevels);
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
 	}
 
 

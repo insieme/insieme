@@ -64,7 +64,7 @@ namespace rulebased {
 
 		core::StatementPtr stmt = builder.compoundStmt(builder.compoundStmt(one));
 		EXPECT_EQ("{{1;};}", toString(*stmt));
-		EXPECT_EQ("{1;}", toString(*trans.apply(stmt)));
+		EXPECT_EQ("{1;}", toString(*trans.apply(core::NodeAddress(stmt))));
 
 		stmt = builder.compoundStmt(
 				one, two,
@@ -73,7 +73,7 @@ namespace rulebased {
 		);
 
 		EXPECT_EQ("{1; 2; {}; 2;}", toString(*stmt));
-		EXPECT_EQ("{1; 2; 2;}", toString(*trans.apply(stmt)));
+		EXPECT_EQ("{1; 2; 2;}", toString(*trans.apply(core::NodeAddress(stmt))));
 
 	}
 
@@ -93,7 +93,7 @@ namespace rulebased {
 		EXPECT_TRUE(forStmt);
 
 		LoopUnrolling trans(parameter::makeValue<unsigned>(4));
-		auto transformed = trans.apply(forStmt);
+		auto transformed = trans.apply(core::NodeAddress(forStmt));
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
@@ -161,7 +161,7 @@ namespace rulebased {
 		EXPECT_TRUE(forStmt);
 
 		TotalLoopUnrolling trans;
-		auto transformed = trans.apply(forStmt);
+		auto transformed = trans.apply(core::NodeAddress(forStmt)).getAddressedNode();
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 		// check transformed code
@@ -191,7 +191,7 @@ namespace rulebased {
 		EXPECT_TRUE(forStmt);
 
 		TotalLoopUnrolling trans;
-		auto transformed = core::analysis::normalize(trans.apply(forStmt));
+		auto transformed = core::analysis::normalize(trans.apply(core::NodeAddress(forStmt)).getAddressedNode());
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
@@ -215,7 +215,7 @@ namespace rulebased {
 			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
-		EXPECT_THROW(trans.apply(forStmt), InvalidTargetException);
+		EXPECT_THROW(trans.apply(core::NodeAddress(forStmt)), InvalidTargetException);
 
 		forStmt = builder.parseStmt(
 			"for(int<4> i = 10+x .. 50+x : 2*x) { "
@@ -223,7 +223,7 @@ namespace rulebased {
 			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
-		EXPECT_THROW(trans.apply(forStmt), InvalidTargetException);
+		EXPECT_THROW(trans.apply(core::NodeAddress(forStmt)), InvalidTargetException);
 	}
 
 	TEST(Transformations, SimpleLoopTiling2D) {
@@ -241,7 +241,7 @@ namespace rulebased {
 		EXPECT_TRUE(forStmt);
 
 		SimpleLoopTiling2D trans(parameter::combineValues(10u,15u));
-		auto transformed = trans.apply(forStmt);
+		auto transformed = trans.apply(core::NodeAddress(forStmt)).getAddressedNode();
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
