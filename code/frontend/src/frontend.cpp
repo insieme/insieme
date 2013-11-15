@@ -58,6 +58,7 @@
 #include "insieme/frontend/extensions/asm_extension.h"
 #include "insieme/frontend/extensions/long_long_extension.h"
 
+
 namespace insieme {
 namespace frontend {
 
@@ -169,6 +170,19 @@ namespace frontend {
 
 		// return instance within global manager
 		return core::transform::utils::migrate(res, manager);
+	}
+
+	bool ConversionJob::isCxx() const {
+		if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
+		if (getStandard() == Standard::C99) return false;
+
+		bool cppFile = any(files, [&](const path& cur) {
+			return static_cast<const ConversionSetup&>(*this).isCxx(cur);
+		});
+
+		bool cppLibs = any(libs, [&](const tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); } );
+
+		return cppFile || cppLibs;
 	}
 
 } // end namespace frontend
