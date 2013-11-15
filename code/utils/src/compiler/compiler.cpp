@@ -115,6 +115,8 @@ namespace compiler {
 		cmd << " " << join(" ", before);
 		cmd << " " << join(" ", inputFiles);
 		cmd << " " << join(" ", after);
+		cmd << " -L" << join(" -L", libs.getPaths());
+		cmd << " -l" << join(" -l", libs.getLibs());
 		cmd << " -o " << outputFile;
 
 		// redirect streams if compilation should be 'silent'
