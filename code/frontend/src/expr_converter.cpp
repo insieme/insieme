@@ -46,7 +46,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
@@ -515,15 +515,18 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 			type = builder.getLangBasic().getInt4();
 			break;
 		case 8:
-			type = builder.getLangBasic().getInt8();
+	//		type = builder.getLangBasic().getInt8();
+			type = convFact.convertType(intLit->getType().getTypePtr());
 			break;
-		case 16:
-			type = builder.getLangBasic().getInt16();
-			break;
+
+	//	case 16:
+	//		type = builder.getLangBasic().getInt16();
+	//		break;
 		default:
 			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
 	}
 
+	frontend_assert(!value.empty()) << "literal con not be an empty string";
     retExpr =  builder.literal(type, toString(value));
 	return retExpr;
 
@@ -1109,9 +1112,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// some casts are not pressent in IR
 			if (gen.isPrimitive(rhs->getType())) {
                 if(core::analysis::isVolatileType(GET_REF_ELEM_TYPE(lhs->getType()))) {
-                    rhs = builder.makeVolatile(utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
+                    rhs = builder.makeVolatile(frontend::utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
                 } else {
-                    rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
+                    rhs = frontend::utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
                 }
 			}
 
@@ -1541,7 +1544,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx =  utils::castScalar(gen.getUInt4(), idx);
+		idx =  frontend::utils::castScalar(gen.getUInt4(), idx);
 	}
 
 	// BASE

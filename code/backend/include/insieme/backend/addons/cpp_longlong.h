@@ -36,43 +36,32 @@
 
 #pragma once
 
-// forwared declaration
-namespace clang { class CastExpr; }
+#include "insieme/core/forward_decls.h"
 
+#include "insieme/backend/addon.h"
+
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
 namespace insieme {
-namespace frontend {
+namespace backend {
+namespace addons {
 
-
-//FORWARD DECLARATION
-namespace conversion {
-	class Converter;
-}
-
-namespace utils {
-
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
 
 	/**
-	 * casts to bool an expression
+	 * An Add-On realizing support for C++ style reference types.
 	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
+	struct CppLongLong : public AddOn {
 
-	/**
-	 * cast between 2 scalar types an IR expression
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::ExpressionPtr& expr);
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
 
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
-	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
-	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
-											  const clang::CastExpr* castExpr);
+	};
 
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme

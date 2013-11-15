@@ -38,6 +38,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <fstream>
 
 #include "insieme/utils/logging.h"
@@ -51,7 +52,34 @@ namespace compiler {
 	// some common abbreviations
 	using std::string;
 	using std::vector;
+	using std::set;
 
+	class ExternalLibraries {
+
+	private:
+
+		set<string> paths;
+
+		set<string> libs;
+
+	public:
+
+		void addPath(const string& path) {
+			paths.insert(path);
+		}
+
+		void addLib(const string& lib) {
+			libs.insert(lib);
+		}
+
+		set<string> getPaths() const {
+			return paths;
+		}
+
+		set<string> getLibs() const {
+			return libs;
+		}
+	};
 
 	class Compiler {
 
@@ -59,11 +87,13 @@ namespace compiler {
 
 		vector<string> flags;
 
+		ExternalLibraries libs;
+
 		bool silent;
 
 	public:
 
-		Compiler(const string& executable) : executable(executable), silent(false) {};
+		Compiler(const string& executable) : executable(executable), libs(), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();
@@ -92,6 +122,11 @@ namespace compiler {
 
 		void addFlag(const string& flag) {
 			flags.push_back(flag);
+		}
+
+		void addExternalLibrary(const string& path, const string& lib) {
+			libs.addPath(path);
+			libs.addLib(lib);
 		}
 
 		string getCommand(const vector<string>& inputFiles, const string& outputFile) const;

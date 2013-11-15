@@ -60,6 +60,7 @@
 
 #include "insieme/backend/addons/cpp_references.h"
 #include "insieme/backend/addons/cpp_memb_ptr.h"
+#include "insieme/backend/addons/cpp_longlong.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/simd_vector.h"
@@ -73,6 +74,7 @@ namespace sequential {
 		auto res = std::make_shared<SequentialBackend>();
 		res->addAddOn<addons::CppReferences>();
 		res->addAddOn<addons::CppMembAddon>();
+		res->addAddOn<addons::CppLongLong>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::SIMDVector>();

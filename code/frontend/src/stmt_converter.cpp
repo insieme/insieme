@@ -40,7 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"

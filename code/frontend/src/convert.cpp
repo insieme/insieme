@@ -49,7 +49,7 @@
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
@@ -1312,12 +1312,12 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
-core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const core::ExpressionPtr& init){
+core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, const core::ExpressionPtr& init){
 
 	// null expression is allowed on globals initializations
 	if (!init) return init;
 
-	core::TypePtr elementType = lookupTypeDetails(type);
+	core::TypePtr elementType = lookupTypeDetails(targetType);
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
@@ -1339,7 +1339,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			return builder.callExpr(
 					elementType,
 					initOp,
-					core::encoder::toIR(type->getNodeManager(), elements),
+					core::encoder::toIR(targetType->getNodeManager(), elements),
 					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
@@ -1360,7 +1360,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 				*elementType.isa<core::VectorTypePtr>()->getSize())
 				return builder.callExpr(
 						builder.getLangBasic().getVectorInitPartial(),
-						core::encoder::toIR(type->getNodeManager(), elements),
+						core::encoder::toIR(targetType->getNodeManager(), elements),
 						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
 					);
 
@@ -1383,14 +1383,14 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 		// desperate times call for desperate measures
 		if (core::GenericTypePtr&& gen = elementType.isa<core::GenericTypePtr>()){
 			// TODO: this might require some more work
-			// this is a blind initialization of a generic type we know nothing about
+			// this is a blind initialization of a generic targetType we know nothing about
 			vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
 			return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
 		}
 
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
-		std::cerr << "type to init: " << type << std::endl;
+		std::cerr << "targetType to init: " << targetType << std::endl;
 		std::cerr << "init expression: " << init << " : " << init->getType() << std::endl;
 
 		assert(false && "fallthrow");
@@ -1406,16 +1406,20 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 			for (unsigned i = 0; i < unionTy->getEntries().size(); ++i)
 				if (*unionTy->getEntries()[i]->getName() == *name)
 					entityType = unionTy->getEntries()[0]->getType();
-			assert(entityType && "the type of the entity could not be found");
+			assert(entityType && "the targetType of the entity could not be found");
 			return  builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0]));
 		}
-		// it might be that is an empy initialization, retrieve the type to avoid nested variable creation
+		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return init.as<core::CallExprPtr>()[0];
 	}
 
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
 	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) return init;
+
+	// long long types
+	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType))
+		return init;
 
 	////////////////////////////////////////////////////////////////////////////
 	// if the type missmatch we might need to take some things in consideration:
@@ -1446,7 +1450,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 
 	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType()))
-		return utils::castScalar(elementType, init);
+		return frontend::utils::castScalar(elementType, init);
 
 	if ( elementType.isa<core::VectorTypePtr>() ){
 		core::ExpressionPtr initVal = init;
@@ -1478,20 +1482,20 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& type, const cor
 
     // the case of enum type initializations
     if(mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(init->getType())) {
-        return utils::castScalar(elementType, init);
+        return frontend::utils::castScalar(elementType, init);
     }
 
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType());
 
-	if (utils::isRefArray(init->getType()) && utils::isRefArray(type)){
-		return builder.refReinterpret(init, type.as<core::RefTypePtr>()->getElementType());
+	if (utils::isRefArray(init->getType()) && utils::isRefArray(targetType)){
+		return builder.refReinterpret(init, targetType.as<core::RefTypePtr>()->getElementType());
 	}
 
-	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
-	std::cerr << "type details: \n\t" << lookupTypeDetails(init->getType()) << std::endl;
-	std::cerr << "\t target: " << type << std::endl;
+	std::cerr << "initialization fails: \n\t" << init << std::endl;
+	std::cerr << "init type / details: \n\t" << init->getType() << " / " << lookupTypeDetails(init->getType()) << std::endl;
+	std::cerr << "\t target: " << targetType << std::endl;
 
 	assert(false && " fallthrow");
 	return init;
