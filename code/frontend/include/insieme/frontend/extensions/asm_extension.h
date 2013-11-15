@@ -40,9 +40,16 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
 using namespace insieme;
 
 class ASMExtension : public insieme::frontend::extensions::FrontendPlugin {
     virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
 };
+
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions

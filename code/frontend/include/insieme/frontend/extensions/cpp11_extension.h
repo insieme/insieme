@@ -36,6 +36,9 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
 class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
@@ -91,3 +94,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	}
 
 };
+
+} //namespace plugin
+} //namespace frontnt
+} //namespace extensions

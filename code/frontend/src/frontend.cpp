@@ -81,13 +81,13 @@ namespace frontend {
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
-        registerFrontendPlugin<ASMExtension>();
+        registerFrontendPlugin<extensions::ASMExtension>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
         if(standard == Cxx11)
-                registerFrontendPlugin<Cpp11Plugin>();
+                registerFrontendPlugin<extensions::Cpp11Plugin>();
     }
 
 
