@@ -215,17 +215,19 @@ namespace analysis {
 	 * checks whenever the inner implementation of the type represents a long long
 	 */
 	bool isLongLong(const TypePtr& type);
+	bool isSignedLongLong(const TypePtr& type);
 
 	/**
 	 * cast to long long
 	 */
-	ExpressionPtr castToLongLong( const ExpressionPtr& expr);
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed = false);
 
 	/**
 	 * cast from long long
 	 */
 	ExpressionPtr castFromLongLong( const ExpressionPtr& expr);
 
+	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr);
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

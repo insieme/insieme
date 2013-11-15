@@ -209,6 +209,7 @@ namespace runtime {
 			case c_ast::PrimitiveType::Float:  kind = "IRT_T_REAL32"; break;
 			case c_ast::PrimitiveType::Double: kind = "IRT_T_REAL64"; break;
 			case c_ast::PrimitiveType::LongLong: kind = "IRT_T_INT64"; break;  
+			case c_ast::PrimitiveType::ULongLong: kind = "IRT_T_UINT64"; break;  
 			}
 
 			// add entry

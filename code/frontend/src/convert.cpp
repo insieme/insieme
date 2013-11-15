@@ -1508,8 +1508,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return builder.refReinterpret(init, targetType.as<core::RefTypePtr>()->getElementType());
 	}
 
-	std::cerr << "initialization fails: \n\t" << init << " : " << init->getType() << std::endl;
-	std::cerr << "targetType details: \n\t" << lookupTypeDetails(init->getType()) << std::endl;
+	std::cerr << "initialization fails: \n\t" << init << std::endl;
+	std::cerr << "init type / details: \n\t" << init->getType() << " / " << lookupTypeDetails(init->getType()) << std::endl;
 	std::cerr << "\t target: " << targetType << std::endl;
 
 	assert(false && " fallthrow");

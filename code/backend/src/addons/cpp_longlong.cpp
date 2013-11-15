@@ -64,7 +64,11 @@ namespace addons {
 				return NOT_HANDLED;	// not handled by this handler
 			}
 
-			c_ast::PrimitiveType::CType kind = c_ast::PrimitiveType::LongLong;
+			c_ast::PrimitiveType::CType kind;
+			if (core::analysis::isSignedLongLong(type)) 
+				kind  = c_ast::PrimitiveType::LongLong;
+			else
+				kind  = c_ast::PrimitiveType::ULongLong;
 			c_ast::TypePtr intType =converter.getCNodeManager()->create<c_ast::PrimitiveType>(kind);
 			c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 			return type_info_utils::createInfo(intType, definition);
@@ -84,6 +88,21 @@ namespace addons {
 					return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); 
 				});
 
+			res[ext.getULongToULongLong()] 	  = OP_CONVERTER({ 
+					return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); 
+				});
+
+			res[ext.getULongLongToULong()] 	  = OP_CONVERTER({ 
+					return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); 
+				});
+
+			res[ext.getULongLongToLongLong()] 	  = OP_CONVERTER({ 
+					return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); 
+				});
+
+			res[ext.getLongLongToULongLong()] 	  = OP_CONVERTER({ 
+					return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); 
+				});
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;
 		}

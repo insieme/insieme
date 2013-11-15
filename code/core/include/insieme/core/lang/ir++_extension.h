@@ -282,6 +282,10 @@ namespace lang {
 				"let longlong = struct { int<8> longlong_val } in "
 				"(int<8> x)->longlong { return (longlong) { x }; }"
 		);
+		LANG_EXT_DERIVED(ULongToULongLong,
+				"let longlong = struct { uint<8> longlong_val } in "
+				"(uint<8> x)->longlong { return (longlong) { x }; }"
+		);
 
 		/**
 		 * cast from long long to long
@@ -289,6 +293,20 @@ namespace lang {
 		LANG_EXT_DERIVED(LongLongToLong,
 				"let longlong = struct { int<8> longlong_val } in "
 				"(longlong x)->int<8> { return x.longlong_val; }"
+		);
+		LANG_EXT_DERIVED(ULongLongToULong,
+				"let longlong = struct { uint<8> longlong_val } in "
+				"(longlong x)->uint<8> { return x.longlong_val; }"
+		);
+		LANG_EXT_DERIVED(ULongLongToLongLong,
+				"let longlong  = struct { int<8>  longlong_val } in "
+				"let ulonglong = struct { uint<8> longlong_val } in "
+				"(ulonglong x)->longlong { return (longlong) { (int<8>) x.longlong_val }; }"
+		);
+		LANG_EXT_DERIVED(LongLongToULongLong,
+				"let longlong  = struct { int<8>  longlong_val } in "
+				"let ulonglong = struct { uint<8> longlong_val } in "
+				"(longlong x)->ulonglong { return (ulonglong) { (uint<8>) x.longlong_val }; }"
 		);
 
 

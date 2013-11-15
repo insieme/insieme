@@ -109,7 +109,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
 
 	CHECK_BUILTIN_TYPE(Long, "int<8>");
-	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
+	CHECK_BUILTIN_TYPE(LongLong, "struct<longlong_val:int<8>>");
 
 	// UInt128
 	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");

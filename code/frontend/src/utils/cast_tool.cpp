@@ -245,18 +245,16 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPtr expr){
+core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr){
 	core::TypePtr exprTy = expr->getType();
+	core::TypePtr targetTy = trgTy;
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::NodeManager& mgr = exprTy.getNodeManager();
 
-	//std::cout << "####### Expr: #######" << std::endl;
-	//dumpDetail(expr);
-	//std::cout << "####### Expr Type: #######" << std::endl;
-	//dumpDetail(exprTy);
-	//std::cout << "####### target Type: #######" << std::endl;
-	//dumpDetail(targetTy);
+	//std::cout << "========= SCALAR CAST =====================" <<std::endl;
+	//std::cout << "Expr: " << expr << " : " << expr->getType() << std::endl;
+	//std::cout << "target Type: " << targetTy << std::endl;
 
 	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
@@ -265,10 +263,25 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPt
 		return expr;
 	}
 
-	// magic casts between longlong and long
+	bool isLongLong = false;
+
+	if (core::analysis::isLongLong (targetTy) && core::analysis::isLongLong(expr->getType())){
+		if (core::analysis::isSignedLongLong(targetTy) == core::analysis::isSignedLongLong(expr->getType())){
+			return expr;
+		}
+		else{
+			return core::analysis::castBetweenLongLong(expr);
+		}
+	}
+
+	// casts from long to longlong and long
 	if (core::analysis::isLongLong (targetTy)){
-		assert(gen.isSignedInt(expr->getType())  && "this cast needs to be improved");
-		return core::analysis::castToLongLong(expr);
+		isLongLong = true;
+		if (core::analysis::isSignedLongLong (targetTy))
+			targetTy = gen.getInt8();
+		else
+			targetTy = gen.getUInt8();
+
 	}
 	
 	// cast from long long
@@ -277,11 +290,18 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPt
 		exprTy = expr->getType();
 	}
 
+	auto lastStep = [&isLongLong, &gen] (const core::ExpressionPtr& expr) -> core::ExpressionPtr {
+		if (isLongLong)
+			return core::analysis::castToLongLong(expr, gen.isSignedInt(expr->getType()));
+		else
+			return expr;
+	};
+
 	// is this the cast of a literal: to simplify code we'll return
 	// a literal of the spected type
 	if (expr->getNodeType() == core::NT_Literal){
 		try{
-			return castLiteral ( expr.as<core::LiteralPtr>(), targetTy);
+			return lastStep(castLiteral ( expr.as<core::LiteralPtr>(), targetTy));
 		}catch (std::exception& e){
 			// literal upgrade not supported, continue with regular cast
 		}
@@ -307,75 +327,94 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPt
 	if (gen.isWChar(targetTy))			code += 60;
 	if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy)) code += 70;
 
-	core::ExpressionPtr op;
-	bool precision = true;
+
+	auto doCast = [&](const core::ExpressionPtr& op,  const core::ExpressionPtr& expr, std::size_t precision) -> core::ExpressionPtr{
+		if (precision) {
+			core::ExpressionList args;
+			args.push_back(expr);
+			args.push_back(builder.getIntParamLiteral(precision));
+			return builder.callExpr(targetTy, op, args);
+
+		}
+		else
+			return builder.callExpr(targetTy, op, expr);
+	};
+	core::ExpressionPtr resIr;
+
 	std::size_t bytes    = getPrecission(targetTy, gen);
 	switch(code){
 		case 11:
 			// only if target precission is smaller, we may have a precission loosse.
-			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
-			else return expr;
+			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getIntPrecisionFix(), expr, bytes);
+			else resIr = expr;
+			break;
         case 17:
-            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
+            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr, 0);
+			break;
 		case 22:
-			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
-			else return expr;
+			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getUintPrecisionFix(), expr, bytes);
+			else resIr = expr;
+			break;
         case 27:
-            return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
+            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr, 0);
+			break;
 		case 33:
-			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
-			else return expr;
+			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getRealPrecisionFix(), expr, bytes);
+			else resIr = expr;
+			break;
 		case 44:
 		case 55: // no cast;
 			// this is a cast withing the same type.
 			// is a preccision adjust, if is on the same type,
 			// no need to adjust anything
-			return expr;
+			resIr = expr;
+			break;
 		case 66:
-			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getWCharPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
-			else return expr;
+			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getWCharPrecisionFix(), expr, bytes);
+			else resIr = expr;
+			break;
 
-		case 12: op = gen.getUnsignedToInt(); break;
-		case 13: op = gen.getRealToInt(); break;
-		case 14: op = gen.getCharToInt(); break;
-		case 15: op = gen.getBoolToInt(); break;
-		case 16: op = gen.getWCharToInt(); break;
+		case 12: resIr = doCast(gen.getUnsignedToInt(), expr, bytes); break;
+		case 13: resIr = doCast(gen.getRealToInt(), expr, bytes); break;
+		case 14: resIr = doCast(gen.getCharToInt(), expr, bytes); break;
+		case 15: resIr = doCast(gen.getBoolToInt(), expr, bytes); break;
+		case 16: resIr = doCast(gen.getWCharToInt(), expr, bytes); break;
 
-		case 21: op = gen.getSignedToUnsigned(); break;
-		case 23: op = gen.getRealToUnsigned(); break;
-		case 24: op = gen.getCharToUnsigned(); break;
-		case 25: op = gen.getBoolToUnsigned(); break;
-		case 26: op = gen.getWCharToUnsigned(); break;
+		case 21: resIr = doCast(gen.getSignedToUnsigned(), expr, bytes); break;
+		case 23: resIr = doCast(gen.getRealToUnsigned(), expr, bytes); break;
+		case 24: resIr = doCast(gen.getCharToUnsigned(), expr, bytes); break;
+		case 25: resIr = doCast(gen.getBoolToUnsigned(), expr, bytes); break;
+		case 26: resIr = doCast(gen.getWCharToUnsigned(), expr, bytes); break;
 
-		case 31: op = gen.getSignedToReal(); break;
-		case 32: op = gen.getUnsignedToReal(); break;
-		case 34: op = gen.getCharToReal(); break;
-		case 35: op = gen.getBoolToReal(); break;
+		case 31: resIr = doCast(gen.getSignedToReal(), expr, bytes); break;
+		case 32: resIr = doCast(gen.getUnsignedToReal(), expr, bytes); break;
+		case 34: resIr = doCast(gen.getCharToReal(), expr, bytes); break;
+		case 35: resIr = doCast(gen.getBoolToReal(), expr, bytes); break;
 
-		case 41: op = gen.getSignedToChar();  precision=false; break;
-		case 42: op = gen.getUnsignedToChar();precision=false; break;
-		case 43: op = gen.getRealToChar();    precision=false; break;
-		case 45: op = gen.getBoolToChar();    precision=false; break;
+		case 41: resIr = doCast(gen.getSignedToChar(), expr, 0);   break;
+		case 42: resIr = doCast(gen.getUnsignedToChar(), expr, 0); break;
+		case 43: resIr = doCast(gen.getRealToChar(), expr, 0);     break;
+		case 45: resIr = doCast(gen.getBoolToChar(), expr, 0);     break;
 
-		case 51: op = gen.getSignedToBool();  precision=false; break;
-		case 52: op = gen.getUnsignedToBool();precision=false; break;
-		case 53: op = gen.getRealToBool();    precision=false; break;
-		case 54: op = gen.getCharToBool();    precision=false; break;
+		case 51: resIr = doCast(gen.getSignedToBool(), expr, 0);   break;
+		case 52: resIr = doCast(gen.getUnsignedToBool(), expr, 0); break;
+		case 53: resIr = doCast(gen.getRealToBool(), expr, 0);     break;
+		case 54: resIr = doCast(gen.getCharToBool(), expr, 0);     break;
 
-		case 57: return builder.callExpr(targetTy, mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsBool(), expr);
+		case 57: resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsBool(), expr, 0); break;
 
-		case 61: op = gen.getSignedToWChar(); break;
-		case 62: op = gen.getUnsignedToWChar(); break;
-		case 63: op = gen.getRealToWChar(); break;
-		case 64: op = gen.getCharToWChar(); break;
-		case 65: op = gen.getBoolToWChar(); break;
+		case 61: resIr = doCast(gen.getSignedToWChar(), expr, 0); break;
+		case 62: resIr = doCast(gen.getUnsignedToWChar(), expr, 0); break;
+		case 63: resIr = doCast(gen.getRealToWChar(), expr, 0); break;
+		case 64: resIr = doCast(gen.getCharToWChar(), expr, 0); break;
+		case 65: resIr = doCast(gen.getBoolToWChar(), expr, 0); break;
 
-		case 71: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
-                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
-		case 72: return builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
-                                     builder.refVar(expr), builder.getTypeLiteral(targetTy)));
+		case 71: resIr = builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy))); break;
+		case 72: resIr = builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
+                                     builder.refVar(expr), builder.getTypeLiteral(targetTy))); break;
 
-        case 77: return expr;
+        case 77: resIr = expr; break;
 
 		default:
 				 std::cerr << "expr type: " << exprTy << std::endl;
@@ -383,14 +422,10 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, core::ExpressionPt
 				 std::cerr << "code: " << (int) code << std::endl;
 				 assert(false && "cast not defined");
 	}
-	if (precision) {
-		core::ExpressionList args;
-		args.push_back(expr);
-		args.push_back(builder.getIntParamLiteral(bytes));
-		return builder.callExpr(targetTy, op, args);
-	}
-	else
-		return builder.callExpr(targetTy, op, expr);
+
+
+	// idelayed casts from long to longlong and long
+	return lastStep(resIr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -440,16 +475,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 	core::TypePtr&& exprTy = expr->getType();
 
-		//if (VLOG_IS_ON(2)){
-		//	VLOG(2) << "####### Expr: #######" ;
-		//	VLOG(2) << (expr);
-		//	VLOG(2) << "####### Expr Type: #######" ;
-		//	VLOG(2) << (exprTy);
-		//	VLOG(2) << "####### cast Type: #######" ;
-		//	VLOG(2) << (targetTy);
-		//	VLOG(2)  << "####### clang: #######" << std::endl;
-		//	castExpr->dump();
-		//}
+	//	if (VLOG_IS_ON(2)){
+	//		VLOG(2) << "####### Expr: #######" ;
+	//		VLOG(2) << (expr);
+	//		VLOG(2) << "####### Expr Type: #######" ;
+	//		VLOG(2) << (exprTy);
+	//		VLOG(2) << "####### cast Type: #######" ;
+	//		VLOG(2) << (targetTy);
+	//		VLOG(2)  << "####### clang: #######" << std::endl;
+	//		castExpr->dump();
+	//	}
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>

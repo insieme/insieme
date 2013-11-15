@@ -44,6 +44,8 @@
 
 #include "insieme/core/datapath/datapath.h"
 
+#include "insieme/utils/assert.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -293,23 +295,65 @@ namespace analysis {
 		// check the one member element
 		IRBuilder builder(type->getNodeManager());
 		NamedTypePtr element = structType[0];
-		if (element->getType() != builder.getLangBasic().getInt8()) return false;
-		if (element->getName().getValue() != "longlong_val") return false;
+
+		if ((element->getName().getValue() != "longlong_val") &&
+			!(element->getType() == builder.getLangBasic().getInt8() || element->getType() == builder.getLangBasic().getUInt8()))
+			return false;
 
 		return true;
 	}
+	
+	bool isSignedLongLong(const TypePtr& type){
+		assert(isLongLong(type));
+		IRBuilder builder(type->getNodeManager());
+		NamedTypePtr element = type.as<StructTypePtr>()[0];
+		return element->getType() == builder.getLangBasic().getInt8();
+	}
 
-	ExpressionPtr castToLongLong( const ExpressionPtr& expr){
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed){
 		NodeManager& manager = expr.getNodeManager();
 		IRBuilder builder(manager);
-		core::ExpressionPtr cast = manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong();
+
+		core::ExpressionPtr cast;
+		if (_signed)
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong();
+		else
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongToULongLong();
+
 		return builder.callExpr(cast, expr);
 	}
 
 	ExpressionPtr castFromLongLong( const ExpressionPtr& expr){
+		assert(isLongLong(expr->getType()));
 		NodeManager& manager = expr.getNodeManager();
 		IRBuilder builder(manager);
-		core::ExpressionPtr cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToLong();
+		
+		core::ExpressionPtr cast;
+		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
+		if (element->getType() == builder.getLangBasic().getInt8())
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToLong();
+		else if (element->getType() == builder.getLangBasic().getUInt8())
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToULong();
+		else
+			assert(false && "not a long long");
+
+		return builder.callExpr(cast, expr);
+	}
+	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr){
+		assert(isLongLong(expr->getType()));
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		
+		core::ExpressionPtr cast;
+		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
+		if (element->getType() == builder.getLangBasic().getInt8()){
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToULongLong();
+		}else if (element->getType() == builder.getLangBasic().getUInt8()){
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToLongLong();
+		}else{
+			assert(false && "not a long long");
+		}
+
 		return builder.callExpr(cast, expr);
 	}
 

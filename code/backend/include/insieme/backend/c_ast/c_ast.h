@@ -134,7 +134,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double, LongLong
+			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double, LongLong, ULongLong
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
