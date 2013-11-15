@@ -60,6 +60,8 @@ namespace cba {
 
 	// -- Arithmetic --
 
+	core::LiteralPtr isIntegerConstant(const core::ExpressionAddress& a);
+
 
 	// -- Functions --
 
