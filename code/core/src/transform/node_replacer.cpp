@@ -603,6 +603,11 @@ private:
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
+		// fix call to known built-in functions
+		if (manager.getLangBasic().isBuiltIn(call->getFunctionExpr())) {
+			return handleCallToBuiltIn(call, newArgs);
+		}
+
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
 /*			if(call->getType() != newCall->getType()) {
@@ -632,6 +637,37 @@ private:
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
 		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;
+	}
+
+	CallExprPtr handleCallToBuiltIn(const CallExprPtr& call, const ExpressionList& args) {
+		// obtain function
+		auto fun = call->getFunctionExpr();
+
+		// should only be called for built-in functions
+		assert(manager.getLangBasic().isBuiltIn(fun));
+
+		// use type inference for the return type
+		if(manager.getLangBasic().isCompositeRefElem(fun)) {
+			return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
+					static_pointer_cast<const Literal>(args.at(1))->getValue()));
+		}
+		if(manager.getLangBasic().isCompositeMemberAccess(fun)) {
+			return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
+					static_pointer_cast<const Literal>(args.at(1))->getValue()));
+		}
+		if(manager.getLangBasic().isTupleRefElem(fun)) {
+			return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
+		}
+		if(manager.getLangBasic().isTupleMemberAccess(fun)) {
+			return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
+		}
+
+		if(manager.getLangBasic().isRefAssign(fun)) {
+			return builder.assign(args.at(0), args.at(1));
+		}
+
+		// otherwise standard treatment
+		return builder.callExpr(fun, args);
 	}
 
 	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
@@ -710,35 +746,6 @@ private:
 
 		// only supported for function types
 		assert(literal->getType()->getNodeType() == NT_FunctionType);
-		// do not touch build-in literals
-		if (manager.getLangBasic().isBuiltIn(literal)) {
-
-			// use type inference for the return type
-			if(manager.getLangBasic().isCompositeRefElem(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
-						static_pointer_cast<const Literal>(args.at(1))->getValue()));
-			}
-			if(manager.getLangBasic().isCompositeMemberAccess(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
-						static_pointer_cast<const Literal>(args.at(1))->getValue()));
-			}
-			if(manager.getLangBasic().isTupleRefElem(literal)) {
-	//std::cout << "TRRRRRRRRR " << args.at(0)->getType() << " < " << args << std::endl;
-				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
-			}
-			if(manager.getLangBasic().isTupleMemberAccess(literal)) {
-	//std::cout << "BAMBAM " << args.at(0)->getType() << " > " << args << std::endl;
-				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
-			}
-
-			if(manager.getLangBasic().isRefAssign(literal)) {
-				return builder.assign(args.at(0), args.at(1));
-			}
-
-			CallExprPtr newCall = builder.callExpr(literal, args);
-
-			return newCall;
-		}
 
 		// assemble new argument types
 		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });

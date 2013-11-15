@@ -431,7 +431,9 @@ namespace core {
 
 	void setMetaInfo(const TypePtr& type, const ClassMetaInfo& info) {
 		assert(analysis::isObjectType(type) && "Meta-Information may only be attached to object types!");
-		assert(!info.getClassType() || *info.getClassType() == *type);
+		assert_true(!info.getClassType() || *info.getClassType() == *type)
+			<< "Target Type: " << *type << "\n"
+			<< "Class Type: " << (info.getClassType() ? toString(*info.getClassType()) : "-unknown-") << "\n";
 
 		// if information is not different to the default => just drop it
 		if (info == defaultInfo) {

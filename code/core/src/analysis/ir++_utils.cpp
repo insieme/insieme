@@ -92,7 +92,7 @@ namespace analysis {
 		case NT_TypeVariable:
 			return true;			// all this types are always object types
 		case NT_RecType:
-			return isObjectType(type.as<RecTypePtr>()->unroll());
+			return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());
 		default: break;
 		}
 

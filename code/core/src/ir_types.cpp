@@ -36,6 +36,7 @@
 
 #include "insieme/core/ir_types.h"
 
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace core {
@@ -124,7 +125,7 @@ namespace core {
 
 	namespace {
 
-		class RecTypeUnroller : public NodeMapping {
+		class RecTypeUnroller : public transform::CachedNodeMapping {
 
 			NodeManager& manager;
 			RecTypeDefinitionPtr definition;
@@ -135,7 +136,7 @@ namespace core {
 			RecTypeUnroller(NodeManager& manager, const RecTypeDefinition& definition)
 				: manager(manager), definition(&definition) { }
 
-			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
 				// check whether it is a known variable
 				if (ptr->getNodeType() == NT_TypeVariable) {
 					TypeVariablePtr var = static_pointer_cast<const TypeVariable>(ptr);
@@ -145,6 +146,11 @@ namespace core {
 						// .. unroll the definition
 						return RecType::get(manager, var, definition);
 					}
+				}
+
+				// check whether current node is a nested recursive type binding
+				if (auto binding = ptr.isa<RecTypeBindingPtr>()) {
+					return binding; // do not decent into this
 				}
 
 				// replace recursively
