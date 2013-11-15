@@ -68,7 +68,7 @@ namespace backend {
 			steps.push_back(makePreProcessor<RestoreGlobals>());
 		}
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
-		steps.push_back(makePreProcessor<RedundancyElimination>());
+		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
