@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/channel.h"
+#include "insieme/analysis/cba/framework/entities/channel.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"

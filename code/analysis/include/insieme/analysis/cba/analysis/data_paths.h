@@ -38,8 +38,8 @@
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
-#include "insieme/analysis/cba/framework/data_path.h"
-#include "insieme/analysis/cba/framework/data_value.h"
+#include "insieme/analysis/cba/framework/entities/data_path.h"
+#include "insieme/analysis/cba/framework/entities/data_value.h"
 
 #include "insieme/analysis/cba/analysis/simple_constant.h"
 #include "insieme/analysis/cba/analysis/arithmetic.h"

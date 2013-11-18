@@ -46,12 +46,13 @@
 #include "insieme/analysis/cba/framework/_forward_decl.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/context.h"
-#include "insieme/analysis/cba/framework/entities.h"
-#include "insieme/analysis/cba/framework/location.h"
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/call_site_manager.h"
 #include "insieme/analysis/cba/framework/call_string_filter.h"
-#include "insieme/analysis/cba/framework/data_path.h"
+
+#include "insieme/analysis/cba/framework/entities/entities.h"
+#include "insieme/analysis/cba/framework/entities/location.h"
+#include "insieme/analysis/cba/framework/entities/data_path.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
