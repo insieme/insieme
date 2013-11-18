@@ -175,7 +175,7 @@ namespace utils {
 				
 				// check whether the stack can be continued
 				if (!includeLoc.isValid()) {
-					VLOG(2) << "no headerfile";
+					//VLOG(2) << "no headerfile";
 					return ""; 		// this happens when element is declared in c / cpp file => no header
 				}
 				
@@ -192,8 +192,8 @@ namespace utils {
 				// if userSearchPath/systemSearch path we need to include de header
 				//
 				//*******************
-				VLOG(2) << "presumedIncludeLoc: " << pIncludeLoc.getFilename();
-				VLOG(2) << "included file: " << ploc.getFilename();
+				//VLOG(2) << "presumedIncludeLoc: " << pIncludeLoc.getFilename();
+				//VLOG(2) << "included file: " << ploc.getFilename();
 
 				// descent further as long as we have a header file as presumed include loc
 				if ( isHeaderFile(pIncludeLoc.getFilename()) ) {
@@ -204,33 +204,33 @@ namespace utils {
 					if((	(isStdLibHeader(ploc.getFilename()) && !isStdLibHeader(sm.getPresumedLoc(includeLoc).getFilename()))
 						||	(isUserLibHeader(ploc.getFilename()) && !isUserLibHeader(sm.getPresumedLoc(includeLoc).getFilename())))
 							&& !isIntrinsicHeader(sm.getPresumedLoc(includeLoc).getFilename())) {
-						VLOG(2) << "userProvidedHeader";
+						//VLOG(2) << "userProvidedHeader";
 						return ploc.getFilename();
 					}
 					
-					VLOG(2) << "recCase " << pIncludeLoc.getFilename();
+					//VLOG(2) << "recCase " << pIncludeLoc.getFilename();
 					return getTopLevelInclude(includeLoc);
 				}
 
 				// we already visited all the headers and we are in the .c/.cpp file
 				if (isHeaderFile(ploc.getFilename())) {
-					VLOG(2) << "incFile: " << ploc.getFilename();
+					//VLOG(2) << "incFile: " << ploc.getFilename();
 					if(isIntrinsicHeader(ploc.getFilename())) {
-						VLOG(2) << "intrinsic";
+						//VLOG(2) << "intrinsic";
 						return ploc.getFilename();
 					} 
 				
 					if (isStdLibHeader(ploc.getFilename()) ) {
-						VLOG(2) << "systemInclude";
+						//VLOG(2) << "systemInclude";
 						return ploc.getFilename(); // this happens when header file is included straight in the code
 					} 
 					
 					if (isUserLibHeader(ploc.getFilename())) {
-						VLOG(2) << "userInclude";
+						//VLOG(2) << "userInclude";
 						return ploc.getFilename();
 					} 
 						
-					VLOG(2) << "not system header";
+					//VLOG(2) << "not system header";
 					return "";  // this happens when is declared in a header which is not system header
 				} 
 
