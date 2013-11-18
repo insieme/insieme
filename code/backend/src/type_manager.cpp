@@ -559,6 +559,17 @@ namespace backend {
 				}
 			}
 
+			if (ptr->getName()->getValue() == "va_list")
+            {
+				auto res = type_info_utils::createInfo(manager, "va_list");
+                c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+                decl->addInclude("stdarg.h");
+                res->declaration = decl;
+                res->definition = decl;
+
+                return res;
+            }
+
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));

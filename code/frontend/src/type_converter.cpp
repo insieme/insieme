@@ -118,13 +118,6 @@ namespace conversion {
 Converter::TypeConverter::TypeConverter(Converter& fact):
 	convFact( fact ), mgr(fact.mgr), builder(fact.builder), gen(fact.mgr.getLangBasic()) { }
 
-core::TypePtr Converter::TypeConverter::pluginPostTypeVisit(const clang::Type* type, core::TypePtr& irType) {
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        irType = plugin->PostVisit(type, irType, convFact);
-    }
-    return irType;
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								BUILTIN TYPES
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -613,19 +606,8 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 
 core::TypePtr Converter::CTypeConverter::convertInternal(const clang::Type* type) {
    	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-   	core::TypePtr retIr;
-   	//iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(type, convFact);
-		if(retIr)
-			return pluginPostTypeVisit(type, retIr);
-	}
-	//check if the insieme type converter should be called
-	if(!retIr) {
-        retIr = TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
-	}
-    //return post visited type
-	return pluginPostTypeVisit(type, retIr);
+   	
+    return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
 }
 
 
@@ -642,8 +624,7 @@ namespace {
 
 }
 
-
-core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
+core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	auto& typeCache = convFact.typeCache;
 
 	// look up type within typeCache
@@ -719,6 +700,25 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 	// be done
 	return res;
+}
+
+core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
+    core::TypePtr irType;
+
+    //iterate clang handler list and check if a handler wants to convert the type
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+	    irType = plugin->Visit(type, convFact);
+        if(irType) break;
+	}
+
+    if(!irType)
+        irType = convertImpl(type);
+
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        irType = plugin->PostVisit(type, irType, convFact);
+    }
+
+	return irType;
 }
 
 //core::TypePtr Converter::CTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
