@@ -38,7 +38,9 @@
 
 #include <unistd.h>
 
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 #include "papi.h"
+#endif
 #include "error_handling.h"
 
 static uint32 __irt_g_cached_cpu_count = 0;
@@ -76,6 +78,7 @@ void _irt_set_num_cpus(uint32 num) {
 }
 
 int32 _irt_setup_hardware_info() {
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
 	if(hwinfo == NULL) {
@@ -91,6 +94,9 @@ int32 _irt_setup_hardware_info() {
 			__irt_g_cached_sockets_count = hwinfo->sockets;
 	if(hwinfo->nnodes > 0)
 				__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
+#else
+	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
+#endif
 
 	return 0;
 }
@@ -121,4 +127,12 @@ uint32 irt_get_num_numa_nodes() {
 		_irt_setup_hardware_info();
 
 	return __irt_g_cached_numa_nodes_count;
+}
+
+uint32 irt_get_sibling_hyperthread(uint32 coreid) {
+	// should work for all sanely set up linux systems
+	if(irt_get_num_threads_per_core() > 2)
+		return coreid + irt_get_num_sockets() * irt_get_num_cores_per_socket();
+	else
+		return coreid;
 }
