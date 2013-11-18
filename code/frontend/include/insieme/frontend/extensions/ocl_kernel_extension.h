@@ -47,17 +47,13 @@ namespace extensions {
 
 class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-	void PostVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact);
+	virtual void PostVisit(const clang::FunctionDecl* funcDecl, conversion::Converter& convFact);
 
+    virtual core::VariablePtr PostVisit(const clang::ValueDecl* decl, core::VariablePtr& irVar, conversion::Converter& convFact);
 
-//    void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
-
-	virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
-                                                     insieme::frontend::conversion::Converter& convFact);
-
-	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 
 } //namespace plugin
-} //namespace frontnt
+} //namespace frontend
 } //namespace extensions
