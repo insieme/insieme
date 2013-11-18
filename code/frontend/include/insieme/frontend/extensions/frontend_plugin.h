@@ -49,6 +49,7 @@ namespace clang {
     class Decl;
     class Type;
     class FunctionDecl;
+    class ValueDecl;
 }
 
 namespace stmtutils {
@@ -105,6 +106,8 @@ namespace extensions {
         virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
                                                  insieme::frontend::conversion::Converter& convFact);
         virtual void PostVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual core::VariablePtr PostVisit(const clang::ValueDecl* decl, const core::VariablePtr& irVar,
+                insieme::frontend::conversion::Converter& convFact);
 
         // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);

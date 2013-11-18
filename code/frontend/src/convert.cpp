@@ -439,90 +439,6 @@ core::TypePtr Converter::tryDeref(const core::TypePtr& type) const {
 	return type;
 }
 
-//////////////////////////////////////////////////////////////////
-///
-// Register call expression handlers to be used during the clang to IR conversion
-//void Converter::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
-//	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
-//	assert( !it.second && "Handler for function declaration already registered." );
-//}
-//  Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
-// 	-> OpenCL address spaces
-core::NodeAnnotationPtr Converter::convertAttribute(const clang::ValueDecl* varDecl) const {
-	if (!varDecl->hasAttrs()) {
-		return insieme::core::NodeAnnotationPtr();
-	}
-
-	std::ostringstream ss;
-	annotations::ocl::BaseAnnotation::AnnotationList declAnnotation;
-	try {
-		for (AttrVec::const_iterator I = varDecl->attr_begin(), E = varDecl->attr_end(); I != E; ++I) {
-			if (AnnotateAttr * attr = dyn_cast<AnnotateAttr>(*I)) {
-				std::string&& sr = attr->getAnnotation().str();
-
-				//check if the declaration has attribute __private
-				if ( sr == "__private" ) {
-					VLOG(2) << "           OpenCL address space __private";
-					declAnnotation.push_back(
-							std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::PRIVATE )
-					);
-					continue;
-				}
-
-				//check if the declaration has attribute __local
-				if ( sr == "__local" ) {
-					VLOG(2) << "           OpenCL address space __local";
-					declAnnotation.push_back(
-							std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::LOCAL )
-					);
-					continue;
-				}
-
-				// TODO global also for global variables
-
-				//check if the declaration has attribute __global
-				if ( sr == "__global" ) {
-					// keywords global and local are only allowed for parameters
-
-					if(isa<const clang::ParmVarDecl>(varDecl) || varDecl->getType().getTypePtr()->isPointerType()) {
-						VLOG(2) << "           OpenCL address space __global";
-						declAnnotation.push_back(
-								std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::GLOBAL )
-						);
-						continue;
-					}
-					ss << "Address space __global not allowed for local scalar variable";
-					throw &ss;
-				}
-
-				//check if the declaration has attribute __constant
-				if ( sr == "__constant" ) {
-					if ( isa<const clang::ParmVarDecl>(varDecl) ) {
-						VLOG(2) << "           OpenCL address space __constant";
-						declAnnotation.push_back(
-								std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::CONSTANT )
-						);
-						continue;
-					}
-					ss << "Address space __constant not allowed for local variable";
-					throw &ss;
-				}
-			}
-
-			// Throw an error if an unhandled attribute is found
-			ss << "Unexpected attribute";
-			throw &ss;// FIXME define an exception class for this error
-		}}
-	catch ( std::ostringstream *errMsg ) {
-		//show errors if unexpected patterns were found
-		fe::utils::compilerMessage(fe::utils::DiagnosticLevel::Warning,
-				varDecl->getLocStart(),
-				errMsg->str(),
-				getCompiler()
-		);
-	}
-	return std::make_shared < annotations::ocl::BaseAnnotation > (declAnnotation);
-}
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -646,12 +562,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	if ( !valDecl->getNameAsString().empty() ) {
 		// Add the C name of this variable as annotation
 		core::annotations::attachName(var,varDecl->getNameAsString());
-	}
-
-	// Add OpenCL attributes
-	insieme::core::NodeAnnotationPtr&& attr = convertAttribute(valDecl);
-	if (attr) {
-		var->addAnnotation(attr);
 	}
 
 	if(annotations::c::hasIncludeAttached(irType)) {

@@ -126,42 +126,6 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
-// with the pack operation provided by the IR.
-vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy,
-		const ExpressionList& args) {
-
-	// check if the function type ends with a VAR_LIST type
-	const core::TypeList& argsTy = funcTy->getParameterTypes()->getElements();
-	// frontend_assert(argsTy ) <<  "Function argument is of not type TupleType\n";
-
-	// if the tuple type is empty it means we cannot pack any of the arguments
-	if (argsTy.empty()) {
-		return args;
-	}
-
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	if (gen.isVarList(argsTy.back())) {
-		ExpressionList ret;
-		assert(args.size() >= argsTy.size()-1 && "Function called with fewer arguments than necessary");
-		// last type is a var_list, we have to do the packing of arguments
-
-		// we copy the first N-1 arguments, the remaining will be unpacked
-		std::copy(args.begin(), args.begin() + argsTy.size() - 1, std::back_inserter(ret));
-
-		ExpressionList toPack;
-		if (args.size() > argsTy.size() - 1) {
-			std::copy(args.begin() + argsTy.size() - 1, args.end(), std::back_inserter(toPack));
-		}
-
-		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
-		ret.push_back(builder.callExpr(gen.getVarList(), gen.getVarlistPack(), builder.tupleExpr(toPack)));
-		return ret;
-	}
-	return args;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
@@ -754,7 +718,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments( callExpr, funcDecl);
-		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit,
 		// we mark this function as extern. and return
@@ -765,11 +728,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 			//-----------------------------------------------------------------------------------------------------
 			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
 				irNode = builder.literal("alloca", funcTy);
-				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
+				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
 			}
 
 			//build callExpr
-			irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs);
+			irNode = builder.callExpr(funcTy->getReturnType(), irNode, args);
 
 			// In the case this is a call to MPI, attach the loc annotation, handlling of those
 			// statements will be then applied by mpi_sema
@@ -794,7 +757,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		frontend_assert(definition) << "No definition found for function\n";
 
-		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
+		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
 	}
 
 

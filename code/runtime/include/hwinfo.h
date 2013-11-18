@@ -38,10 +38,19 @@
 
 #include <unistd.h>
 
-static uint32 __irt_g_chached_cpu_count = 0xFFFFFFFF;
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#include "papi.h"
+#endif
+#include "error_handling.h"
+
+static uint32 __irt_g_cached_cpu_count = 0;
+static uint32 __irt_g_cached_threads_per_core_count = 0;
+static uint32 __irt_g_cached_cores_per_socket_count = 0;
+static uint32 __irt_g_cached_sockets_count = 0;
+static uint32 __irt_g_cached_numa_nodes_count = 0;
 
 uint32 irt_get_num_cpus() {
-	if(__irt_g_chached_cpu_count!=0xFFFFFFFF) return __irt_g_chached_cpu_count;
+	if(__irt_g_cached_cpu_count!=0) return __irt_g_cached_cpu_count;
 	uint32 ret = 1;
 #ifdef _SC_NPROCESSORS_ONLN
 	// Linux
@@ -59,11 +68,71 @@ uint32 irt_get_num_cpus() {
 	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
 #endif
 	if(ret<1) ret = 1;
-	__irt_g_chached_cpu_count = ret;
+	__irt_g_cached_cpu_count = ret;
 	return ret;
 }
 
 // to be used only for testing
 void _irt_set_num_cpus(uint32 num) {
-	__irt_g_chached_cpu_count = num;
+	__irt_g_cached_cpu_count = num;
+}
+
+int32 _irt_setup_hardware_info() {
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
+
+	if(hwinfo == NULL) {
+		IRT_DEBUG("hwinfo: Error trying to get hardware information from PAPI! %p\n", hwinfo);
+		return -1;
+	}
+
+	if(hwinfo->threads > 0)
+		__irt_g_cached_threads_per_core_count = hwinfo->threads;
+	if(hwinfo->cores > 0)
+			__irt_g_cached_cores_per_socket_count = hwinfo->cores;
+	if(hwinfo->sockets > 0)
+			__irt_g_cached_sockets_count = hwinfo->sockets;
+	if(hwinfo->nnodes > 0)
+				__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
+#else
+	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
+#endif
+
+	return 0;
+}
+
+uint32 irt_get_num_threads_per_core() {
+	if(__irt_g_cached_threads_per_core_count == 0)
+		_irt_setup_hardware_info();
+
+	return __irt_g_cached_threads_per_core_count;
+}
+
+uint32 irt_get_num_cores_per_socket() {
+	if(__irt_g_cached_cores_per_socket_count == 0)
+		_irt_setup_hardware_info();
+
+	return __irt_g_cached_cores_per_socket_count;
+}
+
+uint32 irt_get_num_sockets() {
+	if(__irt_g_cached_sockets_count == 0)
+		_irt_setup_hardware_info();
+
+	return __irt_g_cached_sockets_count;
+}
+
+uint32 irt_get_num_numa_nodes() {
+	if(__irt_g_cached_numa_nodes_count == 0)
+		_irt_setup_hardware_info();
+
+	return __irt_g_cached_numa_nodes_count;
+}
+
+uint32 irt_get_sibling_hyperthread(uint32 coreid) {
+	// should work for all sanely set up linux systems
+	if(irt_get_num_threads_per_core() > 2)
+		return coreid + irt_get_num_sockets() * irt_get_num_cores_per_socket();
+	else
+		return coreid;
 }

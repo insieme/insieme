@@ -132,7 +132,9 @@ namespace frontend {
 		});
 
 		// merge the translation units
-		return tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+		auto res = tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+		res.setCXX(isCxx());
+		return res;
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
