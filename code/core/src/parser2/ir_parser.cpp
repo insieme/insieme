@@ -1500,6 +1500,14 @@ namespace parser {
 			));
 
 
+			// -- job expressions --
+			g.addRule("E", rule(
+					seq("job", S),
+					[](Context& cur)->NodePtr {
+						return cur.jobExpr(cur.getTerm(0).as<StatementPtr>(), 1);
+					}
+			));
+
 			// -- this-pointer utilities --
 			struct register_this_pointer : public detail::actions {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
