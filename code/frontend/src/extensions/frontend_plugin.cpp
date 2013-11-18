@@ -91,6 +91,11 @@ namespace extensions {
         return;
     }
 
+    core::VariablePtr FrontendPlugin::PostVisit(const clang::ValueDecl* decl, const core::VariablePtr& irVar,
+    												insieme::frontend::conversion::Converter& convFact){
+    	return irVar;
+    }
+
     // ############ POST CLANG STAGE ############ //
     insieme::core::ProgramPtr FrontendPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
         return prog;

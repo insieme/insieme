@@ -142,7 +142,7 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, DEBUG, 2);
+//	Logger::get(std::cerr, ERROR, 2);
 
 	core::NodeManager manager;
 

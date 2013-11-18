@@ -162,6 +162,7 @@ namespace tu {
 		for(const auto& cur : units) {
 			res = merge(mgr, res, cur);
 		}
+		res.setCXX(any(units, [](const IRTranslationUnit& cur) { return cur.isCXX(); }));
 		return res;
 	}
 
