@@ -864,7 +864,6 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 	assert(enumType);
 	core::TypePtr enumTy = convertType(enumType);
 
-	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
 	string enumConstantName;
 	if( getProgram().getInterceptor().isIntercepted(enumType) ) {
 		//TODO move name mangling into interceptor
@@ -883,6 +882,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 
 		enumConstantName = fixedQualifiedName;
 	} else {
+		bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
 		enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
 	}
 

@@ -151,8 +151,14 @@ namespace {
 
 		core::TypePtr retTy;
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
+			core::GenericTypePtr gt = builder.genericType(typeName);
+		
+			//tag the genericType used inside the enum to pass this to the backend
+			addHeaderForDecl(gt, tagDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+
 			// for intercepted 3rdparty stuff we need to use the actual enum
-			retTy = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
+			retTy = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(gt);
+			//return retTy;
 		}
 		else{
 			retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
@@ -254,7 +260,7 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 
 	// add header file
 	addHeaderForDecl(irType, typeDecl, getStdLibDirs(), getUserIncludeDirs());
-	VLOG(1) << "build interceptedType " << type << " ## " << irType;
+	VLOG(1) << "build interceptedType " << typeDecl->getQualifiedNameAsString() << " ## " << irType;
 	
 	if(insieme::annotations::c::hasIncludeAttached(irType)) {
 		VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(irType);
