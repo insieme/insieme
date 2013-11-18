@@ -78,12 +78,6 @@ annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm
  */
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start);
 
-/*
- * In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
- * with the pack operation provided by the IR.
- */
-vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args);
-
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
 
 /**
