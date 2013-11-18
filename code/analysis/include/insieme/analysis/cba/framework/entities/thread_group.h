@@ -47,16 +47,16 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// the type to represent channels
+	// the type to represent thread groups
 	template<typename Context>
-	class Channel
+	class ThreadGroup
 		: public utils::Printable,
-		  public utils::HashableImmutableData<Channel<Context>>,
-		  public boost::equality_comparable<Channel<Context>>,
-		  public boost::partially_ordered<Channel<Context>> {
+		  public utils::HashableImmutableData<ThreadGroup<Context>>,
+		  public boost::equality_comparable<ThreadGroup<Context>>,
+		  public boost::partially_ordered<ThreadGroup<Context>> {
 
 		/**
-		 * The expression which created the represented channel.
+		 * The expression which created the represented group.
 		 */
 		core::ExpressionAddress creationPoint;
 
@@ -67,12 +67,12 @@ namespace cba {
 
 	public:
 
-		Channel()
-			: utils::HashableImmutableData<Channel<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
+		ThreadGroup()
+			: utils::HashableImmutableData<ThreadGroup<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
 
-		Channel(const core::ExpressionAddress& expr, const Context& ctxt)
-			: utils::HashableImmutableData<Channel<Context>>(combineHashes(expr, ctxt)),
-			  creationPoint(expr),
+		ThreadGroup(const core::ExpressionAddress& group, const Context& ctxt)
+			: utils::HashableImmutableData<ThreadGroup<Context>>(combineHashes(group, ctxt)),
+			  creationPoint(group),
 			  creationContext(ctxt) {}
 
 		const core::ExpressionAddress& getAddress() const {
@@ -83,46 +83,38 @@ namespace cba {
 			return creationContext;
 		}
 
-		bool operator==(const Channel<Context>& other) const {
+		bool operator==(const ThreadGroup<Context>& other) const {
 			if (this == &other) return true;
 			if (this->hash() != other.hash()) return false;
 			return creationPoint == other.creationPoint && creationContext == other.creationContext;
 		}
 
-		bool operator<(const Channel<Context>& other) const {
+		bool operator<(const ThreadGroup<Context>& other) const {
 			return creationPoint < other.creationPoint ||
 					(creationPoint == other.creationPoint && creationContext < other.creationContext);
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << creationPoint << "," << creationContext << ")";
+			return out << "group@" << creationPoint << "::" << creationContext;
 		}
 	};
 
-	inline bool isChannelConstructor(const core::ExpressionAddress& address) {
+	inline bool isThreadGroupConstructor(const core::ExpressionAddress& address) {
 		core::ExpressionPtr expr = address;
 
-		// literals of a channel type are channels
-		if (auto lit = expr.isa<core::LiteralPtr>()) {
-			return lit->getType().isa<core::ChannelTypePtr>();
-		}
-
-		// channel create calls are the only dynamic construction method
-		return core::analysis::isCallOf(expr, expr->getNodeManager().getLangBasic().getChannelCreate());
+		// the expression needs to be a call to the parallel
+		const auto& basic = expr->getNodeManager().getLangBasic();
+		return core::analysis::isCallOf(expr, basic.getParallel()) ||
+			   core::analysis::isCallOf(expr, basic.getParallelDetached());
 	}
 
 	template<typename Context>
-	Channel<Context> getChannelFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	ThreadGroup<Context> getThreadGroupFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
-		assert(isChannelConstructor(ctor));
+		assert(isThreadGroupConstructor(ctor));
 
-		// for globals the call context and thread context is not relevant
-		if (auto lit = ctor.isa<core::LiteralPtr>()) {
-			return Channel<Context>(core::ExpressionAddress(lit), Context());
-		}
-
-		// create the channel instance
-		return Channel<Context>(ctor, ctxt);
+		// create the group instance
+		return ThreadGroup<Context>(ctor, ctxt);
 	}
 
 } // end namespace cba

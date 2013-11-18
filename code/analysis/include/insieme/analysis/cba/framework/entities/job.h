@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
-#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/hash_utils.h"
@@ -47,18 +46,18 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// the type to represent channels
+	// the type to represent jobs
 	template<typename Context>
-	class Channel
+	class Job
 		: public utils::Printable,
-		  public utils::HashableImmutableData<Channel<Context>>,
-		  public boost::equality_comparable<Channel<Context>>,
-		  public boost::partially_ordered<Channel<Context>> {
+		  public utils::HashableImmutableData<Job<Context>>,
+		  public boost::equality_comparable<Job<Context>>,
+		  public boost::partially_ordered<Job<Context>> {
 
 		/**
 		 * The expression which created the represented channel.
 		 */
-		core::ExpressionAddress creationPoint;
+		core::JobExprAddress creationPoint;
 
 		/**
 		 * The context when triggering the create function.
@@ -67,15 +66,15 @@ namespace cba {
 
 	public:
 
-		Channel()
-			: utils::HashableImmutableData<Channel<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
+		Job()
+			: utils::HashableImmutableData<Job<Context>>(combineHashes(core::JobExprAddress(), Context())) {}
 
-		Channel(const core::ExpressionAddress& expr, const Context& ctxt)
-			: utils::HashableImmutableData<Channel<Context>>(combineHashes(expr, ctxt)),
-			  creationPoint(expr),
+		Job(const core::JobExprAddress& job, const Context& ctxt)
+			: utils::HashableImmutableData<Job<Context>>(combineHashes(job, ctxt)),
+			  creationPoint(job),
 			  creationContext(ctxt) {}
 
-		const core::ExpressionAddress& getAddress() const {
+		const core::JobExprAddress& getAddress() const {
 			return creationPoint;
 		}
 
@@ -83,46 +82,33 @@ namespace cba {
 			return creationContext;
 		}
 
-		bool operator==(const Channel<Context>& other) const {
+		bool operator==(const Job<Context>& other) const {
 			if (this == &other) return true;
 			if (this->hash() != other.hash()) return false;
 			return creationPoint == other.creationPoint && creationContext == other.creationContext;
 		}
 
-		bool operator<(const Channel<Context>& other) const {
+		bool operator<(const Job<Context>& other) const {
 			return creationPoint < other.creationPoint ||
 					(creationPoint == other.creationPoint && creationContext < other.creationContext);
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << creationPoint << "," << creationContext << ")";
+			return out << "job@" << creationPoint << "::" << creationContext;
 		}
 	};
 
-	inline bool isChannelConstructor(const core::ExpressionAddress& address) {
-		core::ExpressionPtr expr = address;
-
-		// literals of a channel type are channels
-		if (auto lit = expr.isa<core::LiteralPtr>()) {
-			return lit->getType().isa<core::ChannelTypePtr>();
-		}
-
-		// channel create calls are the only dynamic construction method
-		return core::analysis::isCallOf(expr, expr->getNodeManager().getLangBasic().getChannelCreate());
+	inline bool isJobConstructor(const core::ExpressionAddress& address) {
+		return address.isa<core::JobExprAddress>();
 	}
 
 	template<typename Context>
-	Channel<Context> getChannelFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	Job<Context> getJobFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
-		assert(isChannelConstructor(ctor));
+		assert(isJobConstructor(ctor));
 
-		// for globals the call context and thread context is not relevant
-		if (auto lit = ctor.isa<core::LiteralPtr>()) {
-			return Channel<Context>(core::ExpressionAddress(lit), Context());
-		}
-
-		// create the channel instance
-		return Channel<Context>(ctor, ctxt);
+		// create the job instance
+		return Job<Context>(ctor.as<core::JobExprAddress>(), ctxt);
 	}
 
 } // end namespace cba
