@@ -107,7 +107,7 @@ namespace addons {
 			return res;
 		}
 
-		c_ast::NodePtr LongLongTypeHandler(ConversionContext& context, const core::NodePtr& ptr) {
+		c_ast::NodePtr LongLongStmtHandler(ConversionContext& context, const core::NodePtr& ptr) {
 
 			if(core::LiteralPtr lit = ptr.isa<core::LiteralPtr>()) {
 				if (!core::analysis::isLongLong(lit->getType())) {
@@ -130,7 +130,7 @@ namespace addons {
 		converter.getTypeManager().addTypeHandler(CppLongLongTypeHandler);
 
 		// register stmt handler
-		converter.getStmtConverter().addStmtHandler(LongLongTypeHandler);
+		converter.getStmtConverter().addStmtHandler(LongLongStmtHandler);
 
 		// register additional operators
 		converter.getFunctionManager().getOperatorConverterTable().insertAll(getLocalOperatorTable(converter.getNodeManager()));
