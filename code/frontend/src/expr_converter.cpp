@@ -1267,7 +1267,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
-	frontend_assert(opFunc) << "no operation code set\n";
+	frontend_assert(opFunc) << "no operation code set\n"
+			<< "\tOperator: " << binOp->getOpcodeStr().str() << "\n"
+			<< "\t     LHS: " << *lhs << " : " << *lhs->getType() << "\n"
+			<< "\t     RHS: " << *rhs << " : " << *rhs->getType() << "\n";
+
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
