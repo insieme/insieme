@@ -68,9 +68,8 @@
 #endif
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
-// minimal "hardware model", used for some hardware interaction like DVFS
-#define IRT_HW_CORES_PER_SOCKET 8
-#define IRT_HW_NUM_SOCKETS 4
+// maximum number of sockets (used by features such as DVFS)
+#define IRT_HW_MAX_NUM_SOCKETS 128
 
 // maximum number of frequencies that can be stored
 #define IRT_INST_MAX_CPU_FREQUENCIES 32

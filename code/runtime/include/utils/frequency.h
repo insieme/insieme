@@ -210,8 +210,9 @@ int32 irt_cpu_freq_reset_frequency() {
 	int32 retval = 0;
 	uint32 frequency = 0;
 	char path_to_cpufreq[1024] = { 0 };
+	uint32 total_cores = irt_get_num_cores_per_socket() * irt_get_num_sockets();
 
-	for(uint32 coreid = 0; coreid < IRT_HW_CORES_PER_SOCKET * IRT_HW_NUM_SOCKETS; ++coreid) {
+	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/cpuinfo_max_freq", coreid);
 		frequency = _irt_cpu_freq_read(path_to_cpufreq);
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
@@ -268,7 +269,7 @@ int32 irt_cpu_freq_set_frequency_socket(uint32 socket, uint32 frequency) {
 
 	int32 retval = 0;
 
-	for(uint32 coreid = (socket * IRT_HW_CORES_PER_SOCKET); coreid < ((socket + 1) * IRT_HW_CORES_PER_SOCKET); ++coreid) {
+	for(uint32 coreid = (socket * irt_get_num_cores_per_socket()); coreid < ((socket + 1) * irt_get_num_cores_per_socket()); ++coreid) {
 		// write max, min, max because we don't know the old frequency and setting max below min is rejected by the OS
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
 		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
@@ -311,10 +312,10 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	}
 
 	char path_to_cpufreq[1024] = { 0 };
-	uint32 cpu_freq_list[IRT_HW_NUM_SOCKETS];
+	uint32 cpu_freq_list[IRT_HW_MAX_NUM_SOCKETS];
 
-	for(uint32 i = 0; i < IRT_HW_NUM_SOCKETS; ++i) {
-		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", i * IRT_HW_CORES_PER_SOCKET);
+	for(uint32 i = 0; i < irt_get_num_sockets(); ++i) {
+		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", i * irt_get_num_cores_per_socket());
 		cpu_freq_list[i] = _irt_cpu_freq_read(path_to_cpufreq);
 	}
 
@@ -325,7 +326,7 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	else
 		cur += sprintf(cur, "not set, ");
 
-	for(uint32 i = 0; i < IRT_HW_NUM_SOCKETS; ++i) {
+	for(uint32 i = 0; i < irt_get_num_sockets(); ++i) {
 		cur += sprintf(cur, "%u, ", cpu_freq_list[i]);
 	}
 	*(cur-2) = '\0';
