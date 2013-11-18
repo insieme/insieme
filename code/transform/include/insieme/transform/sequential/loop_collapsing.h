@@ -61,7 +61,7 @@ namespace sequential {
 		/**
 		 * Applies this transformation to the given target node.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 		
 		/**
 		 * Compares this transformation with the given transformation. It will be considered identical

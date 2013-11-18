@@ -34,28 +34,53 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/sequential/dead_code_elimination.h"
+#include <gtest/gtest.h>
+
+#include <fstream>
+
+#include "insieme/transform/cba_based/constant_propagation.h"
+
+#include "insieme/core/ir_builder.h"
+
+#include "insieme/analysis/cba/analysis.h"
 
 namespace insieme {
 namespace transform {
-namespace sequential {
+namespace cba_based {
 
 
-	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
-		// can only be applied to statements and expressions
-		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
+	TEST(CBA_Transform, ConstProp) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		auto code = builder.parseStmt(
+			"{"
+			"	let int = int<4>;"
+			"	ref<int> a = var(3);"
+			"	ref<int> b = var(9 + (a * 5));"
+			"	ref<int> c;"
+			"	"
+			"	c = b * 4;"
+			"	if (c > 10) {"
+			"		c = c - 10;"
+			"	}"
+			"	return c * (60 + a);"
+			"}"
+		);
+
+		EXPECT_TRUE(code);
+
+		// run constant-propagation on this code fragment
+		auto res = propagateConstants(core::NodeAddress(code)).getRootNode();
+
+		EXPECT_PRED2(containsSubString, toString(res), "if(true)");
+		EXPECT_PRED2(containsSubString, toString(res), "return 5418;");
 	}
 
-	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
-		// do nothing so far
-		return target;
-	}
 
-	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-		// just check that the node type hasn't changed (no real post-conditions yet)
-		return before->getNodeType() == after->getNodeType();
-	}
-
-} // end namespace sequential
+} // end namespace filter
 } // end namespace transform
 } // end namespace insieme
+
+

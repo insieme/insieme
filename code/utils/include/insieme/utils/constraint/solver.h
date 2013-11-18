@@ -135,7 +135,14 @@ namespace constraint {
 
 		virtual ~Constraint() {};
 
-		virtual void init(Assignment& ass, vector<ValueID>& workList) const { };
+		virtual void init(Assignment& ass, vector<ValueID>& workList) const {
+			if (update(ass)) {
+				for(auto cur : getOutputs()) {
+					workList.push_back(cur);
+				}
+			}
+		}
+
 		virtual bool update(Assignment& ass) const { return false; };
 		virtual bool check(const Assignment& ass) const =0;
 
@@ -176,14 +183,6 @@ namespace constraint {
 
 			ComposedConstraint(const Filter& filter, const Executor& executor)
 				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs()), filter(filter), executor(executor) {}
-
-			virtual void init(Assignment& ass, vector<ValueID>& workList) const {
-				if (update(ass)) {
-					for(auto cur : getOutputs()) {
-						workList.push_back(cur);
-					}
-				}
-			}
 
 			virtual bool update(Assignment& ass) const {
 				return filter(ass) && executor.update(ass);

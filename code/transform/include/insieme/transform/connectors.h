@@ -95,10 +95,10 @@ namespace transform {
 		 * @param target the target to be transformed
 		 * @return the transformed code segment
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
 			// apply all transformations, one after another
 			// if one is failing, the entire transformation is failing
-			core::NodePtr res = target;
+			core::NodeAddress res = target;
 			for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 				res = cur->apply(res);
 			});
@@ -184,7 +184,7 @@ namespace transform {
 
 		ForEach(const parameter::Value& value);
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		const filter::Filter& getFilter() const {
 			return filter;
@@ -291,7 +291,7 @@ namespace transform {
 		 * @return the transformed node instance
 		 * @throw InvalidTargetException in case on of the selected targets could not be transformed
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		/**
 		 * Compares this connector with the given transformation. It will only be the same
@@ -374,7 +374,7 @@ namespace transform {
 		/**
 		 * Conducts the actual processing of the fixpoint.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		/**
 		 * Compares this connector with the given transformation. It will only be the same
@@ -463,7 +463,7 @@ namespace transform {
 		 * @param target the node to be transformed
 		 * @return the transformed program code
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
 			return (condition(target)) ?
 				thenTransform->apply(target) :
 				elseTransform->apply(target);
@@ -532,7 +532,7 @@ namespace transform {
 		/**
 		 * Realizes the actual semantic of this transformation.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
 			try {
 				return tryTransform->apply(target);
 			} catch(const InvalidTargetException& ite) {

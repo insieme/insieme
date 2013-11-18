@@ -97,8 +97,8 @@ namespace frontend {
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
-			// plugin initialization
-            setup.frontendPluginInit();
+		// plugin initialization
+		setup.frontendPluginInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
@@ -132,7 +132,9 @@ namespace frontend {
 		});
 
 		// merge the translation units
-		return tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+		auto res = tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+		res.setCXX(isCxx());
+		return res;
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {

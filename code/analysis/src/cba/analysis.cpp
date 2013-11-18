@@ -39,8 +39,10 @@
 #include "insieme/analysis/cba/cba.h"
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/references.h"
+#include "insieme/analysis/cba/analysis/arithmetic.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/assert.h"
 
@@ -60,30 +62,54 @@ namespace cba {
 	// -- Boolean --
 
 	bool isTrue(const core::ExpressionAddress& a) {
-		assert_true(isBooleanValue(a)) << "Expecting boolean value - got value of type " << *a->getType() << "\n";
+		if (!isBooleanValue(a)) return false;
 		std::set<bool> res = getValues(a, B);
 		return res.size() == 1 && res.find(true) != res.end();
 	}
 
 	bool mayBeTrue(const core::ExpressionAddress& a) {
-		assert_true(isBooleanValue(a)) << "Expecting boolean value - got value of type " << *a->getType() << "\n";
+		if (!isBooleanValue(a)) return false;
 		std::set<bool> res = getValues(a, B);
 		return res.find(true) != res.end();
 	}
 
 	bool isFalse(const core::ExpressionAddress& a) {
-		assert_true(isBooleanValue(a)) << "Expecting boolean value - got value of type " << *a->getType() << "\n";
+		if (!isBooleanValue(a)) return false;
 		std::set<bool> res = getValues(a, B);
 		return res.size() == 1 && res.find(false) != res.end();
 	}
 
 	bool mayBeFalse(const core::ExpressionAddress& a) {
-		assert_true(isBooleanValue(a)) << "Expecting boolean value - got value of type " << *a->getType() << "\n";
+		if (!isBooleanValue(a)) return false;
 		std::set<bool> res = getValues(a, B);
 		return res.find(false) != res.end();
 	}
 
+
 	// -- Arithmetic --
+
+	core::LiteralPtr isIntegerConstant(const core::ExpressionAddress& a) {
+		const static core::LiteralPtr fail;
+
+		const auto& base = a->getNodeManager().getLangBasic();
+		if (!base.isInt(a->getType())) return fail;
+
+		// get all values
+		std::set<Formula> res = getValues(a, A);
+
+		// check whether result is fixed
+		if (res.size() != 1) return fail;
+
+		// see whether value is known
+		Formula value = *res.begin();
+		if (!value) return fail;
+
+		// check whether value is a integer constant
+		if (!value.formula->isInteger()) return fail;
+
+		// convert result into literal
+		return core::arithmetic::toIR(a->getNodeManager(), (*value.formula)).as<core::LiteralPtr>();
+	}
 
 
 	// -- Functions --

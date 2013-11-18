@@ -34,28 +34,58 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/sequential/dead_code_elimination.h"
+#include "insieme/transform/cba_based/constant_propagation.h"
+
+#include <map>
+
+#include "insieme/analysis/cba/analysis.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace transform {
-namespace sequential {
+namespace cba_based {
+
+	using std::map;
 
 
-	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
-		// can only be applied to statements and expressions
-		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
+	core::NodeAddress propagateConstants(const core::NodeAddress& target) {
+
+		auto& mgr = target->getNodeManager();
+		core::IRBuilder builder(mgr);
+
+		auto trueLit = builder.boolLit(true);
+		auto falseLit = builder.boolLit(false);
+
+		// find a list of constants
+		map<core::NodeAddress, core::NodePtr> constants;
+		visitDepthFirstPrunable(target, [&](const core::ExpressionAddress& expr)->bool {
+			// skip literals
+			if (expr.isa<core::LiteralPtr>()) return true;
+
+			// check boolean literals
+			if (analysis::cba::isTrue(expr)) {
+				constants[expr] = trueLit;
+				return true;
+			} else if (analysis::cba::isFalse(expr)) {
+				constants[expr] = falseLit;
+				return true;
+			} else if (auto lit = analysis::cba::isIntegerConstant(expr)) {
+				// check whether it is a literal
+				constants[expr] = lit;
+				return true;
+			}
+
+			// decent
+			return false;
+		});
+
+		// replace all variable expressions by constants
+		return target.switchRoot(core::transform::replaceAll(mgr, constants));
 	}
 
-	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
-		// do nothing so far
-		return target;
-	}
 
-	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-		// just check that the node type hasn't changed (no real post-conditions yet)
-		return before->getNodeType() == after->getNodeType();
-	}
 
-} // end namespace sequential
+} // end namespace cba_based
 } // end namespace transform
 } // end namespace insieme
