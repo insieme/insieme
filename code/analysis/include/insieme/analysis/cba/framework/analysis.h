@@ -38,7 +38,7 @@
 
 #include "insieme/analysis/cba/framework/_forward_decl.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/entities/entities.h"
+#include "insieme/analysis/cba/framework/entities/callable.h"
 
 #include "insieme/core/forward_decls.h"
 

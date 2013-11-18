@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
-#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/utils/printable.h"
 
@@ -50,7 +49,6 @@ namespace cba {
 
 	// a simple function
 	typedef core::ExpressionAddress ContextFreeCallable;
-
 
 	// the type used to represent functions / closures
 	template<typename Context>
@@ -104,38 +102,6 @@ namespace cba {
 
 		size_t hash() const {
 			return utils::combineHashes(callee, context);
-		}
-	};
-
-	struct Formula : public utils::Printable, public utils::Hashable {
-
-		typedef boost::optional<core::arithmetic::Formula> formula_type;
-		formula_type formula;
-
-		Formula() : formula() {};
-		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
-
-		bool operator==(const Formula& other) const {
-			return this == &other || (!formula && !other.formula) ||
-					(formula && other.formula && *formula == *other.formula);
-		}
-
-		bool operator<(const Formula& other) const {
-			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
-		}
-
-		operator bool() const {
-			return formula;
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			if (formula) return out << *formula;
-			return out << "-unknown-";
-		}
-
-		std::size_t hash() const {
-			// TODO: implement hashing for formulas!
-			return (formula) ? 1 : 0;	// formulas can't be hashed yet ..
 		}
 	};
 

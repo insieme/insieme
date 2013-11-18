@@ -50,7 +50,7 @@
 #include "insieme/analysis/cba/framework/call_site_manager.h"
 #include "insieme/analysis/cba/framework/call_string_filter.h"
 
-#include "insieme/analysis/cba/framework/entities/entities.h"
+#include "insieme/analysis/cba/framework/entities/callable.h"
 #include "insieme/analysis/cba/framework/entities/location.h"
 #include "insieme/analysis/cba/framework/entities/data_path.h"
 
