@@ -46,6 +46,7 @@
 #include "impl/error_handling.impl.h"
 
 #ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#include "hwinfo.h"
 #include "papi_helper.h"
 #include "utils/impl/energy.impl.h"
 #include "utils/impl/temperature.impl.h"
@@ -760,10 +761,10 @@ void _irt_inst_region_detail_data_insert(irt_worker* worker, const int event, co
 	irt_instrumentation_region_data* epd = &(table->data[table->number_of_elements++]);
 
 	rapl_energy_data data;
-	data.number_of_cpus = 4;
-	double package[4];
-	double mc[4];
-	double cores[4];
+	data.number_of_cpus = irt_get_num_sockets();
+	double package[data.number_of_cpus];
+	double mc[data.number_of_cpus];
+	double cores[data.number_of_cpus];
 	data.package = package;
 	data.mc = mc;
 	data.cores = cores;
