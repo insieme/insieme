@@ -97,8 +97,8 @@ namespace frontend {
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
-			// plugin initialization
-            setup.frontendPluginInit();
+		// plugin initialization
+		setup.frontendPluginInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {

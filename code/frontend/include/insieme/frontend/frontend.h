@@ -134,8 +134,8 @@ namespace frontend {
         /**
          *  A map that contains all user plugins
          */
-         typedef std::shared_ptr<extensions::FrontendPlugin> frontendPluginPtr;
-         std::list<frontendPluginPtr> plugins;
+         typedef std::shared_ptr<extensions::FrontendPlugin> FrontendPluginPtr;
+         std::list<FrontendPluginPtr> plugins;
 
 	public:
 
@@ -285,7 +285,7 @@ namespace frontend {
         /**
          *  Return the list of frontend plugins
          */
-        const std::list<frontendPluginPtr> getPlugins() const {
+        const std::list<FrontendPluginPtr> getPlugins() const {
             return plugins;
         };
 	};
@@ -304,6 +304,11 @@ namespace frontend {
 		vector<tu::IRTranslationUnit> libs;
 
 	public:
+
+		/**
+		 * Creates an empty conversion job covering no files.
+		 */
+		ConversionJob() : ConversionSetup(vector<path>()) {}
 
 		/**
 		 * Creates a new conversion job covering a single file.
