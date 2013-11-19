@@ -42,6 +42,13 @@ namespace extensions {
 
 class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
+
+	/**
+	 * lambda expressions are used before defined, so we'll map the pointers here, so after definition 
+	 * we can fix the capture list.
+	 */
+	std::map <const clang::Decl*, const clang::LambdaExpr*> lambdaMap;
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
 
@@ -92,6 +99,12 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 			return VisitDecltypeType(declTy, convFact);
 		return nullptr;
 	}
+
+	/**
+	 * a post visit in needed to:
+	 * 		- fix caputed variables in lambdas
+	 */
+	virtual void PostVisit(const clang::Decl* decl,  insieme::frontend::conversion::Converter& convFact) ;
 
 };
 

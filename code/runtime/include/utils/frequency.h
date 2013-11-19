@@ -44,26 +44,27 @@
 #include "utils/impl/affinity.impl.h"
 #include "hwinfo.h"
 
-#define FREQ_PATH_PREFIX "/sys/devices/system/cpu/cpu%u/cpufreq/"
+#define FREQ_PATH_STRING "/sys/devices/system/cpu/cpu%u/cpufreq/%s"
 
 /*
- * These functions provide an interface to read and set cpu frequency settings.
+ * These functions provide an interface to get and set CPU frequency settings.
  *
- * Hyperthreading support: Values are only read for the first HT unit, but written for both of them for safety reasons.
+ * HyperThreading support: Values are only read for the first HT unit, but written for both of them for safety reasons.
  */
 
 bool irt_g_frequency_setting_specified;
+static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
 
-int32 irt_cpu_freq_get_available_frequencies_core(uint32 coreid, uint32** frequencies, uint32* length) {
+/*
+ * reads all available frequencies for a specific core as a list into the provided pointer
+ */
 
+int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32** frequencies, uint32* length) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 counter = 1;
-//	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
-
 	uint32 frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
 
-	sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_available_frequencies", coreid);
-
+	sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, "scaling_available_frequencies");
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
@@ -94,7 +95,7 @@ int32 irt_cpu_freq_get_available_frequencies_core(uint32 coreid, uint32** freque
  * reads all available frequencies for a worker running on a specific core as a list into the provided pointer
  */
 
-int32 irt_cpu_freq_get_available_frequencies_worker(irt_worker* worker, uint32** frequencies, uint32* length) {
+int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32** frequencies, uint32* length) {
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	return irt_cpu_freq_get_available_frequencies_core(coreid, frequencies, length);
 }
@@ -128,10 +129,8 @@ bool _irt_cpu_freq_write(const char* path_to_cpufreq, const uint32 frequency) {
  */
 
 int32 _irt_cpu_freq_read(const char* path_to_cpufreq) {
-
 	uint32 temp = 0;
 	int32 retval = 0;
-
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
@@ -152,90 +151,93 @@ int32 _irt_cpu_freq_read(const char* path_to_cpufreq) {
 }
 
 /*
- * gets the current frequency a core of a worker is running on
+ * sets the respective frequency setting (max/min/current/...) a core should run at
  */
 
-int32 irt_cpu_freq_get_cur_frequency_worker(irt_worker* worker) {
+bool _irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, const char* entry) {
 	char path_to_cpufreq[1024] = { 0 };
-	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
-	sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_cur_freq", coreid);
+	bool ret_a = true, ret_b = true;
+	sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, entry);
+	ret_a = _irt_cpu_freq_write(path_to_cpufreq, frequency);
+	if(ret_a)
+		irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, coreid, true);
+	if(irt_get_hyperthreading_enabled()) {
+		sprintf(path_to_cpufreq, FREQ_PATH_STRING, irt_get_sibling_hyperthread(coreid), entry);
+		ret_b = _irt_cpu_freq_write(path_to_cpufreq, frequency);
+		if(ret_b)
+			irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, irt_get_sibling_hyperthread(coreid), true);
+	}
+
+	// will show failure if hyperthreading is active but setting the freq for either logical CPU in the OS failed
+	return ret_a && ret_b;
+}
+
+/*
+ * gets the respective frequency setting (max/min/current/...) a core is running at
+ */
+
+int32 _irt_cpu_freq_get(const uint32 coreid, const char* entry) {
+	char path_to_cpufreq[1024] = { 0 };
+	sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, entry);
 	return _irt_cpu_freq_read(path_to_cpufreq);
 }
 
 /*
- * sets the maximum frequency a core of a worker is allowed to run on
+ * gets the current frequency a core of a worker is running at
  */
 
-bool irt_cpu_freq_set_max_frequency_worker(irt_worker* worker, const uint32 frequency) {
-	char path_to_cpufreq_a[1024] = { 0 };
-	char path_to_cpufreq_b[1024] = { 0 };
-	uint32 coreid_a = irt_affinity_mask_get_first_cpu(worker->affinity);
-	uint32 coreid_b = irt_get_sibling_hyperthread(coreid_a);
-	sprintf(path_to_cpufreq_a, FREQ_PATH_PREFIX "scaling_max_freq", coreid_a);
-	sprintf(path_to_cpufreq_b, FREQ_PATH_PREFIX "scaling_max_freq", coreid_b);
-	bool ret_a = _irt_cpu_freq_write(path_to_cpufreq_a, frequency);
-	bool ret_b = _irt_cpu_freq_write(path_to_cpufreq_b, frequency);
-	return ret_a || ret_b;
+int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker) {
+	return _irt_cpu_freq_get(irt_affinity_mask_get_first_cpu(worker->affinity), "scaling_cur_freq");
 }
 
 /*
- * gets the maximum frequency a core of a worker is allowed to run on
+ * sets the maximum frequency a core of a worker is allowed to run at
  */
 
-int32 irt_cpu_freq_get_max_frequency_worker(irt_worker* worker) {
-	char path_to_cpufreq[1024] = { 0 };
-	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
-	sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-	return _irt_cpu_freq_read(path_to_cpufreq);
+bool irt_cpu_freq_set_max_frequency_worker(const irt_worker* worker, const uint32 frequency) {
+	return _irt_cpu_freq_set(irt_affinity_mask_get_first_cpu(worker->affinity), frequency, "scaling_max_freq");
 }
 
 /*
- * sets the minimum frequency a core of a worker is allowed to run on
+ * gets the maximum frequency a core of a worker is allowed to run at
  */
 
-bool irt_cpu_freq_set_min_frequency_worker(irt_worker* worker, const uint32 frequency) {
-	char path_to_cpufreq_a[1024] = { 0 };
-	char path_to_cpufreq_b[1024] = { 0 };
-	uint32 coreid_a = irt_affinity_mask_get_first_cpu(worker->affinity);
-	uint32 coreid_b = irt_get_sibling_hyperthread(coreid_a);
-	sprintf(path_to_cpufreq_a, FREQ_PATH_PREFIX "scaling_min_freq", coreid_a);
-	sprintf(path_to_cpufreq_b, FREQ_PATH_PREFIX "scaling_min_freq", coreid_b);
-	bool ret_a = _irt_cpu_freq_write(path_to_cpufreq_a, frequency);
-	bool ret_b = _irt_cpu_freq_write(path_to_cpufreq_b, frequency);
-	return ret_a || ret_b;
+int32 irt_cpu_freq_get_max_frequency_worker(const irt_worker* worker) {
+	return _irt_cpu_freq_get(irt_affinity_mask_get_first_cpu(worker->affinity), "scaling_max_freq");
 }
 
 /*
- * gets the minimum frequency a core of a worker is allowed to run on
+ * sets the minimum frequency a core of a worker is allowed to run at
  */
 
-int32 irt_cpu_freq_get_min_frequency_worker(irt_worker* worker) {
-	char path_to_cpufreq[1024] = { 0 };
-	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
-	sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_min_freq", coreid);
-	return _irt_cpu_freq_read(path_to_cpufreq);
+bool irt_cpu_freq_set_min_frequency_worker(const irt_worker* worker, const uint32 frequency) {
+	return _irt_cpu_freq_set(irt_affinity_mask_get_first_cpu(worker->affinity), frequency, "scaling_min_freq");
+}
+
+/*
+ * gets the minimum frequency a core of a worker is allowed to run at
+ */
+
+int32 irt_cpu_freq_get_min_frequency_worker(const irt_worker* worker) {
+	return _irt_cpu_freq_get(irt_affinity_mask_get_first_cpu(worker->affinity), "scaling_min_freq");
 }
 
 /*
  * resets all the min and max frequencies of all cores of all workers to the available min and max reported by the hardware
  */
 
-bool irt_cpu_freq_reset_frequency() {
+bool irt_cpu_freq_reset_frequencies() {
 	bool retval = 0;
 	uint32 frequency = 0;
-	char path_to_cpufreq[1024] = { 0 };
 	uint32 total_cores = irt_get_num_threads_per_core() * irt_get_num_cores_per_socket() * irt_get_num_sockets();
 
 	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
-
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "cpuinfo_max_freq", coreid);
-		frequency = _irt_cpu_freq_read(path_to_cpufreq);
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "cpuinfo_min_freq", coreid);
-		frequency = _irt_cpu_freq_read(path_to_cpufreq);
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_min_freq", coreid);
-		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
+		if(irt_affinity_mask_is_set(irt_g_frequency_setting_modified_mask, coreid)) {
+			frequency = _irt_cpu_freq_get(coreid, "cpuinfo_max_freq");
+			retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_max_freq");
+			frequency = _irt_cpu_freq_get(coreid, "cpuinfo_min_freq");
+			retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_min_freq");
+		}
 	}
 	return retval;
 }
@@ -244,7 +246,7 @@ bool irt_cpu_freq_reset_frequency() {
  * resets the min and max frequencies of a core of a worker to the available min and max
  */
 
-int32 irt_cpu_freq_reset_frequency_worker(irt_worker* worker) {
+int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker) {
 	int32 retval = 0;
 	uint32* freqs;
 	uint32 length;
@@ -260,7 +262,7 @@ int32 irt_cpu_freq_reset_frequency_worker(irt_worker* worker) {
  * sets the frequency of a core of a worker to a specific value by setting both the min and max to this value
  */
 
-int32 irt_cpu_freq_set_frequency_worker(irt_worker* worker, uint32 frequency) {
+int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency) {
 	int32 old_min_freq = irt_cpu_freq_get_min_frequency_worker(worker);
 
 	// min always has to be >= max, so if old_min is larger than max, first set new min
@@ -279,9 +281,7 @@ int32 irt_cpu_freq_set_frequency_worker(irt_worker* worker, uint32 frequency) {
  * this function blindly sets the frequency of cores belonging to a socket, whether the runtime actually has workers running on them or not
  */
 
-bool irt_cpu_freq_set_frequency_socket(uint32 socket, uint32 frequency) {
-	char path_to_cpufreq[1024] = { 0 };
-
+bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequency) {
 	bool retval = 0;
 	uint32 core_start = socket * irt_get_num_cores_per_socket();
 	uint32 core_end = (socket + 1) * irt_get_num_cores_per_socket();
@@ -289,40 +289,20 @@ bool irt_cpu_freq_set_frequency_socket(uint32 socket, uint32 frequency) {
 	// first HT unit
 	for(uint32 coreid = core_start; coreid < core_end; ++coreid) {
 		// write max, min, max because we don't know the old frequency and setting max below min is rejected by the OS
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_min_freq", coreid);
-		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-	}
-
-	// second HT unit
-	if(irt_get_num_threads_per_core() > 1) {
-		core_start = irt_get_sibling_hyperthread(core_start);
-		core_end = irt_get_sibling_hyperthread(core_end);
-		for(uint32 coreid = core_start; coreid < core_end; ++coreid) {
-			// write max, min, max because we don't know the old frequency and setting max below min is rejected by the OS
-			sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-			retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-			sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_min_freq", coreid);
-			retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-			sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_max_freq", coreid);
-			retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
-		}
+		// reading the old frequency before to determine that has approximately the same overhead
+		retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_max_freq");
+		retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_min_freq");
+		retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_max_freq");
 	}
 
 	return retval;
 }
 
 /*
- * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now.
+ * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like MIN/MAX/OS.
  */
 
 int32 irt_cpu_freq_set_frequency_socket_env() {
-
-
-
 	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
 	int32 retval = 0;
 
@@ -349,13 +329,10 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	// the rest of this function is only runtime log file output
 	// TODO: we only output the first core of each socket for brevity, but this should be changed
 
-	char path_to_cpufreq[1024] = { 0 };
 	uint32 cpu_freq_list[IRT_HW_MAX_NUM_SOCKETS];
 
-	for(uint32 i = 0; i < irt_get_num_sockets(); ++i) {
-		sprintf(path_to_cpufreq, FREQ_PATH_PREFIX "scaling_cur_freq", i * irt_get_num_cores_per_socket());
-		cpu_freq_list[i] = _irt_cpu_freq_read(path_to_cpufreq);
-	}
+	for(uint32 socketid = 0; socketid < irt_get_num_sockets(); ++socketid)
+		cpu_freq_list[socketid] = _irt_cpu_freq_get(socketid*irt_get_num_cores_per_socket(), "scaling_cur_freq");
 
 	char cpu_freq_output[1024] = { 0 };
 	char* cur = cpu_freq_output;
@@ -364,9 +341,9 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	else
 		cur += sprintf(cur, "not set, ");
 
-	for(uint32 i = 0; i < irt_get_num_sockets(); ++i) {
+	for(uint32 i = 0; i < irt_get_num_sockets(); ++i)
 		cur += sprintf(cur, "%u, ", cpu_freq_list[i]);
-	}
+	// cutting off the last comma and whitespace
 	*(cur-2) = '\0';
 
 	irt_log_setting_s("IRT_CPU_FREQUENCIES", cpu_freq_output);
@@ -384,7 +361,7 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
  * only frequencies offered by the operating system / hardware (c.f. scaling_available_frequencies) are actually written
  */
 
-int32 irt_cpu_freq_set_frequency_worker_env(irt_worker* worker) {
+int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
 	if(freq_str_orig) {
 		char freq_str[strlen(freq_str_orig)]; // needed since strtok modifies the string it's working on
@@ -483,7 +460,7 @@ int32 irt_cpu_freq_print_cur_frequency() {
  * sets the frequency of all cores of all workers to a given value
  */
 
-int32 irt_cpu_freq_set_frequency(uint32 frequency) {
+int32 irt_cpu_freq_set_frequency(const uint32 frequency) {
 	int32 retval = 0;
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		if((retval = irt_cpu_freq_set_frequency_worker(irt_g_workers[i], frequency)) != 0) {

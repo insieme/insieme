@@ -131,8 +131,12 @@ uint32 irt_get_num_numa_nodes() {
 
 uint32 irt_get_sibling_hyperthread(uint32 coreid) {
 	// should work for all sanely set up linux systems
-	if(irt_get_num_threads_per_core() > 2)
+	if(irt_get_num_threads_per_core() > 1)
 		return coreid + irt_get_num_sockets() * irt_get_num_cores_per_socket();
 	else
 		return coreid;
+}
+
+bool irt_get_hyperthreading_enabled() {
+	return (irt_get_num_threads_per_core() > 1);
 }

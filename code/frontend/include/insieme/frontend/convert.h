@@ -225,7 +225,7 @@ class Converter :  boost::noncopyable {
 	 const clang::SourceLocation* lastTrackableLocation;
 
 
-     core::ExpressionPtr convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
+     void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
 public:
 
@@ -349,6 +349,12 @@ public:
 		return pragmaMap;
 	}
 
+	/**
+	 * convert type declaration, it triggers the plugins and converts the represented type
+	 * fills the translation unit with this type
+	 * @param typeDecl: the type declaration itself
+	 */
+	void convertTypeDecl(const clang::TypeDecl* decl);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -382,10 +388,18 @@ public:
 	/**
 	 * Converts a function declaration into an IR lambda.
 	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-	 * @param visitByPlugin determines if pre- and post-plugin visitors should be executed
 	 * @return Converted lambda
 	 */
-	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, const bool visitByPlugin = true);
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+
+	/**
+	 * retrieves the symbol asociated with a function without the need of triggering the translation
+	 * of the function. The function itself should be translated by the clang declaration traverser, 
+	 * and stored in the translation unit.
+	 * @param functionDecl the function decl 
+	 */
+	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
+
 
 	/**
 	 * Entry point for converting function to the right type

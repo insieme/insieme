@@ -132,6 +132,8 @@ public:
 
 };
 
+
+
 /**
  *  This test checks if the user provided
  *  clang plugin registration works correctly.
@@ -248,6 +250,79 @@ TEST(PostClangStage, IRVisit) {
     auto program = job.execute(mgr);
  	EXPECT_TRUE(progVisited);
  	EXPECT_TRUE(tuVisited);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+//    Decls visitor
+
+ 	int varsPre, varsPost;
+	int funcsPre, funsPost;
+	int typesPre, typesPost;
+
+struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
+	virtual bool Visit    (const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
+		//	std::cout << " ########## FUNcT ################## " << std::endl;
+		//	decl->dump();
+		//	std::cout << " ################################### " << std::endl;
+			funcsPre++;
+		}
+		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
+			//std::cout << " ########## VAR ################## " << std::endl;
+			//decl->dump();
+			//std::cout << " ################################### " << std::endl;
+			varsPre++;
+		}
+		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
+	//		std::cout << " ########## TYPE ################## " << std::endl;
+	//		decl->dump();
+	//		std::cout << decl->getDeclKindName() <<std::endl;
+	//		std::cout << " ################################### " << std::endl;
+			typesPre++;
+		}
+		return false;
+	}
+	virtual void PostVisit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
+			funsPost++;
+		}
+		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
+			varsPost++;
+		}
+		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
+			typesPost++;
+		}
+	}
+};
+
+
+TEST(DeclsStage, MatchVisits) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/decls.cpp");
+	
+	varsPre  = varsPost = 0;
+	funcsPre = funsPost = 0;
+	typesPre = typesPost = 0;
+
+	// register plugin
+    job.registerFrontendPlugin<DeclVistors>();
+
+    //execute job
+    auto program = job.execute(mgr);
+
+//	std::cout << varsPre   <<" , " << varsPost << std::endl;
+//	std::cout << funcsPre  <<" , " << funsPost << std::endl;
+//	std::cout << typesPre  <<" , " << typesPost<< std::endl;
+
+	EXPECT_EQ (10, varsPre);  
+	EXPECT_EQ (18, funcsPre);   // this is weird, but works
+	EXPECT_EQ (6, typesPre);	
+
+	EXPECT_EQ (varsPre, varsPost);
+	EXPECT_EQ (funcsPre, funsPost);
+	EXPECT_EQ (typesPre, typesPost);
 }
 
 
