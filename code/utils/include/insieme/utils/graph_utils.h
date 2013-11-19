@@ -171,6 +171,15 @@ namespace graph {
 		}
 
 		/**
+		 * Obtains the descriptor utilized within the underlying boost graph to represent
+		 * the given vertex value.
+		 */
+		vertex_descriptor getVertexDescriptor(const Vertex& vertex) const {
+			assert(vertexMap.find(vertex) != vertexMap.end());
+			return vertexMap.find(vertex)->second;
+		}
+
+		/**
 		 * Tests whether the given vertex is part of this graph.
 		 *
 		 * @param vertex the vertex to be tested
@@ -214,7 +223,7 @@ namespace graph {
 		 */
 		bool containsEdge(const Vertex& source, const Vertex& sink) {
 			// check presents of source / sink vertex an finally the edge
-			return containsVertex(source) && containsVertex(sink) && boost::edge(getVertexDescriptor(source), getVertexDescriptor(sink), graph);
+			return containsVertex(source) && containsVertex(sink) && boost::edge(getVertexDescriptorInternal(source), getVertexDescriptorInternal(sink), graph);
 		}
 
 		/**
@@ -236,8 +245,8 @@ namespace graph {
 		 */
 		boost::optional<EdgeLabel> getLabel(const Vertex& source, const Vertex& sink) {
 
-			auto source_desc = getVertexDescriptor(source);
-			auto sink_desc = getVertexDescriptor(sink);
+			auto source_desc = getVertexDescriptorInternal(source);
+			auto sink_desc = getVertexDescriptorInternal(sink);
 
 			// look up edge
 			if (!source_desc || !sink_desc) {
@@ -386,7 +395,7 @@ namespace graph {
 		 * @param vertex the vertex looking for
 		 * @return an optional containing the requested descriptor whenever present
 		 */
-		boost::optional<vertex_descriptor> getVertexDescriptor(const Vertex& vertex) {
+		boost::optional<vertex_descriptor> getVertexDescriptorInternal(const Vertex& vertex) const {
 			auto pos = vertexMap.find(vertex);
 			if (pos != vertexMap.end()) {
 				return boost::optional<vertex_descriptor>(pos->second);

@@ -45,6 +45,36 @@ namespace prototype {
 
 	namespace {
 
+		Assignment merge(const Assignment& a, const Assignment& b) {
+			Assignment res = a;
+			for(auto cur : b) {
+				res[cur.first].insert(cur.second.begin(), cur.second.end());
+			}
+			return res;
+		}
+
+		void updateInNaive(const Node& node, const Graph& graph) {
+
+			auto& g = graph.asBoostGraph();
+
+			// just merge all the input sets
+
+			typedef boost::graph_traits<Graph::GraphType> GraphTraits;
+
+//			std::cout << "Node: " << node << "\n";
+//			std::cout << "Predecessors: ";
+			typename GraphTraits::in_edge_iterator in_i, in_end;
+			for (std::tie(in_i, in_end) = boost::in_edges(graph.getVertexDescriptor(node), g); in_i != in_end; ++in_i) {
+				auto e = *in_i;
+				auto src = boost::source(e, g);
+//				std::cout << g[src] << "\n";
+				node.before = merge(node.before, g[src].after);
+			}
+//			std::cout << "\n";
+		}
+
+
+
 		bool update(const Node& node, const Graph& g) {
 
 			// create a backup of the old state
@@ -52,12 +82,13 @@ namespace prototype {
 
 //			std::cout << "Updating: " << node << "\n";
 
-			// update in-set
+			// update in-set  ... that's the tricky part
+			updateInNaive(node, g);
 
 			// update out-set
 			node.after = node.before;
 			if (node.getType() == Node::Write) {
-				node.after[node.getVar()].insert(node.getValue());
+				node.after[node.getVar()] = utils::set::toSet<std::set<Value>>(node.getValue());
 			}
 
 //			std::cout << old.before << " != " << node.before << " : " << (old.before != node.before) << "\n";
