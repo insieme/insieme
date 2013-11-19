@@ -849,12 +849,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 		return (irNode = getSizeOfType(builder, type));
 	}
 	case clang::UETT_AlignOf:
+		frontend_assert(false)<< "alingof Kind of expressions not handled\n";
 	case clang::UETT_VecStep:
-	default:
-	frontend_assert(false)<< "Kind of expressions not handled\n";
-	return core::ExpressionPtr();
-}
+		frontend_assert(false)<< "vecStep Kind of expressions not handled\n";
+	}
 
+	return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -880,6 +880,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
+
+	frontend_assert(lhs) << "no left side could be translated";
+	frontend_assert(rhs) << "no right side could be translated";
+	frontend_assert(exprTy) << "no type for expression";
+
 
 	// handle of volatile variables
 	if (binOp->getOpcode() != clang::BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
@@ -1800,6 +1805,7 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		if(retIr)
 			break;
     }
+
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
