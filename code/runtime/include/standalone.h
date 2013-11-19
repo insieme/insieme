@@ -170,7 +170,7 @@ void irt_exit_handler() {
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
 	if(irt_g_frequency_setting_specified)
-		irt_cpu_freq_reset_frequency();
+		irt_cpu_freq_reset_frequencies();
 #endif
 
 #ifdef USE_OPENCL
