@@ -655,12 +655,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.getZero(targetTy);
 			}
 			else{
-				// since we need this, we force the conversion - may god be with the unfortunate soul who has to deal with it
-				return builder.castExpr(targetTy, expr);
-//				dumpDetail(expr);
-//				dumpDetail(targetTy);
-//				assert(false && "Non NULL casts to pointer not supported");
+				// since we need this, we force the conversion - may god have mercy for the unfortunate soul who has to deal with it
+//				return builder.castExpr(targetTy, expr);
+				castExpr->dump();
+				std::cout << "-> at location: (" << utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << "); ";
+				dumpDetail(expr);
+				dumpDetail(targetTy);
+				frontend_assert(false) << "Non NULL cast to pointer not supported!";
+				assert(false && "Non NULL casts to pointer not supported");
 			}
+			break;
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
