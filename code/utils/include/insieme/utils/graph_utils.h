@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <iterator>
+
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graphviz.hpp>
@@ -140,6 +142,13 @@ namespace graph {
 		}
 
 		/**
+		 * An implicit converter of this builder into the resulting graph.
+		 */
+		operator const GraphType&() const {
+			return graph;
+		}
+
+		/**
 		 * Adds a new vertex to the represented graph.
 		 *
 		 * @param vertex the new vertex
@@ -148,6 +157,17 @@ namespace graph {
 		bool addVertex(const Vertex& vertex) {
 			// use internal implementation for adding a vertex
 			return addVertexInternal(vertex).second;
+		}
+
+		/**
+		 * Obtains a reference to the internal copy of the given vertex. If the vertex
+		 * is not present, a copy will be added.
+		 *
+		 * @param vertex the vertex to be obtained
+		 * @return a reference to the internal copy of the given vertex
+		 */
+		Vertex& getVertex(const Vertex& vertex) {
+			return graph[addVertexInternal(vertex).first];
 		}
 
 		/**
@@ -275,6 +295,60 @@ namespace graph {
 			);
 			return out;
 		}
+
+
+		// -- vertex iterator ------------------------------------------------------
+
+		/**
+		 * A vertex iterator implementation
+		 */
+		struct const_iterator : public std::iterator<std::forward_iterator_tag, Vertex> {
+
+			typedef typename boost::graph_traits<GraphType>::vertex_iterator vertex_iter;
+
+			const_iterator() : graph(nullptr), iter() {}
+			const_iterator(const GraphType& graph, const vertex_iter& iter) : graph(&graph), iter(iter) {}
+
+			bool operator==(const const_iterator& other) const {
+				return graph == other.graph && iter == other.iter;
+			}
+
+			bool operator!=(const const_iterator& other) const {
+				return !(*this == other);
+			}
+
+			const Vertex& operator*() const {
+				return (*graph)[*iter];
+			}
+
+			const Vertex* operator->() const {
+				return &(*graph)[*iter];
+			}
+
+			const_iterator& operator++() {
+				++iter; return *this;
+			}
+
+		private:
+
+			const GraphType* graph;
+			vertex_iter iter;
+		};
+
+		/**
+		 * Obtains a const iterator referencing the first vertex.
+		 */
+		const_iterator vertexBegin() const {
+			return const_iterator(graph, boost::vertices(graph).first);
+		}
+
+		/**
+		 * Obtains a const iterator referencing the position after the last vertex.
+		 */
+		const_iterator vertexEnd() const {
+			return const_iterator(graph, boost::vertices(graph).second);
+		}
+
 
 	private:
 
