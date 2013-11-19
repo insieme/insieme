@@ -748,7 +748,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	if (callExpr->getDirectCallee()) {
 
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		irNode = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>();
 		const core::FunctionTypePtr funcTy = irNode->getType().as<core::FunctionTypePtr>() ;
 		const clang::FunctionDecl* definition = NULL;
 
@@ -1268,11 +1268,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	}
 
 	frontend_assert(opFunc) << "no operation code set\n";
-	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
-
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
-
 	return retIr;
 }
 
@@ -1688,7 +1684,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	}
 
 	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
-		return (retIr = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>());
+		return (retIr = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>());
 	}
 
 	if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {

@@ -47,7 +47,7 @@ namespace extensions {
 
 class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-	void PostVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact);
+	void PostVisit(const clang::Decl* funcDecl, insieme::frontend::conversion::Converter& convFact);
 
 
 //    void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);

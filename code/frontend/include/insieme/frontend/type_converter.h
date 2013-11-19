@@ -193,8 +193,6 @@ protected:
 
 	// main entry point
 	virtual core::TypePtr convertInternal(const clang::Type* type);
-
-	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res);
 };
 
 }

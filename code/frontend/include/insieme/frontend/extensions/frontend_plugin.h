@@ -104,7 +104,7 @@ namespace extensions {
                                                  insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
                                                  insieme::frontend::conversion::Converter& convFact);
-        virtual void PostVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
 
         // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);

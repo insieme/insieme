@@ -87,7 +87,7 @@ namespace extensions {
         return irStmt;
     }
     
-    void FrontendPlugin::PostVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+    void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
         return;
     }
 

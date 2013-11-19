@@ -94,6 +94,9 @@ namespace tu {
 			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints), isCppCode(other.isCppCode) {}
 
 		// getter:
+		bool isEmpty(){
+			return types.empty() && functions.empty() && globals.empty(); 
+		}
 
 		const TypeMap& getTypes() const {
 			return types;
