@@ -29,10 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
@@ -214,7 +215,7 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
             core::VariablePtr var = builder.variable(builder.getLangBasic().getVarList());
 
             // if we've already handled it
-            if (params.back().as<core::VariablePtr>()->getType() == var->getType())
+            if (!params.empty() && params.back().as<core::VariablePtr>()->getType() == var->getType())
                 return;
 
             params.push_back(var);

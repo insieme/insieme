@@ -188,6 +188,42 @@ namespace analysis {
 
 	}
 
+	TEST(Normalizing, ForLoops) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<string,NodePtr> symbols;
+		symbols["e"] = builder.variable(builder.parseType("int<4>"), 100);
+
+		auto code =
+				"{"
+				"	int<4> x = 123;"
+				"	ref<int<4>> y = 12;"
+				"	ref<int<4>> sum = var(0);"
+				"	for(int<4> i = x-12+y+e .. x+12+y : x) {"
+				"		for(int<4> j = x-12+y+e .. x+12+y : x) {"
+				"			sum = sum + i + j;"
+				"		}"
+				"	}"
+				"}";
+
+		auto a = builder.parseStmt(code, symbols);
+		auto b = builder.parseStmt(code, symbols);
+
+//		dumpPretty(a);
+//		dumpPretty(b);
+//
+//		dumpPretty(normalize(a));
+//		dumpPretty(normalize(b));
+
+		EXPECT_NE(a,b);
+		EXPECT_NE(*a,*b);
+
+		EXPECT_EQ(normalize(a), normalize(b));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

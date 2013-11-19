@@ -38,7 +38,7 @@
 
 #include <typeindex>
 
-#include "insieme/analysis/cba/framework/data_index.h"
+#include "insieme/analysis/cba/framework/entities/data_index.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"

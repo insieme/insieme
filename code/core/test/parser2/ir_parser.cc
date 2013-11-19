@@ -813,6 +813,19 @@ namespace parser {
 		EXPECT_EQ(call, call2);
 	}
 
+	TEST(IR_Parser2, Jobs) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto job = builder.normalize(builder.parseExpr(
+				"job { int x = 2; }"
+		));
+
+		ASSERT_TRUE(job);
+		EXPECT_EQ("job [] (default: bind(){rec v0.{v0=fun() {int v1 = 2;}}()})", toString(*job));
+	}
+
 	TEST(IR_Parser2, LargeCode) {
 
 		// this is mostly a speed test

@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/cba/framework/data_index.h"
+#include "insieme/analysis/cba/framework/entities/data_index.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"

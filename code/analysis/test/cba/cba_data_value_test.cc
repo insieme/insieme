@@ -38,8 +38,8 @@
 
 #include <array>
 
-#include "insieme/analysis/cba/framework/data_index.h"
-#include "insieme/analysis/cba/framework/data_value.h"
+#include "insieme/analysis/cba/framework/entities/data_index.h"
+#include "insieme/analysis/cba/framework/entities/data_value.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/unused.h"
