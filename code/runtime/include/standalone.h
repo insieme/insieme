@@ -287,7 +287,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 		// initialize PAPI and check version
 		irt_initialize_papi();
-		
+		_irt_setup_hardware_info();
 	#endif
 
 	#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
