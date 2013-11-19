@@ -42,6 +42,7 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/extensions/ocl_kernel_extension.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
@@ -58,73 +59,75 @@ using namespace insieme;
 namespace af = analysis::features;
 
 TEST(OclFeaturesTest, StaticFeaturesTest) {
-//	Logger::get(std::cerr, INFO, 2);
-//	core::NodeManager manager;
-//
-//	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-//
-//	std::cout << SRC_DIR << std::endl;
-//	insieme::frontend::ConversionJob job(SRC_DIR "inputs/hello.cl");
-//	core::ProgramPtr program = job.execute(manager);
-//	LOG(INFO) << "Done.";
-//
-//	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");
-//	core::NodePtr kernel = kpp.process(manager, program);
-///*
-//	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//
-//	LOG(INFO) << "Printing the IR: " << pp;
-//*/
-//	auto errors = core::checks::check(program).getAll();
-//
-//	EXPECT_EQ(errors.size(), 0u);
-//
-//	std::sort(errors.begin(), errors.end());
-//
-//	for_each(errors, [](const core::checks::Message& cur) {
-//		LOG(INFO) << cur << std::endl;
-//	});
-//
-//	// extracting features from the kernel
-//	af::FeatureCatalog catalog;
-//	catalog.addAll(af::getFullCodeFeatureCatalog());
-//
-//	double intOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_OPs_real")->extractFrom(kernel));
-//	double vecIntOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_VEC_OPs_real")->extractFrom(kernel));
-//
-//	double floatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_OPs_real")->extractFrom(kernel));
-//	double vecFloatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_VEC_OPs_real")->extractFrom(kernel));
-//
-//	double intrinsics = af::getValue<double>(catalog.getFeature("SCF_NUM_externalFunction_lambda_real")->extractFrom(kernel));
-//
-//	double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_Calls_real")->extractFrom(kernel));
-//
-//	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
-//	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
-//	double computeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
-//
-//	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOPs-vectorOPs_real_sum")->extractFrom(kernel));
-//
-//
-//	EXPECT_EQ(1.0, intOPs);
-//	EXPECT_EQ(0.0, vecIntOPs);
-//
-//	EXPECT_EQ(1.0, floatOPs);
-//	EXPECT_EQ(14.0, vecFloatOPs);
-//
-//	EXPECT_EQ(10.0, intrinsics);
-//
-//	EXPECT_EQ(0.0, barriers);
-//
-//	EXPECT_EQ(83.0, memoryAccesses);
-//
-////std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
-//	EXPECT_GT(0.001, fabs(0.0120482 - relLocalmemAcc));
-//	EXPECT_GT(0.001, fabs(0.192771 - computeMemoryRatio));
-//
-//	EXPECT_EQ(16.0, totalComputation);
-//
-//	// code_features.cpp:56
-//	// cache_utils.h:72
-//
+	Logger::get(std::cerr, ERROR, 0);
+	core::NodeManager manager;
+
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
+
+	std::cout << SRC_DIR << std::endl;
+	insieme::frontend::ConversionJob job(SRC_DIR "inputs/hello.cl");
+    job.addIncludeDirectory(SRC_DIR "inputs");
+	job.registerFrontendPlugin<frontend::extensions::OclKernelPlugin>();
+	core::ProgramPtr program = job.execute(manager, false);
+	LOG(INFO) << "Done.";
+
+	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");
+	core::NodePtr kernel = kpp.process(manager, program);
+/*
+	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	LOG(INFO) << "Printing the IR: " << pp;
+*/
+	auto errors = core::checks::check(program).getAll();
+
+	EXPECT_EQ(errors.size(), 0u);
+
+	std::sort(errors.begin(), errors.end());
+
+	for_each(errors, [](const core::checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	// extracting features from the kernel
+	af::FeatureCatalog catalog;
+	catalog.addAll(af::getFullCodeFeatureCatalog());
+
+	double intOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_OPs_real")->extractFrom(kernel));
+	double vecIntOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_VEC_OPs_real")->extractFrom(kernel));
+
+	double floatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_OPs_real")->extractFrom(kernel));
+	double vecFloatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_VEC_OPs_real")->extractFrom(kernel));
+
+	double intrinsics = af::getValue<double>(catalog.getFeature("SCF_NUM_externalFunction_lambda_real")->extractFrom(kernel));
+
+	double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_Calls_real")->extractFrom(kernel));
+
+	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
+	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
+	double computeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
+
+	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOPs-vectorOPs_real_sum")->extractFrom(kernel));
+
+
+	EXPECT_EQ(1.0, intOPs);
+	EXPECT_EQ(0.0, vecIntOPs);
+
+	EXPECT_EQ(1.0, floatOPs);
+	EXPECT_EQ(14.0, vecFloatOPs);
+
+	EXPECT_EQ(12.0, intrinsics);
+
+	EXPECT_EQ(0.0, barriers);
+
+	EXPECT_EQ(85.0, memoryAccesses);
+
+//std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
+	EXPECT_GT(0.001, fabs(0.0235294 - relLocalmemAcc));
+	EXPECT_GT(0.001, fabs(0.188235 - computeMemoryRatio));
+
+	EXPECT_EQ(16.0, totalComputation);
+
+	// code_features.cpp:56
+	// cache_utils.h:72
+
 }
