@@ -655,9 +655,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.getZero(targetTy);
 			}
 			else{
-				dumpDetail(expr);
-				dumpDetail(targetTy);
-				assert(false && "Non NULL casts to pointer not supported");
+				// since we need this, we force the conversion - may god be with the unfortunate soul who has to deal with it
+				return builder.castExpr(targetTy, expr);
+//				dumpDetail(expr);
+//				dumpDetail(targetTy);
+//				assert(false && "Non NULL casts to pointer not supported");
 			}
 		}
 

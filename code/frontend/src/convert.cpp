@@ -1405,7 +1405,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	std::cerr << "initialization fails: \n\t" << init << std::endl;
 	std::cerr << "init type / details: \n\t" << init->getType() << " / " << lookupTypeDetails(init->getType()) << std::endl;
-	std::cerr << "\t target: " << targetType << std::endl;
+	std::cerr << "\t          target type: " << targetType << std::endl;
+	std::cerr << "\t resolved target type: " << elementType << std::endl;
 
 	assert(false && " fallthrow");
 	return init;
