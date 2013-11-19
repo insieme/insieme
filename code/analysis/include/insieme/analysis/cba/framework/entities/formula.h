@@ -34,28 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/sequential/dead_code_elimination.h"
+#pragma once
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+
+#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace transform {
-namespace sequential {
+namespace analysis {
+namespace cba {
 
+	struct Formula : public utils::Printable, public utils::Hashable {
 
-	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
-		// can only be applied to statements and expressions
-		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
-	}
+		typedef boost::optional<core::arithmetic::Formula> formula_type;
+		formula_type formula;
 
-	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
-		// do nothing so far
-		return target;
-	}
+		Formula() : formula() {};
+		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
 
-	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-		// just check that the node type hasn't changed (no real post-conditions yet)
-		return before->getNodeType() == after->getNodeType();
-	}
+		bool operator==(const Formula& other) const {
+			return this == &other || (!formula && !other.formula) ||
+					(formula && other.formula && *formula == *other.formula);
+		}
 
-} // end namespace sequential
-} // end namespace transform
+		bool operator<(const Formula& other) const {
+			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
+		}
+
+		operator bool() const {
+			return formula;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			if (formula) return out << *formula;
+			return out << "-unknown-";
+		}
+
+		std::size_t hash() const {
+			// TODO: implement hashing for formulas!
+			return (formula) ? 1 : 0;	// formulas can't be hashed yet ..
+		}
+	};
+
+} // end namespace cba
+} // end namespace analysis
 } // end namespace insieme

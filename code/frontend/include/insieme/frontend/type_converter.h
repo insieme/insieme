@@ -95,8 +95,8 @@ protected:
 	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
-
-	core::TypePtr pluginPostTypeVisit(const clang::Type* type, core::TypePtr& irType);
+    
+    core::TypePtr convertImpl(const clang::Type* type);
 };
 
 

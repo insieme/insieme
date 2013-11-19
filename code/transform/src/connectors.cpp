@@ -122,12 +122,13 @@ namespace transform {
 		  filter(parameter::getValue<filter::TargetFilter>(value, 0)) {}
 
 
-	core::NodePtr ForAll::apply(const core::NodePtr& target) const {
+	core::NodeAddress ForAll::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
 
 		// generate list of target nodes
 		vector<core::NodeAddress> targets = filter(target);
 		if (targets.empty()) {
-			return target;
+			return targetAddress;
 		}
 
 		// generate replacement map
@@ -137,7 +138,8 @@ namespace transform {
 		});
 
 		// apply replacement
-		return core::transform::replaceAll(target->getNodeManager(), replacements);
+		auto mod = core::transform::replaceAll(target->getNodeManager(), replacements);
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, mod);
 	}
 
 	bool ForAll::operator==(const Transformation& transform) const {
@@ -240,8 +242,10 @@ namespace transform {
 
 
 
-	core::NodePtr ForEach::apply(const core::NodePtr& target) const {
-		return apply(target, maxDepth);
+	core::NodeAddress ForEach::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
+		auto mod = apply(target, maxDepth);
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, mod);
 	}
 
 
@@ -281,7 +285,9 @@ namespace transform {
 	}
 
 
-	core::NodePtr Fixpoint::apply(const core::NodePtr& target) const {
+	core::NodeAddress Fixpoint::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
+
 		// apply transformation until result represents a fix-point of the sub-transformation
 		core::NodePtr cur = target;;
 		core::NodePtr last;
@@ -299,7 +305,7 @@ namespace transform {
 		}
 
 		// return fixpoint (or approximation)
-		return cur;
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, cur);
 	}
 
 	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) 	{

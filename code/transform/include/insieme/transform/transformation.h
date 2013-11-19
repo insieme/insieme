@@ -297,7 +297,7 @@ namespace transform {
 		 * @return the transformed node
 		 * @throws InvalidTargetException if this transformation can not be applied to the given target
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const =0;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const =0;
 
 		/**
 		 * A generic version of the method above which will preserve the type of the transformed node.
@@ -314,7 +314,7 @@ namespace transform {
 		 */
 		template<typename T>
 		core::Pointer<const T> apply(const core::Pointer<const T>& target) const {
-			return static_pointer_cast<const T>(apply(core::NodePtr(target)));
+			return static_pointer_cast<const T>(apply(core::NodeAddress(target)).getAddressedNode());
 		}
 
 		/**
@@ -332,7 +332,7 @@ namespace transform {
 		 */
 		template<typename T>
 		core::Address<const T> apply(const core::Address<const T>& target) const {
-			return core::static_address_cast<const T>(core::transform::replaceAddress(target->getNodeManager(), target, apply(target.getAddressedNode())));
+			return apply(core::NodeAddress(target)).as<core::Address<const T>>();
 		}
 
 		/**

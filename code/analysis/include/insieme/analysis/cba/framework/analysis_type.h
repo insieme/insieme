@@ -42,7 +42,8 @@
 #include <boost/noncopyable.hpp>
 
 #include "insieme/utils/constraint/lattice.h"
-#include "insieme/analysis/cba/framework/data_value.h"
+
+#include "insieme/analysis/cba/framework/entities/data_value.h"
 
 namespace insieme {
 namespace analysis {

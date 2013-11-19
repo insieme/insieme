@@ -263,6 +263,50 @@ namespace cba {
 
 	}
 
+	TEST(CBA_Analysis, IntegerConstants) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<string,core::NodePtr> symbols;
+
+		auto code = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let point = struct { int x; int y; };"
+				"	let cycle = struct { point c; int r; };"
+				"	"
+				"	ref<cycle> o = var((cycle) { (point) { 1, 2 }, 3 });"
+				"	"
+				"	*o;"
+				"	*o.c;"
+				"	*o.c.x;"
+				"	*o.c.y;"
+				"	*o.r;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(code);
+		auto root = CompoundStmtAddress(code);
+
+		auto a = root[1].as<ExpressionAddress>();
+		auto b = root[2].as<ExpressionAddress>();
+		auto c = root[3].as<ExpressionAddress>();
+		auto d = root[4].as<ExpressionAddress>();
+		auto e = root[5].as<ExpressionAddress>();
+
+		// check a
+		EXPECT_FALSE(isIntegerConstant(a));
+		EXPECT_FALSE(isIntegerConstant(b));
+		EXPECT_TRUE(isIntegerConstant(c));
+		EXPECT_TRUE(isIntegerConstant(d));
+		EXPECT_TRUE(isIntegerConstant(e));
+
+		EXPECT_EQ("1", toString(*isIntegerConstant(c)));
+		EXPECT_EQ("2", toString(*isIntegerConstant(d)));
+		EXPECT_EQ("3", toString(*isIntegerConstant(e)));
+	}
+
 	TEST(CBA_Analysis, AliasesStructured) {
 
 		NodeManager mgr;

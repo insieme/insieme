@@ -126,42 +126,6 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
-// with the pack operation provided by the IR.
-vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy,
-		const ExpressionList& args) {
-
-	// check if the function type ends with a VAR_LIST type
-	const core::TypeList& argsTy = funcTy->getParameterTypes()->getElements();
-	// frontend_assert(argsTy ) <<  "Function argument is of not type TupleType\n";
-
-	// if the tuple type is empty it means we cannot pack any of the arguments
-	if (argsTy.empty()) {
-		return args;
-	}
-
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	if (gen.isVarList(argsTy.back())) {
-		ExpressionList ret;
-		assert(args.size() >= argsTy.size()-1 && "Function called with fewer arguments than necessary");
-		// last type is a var_list, we have to do the packing of arguments
-
-		// we copy the first N-1 arguments, the remaining will be unpacked
-		std::copy(args.begin(), args.begin() + argsTy.size() - 1, std::back_inserter(ret));
-
-		ExpressionList toPack;
-		if (args.size() > argsTy.size() - 1) {
-			std::copy(args.begin() + argsTy.size() - 1, args.end(), std::back_inserter(toPack));
-		}
-
-		// arguments has to be packed into a tuple expression, and then inserted into a pack expression
-		ret.push_back(builder.callExpr(gen.getVarList(), gen.getVarlistPack(), builder.tupleExpr(toPack)));
-		return ret;
-	}
-	return args;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
@@ -754,7 +718,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments( callExpr, funcDecl);
-		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit,
 		// we mark this function as extern. and return
@@ -765,11 +728,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 			//-----------------------------------------------------------------------------------------------------
 			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
 				irNode = builder.literal("alloca", funcTy);
-				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
+				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
 			}
 
 			//build callExpr
-			irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs);
+			irNode = builder.callExpr(funcTy->getReturnType(), irNode, args);
 
 			// In the case this is a call to MPI, attach the loc annotation, handlling of those
 			// statements will be then applied by mpi_sema
@@ -794,7 +757,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 		frontend_assert(definition) << "No definition found for function\n";
 
-		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs));
+		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
 	}
 
 
@@ -982,13 +945,19 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		frontend_assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
+		else if (!isCompound && subRefTy->getNodeType() != core::NT_ArrayType)
+			lhs = builder.callExpr(gen.getScalarToArray(), lhs);
 
 		// Capture pointer arithmetics
 		// 	Base op must be either a + or a -
 		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n";
 
+		// unpack long-long
+		if (core::analysis::isLongLong(rhs->getType()))
+			rhs = core::analysis::castFromLongLong(rhs);
+
 		// LOG(INFO) << rhs->getType();
-		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be a signed int\n";
+		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be an integer type\nGiven: " << *rhs->getType();
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
 
@@ -1210,15 +1179,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 
 		// This is the required pointer arithmetic in the case we deal with pointers
-		if (!core::analysis::isRefType(rhs->getType()) &&
-			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
+		if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
 			rhs = doPointerArithmetic();
 			return (retIr = rhs);
 		}
 
 		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
-		if (!core::analysis::isRefType(lhs->getType()) &&
-			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
+		if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
 			std::swap(rhs, lhs);
 			rhs = doPointerArithmetic();
 			return (retIr = rhs);
@@ -1267,7 +1234,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
-	frontend_assert(opFunc) << "no operation code set\n";
+	frontend_assert(opFunc) << "no operation code set\n"
+			<< "\tOperator: " << binOp->getOpcodeStr().str() << "\n"
+			<< "\t     LHS: " << *lhs << " : " << *lhs->getType() << "\n"
+			<< "\t     RHS: " << *rhs << " : " << *rhs->getType() << "\n";
+
+	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
 	return retIr;
 }

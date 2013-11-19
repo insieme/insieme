@@ -919,6 +919,37 @@ namespace cba {
 		EXPECT_EQ("{0,1}", toString(analysis.getValuesOf(code[25].as<ExpressionAddress>(), B)));
 	}
 
+	TEST(CBA, Arithmetic_102) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto in = builder.parseStmt(
+			"{"
+			"	let int = int<4>;"
+			"	ref<int> a = var(3);"
+			"	ref<int> b = var(9 + (a * 5));"
+			"	ref<int> c;"
+			"	"
+			"	c = b * 4;"
+			"	if (c > 10) {"
+			"		c = c - 10;"
+			"	}"
+			"	c * (60 + a);"
+			"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// check values
+		EXPECT_EQ("{5418}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
 
 	TEST(CBA, Boolean_101) {
 		NodeManager mgr;

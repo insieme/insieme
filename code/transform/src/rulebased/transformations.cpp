@@ -40,6 +40,8 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/core/pattern/pattern.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/generator.h"
@@ -66,12 +68,12 @@ namespace rulebased {
 		: Transformation(type, param), rules(rules) {}
 
 
-	core::NodePtr RuleBasedTransformation::apply(const core::NodePtr& target) const {
+	core::NodeAddress RuleBasedTransformation::apply(const core::NodeAddress& target) const {
 		// the first matching rule will be applied
 		for(auto it = rules.begin(); it != rules.end(); ++it) {
 			core::NodePtr res = it->applyTo(target);
 			if (res) {
-				return res;
+				return core::transform::replaceAddress(target->getNodeManager(), target, res);
 			}
 		}
 		throw InvalidTargetException(target);

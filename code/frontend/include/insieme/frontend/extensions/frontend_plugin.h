@@ -49,6 +49,7 @@ namespace clang {
     class Decl;
     class Type;
     class FunctionDecl;
+    class ValueDecl;
 }
 
 namespace stmtutils {

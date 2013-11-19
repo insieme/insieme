@@ -49,7 +49,9 @@ namespace functions {
 		if (unrolling < 2) throw InvalidParametersException("Unrolling factor must be at least 2!");
 	}
 
-	core::NodePtr RecursiveFunctionUnrolling::apply(const core::NodePtr& target) const {
+	core::NodeAddress RecursiveFunctionUnrolling::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
+
 		if (target->getNodeType() != core::NT_LambdaExpr) throw InvalidTargetException("Can only be applied to lambdas!");
 
 		// start by obtaining the lambda
@@ -65,7 +67,8 @@ namespace functions {
 		lambda = lambda->unroll(unrolling);
 
 		// simplify resulting expression
-		return core::transform::simplify(lambda->getNodeManager(), lambda);
+		auto res = core::transform::simplify(lambda->getNodeManager(), lambda);
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
 	}
 
 } // end namespace functions

@@ -351,19 +351,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-    core::TypePtr retIr;
-    //iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(type, convFact);
-		if(retIr)
-			return pluginPostTypeVisit(type, retIr);
-	}
-	//check if the insieme type converter should be called
-	if(!retIr) {
-        retIr = TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
-	}
-	//return post visited type
-	return pluginPostTypeVisit(type, retIr);
+
+    return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 
 } // End conversion namespace

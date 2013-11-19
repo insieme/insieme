@@ -1,8 +1,8 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=5.1.0
-SUBVERSION=.2
+VERSION=5.2.0
+SUBVERSION=
 
 ##########################################################################
 ## 								Papi

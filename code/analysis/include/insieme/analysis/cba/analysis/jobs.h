@@ -36,48 +36,59 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/analysis_type.h"
+#include "insieme/analysis/cba/framework/entities/job.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
+	// ----------------- jobs ---------------
 
-	// *************************************************************************************
-	//										Constants
-	// *************************************************************************************
+	template<typename Context> class JobConstraintGenerator;
 
-	// -- Boolean --
+	template<typename Context>
+	const DataAnalysisType<Job<Context>,JobConstraintGenerator>& Jobs() {
+		static const DataAnalysisType<Job<Context>,JobConstraintGenerator> instance("Jobs");
+		return instance;
+	}
 
-	bool isTrue(const core::ExpressionAddress& a);
-
-	bool mayBeTrue(const core::ExpressionAddress& a);
-
-	bool isFalse(const core::ExpressionAddress& a);
-
-	bool mayBeFalse(const core::ExpressionAddress& a);
-
-
-	// -- Arithmetic --
-
-	core::LiteralPtr isIntegerConstant(const core::ExpressionAddress& a);
+	template<typename Context>
+	const DataAnalysisType<Job<Context>,JobConstraintGenerator>& jobs() {
+		static const DataAnalysisType<Job<Context>,JobConstraintGenerator> instance("jobs");
+		return instance;
+	}
 
 
-	// -- Functions --
+	template<typename Context>
+	class JobConstraintGenerator : public BasicDataFlowConstraintGenerator<Job<Context>,DataAnalysisType<Job<Context>,JobConstraintGenerator>, Context> {
 
+		typedef BasicDataFlowConstraintGenerator<Job<Context>,DataAnalysisType<Job<Context>,JobConstraintGenerator>, Context> super;
 
-	// -- Other --
+		CBA& cba;
 
+	public:
 
-	// *************************************************************************************
-	//										 Aliases
-	// *************************************************************************************
+		JobConstraintGenerator(CBA& cba) : super(cba, Jobs<Context>(), jobs<Context>()), cba(cba) { };
 
-	bool notAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		using super::elem;
 
-	bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		void visitJobExpr(const JobExprAddress& job, const Context& ctxt, Constraints& constraints) {
 
-	bool isAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+			// this expression is creating a job
+			auto value = getJobFromConstructor(job, ctxt);
+			auto J_res = cba.getSet(Jobs<Context>(), job, ctxt);
+
+			// add constraint fixing this job
+			constraints.add(elem(value, J_res));
+
+		}
+
+	};
 
 } // end namespace cba
 } // end namespace analysis

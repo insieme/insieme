@@ -51,19 +51,19 @@
 	insieme::core::ProgramPtr LongLongExtension::IRVisit(insieme::core::ProgramPtr& prog){
 
 		// replace all long long literals by int8 or uint8
-	//	auto literalTypeFixer = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
-	//				if (core::LiteralPtr lit = node.isa<core::LiteralPtr>()){
-	//					if (core::analysis::isLongLong(lit->getType())){
-	//						core::IRBuilder builder (node->getNodeManager());
-	//						if (core::analysis::isSignedLongLong(lit->getType()))
-	//							return builder.literal(lit->getValue(), builder.getLangBasic().getInt8());
-	//						else
-	//							return builder.literal(lit->getValue(), builder.getLangBasic().getUInt8());
-	//					}
-	//				}
-	//				return node;
-	//			});
-	//	prog = literalTypeFixer.map(prog);
+		//auto literalTypeFixer = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
+		//			if (core::LiteralPtr lit = node.isa<core::LiteralPtr>()){
+		//				if (core::analysis::isLongLong(lit->getType())){
+		//					core::IRBuilder builder (node->getNodeManager());
+		//					if (core::analysis::isSignedLongLong(lit->getType()))
+		//						return builder.literal(lit->getValue(), builder.getLangBasic().getInt8());
+		//					else
+		//						return builder.literal(lit->getValue(), builder.getLangBasic().getUInt8());
+		//				}
+		//			}
+		//			return node;
+		//		});
+		//prog = literalTypeFixer.map(prog);
 
 		// remove all superfluous casts
 		auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{

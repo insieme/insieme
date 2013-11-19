@@ -79,7 +79,8 @@ namespace transform {
 		}
 	}
 
-	core::NodePtr Versioning::apply(const core::NodePtr& target) const {
+	core::NodeAddress Versioning::apply(const core::NodeAddress& targetAddress) const {
+		auto target = targetAddress.as<core::NodePtr>();
 
 		// check pre-condition
 		if (target->getNodeCategory() != core::NC_Statement && target->getNodeCategory() != core::NC_Expression) {
@@ -106,7 +107,7 @@ namespace transform {
 
 		// special handling for single-version node
 		if (transformations.size() == 1u) {
-			return transformations[0]->apply(target);
+			return transformations[0]->apply(targetAddress);
 		}
 
 		// create switch selecting versions
@@ -127,7 +128,8 @@ namespace transform {
 		});
 
 		// create final switch stmt
-		return builder.switchStmt(builder.pickVariant(index), builder.switchCases(cases), builder.getNoOp());
+		auto res = builder.switchStmt(builder.pickVariant(index), builder.switchCases(cases), builder.getNoOp());
+		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
 	}
 
 	bool Versioning::operator==(const Transformation& transform) const {

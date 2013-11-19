@@ -47,7 +47,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// the type to represent memory locations
+	// the type to represent channels
 	template<typename Context>
 	class Channel
 		: public utils::Printable,

@@ -49,7 +49,7 @@ namespace sequential {
 
 		virtual bool checkPreCondition(const core::NodePtr& target) const;
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const throw (InvalidTargetException);
 
 		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
 

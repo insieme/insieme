@@ -47,7 +47,7 @@
 
 #include <boost/operators.hpp>
 
-#include "insieme/analysis/cba/framework/data_path.h"
+#include "insieme/analysis/cba/framework/entities/data_path.h"
 
 #include "insieme/core/ir.h"
 

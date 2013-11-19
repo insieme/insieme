@@ -86,7 +86,7 @@ namespace rulebased {
 		 *
 		 * @param target the node to be transformed
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
 
 		/**
 		 * Obtains a reference to the internally used rules.

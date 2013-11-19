@@ -37,41 +37,37 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/entities/channel.h"
+#include "insieme/analysis/cba/framework/entities/thread_group.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
-
-#include "insieme/analysis/cba/utils/cba_utils.h"
-#include "insieme/analysis/cba/utils/constraint_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// ----------------- channels ---------------
+	// ----------------- groups ---------------
 
-	template<typename Context> class ChannelConstraintGenerator;
+	template<typename Context> class ThreadGroupConstraintGenerator;
 
 	template<typename Context>
-	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& Ch() {
-		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("Ch");
+	const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>& ThreadGroups() {
+		static const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator> instance("ThreadGroups");
 		return instance;
 	}
 
 	template<typename Context>
-	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& ch() {
-		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("ch");
+	const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>& threadGroups() {
+		static const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator> instance("threadGroups");
 		return instance;
 	}
 
 
 	template<typename Context>
-	class ChannelConstraintGenerator : public BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> {
+	class ThreadGroupConstraintGenerator : public BasicDataFlowConstraintGenerator<ThreadGroup<Context>,DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> super;
+		typedef BasicDataFlowConstraintGenerator<ThreadGroup<Context>,DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>, Context> super;
 
 		CBA& cba;
 
@@ -79,41 +75,24 @@ namespace cba {
 
 	public:
 
-		ChannelConstraintGenerator(CBA& cba) : super(cba, Ch<Context>(), ch<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ThreadGroupConstraintGenerator(CBA& cba) : super(cba, ThreadGroups<Context>(), threadGroups<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprAddress& expr, const Context& ctxt, Constraints& constraints) {
 
-			// and default handling
-			super::visitLiteral(literal, ctxt, constraints);
+			// default handling
+			super::visitCallExpr(expr, ctxt, constraints);
 
-			// only interested in memory location constructors
-			if (!isChannelConstructor(literal)) return;
+			// handle creation of thread groups if necessary
+			if (!isThreadGroupConstructor(expr)) return;
 
-			// add constraint literal \in R(lit)
-			auto value = getChannelFromConstructor(literal, ctxt);
-			auto l_lit = cba.getLabel(literal);
+			// this expression is creating a job
+			auto value = getThreadGroupFromConstructor(expr, ctxt);
+			auto G_res = cba.getSet(ThreadGroups<Context>(), expr, ctxt);
 
-			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
-			constraints.add(elem(value, C_lit));
-
-		}
-
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-
-			// and default handling
-			super::visitCallExpr(call, ctxt, constraints);
-
-			// introduce channels in case the constructor is called
-			if (!isChannelConstructor(call)) return;
-
-			// add constraint location \in R(call)
-			auto value = getChannelFromConstructor(call, ctxt);
-			auto l_lit = cba.getLabel(call);
-
-			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
-			constraints.add(elem(value, C_lit));
+			// add constraint fixing this job
+			constraints.add(elem(value, G_res));
 
 		}
 

@@ -34,28 +34,52 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/sequential/dead_code_elimination.h"
+#include <gtest/gtest.h>
+
+
+#include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/analysis/jobs.h"
+
+#include "insieme/core/ir_builder.h"
+
+#include "cba_test.inc.h"
 
 namespace insieme {
-namespace transform {
-namespace sequential {
+namespace analysis {
+namespace cba {
 
+	using namespace core;
 
-	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
-		// can only be applied to statements and expressions
-		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
+	TEST(CBA, SimpelParallel) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(12);"
+				"	*x;"		// should be 12
+				"	spawn x = 14;"
+				"	*x;"		// should still be 12
+				"	sync;"
+				"	*x;"		// should be 14
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+
 	}
 
-	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
-		// do nothing so far
-		return target;
-	}
-
-	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-		// just check that the node type hasn't changed (no real post-conditions yet)
-		return before->getNodeType() == after->getNodeType();
-	}
-
-} // end namespace sequential
-} // end namespace transform
+} // end namespace cba
+} // end namespace analysis
 } // end namespace insieme

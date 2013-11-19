@@ -40,8 +40,9 @@
 
 #include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/data_index.h"
-#include "insieme/analysis/cba/framework/data_value.h"
+
+#include "insieme/analysis/cba/framework/entities/data_index.h"
+#include "insieme/analysis/cba/framework/entities/data_value.h"
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"

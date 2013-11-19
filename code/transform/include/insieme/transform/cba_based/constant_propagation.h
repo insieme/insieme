@@ -34,28 +34,72 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/sequential/dead_code_elimination.h"
+#pragma once
+
+#include "insieme/transform/transformation.h"
 
 namespace insieme {
 namespace transform {
-namespace sequential {
+namespace cba_based {
 
 
-	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
-		// can only be applied to statements and expressions
-		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
-	}
+	// -- Plain Functions -------------------------------------------------
 
-	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
-		// do nothing so far
-		return target;
-	}
+	/**
+	 * Conducts constant propagation on the given code fragment.
+	 *
+	 * @param target the targeted code fragment - all nodes within the given sub-tree
+	 * 		will be checked for constants and replaced if so
+	 * @return the target address pointing to the modified code fragment
+	 */
+	core::NodeAddress propagateConstants(const core::NodeAddress& target);
 
-	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-		// just check that the node type hasn't changed (no real post-conditions yet)
-		return before->getNodeType() == after->getNodeType();
-	}
 
-} // end namespace sequential
+
+	// -- Transformation Wrapper ------------------------------------------
+
+
+	/**
+	 * A transformation conducting constant propagation within the given code fragment
+	 * based on the constraint-based-analysis framework.
+	 */
+	class ConstantPropagation : public Transformation {
+
+	public:
+
+		/**
+		 * Creates a new instance of this transformation type
+		 */
+		ConstantPropagation(const parameter::Value& value);
+
+		/**
+		 * Implements the actual transformation.
+		 *
+		 * @param target the node to be transformed
+		 */
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			return propagateConstants(target);
+		}
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "ConstantPropagation()";
+		}
+
+	};
+
+	/**
+	 * Factory for the recursive-function unrolling transformation.
+	 */
+	TRANSFORMATION_TYPE(
+		ConstantPropagation,
+		"Applies constant propagation on a targeted sub-tree.",
+		parameter::no_parameters()
+	);
+
+} // end namespace cba_based
 } // end namespace transform
 } // end namespace insieme

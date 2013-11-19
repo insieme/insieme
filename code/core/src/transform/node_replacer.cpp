@@ -1277,6 +1277,9 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
 	assert( toReplace.isValid() && "Invalid node address provided!");
 
+	// short-cut for replacing the root
+	if (toReplace.isRoot()) return replacement;
+
 	// create result
 	NodePtr res = replacement;
 
@@ -1306,6 +1309,7 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 }
 
 NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
+	if (toReplace.isRoot()) return NodeAddress(replacement);
 	NodePtr newRoot = replaceNode(manager, toReplace, replacement);
 	return toReplace.switchRoot(newRoot);
 }
