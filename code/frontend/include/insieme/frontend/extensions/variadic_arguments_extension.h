@@ -39,6 +39,10 @@
 
 #include "insieme/frontend/expr_converter.h"
 
+#include "insieme/core/lang/varargs_extension.h"
+
+#include "insieme/core/transform/node_mapper_utils.h"
+
 using namespace insieme;
 
 class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin
@@ -54,51 +58,58 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
         const clang::VAArgExpr* vaargexpr = (llvm::isa<clang::VAArgExpr>(expr)) ? llvm::cast<clang::VAArgExpr>(expr) : nullptr;
         if(vaargexpr)
         {
-                LOG(INFO) << "VISIT EXPR";
             core::IRBuilder builder = convFact.getIRBuilder();
+            const auto& builderExt = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
 
             core::ExpressionPtr firstArg = convFact.convertExpr(vaargexpr->getSubExpr());
             core::ExpressionList args;
             args.push_back(firstArg);
             const clang::QualType varTy = vaargexpr->getType();
             core::TypePtr&& irType = convFact.convertType( varTy.getTypePtr() );
+            args.push_back(builder.getTypeLiteral(irType));
 
-            auto type = builder.functionType(
-                    toVector<core::TypePtr>(builder.refType(builder.arrayType(builder.genericType("va_list")))),// builder.typeVariable("a")), 
-                    irType);
-            auto lit = builder.literal("va_arg", type.as<core::FunctionTypePtr>());
-
-            return builder.callExpr(lit, args);
+            return builder.callExpr(builderExt.getVaarg(), args);
         }
 
         return nullptr;
     }
+
     virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                        insieme::frontend::conversion::Converter& convFact) 
     { 
         const clang::CallExpr* callexpr = (llvm::isa<clang::CallExpr>(expr)) ? llvm::cast<clang::CallExpr>(expr) : nullptr;
 
-        if(callexpr && callexpr->getDirectCallee() && callexpr->getDirectCallee()->isVariadic())
-        {
-                LOG(INFO) << "POST VISIT EXPR";
+        if(callexpr && callexpr->getDirectCallee()) {
             core::IRBuilder builder = convFact.getIRBuilder();
-
             auto funExpr = irExpr.as<core::CallExprPtr>()->getFunctionExpr();
 
-            // dividing common arguments from variadic ones 
-            
-            auto type = funExpr->getType().as<core::FunctionTypePtr>();
-            auto parameterTypes = type->getParameterTypeList();    
+            /*if(callexpr->getDirectCallee()->getNameAsString().find("builtin_va_") != std::string::npos) {
 
-            auto args = irExpr.as<core::CallExprPtr>()->getArguments();
-            core::ExpressionList varArgs(args.begin() + parameterTypes.size() -1, args.end());
+                auto args = irExpr.as<core::CallExprPtr>()->getArguments();
+                core::ExpressionList newArgs;
+                newArgs.push_back(args[0].as<core::CallExprPtr>()->getArguments()[0].as<core::CallExprPtr>()->getArguments()[0].as<core::ExpressionPtr>());
+                LOG(INFO) << "FUNC " << args[0].as<core::CallExprPtr>()->getArguments()[0].as<core::CallExprPtr>()->getArguments()[0].as<core::ExpressionPtr>();
+                newArgs.insert(newArgs.end(), args.begin() +1, args.end());
 
-            // building new arguments list with packed variadic arguments
+                return  builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
+            }
+            else */if(callexpr->getDirectCallee()->isVariadic())
+            {
+                // dividing common arguments from variadic ones 
+                
+                auto type = funExpr->getType().as<core::FunctionTypePtr>();
+                auto parameterTypes = type->getParameterTypeList();    
 
-            core::ExpressionList newArgs(args.begin(), args.begin() + parameterTypes.size() -1);
-            newArgs.push_back(builder.callExpr(builder.getLangBasic().getVarList(), builder.getLangBasic().getVarlistPack(), builder.tupleExpr(varArgs))); 
+                auto args = irExpr.as<core::CallExprPtr>()->getArguments();
+                core::ExpressionList varArgs(args.begin() + parameterTypes.size() -1, args.end());
 
-            return  builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
+                // building new arguments list with packed variadic arguments
+
+                core::ExpressionList newArgs(args.begin(), args.begin() + parameterTypes.size() -1);
+                newArgs.push_back(builder.callExpr(builder.getLangBasic().getVarList(), builder.getLangBasic().getVarlistPack(), builder.tupleExpr(varArgs))); 
+
+                return  builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
+            }
         }
 
         return irExpr;
@@ -108,34 +119,29 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
     {
         if(const clang::FunctionDecl *fd = llvm::dyn_cast<clang::FunctionDecl>(decl))
         {
-                LOG(INFO) << "VISIT DECL";
             core::IRBuilder builder = convFact.getIRBuilder();
+            const auto& builderExt = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
             core::LiteralPtr lit;
 
             // handling builtins 
 
             if(fd->getNameAsString().find("va_start") != string::npos)
             {
-                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builder.genericType("va_list"))), builder.getLangBasic().getVarList()), builder.getLangBasic().getUnit());
+                    return false;
+                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist())), builder.getLangBasic().getVarList()), builder.getLangBasic().getUnit());
                 lit = builder.literal("va_start", newType.as<core::FunctionTypePtr>());
+                //lit = builderExt.getVastart();
             }
             else if(fd->getNameAsString().find("va_end") != string::npos)
             {
-                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builder.genericType("va_list")))), builder.getLangBasic().getUnit());
+                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist()))), builder.getLangBasic().getUnit());
                 lit = builder.literal("va_end", newType.as<core::FunctionTypePtr>());
             }
             else if(fd->getNameAsString().find("va_copy") != string::npos)
             {
-                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builder.genericType("va_list"))), builder.refType(builder.arrayType(builder.genericType("va_list")))), builder.getLangBasic().getUnit());
+                auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist())), builder.refType(builder.arrayType(builderExt.getValist()))), builder.getLangBasic().getUnit());
                 lit = builder.literal("va_copy", newType.as<core::FunctionTypePtr>());
             }
-            //else if(fd->getNameAsString().find("va_arg") != string::npos)
-            //{
-            //        LOG(INFO) << "DUMP ";
-            //        fd->dump() ;
-            //    auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builder.genericType("va_list"))), builder.genericType("va_arg_type", insieme::core::TypeList(builder.typeVariable("a")), insieme::core::IntParamList()), builder.getLangBasic().getInt4()));
-            //    lit = builder.literal("va_arg", newType.as<core::FunctionTypePtr>());
-            //}
             else {
                     // Do not handle anything else
                     return false;
@@ -151,10 +157,16 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
 
     virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact)
     {
-        if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
+        /*if(const clang::TypedefType* tdt = llvm::dyn_cast<clang::TypedefType>(type)) {
+            if(tdt->getDecl()->getNameAsString().find("__builtin_va_list") != std::string::npos) {
+                auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
+                convFact.addToTypeCache(type, irType);
+                return irType;
+            }
+        }
+        else */if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
             if(tt->getDecl()->getNameAsString().find("va_list") != std::string::npos) {
-                LOG(INFO) << "VISIT TYPE";
-                auto irType = convFact.getIRBuilder().genericType("va_list");
+                auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
                 convFact.addToTypeCache(type, irType);
                 return irType;
             }
@@ -168,7 +180,6 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
     {
         if(const clang::FunctionProtoType * funType = llvm::dyn_cast<clang::FunctionProtoType>(type)) {
             if(funType->isVariadic()) {
-                LOG(INFO) << "POST VISIT TYPE";
 
                 core::IRBuilder builder = convFact.getIRBuilder();
             
@@ -198,7 +209,6 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
     {
         if(decl->isVariadic())
         {
-                LOG(INFO) << "POST VISIT DECL";
             core::IRBuilder builder = convFact.getIRBuilder();
 
             core::ExpressionPtr symb = convFact.convertFunctionDecl(decl, false);
@@ -233,5 +243,34 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
 
        return;
     }
+
+    insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog){
+
+		//auto literalTypeFixer = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
+        //            if(core::VectorTypePtr type = node->getNodeType().as<core::VectorTypePtr>()) { // dynamic_pointer_cast<core::VectorTypePtr>(node->getNodeType())) {
+		//				core::IRBuilder builder (node->getNodeManager());
+        //                const auto& builderExt = node->getNodeManager().getLangExtension<core::lang::VarArgsExtension>(); 	
+
+        //                if(builderExt.isValist(type->getElementType()) {
+        //                        return node;
+        //                }
+        //                    
+        //            }
+		//			return node;
+		//		});
+
+		//prog = literalTypeFixer.map(prog);
+
+		//// finaly, substitute any usage of the long long types
+		//core::IRBuilder builder (prog->getNodeManager());
+		//core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8()))); 
+		//core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8()))); 
+		//core::NodeMap replacements;
+		//replacements [ longlongTy ] = builder.getLangBasic().getInt8();
+		//replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
+		//prog = core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
+
+		return prog;
+	}
 
 };
