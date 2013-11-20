@@ -69,20 +69,49 @@ namespace graph {
 	/**
 	 * A functor class capable of printing labels within dot files for nodes and edges.
 	 */
-	template <class Graph, class Printer>
+	template <class Graph, class Printer, class Decorator>
 	class label_printer {
 		Graph graph;
 		const Printer& printer;
+		const Decorator& decorator;
 	public:
-		label_printer(Graph _graph, const Printer& printer)
-			: graph(_graph), printer(printer) {}
+		label_printer(Graph _graph, const Printer& printer, const Decorator& decorator)
+			: graph(_graph), printer(printer), decorator(decorator) {}
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
 			out << "[label=\"";
 			printer(out, graph[v]);
-			out << "\"]";
+			out << "\" ";
+			decorator(out, graph[v]);
+			out << "]";
 		}
+	};
+
+	/**
+	 * A functor realizing no label.
+	 */
+	struct no_label {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {}
+	};
+
+	/**
+	 * A functor realizing a default to-string label.
+	 */
+	struct default_label {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {
+			out << t;
+		}
+	};
+
+	/**
+	 * A functor realizing no decoration.
+	 */
+	struct default_deco {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {}
 	};
 
 
@@ -296,11 +325,17 @@ namespace graph {
 		 * @param vertexPrinter the printer to be used for formating edge labels
 		 * @return the reference to the handed in output stream
 		 */
-		template<class VertexPrinter = print<id<Vertex>>, class EdgePrinter = print<id<EdgeLabel>>>
-		std::ostream& printGraphViz(std::ostream& out, const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter()) const {
+		template<
+			class VertexPrinter = default_label, class EdgePrinter = default_label,
+			class VertexDecorator = default_deco, class EdgeDecorator = default_deco
+		>
+		std::ostream& printGraphViz(std::ostream& out,
+				const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter(),
+				const VertexDecorator& vertexDeco = VertexDecorator(), const EdgeDecorator& edgeDeco = EdgeDecorator()
+		) const {
 			boost::write_graphviz(out, graph,
-					label_printer<GraphType, VertexPrinter>(graph, vertexPrinter),
-					label_printer<GraphType, EdgePrinter>(graph, edgePrinter)
+					label_printer<GraphType, VertexPrinter, VertexDecorator>(graph, vertexPrinter, vertexDeco),
+					label_printer<GraphType, EdgePrinter, EdgeDecorator>(graph, edgePrinter, edgeDeco)
 			);
 			return out;
 		}
@@ -430,24 +465,28 @@ namespace graph {
 	 * @param vertexPrinter the printer to be used for formating edge labels
 	 * @return the reference to the handed in output stream
 	 */
-	template<class OutEdgeListS,
+	template<
+			class OutEdgeListS,
 			class VertexListS,
 			class DirectedS,
 			class VertexProperty,
 			class EdgeProperty,
 			class GraphProperty,
 			class EdgeListS,
-			class VertexPrinter = print<id<VertexProperty>>,
-			class EdgePrinter = print<id<EdgeProperty>>>
-
+			class VertexPrinter = default_label,
+			class EdgePrinter = default_label,
+			class VertexDecorator = default_deco,
+			class EdgeDecorator = default_deco
+	>
 	inline std::ostream& printGraphViz(std::ostream& out,
 			boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> graph,
-			const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter()) {
+			const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter(),
+			const VertexDecorator& vertexDeco = VertexDecorator(), const EdgeDecorator& edgeDeco = EdgeDecorator()) {
 
 		typedef boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> GraphType;
 		boost::write_graphviz(out, graph,
-				label_printer<GraphType, VertexPrinter>(graph, vertexPrinter),
-				label_printer<GraphType, EdgePrinter>(graph, edgePrinter)
+				label_printer<GraphType, VertexPrinter, VertexDecorator>(graph, vertexPrinter, vertexDeco),
+				label_printer<GraphType, EdgePrinter, EdgeDecorator>(graph, edgePrinter, edgeDeco)
 		);
 		return out;
 	}

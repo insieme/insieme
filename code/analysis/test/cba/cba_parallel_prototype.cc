@@ -47,6 +47,8 @@ namespace prototype {
 
 	namespace {
 
+		namespace ug = utils::graph;
+
 		void createDotDump(const Graph& graph) {
 //			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
 			{
@@ -54,7 +56,20 @@ namespace prototype {
 				std::ofstream out("graph.dot", std::ios::out );
 
 				// write file
-				utils::graph::printGraphViz(out, graph.asBoostGraph());
+				ug::printGraphViz(
+						out,
+						graph.asBoostGraph(),
+						ug::default_label(),
+						ug::no_label(),
+						ug::default_deco(),
+						[](std::ostream& out, const Edge& e) {
+							switch(e) {
+							case Seq: out << ", style=\"solid\"";  break;
+							case Par: out << ", style=\"dashed\""; break;
+							case Com: out << ", style=\"dotted\""; break;
+							}
+						}
+				);
 			}
 
 			// create svg
@@ -77,16 +92,16 @@ namespace prototype {
 		Node f = Node::write("x", 6);
 		Node g = Node::write("x", 7);
 
-		graph.addEdge(a, b);
-		graph.addEdge(b, c);
-		graph.addEdge(c, d);
-		graph.addEdge(d, e);
+		graph.addEdge(a, b, Par);
+		graph.addEdge(b, c, Par);
+		graph.addEdge(c, d, Par);
+		graph.addEdge(d, e, Par);
 
-		graph.addEdge(a, f);
-		graph.addEdge(f, c);
+		graph.addEdge(a, f, Par);
+		graph.addEdge(f, c, Par);
 
-		graph.addEdge(b, g);
-		graph.addEdge(g, d);
+		graph.addEdge(b, g, Par);
+		graph.addEdge(g, d, Par);
 
 		// solve the data flow equations
 		solve(graph);
@@ -95,6 +110,197 @@ namespace prototype {
 		EXPECT_EQ("{x={5}}", toString(graph.getVertex(e).after));
 
 		createDotDump(graph);
+	}
+
+
+	TEST(CBA_Parallel, DiamondNoAssign) {
+
+		Graph graph;
+
+		Node a = Node::write("x", 0);
+		Node b = Node::noop();
+		Node c = Node::noop();
+		Node d = Node::read("x");
+
+		graph.addEdge(a,b, Par);
+		graph.addEdge(a,c, Par);
+		graph.addEdge(b,d, Par);
+		graph.addEdge(c,d, Par);
+
+		solve(graph);
+
+		EXPECT_EQ("{x={0}}", toString(graph.getVertex(d).before));
+
+		createDotDump(graph);
+
+	}
+
+	TEST(CBA_Parallel, DiamondOneAssign) {
+
+		Graph graph;
+
+		Node a = Node::write("x", 0);
+		Node b = Node::write("x", 1);
+		Node c = Node::noop();
+		Node d = Node::read("x");
+
+		graph.addEdge(a,b, Par);
+		graph.addEdge(a,c, Par);
+		graph.addEdge(b,d, Par);
+		graph.addEdge(c,d, Par);
+
+		solve(graph);
+
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(d).before));
+
+		createDotDump(graph);
+
+	}
+
+	TEST(CBA_Parallel, DiamondTwoAssign) {
+
+		Graph graph;
+
+		Node a = Node::write("x", 0);
+		Node b = Node::write("x", 1);
+		Node c = Node::write("x", 2);
+		Node d = Node::read("x");
+
+		graph.addEdge(a,b, Par);
+		graph.addEdge(a,c, Par);
+		graph.addEdge(b,d, Par);
+		graph.addEdge(c,d, Par);
+
+		solve(graph);
+
+		EXPECT_EQ("{x={1,2}}", toString(graph.getVertex(d).before));
+
+		createDotDump(graph);
+
+	}
+
+
+	TEST(CBA_Parallel, ThreeDiamonds) {
+
+		Graph graph;
+
+		{
+			Node a = Node::write("x", 0);
+			Node b = Node::noop();
+			Node c = Node::noop();
+			Node d = Node::read("x");
+
+			graph.addEdge(a,b, Par);
+			graph.addEdge(a,c, Par);
+			graph.addEdge(b,d, Par);
+			graph.addEdge(c,d, Par);
+
+			solve(graph);
+
+			EXPECT_EQ("{x={0}}", toString(graph.getVertex(d).before));
+		}
+
+		{
+			Node a = Node::write("x", 0);
+			Node b = Node::write("x", 1);
+			Node c = Node::noop();
+			Node d = Node::read("x");
+
+			graph.addEdge(a,b, Par);
+			graph.addEdge(a,c, Par);
+			graph.addEdge(b,d, Par);
+			graph.addEdge(c,d, Par);
+
+			solve(graph);
+
+			EXPECT_EQ("{x={1}}", toString(graph.getVertex(d).before));
+		}
+
+		{
+			Node a = Node::write("x", 0);
+			Node b = Node::write("x", 1);
+			Node c = Node::write("x", 2);
+			Node d = Node::read("x");
+
+			graph.addEdge(a,b, Par);
+			graph.addEdge(a,c, Par);
+			graph.addEdge(b,d, Par);
+			graph.addEdge(c,d, Par);
+
+			solve(graph);
+
+			EXPECT_EQ("{x={1,2}}", toString(graph.getVertex(d).before));
+		}
+
+		{
+			// built the graph
+			Node a = Node::write("x", 1);
+			Node b = Node::write("x", 2);
+			Node c = Node::read("x");
+			Node d = Node::read("x");
+			Node e = Node::write("x", 5);
+
+			Node f = Node::write("x", 6);
+			Node g = Node::write("x", 7);
+
+			graph.addEdge(a, b, Seq);
+			graph.addEdge(b, c, Seq);
+			graph.addEdge(c, d, Seq);
+			graph.addEdge(d, e, Seq);
+
+			graph.addEdge(a, f, Par);
+			graph.addEdge(f, c, Par);
+
+			graph.addEdge(b, g, Par);
+			graph.addEdge(g, d, Par);
+
+			// solve the data flow equations
+			solve(graph);
+
+			EXPECT_EQ("{x={1}}", toString(graph.getVertex(a).after));
+//			EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
+			EXPECT_EQ("{x={5}}", toString(graph.getVertex(e).after));
+
+		}
+
+		createDotDump(graph);
+
+	}
+
+	TEST(CBA_Parallel, TwoInterleavedSideThreads) {
+
+		Graph graph;
+
+		// built the graph
+		Node a = Node::write("x", 1);
+		Node b = Node::write("x", 2);
+		Node c = Node::read("x");
+		Node d = Node::read("x");
+		Node e = Node::write("x", 5);
+
+		Node f = Node::write("x", 6);
+		Node g = Node::write("x", 7);
+
+		graph.addEdge(a, b, Seq);
+		graph.addEdge(b, c, Seq);
+		graph.addEdge(c, d, Seq);
+		graph.addEdge(d, e, Seq);
+
+		graph.addEdge(a, f, Par);
+		graph.addEdge(f, c, Par);
+
+		graph.addEdge(b, g, Par);
+		graph.addEdge(g, d, Par);
+
+		// solve the data flow equations
+		solve(graph);
+
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(a).after));
+//		EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
+		EXPECT_EQ("{x={5}}", toString(graph.getVertex(e).after));
+
+		createDotDump(graph);
+
 	}
 
 } // end namespace prototype

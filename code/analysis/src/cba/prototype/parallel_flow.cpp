@@ -36,6 +36,7 @@
 
 #include "insieme/analysis/cba/prototype/parallel_flow.h"
 
+#include <iterator>
 
 namespace insieme {
 namespace analysis {
@@ -45,34 +46,133 @@ namespace prototype {
 
 	namespace {
 
-		Assignment merge(const Assignment& a, const Assignment& b) {
-			Assignment res = a;
+		std::size_t numPred(const Node& node, const Graph& graph) {
+			auto& g = graph.asBoostGraph();
+			typedef boost::graph_traits<Graph::GraphType> GraphTraits;
+			typename GraphTraits::in_edge_iterator in_i, in_end;
+			std::tie(in_i, in_end) = boost::in_edges(graph.getVertexDescriptor(node), g);
+			return std::distance(in_i,in_end);
+		}
+
+		template<typename F>
+		void forEachPred(const Node& node, const Graph& graph, const F& f) {
+			auto& g = graph.asBoostGraph();
+			typedef boost::graph_traits<Graph::GraphType> GraphTraits;
+			typename GraphTraits::in_edge_iterator in_i, in_end;
+			for (std::tie(in_i, in_end) = boost::in_edges(graph.getVertexDescriptor(node), g); in_i != in_end; ++in_i) {
+				auto e = *in_i;
+				auto src = boost::source(e, g);
+				f(g[src]);
+			}
+		}
+
+		template<typename K, typename E>
+		map<K,set<E>> merge(const map<K,set<E>>& a, const map<K,set<E>>& b) {
+			map<K,set<E>> res = a;
 			for(auto cur : b) {
 				res[cur.first].insert(cur.second.begin(), cur.second.end());
 			}
 			return res;
 		}
 
-		void updateInNaive(const Node& node, const Graph& graph) {
+		void updateDominatorSet(const Node& node, const Graph& g) {
+			auto& dom = node.dom;
 
-			auto& g = graph.asBoostGraph();
+			// ---- node distance -----
 
-			// just merge all the input sets
+			node.distance[node.getID()] = 0;
+			forEachPred(node, g, [&](const Node& cur) {
+				for(auto e : cur.distance) {
+					auto pos = node.distance.find(e.first);
+					if (pos == node.distance.end()) {
+						node.distance[e.first] = e.second+1;
+					} else {
+						node.distance[e.first] = std::min(pos->second, e.second+1);
+					}
+				}
+			});
 
-			typedef boost::graph_traits<Graph::GraphType> GraphTraits;
 
-//			std::cout << "Node: " << node << "\n";
-//			std::cout << "Predecessors: ";
-			typename GraphTraits::in_edge_iterator in_i, in_end;
-			for (std::tie(in_i, in_end) = boost::in_edges(graph.getVertexDescriptor(node), g); in_i != in_end; ++in_i) {
-				auto e = *in_i;
-				auto src = boost::source(e, g);
-//				std::cout << g[src] << "\n";
-				node.before = merge(node.before, g[src].after);
+			// ---- dominator list -----
+
+			// local node is always included
+			dom.insert(node.getID());
+
+			// intersect dominators of predecessors
+			vector<set<ID>> preDom;
+			forEachPred(node, g, [&](const Node& pred) {
+				preDom.push_back(pred.dom);
+			});
+
+			if (preDom.empty()) return;
+
+			auto intersect = preDom[0];
+			for(auto cur : preDom) {
+				intersect = utils::set::intersect(intersect, cur);
 			}
-//			std::cout << "\n";
+
+			// add intersection of pre-decessor dominators
+			dom.insert(intersect.begin(), intersect.end());
+
+			// update strict dominator set
+			node.strict_dom = dom;
+			node.strict_dom.erase(node.getID());
+
+			// --- immediate dominator ------
+
+			// update immediate dominator
+
+			if (!node.strict_dom.empty()) {
+				ID idom = *node.strict_dom.begin();
+				auto dist = node.distance[idom];
+				for (auto cur : node.strict_dom) {
+					if (node.distance[cur] < dist) {
+						idom = cur;
+						dist = node.distance[cur];
+					}
+				}
+				node.immediate_dom.insert(idom);
+				assert_le(node.immediate_dom.size(), 1u);
+			}
+
 		}
 
+		void updateAccessIn(const Node& node, const Graph& graph) {
+			forEachPred(node, graph, [&](const Node& pred) {
+				node.accessIn = merge(node.accessIn, pred.accessOut);
+			});
+		}
+
+
+		void updateInNaive(const Node& node, const Graph& graph) {
+			// just merge all the input sets
+			forEachPred(node, graph, [&](const Node& pred) {
+				node.before = merge(node.before, pred.after);
+			});
+		}
+
+		void updateInDom(const Node& node, const Graph& graph) {
+
+			// skip while idom is not known
+			if (node.immediate_dom.empty()) return;
+			assert_eq(node.immediate_dom.size(), 1u) << "Node: " << node;
+
+			// get idom id
+			ID idom = *node.immediate_dom.begin();
+
+			// get variables written since immediate dominating node
+			const set<Var>& accessed = node.accessIn[idom];		// get variables written since acc
+
+			// merge input sets
+			forEachPred(node, graph, [&](const Node& pred) {
+				for(auto cur : pred.after) {
+					// only if written in no branch or in this branch
+					if (!contains(accessed, cur.first) || contains(pred.accessOut[idom], cur.first)) {
+						node.before[cur.first].insert(cur.second.begin(), cur.second.end());
+					}
+				}
+			});
+		}
 
 
 		bool update(const Node& node, const Graph& g) {
@@ -80,24 +180,34 @@ namespace prototype {
 			// create a backup of the old state
 			Node old = node;
 
-//			std::cout << "Updating: " << node << "\n";
+			// update dominator set
+			updateDominatorSet(node, g);
 
 			// update in-set  ... that's the tricky part
-			updateInNaive(node, g);
+			updateAccessIn(node, g);
+//			updateInNaive(node, g);
+			updateInDom(node, g);
 
-			// update out-set
+			// update out-set accesses
+
+
+			// update out-set (assignment)
 			node.after = node.before;
+			node.accessOut = node.accessIn;
 			if (node.getType() == Node::Write) {
 				node.after[node.getVar()] = utils::set::toSet<std::set<Value>>(node.getValue());
+
+				forEachPred(node, g, [&](const Node& pred) {
+					node.accessOut[pred.getID()].insert(node.getVar());
+				});
+
 			}
 
-//			std::cout << old.before << " != " << node.before << " : " << (old.before != node.before) << "\n";
-//			std::cout << old.after << " != " << node.after << " : " << (old.after != node.after) << "\n";
-//			std::cout << "After:    " << node << "\n\n";
-
-
 			// check whether there was a change
-			return old.before != node.before || old.after != node.after;
+			return  old.dom != node.dom || old.strict_dom != node.strict_dom ||
+					old.immediate_dom != node.immediate_dom || old.distance != node.distance ||
+					old.before != node.before || old.after != node.after ||
+					old.accessIn != node.accessIn || old.accessOut != node.accessOut;
 		}
 
 	}

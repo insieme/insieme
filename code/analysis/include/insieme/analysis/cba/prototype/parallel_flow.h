@@ -57,10 +57,11 @@ namespace prototype {
 	typedef string Var;
 	typedef int Value;
 
-	class Node;
-	class Edge;
+	typedef std::size_t ID;
 
 	typedef map<Var,set<Value>> Assignment;
+
+	typedef map<ID,set<Var>> AccessedVars;
 
 	class Node :
 			public utils::Printable,
@@ -74,7 +75,7 @@ namespace prototype {
 
 	private:
 
-		std::size_t id;
+		ID id;
 		Type type;
 		Var var;
 		Value value;
@@ -84,12 +85,20 @@ namespace prototype {
 		mutable Assignment before;
 		mutable Assignment after;
 
+		mutable AccessedVars accessIn;
+		mutable AccessedVars accessOut;
+
+		mutable set<ID> dom;
+		mutable set<ID> strict_dom;
+		mutable set<ID> immediate_dom;
+		mutable map<ID,int> distance;
 
 		Node() : id(nextID()), type(Noop), var(), value(0) {}
 
-		Node(const Node& other)
-			: id(other.id), type(other.type), var(other.var), value(other.value),
-			  before(other.before), after(other.after) {}
+//		Node(const Node& other)
+//			: id(other.id), type(other.type), var(other.var), value(other.value),
+//			  before(other.before), after(other.after),
+//			  accessIn(other.accessIn), accessOut(other.accessOut) {}
 
 	private:
 
@@ -98,6 +107,7 @@ namespace prototype {
 
 	public:
 
+		ID getID() const { return id; }
 		Type getType() const { return type; }
 		Var  getVar() const { return var; }
 		Value getValue() const { return value; }
@@ -111,7 +121,12 @@ namespace prototype {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			out << before << " / ";
+			out << id << "\\n";
+//			out << "dom: " << dom << "\\n";
+//			out << "strict_dom: " << strict_dom << "\\n";
+//			out << "distance: " << distance << "\\n";
+			out << "idom: " << immediate_dom << "\\n";
+			out << before << "/" << accessIn << " \\n ";
 			switch(type) {
 			case Read:  out << "R: " << var; break;
 			case Write: out << "W: " << var << " = " << value; break;
@@ -120,14 +135,14 @@ namespace prototype {
 				assert_fail() << "Unsupported type: " << type;
 				break;
 			}
-			out << " / " << after ;
+			out << " \\n " << after << "/" << accessOut;
 			return out;
 		}
 
 	private:
 
-		static std::size_t nextID() {
-			static std::size_t next = 0;
+		static ID nextID() {
+			static ID next = 0;
 			return next++;
 		}
 
@@ -147,21 +162,12 @@ namespace prototype {
 
 	};
 
-//	class Edge :
-//			public utils::Printable {
-//
-//		map<Var,set<Value>> assignment;
-//
-//	public:
-//
-//		std::ostream& printTo(std::ostream& out) const {
-//			return out << assignment;
-//		}
-//
-//	};
+	enum Edge {
+		Seq, Par, Com
+	};
 
 //	typedef utils::graph::Graph<Node,Edge> GraphBuilder;
-	typedef utils::graph::Graph<Node> Graph;
+	typedef utils::graph::Graph<Node,Edge> Graph;
 
 	void solve(const Graph& graph);
 
