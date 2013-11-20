@@ -1274,9 +1274,9 @@ namespace backend {
 			});
 
 			res[irppExt.getAlignof()] = OP_CONVERTER({
-				core::IRBuilder builder(NODE_MANAGER);
-				auto func = builder.literal("__alignof__", call->getFunctionExpr()->getType());
-				return CONVERT_EXPR(builder.callExpr(LANG_BASIC.getUnit(), func, ARG(0)));
+                c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("__alignof__"));
+                res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
+				return res;
 			});
 		}
 		
