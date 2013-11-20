@@ -890,6 +890,14 @@ namespace arithmetic {
 		Rational getConstantValue() const;
 
 		/**
+		 * Obtains the integer value represented by this formula. If this formula
+		 * is not representing a integer value, an assertion is triggered.
+		 *
+		 * @return the constant value represented by this formula
+		 */
+		int64_t getIntegerValue() const;
+
+		/**
 		 * Returns the degree of this polynomial
 		 */
 		size_t getDegree() const;

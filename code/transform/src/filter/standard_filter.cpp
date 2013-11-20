@@ -40,7 +40,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/utils/value_wrapper.h"
 

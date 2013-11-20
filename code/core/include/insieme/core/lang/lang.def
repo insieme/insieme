@@ -52,6 +52,9 @@
 #ifndef OPERATION
 #define OPERATION(_type, _op, _name, _spec)
 #endif
+#ifndef DERIVED_OP
+#define DERIVED_OP(_type, _op, _name, _spec)
+#endif
 #ifndef SUB_TYPE
 #define SUB_TYPE(_subtype, _supertype)
 #endif
@@ -64,8 +67,8 @@ TYPE(Any, "any")
 TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
-TYPE(WChar16,  "wchar16")
-TYPE(WChar32,  "wchar32")
+TYPE(WChar16,  "wchar<16>")
+TYPE(WChar32,  "wchar<32>")
 TYPE(String, "ref<array<char,1>>")
 TYPE(Identifier, "identifier")
 
@@ -191,8 +194,6 @@ OPERATOR(Ge,	">=")  // 25
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
@@ -201,10 +202,12 @@ OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
 OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
 OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
 
+DERIVED_OP(Bool, LAnd, "bool.and", "(bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
+DERIVED_OP(Bool, LOr,  "bool.or",  "(bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
+
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod,
-IncrementOp)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, IncrementOp)
 //      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
@@ -217,6 +220,19 @@ OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
 // OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
+
+GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod, IncrementOp)
+
+OPERATION(Char, Add,  "char.add", "(char,char) -> char")
+OPERATION(Char, Sub,  "char.sub", "(char,char) -> char")
+OPERATION(Char, Mul,  "char.mul", "(char,char) -> char")
+OPERATION(Char, Div,  "char.div", "(char,char) -> char")
+OPERATION(Char, Mod,  "char.mod", "(char,char) -> char")
+
+// OPERATION(Char, PreInc,  "char.preInc",  "(ref<char>) -> char")
+// OPERATION(Char, PostInc, "char.postInc", "(ref<char>) -> char")
+OPERATION(Char, PreDec,  "char.preDec",  "(ref<char>) -> char")
+OPERATION(Char, PostDec, "char.postDec", "(ref<char>) -> char")
 
 GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
 IncrementOp)
@@ -297,20 +313,31 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
       // TO INT
-GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
+GROUP( ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
 LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (WCharToInt,	"wchar.to.int",   "(wchar<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
 LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
 LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
 
       // TO UINT
-GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
+GROUP( ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
 LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (WCharToUnsigned,	"wchar.to.uint","(wchar<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
 LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
 LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
+
+	  // TO WCHAR
+GROUP( ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
+LITERAL (SignedToWChar,	    "int.to.wchar" ,	"(int<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (UnsignedToWChar,	"uint.to.wchar",    "(uint<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (RealToWChar,		"real.to.wchar",    "(real<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (CharToWChar,		"char.to.wchar",    "(char,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (BoolToWChar,		"bool.to.wchar",    "(bool,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (WCharPrecisionFix, "wchar.precision",  "(wchar<#a>,intTypeParam<#b>) -> wchar<#b>")
 
       // TO REAL
 GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
@@ -369,6 +396,7 @@ LITERAL(MemLocLocal, "memloc.local", "memloc")
 
 LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
 LITERAL(RefNull,        "ref.null",             "ref<any>")
+LITERAL(NullFunc,       "func.null",            "(type<'a>)->'a")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
 LITERAL(RefAssign, 		"ref.assign", 			"(sink<'a>,'a) -> 'a")
 LITERAL(RefDeref,  		"ref.deref",  			"(src<'a>) -> 'a")
@@ -486,7 +514,7 @@ LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>)
 LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
 LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+DERIVED(ArrayRefElem1D,     "array.ref.elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
 LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
@@ -527,7 +555,7 @@ LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<
 LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
-LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+DERIVED(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref.narrow(v, dp.element(dp.root, i), lit('elem)); }")
 
 LITERAL(VectorPointwise,      	"vector.pointwise",
 								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
@@ -551,12 +579,12 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, Ar
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
-LITERAL(CompositeRefElem,      "composite.ref.elem",      "(ref<'a>, identifier, type<'b>) -> ref<'b>")
+DERIVED(CompositeRefElem,      "composite.ref.elem",      "(ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.member(dp.root, i), t); }")
 LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
 
 // Tuple --------------------------------------------------------------------------------------------------------------
 // first argument has to be a tuple or a union, 'b has to be the type of the requested member
-LITERAL(TupleRefElem,      "tuple.ref.elem",      "(ref<'a>, uint<8>, type<'b>) -> ref<'b>")
+DERIVED(TupleRefElem,      "tuple.ref.elem",      "(ref<'a> s, uint<8> i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.component(dp.root, i), t); }")
 LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b")
 
 GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
@@ -620,7 +648,16 @@ DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<arr
 DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array.reduce(data, size, op, init) ); }")
 
 
-// Atomics -----------------------------------------------------------------------------------------------------
+// Channels -----------------------------------------------------------------------------------------------------------
+
+LITERAL(ChannelCreate, 		"channel.create", 		"(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
+LITERAL(ChannelRelease, 	"channel.release", 		"(channel<'a,#n>) -> unit")
+
+LITERAL(ChannelSend, 		"channel.send", 		"(channel<'a,#n>, 'a) -> unit")
+LITERAL(ChannelRecv, 		"channel.recv", 		"(channel<'a,#n>) -> 'a")
+LITERAL(ChannelProbe, 		"channel.probe", 		"(channel<'a,#n>) -> bool")
+
+// Atomics ------------------------------------------------------------------------------------------------------------
 
 DERIVED(Atomic, "atomic",
 		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
@@ -758,4 +795,5 @@ GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
 #undef GROUP
 #undef OPERATOR
 #undef OPERATION
+#undef DERIVED_OP
 #undef SUB_TYPE

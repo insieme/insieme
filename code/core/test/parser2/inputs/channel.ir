@@ -1,0 +1,25 @@
+
+let int = int<4>;
+let channel = channel<int,1>;
+
+unit main() {
+	
+	// check creation
+	auto c = channel.create(type(int),param(1));
+	
+	// check assignment
+	channel c2 = c;
+	
+	// try sending stuff
+	channel.send(c, 12);
+	
+	// try receiving stuff
+	auto v = channel.recv(c);
+	
+	// check probe
+	if (channel.probe(c)) {};
+	
+	// and release
+	channel.release(c);
+		
+}

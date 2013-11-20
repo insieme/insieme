@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -216,6 +216,7 @@ AST_TERMINAL(Call, Expression)
 AST_TERMINAL(MemberCall, Expression)
 AST_TERMINAL(ConstructorCall, Expression)
 AST_TERMINAL(DestructorCall, Expression)
+AST_TERMINAL(OpaqueExpr, Expression)
 
 //
 // --- Declarations ---
@@ -267,11 +268,13 @@ AST_TERMINAL(MemberFunction, Definition)
 
 AST_TERMINAL(ComplexType, Type)
 
-
 // --- Enum Extensions ---
-//
 
 AST_TERMINAL(EnumType, Type)
+
+// --- member pointer Extensions ---
+
+AST_TERMINAL(MemberFieldPointer, Type)
 
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------

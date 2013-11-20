@@ -285,3 +285,19 @@ TEST(Printer, Vector) {
 	EXPECT_EQ("[1,2,3]", toString(v));
 
 }
+
+TEST(Printer, Tuple) {
+
+	std::tuple<> t1 = std::make_tuple();
+	EXPECT_EQ("()", toString(t1));
+
+	std::tuple<int> t2 = std::make_tuple(1);
+	EXPECT_EQ("(1)", toString(t2));
+
+	std::tuple<int, float> t3 = std::make_tuple(1,2.1f);
+	EXPECT_EQ("(1,2.1)", toString(t3));
+
+	std::tuple<int, float, string> t4 = std::make_tuple(1,2.1f,"hello");
+	EXPECT_EQ("(1,2.1,hello)", toString(t4));
+
+}

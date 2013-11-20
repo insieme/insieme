@@ -64,7 +64,7 @@ namespace transform {
 		/**
 		 * Applies this transformation to the given target node.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
 			return target; // this is just the identity!
 		}
 
@@ -138,8 +138,8 @@ namespace transform {
 		/**
 		 * Applies this transformation to the given target node.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			return fun(target);
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			return core::transform::replaceAddress(target->getNodeManager(), target, fun(target));
 		}
 
 		/**

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -77,12 +77,6 @@ annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm
  * Returns a string of the text within the source range of the input stream
  */
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start);
-
-/*
- * In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
- * with the pack operation provided by the IR.
- */
-vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args);
 
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
 
@@ -129,13 +123,12 @@ template<class ClangExprTy>
 ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 									const clang::FunctionDecl* declaration){
 	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
-	return getFunctionArguments(callExpr, funcTy, declaration);
+	return getFunctionArguments(callExpr, funcTy);
 }
 
 template<class ClangExprTy>
 ExpressionList getFunctionArguments(ClangExprTy* callExpr,
-									const core::FunctionTypePtr& funcTy,
-									const clang::FunctionDecl* declaration = NULL){
+									const core::FunctionTypePtr& funcTy){
 	ExpressionList args;
 
 	// if member function, need to skip one arg (the local scope arg)
@@ -154,19 +147,9 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 		if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
 			argIdOffSet = 1;
 			off=0;
-			VLOG(2) << "opcall";
+			VLOG(2) << " == Operator call == ";
 		}
 	}
-
-//	// if needed, globals are the leftmost argument (after the memory storage in ctors)
-//	// NOTE: functions being captured with a pointer CAN NOT USE globals
-//	if (declaration){
-//		convFact.getTranslationUnitForDefinition(declaration);
-//		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
-//			args.push_back(convFact.ctx.globalVar);
-//			off ++;
-//		}
-//	}
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
@@ -425,8 +408,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
-	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
@@ -434,6 +415,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++
@@ -460,9 +442,11 @@ public:
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
 
-	//  C++ 11
-	//core::ExpressionPtr VisitLambdaExpr 				(const clang::LambdaExpr* substExpr);
-	//core::ExpressionPtr VisitCXXNullPtrLiteralExpr		(const clang::CXXNullPtrLiteralExpr* nullPtrExpr);
+	core::ExpressionPtr VisitUnaryOperator 				(const clang::UnaryOperator* unaryOp);
+
+	core::ExpressionPtr VisitBinPtrMemD					(const clang::BinaryOperator* binPtrMemDexpr);
+	core::ExpressionPtr VisitBinPtrMemI					(const clang::BinaryOperator* binPtrMemIexpr);
+
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  default visitor call

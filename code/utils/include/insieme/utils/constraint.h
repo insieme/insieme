@@ -413,7 +413,7 @@ struct ConstraintVisitor {
 		if (const BinConstraint<FuncTy>* bc = dynamic_cast<const BinConstraint<FuncTy>*>(&cur)) {
 			return visitBinConstraint(*bc);
 		}
-		std::cout << cur;
+		//std::cout << cur;
 		assert(false && "Constraint Combiner not supported");
 		return RetTy();
 	}

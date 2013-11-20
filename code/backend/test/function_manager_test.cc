@@ -286,7 +286,7 @@ TEST(FunctionManager, Bind) {
 
 	string def = toC(info.definitions);
 	EXPECT_PRED2(containsSubString, def, "bool(* call)(name_closure*,float,int32_t);");
-	EXPECT_PRED2(containsSubString, def, "bool(* nested)(float,int32_t*,int32_t);");
+	//EXPECT_PRED2(containsSubString, def, "bool(* nested)(float,int32_t*,int32_t);");
 	EXPECT_PRED2(containsSubString, def, "int32_t* c2;");
 	EXPECT_PRED2(containsSubString, def, "typedef struct name_closure name_closure;");
 
@@ -297,7 +297,7 @@ TEST(FunctionManager, Bind) {
 	);
 
 	EXPECT_PRED2(containsSubString, def,
-		"static inline name_closure* name_ctr(name_closure* closure, bool(* nested)(float,int32_t*,int32_t), int32_t* c2) {\n"
+		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
 		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
 		"    return closure;\n"
 		"}"

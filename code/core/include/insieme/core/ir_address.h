@@ -810,8 +810,16 @@ struct DynamicAddressCast {
 
 template <class A, class B>
 Address<const B> concat(const Address<const A>& head, const Address<const B>& tail) {
-	assert(head.getAddressedNode() == tail.getRootNode() && "Impossible to merge addresses");
+	assert_eq(head.getAddressedNode(), tail.getRootNode())
+				<< "Cannot concatenate paths with un-matching ends: "
+				<< head->getNodeType() << "@" << &*head.getAddressedNode() << " vs. "
+				<< tail.getRootNode()->getNodeType() << "@" << &*tail.getRootNode();
 	return Address<const B>(Path::concat(head.getPath(), tail.getPath()));
+}
+
+template<class A, class B>
+Address<const B> operator>>(const Address<const A>& head, const Address<const B>& tail) {
+	return concat(head, tail);
 }
 
 /**
@@ -927,6 +935,16 @@ namespace std {
 	std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
 		return (node) ? out << node.getPath() : out << "NULL";
 	}
+
+	/**
+	 * Integrate addresses into the std::hash framework.
+	 */
+	template<typename T>
+	struct hash<insieme::core::Address<T>> {
+		size_t operator()(const insieme::core::Address<T>& addr) const {
+			return addr.hash();
+		}
+	};
 
 }
 

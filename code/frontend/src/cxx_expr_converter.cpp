@@ -57,8 +57,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/temporariesLookup.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/temporaries_lookup.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/utils/debug.h"
@@ -154,6 +154,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::Call
 	return irCall;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						  Unarty operator EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang::UnaryOperator *unOp) {
+	core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(unOp, retIr);
+
+	// member pointers are a spetial kind of expression that needs to be handled differently.
+	// we do not retreieve the address of it since there is no address
+	if ( unOp->getOpcode() == clang::UO_AddrOf) {
+		core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
+		if(	core::analysis:: isMemberPointer (subExpr->getType()))
+			return subExpr;
+	}
+
+	return retIr = Converter::ExprConverter::VisitUnaryOperator (unOp);
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  MEMBER EXPRESSION
@@ -190,6 +207,14 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 			return retIr;
 		}
 	}
+
+	if (const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl() ) ) {
+		// this is the direct access to a member field in a generic way: something like Obj::a
+		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl());
+		core::TypePtr membType = convFact.convertType(declRef->getType().getTypePtr());
+    	return retIr = core::analysis::getMemberPointerValue(classTy, field->getNameAsString(), membType);
+	}
+
 	return retIr = Converter::ExprConverter::VisitDeclRefExpr (declRef);
 }
 
@@ -210,39 +235,58 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBoolLiteralExpr(const c
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
-	core::CallExprPtr ret;
+	core::ExpressionPtr ret;
 	LOG_EXPR_CONVERSION(callExpr, ret);
 	// TODO: static methods
 
 	const core::IRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
-	// to begin with we translate the constructor as a regular function
-	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
-	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
+	if (!methodDecl){
+		// no method declaration... this is call to something else. 
+		// what else is callable??? just a pointer, 
+		//  INTRODUCING: member function pointer!
 
-	// get the this-Object
-	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
-	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
-	// index the first element
-	ownerObj = getCArrayElemRef(builder, ownerObj);
-	if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
-		ownerObj = builder.toIRRef(ownerObj);
+		// now we have the function to call, we create the call expression with the right paramenters
+		// the member pointer executor operator will return to us a fucntion call with the "this" parameter
+		// as first param
+		frontend_assert(callExpr->getCallee ());
+		core::CallExprPtr inner = convFact.convertExpr(callExpr->getCallee()).as<core::CallExprPtr>();
+		ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, inner->getFunctionExpr()->getType().as<core::FunctionTypePtr>());
+		core::ExpressionPtr thisArg =  inner->getArgument(0);
+		args.insert (args.begin(), thisArg);
 
-	// if owner object is not a ref is the case of a call on a return value which has not
-	// being identified as temporary expression, because in IR classes are always a left side
-	// we have to materialize
-	if(!ownerObj.getType().isa<core::RefTypePtr>()){
-		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+		ret = builder.callExpr( inner->getType() , inner->getFunctionExpr(), args);
 	}
+	else{
+		// to begin with we translate the constructor as a regular function
+		auto func = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl> (methodDecl));
+		core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
 
-	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
-	args.insert (args.begin(), ownerObj);
-	core::TypePtr retTy = funcTy.getReturnType();
+		// get the this-Object
+		core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
+		// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
+		// index the first element
+		ownerObj = getCArrayElemRef(builder, ownerObj);
+		if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
+			ownerObj = builder.toIRRef(ownerObj);
 
-	// build expression and we are done!!!
-	ret = builder.callExpr(retTy, newFunc, args);
+		// if owner object is not a ref is the case of a call on a return value which has not
+		// being identified as temporary expression, because in IR classes are always a left side
+		// we have to materialize
+		if(!ownerObj.getType().isa<core::RefTypePtr>()){
+			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+		}
+
+		// reconstruct Arguments list, fist one is a scope location for the object
+		ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
+		args.insert (args.begin(), ownerObj);
+		core::TypePtr retTy = funcTy.getReturnType();
+
+		// build expression and we are done!!!
+		ret = builder.callExpr(retTy, func, args);
+
+	}
 	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -269,7 +313,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 				<< methodDecl->getNameAsString();
 
 
-		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
+		convertedOp =  convFact.getCallableExpression(methodDecl);
 
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
 		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
@@ -285,7 +329,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
+	args = getFunctionArguments(callExpr, funcTy);
 
 		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
@@ -306,7 +350,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// unary:	operator@( left==arg(0) )
 		// binary:	operator@( left==arg(0), right==arg(1) )
 
-		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		convertedOp =  convFact.getCallableExpression(funcDecl);
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}
@@ -388,7 +432,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	// to begin with we translate the constructor as a regular function but with initialization list
-	core::ExpressionPtr ctorFunc = convFact.convertFunctionDecl(ctorDecl);
+	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
@@ -412,7 +456,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		dumpPretty(retIr);
 	}
 
-    assert(retIr && "ConstructExpr could not be translated");
+    frontend_assert(retIr) << "ConstructExpr could not be translated\n";
 	return retIr;
 }
 
@@ -433,7 +477,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		if(callExpr->hasInitializer()) {
             const clang::Expr * initializer = callExpr->getInitializer();
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
-			assert(initializerExpr);
+			frontend_assert(initializerExpr);
             placeHolder = initializerExpr;
 		}
         else {
@@ -468,7 +512,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 				}
 			}
 		}
-		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
+		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint no constructor call in here, no way to translate NEW\n";
+
 
 		core::TypePtr type = ctorCall->getType();
 		core::ExpressionPtr newCall = builder.undefinedNew(type);
@@ -480,7 +525,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
 
-			assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size() > 0 && "not default ctor used in array construction");
+			frontend_assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size()) << "not default ctor used in array construction\n";
 
 			retExpr = ( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
 			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
@@ -518,20 +563,20 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 //						CXX DELETE CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
-
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(deleteExpr, retExpr);
 
+	// convert the target of our delete expr
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
-	core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
-
-	VLOG(2) << exprToDelete->getType();
-
 
 	core::ExpressionPtr dtor;
-	if( core::hasMetaInfo(desTy)){
-		const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
-		dtor = info.getDestructor();
+	// since destructor might be defined in a different translation unit or even in this one but after the usage
+	// we should retrieve a callable symbol and delay the conversion
+	if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(deleteExpr->getDestroyedType().getTypePtr())){
+		if (const clang::CXXRecordDecl* classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl())){
+			if ( classDecl->getDestructor())
+				dtor = convFact.getCallableExpression(classDecl->getDestructor());
+		}
 	}
 
 	if (deleteExpr->isArrayForm () ){
@@ -540,7 +585,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		if(dtor){
 
 			//FIXME: why mem_alloc dtor has being marked as virtual????
-			assert(!core::getMetaInfo(desTy).isDestructorVirtual() && "no virtual dtor allowed for array dtor");
+			core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
+			desTy = convFact.lookupTypeDetails(desTy);
+			frontend_assert(!core::getMetaInfo(desTy).isDestructorVirtual()) << "no virtual dtor allowed for array dtor\n";
 
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);
@@ -577,7 +624,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 	//figure out the type of the expression
 	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
-	assert(irType.isa<core::GenericTypePtr>() && "for convention, all this operators deal with generic types");
+	frontend_assert(irType.isa<core::GenericTypePtr>() ) << "for convention, all this operators deal with generic types\n";
 	irType = builder.refType(irType);
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
@@ -776,8 +823,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 				core::visitDepthFirstOnce (lambdaBody, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						assert(anno);
+						const auto& anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						frontend_assert(anno);
 						anno->replaceUsage (var, newParam);
 					}
 				});
@@ -878,17 +925,46 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr) {
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(substExpr, retIr);
-	assert(substExpr->getReplacement() && "template parameter cannot be substituted by nothing");
+	frontend_assert(substExpr->getReplacement()) << "template parameter cannot be substituted by nothing\n";
 	retIr = Visit(substExpr->getReplacement());
 	return retIr;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//			C++ 11
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			memeber function pointer executors
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+namespace {
+
+	core::ExpressionPtr convertMemberFuncExecutor (const clang::BinaryOperator* clangExpr,  const frontend::conversion::Converter& convFact){
+		core::ExpressionPtr papa    = convFact.convertExpr(clangExpr->getLHS());
+		core::ExpressionPtr trgPtr = convFact.convertExpr(clangExpr->getRHS());
+
+		// unwrap pointer kind
+		if (clangExpr->getOpcode() == clang::BO_PtrMemI)
+			papa = getCArrayElemRef(convFact.getIRBuilder(), papa);
+
+		// check whenever function of member data pointer
+		if (trgPtr->getType().isa<core::FunctionTypePtr>())
+			return convFact.getIRBuilder().callExpr(trgPtr->getType().as<core::FunctionTypePtr>()->getReturnType(), trgPtr, toVector(papa));
+		else{
+			frontend_assert(core::analysis::isMemberPointer (trgPtr->getType()) ) << " not a memberPointer? " << trgPtr << " : " << trgPtr->getType();
+			return core::analysis::getMemberPointerAccess(papa,trgPtr);
+		}
+	}
+
+}
+
+core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemD(const clang::BinaryOperator* exprD) {
+	// direct, ->*
+	return convertMemberFuncExecutor(exprD,convFact);
+}
+
+core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemI(const clang::BinaryOperator* exprI) {
+	// indirect, ->*
+	return convertMemberFuncExecutor(exprI,convFact);
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -903,16 +979,25 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
+	//call frontend plugin visitors
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
 		retIr = plugin->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
-    if(!retIr)
+    if(!retIr){
+		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
+	}
 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
+
+    // call frontend plugin post visitors
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retIr = plugin->PostVisit(expr, retIr, convFact);
+	}
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);

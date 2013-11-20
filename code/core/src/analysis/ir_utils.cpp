@@ -521,7 +521,9 @@ VariableList getFreeVariables(const NodePtr& code) {
 	auto set = FreeVariableCollector<Pointer>().run(code);
 
 	// convert result into list
-	return VariableList(set.begin(), set.end());
+	VariableList res(set.begin(), set.end());
+	std::sort(res.begin(), res.end(), compare_target<VariablePtr>());
+	return res;
 }
 
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
@@ -533,6 +535,12 @@ vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
 	auto res = vector<VariableAddress>(set.begin(), set.end());
 	std::sort(res.begin(), res.end());
 	return res;
+}
+
+bool hasFreeVariable(const NodePtr& code, const std::function<bool(VariablePtr)>& filter) {
+	if (!code.isa<StatementPtr>()) return false;
+	// TODO: improve this implementation by forwarding filter to visitor
+	return any(getFreeVariables(code), filter);
 }
 
 vector<StatementAddress> getExitPoints(const StatementPtr& stmt) {

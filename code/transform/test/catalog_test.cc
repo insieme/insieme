@@ -55,7 +55,7 @@ namespace transform {
 			return true;
 		}
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
 			return target;
 		}
 
@@ -95,8 +95,9 @@ namespace transform {
 			return true;
 		}
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			return core::IRBuilder(target->getNodeManager()).intLit(dummyParameter);
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			auto res = core::IRBuilder(target->getNodeManager()).intLit(dummyParameter);
+			return core::transform::replaceAddress(target->getNodeManager(), target, res);
 		}
 
 		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {

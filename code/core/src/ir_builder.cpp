@@ -622,6 +622,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return getZero (type.as<core::RecTypePtr>()->unroll());
 	}
 
+	// FIXME: this might be a little dangerous, but at least right typed
+	if (type->getNodeType() == core::NT_ArrayType) {
+		return (undefined(type));
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
@@ -1264,8 +1269,12 @@ LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const
 	return literal(type, toString(*param));
 }
 
+TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
+	return genericType("type", toVector(type));
+}
+
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
-	auto literalType = genericType("type", toVector(type));
+	auto literalType = getTypeLiteralType(type);
 	return literal(literalType, toString(*type));
 }
 

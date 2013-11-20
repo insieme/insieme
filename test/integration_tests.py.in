@@ -559,7 +559,18 @@ class TestJob:
 		self.__cmds = [ ]
 		self.__is_parallel = False
 
-		ext = '.cpp' if isCxx==True else '.c'
+		#ext = '.cpp' if isCxx==True else '.c'
+		if isCxx == True:
+			if os.path.exists(self.__data.name + '.cpp'):
+				ext = '.cpp'
+			else:
+				ext = '.c'
+		else:
+			if os.path.exists(self.__data.name + '.c'):
+				ext = '.c'
+			else:
+				ext = '.cpp'
+
 
 		path = os.path.abspath(".")
 

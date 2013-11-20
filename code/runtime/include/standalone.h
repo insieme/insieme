@@ -170,7 +170,7 @@ void irt_exit_handler() {
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
 	if(irt_g_frequency_setting_specified)
-		irt_cpu_freq_reset_frequency();
+		irt_cpu_freq_reset_frequencies();
 #endif
 
 #ifdef USE_OPENCL
@@ -287,7 +287,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 		// initialize PAPI and check version
 		irt_initialize_papi();
-		
+		_irt_setup_hardware_info();
 	#endif
 
 	#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION

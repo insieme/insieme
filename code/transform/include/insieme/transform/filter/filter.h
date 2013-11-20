@@ -38,10 +38,10 @@
 
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/pattern/pattern.h"
+
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/printable.h"
-
-#include "insieme/transform/pattern/pattern.h"
 
 namespace insieme {
 namespace transform {
@@ -148,11 +148,11 @@ namespace filter {
 
 
 	// pattern based filter
-	inline Filter pattern(const string& name, const pattern::TreePatternPtr& pattern) {
+	inline Filter pattern(const string& name, const core::pattern::TreePatternPtr& pattern) {
 		return Filter(name, [=](const core::NodePtr& node)->bool { return pattern->matchPointer(node); });
 	}
 
-	inline Filter pattern(const pattern::TreePatternPtr& treePattern) {
+	inline Filter pattern(const core::pattern::TreePatternPtr& treePattern) {
 		return pattern(format("pattern(%s)", toString(treePattern).c_str()), treePattern);
 	}
 
@@ -169,22 +169,22 @@ namespace filter {
 	 * This pattern based filter is trying to match against a potential target node. If
 	 * it matches, it returns the list of matches bound to the given variable.
 	 */
-	TargetFilter pattern(const string& name, const pattern::TreePatternPtr& pattern, const string& var);
+	TargetFilter pattern(const string& name, const core::pattern::TreePatternPtr& pattern, const string& var);
 
 	/**
 	 * This pattern based filter is trying to match against a potential target node. If
 	 * it matches, it returns the list of matches bound to the given variable.
 	 */
-	inline TargetFilter pattern(const pattern::TreePatternPtr& treePattern, const string& var) {
+	inline TargetFilter pattern(const core::pattern::TreePatternPtr& treePattern, const string& var) {
 		return pattern(format("all %s within (%s)", var.c_str(), toString(treePattern).c_str()), treePattern, var);
 	}
 
 	/**
 	 * Creates a filter searching all sub-structures matching the given pattern.
 	 */
-	TargetFilter allMatches(const string& name, const pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
+	TargetFilter allMatches(const string& name, const core::pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
 
-	inline TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes = true) {
+	inline TargetFilter allMatches(const core::pattern::TreePatternPtr& pattern, bool ignoreTypes = true) {
 		return allMatches(format("all matching (%s)", toString(pattern).c_str()), pattern, ignoreTypes);
 	}
 

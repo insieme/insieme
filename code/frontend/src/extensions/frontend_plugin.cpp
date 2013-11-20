@@ -35,12 +35,25 @@
  */
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
-
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/stmt_converter.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
+
+    // ############ PRE CLANG STAGE ############ //
+    const FrontendPlugin::macroMap& FrontendPlugin::getMacroList() const {
+        return macros;
+    }
+
+    const FrontendPlugin::headerVec& FrontendPlugin::getInjectedHeaderList() const {
+        return injectedHeaders;
+    }
+
+    const FrontendPlugin::headerVec& FrontendPlugin::getKidnappedHeaderList() const {
+        return kidnappedHeaders;
+    }
 
     // ############ CLANG STAGE ############ //
     insieme::core::ExpressionPtr FrontendPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
@@ -59,17 +72,23 @@ namespace extensions {
         return false;
     }
 
-    // ############ PRE CLANG STAGE ############ //
-    const FrontendPlugin::macroMap& FrontendPlugin::getMacroList() const {
-        return macros;
+    insieme::core::ExpressionPtr FrontendPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                                           insieme::frontend::conversion::Converter& convFact) {
+        return irExpr;
     }
 
-    const FrontendPlugin::headerVec& FrontendPlugin::getInjectedHeaderList() const {
-        return injectedHeaders;
+    insieme::core::TypePtr FrontendPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+                                                     insieme::frontend::conversion::Converter& convFact) {
+        return irType;
     }
 
-    const FrontendPlugin::headerVec& FrontendPlugin::getKidnappedHeaderList() const {
-        return kidnappedHeaders;
+    stmtutils::StmtWrapper FrontendPlugin::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+                                                     insieme::frontend::conversion::Converter& convFact) {
+        return irStmt;
+    }
+    
+    void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
+        return;
     }
 
     // ############ POST CLANG STAGE ############ //

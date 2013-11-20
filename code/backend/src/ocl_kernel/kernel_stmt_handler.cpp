@@ -47,12 +47,12 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 #include "insieme/utils/logging.h"
 
-namespace irg = insieme::transform::pattern::generator::irg;
+namespace irg = insieme::core::pattern::generator::irg;
 
 namespace insieme {
 namespace backend {
@@ -60,8 +60,8 @@ namespace ocl_kernel {
 
 	namespace {
 
-    namespace itp = insieme::transform::pattern;
-    using insieme::transform::pattern::anyList;
+    namespace itp = insieme::core::pattern;
+    using insieme::core::pattern::anyList;
 
 		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
 

@@ -79,14 +79,21 @@ namespace core {
 		 */
 		struct RecursiveCallLocations {
 
-			// the internal store for the recursive call locations
-			map<VariablePtr, vector<VariableAddress>> locations;
+			LambdaDefinitionPtr root;
 
-			RecursiveCallLocations(const map<VariablePtr, vector<VariableAddress>>& locations = map<VariablePtr, vector<VariableAddress>>())
-				: locations(locations) {};
+			// the internal store for the recursive call locations
+			map<LambdaBindingPtr, vector<VariableAddress>> bind2var;
+			map<VariablePtr, vector<VariableAddress>> var2var;
+
+			RecursiveCallLocations(const LambdaDefinitionPtr& root)
+				: root(root), bind2var(), var2var() {};
 
 			bool operator==(const RecursiveCallLocations& other) const {
-				return locations == other.locations;
+				return this == &other || bind2var == other.bind2var;
+			}
+
+			bool empty() const {
+				return bind2var.empty();
 			}
 		};
 
@@ -113,12 +120,30 @@ namespace core {
 				for(const LambdaBindingPtr& cur : definition) { recVarSet.insert(cur->getVariable()); }
 
 				// search locations
-				RecursiveCallLocations res;
+				RecursiveCallLocations res(definition);
 				for(auto cur : definition) {
-					auto var = cur->getVariable();
-					vector<VariableAddress>& curList = res.locations[var];
-					visit(NodeAddress(definition->getDefinitionOf(var)), curList, recVarSet);
+					vector<VariableAddress>& curList = res.bind2var[cur];
+					visit(NodeAddress(cur->getLambda()), curList, recVarSet);
 				}
+
+				// check whether some recursive calls have been
+				if (res.empty()) return res;
+
+				// get relative address from definition to the bindings
+				map<LambdaBindingPtr, LambdaAddress> lambdas;
+				for(auto cur : LambdaDefinitionAddress(definition)) {
+					lambdas[cur.as<LambdaBindingPtr>()] = cur->getLambda();
+				}
+
+				// complete var2call index
+				for(auto cur : res.bind2var) {
+					auto head = lambdas[cur.first];
+					for(auto var : cur.second) {
+						res.var2var[var.as<VariablePtr>()].push_back(concat(head, var));
+					}
+				}
+
+				// done
 				return res;
 			}
 
@@ -168,10 +193,7 @@ namespace core {
 
 		};
 
-
-		const vector<VariableAddress>& getRecursiveCallLocations(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
-			// get lambda binding
-			assert(definition->getBindingOf(var) && "Requesting recursive status of invalid rec-lambda variable!");
+		const RecursiveCallLocations& getRecursiveCallLocations(const LambdaDefinitionPtr& definition) {
 
 			// compute recursive call locations if missing
 			if (!definition->hasAttachedValue<RecursiveCallLocations>()) {
@@ -179,18 +201,43 @@ namespace core {
 			}
 
 			// return a reference to the call location set
-			const auto& locs = definition->getAttachedValue<RecursiveCallLocations>().locations;
-			const auto& res = locs.find(var)->second;		// this location might be invalid if migrated => following if is checking for this
+			const auto& res = definition->getAttachedValue<RecursiveCallLocations>();
+
+			// this locations might be invalid if migrated => the following if is checking for this
 
 			// check validity of annotation (not moved between node managers)
-			if (locs.find(var) == locs.end() || (!res.empty() && res[0].getRootNode() != definition->getDefinitionOf(var).as<core::NodePtr>())) {
+			if (res.root != definition) {
 				definition->attachValue(RecursiveCallCollector().findLocations(definition));
-				return definition->getAttachedValue<RecursiveCallLocations>().locations.find(var)->second;
+				return definition->getAttachedValue<RecursiveCallLocations>();
 			}
 
 			return res;
 		}
 
+		const vector<VariableAddress>& getRecursiveCallLocationsInternal(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
+			static const vector<VariableAddress> empty;
+
+			// get lambda binding
+			auto binding = definition->getBindingOf(var);
+			assert(binding && "Requesting recursive status of invalid rec-lambda variable!");
+
+			// return a reference to the call location set
+			const auto& locs = getRecursiveCallLocations(definition).bind2var;
+			auto pos = locs.find(binding);
+			return (pos == locs.end()) ? empty : pos->second;
+		}
+
+		const vector<VariableAddress>& getRecursiveCallsOfInternal(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
+			static const vector<VariableAddress> empty;
+
+			// check if this variable is even covered
+			if (!definition->getBindingOf(var)) return empty;
+
+			// get all
+			const auto& locs = getRecursiveCallLocations(definition).var2var;
+			auto pos = locs.find(var);
+			return (pos == locs.end()) ? empty : pos->second;
+		}
 
 	}
 
@@ -201,8 +248,8 @@ namespace core {
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
 		VariablePtr var = Variable::get(manager, lambda->getType(), 0);
 		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
-		binding->attachValue(RecursiveCallLocations());			// this is not a recursive function!
 		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+		def->attachValue(RecursiveCallLocations(def));			// this is not a recursive function!
 		return get(manager, lambda->getType(), var, def);
 	}
 
@@ -227,7 +274,11 @@ namespace core {
 
 
 	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
-		return !getRecursiveCallLocations(this, variable).empty();
+		return !getRecursiveCallLocationsInternal(this, variable).empty();
+	}
+
+	const vector<VariableAddress>& LambdaDefinition::getRecursiveCallsOf(const VariablePtr& variable) const {
+		return getRecursiveCallsOfInternal(this, variable);
 	}
 
 	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
@@ -239,7 +290,7 @@ namespace core {
 		}
 		// compute peeled code versions for each variable
 		std::map<VariablePtr, LambdaExprPtr> peeled;
-		for(const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+		for(const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
 			auto pos = peeled.find(cur);
 			if (pos == peeled.end()) {
 				peeled[cur] = peel(manager, cur, numTimes - 1);
@@ -248,7 +299,7 @@ namespace core {
 
 		// build up replacement map
 		std::map<NodeAddress, NodePtr> replacements;
-		for (const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+		for (const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
 			replacements[cur] = peeled[cur];
 		}
 
@@ -278,7 +329,7 @@ namespace core {
 
 			// build up replacement map
 			std::map<NodeAddress, NodePtr> replacements;
-			for (const VariableAddress& var : getRecursiveCallLocations(this, cur->getVariable())) {
+			for (const VariableAddress& var : getRecursiveCallLocationsInternal(this, cur->getVariable())) {
 				replacements[var] = unrolled[var];
 			}
 

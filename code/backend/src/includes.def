@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -55,13 +55,6 @@
 // -----------------------------------
 
 FUN("assert.h", __assert_fail)
-
-FUN("stdarg.h", va_start)
-FUN("stdarg.h", va_end)
-FUN("stdarg.h", va_copy)
-FUN("stdarg.h", va_arg)
-TYPE("stdarg.h", "va_list")
-TYPE("stdarg.h", "__va_list_tag")
 
 FUN("stdio.h", printf)
 FUN("stdio.h", par_printf) // a lie

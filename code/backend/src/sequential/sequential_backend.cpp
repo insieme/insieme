@@ -59,9 +59,13 @@
 #include "insieme/backend/sequential/sequential_type_handler.h"
 
 #include "insieme/backend/addons/cpp_references.h"
+#include "insieme/backend/addons/cpp_memb_ptr.h"
+#include "insieme/backend/addons/cpp_longlong.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/simd_vector.h"
+#include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/varargs.h"
 
 namespace insieme {
 namespace backend {
@@ -70,9 +74,13 @@ namespace sequential {
 	SequentialBackendPtr SequentialBackend::getDefault() {
 		auto res = std::make_shared<SequentialBackend>();
 		res->addAddOn<addons::CppReferences>();
+		res->addAddOn<addons::CppMembAddon>();
+		res->addAddOn<addons::CppLongLong>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::SIMDVector>();
+		res->addAddOn<addons::AsmStmt>();
+		res->addAddOn<addons::VarArgs>();
 		return res;
 	}
 

@@ -29,12 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
+
+#include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/core/ir_program.h"
@@ -45,6 +47,7 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
@@ -62,13 +65,14 @@ using namespace insieme::utils::log;
 
 namespace {
 class OclTestVisitor : public core::IRVisitor<void> {
+private:
+	bool kernelFound;
 public:
 
-	OclTestVisitor() : core::IRVisitor<void>(false) {}
+	OclTestVisitor() : core::IRVisitor<void>(false), kernelFound(false) {}
 
-	void visitMarkerExpr(const core::MarkerExprPtr& marker) {
-		// marker expression has not been removed
-		EXPECT_FALSE(dynamic_pointer_cast<const core::LambdaExpr>(marker->getSubExpression()));
+	bool foundKernel() {
+		return kernelFound;
 	}
 
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
@@ -80,6 +84,7 @@ public:
             const core::TypeList& args = funcType->getParameterTypes()->getElements();
 
             if(func->hasAnnotation(insieme::annotations::ocl::BaseAnnotation::KEY)) {
+            	kernelFound = true;
 
                 const core::TypePtr& retTy = funcType->getReturnType();
 
@@ -137,13 +142,13 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, DEBUG, 2);
+//	Logger::get(std::cerr, ERROR, 2);
 
 	core::NodeManager manager;
 
     fe::ConversionJob job(SRC_DIR "inputs/hello.cl");
     job.addIncludeDirectory(SRC_DIR "inputs");
-    job.setOption(fe::ConversionJob::OpenCL);
+    job.registerFrontendPlugin<fe::extensions::OclKernelPlugin>();
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     core::ProgramPtr program = job.execute(manager, false);
@@ -156,6 +161,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     OclTestVisitor otv;
     core::visitDepthFirst(program, otv);
 
+    EXPECT_TRUE(otv.foundKernel());
 
 //    LOG(INFO) << pp;
 

@@ -134,7 +134,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
+			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double, LongLong, ULongLong
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
@@ -217,11 +217,10 @@ namespace c_ast {
 
 	struct FunctionType : public Type {
 		TypePtr returnType;
+		TypePtr classType;
 		vector<TypePtr> parameterTypes;
-		FunctionType(const TypePtr& returnType)
-					: Type(NT_FunctionType), returnType(returnType), parameterTypes() {}
-		FunctionType(const TypePtr& returnType, const vector<TypePtr>& parameter)
-			: Type(NT_FunctionType), returnType(returnType), parameterTypes(parameter) {}
+		FunctionType(const TypePtr& returnType, const TypePtr& classTy = TypePtr(), const vector<TypePtr>& parameter = vector<TypePtr>())
+			: Type(NT_FunctionType), returnType(returnType), classType(classTy), parameterTypes(parameter) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -242,6 +241,14 @@ namespace c_ast {
         string name;
         string annotation;
         EnumType(const string& identifier, const string& elements) : Type(NT_EnumType), name(identifier), annotation(elements) {}
+        virtual bool equals(const Node& node) const;
+    };
+
+    struct MemberFieldPointer : public Type {
+		TypePtr parentType;
+		TypePtr type;
+        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy) 
+			: Type(NT_MemberFieldPointer), parentType(parentTy), type(fieldTy) {}
         virtual bool equals(const Node& node) const;
     };
 
@@ -431,8 +438,8 @@ namespace c_ast {
 			PostfixDec,
 			LogicNot,
 			BitwiseNot,
-			Indirection,
-			Reference,
+			Indirection,   // *
+			Reference,	   // &
 			SizeOf,
 			Typeid,
 			ComplexReal,
@@ -491,7 +498,9 @@ namespace c_ast {
 
 			// C++ operators
 			StaticCast,
-			DynamicCast
+			DynamicCast,
+			ScopeResolution,    //  the scope resolution operator is: "::" 
+			PointerToMember		//	pointer to member operator. "->*"
 		};
 
 		BinaryOp operation;
@@ -569,6 +578,12 @@ namespace c_ast {
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct OpaqueExpr : public Expression {
+		std::string value;
+		OpaqueExpr(const std::string& val) : Expression(NT_OpaqueExpr), value(val) {}
 		virtual bool equals(const Node& node) const;
 	};
 

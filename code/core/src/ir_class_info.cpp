@@ -127,9 +127,15 @@ namespace core {
 		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
 		assert(checkObjectType(function.getImplementation()));
 
-		// check that there are not duplicates
-		assert(!hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst()) &&
-				"Member functions may not exhibit the same name, type and const-flag state.");
+		// if duplicates, retur, but check if we are incorporating a different implementation
+		if(hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())) {
+			assert_eq(*analysis::normalize(getMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())->getImplementation()), 
+					  *analysis::normalize(function.getImplementation()))
+					<< "Member functions may not exhibit the same name, type and const-flag state. \n" 
+					<< "\t name: " << function.getName() << "\n\t"
+					<< "\t impl: " << function.getImplementation() << "\n";
+			return;
+		}
 
 		// add new member function
 		this->memberFunctions.push_back(function);
@@ -431,7 +437,9 @@ namespace core {
 
 	void setMetaInfo(const TypePtr& type, const ClassMetaInfo& info) {
 		assert(analysis::isObjectType(type) && "Meta-Information may only be attached to object types!");
-		assert(!info.getClassType() || *info.getClassType() == *type);
+//		assert_true(!info.getClassType() || *info.getClassType() == *type)
+//			<< "Target Type: " << *type << "\n"
+//			<< "Class Type: " << (info.getClassType() ? toString(*info.getClassType()) : "-unknown-") << "\n";
 
 		// if information is not different to the default => just drop it
 		if (info == defaultInfo) {

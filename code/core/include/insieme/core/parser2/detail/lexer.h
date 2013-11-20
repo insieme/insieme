@@ -251,12 +251,10 @@ namespace detail {
 			return lexeme;
 		}
 
-	protected:
-
 		/**
 		 * Allows tokens to be printed to the streams in a readable format.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

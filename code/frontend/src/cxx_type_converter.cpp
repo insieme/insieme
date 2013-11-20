@@ -213,9 +213,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
 				break;
 			}
-				// -------------------   NON IMPLEMENTED ONES ------------------------ 
+				// -------------------   NON IMPLEMENTED ONES ------------------------
 			case clang::TemplateArgument::Integral:  {
-			// templated parameters are values wich spetialize the template, because of their value nature, 
+			// templated parameters are values wich spetialize the template, because of their value nature,
 			// they should be encapsulated as types to fit in the typing of the parent type
 				VLOG(2) << "arg: integral";
 				assert(false);
@@ -325,158 +325,34 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
     core::TypePtr retTy;
     LOG_TYPE_CONVERSION( memPointerTy, retTy );
     retTy = convert(memPointerTy->getPointeeType().getTypePtr());
-    return retTy;
-}
+	core::TypePtr memTy=  convFact.lookupTypeDetails(retTy);
+	core::TypePtr classTy = convert(memPointerTy->getClass ());
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                 post convertion action for functions
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
+	if (memPointerTy->isMemberFunctionPointer()){
+		frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
 
-	// now attach meta-info (only for record type definitios)
-	const clang::RecordType* recType = dyn_cast<const clang::RecordType>(clangType);
-	if (!recType) return;	// nothing to do
+		// prepend this obj to the param list
+		core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
+		paramTypes.push_back(builder.refType(classTy));
+		core::TypePtr  returnTy      = memTy.as<core::FunctionTypePtr>()->getReturnType();
 
-	// skip if there is not declaration available
-	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
-	if( !irType.isa<core::StructTypePtr>() ) { return; }
-
-	// get the generic type to substitute "this" parameter by the complete implementation
-	// and make sure that the type we want to complete is "closed"
-	// NOTE: irAlias might not exist for annonimous types
-	core::TypePtr irAliasType    =	convFact.convertType(clangType);
-	core::TypePtr irCompleteType =  convFact.lookupTypeDetails(irType);
-
-	assert (!irCompleteType.isa<core::GenericTypePtr>());
-
-	// assemble class info
-	core::ClassMetaInfo classInfo;
-
-	//~~~~~ look for the full decl ~~~~
-	const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(recType->getDecl());
-
-	//~~~~~ copy ctor, move ctor, default ctor ~~~~~
-	clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
-	clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
-	for (; ctorIt != ctorEnd; ctorIt ++){
-		const CXXConstructorDecl* ctorDecl = *ctorIt;
-		if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
-
-			// the function is a template spetialization, but if it has no body, we wont
-			// convert it, it was never instanciated
-			if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-					continue;
-			}
-
-			core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-			if (ctorLambda){
-				assert(ctorLambda);
-				ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
-				// if there is an implementation of the constructor, substitute all the usages of the type alias (generic)
-				// by the complete implementation
-				if (!ctorLambda.isa<core::LiteralPtr>()){
-					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
-					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-				}
-			}
-		}
+		// generate new member function type
+		retTy =  builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
+		return retTy;
 	}
-
-	//~~~~~ convert destructor ~~~~~
-	if(classDecl->hasUserDeclaredDestructor()){
-		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-		dtorLambda = convFact.lookupFunctionImpl(dtorLambda);
-		if (dtorLambda.isa<core::LambdaExprPtr>()){
-			if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irCompleteType, irAliasType, true);
-			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
-			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
-				classInfo.setDestructorVirtual();
-		}
+	else {
+		frontend_assert (memPointerTy->isMemberDataPointer());
+    	return retTy = core::analysis::getMemberPointer(classTy, memTy);
 	}
-
-	//~~~~~ member functions ~~~~~
-	clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
-	clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
-	for (; methodIt != methodEnd; methodIt ++){
-		if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
-			llvm::isa<clang::CXXDestructorDecl>(*methodIt)){
-			// ctor are handled in a previous loop
-			continue;
-		}
-
-//		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-//			//FIXME: for now ignore CopyAssignmentOperator
-//			// -- backendCompiler should take care of it
-//			continue;
-//		}
-
-//		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-//			//FIXME for non-userProvided moveAssign ops find solution,
-//			//maybe leave them to be handled by the backendCompiler or something else
-//			//currently are left over for be-compiler
-//			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
-//		}
-
-		const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
-
-		// the function is a template espetialization, but if it has no body, we wont
-		// convert it, it was never instanciated
-		if (method->getMemberSpecializationInfo () && !method->hasBody()){
-				continue;
-		}
-
-		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-
-		if (methodLambda->getType().as<core::FunctionTypePtr>()->isPlain())
-			continue;
-
-		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irCompleteType, irAliasType, true);
-
-		if( method->isPure() ) {
-			//pure virtual functions are handled bit different in metainfo
-			VLOG(2) << "pure virtual function " << method;
-			auto funcTy = methodLambda->getType().as<core::FunctionTypePtr>();
-			VLOG(2) << funcTy;
-			methodLambda = builder.getPureVirtual(funcTy);
-		}
-
-		if (VLOG_IS_ON(2)){
-			VLOG(2) << " ############ member! #############";
-			VLOG(2) << method->getNameAsString();
-			VLOG(2) << methodLambda->getType();
-			dumpDetail(methodLambda);
-			VLOG(2) << " ###";
-			method->dump();
-			std::cout << std::endl;
-			VLOG(2) << ((*methodIt)->isVirtual()? "virtual!":" ");
-			VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
-			VLOG(2) << "           ############";
-		}
-
-		classInfo.addMemberFunction(method->getNameAsString(),
-									methodLambda,
-									(*methodIt)->isVirtual(),
-									(*methodIt)->isConst());
-	}
-
-	// append meta information to the class definition
-	core::setMetaInfo(irAliasType, core::merge(classInfo, core::getMetaInfo(irAliasType)));
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //			The visitor itself
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
-    //iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		core::TypePtr retIr = plugin->Visit(type, convFact);
-		if(retIr)
-			return retIr;
-	}
-
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
+
+    return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 
 } // End conversion namespace

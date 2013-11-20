@@ -8,9 +8,6 @@ include(../environment.cmake)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_config.h.in
-	${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/analysis/cmake_config.h)
-
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_analysis_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_analysis_incs 	include/*.h )
@@ -20,7 +17,6 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
-include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
 
 # Build the core library

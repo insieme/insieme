@@ -651,7 +651,6 @@ TEST(TypeManager, FunctionTypes) {
 	core::TypePtr typeB = basic.getBool();
 	core::TypePtr typeC = basic.getFloat();
 
-
 	core::FunctionTypePtr type;
 
 	// -- test a thick function pointer first => should generate closure, constructor and caller --
@@ -699,9 +698,9 @@ TEST(TypeManager, FunctionTypes) {
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 	EXPECT_TRUE(info.plain);
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.lValueType));
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.rValueType));
-	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.externalType));  // should this be this way?
+	EXPECT_EQ("name*", toC(info.lValueType));  // there is an implicit typedef, therefore the type is used with a symbol name
+	EXPECT_EQ("name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.externalType));  // should this be this way?
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_FALSE((bool)info.callerName);
@@ -719,7 +718,7 @@ TEST(TypeManager, FunctionTypes) {
 	auto decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
 			info.lValueType, cManager->create("var")
 	));
-	EXPECT_EQ("float(* var)(int32_t,bool)", toC(decl));
+	EXPECT_EQ("name* var", toC(decl));
 
 	// test the same with a function not accepting any arguments
 	type = builder.functionType(core::TypeList(), typeA);
@@ -729,9 +728,42 @@ TEST(TypeManager, FunctionTypes) {
 	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
 			info.lValueType, cManager->create("var")
 	));
-	EXPECT_EQ("int32_t(* var)()", toC(decl));
+	EXPECT_EQ("name* var", toC(decl));
 
+
+	// -- test a member function type --
+
+	core::TypePtr classTy = builder.refType( builder.structType(toVector(builder.namedType("a", typeA), builder.namedType("b", typeA)) ));
+
+	type = builder.functionType(toVector(classTy, typeA), typeC, core::FK_MEMBER_FUNCTION);
+	info = typeManager.getTypeInfo(type);
+
+
+	EXPECT_EQ("(struct<a:int<4>,b:int<4>>::(int<4>)->real<4>)", toString(*type));
+	EXPECT_TRUE(info.plain);
+	EXPECT_EQ("name", toC(info.lValueType));// there is an implicit typedef, therefore the type is used with a symbol name
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_FALSE((bool)info.callerName);
+	EXPECT_FALSE((bool)info.caller);
+	EXPECT_FALSE((bool)info.constructorName);
+	EXPECT_FALSE((bool)info.constructor);
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+	// check variable declaration
+	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
+			info.lValueType, cManager->create("var")
+	));
+	EXPECT_EQ("name var", toC(decl));
 }
+
 
 TEST(TypeManager, RecursiveTypes) {
 

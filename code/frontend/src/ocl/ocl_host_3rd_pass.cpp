@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -176,7 +176,7 @@ assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable
 // returns a 0-literal of the corresponding type or NoOp in cas of unit
 const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
 	auto zero = builder.intLit(0);
-	return utils::castScalar(type,zero);
+	return frontend::utils::castScalar(type,zero);
 	/*TypeList noArgs;
 	std::vector<VariablePtr> noParams;
 	std::vector<ExpressionPtr> noExpr;

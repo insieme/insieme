@@ -42,8 +42,9 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/subtyping.h"
 #include "insieme/annotations/c/include.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
@@ -77,7 +78,7 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 
 		if (stmt.isa<core::CallExprAddress>()){
 			if (core::analysis::isCallOf(stmt.as<core::CallExprPtr>(), mgr.getLangBasic().getRefAssign())){
-					// if there is coma (,) operator, we will find the assigments enclosed into a labmda, we need to translate the 
+					// if there is comma (,) operator, we will find the assignments enclosed into a labmda, we need to translate the
 					// variable names
 				core::ExpressionPtr left = stmt.as<core::CallExprPtr>()[0].as<core::ExpressionPtr>();
 				if (stmt.as<core::CallExprPtr>()[0].isa<core::VariablePtr>()){
@@ -97,7 +98,6 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 				}
 				return true;
 			}
-//utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist);
 		}
 		return false;
 	}
@@ -117,21 +117,6 @@ struct InitializationCollector : public core::IRVisitor<bool,core::Address>{
 	}
 };
 
-core::ExpressionPtr absFunc(const core::ExpressionPtr& expr, const core::TypePtr& type){
-	core::IRBuilder builder( expr->getNodeManager() );
-	auto ceilType = builder.functionType(expr->getType(), type);
-	auto ceilLit = builder.literal("abs", ceilType);
-	insieme::annotations::c::attachInclude(ceilLit, "stdlib.h");
-	return builder.callExpr (type, ceilLit, expr);
-}
-
-core::ExpressionPtr insertCeilFunc(const core::ExpressionPtr& expr, const core::TypePtr& type){
-	core::IRBuilder builder( expr->getNodeManager() );
-	auto ceilType = builder.functionType(expr->getType(), type);
-	auto ceilLit = builder.literal("ceil", ceilType);
-	insieme::annotations::c::attachInclude(ceilLit, "math.h");
-	return builder.callExpr (type, ceilLit, expr);
-}
 }
 
 namespace insieme {
@@ -141,7 +126,7 @@ namespace analysis {
 
 LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact): 
 	convFact(convFact),
-	loopToBounduary (false),
+	loopToBoundary (false),
 	restoreValue (false){
 	
 	if ( !forStmt->getInc() )   throw LoopNormalizationError(" no increment expression in loop");
@@ -154,113 +139,71 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 	// we look for the condition expression
 	handleCondExpr(forStmt);
 
-	// we finish the thing: build normalized induction expression and compute number of iterations
-
-	//   FIXME: formulas do not work nice whith the paratesis, if all variables, the computation is truncated in several places
-	//try{
-
-	//	/////////////////////////////////////////////////////////////
-	//	//    #iterations =  (up-low-1)/step   if <  N
-	//	//    #iterations =  (up-low)/step     if <= N
-
-	//	core::arithmetic::Formula low = core::arithmetic::toFormula(initValue);
-	//	core::arithmetic::Formula up = core::arithmetic::toFormula(endValue);
-	//	core::arithmetic::Formula range = (up - low);
-	//	core::arithmetic::Formula step = core::arithmetic::toFormula(stepExpr);
-	//	core::arithmetic::Formula n = range;
-	//	if (!loopToBounduary)  n = (n + -1);
-	//	n =  (n / step.getTerms()[0]) +1;
-
-	//	normalizedIterations = core::arithmetic::toIR(convFact.getNodeManager(), n);
-	//	normalizedIterations = frontend::utils::castScalar(inductionVar->getType(), normalizedIterations);
-	//	/////////////////////////////////////////////////////////////
-	//	//    iteration = (it* step)+init
-	//	
-	//	core::arithmetic::Formula v   = core::arithmetic::Formula(inductionVar);
-	//	core::arithmetic::Formula it  = (v * step) + low;
-	//	normalizedInductionExpr = core::arithmetic::toIR(convFact.getNodeManager(),it);
-
-	//	////////////////////////////////////////////////////////////
-	//	//   final value of the iteration variable: if not declared in the loop
-	//	//	( #iterations * step) + init
-	//	
-	//	if(restoreValue){
-	//		core::arithmetic::Formula postValue = (n * step) + low;
-	//		core::StatementPtr assign = convFact.getIRBuilder().assign(originalInductionExpr.as<core::CallExprPtr>()[0], 
-	//																   core::arithmetic::toIR(convFact.getNodeManager(), postValue));
-	//		postStmts.push_back(assign);
-	//	}
-
-	//}catch(const std::exception& error){
-		
-		// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
-		const core::IRBuilder& builder = convFact.getIRBuilder();
-		if (frontend::utils::isRefArray(inductionVar->getType())){
-			
+	// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
+	const core::IRBuilder& builder = convFact.getIRBuilder();
+	if (frontend::utils::isRefArray(inductionVar->getType())
+			|| frontend::utils::isRefArray(endValue->getType())
+			|| frontend::utils::isRefArray(initValue->getType())) {
 		throw LoopNormalizationError(" pointer for loop not supported yet!"); 
-			//// build the thing for pointers
-			//inductionVar =  convFact.getIRBuilder().variable(builder.getLangBasic().getUInt8());
-			//core::ExpressionPtr distance = builder.callExpr (builder.getLangBasic().getUInt8(), 
-			//												 builder.getLangBasic().getArrayRefDistance(), endValue, initValue);
-			//normalizedIterations = insertCeilFunc(builder.div(frontend::utils::castScalar(builder.getLangBasic().getReal8(),distance),
-			//												  frontend::utils::castScalar(builder.getLangBasic().getReal8(), stepExpr)), 
-			//									  builder.getLangBasic().getUInt8());
-			//if (loopToBounduary) normalizedIterations = builder.add(normalizedIterations, builder.literal("1", builder.getLangBasic().getUInt8()));
+	}
+	else{
+		auto one =  builder.literal("1", inductionVar->getType());
 
-			//normalizedInductionExpr =  builder.callExpr(builder.getLangBasic().getArrayView(), initValue,
-			//												  frontend::utils::castScalar(builder.getLangBasic().getInt8(), 
-			//													  						  builder.mul(stepExpr, inductionVar) ));
-			//if(restoreValue){
-			//	core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
-			//												builder.callExpr(builder.getLangBasic().getArrayView(), 
-			//																initValue,
-			//																frontend::utils::castScalar(builder.getLangBasic().getInt8(), 
-			//																						   normalizedIterations)));
-			//	postStmts.push_back(assign);
-			//}
-		}
-		else{
-			auto one =  builder.literal("1", inductionVar->getType());
-			core::ExpressionPtr tmp;
-			endValue = frontend::utils::castScalar(inductionVar->getType(), endValue);
-			if (whileLessThan) {  
-				tmp= builder.sub(endValue, initValue);
-				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
-			}
-			else{
-				tmp= builder.sub(initValue, endValue);
-				if (!loopToBounduary)  tmp = builder.sub(tmp, one);
-			}
-
-			// assure right typing
-			assert(initValue->getType() == endValue->getType());
-			assert(inductionVar->getType() == endValue->getType());
-
-			// we create a variable for the range (needs to be a var because we can not divide the whole arithmetic eq , we have no way to parenthesise the
-			// upper term)
-			core::VariablePtr range = builder.variable( inductionVar->getType());
-			auto rangeVarDecl = builder.declarationStmt(range, tmp);
-			preStmts.push_back(rangeVarDecl);
-
-			normalizedIterations = builder.add(builder.div(range, absFunc(stepExpr, range->getType())), one);
-
-			normalizedInductionExpr = builder.mul(frontend::utils::castScalar(stepExpr->getType(),inductionVar), stepExpr);
-			normalizedInductionExpr = builder.add (frontend::utils::castScalar(initValue->getType(), normalizedInductionExpr), initValue);
-
-			// if the variable is declared outside, we must give it a final value afer all iterations
-			if(restoreValue){
-				core::StatementPtr assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], 
-															builder.add(builder.mul(normalizedIterations, stepExpr), initValue));
-				// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
-				// update this variable so the inner loop side effects have access to it
-				postStmts.push_back(assign);  
-				if ( initValue != originalInductionExpr){
-					assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
-					firstStmts.push_back(assign);
+		// if we need to invert the loop and the variable type was an unsigned, change to signed
+		if(invertComparisonOp) {
+			using namespace insieme::core;
+			NodeManager& mgr = convFact.getNodeManager();
+			TypePtr currentType = inductionVar->getType();
+			if(mgr.getLangBasic().isUnsignedInt(currentType)) {
+				TypePtr newType = builder.genericType("int", TypeList(), toVector(currentType.as<insieme::core::GenericTypePtr>().getIntTypeParameter()->getElement(0)));
+				TypePtr commonType = types::getSmallestCommonSuperType(newType, currentType);
+				inductionVar = convFact.getIRBuilder().variable(commonType, inductionVar->getId());
+				// if we change the type of the var, we also need to change the type of the literal to make the semantic checker happy
+				if(initValue.isa<LiteralPtr>()) {
+					LiteralPtr literal = initValue.as<LiteralPtr>();
+					int value = literal->getValueAs<int>();
+					initValue = convFact.getIRBuilder().intLit(value);
 				}
 			}
 		}
-//	}
+
+		endValue = frontend::utils::castScalar(inductionVar->getType(), endValue);
+
+		newInductionExpr = inductionVar.as<insieme::core::ExpressionPtr>();  // philgs uncomment
+
+		// if the variable is declared outside, we must give it a final value after all iterations
+		if(restoreValue) {
+			core::ExpressionPtr tmpEndValue;
+			if(loopToBoundary) {
+				if(invertComparisonOp)
+					tmpEndValue = builder.sub(endValue, one);
+				else
+					tmpEndValue = builder.add(endValue, one);
+			} else
+				tmpEndValue = endValue;
+
+			core::StatementPtr assign = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], tmpEndValue);
+			// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
+			// update this variable so the inner loop side effects have access to it
+			postStmts.push_back(assign);
+			if ( initValue != originalInductionExpr) {
+				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
+				firstStmts.push_back(assign);
+			}
+		}
+
+		// if the comparison operator was not < or <=, we need to invert to comply with IR loops that have an implicit <
+		if(invertComparisonOp) {
+			newInductionExpr = convFact.getIRBuilder().invertSign(newInductionExpr);
+			stepExpr = convFact.getIRBuilder().invertSign( stepExpr);
+			initValue = convFact.getIRBuilder().invertSign( initValue );
+			endValue = convFact.getIRBuilder().invertSign( endValue );
+		}
+
+		// if the loop iterations include the boundary case, extend range + 1 to comply with IR loops
+		if(loopToBoundary)
+			endValue = convFact.getIRBuilder().add(endValue, convFact.getIRBuilder().literal("1", inductionVar->getType()));
+	}
 }
 
 // to identify the induction variable, we cross the expressions in the increment with the expressions in the condition
@@ -269,7 +212,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 //
 void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 
-	// convert to IR everithing in condition and increment
+	// convert to IR everything in condition and increment
 	core::ExpressionPtr condition = convFact.convertExpr (forStmt->getCond());
 	core::ExpressionPtr incrementExpr;
 
@@ -306,14 +249,14 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 		core::visitDepthFirstOnce(right, [&isRight,&value] (const core::ExpressionPtr& expr){ if (expr == value) isRight = true; });
 
 		if (isLeft){
-			// left is the induction expression, right is the up bounduary
+			// left is the induction expression, right is the up boundary
 			originalInductionExpr = left;
 			endValue = right;
 			conditionLeft = true; 
 		}
 		else{
 			if (!isRight) throw LoopNormalizationError("induction variable could not be identified");
-			// right is the induction expression, left is the up bounduary
+			// right is the induction expression, left is the up boundary
 			originalInductionExpr = right;
 			endValue = left;
 			conditionLeft = false; 
@@ -341,7 +284,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 		initValue = originalInductionExpr;
 	}
 	else{
-		// could be a declaration or could be an assigment
+		// could be a declaration or could be an assignment
 		core::StatementPtr initIR = convFact.convertStmt(initStmt);
 		InitializationCollector collector(incrementExpr);
 		visitDepthFirstPrunable(core::NodeAddress (initIR), collector);
@@ -360,8 +303,10 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 
 	// a normalized loop always steps +1
 	// special case for arrays, since we iterate with an scalar, we generate a ponter wide iteration var (UINT 8)
-	if (!frontend::utils::isRefArray(inductionVar->getType())) incrExpr = convFact.getIRBuilder().literal("1", originalInductionExpr->getType());
-	else incrExpr = convFact.getIRBuilder().literal("1", convFact.getIRBuilder().getLangBasic().getUInt8());
+	if (!frontend::utils::isRefArray(inductionVar->getType()))
+		incrExpr = convFact.getIRBuilder().literal("1", originalInductionExpr->getType());
+	else
+		incrExpr = convFact.getIRBuilder().literal("1", convFact.getIRBuilder().getLangBasic().getUInt8());
 
 	// but what is the real step??
 	if( const UnaryOperator* unOp = dyn_cast<const UnaryOperator>(forStmt->getInc()) ) {
@@ -369,12 +314,10 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case UO_PreInc:
 		case UO_PostInc:
 			stepExpr =  incrExpr;
-			direction = LOOP_UP;
 			return;
 		case UO_PreDec:
 		case UO_PostDec:
 			stepExpr = convFact.getIRBuilder().invertSign( incrExpr );
-			direction = LOOP_DOWN;
 			return;
 		default:
 			LoopNormalizationError("UnaryOperator different from post/pre inc/dec (++/--) not supported in loop increment expression");
@@ -387,7 +330,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case BO_AddAssign:
 			stepExpr = tmpStep;
 			return;
-		case BO_SubAssign: 
+		case BO_SubAssign:
 			stepExpr = convFact.getIRBuilder().invertSign( tmpStep);
 			return;
 		default:
@@ -405,32 +348,37 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	if (!cond)
 		throw LoopNormalizationError("no condition -> no loop");
 
-	// we know the up bonduary from the induction expression lookup, now we just need to determine whenever to stop at bounduary or before
+	// we know the up bonduary from the induction expression lookup, now we just need to determine whenever to stop at boundary or before
 	// if comparator is ( it < N ) whileLessThan should be true already (because of left side) we invert it if no
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
+
+		invertComparisonOp = false;
+
 		switch(binOp->getOpcode()) {
 		case BO_LT:
 			whileLessThan = conditionLeft;
-			loopToBounduary = false;
+			loopToBoundary = false;
 			break;
 		case BO_GT:
 			whileLessThan = !conditionLeft;
-			loopToBounduary = false;
+			loopToBoundary = false;
+			invertComparisonOp = true;
 			break;
 		case BO_NE:
 			whileLessThan = true;
-			loopToBounduary = false;
+			loopToBoundary = false;
 			break;
 		case BO_GE:
 			whileLessThan = !conditionLeft;
-			loopToBounduary = true;
+			loopToBoundary = true;
+			invertComparisonOp = true;
 			break;
 		case BO_LE:
 			whileLessThan = conditionLeft;
-			loopToBounduary = true;
+			loopToBoundary = true;
 			break;
 		case BO_EQ:
-			loopToBounduary = true;
+			loopToBoundary = true;
 			whileLessThan = true;
 			break;
 
@@ -451,34 +399,32 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementPtr& body) const{
 	auto& mgr(body->getNodeManager());
 
-	// if any of condition variables is not read only, we can not waranty the condition of the loop
+	// if any of condition variables is not read only, we can not guarantee the condition of the loop
 	for(auto c : conditionVars ) {
 		if(!core::analysis::isReadOnly(body, c))  throw analysis::LoopNormalizationError("Variable in condition expr is not readOnly");
 	}
 
-	// if the iteration variable is modified during loop body, we can not waranty for loop number of iterations (not static bounds)
+	// if the iteration variable is modified during loop body, we can not guarantee for loop number of iterations (not static bounds)
 	core::VariableList vars;
 	visitDepthFirst(originalInductionExpr, [this, &vars] (const core::VariablePtr& var){ vars.push_back(var);});
 	for(auto c : vars ) {
 		if(!core::analysis::isReadOnly(body, c))  throw analysis::LoopNormalizationError("Induction variable is not preserved during loop");
 	}
 
-	// substite the induction expression by the induction var 
-	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, normalizedInductionExpr, true);
+	// substitute the induction expression by the induction var
+	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, newInductionExpr, true);
 
 	// allrighty... green light, append extra code that might be needed and we are done
-	// reproduce first and last stmts (like assign value if not loop local)
+	// reproduce first stmts (like assign value if not loop local)
 	core::StatementList tmp;
 	tmp.insert(tmp.end(), firstStmts.begin(), firstStmts.end());
 	tmp.push_back(newBody);
-	tmp.insert(tmp.end(), lastStmts.begin(), lastStmts.end());
 	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
-	
-	// normalized loop iterates from 0
-	core::ExpressionPtr zero = convFact.getIRBuilder().literal("0", inductionVar->getType());
-	return convFact.getIRBuilder().forStmt(inductionVar, zero, normalizedIterations, incrExpr, finalBody);
+
+	return convFact.getIRBuilder().forStmt(inductionVar, initValue, endValue, stepExpr, finalBody);
 }
 
 } // End analysis namespace
 } // End froentend namespace
 } // End insieme namespace
+

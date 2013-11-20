@@ -46,6 +46,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/unused.h"
+#include "insieme/utils/assert.h"
 
 #include <stack>
 
@@ -152,8 +153,11 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 	case core::NT_RecType:
 		type = core::static_pointer_cast<const core::RecType>( subTy );
 		break;
+	case core::NT_GenericType:
+		type = core::static_pointer_cast<const core::GenericType>( subTy );
+		break;
 	default:
-		assert(false && "Type for member access expression not handled");
+		assert_fail() << "Type for member access expression not handled: " << subTy->getNodeType();
 	}
 }
 

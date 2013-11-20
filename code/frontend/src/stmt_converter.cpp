@@ -40,7 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
@@ -274,7 +274,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
 
 		core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
-		assert(forIr && "Created for statement is not valid");
+		frontend_assert(forIr && "Created for statement is not valid");
 
 		// add annotations
 		attatchDatarangeAnnotation(forIr, forStmt, convFact);
@@ -297,7 +297,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		}
 
 		if( clang::VarDecl* condVarDecl = forStmt->getConditionVariable() ) {
-			assert(forStmt->getCond() == NULL &&
+			frontend_assert(forStmt->getCond() == NULL &&
 					"ForLoop condition cannot be a variable declaration and an expression");
 			/*
 			 * the for loop has a variable declared in the condition part, e.g.
@@ -312,7 +312,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 			core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);// restore the init value
 
-			assert(false && "ForStmt with a declaration of a condition variable not supported");
+			frontend_assert(false && "ForStmt with a declaration of a condition variable not supported");
 			retStmt.push_back( declStmt );
 		}
 
@@ -396,7 +396,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 	LOG_STMT_CONVERSION(ifStmt, retStmt );
 
 	core::StatementPtr thenBody = stmtutils::tryAggregateStmts( builder, Visit( ifStmt->getThen() ) );
-	assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
+	frontend_assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
 	core::ExpressionPtr condExpr;
 	if ( const clang::VarDecl* condVarDecl = ifStmt->getConditionVariable()) {
@@ -415,11 +415,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
 
-		assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
+		frontend_assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
 	}
 
 	const clang::Expr* cond = ifStmt->getCond();
-	assert( cond && "If statement with no condition." );
+	frontend_assert( cond && "If statement with no condition." );
 
 	condExpr = convFact.convertExpr(cond);
 
@@ -430,7 +430,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 		condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
 	}
 
-	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
+	frontend_assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
 
 	if (!gen.isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
@@ -442,7 +442,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 	if ( Stmt* elseStmt = ifStmt->getElse()) {
 		elseBody = stmtutils::tryAggregateStmts(builder, Visit(elseStmt));
 	}
-	assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
+	frontend_assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
 
 	// adding the ifstmt to the list of returned stmts
 	retStmt.push_back(builder.ifStmt(condExpr, thenBody, elseBody));
@@ -465,11 +465,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitWhileStmt(clang::WhileStmt
 	LOG_STMT_CONVERSION(whileStmt, retStmt);
 
 	core::StatementPtr body = tryAggregateStmts( builder, Visit( whileStmt->getBody() ) );
-	assert(body && "Couldn't convert body of the WhileStmt");
+	frontend_assert(body && "Couldn't convert body of the WhileStmt");
 
 	core::ExpressionPtr condExpr;
 	if ( clang::VarDecl* condVarDecl = whileStmt->getConditionVariable()) {
-		assert(	!whileStmt->getCond() &&
+		frontend_assert(	!whileStmt->getCond() &&
 				"WhileStmt condition cannot contains both a variable declaration and an expression"
 			);
 
@@ -492,10 +492,10 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitWhileStmt(clang::WhileStmt
 
 		retStmt.push_back(declStmt);
 		// the expression will be an a = expr
-		assert( false && "WhileStmt with a declaration of a condition variable not supported");
+		frontend_assert( false && "WhileStmt with a declaration of a condition variable not supported");
 	} else {
 		const clang::Expr* cond = whileStmt->getCond();
-		assert( cond && "WhileStmt with no condition.");
+		frontend_assert( cond && "WhileStmt with no condition.");
 
 		condExpr = convFact.convertExpr(cond);
 
@@ -507,7 +507,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitWhileStmt(clang::WhileStmt
 		}
 	}
 
-	assert( condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
+	frontend_assert( condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 
 	if (!gen.isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
@@ -531,15 +531,15 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDoStmt(clang::DoStmt* doSt
 	LOG_STMT_CONVERSION(doStmt, retStmt);
 
 	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit( doStmt->getBody() ) ) );
-	assert(body && "Couldn't convert body of the WhileStmt");
+	frontend_assert(body && "Couldn't convert body of the WhileStmt");
 
 	const clang::Expr* cond = doStmt->getCond();
-	assert(cond && "DoStmt must have a condition.");
+	frontend_assert(cond && "DoStmt must have a condition.");
 
 	core::ExpressionPtr condExpr = convFact.convertExpr(cond);
-	assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
+	frontend_assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
 
-	assert(!core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign()) &&
+	frontend_assert(!core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign()) &&
 			"Assignment not allowd in condition expression");
 
 	if (!gen.isBool(condExpr->getType())) {
@@ -580,20 +580,20 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	core::ExpressionPtr condExpr;
 
 	if ( const clang::VarDecl* condVarDecl = switchStmt->getConditionVariable()) {
-		assert(	!switchStmt->getCond() &&
+		frontend_assert(	!switchStmt->getCond() &&
 				"SwitchStmt condition cannot contains both a variable declaration and an expression");
 
 		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
 
-		assert(declStmt.isa<core::DeclarationStmtPtr>() &&
+		frontend_assert(declStmt.isa<core::DeclarationStmtPtr>() &&
 				" declaring a static variable in a switch condition??? you must have a very good reason to do this!!!");
 
 		// the expression will be a reference to the declared variable
 		condExpr = declStmt.as<core::DeclarationStmtPtr>()->getVariable();
 	} else {
 		const clang::Expr* cond = switchStmt->getCond();
-		assert(cond && "SwitchStmt with no condition.");
+		frontend_assert(cond && "SwitchStmt with no condition.");
 		condExpr = convFact.tryDeref(convFact.convertExpr(cond));
 
 		// we create a variable to store the value of the condition for this switch
@@ -606,7 +606,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		condExpr = condVar;
 	}
 
-	assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
+	frontend_assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
 	std::map <core::LiteralPtr, std::vector<core::StatementPtr> > caseMap;
 	std::vector <core::LiteralPtr> openCases;
@@ -622,7 +622,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// converts to literal the cases,
 	auto convertCase = [this, defLit] (const clang::SwitchCase* switchCase) -> core::LiteralPtr{
 
-		assert(switchCase);
+		frontend_assert(switchCase);
 		if (llvm::isa<clang::DefaultStmt>(switchCase) ){
 			return defLit;
 		}
@@ -684,7 +684,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 	// iterate throw statements inside of switch
 	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
-	assert( compStmt && "Switch statements doesn't contain a compound stmt");
+	frontend_assert( compStmt && "Switch statements doesn't contain a compound stmt");
 	vector<core::StatementPtr> decls;
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* currStmt = *it;
@@ -747,7 +747,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
  * visitor is not called on his subnodes
  */
 stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchCase(clang::SwitchCase* caseStmt) {
-	assert(false && "Visitor is visiting a 'case' stmt");
+	frontend_assert(false && "Visitor is visiting a 'case' stmt");
 	return stmtutils::StmtWrapper();
 }
 
@@ -837,7 +837,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitLabelStmt(clang::LabelStmt
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::StmtConverter::VisitAsmStmt(clang::AsmStmt* asmStmt) {
 	//two subclasses - gccasmstmt/msasmstmt
-	assert(false && "currently not implemented");
+	frontend_assert(false && "currently not implemented");
 	return stmtutils::StmtWrapper();
 }
 
@@ -846,7 +846,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitAsmStmt(clang::AsmStmt* as
 //							  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-	assert(false && "this code looks malform and no used");
+	frontend_assert(false && "this code looks malform and no used");
 	std::for_each(stmt->child_begin(), stmt->child_end(), [ this ] (clang::Stmt* stmt) {
 			this->Visit(stmt);
 	});
@@ -866,15 +866,19 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "C";
 
-    //iterate clang handler list and check if a handler wants to convert the stmt
+    //iterate frontend plugin list and check if a plugin wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retStmt = plugin->Visit(stmt, convFact);
 		if(retStmt.size())
 			break;
 	}
-    if(retStmt.size()==0)
+    if(retStmt.size()==0){
+		convFact.trackSourceLocation(stmt->getLocStart());
         retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+		convFact.untrackSourceLocation();
+	}
+
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
@@ -891,10 +895,15 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 
 		// Deal with omp pragmas
 		if ( irStmt->getAnnotations().empty() )
-			return omp::attachOmpAnnotation(irStmt, stmt, convFact);
-
-		return stmtutils::StmtWrapper(irStmt);
+			retStmt = omp::attachOmpAnnotation(irStmt, stmt, convFact);
+        else
+            retStmt = stmtutils::StmtWrapper(irStmt);
 	}
+
+    // call frontend plugin post visitors
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    }
 	return retStmt;
 }
 

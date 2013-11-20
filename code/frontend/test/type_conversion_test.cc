@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -89,9 +89,9 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Char
 	CHECK_BUILTIN_TYPE(SChar, "char");
 	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "wchar16");
+	CHECK_BUILTIN_TYPE(Char16, "wchar<16>");
 	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "wchar32");
+	CHECK_BUILTIN_TYPE(Char32, "wchar<32>");
 	// WChar
 	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
 
@@ -106,10 +106,10 @@ TEST(TypeConversion, HandleBuildinType) {
 
 	// ULong
 	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
-	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
+	CHECK_BUILTIN_TYPE(ULongLong, "struct<longlong_val:uint<8>>");
 
 	CHECK_BUILTIN_TYPE(Long, "int<8>");
-	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
+	CHECK_BUILTIN_TYPE(LongLong, "struct<longlong_val:int<8>>");
 
 	// UInt128
 	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");

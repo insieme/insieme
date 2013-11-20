@@ -48,6 +48,8 @@ namespace clang {
     class Stmt;
     class Decl;
     class Type;
+    class FunctionDecl;
+    class ValueDecl;
 }
 
 namespace stmtutils {
@@ -68,28 +70,44 @@ namespace conversion {
 namespace extensions {
 
     /**
-     *  This class is the base class for user provided clang stage plugins
-     *  It basically consists of three visitor methods. The user can implement one
-     *  or more of the methods to provide a visitor for clang types,
-     *  expression or statements.
+     *  This class is the base class for user provided frontend plugins
+     *  It basically consists of four stages. The pre clang stage contains
+     *  three methods that are called by the insieme frontend to receive
+     *  user provided macros, injected headers and headers that should be
+     *  kidnapped. The clang stage provides visitors for statement, expressions,
+     *  types or declarations. Post clang stage is used to modify the program or
+     *  translation unit after the conversion is done. Pragmas can be registered
+     *  to support user provided pragma handling.
      */
 	class FrontendPlugin {
     protected:
         typedef std::map<std::string,std::string> macroMap;
-        macroMap macros;
         typedef std::vector<std::string> headerVec;
+        macroMap macros;
         headerVec injectedHeaders;
         headerVec kidnappedHeaders;
 
 	public:
-		virtual ~FrontendPlugin(){}
-		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+        virtual ~FrontendPlugin(){}
+        // ############ PRE CLANG STAGE ############ //
+        const macroMap& getMacroList() const;
+        const headerVec& getInjectedHeaderList() const;
+        const headerVec& getKidnappedHeaderList() const;
+        // ############ CLANG STAGE ############ //
+        virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
-		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
-		virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
-		const macroMap& getMacroList() const;
-		const headerVec& getInjectedHeaderList() const;
-		const headerVec& getKidnappedHeaderList() const;
+        virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
+        virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+
+        virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                                       insieme::frontend::conversion::Converter& convFact);
+        virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+                                                 insieme::frontend::conversion::Converter& convFact);
+        virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+                                                 insieme::frontend::conversion::Converter& convFact);
+        virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+
+        // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 	};

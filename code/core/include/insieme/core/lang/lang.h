@@ -41,7 +41,7 @@
  */
 
 #include <string>
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
@@ -75,8 +75,17 @@ namespace lang {
 	 *
 	 * @param node the node to be marked as being derived
 	 * @param name the name of the the derived construct
+	 * @return the handed in node
 	 */
-	void markAsDerived(const NodePtr& node, const string& name);
+	NodePtr markAsDerived(const NodePtr& node, const string& name);
+
+	/**
+	 * A generic version of the function above.
+	 */
+	template<typename T>
+	Pointer<T> markAsDerived(const Pointer<T>& node, const string& name) {
+		return markAsDerived(NodePtr(node), name).as<Pointer<T>>();
+	}
 
 } // end namespace lang
 } // end namespace core

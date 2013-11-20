@@ -198,6 +198,34 @@ star node::operator*() const { return star(*this); }
 choice node::operator|(node const& n) const { return choice(*this, n); }
 option node::operator!() const { return option(*this); }
 
+std::ostream& node::printTo(std::ostream& out) const {
+	return out << "node";
+}
+
+std::ostream& star::printTo(std::ostream& out) const {
+	return out << "star(" << *getNode() << ")";
+}
+
+std::ostream& concat::printTo(std::ostream& out) const {
+	return out << "(" << *first << ", " << *second << ")";
+}
+
+std::ostream& option::printTo(std::ostream& out) const {
+	return out << "option(" << *getNode() << ")";
+}
+
+template<clang::tok::TokenKind T>
+std::ostream& Tok<T>::printTo(std::ostream& out) const {
+	if(tok.empty())
+		return out << clang::tok::getTokenName(T);
+	else
+		return out << "Tok(" << clang::tok::getTokenName(T) << ": " << tok << ")";
+}
+
+std::ostream& kwd::printTo(std::ostream& out) const {
+	return out << "kwd(" << kw << ")";
+}
+
 bool concat::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
@@ -271,7 +299,7 @@ bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStac
 
 bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	clang::Token& token = ParserProxy::get().ConsumeToken();
-	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
+	if (token.getIdentifierInfo() && token.getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())
 			mmap[kw];
 		else if(isAddToMap())

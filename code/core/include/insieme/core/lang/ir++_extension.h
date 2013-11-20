@@ -251,11 +251,63 @@ namespace lang {
 			"('a)->struct { ref<std::type_info>  _const_cpp_ref; }"
 		);
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//	member pointer (only for data member pointers)
+		
+		/**
+		 * the access is done by narrowing the given object to the defined element
+		 */
+		LANG_EXT_DERIVED(MemberPointerCtor, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; } in "
+											  "(type<'a> classTy, identifier id, type<'b> ty) -> memb_ptr { "
+											  " return (memb_ptr) { classTy, id, ty };"
+											  "}");
+
+		/**
+		 * the access is done by narrowing the given object to the defined element
+		 */
+		LANG_EXT_DERIVED(MemberPointerAccess, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; } in "
+											  "(ref<'a> obj, memb_ptr m) -> ref<'b> { "
+											  " return ref.narrow(obj, dp.member(dp.root, m.id), m.membType );"
+											  "}");
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
-	//	C++11 extensions
+	//   long long
 
+		/**
+		 * cast from long to long long
+		 */
+		LANG_EXT_DERIVED(LongToLongLong,
+				"let longlong = struct { int<8> longlong_val } in "
+				"(int<8> x)->longlong { return (longlong) { x }; }"
+		);
+		LANG_EXT_DERIVED(ULongToULongLong,
+				"let longlong = struct { uint<8> longlong_val } in "
+				"(uint<8> x)->longlong { return (longlong) { x }; }"
+		);
+
+		/**
+		 * cast from long long to long
+		 */
+		LANG_EXT_DERIVED(LongLongToLong,
+				"let longlong = struct { int<8> longlong_val } in "
+				"(longlong x)->int<8> { return x.longlong_val; }"
+		);
+		LANG_EXT_DERIVED(ULongLongToULong,
+				"let longlong = struct { uint<8> longlong_val } in "
+				"(longlong x)->uint<8> { return x.longlong_val; }"
+		);
+		LANG_EXT_DERIVED(ULongLongToLongLong,
+				"let longlong  = struct { int<8>  longlong_val } in "
+				"let ulonglong = struct { uint<8> longlong_val } in "
+				"(ulonglong x)->longlong { return (longlong) { (int<8>) x.longlong_val }; }"
+		);
+		LANG_EXT_DERIVED(LongLongToULongLong,
+				"let longlong  = struct { int<8>  longlong_val } in "
+				"let ulonglong = struct { uint<8> longlong_val } in "
+				"(longlong x)->ulonglong { return (ulonglong) { (uint<8>) x.longlong_val }; }"
+		);
 
 
 	}; // extension class

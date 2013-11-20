@@ -57,6 +57,20 @@ namespace checks {
 
 namespace {
 
+	bool isCompleteDataPath(const ExpressionPtr& datapath) {
+		const lang::BasicGenerator& basic = datapath.getNodeManager().getLangBasic();
+
+		// root is a complete path
+		if (basic.isDataPathRoot(datapath)) return true;
+
+		// also, every call to a constructor with proper arguments
+		auto call = datapath.isa<CallExprPtr>();
+		if (!call || !basic.isDataPathPrimitive(call->getFunctionExpr())) return false;
+
+		// the input parameters need to be fixed and input-datapath has to be complete
+		return call[1].isa<LiteralPtr>() && isCompleteDataPath(call[0]);
+	}
+
 	TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
 
 		TypePtr fail;
@@ -1221,6 +1235,9 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 	ExpressionPtr srcArg = callExpr->getArgument(0);
 	ExpressionPtr dpArg  = callExpr->getArgument(1);
 	ExpressionPtr trgArg = callExpr->getArgument(2);
+
+	// check whether path is complete
+	if (!isCompleteDataPath(dpArg)) return res; // nothing to check here
 
 	// check whether src argument is of a reference type
 	auto srcType = analysis::getReferencedType(srcArg->getType());

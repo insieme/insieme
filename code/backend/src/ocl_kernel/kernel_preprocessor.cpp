@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -56,8 +56,8 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
@@ -70,8 +70,8 @@ namespace ocl_kernel {
 
 
 	using namespace insieme::annotations::ocl;
-	namespace irp =  insieme::transform::pattern::irp;
-	namespace tr = insieme::transform::pattern;
+	namespace irp =  insieme::core::pattern::irp;
+	namespace tr = insieme::core::pattern;
     namespace rb = insieme::transform::rulebased;
 	//using namespace insieme::core;
 
@@ -233,10 +233,10 @@ namespace ocl_kernel {
 		bool isGetIDHelper(const core::ExpressionPtr& fun, int value) {
 			core::NodeManager manager;
 			core::IRBuilder builder(manager);
-			insieme::transform::pattern::TreePatternPtr functionID = irp::lambdaExpr(tr::any, aT(tr::any,
+			insieme::core::pattern::TreePatternPtr functionID = irp::lambdaExpr(tr::any, aT(tr::any,
 									  irp::lambda(tr::any, *tr::any, var("body", irp::compoundStmt(*tr::any)))));
 
-			insieme::transform::pattern::TreePatternPtr getThreadID = tr::aT(irp::callExpr(irp::literal("getThreadID"), tr::var("lit") << *tr::any));
+			insieme::core::pattern::TreePatternPtr getThreadID = tr::aT(irp::callExpr(irp::literal("getThreadID"), tr::var("lit") << *tr::any));
 
 			auto&& matchFunctionID = functionID->matchPointer(fun);
 			if (matchFunctionID) {
@@ -549,7 +549,7 @@ namespace {
                 // so we can add then the __global to gl
                 utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varToGlobalize;
                 std::vector<core::VariablePtr> varVec;
-                insieme::transform::pattern::TreePatternPtr declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
+                insieme::core::pattern::TreePatternPtr declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
                 visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
                     auto&& var = decl->getVariable();
                     auto&& init = decl->getInitialization();
@@ -609,7 +609,7 @@ namespace {
 				//std::cout << "Core Before: " << core << std::endl;
 				utils::map::PointerMap<core::NodePtr, core::NodePtr> nodeMap;
 				// TODO: improve pattern
-				insieme::transform::pattern::TreePatternPtr convertPattern = irp::callExpr(tr::any, tr::any,
+				insieme::core::pattern::TreePatternPtr convertPattern = irp::callExpr(tr::any, tr::any,
 					tr::var("expr") << irp::literal(irp::genericType("type", *tr::any, *tr::any), tr::any)); // list 2 arguments
 
 				visitDepthFirst(core, [&](const core::CallExprPtr& call) {

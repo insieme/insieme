@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace frontend {
@@ -87,12 +88,15 @@ namespace tu {
 		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr), isCppCode(false) {}
 
 		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints, bool cppCode)
-			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), isCppCode(isCppCode) {}
+			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), isCppCode(cppCode) { }
 
 		IRTranslationUnit(const IRTranslationUnit& other)
 			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints), isCppCode(other.isCppCode) {}
 
 		// getter:
+		bool isEmpty(){
+			return types.empty() && functions.empty() && globals.empty(); 
+		}
 
 		const TypeMap& getTypes() const {
 			return types;
@@ -155,10 +159,11 @@ namespace tu {
 			assert_eq(*symbol->getType(), *definition->getType());
 			//check if function exists, if it exists we
 			//have to check if they are really the same.
-			//assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
-			if(functions.find(symbol) != functions.end()) {
-                assert(core::analysis::equalNormalize ( definition, functions[symbol] ));
-			}
+			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
+					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
+					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
+					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
+
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
@@ -222,9 +227,7 @@ namespace tu {
 			isCppCode =  flag;
 		}
 
-	protected:
-
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 	};
 

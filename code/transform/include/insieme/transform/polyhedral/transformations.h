@@ -92,7 +92,7 @@ public:
 	LoopInterchange(const parameter::Value& value);
 	LoopInterchange(unsigned src, unsigned dest);
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 	
 	bool operator==(const LoopInterchange& other) const {
 		return srcIdx == other.srcIdx && destIdx == other.destIdx;
@@ -134,7 +134,7 @@ public:
 	LoopStripMining(const parameter::Value& value);
 	LoopStripMining(unsigned idx, unsigned tileSize);
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const LoopStripMining& other) const {
 		return loopIdx == other.loopIdx && tileSize == other.tileSize;
@@ -177,7 +177,7 @@ struct LoopTiling: public Transformation<LoopTiling> {
 	LoopTiling(const parameter::Value& value);
 	LoopTiling(const TileVect& tiles, const LoopIndexVect& idxs = LoopIndexVect());
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const LoopTiling& other) const {
 		return std::equal(tileSizes.begin(), tileSizes.end(), other.tileSizes.begin()) &&
@@ -221,7 +221,7 @@ struct LoopFusion : public Transformation<LoopFusion> {
 	LoopFusion(const parameter::Value& value);
 	LoopFusion(const LoopIndexVect& idxs);
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const LoopFusion& other) const {
 		return loopIdxs.size() == other.loopIdxs.size() && 
@@ -260,7 +260,7 @@ struct LoopFission : public Transformation<LoopFission> {
 	LoopFission(const parameter::Value& value);
 	LoopFission(const StmtIndexVect& idxs);
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const LoopFission& other) const {
 		return stmtIdxs.size() == other.stmtIdxs.size() && 
@@ -301,7 +301,7 @@ struct LoopStamping : public Transformation<LoopStamping> {
 
 	LoopStamping(const unsigned& tileSize, const LoopIndexVect& idx);
 	
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const LoopStamping& other) const {
 		return tileSize == other.tileSize;
@@ -337,7 +337,7 @@ struct LoopReschedule : public Transformation<LoopReschedule> {
    LoopReschedule(const parameter::Value& value);
    LoopReschedule();
 
-   core::NodePtr apply(const core::NodePtr& target) const;
+   core::NodeAddress apply(const core::NodeAddress& target) const;
 
    inline bool operator==(const LoopReschedule& other) const { return true; }
 
@@ -363,7 +363,7 @@ struct LoopParallelize : public Transformation<LoopParallelize> {
    LoopParallelize(const parameter::Value& value);
    LoopParallelize();
 
-   core::NodePtr apply(const core::NodePtr& target) const;
+   core::NodeAddress apply(const core::NodeAddress& target) const;
 
    inline bool operator==(const LoopParallelize& other) const { return true; }
 
@@ -392,7 +392,7 @@ struct RegionStripMining : public Transformation<RegionStripMining> {
 	RegionStripMining(const parameter::Value& value);
 	RegionStripMining(unsigned tileSize);
 
-	core::NodePtr apply(const core::NodePtr& target) const;
+	core::NodeAddress apply(const core::NodeAddress& target) const;
 
 	bool operator==(const RegionStripMining& other) const {
 		return tileSize == other.tileSize;

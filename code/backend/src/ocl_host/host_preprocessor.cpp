@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -57,8 +57,8 @@
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
@@ -68,16 +68,16 @@
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 
-using namespace insieme::transform::pattern;
 using namespace insieme::core;
-namespace irg = insieme::transform::pattern::generator::irg;
+using namespace insieme::core::pattern;
+namespace irg = insieme::core::pattern::generator::irg;
 
 namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-using insieme::transform::pattern::any;
-using insieme::transform::pattern::anyList;
+using insieme::core::pattern::any;
+using insieme::core::pattern::anyList;
 
 	/*
 	 * This struct hold information of how much data has to be copied from/to the devices to run it

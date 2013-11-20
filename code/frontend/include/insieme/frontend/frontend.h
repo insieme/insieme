@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -134,8 +134,8 @@ namespace frontend {
         /**
          *  A map that contains all user plugins
          */
-         typedef std::shared_ptr<extensions::FrontendPlugin> frontendPluginPtr;
-         std::list<frontendPluginPtr> plugins;
+         typedef std::shared_ptr<extensions::FrontendPlugin> FrontendPluginPtr;
+         std::list<FrontendPluginPtr> plugins;
 
 	public:
 
@@ -285,7 +285,7 @@ namespace frontend {
         /**
          *  Return the list of frontend plugins
          */
-        const std::list<frontendPluginPtr> getPlugins() const {
+        const std::list<FrontendPluginPtr> getPlugins() const {
             return plugins;
         };
 	};
@@ -304,6 +304,11 @@ namespace frontend {
 		vector<tu::IRTranslationUnit> libs;
 
 	public:
+
+		/**
+		 * Creates an empty conversion job covering no files.
+		 */
+		ConversionJob() : ConversionSetup(vector<path>()) {}
 
 		/**
 		 * Creates a new conversion job covering a single file.
@@ -365,18 +370,7 @@ namespace frontend {
 		/**
 		 * Determines whether this conversion job is processing a C++ file or not.
 		 */
-		bool isCxx() const {
-			if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
-			if (getStandard() == Standard::C99) return false;
-
-			bool cppFile = any(files, [&](const path& cur) {
-				return static_cast<const ConversionSetup&>(*this).isCxx(cur);
-			});
-
-			bool cppLibs = any(libs, [&](const tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); } );
-
-			return cppFile || cppLibs;
-		}
+		bool isCxx() const;
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.

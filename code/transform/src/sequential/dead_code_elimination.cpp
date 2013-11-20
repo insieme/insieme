@@ -46,7 +46,7 @@ namespace sequential {
 		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
 	}
 
-	core::NodePtr DeadCodeElimination::apply(const core::NodePtr& target) const throw (InvalidTargetException) {
+	core::NodeAddress DeadCodeElimination::apply(const core::NodeAddress& target) const throw (InvalidTargetException) {
 		// do nothing so far
 		return target;
 	}

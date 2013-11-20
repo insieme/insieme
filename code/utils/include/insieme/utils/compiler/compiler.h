@@ -38,6 +38,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <fstream>
 
 #include "insieme/utils/logging.h"
@@ -51,7 +52,34 @@ namespace compiler {
 	// some common abbreviations
 	using std::string;
 	using std::vector;
+	using std::set;
 
+	class ExternalLibraries {
+
+	private:
+
+		set<string> paths;
+
+		set<string> libs;
+
+	public:
+
+		void addPath(const string& path) {
+			paths.insert(path);
+		}
+
+		void addLib(const string& lib) {
+			libs.insert(lib);
+		}
+
+		set<string> getPaths() const {
+			return paths;
+		}
+
+		set<string> getLibs() const {
+			return libs;
+		}
+	};
 
 	class Compiler {
 
@@ -59,11 +87,13 @@ namespace compiler {
 
 		vector<string> flags;
 
+		ExternalLibraries libs;
+
 		bool silent;
 
 	public:
 
-		Compiler(const string& executable) : executable(executable), silent(false) {};
+		Compiler(const string& executable) : executable(executable), libs(), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();
@@ -92,6 +122,11 @@ namespace compiler {
 
 		void addFlag(const string& flag) {
 			flags.push_back(flag);
+		}
+
+		void addExternalLibrary(const string& path, const string& lib) {
+			libs.addPath(path);
+			libs.addLib(lib);
 		}
 
 		string getCommand(const vector<string>& inputFiles, const string& outputFile) const;
@@ -123,14 +158,26 @@ namespace compiler {
 	 * @return true if successful, false otherwise
 	 */
 	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler());
-	
+
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
 	 *
 	 * @param source the source code to be compiled
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 */
-	bool compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+	bool compile(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+
+	/**
+	 * Compiles the given source code using the given compiler and temporary source and target files.
+	 *
+	 * @param source the source code to be compiled
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 */
+	template<typename Printable>
+	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, bool>::type
+	compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compile(toVirtualPrintable(source), compiler);
+	}
 
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
@@ -139,7 +186,20 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return the name of the binary (or empty string if compilation failed)
 	 */
-	string compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+
+	/**
+	 * Compiles the given source code using the given compiler and temporary source and target files.
+	 *
+	 * @param source the source code to be compiled
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 * @return the name of the binary (or empty string if compilation failed)
+	 */
+	template<typename Printable>
+	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, string>::type
+	compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compileToBinary(toVirtualPrintable(source), compiler);
+	}
 
 	/**
 	 * Compiles the given source code using the given compiler to the given target file using a temporary
@@ -150,7 +210,22 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return true if successful, false otherwise
 	 */
-	bool compileToBinary(const Printable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+	bool compileToBinary(const VirtualPrintable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+
+	/**
+	 * Compiles the given source code using the given compiler to the given target file using a temporary
+	 * source file-
+	 *
+	 * @param source the source code to be compiled
+	 * @param target the name of the target file (binary)
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 * @return true if successful, false otherwise
+	 */
+	template<typename Printable>
+	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, bool>::type
+	compileToBinary(const Printable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compileToBinary(toVirtualPrintable(source), target, compiler);
+	}
 
 
 } // end namespace: compiler

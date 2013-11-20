@@ -268,8 +268,8 @@ TEST(ScopRegion, ForStmt3) {
 	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
-	EXPECT_EQ("(v0,v11|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v11 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v52|v2,v3,v4|1)", toString(iterVec));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v52 + -v3 == 0))", toString(ann.getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -308,8 +308,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v9,v10,v11|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v9 + -v10 + 5 == 0) ^ (v10 + -2 < 0)) ^ (v10 >= 0)) ^ (v0 + -v9 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v9 + -5*v11 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v50,v51,v52|v2|1)",toString(iterVec));
+	EXPECT_EQ("((((((-2*v50 + -v51 + 5 == 0) ^ (v51 + -2 < 0)) ^ (v51 >= 0)) ^ (v0 + -v50 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v50 + -5*v52 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -356,8 +356,8 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v11,v12,v13|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v11 + v12 + v4 == 0) ^ (v12 + -3 < 0)) ^ (v12 >= 0)) ^ (v0 + -v11 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v11 + -5*v13 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v52,v53,v54|v2,v4,v3|1)", toString(iterVec));
+	EXPECT_EQ("((((((-3*v52 + v53 + v4 == 0) ^ (v53 + -3 < 0)) ^ (v53 >= 0)) ^ (v0 + -v52 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v52 + -5*v54 == 0))", toString(ann.getDomainConstraints()));
 }
 
 /*
@@ -477,7 +477,7 @@ TEST(ScopRegion, ForStmtToIR) {
 	NodePtr res = scop->toIR(mgr);
 	res = analysis::normalize(res);
 	EXPECT_EQ("for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-				"vector.ref.elem(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
 			  "}", 
 			  toString(*res)
 			 );
@@ -514,7 +514,7 @@ TEST(ScopRegion, ForStmtToIR2) {
 		"{"
 			"ref.assign(v3, 0); "
 			"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-				"vector.ref.elem(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
 			"};"
 		"}", toString(*res));
 
@@ -550,7 +550,7 @@ TEST(ScopRegion, IfStmtSelect) {
 	NodeManager mgr1;
 	NodePtr res = scop->toIR(mgr1);
 	EXPECT_EQ(
-		"{ref.assign(v4, 0); if(bool.and(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(bool.and(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+		"{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -589,7 +589,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
-	EXPECT_EQ("{ref.assign(v4, 0); if(bool.and(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+	EXPECT_EQ("{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -627,7 +627,7 @@ TEST(ScopRegion, ForStmtToIR3) {
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
 
-	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v1 = 1 .. int.add(cloog.floor(int.add(cast<int<4>>(v2), cast<int<4>>(-3)), 3), 1) : 1) {vector.ref.elem(v1, cast<uint<8>>(int.add(v1, v3)));};} else {}", toString(*res));
+	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v1 = 1 .. int.add(cloog.floor(int.add(cast<int<4>>(v2), cast<int<4>>(-3)), 3), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v1, v3)));};} else {}", toString(*res));
 	
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -799,7 +799,7 @@ TEST(ScopRegion, ForStmtToIR4) {
 	NodePtr res = scop->toIR(mgr);
 	// normalize varnames
 	res = analysis::normalize(res);
-	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. int.add(49, 1) : 1) {ref.assign(v0, ref.deref(v4)); vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));};}", toString(*res));
+	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. int.add(49, 1) : 1) {ref.assign(v0, ref.deref(v4)); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));};}", toString(*res));
 
 }
 

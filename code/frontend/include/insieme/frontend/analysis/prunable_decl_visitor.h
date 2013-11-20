@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -30,11 +29,10 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
 
 namespace insieme{
 namespace frontend{
@@ -120,18 +118,16 @@ class PrunableDeclVisitor{
 	 * for debug purposes
 	 */
 	void echocallback(const clang::Decl* decl){
+		//	std::cout << " ==================  " << decl->getDeclKindName() << " ====================== " <<std::endl;
+		//	decl->dump();
+		//	std::cout << " =========================================================== " << std::endl;
 	}
 
 	/**
 	 */
 	void dispatchDecl(const clang::Decl* decl){
 		static_cast<BASE*>(this)->echocallback(decl);
-		//check if a user provided decl visitor wants
-		//to do something with the declaration
-		bool wasVisited = false;
-		for(auto plugin : static_cast<BASE*>(this)->getConverter().getConversionSetup().getPlugins()) {
-            wasVisited = plugin->Visit(decl, static_cast<BASE*>(this)->getConverter());
-		}
+		
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{
@@ -140,26 +136,21 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Record:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
-
 					break;
 				}
 			case clang::Decl::CXXRecord:
 				{
 					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
-
 					break;
 				}
 			case clang::Decl::Var:
 				{
 					if (llvm::cast<clang::VarDecl>(decl)->getType().getTypePtr()->isDependentType() && !visitTemplates) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
+                    static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
 			case clang::Decl::CXXDestructor:
@@ -171,38 +162,50 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Function:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
+					const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(decl);
+                    static_cast<BASE*>(this)->VisitFunctionDecl(funcDecl);
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
 			case clang::Decl::Typedef:
 				{
 					if (llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
-					if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
+                    static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
 					break;
 				}
 			case clang::Decl::LinkageSpec:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
+                    static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplate:
 				{
-					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
+					const clang::ClassTemplateDecl* classTmplDecl = llvm::cast<clang::ClassTemplateDecl>(decl);
+					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(classTmplDecl);
+					// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
+					clang::ClassTemplateDecl::spec_iterator spec_it = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_begin ();
+					clang::ClassTemplateDecl::spec_iterator spec_end = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_end ();
+					for (; spec_it != spec_end; ++spec_it){
+						dispatchDecl(*spec_it);
+					}
 					break;
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
-				    if (!wasVisited)
-                        static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
+                    static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;
 				}
 			case clang::Decl::FunctionTemplate:
 				{
-					if (visitTemplates && !wasVisited) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
+					const clang::FunctionTemplateDecl* funcTmplDecl = llvm::cast<clang::FunctionTemplateDecl>(decl);
+					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(funcTmplDecl);
+					// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
+					clang::FunctionTemplateDecl::spec_iterator spec_it = const_cast<clang::FunctionTemplateDecl*> (funcTmplDecl)->spec_begin ();
+					clang::FunctionTemplateDecl::spec_iterator spec_end = const_cast<clang::FunctionTemplateDecl*> (funcTmplDecl)->spec_end ();
+					for (; spec_it != spec_end; ++spec_it){
+						dispatchDecl(*spec_it);
+					}
 					break;
 				}
 
@@ -220,7 +223,7 @@ class PrunableDeclVisitor{
 				break;
 
 			default:
-			//	std::cout << "disp: " << decl->getDeclKindName() << std::endl;
+			//	std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
 				return;
 		}
 	}

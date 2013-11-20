@@ -42,6 +42,10 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
 
+#include "insieme/core/datapath/datapath.h"
+
+#include "insieme/utils/assert.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -90,7 +94,7 @@ namespace analysis {
 		case NT_TypeVariable:
 			return true;			// all this types are always object types
 		case NT_RecType:
-			return isObjectType(type.as<RecTypePtr>()->unroll());
+			return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());
 		default: break;
 		}
 
@@ -175,6 +179,63 @@ namespace analysis {
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
+	// --------------------------- data member pointer -----------------------------------
+	
+	bool isMemberPointer (const TypePtr& type){
+
+		// filter out null-pointer
+		if (!type) return false;
+
+		// must be a struct type
+		StructTypePtr structType = type.isa<StructTypePtr>();
+		if (!structType) return false;
+
+		// has 3 elements
+		if (structType.size() != 3u) return false;
+
+		NamedTypePtr element = structType[0];
+		if ( !isTypeLiteralType(element->getType())) 	return false;
+		if (element->getName().getValue() != "objType") return false;
+
+		element = structType[1];
+		//if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
+		if (element->getName().getValue() != "id") return false;
+
+		element = structType[2];
+		if ( !isTypeLiteralType(element->getType())) 	 return false;
+		if (element->getName().getValue() != "membType") return false;
+
+		return true;
+	}
+
+	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy){
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+		return builder.structType(toVector(
+				builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
+				builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
+				builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))
+		));
+	}
+
+	ExpressionPtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membType){
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired member pointer struct
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCtor();
+		return builder.callExpr(access, toVector<core::ExpressionPtr>(builder.getTypeLiteral(classType), builder.getIdentifierLiteral(fieldName), builder.getTypeLiteral(membType)));
+	}
+
+	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& base, const ExpressionPtr& expr){
+		NodeManager& manager = base.getNodeManager();
+		IRBuilder builder(manager);
+		
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
+		return builder.callExpr(access,  toVector(base, expr));
+	}
+
 	// --------------------------- C++ calls ---------------------------------------------
 
 	bool isConstructorCall(const core::ExpressionPtr& expr){
@@ -217,6 +278,84 @@ namespace analysis {
 		return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
 	}
 
+	// ------------------------------- Long Long ---------------------------------------
+	//
+	bool isLongLong(const TypePtr& type){
+
+		// filter out null-pointer
+		if (!type) return false;
+
+		// must be a struct type
+		StructTypePtr structType = type.isa<StructTypePtr>();
+		if (!structType) return false;
+
+		// only one member
+		if (structType.size() != 1u) return false;
+
+		// check the one member element
+		IRBuilder builder(type->getNodeManager());
+		NamedTypePtr element = structType[0];
+
+		if ((element->getName().getValue() != "longlong_val") &&
+			!(element->getType() == builder.getLangBasic().getInt8() || element->getType() == builder.getLangBasic().getUInt8()))
+			return false;
+
+		return true;
+	}
+	
+	bool isSignedLongLong(const TypePtr& type){
+		assert(isLongLong(type));
+		IRBuilder builder(type->getNodeManager());
+		NamedTypePtr element = type.as<StructTypePtr>()[0];
+		return element->getType() == builder.getLangBasic().getInt8();
+	}
+
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+
+		core::ExpressionPtr cast;
+		if (_signed)
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong();
+		else
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongToULongLong();
+
+		return builder.callExpr(cast, expr);
+	}
+
+	ExpressionPtr castFromLongLong( const ExpressionPtr& expr){
+		assert(isLongLong(expr->getType()));
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		
+		core::ExpressionPtr cast;
+		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
+		if (element->getType() == builder.getLangBasic().getInt8())
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToLong();
+		else if (element->getType() == builder.getLangBasic().getUInt8())
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToULong();
+		else
+			assert(false && "not a long long");
+
+		return builder.callExpr(cast, expr);
+	}
+	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr){
+		assert(isLongLong(expr->getType()));
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		
+		core::ExpressionPtr cast;
+		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
+		if (element->getType() == builder.getLangBasic().getInt8()){
+			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToULongLong();
+		}else if (element->getType() == builder.getLangBasic().getUInt8()){
+			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToLongLong();
+		}else{
+			assert(false && "not a long long");
+		}
+
+		return builder.callExpr(cast, expr);
+	}
 
 } // end namespace analysis
 } // end namespace core

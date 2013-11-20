@@ -106,16 +106,16 @@ namespace printer {
 
 				// test whether for the current call a special format has been registered
 				auto function = call->getFunctionExpr();
-				if (function->getNodeType() == NT_Literal) {
-					auto pos = operatorTable.find(function);
-					if (pos != operatorTable.end()) {
-						if (!outermost) out << "(";
-						pos->second(*this, call);
-						if (!outermost) out << ")";
-						return;
-					}
+				auto pos = operatorTable.find(function);
+				if (pos != operatorTable.end()) {
+					if (!outermost) out << "(";
+					pos->second(*this, call);
+					if (!outermost) out << ")";
+					return;
+				}
 
-					// check whether it is a build in
+				// check whether it is a built-in literal
+				if (function->getNodeType() == NT_Literal) {
 					if (call->getNodeManager().getLangBasic().isBuiltIn(function)) {
 						throw LuaConversionException(call, "Unsupported built-in function!");
 					}

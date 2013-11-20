@@ -36,19 +36,19 @@
 
 #include "insieme/analysis/features/code_feature_catalog.h"
 
-#include "insieme/transform/pattern/ir_generator.h"
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-namespace itpi = insieme::transform::pattern::irp;
+namespace itpi = insieme::core::pattern::irp;
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-using insieme::transform::pattern::any;
+using insieme::core::pattern::any;
 
 	namespace {
 
@@ -273,7 +273,7 @@ using insieme::transform::pattern::any;
 		// add features that count occurrences of certain patterns
 		void addPatternFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 			// create lists of considered operations
-			std::map<string, transform::pattern::TreePatternPtr> patterns;
+			std::map<string, core::pattern::TreePatternPtr> patterns;
 			patterns["function"] = itpi::callExpr(any, *any);
 			// TODO: @Klaus: I had to change this pattern due to added casts - hope this is still OK ...
 			patterns["globalMemoryAccess"] = itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any);
@@ -292,7 +292,7 @@ using insieme::transform::pattern::any;
 
 
 			// create the actual features
-			for_each(patterns, [&](const std::pair<string, transform::pattern::TreePatternPtr>& cur_pattern){
+			for_each(patterns, [&](const std::pair<string, core::pattern::TreePatternPtr>& cur_pattern){
 				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
 
 					string name = format("SCF_NUM_%s_calls_%s",
@@ -312,8 +312,8 @@ using insieme::transform::pattern::any;
 			std::map<string, std::function<simple_feature_value_type(const core::NodePtr)> > lambdas;
 			lambdas["variables"] = [=](core::NodePtr node) { if(node->getNodeType() == core::NT_Variable) return true; return false; };
 			lambdas["pattern"] = [=](core::NodePtr node) {
-				transform::pattern::TreePatternPtr pattern = itpi::callExpr(any, *any);
-				insieme::transform::pattern::MatchOpt&& match = pattern->matchPointer(node);
+				core::pattern::TreePatternPtr pattern = itpi::callExpr(any, *any);
+				insieme::core::pattern::MatchOpt&& match = pattern->matchPointer(node);
 				return !!match;
 			};
 			lambdas["externalFunction"] = [&](core::NodePtr node) {
@@ -330,9 +330,8 @@ using insieme::transform::pattern::any;
 			};
 			lambdas["builtinFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
-					if(const core::LiteralPtr literal = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
-						if(basic.isBuiltIn(literal))
-							return 1;
+					if (basic.isBuiltIn(call->getFunctionExpr())) {
+						return 1;
 					}
 				}
 				return 0;

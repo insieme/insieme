@@ -104,7 +104,7 @@ TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
 			"}\n\n";
 
 	// compile using direct signature
-	EXPECT_TRUE(compile(toPrintable(code)));
+	EXPECT_TRUE(compile(code));
 
 }
 

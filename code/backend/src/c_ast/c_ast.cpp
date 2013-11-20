@@ -224,7 +224,7 @@ namespace c_ast {
 	bool FunctionType::equals(const Node& node) const {
 		assert(dynamic_cast<const FunctionType*>(&node));
 		auto other = static_cast<const FunctionType&>(node);
-		return *returnType == *other.returnType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
+		return *returnType == *other.returnType && *classType == *other.classType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
 	}
 
 	bool VarArgsType::equals(const Node& node) const {
@@ -244,6 +244,11 @@ namespace c_ast {
         return ((name == other.name) && (annotation == other.annotation));
     }
 
+    bool MemberFieldPointer::equals(const Node& node) const {
+        assert(dynamic_cast<const MemberFieldPointer*>(&node));
+        auto other = static_cast<const MemberFieldPointer&>(node);
+        return ((*parentType == *other.parentType) && (*type == *other.type));
+    }
 
 	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
 				: Statement(NT_VarDecl), varInit(initList) {
@@ -414,6 +419,12 @@ namespace c_ast {
 		assert(dynamic_cast<const Parentheses*>(&node));
 		auto other = static_cast<const Parentheses&>(node);
 		return *expression==*other.expression;
+	}
+
+	bool OpaqueExpr::equals(const Node& node) const {
+		assert(dynamic_cast<const OpaqueExpr*>(&node));
+		auto other = static_cast<const OpaqueExpr&>(node);
+		return value==other.value;
 	}
 
 	bool TypeDeclaration::equals(const Node& node) const {

@@ -69,8 +69,9 @@ namespace sequential {
 		/**
 		 * Applies this transformation to the given target node.
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			return foldConstants(target->getNodeManager(), target);
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			auto res = foldConstants(target->getNodeManager(), target);
+			return core::transform::replaceAddress(target->getNodeManager(), target, res);
 		}
 
 		/**

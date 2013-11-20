@@ -843,6 +843,23 @@ namespace parser {
 					}
 			));
 
+			g.addRule("E", rule(
+					seq("type(", T, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding type literal
+						return cur.getTypeLiteral(cur.getTerm(0).as<TypePtr>());
+					}
+			));
+
+			// type parameter literals
+			g.addRule("E", rule(
+					seq("param(", P, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding int-type parameter literal
+						return cur.getIntTypeParamLiteral(cur.getTerm(0).as<IntTypeParamPtr>());
+					}
+			));
+
 			// identifier literals
 			g.addRule("E", rule(
 					seq("lit(", cap(any(Token::String_Literal)), ")"),
@@ -1377,7 +1394,7 @@ namespace parser {
 						if (res && res->getNodeCategory() == NC_Expression) return res;
 						return cur.getSymbolManager().lookup(cur.getSubRange(0)).isa<ExpressionPtr>();
 					},
-					1 // higher priority than other rules
+					2 // higher priority than other rules
 			));
 
 			g.addRule("E", rule(
@@ -1387,7 +1404,7 @@ namespace parser {
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
 						return dynamic_pointer_cast<ExpressionPtr>(res);
 					},
-					1    // higher priority than generic type rule
+					1    // lower priority than variable resolution
 			));
 
 			// -- call expression --
@@ -1482,6 +1499,14 @@ namespace parser {
 					}
 			));
 
+
+			// -- job expressions --
+			g.addRule("E", rule(
+					seq("job", S),
+					[](Context& cur)->NodePtr {
+						return cur.jobExpr(cur.getTerm(0).as<StatementPtr>(), 1);
+					}
+			));
 
 			// -- this-pointer utilities --
 			struct register_this_pointer : public detail::actions {

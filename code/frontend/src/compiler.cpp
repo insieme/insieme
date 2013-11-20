@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -351,7 +351,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	if(config.getStandard() == ConversionSetup::C99) {
 		//set default values for C --
 		//langStandard is defined in include/clang/Frontend/LangStandards.de
-		CompilerInvocation::setLangDefaults(LO, clang::IK_C, clang::LangStandard::lang_c99);
+		CompilerInvocation::setLangDefaults(LO, clang::IK_C, clang::LangStandard::lang_gnu99);
 	}
 
 	if (config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) pimpl->m_isCXX = true;

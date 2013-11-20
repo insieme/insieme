@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -43,6 +43,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/utils/interceptor.h"
+#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/pragma/handler.h"
 
 #include "insieme/core/ir_program.h"
@@ -218,6 +219,13 @@ class Converter :  boost::noncopyable {
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
+	/**
+	 *  keeps track of the last point a source location to the input code could be found
+	 */
+	 const clang::SourceLocation* lastTrackableLocation;
+
+
+     void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
 public:
 
@@ -273,7 +281,19 @@ public:
         return convSetup;
     }
 
-	/**
+    void addToTypeCache(const clang::Type* type, core::TypePtr ptr) {
+        typeCache[type] = ptr;
+    }
+
+    void addToLambdaCache(const clang::FunctionDecl* decl, core::ExpressionPtr ptr) {
+        lambdaExprCache[decl] = ptr;
+    }
+
+    core::ExpressionPtr getLambdaFromCache(const clang::FunctionDecl* decl) {
+        return lambdaExprCache[decl];
+    }
+
+    /**
 	 * Determines the definition of the given generic type pointer within the
 	 * internally maintained IR Translation Unit. If non is present, the given
 	 * type will be returned.
@@ -329,6 +349,12 @@ public:
 		return pragmaMap;
 	}
 
+	/**
+	 * convert type declaration, it triggers the plugins and converts the represented type
+	 * fills the translation unit with this type
+	 * @param typeDecl: the type declaration itself
+	 */
+	void convertTypeDecl(const clang::TypeDecl* decl);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -362,10 +388,18 @@ public:
 	/**
 	 * Converts a function declaration into an IR lambda.
 	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
 	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+
+	/**
+	 * retrieves the symbol asociated with a function without the need of triggering the translation
+	 * of the function. The function itself should be translated by the clang declaration traverser, 
+	 * and stored in the translation unit.
+	 * @param functionDecl the function decl 
+	 */
+	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
+
 
 	/**
 	 * Entry point for converting function to the right type
@@ -488,6 +522,29 @@ public:
 	 * @param loc: the location this warning will be attached to
 	 */
 	void printDiagnosis(const clang::SourceLocation& loc);
+	
+	/**
+	 *  keeps track of the last point a source location to the input code could be found
+	 */
+	void trackSourceLocation (const clang::SourceLocation& sl){
+		lastTrackableLocation = &sl;
+	}
+
+	void untrackSourceLocation (){
+		lastTrackableLocation = nullptr;
+	}
+	
+	/**
+	 *  prints location of the last registered source location
+	 */
+	std::string getLastTrackableLocation() const{
+		if (lastTrackableLocation){
+			return utils::location(*lastTrackableLocation, getSourceManager());
+		}
+		else{
+			return " << unable to identify last input code location >>";
+		}
+	}
 
 };
 

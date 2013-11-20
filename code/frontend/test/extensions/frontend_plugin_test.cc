@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-
 #include <gtest/gtest.h>
 
 #include <sstream>
@@ -60,6 +59,11 @@ using namespace insieme;
 
 bool declVisited = false;
 bool typeVisited = false;
+bool exprVisited = false;
+bool stmtVisited = false;
+bool postTypeVisited = false;
+bool postExprVisited = false;
+bool postStmtVisited = false;
 bool tuVisited = false;
 bool progVisited = false;
 
@@ -75,9 +79,40 @@ public:
         kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
     }
 
+    //TYPE VISITOR
 	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
         typeVisited=true;
         return nullptr;
+	}
+
+    virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+                                             frontend::conversion::Converter& convFact) {
+        postTypeVisited=true;
+        return irType;
+	}
+
+	//EXPR VISITOR
+	virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact) {
+        exprVisited=true;
+        return nullptr;
+	}
+
+    virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                             frontend::conversion::Converter& convFact) {
+        postExprVisited=true;
+        return irExpr;
+	}
+
+	//STMT VISITOR
+    virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+        stmtVisited=true;
+        return stmtutils::StmtWrapper();
+    }
+
+    virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+                                             frontend::conversion::Converter& convFact) {
+        postStmtVisited=true;
+        return irStmt;
 	}
 
 	virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
@@ -96,6 +131,8 @@ public:
 	}
 
 };
+
+
 
 /**
  *  This test checks if the user provided
@@ -121,12 +158,20 @@ TEST(ClangStage, Conversion) {
     insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
 
-    //check if the decl visitor and
-    //the type visitor is visited correctly
 	EXPECT_FALSE(declVisited);
 	EXPECT_FALSE(typeVisited);
+	EXPECT_FALSE(stmtVisited);
+	EXPECT_FALSE(exprVisited);
+	EXPECT_FALSE(postTypeVisited);
+	EXPECT_FALSE(postStmtVisited);
+	EXPECT_FALSE(postExprVisited);
 	auto program = job.execute(mgr);
 	EXPECT_TRUE(typeVisited);
+	EXPECT_TRUE(stmtVisited);
+	EXPECT_TRUE(exprVisited);
+	EXPECT_TRUE(postTypeVisited);
+	EXPECT_TRUE(postStmtVisited);
+	EXPECT_TRUE(postExprVisited);
 	EXPECT_TRUE(declVisited);
 
 }
@@ -205,6 +250,79 @@ TEST(PostClangStage, IRVisit) {
     auto program = job.execute(mgr);
  	EXPECT_TRUE(progVisited);
  	EXPECT_TRUE(tuVisited);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+//    Decls visitor
+
+ 	int varsPre, varsPost;
+	int funcsPre, funsPost;
+	int typesPre, typesPost;
+
+struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
+	virtual bool Visit    (const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
+		//	std::cout << " ########## FUNcT ################## " << std::endl;
+		//	decl->dump();
+		//	std::cout << " ################################### " << std::endl;
+			funcsPre++;
+		}
+		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
+			//std::cout << " ########## VAR ################## " << std::endl;
+			//decl->dump();
+			//std::cout << " ################################### " << std::endl;
+			varsPre++;
+		}
+		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
+	//		std::cout << " ########## TYPE ################## " << std::endl;
+	//		decl->dump();
+	//		std::cout << decl->getDeclKindName() <<std::endl;
+	//		std::cout << " ################################### " << std::endl;
+			typesPre++;
+		}
+		return false;
+	}
+	virtual void PostVisit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
+		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
+			funsPost++;
+		}
+		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
+			varsPost++;
+		}
+		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
+			typesPost++;
+		}
+	}
+};
+
+
+TEST(DeclsStage, MatchVisits) {
+	//initialization
+	insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/decls.cpp");
+	
+	varsPre  = varsPost = 0;
+	funcsPre = funsPost = 0;
+	typesPre = typesPost = 0;
+
+	// register plugin
+    job.registerFrontendPlugin<DeclVistors>();
+
+    //execute job
+    auto program = job.execute(mgr);
+
+//	std::cout << varsPre   <<" , " << varsPost << std::endl;
+//	std::cout << funcsPre  <<" , " << funsPost << std::endl;
+//	std::cout << typesPre  <<" , " << typesPost<< std::endl;
+
+	EXPECT_EQ (10, varsPre);  
+	EXPECT_EQ (18, funcsPre);   // this is weird, but works
+	EXPECT_EQ (6, typesPre);	
+
+	EXPECT_EQ (varsPre, varsPost);
+	EXPECT_EQ (funcsPre, funsPost);
+	EXPECT_EQ (typesPre, typesPost);
 }
 
 

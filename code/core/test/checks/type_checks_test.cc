@@ -454,7 +454,7 @@ TEST(MemberAccessElementTypeCheck, References) {
 	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	// get function to be tested
-	LiteralPtr fun = basic.getCompositeRefElem();
+	ExpressionPtr fun = basic.getCompositeRefElem();
 
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");
@@ -542,7 +542,7 @@ TEST(ComponentAccessTypeCheck, References) {
 	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	// get function to be tested
-	LiteralPtr fun = basic.getTupleRefElem();
+	ExpressionPtr fun = basic.getTupleRefElem();
 
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");

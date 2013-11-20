@@ -388,7 +388,12 @@ namespace backend {
 		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- generic --
-		
+	
+		res[basic.getGenAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
 		res[basic.getGenEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getGenNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getGenGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -846,6 +851,10 @@ namespace backend {
 			return CONVERT_EXPR(res);
 		});
 
+		res[basic.getNullFunc()] = OP_CONVERTER({
+			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
+			return  c_ast::lit(intType, "0");
+		});
 
 		// -- structs --
 
@@ -1262,6 +1271,8 @@ namespace backend {
 				}
 			});
 		}
+
+
 
 		#include "insieme/backend/operator_converter_end.inc"
 

@@ -59,7 +59,7 @@ namespace measure {
 	}
 
 	boost::optional<utils::net::NetworkPath> buildRemote(
-				const utils::Printable& source, const Host& targetHost,
+				const utils::VirtualPrintable& source, const Host& targetHost,
 				const utils::compiler::Compiler& compiler) {
 
 		// create a temporary local source file

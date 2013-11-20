@@ -227,5 +227,48 @@ namespace frontend {
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 	}
 
+	TEST(Converter, MutualRecursiveClasses) {
+
+		// create a temporary source file
+		Source file(
+				R"(
+
+					struct A;
+					struct B;
+
+					struct A {
+						const B* b;
+						A(const B* b = 0) : b(b) {}
+					};
+
+					struct B {
+						const A* a;
+						B(const A* a = 0) : a(a) {}
+					};
+
+
+					int main(int argc, char* argv[]) {
+						A a;
+					}
+
+				)",
+				CPP
+		);
+
+		// check the resulting translation unit
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		auto irtu = ConversionJob(file).toTranslationUnit(manager);
+//		std::cout << irtu << "\n";
+
+		// just test whether this works
+		irtu.resolve(builder.genericType("A"));
+
+		auto program = tu::toProgram(manager, irtu);
+
+//		dumpPretty(program);
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+	}
+
 } // end frontend
 } // end insieme

@@ -155,6 +155,34 @@ namespace analysis {
 	 */
 	TypePtr getCppRefElementType(const TypePtr& cppRefType);
 
+	// --------------------------- data member pointer -----------------------------------
+	
+	/** 
+	 * queries whenever this is or not a member pointer type
+	 */
+	bool isMemberPointer (const TypePtr& type);
+
+	/**
+	 * constructs a member pointer type
+	 * @param the class of the owner object
+	 * @param the identifier for the 
+	 */
+	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy);
+
+	/**
+	 * initializes a value of type member pointer
+	 * @param 
+	 * @param
+	 * @param
+	 */
+	ExpressionPtr getMemberPointerValue (const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy);
+
+	/**
+	 * access of a member pointer
+	 * @param
+	 * @param
+	 */
+	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& parent, const ExpressionPtr& expr);
 
 	// ---------------------------- Constructors --------------------------------------
 
@@ -181,6 +209,25 @@ namespace analysis {
 	 */
 	bool isDefaultConstructor(const LambdaExprPtr& lambda);
 
+	// ------------------------------- Long Long ---------------------------------------
+
+	/**
+	 * checks whenever the inner implementation of the type represents a long long
+	 */
+	bool isLongLong(const TypePtr& type);
+	bool isSignedLongLong(const TypePtr& type);
+
+	/**
+	 * cast to long long
+	 */
+	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed = false);
+
+	/**
+	 * cast from long long
+	 */
+	ExpressionPtr castFromLongLong( const ExpressionPtr& expr);
+
+	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr);
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

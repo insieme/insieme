@@ -38,8 +38,9 @@
 
 #include "insieme/transform/polyhedral/transformations.h"
 
+#include "insieme/core/pattern/ir_pattern.h"
+
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ir_builder.h"
@@ -54,9 +55,9 @@ TEST(Transform, InterchangeManual) {
 	Logger::get(std::cerr, DEBUG);
 
 	using namespace insieme::core;
+	using namespace insieme::core::pattern;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -96,7 +97,7 @@ TEST(Transform, InterchangeManual) {
 	NodePtr newIR = analysis::normalize(scop.toIR(mgr));
 	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
 					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
-						"vector.ref.elem(v1, uint.add(v2, v0));"
+						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v2, v0));"
 					"};"
 				"}", toString(*newIR));
 }
@@ -115,8 +116,8 @@ void checkSCoPCorrectness(const insieme::core::NodePtr& node) {
 TEST(Transform, InterchangeAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 
@@ -134,11 +135,11 @@ TEST(Transform, InterchangeAuto) {
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 	
 	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
 					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
-						"vector.ref.elem(v1, uint.add(v2, v0));"
+						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v2, v0));"
 					"};"
 				"}", toString(*newIR));
 
@@ -148,8 +149,8 @@ TEST(Transform, InterchangeAuto) {
 TEST(Transform, InterchangeAuto2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 
@@ -168,16 +169,16 @@ TEST(Transform, InterchangeAuto2) {
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 	
 	EXPECT_EQ( 
 		"{"
 			"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-				"vector.ref.elem(v1, v0);"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v0);"
 			"}; "
 			"for(int<4> v2 = 5 .. int.add(24, 1) : 1) {"
 				"for(int<4> v3 = 10 .. int.add(49, 1) : 1) {"
-					"vector.ref.elem(v1, uint.add(v3, v2));"
+					"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v3, v2));"
 				"};"
 			"};"
 		"}", toString(*newIR));
@@ -188,8 +189,8 @@ TEST(Transform, InterchangeAuto2) {
 TEST(Transform, StripMiningAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -209,14 +210,14 @@ TEST(Transform, StripMiningAuto) {
 	scop::mark(forStmt);
 
 	LoopStripMining li(1, 7);
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
 	EXPECT_EQ( 
 		"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-			"vector.ref.elem(v1, v0); "
+			"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v0); "
 			"for(int<4> v2 = 5 .. int.add(24, 1) : 7) {"
 				"for(int<4> v3 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {"
-					"vector.ref.elem(v1, uint.add(v0, v3));"
+					"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v3));"
 				"};"
 			"};"
 		"}", toString(*newIR));
@@ -229,8 +230,8 @@ TEST(Transform, StripMiningAuto) {
 TEST(Transform, LoopFusionAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -252,9 +253,9 @@ TEST(Transform, LoopFusionAuto) {
 	scop::mark(stmt);
 
 	LoopFusion lf( {0,1} );
-	NodePtr newIR = analysis::normalize(lf.apply(stmt));
+	NodePtr newIR = analysis::normalize(lf.apply(NodeAddress(stmt)));
 
-	EXPECT_EQ( "{for(int<4> v0 = 5 .. int.add(9, 1) : 1) {vector.ref.elem(v1, v0);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {vector.ref.elem(v1, v2); vector.ref.elem(v1, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {vector.ref.elem(v1, v3);};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 5 .. int.add(9, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v0);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v2); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, v3);};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -262,8 +263,8 @@ TEST(Transform, LoopFusionAuto) {
 TEST(Transform, TilingManual) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -282,15 +283,15 @@ TEST(Transform, TilingManual) {
 	scop::mark(forStmt);
 
 	LoopStripMining lsm1(0, 7);
-	NodePtr newIR = lsm1.apply(forStmt);
+	NodePtr newIR = lsm1.apply(NodeAddress(forStmt));
 
 	LoopStripMining lsm2(2, 7);
-	newIR = lsm2.apply(newIR);
+	newIR = lsm2.apply(NodeAddress(newIR));
 
 	LoopInterchange li(1,2);
-	newIR = analysis::normalize(li.apply(newIR));
+	newIR = analysis::normalize(li.apply(NodeAddress(newIR)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v3, v4));};};};}", newIR->toString() );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -300,8 +301,8 @@ TEST(Transform, TilingManual) {
 TEST(Transform, TilingAuto) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -320,9 +321,9 @@ TEST(Transform, TilingAuto) {
 	scop::mark(forStmt);
 
 	LoopTiling li({7,7});
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v3, v4));};};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -330,8 +331,8 @@ TEST(Transform, TilingAuto) {
 TEST(Transform, TilingAuto2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -352,9 +353,9 @@ TEST(Transform, TilingAuto2) {
 	scop::mark(forStmt);
 
 	LoopTiling li({ 7,6,3 });
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)).getAddressedNode());
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 3 .. int.add(24, 1) : 6) {for(int<4> v3 = 2 .. int.add(99, 1) : 3) {for(int<4> v4 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v5 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(2)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v4, v5));};};};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 3 .. int.add(24, 1) : 6) {for(int<4> v3 = 2 .. int.add(99, 1) : 3) {for(int<4> v4 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v5 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(2)), 99, int.lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v4, v5));};};};};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -362,8 +363,8 @@ TEST(Transform, TilingAuto2) {
 TEST(Transform, TilingAuto21) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -382,9 +383,9 @@ TEST(Transform, TilingAuto21) {
 	scop::mark(forStmt);
 
 	LoopTiling li({ 5,5 }, {0,0});
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 1) {for(int<4> v2 = 3 .. int.add(24, 1) : 5) {for(int<4> v3 = 2 .. int.add(99, 1) : 5) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(4)), 24, int.lt), 1) : 1) {for(int<4> v5 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(4)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v0, v4));};};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 1) {for(int<4> v2 = 3 .. int.add(24, 1) : 5) {for(int<4> v3 = 2 .. int.add(99, 1) : 5) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(4)), 24, int.lt), 1) : 1) {for(int<4> v5 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(4)), 99, int.lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v4));};};};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -392,8 +393,8 @@ TEST(Transform, TilingAuto21) {
 TEST(Transform, TilingAuto3) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -414,9 +415,9 @@ TEST(Transform, TilingAuto3) {
 	scop::mark(forStmt);
 
 	LoopTiling li({7,6,8});
-	NodePtr newIR = analysis::normalize(li.apply(forStmt));
+	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 1 .. int.add(24, 1) : 6) {for(int<4> v3 = v0 .. int.add(99, 1) : 1) {for(int<4> v4 = int.add(cast<int<4>>(v3), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v0))), cast<int<4>>(v3)), 8))))) .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), select(v3, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v0, v4), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.ge(v1, int.add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v4)})) {for(int<4> v5 = v2 .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(7)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v4, v5));};};} else {};};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 1 .. int.add(24, 1) : 6) {for(int<4> v3 = v0 .. int.add(99, 1) : 1) {for(int<4> v4 = int.add(cast<int<4>>(v3), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v0))), cast<int<4>>(v3)), 8))))) .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), select(v3, 49, int.lt), int.lt), 1) : 8) {if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.le(v0, v4), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.ge(v1, int.add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v4)})) {for(int<4> v5 = v2 .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(7)), 99, int.lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v4, v5));};};} else {};};};};}", toString(*newIR) );
 
 	// checkSCoPCorrectness(newIR);
 }
@@ -424,8 +425,8 @@ TEST(Transform, TilingAuto3) {
 TEST(Transform, LoopStamping) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -444,9 +445,9 @@ TEST(Transform, LoopStamping) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0,0 } );
-	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
+	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "{for(int<4> v0 = 0 .. int.add(29, 1) : 1) {for(int<4> v2 = 0 .. int.add(27, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 0 .. int.add(29, 1) : 1) {for(int<4> v4 = 28 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 0 .. int.add(29, 1) : 1) {for(int<4> v2 = 0 .. int.add(27, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v2));};}; for(int<4> v3 = 0 .. int.add(29, 1) : 1) {for(int<4> v4 = 28 .. int.add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v3, v4));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 
@@ -455,8 +456,8 @@ TEST(Transform, LoopStamping) {
 TEST(Transform, LoopStamping2) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	
 	NodeManager mgr;
@@ -476,9 +477,9 @@ TEST(Transform, LoopStamping2) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7 , { 0 } );
-	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
+	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "{for(int<4> v0 = 3 .. int.add(23, 1) : 1) {for(int<4> v2 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 24 .. int.add(29, 1) : 1) {for(int<4> v4 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 3 .. int.add(23, 1) : 1) {for(int<4> v2 = 3 .. int.add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v2));};}; for(int<4> v3 = 24 .. int.add(29, 1) : 1) {for(int<4> v4 = 3 .. int.add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v3, v4));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 
@@ -487,8 +488,8 @@ TEST(Transform, LoopStamping2) {
 TEST(Transform, LoopStamping3) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	
 	NodeManager mgr;
@@ -511,9 +512,9 @@ TEST(Transform, LoopStamping3) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
-	NodePtr newIR = builder.normalize(ls.apply(forStmt));
+	NodePtr newIR = builder.normalize(ls.apply(NodeAddress(forStmt)).getAddressedNode());
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = 1 .. int.add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = 1 .. int.add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
 
 	//checkSCoPCorrectness(newIR);
 }
@@ -521,8 +522,8 @@ TEST(Transform, LoopStamping3) {
 TEST(Transform, LoopStamping4) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
+	using namespace insieme::core::pattern;
+	using insieme::core::pattern::any;
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -544,9 +545,9 @@ TEST(Transform, LoopStamping4) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
-	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
+	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = v0 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = v5 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = v0 .. int.add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = v5 .. int.add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
 
 	// checkSCoPCorrectness(8,newIR);
 

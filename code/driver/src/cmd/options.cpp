@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -63,7 +63,7 @@ namespace cmd {
 					("library-path,L", bpo::value<vector<frontend::path>>(), "library paths - optional")
 					("include-path,I", bpo::value<vector<frontend::path>>(), "include files - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
-					("std,s", bpo::value<string>()->default_value("auto"), "determines the language standard")
+					("std", bpo::value<string>()->default_value("auto"), "determines the language standard")
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
@@ -223,9 +223,6 @@ namespace cmd {
 			for(auto cur : parser_steps) {
 				res.valid = cur(map) && res.valid;
 			}
-
-			// plugin initialization
-            res.job.frontendPluginInit();
 
 			// done
 			return res;
