@@ -153,48 +153,63 @@ core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* varDecl, conver
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               adding OpenCL kernel annotation
-void OclKernelPlugin::PostVisit(const clang::FunctionDecl* funcDecl, conversion::Converter& convFact) {
-	// check Attributes of the function definition
-	annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
+void OclKernelPlugin::PostVisit(const clang::Decl* decl, conversion::Converter& convFact) {
 
-	if (funcDecl->hasAttrs()) {
-		const clang::AttrVec attrVec = funcDecl->getAttrs();
+	// check function decls:
+	if (const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)){
+		// check Attributes of the function definition
+		annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
-		for (clang::AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-			if (clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
-				//get annotate string
-				llvm::StringRef&& sr = attr->getAnnotation();
+		if (funcDecl->hasAttrs()) {
+			const clang::AttrVec attrVec = funcDecl->getAttrs();
 
-				//check if it is an OpenCL kernel function
-				if ( sr == "__kernel" ) {
-					VLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
+			for (clang::AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+				if (clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
+					//get annotate string
+					llvm::StringRef&& sr = attr->getAnnotation();
+
+					//check if it is an OpenCL kernel function
+					if ( sr == "__kernel" ) {
+						VLOG(1) << "is OpenCL kernel function";
+						kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
+					}
+				}
+				else if ( clang::ReqdWorkGroupSizeAttr* attr = llvm::dyn_cast<clang::ReqdWorkGroupSizeAttr>(*I) ) {
+					kernelAnnotation.push_back(
+							std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
+					);
 				}
 			}
-			else if ( clang::ReqdWorkGroupSizeAttr* attr = llvm::dyn_cast<clang::ReqdWorkGroupSizeAttr>(*I) ) {
-				kernelAnnotation.push_back(
-						std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
-				);
-			}
+		}
+
+	// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
+		if (!kernelAnnotation.empty()) {
+			core::ExpressionPtr lambda = convFact.getLambdaFromCache(funcDecl);
+			lambda->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
+			convFact.addToLambdaCache(funcDecl, lambda);
 		}
 	}
 
-// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
-	if (!kernelAnnotation.empty()) {
-		core::ExpressionPtr lambda = convFact.getLambdaFromCache(funcDecl);
-		lambda->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
-		convFact.addToLambdaCache(funcDecl, lambda);
-	}
-}
-
-core::VariablePtr OclKernelPlugin::PostVisit(const clang::ValueDecl* decl, core::VariablePtr& irVar, conversion::Converter& convFact){
-	// Add OpenCL attributes
-	insieme::core::NodeAnnotationPtr&& attr = convertAttribute(decl, convFact);
-	if (attr) {
-		irVar->addAnnotation(attr);
+	// check type Decls
+	else if (const clang::TypeDecl* typeDecl = llvm::dyn_cast<clang::TypeDecl>(decl)){
+		typeDecl->dump();
 	}
 
-	return irVar;
+	// check var Decls
+	else if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
+		varDecl->dump();
+
+		// Add OpenCL attributes
+		insieme::core::NodeAnnotationPtr&& attr = convertAttribute(varDecl, convFact);
+		if (attr) {
+			core::ExpressionPtr irVar = convFact.lookUpVariable(varDecl);
+			irVar->addAnnotation(attr);
+		}
+	}
+
+	// check any other decl
+	//else if (const clang::WHATEVER* funcDecl = llvm::dyn_cast<clang::WHATEVER>(decl)){
+	//}
 }
 
 /*
