@@ -127,6 +127,24 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
+	core::LiteralPtr size;
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+		return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
+				getSizeOfType(builder, vecTy->getElementType()));
+	}
+	// in case of ref<'a>, recurr on 'a
+	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		return getSizeOfType(builder, refTy->getElementType());
+	}
+
+	return builder.callExpr(gen.getAlignof(), builder.getTypeLiteral(type));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
 
@@ -841,17 +859,20 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 	core::ExpressionPtr irNode;
     LOG_EXPR_CONVERSION(expr, irNode);
 
-	switch (expr->getKind()) {
-	case clang::UETT_SizeOf: {
-		core::TypePtr&& type = expr->isArgumentType() ?
+	core::TypePtr&& type = expr->isArgumentType() ?
 		convFact.convertType( expr->getArgumentType().getTypePtr() ) :
 		convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-		return (irNode = getSizeOfType(builder, type));
-	}
-	case clang::UETT_AlignOf:
-		frontend_assert(false)<< "alingof Kind of expressions not handled\n";
-	case clang::UETT_VecStep:
-		frontend_assert(false)<< "vecStep Kind of expressions not handled\n";
+
+	switch (expr->getKind()) {
+		case clang::UETT_SizeOf: {
+			return (irNode = getSizeOfType(builder, type));
+		}
+		case clang::UETT_AlignOf:{
+			return (irNode = getAlignOfType(builder, type));
+		}
+		case clang::UETT_VecStep:{
+			frontend_assert(false)<< "vecStep Kind of expressions not handled\n";
+		 }
 	}
 
 	return core::ExpressionPtr();
