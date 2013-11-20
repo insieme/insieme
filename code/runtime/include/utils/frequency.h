@@ -59,7 +59,7 @@ static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
  * reads all available frequencies for a specific core as a list into the provided pointer
  */
 
-int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32** frequencies, uint32* length) {
+int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* frequencies, uint32* length) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 counter = 1;
 	uint32 frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
@@ -78,13 +78,14 @@ int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32** 
 		return -1;
 	}
 
-	while(fscanf(file, " %u", &frequencies_temp[counter]) == 1) ++counter;
-
-	*length = counter;
-	(*frequencies) = (uint32*)malloc(counter*sizeof(uint32));
+	while(fscanf(file, " %u", &frequencies_temp[counter]) == 1) {
+		IRT_ASSERT(counter < IRT_INST_MAX_CPU_FREQUENCIES, IRT_ERR_INSTRUMENTATION, "Instrumentation: number of available frequencies %u for core %u exceeds IRT_INST_MAX_CPU_FREQUENCIES", counter, coreid);
+		++counter;
+	}
 
 	for(uint32 j = 0; j < counter; ++j)
-		(*frequencies)[j] = frequencies_temp[j]/1000;
+		frequencies[j] = frequencies_temp[j]/1000;
+	*length = counter;
 
 	fclose(file);
 
@@ -95,7 +96,7 @@ int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32** 
  * reads all available frequencies for a worker running on a specific core as a list into the provided pointer
  */
 
-int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32** frequencies, uint32* length) {
+int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32* frequencies, uint32* length) {
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	return irt_cpu_freq_get_available_frequencies_core(coreid, frequencies, length);
 }
@@ -248,9 +249,9 @@ bool irt_cpu_freq_reset_frequencies() {
 
 int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker) {
 	int32 retval = 0;
-	uint32* freqs;
+	uint32 freqs[IRT_INST_MAX_CPU_FREQUENCIES];
 	uint32 length;
-	if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, &freqs, &length)) == 0) {
+	if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, freqs, &length)) == 0) {
 		irt_cpu_freq_set_max_frequency_worker(worker, freqs[0]);
 		irt_cpu_freq_set_min_frequency_worker(worker, freqs[length-1]);
 	} else
@@ -368,10 +369,10 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 		strcpy(freq_str, freq_str_orig);
 
 		int32 retval;
-		uint32* freqs;
+		uint32 freqs[IRT_INST_MAX_CPU_FREQUENCIES];
 		uint32 length;
 
-		if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, &freqs, &length)) == 0) {
+		if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, freqs, &length)) == 0) {
 			char *tok = strtok(freq_str, ",");
 			// copies the first entry, to be used by all workers if it was the only one supplied
 			char first_copy[strlen(tok)];
