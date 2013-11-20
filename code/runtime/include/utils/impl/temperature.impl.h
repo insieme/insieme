@@ -45,24 +45,24 @@
 	#include "abstraction/impl/temperature_intel.impl.h"
 #endif
 
-uint64 irt_get_temperature_dummy() {
+uint64 irt_get_temperature_dummy(const irt_worker* worker) {
 	return 0;
 }
 
 void irt_temperature_select_instrumentation_method() {
 	if(irt_temperature_intel_core_is_supported()) {
-		irt_get_temperature_core = irt_get_temperature_intel_core;
+		irt_get_temperature_core = &irt_get_temperature_intel_core;
 		irt_log_setting_s("irt core temperature measurement method", "intel");
 	} else {
-		irt_get_temperature_core = irt_get_temperature_dummy;
+		irt_get_temperature_core = &irt_get_temperature_dummy;
 		irt_log_setting_s("irt core temperature measurement method", "none");
 	}
 
 	if(irt_temperature_intel_package_is_supported()) {
-		irt_get_temperature_package = irt_get_temperature_intel_package;
+		irt_get_temperature_package = &irt_get_temperature_intel_package;
 		irt_log_setting_s("irt pkg temperature measurement method", "intel");
 	} else {
-		irt_get_temperature_package = irt_get_temperature_dummy;
+		irt_get_temperature_package = &irt_get_temperature_dummy;
 		irt_log_setting_s("irt pkg temperature measurement method", "none");
 	}
 }
