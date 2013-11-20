@@ -1004,7 +1004,6 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 		if(retIr)
 			break;
     }
-	std::cout << "-> at location: (" <<  utils::location(expr->getLocStart(), convFact.getSourceManager()) << "); \n"; 
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
