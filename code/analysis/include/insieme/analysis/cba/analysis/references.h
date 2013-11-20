@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/location.h"
+#include "insieme/analysis/cba/framework/entities/location.h"
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/analysis/cba/analysis/data_paths.h"

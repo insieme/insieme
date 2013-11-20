@@ -34,55 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+#pragma once
 
-//char4 as_char4(int);
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
-float4 subfunction(float4 a) {
-	float b = cos(a.z);
-	return (float4)(b, get_local_id(1), a.w, a.y);
-}
+#include "insieme/utils/printable.h"
 
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor, short2 vector){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	__local float ll[4];
-	ll[get_local_id(0)] = dst[get_global_id(0)].z;
-	short bs1 = bitselect(src[0], src[1], src[2]);
-	float4 bs2 = bitselect(dst[0], dst[1], dst[2]);
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-	float af = as_float(factor);
-	char4 ac = as_char4(factor);
-	short8 as = as_short8(bs2);
+	struct Formula : public utils::Printable, public utils::Hashable {
 
-	float4 a = cos((float4)(l[3]));
-	float4* b = (float4*)src;
-	int4 n = (int4)3;
-	int4 m;// = (n & ~(a > b[0])) | n;
-	b = (float4*)src ;
-	float f = 7.0f;
-	subfunction(a);
-	float4 c = native_divide(a, b[3]);
-	short t[4]; 
-	short* x = t + 7lu;
+		typedef boost::optional<core::arithmetic::Formula> formula_type;
+		formula_type formula;
 
-	char4 d = convert_char4(a);
-	a = convert_float4(d);
-	
-	float16 sixteen;
+		Formula() : formula() {};
+		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
 
-#pragma insieme iterations 7
-	for(int i = 0; i < factor; ++i)
-		dst[0] = a - sixteen.sA5c8;
-	dst[1] = b[1] / c.wzyx;
-	dst[2] = (float)src[0] + b[0];
-	dst[3] = 5.0f + c;
-	dst[4] = c * (float)factor;
-	dst[5] = (a + c) * 2.0f;
-	dst[6] = (float4)(6.0f) + c.z;
-	int i = get_global_id(0);
-	dst[i].x += src[i] * factor;
-}}
+		bool operator==(const Formula& other) const {
+			return this == &other || (!formula && !other.formula) ||
+					(formula && other.formula && *formula == *other.formula);
+		}
+
+		bool operator<(const Formula& other) const {
+			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
+		}
+
+		operator bool() const {
+			return formula;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			if (formula) return out << *formula;
+			return out << "-unknown-";
+		}
+
+		std::size_t hash() const {
+			// TODO: implement hashing for formulas!
+			return (formula) ? 1 : 0;	// formulas can't be hashed yet ..
+		}
+	};
+
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

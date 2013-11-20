@@ -47,45 +47,39 @@
 #endif
 
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
-        int32 file = 0;
-        //int32 numcores = irt_get_num_cpus();
-        uint64 result = 0;
-        double energy_units = -1.0;
+	int32 file = 0;
+	uint64 result = 0;
+	double energy_units = -1.0;
 
-        bool sockets[16] = { false };
+	bool socket_mask[data->number_of_cpus];
 
 	for(uint32 i = 0; i < data->number_of_cpus; ++i) {
-		data->package[i] = 0;
-		data->cores[i] = 0;
-		data->mc[i] = 0;
+		socket_mask[i] = false;
+		data->package[i] = 0.0;
+		data->cores[i] = 0.0;
+		data->mc[i] = 0.0;
 	}
 
 	// mark sockets that should be measured (i.e. that have cores which have workers running on them)
-        for(uint32 i = 0; i < irt_g_worker_count; ++i)
-        	sockets[irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity)/8] = true;
+	for(uint32 i = 0; i < irt_g_worker_count; ++i)
+		socket_mask[irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity) / 8] = true;
 
-        for(uint32 socket = 0; socket < 16; ++socket) {
-		if(sockets[socket]) {
-			data->package[socket] = 0.0;
-			data->mc[socket] = 0.0;
-			data->cores[socket] = 0.0;
-			if((file = _irt_open_msr(socket*8)) > 0) {
+	for(uint32 socket_id = 0; socket_id < data->number_of_cpus; ++socket_id) {
+		if(socket_mask[socket_id]) {
+			if((file = _irt_open_msr(socket_id * irt_get_num_cores_per_socket())) > 0) {
 				if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
-					energy_units = pow(0.5, (double)((result>>8) & 0x1F));
-					if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
-						data->package[socket] = (double) (result&0xFFFFFFFF) * energy_units;
-					}
-					if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
-						data->mc[socket] = (double) (result&0xFFFFFFFF) * energy_units;
-					}
-					if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
-						data->cores[socket] = (double) (result&0xFFFFFFFF) * energy_units;
-					}
+					energy_units = pow(0.5, (double) ((result >> 8) & 0x1F));
+					if ((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
+						data->package[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
+					if ((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
+						data->mc[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
+					if ((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
+						data->cores[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
 				}
 				_irt_close_msr(file);
 			}
-        	}
-        }
+		}
+	}
 }
 
 bool irt_rapl_is_supported() {

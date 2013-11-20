@@ -118,6 +118,9 @@ class PrunableDeclVisitor{
 	 * for debug purposes
 	 */
 	void echocallback(const clang::Decl* decl){
+		//	std::cout << " ==================  " << decl->getDeclKindName() << " ====================== " <<std::endl;
+		//	decl->dump();
+		//	std::cout << " =========================================================== " << std::endl;
 	}
 
 	/**
@@ -135,7 +138,6 @@ class PrunableDeclVisitor{
 				{
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
-
 					break;
 				}
 			case clang::Decl::CXXRecord:
@@ -143,7 +145,6 @@ class PrunableDeclVisitor{
 					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
-
 					break;
 				}
 			case clang::Decl::Var:
@@ -161,7 +162,8 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Function:
 				{
-                    static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
+					const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(decl);
+                    static_cast<BASE*>(this)->VisitFunctionDecl(funcDecl);
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
@@ -178,17 +180,32 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::ClassTemplate:
 				{
-					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
+					const clang::ClassTemplateDecl* classTmplDecl = llvm::cast<clang::ClassTemplateDecl>(decl);
+					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(classTmplDecl);
+					// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
+					clang::ClassTemplateDecl::spec_iterator spec_it = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_begin ();
+					clang::ClassTemplateDecl::spec_iterator spec_end = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_end ();
+					for (; spec_it != spec_end; ++spec_it){
+						dispatchDecl(*spec_it);
+					}
 					break;
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
+					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;
 				}
 			case clang::Decl::FunctionTemplate:
 				{
-					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
+					const clang::FunctionTemplateDecl* funcTmplDecl = llvm::cast<clang::FunctionTemplateDecl>(decl);
+					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(funcTmplDecl);
+					// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
+					clang::FunctionTemplateDecl::spec_iterator spec_it = const_cast<clang::FunctionTemplateDecl*> (funcTmplDecl)->spec_begin ();
+					clang::FunctionTemplateDecl::spec_iterator spec_end = const_cast<clang::FunctionTemplateDecl*> (funcTmplDecl)->spec_end ();
+					for (; spec_it != spec_end; ++spec_it){
+						dispatchDecl(*spec_it);
+					}
 					break;
 				}
 
@@ -206,7 +223,7 @@ class PrunableDeclVisitor{
 				break;
 
 			default:
-			//	std::cout << "disp: " << decl->getDeclKindName() << std::endl;
+			//	std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
 				return;
 		}
 	}

@@ -1,10 +1,6 @@
 #include <iostream>
 #include "class.h"
-int g(int a){
-	return a;
-}
 int main(){
-	std::cout << g(2) << std::endl;
 
 	CLASS c1(100);
 	CLASS c2(101);

@@ -43,7 +43,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/hash_utils.h"
 
-#include "insieme/analysis/cba/framework/data_path.h"
+#include "insieme/analysis/cba/framework/entities/data_path.h"
 
 namespace insieme {
 namespace analysis {

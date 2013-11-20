@@ -47,9 +47,7 @@ namespace extensions {
 
 class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-	virtual void PostVisit(const clang::FunctionDecl* funcDecl, conversion::Converter& convFact);
-
-    virtual core::VariablePtr PostVisit(const clang::ValueDecl* decl, core::VariablePtr& irVar, conversion::Converter& convFact);
+	virtual void PostVisit(const clang::Decl* decl, conversion::Converter& convFact);
 
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };

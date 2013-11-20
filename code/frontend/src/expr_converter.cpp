@@ -712,7 +712,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	if (callExpr->getDirectCallee()) {
 
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		irNode = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>();
 		const core::FunctionTypePtr funcTy = irNode->getType().as<core::FunctionTypePtr>() ;
 		const clang::FunctionDecl* definition = NULL;
 
@@ -945,13 +945,19 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		frontend_assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
+		else if (!isCompound && subRefTy->getNodeType() != core::NT_ArrayType)
+			lhs = builder.callExpr(gen.getScalarToArray(), lhs);
 
 		// Capture pointer arithmetics
 		// 	Base op must be either a + or a -
 		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n";
 
+		// unpack long-long
+		if (core::analysis::isLongLong(rhs->getType()))
+			rhs = core::analysis::castFromLongLong(rhs);
+
 		// LOG(INFO) << rhs->getType();
-		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be a signed int\n";
+		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be an integer type\nGiven: " << *rhs->getType();
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
 
@@ -1173,15 +1179,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 
 		// This is the required pointer arithmetic in the case we deal with pointers
-		if (!core::analysis::isRefType(rhs->getType()) &&
-			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
+		if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
 			rhs = doPointerArithmetic();
 			return (retIr = rhs);
 		}
 
 		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
-		if (!core::analysis::isRefType(lhs->getType()) &&
-			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
+		if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
 			std::swap(rhs, lhs);
 			rhs = doPointerArithmetic();
 			return (retIr = rhs);
@@ -1230,12 +1234,15 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
-	frontend_assert(opFunc) << "no operation code set\n";
+	frontend_assert(opFunc) << "no operation code set\n"
+			<< "\tOperator: " << binOp->getOpcodeStr().str() << "\n"
+			<< "\t     LHS: " << *lhs << " : " << *lhs->getType() << "\n"
+			<< "\t     RHS: " << *rhs << " : " << *rhs->getType() << "\n";
+
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
-
 	return retIr;
 }
 
@@ -1651,7 +1658,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	}
 
 	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
-		return (retIr = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>());
+		return (retIr = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>());
 	}
 
 	if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {

@@ -29,10 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
@@ -205,44 +206,43 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
         return irType;
     }
 
-    virtual void PostVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact)
+    virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact)
     {
-        if(decl->isVariadic())
-        {
-            core::IRBuilder builder = convFact.getIRBuilder();
 
-            core::ExpressionPtr symb = convFact.convertFunctionDecl(decl, false);
-            assert(symb.isa<core::LiteralPtr>());
+		if (const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(decl)){
+			if(fd->isVariadic())
+			{
+				core::IRBuilder builder = convFact.getIRBuilder();
 
-            core::ExpressionPtr fe = convFact.getIRTranslationUnit()[symb.as<core::LiteralPtr>()];
-            if(!fe) {
-                // this is an intercepted function
-                return;
-            }
+				core::ExpressionPtr symb = convFact.convertFunctionDecl(fd);
+				assert(symb.isa<core::LiteralPtr>());
 
-            core::VariableList params = fe.as<core::LambdaExprPtr>()->getParameterList();
-            core::VariablePtr var = builder.variable(builder.getLangBasic().getVarList());
+				core::ExpressionPtr fe = convFact.getIRTranslationUnit()[symb.as<core::LiteralPtr>()];
+				if(!fe) {
+					// this is an intercepted function
+					return;
+				}
 
-            // if we've already handled it
-            if (params.back().as<core::VariablePtr>()->getType() == var->getType())
-                return;
+				core::VariableList params = fe.as<core::LambdaExprPtr>()->getParameterList();
+				core::VariablePtr var = builder.variable(builder.getLangBasic().getVarList());
 
-            params.push_back(var);
+				// if we've already handled it
+				if (!params.empty() && params.back().as<core::VariablePtr>()->getType() == var->getType())
+					return;
 
-            auto body = fe.as<core::LambdaExprPtr>()->getBody();
-            auto funcTy = fe->getType();
-            auto lambda = builder.lambdaExpr(funcTy.as<core::FunctionTypePtr>(), params, body.as<core::CompoundStmtPtr>());
+				params.push_back(var);
 
-            assert(lambda);
-            assert(lambda->getType() == symb->getType());
+				auto body = fe.as<core::LambdaExprPtr>()->getBody();
+				auto funcTy = fe->getType();
+				auto lambda = builder.lambdaExpr(funcTy.as<core::FunctionTypePtr>(), params, body.as<core::CompoundStmtPtr>());
 
-            convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), lambda);
+				assert(lambda);
+				assert(lambda->getType() == symb->getType());
 
-            return;
-        }
-
-       return;
-    }
+				convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), lambda);
+			}
+		}
+	}
 
     insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog){
 

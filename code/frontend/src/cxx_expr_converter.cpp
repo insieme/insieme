@@ -260,7 +260,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	}
 	else{
 		// to begin with we translate the constructor as a regular function
-		auto func = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
+		auto func = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl> (methodDecl));
 		core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
 
 		// get the this-Object
@@ -313,7 +313,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 				<< methodDecl->getNameAsString();
 
 
-		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
+		convertedOp =  convFact.getCallableExpression(methodDecl);
 
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
 		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
@@ -350,7 +350,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// unary:	operator@( left==arg(0) )
 		// binary:	operator@( left==arg(0), right==arg(1) )
 
-		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		convertedOp =  convFact.getCallableExpression(funcDecl);
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}
@@ -432,7 +432,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	// to begin with we translate the constructor as a regular function but with initialization list
-	core::ExpressionPtr ctorFunc = convFact.convertFunctionDecl(ctorDecl);
+	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
@@ -563,20 +563,20 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 //						CXX DELETE CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
-
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(deleteExpr, retExpr);
 
+	// convert the target of our delete expr
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
-	core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
-
-	VLOG(2) << exprToDelete->getType();
-
 
 	core::ExpressionPtr dtor;
-	if( core::hasMetaInfo(desTy)){
-		const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
-		dtor = info.getDestructor();
+	// since destructor might be defined in a different translation unit or even in this one but after the usage
+	// we should retrieve a callable symbol and delay the conversion
+	if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(deleteExpr->getDestroyedType().getTypePtr())){
+		if (const clang::CXXRecordDecl* classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl())){
+			if ( classDecl->getDestructor())
+				dtor = convFact.getCallableExpression(classDecl->getDestructor());
+		}
 	}
 
 	if (deleteExpr->isArrayForm () ){
@@ -585,6 +585,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		if(dtor){
 
 			//FIXME: why mem_alloc dtor has being marked as virtual????
+			core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
+			desTy = convFact.lookupTypeDetails(desTy);
 			frontend_assert(!core::getMetaInfo(desTy).isDestructorVirtual()) << "no virtual dtor allowed for array dtor\n";
 
 			std::vector<core::ExpressionPtr> args;
