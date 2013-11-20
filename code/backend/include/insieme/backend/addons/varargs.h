@@ -36,33 +36,32 @@
 
 #pragma once
 
-#include "utils/temperature.h"
+#include "insieme/core/forward_decls.h"
 
-#ifdef _WIN32
-	#warning "Temperature measurements in Windows are not supported!"
-#else
-	#include "utils/temperature.h"
-	#include "abstraction/impl/temperature_intel.impl.h"
-#endif
+#include "insieme/backend/addon.h"
 
-uint64 irt_get_temperature_dummy(const irt_worker* worker) {
-	return 0;
-}
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
+namespace insieme {
+namespace backend {
+namespace addons {
 
-void irt_temperature_select_instrumentation_method() {
-	if(irt_temperature_intel_core_is_supported()) {
-		irt_get_temperature_core = &irt_get_temperature_intel_core;
-		irt_log_setting_s("irt core temperature measurement method", "intel");
-	} else {
-		irt_get_temperature_core = &irt_get_temperature_dummy;
-		irt_log_setting_s("irt core temperature measurement method", "none");
-	}
 
-	if(irt_temperature_intel_package_is_supported()) {
-		irt_get_temperature_package = &irt_get_temperature_intel_package;
-		irt_log_setting_s("irt pkg temperature measurement method", "intel");
-	} else {
-		irt_get_temperature_package = &irt_get_temperature_dummy;
-		irt_log_setting_s("irt pkg temperature measurement method", "none");
-	}
-}
+	/**
+	 * An Add-On providing support for Variadic Arguments 
+	 * */
+	struct VarArgs : public AddOn {
+
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+
+	};
+
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme
