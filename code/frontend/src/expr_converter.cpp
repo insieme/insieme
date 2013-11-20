@@ -127,6 +127,24 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
+	core::LiteralPtr size;
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+		return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
+				getSizeOfType(builder, vecTy->getElementType()));
+	}
+	// in case of ref<'a>, recurr on 'a
+	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		return getSizeOfType(builder, refTy->getElementType());
+	}
+
+	return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
 
@@ -841,20 +859,23 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 	core::ExpressionPtr irNode;
     LOG_EXPR_CONVERSION(expr, irNode);
 
-	switch (expr->getKind()) {
-	case clang::UETT_SizeOf: {
-		core::TypePtr&& type = expr->isArgumentType() ?
+	core::TypePtr&& type = expr->isArgumentType() ?
 		convFact.convertType( expr->getArgumentType().getTypePtr() ) :
 		convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-		return (irNode = getSizeOfType(builder, type));
-	}
-	case clang::UETT_AlignOf:
-	case clang::UETT_VecStep:
-	default:
-	frontend_assert(false)<< "Kind of expressions not handled\n";
-	return core::ExpressionPtr();
-}
 
+	switch (expr->getKind()) {
+		case clang::UETT_SizeOf: {
+			return (irNode = getSizeOfType(builder, type));
+		}
+		case clang::UETT_AlignOf:{
+			return (irNode = getAlignOfType(builder, type));
+		}
+		case clang::UETT_VecStep:{
+			frontend_assert(false)<< "vecStep Kind of expressions not handled\n";
+		 }
+	}
+
+	return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -880,6 +901,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
+
+	frontend_assert(lhs) << "no left side could be translated";
+	frontend_assert(rhs) << "no right side could be translated";
+	frontend_assert(exprTy) << "no type for expression";
+
 
 	// handle of volatile variables
 	if (binOp->getOpcode() != clang::BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
@@ -1800,6 +1826,7 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		if(retIr)
 			break;
     }
+
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);

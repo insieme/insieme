@@ -447,7 +447,6 @@ OPERATION(Gen, Mod, 	 "gen.mod", "('a,'a)->'a")
 OPERATION(Gen, And, 	 "gen.and", "('a,'a)->'a")
 OPERATION(Gen, Or, 	 	 "gen.or",  "('a,'a)->'a")
 OPERATION(Gen, Xor, 	 "gen.xor", "('a,'a)->'a")
-
 OPERATION(Gen, LShift, 	 "gen.lshift", "('a,'a)->'a")
 OPERATION(Gen, RShift, 	 "gen.rshift", "('a,'a)->'a")
 
@@ -458,8 +457,11 @@ OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
 OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
 OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 
+// generic unary ops
+OPERATION(Gen, Not,      "gen.not",    "('a) -> 'a")
+
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
-GROUP(GenBitwiseOp, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
+GROUP(GenBitwiseOp, GenNot, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
 GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp )
 

@@ -1251,6 +1251,7 @@ namespace backend {
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
+
 			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
 				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
 
@@ -1260,6 +1261,7 @@ namespace backend {
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
+
 			res[irppExt.getTypeid()] = OP_CONVERTER({
 				// extract typeinfo
 				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
@@ -1270,10 +1272,14 @@ namespace backend {
                     return c_ast::typeId(c_ast::deref(CONVERT_ARG(0)));
 				}
 			});
+
+			res[irppExt.getAlignof()] = OP_CONVERTER({
+                c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("__alignof__"));
+                res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
+				return res;
+			});
 		}
-
-
-
+		
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table
