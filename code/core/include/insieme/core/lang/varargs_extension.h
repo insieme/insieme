@@ -36,33 +36,35 @@
 
 #pragma once
 
-#include "utils/temperature.h"
+#include "insieme/core/lang/extension.h"
 
-#ifdef _WIN32
-	#warning "Temperature measurements in Windows are not supported!"
-#else
-	#include "utils/temperature.h"
-	#include "abstraction/impl/temperature_intel.impl.h"
-#endif
+namespace insieme {
+namespace core {
+namespace lang {
 
-uint64 irt_get_temperature_dummy(const irt_worker* worker) {
-	return 0;
+	/**
+	 */
+	class VarArgsExtension : public core::lang::Extension {
+
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		VarArgsExtension(core::NodeManager& manager)
+				: core::lang::Extension(manager) {}
+
+
+	public:
+
+        LANG_EXT_TYPE(Valist, "va_list");
+
+        LANG_EXT_LITERAL(Vaarg, "va_arg", "(ref<array<va_list,1>>, type<'a>) -> 'a");
+        LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
+	};
 }
-
-void irt_temperature_select_instrumentation_method() {
-	if(irt_temperature_intel_core_is_supported()) {
-		irt_get_temperature_core = &irt_get_temperature_intel_core;
-		irt_log_setting_s("irt core temperature measurement method", "intel");
-	} else {
-		irt_get_temperature_core = &irt_get_temperature_dummy;
-		irt_log_setting_s("irt core temperature measurement method", "none");
-	}
-
-	if(irt_temperature_intel_package_is_supported()) {
-		irt_get_temperature_package = &irt_get_temperature_intel_package;
-		irt_log_setting_s("irt pkg temperature measurement method", "intel");
-	} else {
-		irt_get_temperature_package = &irt_get_temperature_dummy;
-		irt_log_setting_s("irt pkg temperature measurement method", "none");
-	}
+}
 }
