@@ -65,6 +65,7 @@
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/simd_vector.h"
 #include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/varargs.h"
 
 namespace insieme {
 namespace backend {
@@ -79,6 +80,7 @@ namespace sequential {
 		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::SIMDVector>();
 		res->addAddOn<addons::AsmStmt>();
+		res->addAddOn<addons::VarArgs>();
 		return res;
 	}
 
