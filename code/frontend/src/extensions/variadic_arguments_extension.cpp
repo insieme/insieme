@@ -41,13 +41,14 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/annotations/c/include.h"
+
+#include <boost/algorithm/string/predicate.hpp>
+
 using namespace insieme;
 
-bool VariadicArgumentsPlugin::isStdargBuiltin(const std::string& name) {
-		return (name.find("__builtin_va") != std::string::npos) ? true : false;
-}       
 
- core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) { 
+core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) { 
 	const clang::VAArgExpr*  vaargexpr = (llvm::isa<clang::VAArgExpr>(expr)) ? llvm::cast<clang::VAArgExpr>(expr) : nullptr;
 	if(vaargexpr)
 	{
@@ -67,7 +68,7 @@ bool VariadicArgumentsPlugin::isStdargBuiltin(const std::string& name) {
 	return nullptr;
 }
 
- core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
 												   insieme::frontend::conversion::Converter& convFact) { 
 	const clang::CallExpr* callexpr = (llvm::isa<clang::CallExpr>(expr)) ? llvm::cast<clang::CallExpr>(expr) : nullptr;
 
@@ -75,18 +76,7 @@ bool VariadicArgumentsPlugin::isStdargBuiltin(const std::string& name) {
 		core::IRBuilder builder = convFact.getIRBuilder();
 		auto funExpr = irExpr.as<core::CallExprPtr>()->getFunctionExpr();
 
-		/*if(callexpr->getDirectCallee()->getNameAsString().find("builtin_va_") != std::string::npos) {
-
-			auto args = irExpr.as<core::CallExprPtr>()->getArguments();
-			core::ExpressionList newArgs;
-			newArgs.push_back(args[0].as<core::CallExprPtr>()->getArguments()[0].as<core::CallExprPtr>()->getArguments()[0].as<core::ExpressionPtr>());
-			LOG(INFO) << "FUNC " << args[0].as<core::CallExprPtr>()->getArguments()[0].as<core::CallExprPtr>()->getArguments()[0].as<core::ExpressionPtr>();
-			newArgs.insert(newArgs.end(), args.begin() +1, args.end());
-
-			return  builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
-		}
-		else */if(callexpr->getDirectCallee()->isVariadic())
-		{
+		if(callexpr->getDirectCallee()->isVariadic()) {
 			// dividing common arguments from variadic ones 
 			
 			auto type = funExpr->getType().as<core::FunctionTypePtr>();
@@ -107,60 +97,8 @@ bool VariadicArgumentsPlugin::isStdargBuiltin(const std::string& name) {
 	return irExpr;
 }
 
- bool  VariadicArgumentsPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
-
-
-	 // variadic arguments come along with a set of builtins, we'll have an specific Literal for each of those
-	if(const clang::FunctionDecl *fd = llvm::dyn_cast<clang::FunctionDecl>(decl))
-	{
-		core::IRBuilder builder = convFact.getIRBuilder();
-		const auto& builderExt = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
-		core::LiteralPtr lit;
-
-		// handling builtins 
-
-		if(fd->getNameAsString().find("va_start") != string::npos)
-		{
-			std::cout << " func: " << fd->getNameAsString() << std::endl;
-			////return false;
-			//auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist())), builder.getLangBasic().getVarList()), builder.getLangBasic().getUnit());
-			//lit = builder.literal("va_start", newType.as<core::FunctionTypePtr>());
-			lit = builderExt.getVastart();
-		}
-		else if(fd->getNameAsString().find("va_end") != string::npos)
-		{
-			auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist()))), builder.getLangBasic().getUnit());
-			lit = builder.literal("va_end", newType.as<core::FunctionTypePtr>());
-		}
-		else if(fd->getNameAsString().find("va_copy") != string::npos)
-		{
-			auto newType = builder.functionType(toVector<core::TypePtr>(builder.refType(builder.arrayType(builderExt.getValist())), builder.refType(builder.arrayType(builderExt.getValist()))), builder.getLangBasic().getUnit());
-			lit = builder.literal("va_copy", newType.as<core::FunctionTypePtr>());
-		}
-		else {
-				// Do not handle anything else
-				return false;
-		}
-
-		convFact.addToLambdaCache(fd, lit);
-
-		return true;
-	}
-
-
-
-	return false;
-}
-
- core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
-	/*if(const clang::TypedefType* tdt = llvm::dyn_cast<clang::TypedefType>(type)) {
-		if(tdt->getDecl()->getNameAsString().find("__builtin_va_list") != std::string::npos) {
-			auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
-			convFact.addToTypeCache(type, irType);
-			return irType;
-		}
-	}
-	else */if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
+core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+	if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
 		if(tt->getDecl()->getNameAsString().find("va_list") != std::string::npos) {
 			auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
 			convFact.addToTypeCache(type, irType);
@@ -171,7 +109,7 @@ bool VariadicArgumentsPlugin::isStdargBuiltin(const std::string& name) {
 	return nullptr;
 }
 
- core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
 											 insieme::frontend::conversion::Converter& convFact) {
 
 	 // build the right function type for variadic functions, we have to extend the parameter list with an extra TYPE
@@ -249,14 +187,13 @@ insieme::core::ProgramPtr  VariadicArgumentsPlugin::IRVisit(insieme::core::Progr
 	core::TypePtr vectorVaList = builder.vectorType( vaListTy, core::ConcreteIntTypeParam::get(mgr, 1));
 	core::TypePtr arrayVaList = builder.refType(builder.arrayType( vaListTy));
 
-
+	// fix types, change usage
 	core::NodeMap replacements;
 	replacements [ arrayVaList ]  = vaListTy;
 	replacements [ vectorVaList ] = vaListTy;
 	prog = core::transform::replaceAllGen (mgr, prog, replacements, false);
 
-
-
+	// cleanup the not needed casts
 	auto castRemover = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 				if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
 					core::IRBuilder builder (node->getNodeManager());
@@ -272,14 +209,20 @@ insieme::core::ProgramPtr  VariadicArgumentsPlugin::IRVisit(insieme::core::Progr
 			});
 	prog = castRemover.map(prog);
 
-	//// finaly, substitute any usage of the long long types
-	//core::IRBuilder builder (prog->getNodeManager());
-	//core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8()))); 
-	//core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8()))); 
-	//core::NodeMap replacements;
-	//replacements [ longlongTy ] = builder.getLangBasic().getInt8();
-	//replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
-	//prog = core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
+	// rename all __builtin_va functions (just remove the __builtin prefix for this ones)
+	auto literalRenamer = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+				if (core::LiteralPtr lit = node.isa<core::LiteralPtr>()){
+					if (boost::starts_with(lit->getStringValue(), "__builtin_va_" )){
+						core::IRBuilder builder (lit->getNodeManager());
+						core::LiteralPtr res = builder.literal(lit->getStringValue().substr(10), lit->getType());
+						insieme::annotations::c::attachInclude(res, "stdarg.h");
+						return res;
+					}
+				}
+
+				return node;
+			});
+	prog = literalRenamer.map(prog);
 
 	return prog;
 }

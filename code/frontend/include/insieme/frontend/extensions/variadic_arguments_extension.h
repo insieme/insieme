@@ -42,14 +42,10 @@ using namespace insieme;
 
 class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin { 
 
-    bool isStdargBuiltin(const std::string& name);
-
     virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
 
     virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                            insieme::frontend::conversion::Converter& convFact) ;
-
-    virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
 
     virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
 
