@@ -451,6 +451,10 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 		return builder.callExpr(gen.getBool(), gen.getGenNe(), expr, builder.getZero(exprTy));
 	}
 
+	if (core::analysis::isLongLong (exprTy)){
+	    return castScalar (gen.getBool(),core::analysis::castFromLongLong( expr));
+	}
+
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
 		dumpDetail(expr);
 		std::cout << "****" << std::endl;
