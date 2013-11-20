@@ -502,7 +502,6 @@ DERIVED(Id, 				"id", "('a x)->'a { return x; }")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
-LITERAL(Alignof, 			"alignof", 					"(type<'a>) -> uint<8>")
 LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------

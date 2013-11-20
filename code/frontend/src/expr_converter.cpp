@@ -140,7 +140,7 @@ core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::Typ
 		return getSizeOfType(builder, refTy->getElementType());
 	}
 
-	return builder.callExpr(gen.getAlignof(), builder.getTypeLiteral(type));
+	return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
