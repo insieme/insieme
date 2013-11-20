@@ -446,6 +446,7 @@ public:
 
 	core::ExpressionPtr VisitBinPtrMemD					(const clang::BinaryOperator* binPtrMemDexpr);
 	core::ExpressionPtr VisitBinPtrMemI					(const clang::BinaryOperator* binPtrMemIexpr);
+	core::ExpressionPtr VisitBinaryTypeTraitExpr		(const clang::BinaryTypeTraitExpr* binTypeTraitExpr);
 
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
