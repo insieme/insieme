@@ -48,6 +48,7 @@
 #elif defined(_GEMS)
 	#include <include_gems/alloca.h>
 	#include <include_gems/stdlib.h>
+	#include <include_gems/stdio.h>
 #else
 	#include <alloca.h>
 #endif

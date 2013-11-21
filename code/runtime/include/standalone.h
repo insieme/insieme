@@ -370,6 +370,9 @@ void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *para
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
+    #ifdef _GEMS
+        irt_mutex_init(&print_mutex);
+    #endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
