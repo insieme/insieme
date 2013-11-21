@@ -629,8 +629,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			// otherwhise, we just reinterpret
 			core::ExpressionPtr innerExpr = expr;
 			if (gen.isRefDeref(expr)){
-				//clang does LtoR always, but we want refs in the cast. if there is a deref in the inner
-				//expression remove it
+				//clang does LtoR always, but we want refs in the cast. if there is a deref in the inner expression remove it
 				innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
 			}
 			return builder.callExpr(targetTy, gen.getRefReinterpret(),
@@ -781,6 +780,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_MemberPointerToBoolean 	:
 		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
 		* */
@@ -799,30 +799,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			if (gen.isUnit(targetTy)) { return gen.getUnitConstant(); }
 		}
 
-
-		/*
-		case clang::CK_UncheckedDerivedToBase:
-		//A conversion from a C++ class pointer/reference to a base class that can assume that
-		//the derived pointer is not null. const A &a = B(); b->method_from_a();
-		{
-			// if is a derived class, we will return a narrow expression with the datapath
-			// to access the right superclass
-
-			// TODO: do we need to check if is pointerType?
-			// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
-			// it is needed to deref the first element
-			expr = getCArrayElemRef(builder, expr);
-
-			core::TypePtr targetTy;
-			clang::CastExpr::path_const_iterator it;
-			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-				targetTy = convFact.convertType((*it)->getType().getTypePtr());
-				expr = builder.refParent(expr, targetTy);
-			}
-			return expr;
-		}
-		*/
-
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_UncheckedDerivedToBase:
 		case clang::CK_DerivedToBase:
 		//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
@@ -858,8 +835,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			VLOG(2) << expr;
 			return expr;
 		}
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_BaseToDerived:
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a);
 		{
@@ -898,8 +875,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			VLOG(2) << retIr << " " << retIr->getType();
 			return retIr;
 		}
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
 		{
@@ -940,7 +917,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			return retIr;
 		}
 
-
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_PointerToIntegral :
 		// CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
 		// ObjC, and block pointers. (intptr_t) "help!"
@@ -948,29 +925,33 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(targetTy));
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FunctionToPointerDecay 	:
 		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
 		{
 			return expr;
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NullToMemberPointer 	:
 		/*case clang::CK_NullToMemberPointer - Null pointer constant to member pointer.
 		 * int A::*mptr = 0; int (A::*fptr)(int) = nullptr;
-		* */
+		 */
 		{
 			return builder.callExpr(targetTy, gen.getNullFunc(), builder.getTypeLiteral(targetTy));
 		}
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_BaseToDerivedMemberPointer 	:
 		/*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
 		 * int B::*mptr = &A::member;
 		* */
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_DerivedToBaseMemberPointer 	:
 		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
-		* int A::*mptr = static_cast<int A::*>(&B::member);
-		* */
-
+		 * int A::*mptr = static_cast<int A::*>(&B::member);
+		 */
 		{
 			assert(false);
 		}
@@ -989,8 +970,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		/*case clang::CK_ToUnion - The GCC cast-to-union extension. i
 		* int -> union { int x; float y; } float -> union { int x; float y; }
 		* */
-
-
 
 		case clang::CK_ReinterpretMemberPointer 	:
 		/*case clang::CK_ReinterpretMemberPointer - Reinterpret a member pointer as a different kind of member pointer.
