@@ -535,7 +535,7 @@ public:
 	}
 	
 	/**
-	 *  prints location of the last registered source location
+	 *  returns readable location of the last registered source location
 	 */
 	std::string getLastTrackableLocation() const{
 		if (lastTrackableLocation){

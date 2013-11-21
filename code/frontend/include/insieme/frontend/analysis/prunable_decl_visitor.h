@@ -95,7 +95,6 @@ class PrunableDeclVisitor{
 	void VisitClassTemplate(const clang::ClassTemplateDecl* templ) {
 	}
 
-
 	/**
 	 * a function template
 	 */
@@ -118,9 +117,9 @@ class PrunableDeclVisitor{
 	 * for debug purposes
 	 */
 	void echocallback(const clang::Decl* decl){
-		//	std::cout << " ==================  " << decl->getDeclKindName() << " ====================== " <<std::endl;
-		//	decl->dump();
-		//	std::cout << " =========================================================== " << std::endl;
+	//		std::cout << " ==================  " << decl->getDeclKindName() << " ====================== " <<std::endl;
+	//		decl->dump();
+	//		std::cout << " =========================================================== " << std::endl;
 	}
 
 	/**
@@ -149,7 +148,13 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Var:
 				{
-					if (llvm::cast<clang::VarDecl>(decl)->getType().getTypePtr()->isDependentType() && !visitTemplates) break;
+					const clang::VarDecl* var = llvm::cast<clang::VarDecl>(decl);
+					if( var->isStaticDataMember() && var->getInstantiatedFromStaticDataMember () )
+						var = var->getInstantiatedFromStaticDataMember ();
+					if (var->getType().getTypePtr()->isDependentType() ||
+						(var->hasInit() && var->getInit()->getType()->isDependentType()) ){
+							if(!visitTemplates) break;
+					}
                     static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}

@@ -194,7 +194,7 @@ namespace conversion {
 Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
 		program(prog), convSetup(setup), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
-		irTranslationUnit(mgr), used(false)
+		irTranslationUnit(mgr), used(false), lastTrackableLocation(nullptr)
 {
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -313,7 +313,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
-			//if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
@@ -1105,7 +1104,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
 		lambdaExprCache[funcDecl] = irExpr;
 		VLOG(2) << "\tintercepted: " << irExpr;
-		return; //irExpr;
+		return; 
 	}
 
 	// obtain function type
@@ -1254,11 +1253,15 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		return pos->second;		// done
 	}
 
+	bool visited =false;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->Visit(funcDecl, *this);
+        visited = plugin->Visit(funcDecl, *this);
+		if (visited) break;
     }
 
-    convertFunctionDeclImpl(funcDecl);
+	if (!visited)
+    	convertFunctionDeclImpl(funcDecl);
+
 
     for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(funcDecl, *this);
