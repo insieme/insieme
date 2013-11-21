@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -154,13 +154,33 @@ public:
 		// register 'mpi' pragma
 		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
+        // check for frontend plugins pragma handlers
+         // and add user provided pragmas to be handled
+         // by insieme
+        std::map<std::string,clang::PragmaNamespace *> pragmaNamespaces;
+        for(auto plugin : setup.getPlugins()) {
+            for(auto ph : plugin->getPragmaHandlers()) {
+                std::string name = ph->getName();
+                // if the pragma namespace is not registered already
+                // create and register it and store it in the map of pragma namespaces
+                if(pragmaNamespaces.find(name) == pragmaNamespaces.end()) {
+                    pragmaNamespaces[name] = new clang::PragmaNamespace(name);
+                    mClang.getPreprocessor().AddPragmaHandler(pragmaNamespaces[name]);
+                }
+                // add the user provided pragma handler
+                pragmaNamespaces[name]->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<pragma::Pragma>(
+                                                            mClang.getPreprocessor().getIdentifierInfo(ph->getKeyword()),
+                                                            *ph->getToken(), ph->getName(), ph->getFunction()));
+
+            }
+        }
 		//  FIXME: preprocess here or in indexer?
 		//clang::ASTConsumer emptyCons;
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 
 		parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
-		
+
 		if(mClang.getDiagnostics().hasErrorOccurred()) {
 			// errors are always fatal
 			throw ClangParsingError(mFileName);
@@ -195,9 +215,9 @@ struct Program::ProgramImpl {
 		userIncludeDirs(::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
 		//interceptor(mgr, setup.getSystemHeadersDirectories(), setup.getIncludeDirectories(), setup.getInterceptions())
 		interceptor(
-				mgr, 
+				mgr,
 				::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ),
-				::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ), 
+				::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ),
 				setup.getInterceptions())
 		{}
 };
