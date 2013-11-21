@@ -876,7 +876,6 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
     if(retStmt.size()==0){
 		convFact.trackSourceLocation(stmt->getLocStart());
         retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-		convFact.untrackSourceLocation();
 	}
 
 

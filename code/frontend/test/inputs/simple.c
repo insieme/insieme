@@ -41,5 +41,8 @@ int main() {
     A;
     //check for injected headers
     int x = magicFunction();
-	return 0;
+    #pragma te loop x num_threads(x*2)
+    #pragma te scheduling auto
+    return 0;
+    #pragma te barrier
 }

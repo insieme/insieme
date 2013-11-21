@@ -782,7 +782,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	// if there callee is not a fuctionDecl we need to use other method.
 	// it might be a pointer to function.
 	if ( callExpr->getCallee() ) {
-		core::ExpressionPtr funcPtr = convFact.tryDeref(Visit(callExpr->getCallee()));
+		core::ExpressionPtr funcPtr = Visit(callExpr->getCallee());
+		frontend_assert(funcPtr) << "no function could be converted";
+		funcPtr = convFact.tryDeref(funcPtr);
 		core::TypePtr subTy = funcPtr->getType();
 
 		if (subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) {
@@ -1830,7 +1832,6 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
-		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

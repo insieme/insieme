@@ -267,7 +267,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
     if(retStmt.size()==0){
 		convFact.trackSourceLocation(stmt->getLocStart());
         retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

@@ -29,14 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/frontend/convert.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -65,9 +66,9 @@ using namespace insieme::frontend::pragma;
 
 namespace {
 
-void reportRecord( std::ostream& 					ss, 
-				   ParserStack::LocErrorList const& errs, 
-				   clang::SourceManager& 			srcMgr ) 
+void reportRecord( std::ostream& 					ss,
+				   ParserStack::LocErrorList const& errs,
+				   clang::SourceManager& 			srcMgr )
 {
 	std::vector<std::string> list;
 	std::transform(errs.begin(), errs.end(), back_inserter(list),
@@ -117,19 +118,62 @@ MatchMap::MatchMap(const MatchMap& other) {
 		ValueList& currList = (*this)[curr.first];
 
 		std::for_each(curr.second.cbegin(), curr.second.cend(), [ &currList ](const ValueList::value_type& elem) {
-			currList.push_back( ValueUnionPtr( new ValueUnion(*elem, true) ) );
+			currList.push_back( ValueUnionPtr( new ValueUnion(*elem, true, elem->isExpr()) ) );
 		});
 	});
 }
 
 std::ostream& MatchMap::printTo(std::ostream& out) const {
-	for_each(begin(), end(), [&] ( const MatchMap::value_type& cur ) { 
+	for_each(begin(), end(), [&] ( const MatchMap::value_type& cur ) {
 				out << "KEY: '" << cur.first << "' -> ";
-				out << "[" << join(", ", cur.second, 
+				out << "[" << join(", ", cur.second,
 					[](std::ostream& out, const ValueUnionPtr& cur){ out << *cur; } ) << "]";
 				out << std::endl;
 			});
 	return out;
+}
+
+bool ValueUnion::isExpr() const {
+    return isExp;
+}
+
+// ------------------------------------ MatchObject ---------------------------
+core::ExpressionPtr MatchObject::getExpr(const ValueUnionPtr& p, conversion::Converter& fact) {
+    clang::Stmt* stmt = p->get<clang::Stmt*>();
+    if(auto expr = llvm::dyn_cast<clang::Expr>(stmt)) {
+        core::ExpressionPtr&& varExpr = fact.convertExpr( expr );
+        assert(varExpr && "Conversion a to Insieme node failed!");
+        return varExpr;
+    }
+    assert(false && "expression used in pragma seems to be no expression");
+}
+
+core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Converter& fact) {
+    clang::Stmt* varIdent = p->get<clang::Stmt*>();
+    assert(varIdent && "Clause not containing var exps");
+    clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
+    assert(refVarIdent && "Clause not containing a DeclRefExpr");
+    core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
+    assert(varExpr.isa<core::VariablePtr>() && "variable used in pragma cannot seems to be no variable");
+    return varExpr.as<core::VariablePtr>();
+}
+
+
+void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact) {
+    if(called) {
+        return;
+    } else {
+        for(auto m : mmap) {
+            for(unsigned i=0; i<m.second.size(); i++) {
+                if(!m.second[i]->isExpr()) {
+                    varList[m.first].push_back(getVar(m.second[i], fact));
+                } else {
+                    exprList[m.first].push_back(getExpr(m.second[i], fact));
+                }
+            }
+        }
+        called = true;
+    }
 }
 
 // ------------------------------------ ParserStack ---------------------------
@@ -288,7 +332,7 @@ bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStac
 		PP.LookAhead(1); // THIS IS CRAZY BUT IT WORKS
 		if (getMapName().size())
 			mmap[getMapName()].push_back( ValueUnionPtr(
-				new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context)
+				new ValueUnion(result, &static_cast<clang::Sema&>(ParserProxy::get().getParser()->getActions()).Context, true)
 			));
 		return true;
 	}
@@ -331,16 +375,16 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 	Sema& A = ParserProxy::get().getParser()->getActions();
 
 	// HACK: FIXME
-	// this hacks make it possible that if we have a token and we just want its string value 
-	// we do not invoke clang semantics action on it. 
+	// this hacks make it possible that if we have a token and we just want its string value
+	// we do not invoke clang semantics action on it.
 	if (!resolve) {
 		if (tok == clang::tok::identifier) {
 			UnqualifiedId Name;
 			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-			mmap[map_str].push_back( 
+			mmap[map_str].push_back(
 				ValueUnionPtr(new ValueUnion(
 					std::string(
-						Name.Identifier->getNameStart(), 
+						Name.Identifier->getNameStart(),
 						Name.Identifier->getLength()
 					)
 				))
@@ -352,7 +396,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 	}
 
 	// We want to use clang sema to actually get the Clang node which is found out of this
-	// identifier 
+	// identifier
 	switch (tok) {
 	case clang::tok::numeric_constant:
 		mmap[map_str].push_back(ValueUnionPtr(

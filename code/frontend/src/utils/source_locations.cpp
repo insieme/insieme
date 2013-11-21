@@ -51,11 +51,17 @@ namespace frontend {
 namespace utils {
 
 string FileName(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	if (pl.isValid())
-		return string(pl.getFilename());
-	else
-		return string("UNKNOWN FILE");
+	if (l.isValid()){
+		return l.printToString(sm);
+	//	if (l.isMacroID()){
+	//		PresumedLoc pl = sm.getPresumedLoc(l);
+	//		if (pl.isValid()){
+	//			return string(pl.getFilename());
+	//		}
+	//	}
+	//	return string(l.getFilename());
+	}
+	return string("UNKNOWN FILE");
 }
 
 string FileId(SourceLocation const& l, SourceManager const& sm) {
@@ -90,9 +96,19 @@ std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager 
 }
 
 std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
-	std::ostringstream ss;
-	ss << FileName(l, sm) << ":" << Line(l,sm) << ":" << Column(l,sm);
-	return ss.str();
+	if (l.isValid()){
+		if (l.isFileID()) {
+			if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE"; 
+			return l.printToString(sm);
+		}
+		if (l.isMacroID()){
+			PresumedLoc pl = sm.getPresumedLoc(l);
+			if (pl.isValid()){
+				return string(pl.getFilename());
+			}
+		}
+	}
+	return string("UNKNOWN FILE");
 }
 
 } // End util namespace

@@ -59,6 +59,11 @@ namespace stmtutils {
 namespace insieme {
 namespace frontend {
 
+namespace pragma {
+    class MatchObject;
+    struct node;
+}
+
 namespace tu {
     class IRTranslationUnit;
 }
@@ -68,6 +73,32 @@ namespace conversion {
 }
 
 namespace extensions {
+
+    class PragmaHandler {
+    protected:
+        typedef std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> pragmaHandlerFunction;
+        pragmaHandlerFunction f;
+        const std::string name;
+        const std::string keyw;
+        insieme::frontend::pragma::node* tok;
+    public:
+        PragmaHandler( const std::string& pragmaNamespace,
+                        const std::string& keyword,
+                        insieme::frontend::pragma::node& re,
+                        std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> lambda);
+        ~PragmaHandler();
+
+        const std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)>  getFunction() {
+            return f;
+        }
+        const std::string& getName() const {
+            return name;
+        }
+        const std::string& getKeyword() const {
+            return keyw;
+        }
+        const insieme::frontend::pragma::node* getToken() const;
+    };
 
     /**
      *  This class is the base class for user provided frontend plugins
@@ -83,6 +114,8 @@ namespace extensions {
     protected:
         typedef std::map<std::string,std::string> macroMap;
         typedef std::vector<std::string> headerVec;
+        typedef std::vector<std::shared_ptr<PragmaHandler>> pragmaHandlerVec;
+        pragmaHandlerVec pragmaHandlers;
         macroMap macros;
         headerVec injectedHeaders;
         headerVec kidnappedHeaders;
@@ -110,6 +143,8 @@ namespace extensions {
         // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		// ############ PRAGMA HANDLING ############ //
+        const pragmaHandlerVec& getPragmaHandlers() const;
 	};
 
 }
