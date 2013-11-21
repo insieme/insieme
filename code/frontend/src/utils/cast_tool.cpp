@@ -942,18 +942,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		case clang::CK_BaseToDerivedMemberPointer 	:
-		/*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
-		 * int B::*mptr = &A::member;
+		case clang::CK_UserDefinedConversion 	:
+		/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
+		* struct A { operator int(); }; int i = int(A());
 		* */
-
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		case clang::CK_DerivedToBaseMemberPointer 	:
-		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
-		 * int A::*mptr = static_cast<int A::*>(&B::member);
-		 */
 		{
-			assert(false);
+			return convFact.convertExpr(castExpr->getSubExpr ());
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -971,16 +965,21 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* int -> union { int x; float y; } float -> union { int x; float y; }
 		* */
 
+		case clang::CK_BaseToDerivedMemberPointer 	:
+		/*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
+		 * int B::*mptr = &A::member;
+		* */
+
+		case clang::CK_DerivedToBaseMemberPointer 	:
+		/*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
+		* int A::*mptr = static_cast<int A::*>(&B::member);
+		* */
+
 		case clang::CK_ReinterpretMemberPointer 	:
 		/*case clang::CK_ReinterpretMemberPointer - Reinterpret a member pointer as a different kind of member pointer.
 		* C++ forbids this from crossing between function and object types, but otherwise does not restrict it.
 		* However, the only operation that is permitted on a "punned" member pointer is casting it back to the original type,
 		* which is required to be a lossless operation (although many ABIs do not guarantee this on all possible intermediate types).
-		* */
-
-		case clang::CK_UserDefinedConversion 	:
-		/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
-		* struct A { operator int(); }; int i = int(A());
 		* */
 
 		case clang::CK_CPointerToObjCPointerCast 	:
@@ -1025,6 +1024,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_CopyAndAutoreleaseBlockObject 	:
 		case clang::CK_BuiltinFnToFnPtr 	:
 			std::cout << " \nCAST: " << castExpr->getCastKindName () << " not supported!!"<< std::endl;
+			std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart (), convFact.getSourceManager()) <<std::endl;
 			castExpr->dump();
 			assert(false);
 		default:
