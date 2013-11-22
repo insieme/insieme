@@ -548,7 +548,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 				omp::addThreadPrivateAnnotation(globVar);
 			}
 
-			utils::addHeaderForDecl(globVar, valDecl, getHeaderTagger());
+			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 			varDeclMap.insert( { valDecl, globVar } );
 		} else {
 			// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
@@ -1141,7 +1141,8 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, getHeaderTagger());
+		// TODO: check if we can optimize the usage of this, consumes too much time
+		getHeaderTagger().addHeaderForDecl(retExpr, funcDecl);
 		lambdaExprCache[funcDecl] = retExpr;
 		return ;// retExpr;
 	}

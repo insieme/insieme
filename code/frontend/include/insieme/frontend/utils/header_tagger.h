@@ -72,12 +72,10 @@ namespace utils {
 			
 			vector<fs::path> stdLibDirs;
 			vector<fs::path> userIncludeDirs;
-			vector<fs::path> searchPath;
 			const clang::SourceManager& sm;
 
-			public:
+			mutable std::map<clang::FileID, std::pair<std::string, bool> > locationCache;
 
-			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
 			/**
 			 * A utility function cutting down std-lib header files.
 			 */
@@ -86,11 +84,13 @@ namespace utils {
 			bool isStdLibHeader(const clang::SourceLocation& loc) const;
 
 			bool isStdLibHeader(const fs::path& path) const;
+
 			bool isUserLibHeader(const clang::SourceLocation& loc) const;
 
 			bool isUserLibHeader(const fs::path& path) const;
 
 			boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
+
 			bool isHeaderFile(const string& name) const;
 
 			string getTopLevelInclude(const clang::SourceLocation& loc) const;
@@ -98,22 +98,31 @@ namespace utils {
 			bool isIntrinsicHeader(const string& name) const;
 
 			boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
+
+
+		public:
+
+			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
+
+
+			/**
+			 *	asks whenever this declaration is in a system header, 
+			 *	@param the declaration we are asking for
+			 *	@whenever is a system header
+			 */
+			bool isDefinedInSystemHeader (const clang::Decl* decl) const;
+
+			/**
+			 * Attaches a header annotation to the given node which is supposed to be
+			 * the result of converting the given declaration.
+			 *
+			 * @param node the node to be annotated
+			 * @param decl the declaration this node has been derived from
+			 * @param the header tagger which stores all information about headers
+			 * @param whenever we want to annotate user defined headers, for explicit code sections interception
+			 */
+			void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined = false) const;
 		};
-
-
-
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const HeaderTagger& headerTagger);
-
-	/**
-	 * Attaches a header annotation to the given node which is supposed to be
-	 * the result of converting the given declaration.
-	 *
-	 * @param node the node to be annotated
-	 * @param decl the declaration this node has been derived from
-	 * @param the header tagger which stores all information about headers
-	 * @param whenever we want to annotate user defined headers, for explicit code sections interception
-	 */
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& headerTagger, bool attachUserDefined = false);
 
 } // end namespace utils
 } // end namespace frontend

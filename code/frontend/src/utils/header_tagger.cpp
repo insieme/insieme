@@ -61,14 +61,7 @@ namespace utils {
 		HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr ):
 			stdLibDirs( ::transform(stdLibDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
 			userIncludeDirs( ::transform(userIncludeDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
-			sm(srcMgr)
-		{ 
-			for (const fs::path& header : userIncludeDirs)
-				searchPath.push_back(fs::canonical(header));
-		
-			for (const fs::path& header : stdLibDirs)
-				searchPath.push_back(fs::canonical(header));
-
+			sm(srcMgr) { 
 		}
 
 		/**
@@ -79,7 +72,7 @@ namespace utils {
 
 			if (stdLibDirs.empty()) { return fail; }
 
-			if (contains(stdLibDirs, fs::canonical(path) )) {
+			if (contains(stdLibDirs, fs::canonical(path) )) {   // very expensive, keep low use
 				return fs::path();
 			}
 
@@ -94,16 +87,32 @@ namespace utils {
 
 		bool HeaderTagger::isStdLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
-			return isStdLibHeader ( sm.getPresumedLoc(loc).getFilename());
+			auto fit = locationCache.find(sm.getFileID(loc));
+			if (fit != locationCache.end()){
+				return fit->second.second;
+			}
+
+			std::string filename =  sm.getPresumedLoc(loc).getFilename();
+			bool isSys = isStdLibHeader (filename);
+			locationCache[sm.getFileID(loc)] = { filename, isSys };
+			return isSys;
 		}
 
 		bool HeaderTagger::isStdLibHeader(const fs::path& path) const{
-			return toStdLibHeader(fs::canonical(path));
+			return toStdLibHeader(fs::canonical(path)); // expensive, dont go crazy with this
 		}
 	
 		bool HeaderTagger::isUserLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
-			return isUserLibHeader ( sm.getPresumedLoc(loc).getFilename());
+			auto fit = locationCache.find(sm.getFileID(loc));
+			if (fit != locationCache.end()){
+				return !fit->second.second;
+			}
+
+			std::string filename =  sm.getPresumedLoc(loc).getFilename();
+			bool isUser = isUserLibHeader (filename);
+			locationCache[sm.getFileID(loc)] = { filename, !isUser };
+			return isUser;
 		}	
 
 		bool HeaderTagger::isUserLibHeader(const fs::path& path) const{
@@ -177,10 +186,13 @@ namespace utils {
 				// check if last include was in the search path and next is not,
 				// this case is a system header included inside of a programmer include chain
 				// BUT if both are still in the search path, continue cleaning the include
-				if((	(isStdLibHeader(ploc.getFilename()) && !isStdLibHeader(sm.getPresumedLoc(includeLoc).getFilename()))
-					||	(isUserLibHeader(ploc.getFilename()) && !isUserLibHeader(sm.getPresumedLoc(includeLoc).getFilename())))
-						&& !isIntrinsicHeader(sm.getPresumedLoc(includeLoc).getFilename())) {
-					return ploc.getFilename();
+				if (isStdLibHeader(loc) && !isStdLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+						return ploc.getFilename();
+				}
+				if (isUserLibHeader(loc) && !isUserLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+						return ploc.getFilename();
 				}
 				
 				return getTopLevelInclude(includeLoc);
@@ -223,15 +235,17 @@ namespace utils {
 		}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// 			Non member functions, header tagging interface
+	// 			header tagging interface
 
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const HeaderTagger& tagger) {
-		return tagger.isStdLibHeader(decl->getLocation());
+	bool HeaderTagger::isDefinedInSystemHeader (const clang::Decl* decl) const {
+		return isStdLibHeader(decl->getLocation());
 	}
 
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& tagger, bool attachUserDefined) {
-	//	if (insieme::annotations::c::hasIncludeAttached(node))  // this impacts half a second
-	//		return;
+	void HeaderTagger::addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined) const {
+
+		// the node was already annotated, what is the point of doint it again?
+		if (insieme::annotations::c::hasIncludeAttached(node))  
+			return;
 
 		// check whether there is a declaration at all
 		if (!decl) return;
@@ -243,10 +257,10 @@ namespace utils {
 			VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << " [clang: " << name << "]" ;
 		}
 
-		string fileName = tagger.getTopLevelInclude(decl->getLocation());
+		string fileName = getTopLevelInclude(decl->getLocation());
 
 		// file must be a header file
-		if (!tagger.isHeaderFile(fileName)) {
+		if (!isHeaderFile(fileName)) {
 			VLOG(2) << "'" << fileName << "' not a headerfile";
 			return;			// not to be attached
 		}
@@ -255,18 +269,18 @@ namespace utils {
 		if (const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 			// TODO: this is just based on integration tests - to make them work, no real foundation :(
 			if( funDecl->isExternC() && 
-				!(tagger.isStdLibHeader(fileName) || tagger.isIntrinsicHeader(fileName)) ) return;
+				!(isStdLibHeader(fileName) || isIntrinsicHeader(fileName)) ) return;
 		}
 
 		// get absolute path of header file
 		fs::path header = fs::canonical(fileName);
 
 		// check if header is in STL
-		if( auto stdLibHeader = tagger.toStdLibHeader(header) ) {
+		if( auto stdLibHeader = toStdLibHeader(header) ) {
 			header = *stdLibHeader;
-		} else if( auto intrinsicHeader = tagger.toIntrinsicHeader(header) ) {
+		} else if( auto intrinsicHeader = toIntrinsicHeader(header) ) {
 			header = *intrinsicHeader;
-		} else if (auto userLibHeader = tagger.toUserLibHeader(header) ) {
+		} else if (auto userLibHeader = toUserLibHeader(header) ) {
 			if(attachUserDefined )
 				header = *userLibHeader;
 			else

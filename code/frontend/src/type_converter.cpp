@@ -662,9 +662,9 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 
 		//check if type is defined in a system header --> if so add includeAnnotation which is used
 		//in backend to avoid redeclaration of type
-		if( utils::isDefinedInSystemHeader(recDecl, convFact.getHeaderTagger()) ) {
+		if( convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl) ) {
 			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-			utils::addHeaderForDecl(res, recDecl, convFact.getHeaderTagger());
+			convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 		}
 
 		frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
