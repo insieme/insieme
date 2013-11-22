@@ -139,10 +139,11 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 		// but we DO NOT call a constructor on return in EXCEPT if :
 		// 			- when we are actually creating a new object out of more than one paramenter, then we have no way to 
-		// 			  return that tuple to construct afterwards
+		// 			  return that tuple to construct afterwards 
 		if (retExpr->getNodeType() == core::NT_CallExpr){
 			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
-				if(ty.isConstructor() && retExpr.as<core::CallExprPtr>()->getArguments().size()==1){
+				// FIXME: build a test of return values
+				if(ty.isConstructor() && retExpr.as<core::CallExprPtr>()->getArguments().size()==2){ // two args, first is this, second the obj to copy
 					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
 				}
 			}
