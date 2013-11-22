@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -42,12 +42,13 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include "clang/AST/StmtVisitor.h"
-	#include <clang/AST/DeclCXX.h>
-	#include <clang/AST/ExprCXX.h>
-	#include <clang/AST/CXXInheritance.h>
 
-	#include <clang/Basic/FileManager.h>
+#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/CXXInheritance.h>
+
+#include <clang/Basic/FileManager.h>
 #pragma GCC diagnostic pop
 
 
@@ -329,7 +330,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-	args = getFunctionArguments(callExpr, funcTy);
+		args = getFunctionArguments(callExpr, funcTy);
 
 		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
@@ -350,7 +351,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// unary:	operator@( left==arg(0) )
 		// binary:	operator@( left==arg(0), right==arg(1) )
 
-		convertedOp =  convFact.getCallableExpression(funcDecl);
+		convertedOp = convFact.convertExpr(callExpr->getCallee());
+
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -635,14 +635,6 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 
 	// create result location
 	core::TypePtr res;
-
-	//check if type is intercepted
-	if(convFact.program.getInterceptor().isIntercepted(type)) {
-		VLOG(2) << type << " isIntercepted";
-		res = convFact.program.getInterceptor().intercept(type, convFact);
-		typeCache[type] = res;
-		return res;
-	}
 
 	// assume a recursive construct for record declarations
 	if (auto recDecl = toRecordDecl(type)) {

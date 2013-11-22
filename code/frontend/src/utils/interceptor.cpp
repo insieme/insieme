@@ -37,6 +37,7 @@
 #include "insieme/frontend/utils/interceptor.h"
 
 #include <iostream>
+#include <sstream>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -50,6 +51,7 @@
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/core/lang/enum_extension.h"
 		
 namespace insieme {
@@ -136,12 +138,23 @@ namespace {
 							auto Ilist = insieme::core::IntParamList();
 							Ilist.push_back( builder.concreteIntTypeParam(args[i].getAsIntegral().getLimitedValue()));
 							typeList.insert(typeList.end(),builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
-							break;
 						}
+						break;
 					case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
 					case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
 					case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
-					case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
+					case clang::TemplateArgument::ArgKind::Pack:
+						{
+							VLOG(2) << "template pack ";
+							for(clang::TemplateArgument::pack_iterator it = args[i].pack_begin(), end = args[i].pack_end();it!=end;it++) {
+								const clang::Type* argType = (*it).getAsType().getTypePtr();
+								auto ty =  convFact.convertType(argType);
+								VLOG(2) << ty;
+								typeList.insert( typeList.end(), ty );
+							}
+							//VLOG(2) << "ArgKind::Pack not supported";
+						}
+						break;
 				}
 			}
 		}
@@ -304,11 +317,12 @@ bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) {
 	//FIXME create generic type for templates
 	/* get template decl and convert its type -> add to converttype template handling...
 		* if not specialized -> use typeVariable
 		* */
+	std::stringstream ss;
 	switch( decl->getTemplatedKind() ) {
 		case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
 			VLOG(2) << "TK_NonTemplate";
@@ -320,17 +334,101 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 			VLOG(2) << "TK_MemberSpecialization";
 			break;
 		case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
-			VLOG(2) << "TK_FunctionTemplateSpecialization";
+			{
+				VLOG(2) << "TK_FunctionTemplateSpecialization";
+				std::vector<string> templateParams;
+
+				clang::FunctionTemplateSpecializationInfo* funcTempSpecInfo= decl->getTemplateSpecializationInfo();
+				auto getTemplateArgs = [&](const clang::TemplateArgumentList* args) {
+				for(unsigned i=0; i<args->size(); ++i){
+				//for(unsigned i=0; i<decl->getTemplateSpecializationArgs()->size(); ++i){
+					const clang::TemplateArgument& arg = args->get(i);
+					//only add something if we have a type
+					switch(arg.getKind()) {
+						case clang::TemplateArgument::Expression: {
+							VLOG(2) << arg.getAsExpr()->getType().getAsString();
+							//templateParams.push_back(arg.getAsExpr()->getType().getAsString());
+							break;
+						}
+						case clang::TemplateArgument::Type: {
+							std::string typeName = arg.getAsType().getAsString();
+							VLOG(2) << typeName;
+							//type has struct/class in name remove it
+							boost::replace_all(typeName, "class ", ""); 
+							boost::replace_all(typeName, "struct ", ""); 
+							VLOG(2) << typeName;
+
+							templateParams.push_back(typeName);
+							break;
+						}
+						case clang::TemplateArgument::Null: {
+							VLOG(2) << "null";
+							//templateParams.push_back("null");
+							break;
+						}
+						case clang::TemplateArgument::Declaration: {
+							VLOG(2) << arg.getAsDecl()->getType().getAsString();
+							//templateParams.push_back(arg.getAsDecl()->getType().getAsString());
+							break;
+						}
+						case clang::TemplateArgument::NullPtr: {
+							VLOG(2) << "nullptr";
+							//templateParams.push_back("nullptr");
+							break;
+						}
+						case clang::TemplateArgument::Integral:  {
+							VLOG(2) << arg.getAsIntegral().toString(10);
+							templateParams.push_back(arg.getAsIntegral().toString(10));
+							break;
+						}
+						case clang::TemplateArgument::Template: {
+							VLOG(2) << arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString();
+							//templateParams.push_back(arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+						}
+						case clang::TemplateArgument::TemplateExpansion: {
+							VLOG(2) << "TemplateExpansion";
+							//I don't know what to do here
+							break;
+						}
+						case clang::TemplateArgument::Pack: {
+							for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end();it!=end;it++) {
+								const clang::QualType& argType = (*it).getAsType();
+								VLOG(2) << argType.getAsString();
+								//templateParams.push_back(argType.getAsString());
+							}
+							break;
+						}
+						default:
+							assert(false);
+					}
+				}
+				};
+
+				if(explicitTemplateArgs) {
+					//append template args explicitly
+					getTemplateArgs(funcTempSpecInfo->TemplateArguments);
+				}
+				if(!templateParams.empty()) {
+					ss << " < " << join(", ",templateParams) <<  " > ";
+					VLOG(2) << ss.str();
+				}
+			}
 			break;
 		case clang::FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 			VLOG(2) << "TK_DependentFunctionTemplateSpecialization";
 			break;
+		default:
+			assert(false);
 	}
+
 
 	core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
 
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
+
+	//append eventual templateSpecializations
+	literalName.append(ss.str());
 
 	// fix the type and literal name for Cxx members / ctors / dtors
 	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {

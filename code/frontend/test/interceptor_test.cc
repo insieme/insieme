@@ -60,16 +60,16 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
-// clang [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
+#include "insieme/utils/test/test_utils.h"
+#include "test_utils.inc"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
-using namespace clang;
 
 void checkSemanticErrors(const NodePtr& node) {
 	auto msgList = check( node, checks::getFullCheck() ).getAll();
@@ -98,44 +98,70 @@ std::string getPrettyPrinted(const NodePtr& node) {
 	return std::string(res.begin(), res.end());
 }
 
-TEST(Interception, FileTest) {
-
-	Logger::get(std::cerr, DEBUG, 0);
-
-	NodeManager manager;
-	fe::Program prog( manager, SRC_DIR "/inputs/interceptor/interceptor_test.cpp" );
-
-	//setup interceptor 
-	prog.getInterceptor().loadConfigSet( {"ns::simpleFunc.*", "ns::S.*", "nsInc::.*"} );
-	
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
-
-		fe::conversion::Converter convFactory( mgr, prog );
-
-		if(tp.isStatement()) {
-			StatementPtr&& stmt = analysis::normalize(convFactory.convertStmt( tp.getStatement() ));
-			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
-			// do semantics checking
-			checkSemanticErrors(stmt);
-
-		} else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<clang::TypeDecl>(tp.getDecl())) {
-				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
-				// do semantics checking
-				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = convFactory.convertFunctionDecl(fd).as<insieme::core::LambdaExprPtr>();
-				assert(expr);
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
-				// do semantics checking
-				checkSemanticErrors(expr);
+TEST(Interception, SimpleInterception) {
+	fe::Source src(
+		R"(
+			#include "interceptor_header.h"
+			void intercept_simpleFunc() {
+				int a = 0;
+				ns::simpleFunc(1);
+				ns::simpleFunc(a);
 			}
-		}
-	}
+
+			void intercept_memFunc1() {
+				int a = 0;
+				ns::S s;
+				s.memberFunc(a);
+			}
+			void intercept_memFunc2() {
+				using namespace ns;
+				int a = 0;
+				S s;
+				s.memberFunc(a);
+			}
+
+			// only for manual compilation
+			int main() {
+				intercept_simpleFunc();
+				intercept_memFunc1();
+				intercept_memFunc2();
+			};
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(SRC_DIR "inputs/interceptor/");
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>();
+	job.setInterception( "ns::.*" );
+	auto tu = job.toTranslationUnit(mgr);
+	//LOG(INFO) << tu;
+
+	auto retTy = builder.getLangBasic().getUnit(); 
+	auto funcTy = builder.functionType( TypeList(), retTy);
+
+	//intercept_simpleFunc
+	auto sf = builder.literal("intercept_simpleFunc", funcTy);
+	auto sf_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v1));}";
+
+	auto res = analysis::normalize(tu[sf]);
+	auto code = toString(getPrettyPrinted(res));
+	EXPECT_EQ(sf_expected, code);
+
+	//intercept_memFunc1
+	auto mf1 = builder.literal("intercept_memFunc1", funcTy);
+	auto mf1_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
+
+	res = analysis::normalize(tu[mf1]);
+	code = toString(getPrettyPrinted(res));
+
+	EXPECT_EQ(mf1_expected, code);
+	//intercept_memFunc2
+	auto mf2 = builder.literal("intercept_memFunc2", funcTy);
+	auto mf2_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
+
+	res = analysis::normalize(tu[mf2]);
+	code = toString(getPrettyPrinted(res));
+	EXPECT_EQ(mf2_expected, code);
 }
