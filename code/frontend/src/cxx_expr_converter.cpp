@@ -985,6 +985,18 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitBinaryTypeTraitExpr		(cons
 	return retExpr;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//		SizeOfPack expr
+//		basically a cpp11 feature but tends to end up also in cpp03
+//		DUPLICATED INTO CPP11extension
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr) {
+	convFact.warnings.insert("SizeOfPack -(sizeof...) is supported from c++11 on");
+	//sizeOf... returns size_t --> use unsigned int
+	core::ExpressionPtr retExpr = builder.uintLit(sizeOfPackExpr->getPackLength());
+	LOG_EXPR_CONVERSION(sizeOfPackExpr, retExpr);
+	return retExpr;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
