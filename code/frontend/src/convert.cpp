@@ -193,8 +193,13 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), convSetup(setup), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
-		irTranslationUnit(mgr), used(false), lastTrackableLocation(nullptr)
+		program(prog), 
+		convSetup(setup), 
+		pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		irTranslationUnit(mgr), used(false),
+		lastTrackableLocation(nullptr),
+		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager()),
+		interceptor(mgr, headerTagger, setup.getInterceptions())
 {
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -267,7 +272,7 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) { return; }
 			if (var->hasExternalStorage()) { return; }
 			if (var->isStaticLocal()) { return; }
-			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) { return; }
+			if (converter.getInterceptor().isIntercepted(var->getQualifiedNameAsString())) { return; }
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -344,6 +349,18 @@ tu::IRTranslationUnit Converter::convert() {
 
 	// that's all
 	return irTranslationUnit;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
+	return headerTagger;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+const frontend::utils::Interceptor& Converter::getInterceptor() const{
+	return interceptor;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -493,7 +510,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
 		std::string name = utils::buildNameForVariable(varDecl);
-		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+		if (getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 			name = varDecl->getQualifiedNameAsString();
 		}
 
@@ -532,7 +549,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// since this is the fist time we get access to the complete type, we can define the
 		// suitable initialization
 		// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
-		if (varDecl->isStaticDataMember() && !getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
+		if (varDecl->isStaticDataMember() && !getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
 			VLOG(2)	<< "         is static data member";
 			auto initValue = convertInitForGlobal(*this, varDecl, irType);
 			// as we don't see them in the globalVisitor we have to take care of them here
@@ -544,7 +561,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			omp::addThreadPrivateAnnotation(globVar);
 		}
 
-		utils::addHeaderForDecl(globVar, valDecl, program.getStdLibDirs());
+		utils::addHeaderForDecl(globVar, valDecl, getHeaderTagger());
 		varDeclMap.insert( { valDecl, globVar } );
 
 		for(auto plugin : this->getConversionSetup().getPlugins()) {
@@ -784,7 +801,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 
 	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
 	string enumConstantName;
-	if( getProgram().getInterceptor().isIntercepted(enumType) ) {
+	if( getInterceptor().isIntercepted(enumType) ) {
 		//TODO move name mangling into interceptor
 		auto enumDecl = enumType->getDecl();
 		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
@@ -1100,8 +1117,8 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 
 	// check whether function should be intersected
-	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
-		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
+	if( getInterceptor().isIntercepted(funcDecl) ) {
+		auto irExpr = getInterceptor().intercept(funcDecl, *this);
 		lambdaExprCache[funcDecl] = irExpr;
 		VLOG(2) << "\tintercepted: " << irExpr;
 		return; 
@@ -1141,7 +1158,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs(), program.getUserIncludeDirs());
+		utils::addHeaderForDecl(retExpr, funcDecl, getHeaderTagger());
 		lambdaExprCache[funcDecl] = retExpr;
 		return ;// retExpr;
 	}
@@ -1285,8 +1302,8 @@ core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* 
 	}
 
 	// check whether function should be intercected
-	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
-		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
+	if( getInterceptor().isIntercepted(funcDecl) ) {
+		auto irExpr = getInterceptor().intercept(funcDecl, *this);
 		return irExpr;
 	}
 

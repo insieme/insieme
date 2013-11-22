@@ -637,9 +637,9 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	core::TypePtr res;
 
 	//check if type is intercepted
-	if(convFact.program.getInterceptor().isIntercepted(type)) {
+	if(convFact.getInterceptor().isIntercepted(type)) {
 		VLOG(2) << type << " isIntercepted";
-		res = convFact.program.getInterceptor().intercept(type, convFact);
+		res = convFact.getInterceptor().intercept(type, convFact);
 		typeCache[type] = res;
 		return res;
 	}
@@ -662,9 +662,9 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 
 		//check if type is defined in a system header --> if so add includeAnnotation which is used
 		//in backend to avoid redeclaration of type
-		if( utils::isDefinedInSystemHeader(recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs()) ) {
+		if( utils::isDefinedInSystemHeader(recDecl, convFact.getHeaderTagger()) ) {
 			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-			utils::addHeaderForDecl(res, recDecl, convFact.getProgram().getStdLibDirs());
+			utils::addHeaderForDecl(res, recDecl, convFact.getHeaderTagger());
 		}
 
 		frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());

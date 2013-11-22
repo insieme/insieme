@@ -40,13 +40,69 @@
 
 #include "insieme/core/forward_decls.h"
 
-namespace clang { class Decl; }
+#include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/ASTContext.h>
+#pragma GCC diagnostic pop
+
+namespace clang { 
+	class Decl; 
+}
 
 namespace insieme {
 namespace frontend {
 namespace utils {
 
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs= vector<boost::filesystem::path>(), const vector<boost::filesystem::path>& userIncludeDirs=vector<boost::filesystem::path>());
+	namespace fs = boost::filesystem;
+	namespace ba = boost::algorithm;
+
+		/**
+		 * class which helps finding the more suitable header for a declaration, not allways top
+		 * level since we might have a system header included deep in a includes chain.
+		 * the most apropiate header has to be computed
+		 */
+		class HeaderTagger { 
+			
+			vector<fs::path> stdLibDirs;
+			vector<fs::path> userIncludeDirs;
+			vector<fs::path> searchPath;
+			const clang::SourceManager& sm;
+
+			public:
+
+			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
+			/**
+			 * A utility function cutting down std-lib header files.
+			 */
+			boost::optional<fs::path> toStdLibHeader(const fs::path& path) const;
+
+			bool isStdLibHeader(const clang::SourceLocation& loc) const;
+
+			bool isStdLibHeader(const fs::path& path) const;
+			bool isUserLibHeader(const clang::SourceLocation& loc) const;
+
+			bool isUserLibHeader(const fs::path& path) const;
+
+			boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
+			bool isHeaderFile(const string& name) const;
+
+			string getTopLevelInclude(const clang::SourceLocation& loc) const;
+			
+			bool isIntrinsicHeader(const string& name) const;
+
+			boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
+		};
+
+
+
+	bool isDefinedInSystemHeader (const clang::Decl* decl, const HeaderTagger& headerTagger);
 
 	/**
 	 * Attaches a header annotation to the given node which is supposed to be
@@ -57,9 +113,7 @@ namespace utils {
 	 * @param stdLibDirs libraries to be considered within the library path (to keep lib header paths short trims "/foo/bar/vector" to "vector")
 	 * @param userIncludeDirs are not considered when trimming the path (/foo/bar/headeFile.h stays that way)
 	 */
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, 
-			const vector<boost::filesystem::path>& stdLibDirs = vector<boost::filesystem::path>(),
-			const vector<boost::filesystem::path>& userIncludeDirs = vector<boost::filesystem::path>());
+	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& headerTagger);
 
 } // end namespace utils
 } // end namespace frontend

@@ -43,6 +43,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/frontend/utils/header_tagger.h"
 
 // Forward declarations
 namespace clang {
@@ -63,20 +64,17 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			const vector<boost::filesystem::path>& systemHeaderDirs,
-			const vector<boost::filesystem::path>& userIncludeDirs,
+			const HeaderTagger& headerTagger,
 			const std::set<std::string>& interceptSet)
-		: builder(mgr), systemHeaderDirs(systemHeaderDirs), userIncludeDirs(userIncludeDirs),
+		: builder(mgr), headerTagger(headerTagger),
 		
-		// by default intercept std:: and __gnu_cxx:: namespaces
-		// __gnu_cxx is needed for the iterator of std::vector for example
-		toIntercept(interceptSet), 
+  		  // by default intercept std:: and __gnu_cxx:: namespaces
+		  // __gnu_cxx is needed for the iterator of std::vector for example
+		  toIntercept(interceptSet), 
 	
-		//joins all the strings in the toIntercept-set to one big regEx
-		rx("("+toString(join(")|(", toIntercept))+")")
+		  //joins all the strings in the toIntercept-set to one big regEx
+		  rx("("+toString(join(")|(", toIntercept))+")")
 	{	
-		this->includeDirs.insert(this->includeDirs.end(), userIncludeDirs.begin(), userIncludeDirs.end());
-		this->includeDirs.insert(this->includeDirs.end(), systemHeaderDirs.begin(), systemHeaderDirs.end()); 
 	}
 
 	void loadConfigSet(std::set<std::string> toIntercept);	
@@ -85,35 +83,29 @@ public:
 	bool isIntercepted(const clang::Type* type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
-	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const ;
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) const;
 
-	const vector<boost::filesystem::path>& getAllIncludeDirs() const {
-		return includeDirs;
-	}
-
-	const vector<boost::filesystem::path>& getStdLibDirs() const {
-		return systemHeaderDirs;
-	}
-
-	const vector<boost::filesystem::path>& getUserIncludeDirs() const {
-		return userIncludeDirs;
-	}
+	const HeaderTagger& getHeaderTagger () const {
+		return headerTagger;
+	} 
 
 private:
 	insieme::core::IRBuilder builder;
 
-	//FIXME: needs init from stdLib and userIncludeDirs --> headerTagger needs to use "includeDirs" to
-	//look for headers 
-	vector<boost::filesystem::path> includeDirs;
+	/**
+	 * the header tagger to use when detecting headers
+	 */
+	const HeaderTagger& headerTagger;
 
-	const vector<boost::filesystem::path> systemHeaderDirs;
-	const vector<boost::filesystem::path> userIncludeDirs;
-
-	// set of strings representing the regEx to be intercepted
+	/**
+	 * set of strings representing the regEx to be intercepted
+	 */
 	std::set<std::string> toIntercept;
 
-	// the combined regex from the toIntercept-set
+	/**
+	 * the combined regex from the toIntercept-set
+	 */
 	boost::regex rx;
 };
 

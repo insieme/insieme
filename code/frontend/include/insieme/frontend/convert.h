@@ -42,9 +42,11 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
-#include "insieme/frontend/utils/interceptor.h"
+#include "insieme/frontend/utils/interceptor.h"   // FIXME:  to delete
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/pragma/handler.h"
+
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -86,6 +88,8 @@ namespace conversion {
  */
 class Converter :  boost::noncopyable {
 
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 					Cache of already converted elements
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +119,7 @@ class Converter :  boost::noncopyable {
     StaticVarDeclMap staticVarDeclMap;
     int staticVarCount;
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 						Recursive Function resolution
+	// 					Function resolution
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
@@ -132,7 +136,6 @@ class Converter :  boost::noncopyable {
 	// TODO: remove this - not required
 	typedef const vector<core::VariablePtr>* ParameterList;
 	ParameterList curParameter;
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						Specifically marked Objects
@@ -224,6 +227,8 @@ class Converter :  boost::noncopyable {
 	 */
 	 const clang::SourceLocation* lastTrackableLocation;
 
+	frontend::utils::HeaderTagger headerTagger;
+	frontend::utils::Interceptor  interceptor;
 
      void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
@@ -505,6 +510,12 @@ public:
 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	/**
+	 * retrives the header tagger to annotate headers
+	 */
+	const frontend::utils::HeaderTagger&  getHeaderTagger() const;
+	const frontend::utils::Interceptor&   getInterceptor() const;
 
    /**
 	* Creates the variable which should be used as a placeholder for invoking the iven
