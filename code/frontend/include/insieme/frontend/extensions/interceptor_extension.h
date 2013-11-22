@@ -34,27 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/clang.h"
+#include "insieme/frontend/convert.h"
 
-/**
- * This header file should be included only by cpp files depending on clang.
- * Within header files, forward declarations should be sufficient.
- */
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-	#include <clang/AST/TemplateBase.h>
-	#include <clang/AST/Decl.h>
-	#include <clang/AST/Expr.h>
-	#include <clang/AST/CXXInheritance.h>
-	#include <clang/AST/StmtVisitor.h>
-	#include <clang/AST/DeclVisitor.h>
-	#include <clang/AST/RecursiveASTVisitor.h>
-	#include <clang/AST/ASTContext.h>
-	#include <clang/AST/TypeVisitor.h>
-	#include <clang/Sema/Sema.h>
-	#include <clang/Sema/Ownership.h>
-#pragma GCC diagnostic pop
+class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
+
+	//Plugin Hooks
+	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+        
+    virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+    
+    virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact); 
+        
+    virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+};
+
+}
+}
+}

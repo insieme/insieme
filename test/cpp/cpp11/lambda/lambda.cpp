@@ -5,7 +5,8 @@ int main (){
 
 	// value capture
 	{
-		int x;
+		int x=0;
+		std::cout << " x: " << x << std::endl;
 
 		auto lambda = [x](int i) {
 			std::cout << " output: " << i << std::endl;
@@ -20,7 +21,7 @@ int main (){
 
 	// mutable
 	{
-		int x;
+		int x=0;
 
 		auto lambda = [x](int i) mutable {
 			std::cout << " output: " << i << std::endl;
@@ -37,7 +38,7 @@ int main (){
 
 	// ref capture
 	{
-		int x;
+		int x=0;
 
 		auto lambda = [&x](int i) {
 			std::cout << " output: " << i << std::endl;
@@ -54,7 +55,7 @@ int main (){
 
 	// complete capture
 	{
-		int x;
+		int x=0;
 		auto lambda = [&](int i) {
 			std::cout << " output: " << i << std::endl;
 			std::cout << " captured x: " << x << std::endl;
