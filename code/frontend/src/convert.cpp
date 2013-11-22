@@ -1206,6 +1206,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << lambda << " + function declaration: " << funcDecl;
 	}
 
+	// FIXME: this might have some performance impact
 	// if we are dealing with a memberFunction, retrieve meta-info and update it
 	if (funcTy->isMember()) {
 		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();

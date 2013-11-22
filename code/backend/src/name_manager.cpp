@@ -57,6 +57,7 @@ namespace backend {
 
 			// test whether the node has a name attached
 			if (core::annotations::hasNameAttached(ptr)) {
+
 				// => take the attached name
 				return core::annotations::getAttachedName(ptr);
 			}
@@ -108,15 +109,12 @@ namespace backend {
 		return name;
 	}
 
-
-
 	string SimpleNameManager::getName( const NodePtr& ptr, const string& fragment) {
 
 		// let variables be handled by the specialized variant
 		if (ptr->getNodeType() == core::NT_Variable) {
 			return getName(ptr.as<core::VariablePtr>());
 		}
-
 
 		// test whether a name has already been picked
 		auto it = globalScope.names.find(ptr);
@@ -132,7 +130,6 @@ namespace backend {
 				return name;
 			}
 		}
-
 
 		// generate a new name string
 		std::stringstream name;

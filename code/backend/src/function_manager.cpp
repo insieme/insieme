@@ -1306,8 +1306,6 @@ namespace backend {
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
 				}
 
-
-
 				// convert the body code fragment and collect dependencies
 				c_ast::NodePtr code = converter.getStmtConverter().convert(context, body);
 				cBody = static_pointer_cast<c_ast::Statement>(code);
@@ -1341,7 +1339,6 @@ namespace backend {
 				return c_ast::IdentifierPtr();
 			};
 
-
 			// modify function if required
 			if (funType->isMemberFunction()) {
 
@@ -1361,7 +1358,6 @@ namespace backend {
 			}
 			return res;
 		}
-
 
 		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
 		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external) {

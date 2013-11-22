@@ -41,6 +41,7 @@
 #include "insieme/utils/printable.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace insieme {
 namespace backend {
@@ -621,7 +622,7 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< print(fun->returnType) << " "
+						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
 						<< print(fun->name)
 						<< "(" << printMemberParam(fun->parameter)<< ")"
 						<< (node->fun->isConstant?" const":"")
@@ -770,8 +771,11 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << print(fun->returnType) << " " << print(node->className) << "::" << print(fun->name)
-						<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
+				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
+					<< " " 
+					<< print(node->className) << "::" 
+					<< print(fun->name)
+					<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
 
 				// print body
 				return out << print(wrapBody(fun->body));

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,7 +83,7 @@ clang::Decl const* Pragma::getDecl() const {
 std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	std::ostringstream ss;
 	ss << "(" << loc2string(getStartLocation(), sm) << ", " << loc2string(getEndLocation(), sm) << "),\n\t";
-	
+
 	ss << (isStatement() ? "Stmt -> " : "Decl -> ") << "(";
 
 	if(isStatement() && getStatement())
@@ -102,13 +102,13 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 }
 
 
-core::NodePtr attachPragma( const core::NodePtr& 			node, 
-						   const clang::Stmt* 				clangNode, 
-						   conversion::Converter& 	fact ) 
+core::NodePtr attachPragma( const core::NodePtr& 			node,
+						   const clang::Stmt* 				clangNode,
+						   conversion::Converter& 	fact )
 {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
-	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter; 
+	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
 
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
@@ -119,19 +119,22 @@ core::NodePtr attachPragma( const core::NodePtr& 			node,
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
 				ret = pragma->attachTo(node, fact);
 				return;
-			}
+             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+                 return;
+             }
 	});
 
 	return ret;
 }
 
-core::NodePtr attachPragma(const core::NodePtr& 			node, 
-						   const clang::Decl* 				clangDecl, 
-						   conversion::Converter& 	fact ) 
+core::NodePtr attachPragma(const core::NodePtr& 			node,
+						   const clang::Decl* 				clangDecl,
+						   conversion::Converter& 	fact )
 {
 	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 
-	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter; 
+	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter;
 
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
@@ -142,7 +145,10 @@ core::NodePtr attachPragma(const core::NodePtr& 			node,
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
 				ret = pragma->attachTo(node, fact);
 				return;
-			}
+             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+                 return;
+             }
 	});
 
 	return ret;
