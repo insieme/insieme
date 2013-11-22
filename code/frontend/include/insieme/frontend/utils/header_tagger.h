@@ -110,10 +110,10 @@ namespace utils {
 	 *
 	 * @param node the node to be annotated
 	 * @param decl the declaration this node has been derived from
-	 * @param stdLibDirs libraries to be considered within the library path (to keep lib header paths short trims "/foo/bar/vector" to "vector")
-	 * @param userIncludeDirs are not considered when trimming the path (/foo/bar/headeFile.h stays that way)
+	 * @param the header tagger which stores all information about headers
+	 * @param whenever we want to annotate user defined headers, for explicit code sections interception
 	 */
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& headerTagger);
+	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& headerTagger, bool attachUserDefined = false);
 
 } // end namespace utils
 } // end namespace frontend

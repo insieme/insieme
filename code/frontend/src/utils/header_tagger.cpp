@@ -250,7 +250,7 @@ namespace utils {
 		return tagger.isStdLibHeader(decl->getLocation());
 	}
 
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& tagger) {
+	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const HeaderTagger& tagger, bool attachUserDefined) {
 	//	if (insieme::annotations::c::hasIncludeAttached(node))  // this impacts half a second
 	//		return;
 
@@ -287,8 +287,11 @@ namespace utils {
 			header = *stdLibHeader;
 		} else if( auto intrinsicHeader = tagger.toIntrinsicHeader(header) ) {
 			header = *intrinsicHeader;
-		} else if( auto userLibHeader = tagger.toUserLibHeader(header) ) {
-			header = *userLibHeader;
+		} else if (auto userLibHeader = tagger.toUserLibHeader(header) ) {
+			if(attachUserDefined )
+				header = *userLibHeader;
+			else
+				return;
 		}
 
 		VLOG(2) << "		header to be attached: " << header.string();
