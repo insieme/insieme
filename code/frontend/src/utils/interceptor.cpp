@@ -167,7 +167,7 @@ namespace {
 			core::GenericTypePtr gt = builder.genericType(typeName);
 		
 			//tag the genericType used inside the enum to pass this to the backend
-			addHeaderForDecl(gt, tagDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+			addHeaderForDecl(gt, tagDecl, interceptor.getHeaderTagger() , true);
 
 			// for intercepted 3rdparty stuff we need to use the actual enum
 			retTy = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(gt);
@@ -177,7 +177,7 @@ namespace {
 			retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
 
-		addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+		addHeaderForDecl(retTy, tagDecl, interceptor.getHeaderTagger() , true);
 		return retTy;
 	}
 
@@ -218,16 +218,16 @@ namespace {
 
 		// build resulting type
 		core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-		addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+		addHeaderForDecl(retTy, templDecl, interceptor.getHeaderTagger() , true);
 		return retTy;
 	}
 
 	core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType) {
-		if( const clang::TemplateTypeParmDecl* tD = templParmType->getDecl() ) {
-			string typeName = fixQualifiedName(tD->getNameAsString());
+		if( const clang::TemplateTypeParmDecl* tempTypeParamDecl = templParmType->getDecl() ) {
+			string typeName = fixQualifiedName(tempTypeParamDecl->getNameAsString());
 			VLOG(2) << typeName;
 			core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
-			addHeaderForDecl(retTy, tD, interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+			addHeaderForDecl(retTy, tempTypeParamDecl, interceptor.getHeaderTagger() , true);
 			return retTy;
 		}
 		assert(false && "TemplateTypeParmType intercepted");
@@ -242,7 +242,7 @@ namespace {
 		if (res && res->getNodeType() == core::NT_GenericType) {
 			const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
 			if (interceptor.isIntercepted(name)) {
-				addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirs(), interceptor.getUserIncludeDirs());
+				addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getHeaderTagger() , true);
 			}
 		}
 
@@ -251,7 +251,7 @@ namespace {
 }
 
 
-insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const{
 
 	InterceptTypeVisitor iTV(convFact, *this);
 	// resolve type and save in cache
@@ -272,7 +272,7 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 	assert(irType && "irType");
 
 	// add header file
-	addHeaderForDecl(irType, typeDecl, getStdLibDirs(), getUserIncludeDirs());
+	addHeaderForDecl(irType, typeDecl, getHeaderTagger() , true);
 	VLOG(1) << "build interceptedType " << typeDecl->getQualifiedNameAsString() << " ## " << irType;
 	
 	if(insieme::annotations::c::hasIncludeAttached(irType)) {
@@ -317,7 +317,7 @@ bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) {
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) const {
 	//FIXME create generic type for templates
 	/* get template decl and convert its type -> add to converttype template handling...
 		* if not specialized -> use typeVariable
@@ -443,7 +443,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 
 	literalName = fixQualifiedName(literalName);
 	core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
-	addHeaderForDecl(interceptExpr, decl, getStdLibDirs(), getUserIncludeDirs());
+	addHeaderForDecl(interceptExpr, decl, getHeaderTagger(), true);
 
 	VLOG(2) << interceptExpr << " " << interceptExpr->getType();
 
