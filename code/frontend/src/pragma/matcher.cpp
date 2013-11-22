@@ -146,6 +146,7 @@ core::ExpressionPtr MatchObject::getExpr(const ValueUnionPtr& p, conversion::Con
         return varExpr;
     }
     assert(false && "expression used in pragma seems to be no expression");
+	return core::ExpressionPtr();
 }
 
 core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Converter& fact) {
