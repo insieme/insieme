@@ -111,6 +111,16 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 ;
 }
 
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//		SizeOfPack expr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact) {
+	//sizeOf... returns size_t --> use unsigned int
+	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
+	return retExpr;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
 

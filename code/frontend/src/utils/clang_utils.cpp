@@ -174,8 +174,13 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
                     break;
                 }
                 case clang::TemplateArgument::Pack: {
+                										
+					for(clang::TemplateArgument::pack_iterator it = funcDecl->getTemplateSpecializationArgs()->get(i).pack_begin(), end = funcDecl->getTemplateSpecializationArgs()->get(i).pack_end();it!=end;it++) {
+						const clang::QualType& argType = (*it).getAsType();
                     name.append ("_" +
-                        funcDecl->getTemplateSpecializationArgs()->get(i).getAsTemplateOrTemplatePattern().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+                    	argType.getAsString());
+                        //(*it).getAsExpr()->getType().getAsString());
+					}
                     break;
                 }
             }

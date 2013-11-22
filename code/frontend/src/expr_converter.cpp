@@ -727,84 +727,38 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	core::ExpressionPtr irNode;
     LOG_EXPR_CONVERSION(callExpr, irNode);
 
+	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
+	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
+
+	bool needsMPIMarkerNode = false;
+	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'> 
+	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
-
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		irNode = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>();
-		const core::FunctionTypePtr funcTy = irNode->getType().as<core::FunctionTypePtr>() ;
-		const clang::FunctionDecl* definition = NULL;
-
-		// collects the type of each argument of the expression
-		ExpressionList&& args = getFunctionArguments( callExpr, funcDecl);
-
-		// No definition has been found in any translation unit,
-		// we mark this function as extern. and return
-		if (!definition) {
-
-			//-----------------------------------------------------------------------------------------------------
-			//     						Handle of 'special' built-in functions
-			//-----------------------------------------------------------------------------------------------------
-			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
-				irNode = builder.literal("alloca", funcTy);
-				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
-			}
-
-			//build callExpr
-			irNode = builder.callExpr(funcTy->getReturnType(), irNode, args);
-
-			// In the case this is a call to MPI, attach the loc annotation, handlling of those
-			// statements will be then applied by mpi_sema
-			std::string callName = funcDecl->getNameAsString();
-			if (callName.compare(0, 4, "MPI_") == 0) {
-
-				auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
-
-				// add a marker node because multiple istances of the same MPI call must be distinct
-				irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
-
-				irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-								convertClangSrcLoc(convFact.getSourceManager(), loc.first),
-								convertClangSrcLoc(convFact.getSourceManager(), loc.second))
-				);
-			}
-
-			return irNode;
-		}
-
-		// =====  We found a definition for funcion, need to be translated ======
-
-		frontend_assert(definition) << "No definition found for function\n";
-
-		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
+		//FIXME changing type to fit "free" -- with refDelete
+		funcTy = convFact.convertFunctionType(funcDecl);
+		
+		needsMPIMarkerNode = (funcDecl->getNameAsString().compare(0, 4, "MPI_") == 0);
 	}
 
+	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
+	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
+	
+	// In the case this is a call to MPI, attach the loc annotation, handlling of those
+	// statements will be then applied by mpi_sema
+	if (needsMPIMarkerNode) {
+		auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
 
-	// if there callee is not a fuctionDecl we need to use other method.
-	// it might be a pointer to function.
-	if ( callExpr->getCallee() ) {
-		core::ExpressionPtr funcPtr = Visit(callExpr->getCallee());
-		frontend_assert(funcPtr) << "no function could be converted";
-		funcPtr = convFact.tryDeref(funcPtr);
-		core::TypePtr subTy = funcPtr->getType();
+		// add a marker node because multiple istances of the same MPI call must be distinct
+		irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
-		if (subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) {
-
-			subTy = subTy.as<core::SingleElementTypePtr>()->getElementType();
-			funcPtr = builder.callExpr(subTy, builder.getLangBasic().getArraySubscript1D(), funcPtr, builder.uintLit(0));
-
-		}
-
-		frontend_assert( subTy->getNodeType() == core::NT_FunctionType) << "Using () operator on a non function object\n";
-
-		auto funcTy = subTy.as<core::FunctionTypePtr>();
-
-		ExpressionList&& args = getFunctionArguments(callExpr, funcTy);
-		irNode = builder.callExpr(funcPtr, args);
-		return irNode;
+		irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+						convertClangSrcLoc(convFact.getSourceManager(), loc.first),
+						convertClangSrcLoc(convFact.getSourceManager(), loc.second))
+		);
 	}
 
-	frontend_assert( false ) << "Call expression not referring a function\n";
-	return core::ExpressionPtr();
+	return irNode;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

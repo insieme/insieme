@@ -289,6 +289,10 @@ public:
         lambdaExprCache[decl] = ptr;
     }
 
+    void addToVarDeclMap(const clang::ValueDecl* decl, core::ExpressionPtr ptr) {
+    	varDeclMap[decl] = ptr;
+	}
+
     core::ExpressionPtr getLambdaFromCache(const clang::FunctionDecl* decl) {
         return lambdaExprCache[decl];
     }
@@ -397,9 +401,9 @@ public:
 	 * of the function. The function itself should be translated by the clang declaration traverser, 
 	 * and stored in the translation unit.
 	 * @param functionDecl the function decl 
-	 */
-	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
-
+	 * @param explicitTempArgs interceptor should add the template arguments explicitly
+	 * */
+	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl, const bool explicitTemplateArgs=false);
 
 	/**
 	 * Entry point for converting function to the right type

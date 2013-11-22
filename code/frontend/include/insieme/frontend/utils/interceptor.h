@@ -86,7 +86,7 @@ public:
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
 	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
-	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs=false);
 
 	const vector<boost::filesystem::path>& getAllIncludeDirs() const {
 		return includeDirs;
