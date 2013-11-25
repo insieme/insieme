@@ -1,1 +1,1 @@
-{PATH}/{EXEC} -c -f {PATH}/../../../bots/alignment/prot.20.aa
+{PATH}/{EXEC} -c -f {PATH}/../../../bots/prot.20.aa
