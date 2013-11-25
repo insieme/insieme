@@ -186,6 +186,12 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 		base = builder.toIRRef(base);
 	}
 
+	// it might be that is a function, therefore we retrieve a callable expression
+	const clang::ValueDecl *valDecl = membExpr->getMemberDecl ();
+	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)){
+		return convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
+	}
+
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
 
 	// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
