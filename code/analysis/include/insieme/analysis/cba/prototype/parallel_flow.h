@@ -63,6 +63,8 @@ namespace prototype {
 
 	typedef map<ID,set<Var>> AccessedVars;
 
+	typedef set<ID> Nodes;
+
 	class Node :
 			public utils::Printable,
 			public utils::Hashable {
@@ -93,6 +95,12 @@ namespace prototype {
 		mutable set<ID> immediate_dom;
 		mutable map<ID,int> distance;
 
+		mutable Nodes activeWriteIn;
+		mutable Nodes killedLocationsIn;
+
+		mutable Nodes activeWriteOut;
+		mutable Nodes killedLocationsOut;
+
 		Node() : id(nextID()), type(Noop), var(), value(0) {}
 
 //		Node(const Node& other)
@@ -121,12 +129,14 @@ namespace prototype {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
+
 			out << id << "\\n";
 //			out << "dom: " << dom << "\\n";
 //			out << "strict_dom: " << strict_dom << "\\n";
 //			out << "distance: " << distance << "\\n";
-			out << "idom: " << immediate_dom << "\\n";
-			out << before << "/" << accessIn << " \\n ";
+//			out << "idom: " << immediate_dom << "\\n";
+			out << "a = {" << join(",",activeWriteIn) << "} / k = {" << join(",",killedLocationsIn) << "}\\n";
+			out << before << "\\n"; //"/" << accessIn << " \\n ";
 			switch(type) {
 			case Read:  out << "R: " << var; break;
 			case Write: out << "W: " << var << " = " << value; break;
@@ -135,7 +145,8 @@ namespace prototype {
 				assert_fail() << "Unsupported type: " << type;
 				break;
 			}
-			out << " \\n " << after << "/" << accessOut;
+			out << " \\n " << after << "\\n"; //"/" << accessOut << "\\n";
+			out << "a = {" << join(",",activeWriteOut) << "} / k = {" << join(",",killedLocationsOut) << "}";
 			return out;
 		}
 

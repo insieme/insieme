@@ -66,6 +66,27 @@ namespace prototype {
 			}
 		}
 
+		template<typename F>
+		void forEachInEdge(const Node& node, const Graph& graph, const F& f) {
+			auto& g = graph.asBoostGraph();
+			typedef boost::graph_traits<Graph::GraphType> GraphTraits;
+			typename GraphTraits::in_edge_iterator in_i, in_end;
+			for (std::tie(in_i, in_end) = boost::in_edges(graph.getVertexDescriptor(node), g); in_i != in_end; ++in_i) {
+				auto e = *in_i;
+				auto src = boost::source(e, g);
+				f(g[e], g[src]);
+			}
+		}
+
+		const Node& getNode(const Graph& graph, const ID& id) {
+			static const Node dummy;
+			for(auto it = graph.vertexBegin(); it != graph.vertexEnd(); ++it) {
+				if (it->getID() == id) return *it;
+			}
+			assert_fail() << "Invalid node id " << id << " requested!";
+			return dummy;
+		}
+
 		template<typename K, typename E>
 		map<K,set<E>> merge(const map<K,set<E>>& a, const map<K,set<E>>& b) {
 			map<K,set<E>> res = a;
@@ -74,6 +95,36 @@ namespace prototype {
 			}
 			return res;
 		}
+
+		template<typename T>
+		set<T> set_intersect(const vector<set<T>>& sets) {
+			assert_true(!sets.empty());
+			set<T> res = sets[0];
+			for(const auto& cur : sets) {
+				res = utils::set::intersect(res, cur);
+			}
+			return res;
+		}
+
+		template<typename T, typename ... R>
+		set<T> set_intersect(const set<T>& first, const R& ... rest) {
+			return set_intersect(toVector(first, rest...));
+		}
+
+		template<typename T>
+		set<T> set_union(const vector<set<T>>& sets) {
+			set<T> res;
+			for(const auto& cur : sets) {
+				res.insert(cur.begin(), cur.end());
+			}
+			return res;
+		}
+
+		template<typename T, typename ... R>
+		set<T> set_union(const set<T>& first, const R& ... rest) {
+			return set_union(toVector(first, rest...));
+		}
+
 
 		void updateDominatorSet(const Node& node, const Graph& g) {
 			auto& dom = node.dom;
@@ -145,6 +196,9 @@ namespace prototype {
 
 
 		void updateInNaive(const Node& node, const Graph& graph) {
+			// update set of accessed values
+			updateAccessIn(node, graph);
+
 			// just merge all the input sets
 			forEachPred(node, graph, [&](const Node& pred) {
 				node.before = merge(node.before, pred.after);
@@ -152,6 +206,9 @@ namespace prototype {
 		}
 
 		void updateInDom(const Node& node, const Graph& graph) {
+
+			// update set of accessed values
+			updateAccessIn(node, graph);
 
 			// skip while idom is not known
 			if (node.immediate_dom.empty()) return;
@@ -174,6 +231,76 @@ namespace prototype {
 			});
 		}
 
+		void updateInActiveKill(const Node& node, const Graph& graph) {
+
+			// -- update killed-def in -----------------------------------
+
+			// update kill-in set - union of all kill-out sets
+
+			// collect all in-kill sets of parallel and sequential edges
+			vector<set<ID>> inSeq;
+			vector<set<ID>> inPar;
+			forEachInEdge(node, graph, [&](const Edge& e, const Node& pred) {
+				if (e == Seq) inSeq.push_back(pred.killedLocationsOut);
+				if (e == Par) inPar.push_back(pred.killedLocationsOut);
+			});
+
+			if (inSeq.empty() && inPar.empty()) {
+				node.killedLocationsIn.clear();
+			} else if (inSeq.empty()) {
+				node.killedLocationsIn = set_union(inPar);
+			} else if (inPar.empty()) {
+				node.killedLocationsIn = set_intersect(inSeq);
+			} else {
+				node.killedLocationsIn = set_union(
+						set_intersect(inSeq), set_union(inPar)
+				);
+			}
+
+//			node.killedLocationsIn.clear();
+//			forEachPred(node, graph, [&](const Node& pred) {
+//				node.killedLocationsIn.insert(pred.killedLocationsOut.begin(), pred.killedLocationsOut.end());
+//			});
+
+
+			// -- active write set ---------------------------------------
+
+			// update active-in - union of all active-out sets of the in-edges
+			node.activeWriteIn.clear();
+			forEachPred(node, graph, [&](const Node& pred) {
+				for(auto cur : pred.activeWriteOut) {
+					if (!contains(node.killedLocationsIn, cur)) {
+						node.activeWriteIn.insert(cur);
+					}
+				}
+			});
+
+			// update active-write out
+			node.activeWriteOut.clear();
+			if (node.getType() == Node::Write) {
+				node.activeWriteOut.insert(node.getID());
+			} else {
+				node.activeWriteOut.insert(node.activeWriteIn.begin(), node.activeWriteIn.end());
+			}
+
+			// -- update killed-def out -----------------------------------
+
+			// update kill-out set - in set + active set in case this node is a write node
+			node.killedLocationsOut.clear();
+			node.killedLocationsOut.insert(node.killedLocationsIn.begin(), node.killedLocationsIn.end());
+			if (node.getType() == Node::Write) {
+				node.killedLocationsOut.insert(node.activeWriteIn.begin(), node.activeWriteIn.end());
+			}
+
+			// -- update value set (before) ------------
+
+			node.before.clear();
+			for(auto cur : node.activeWriteIn) {
+				// collect after-values of all active nodes
+				node.before = merge(node.before, getNode(graph,cur).after);
+			}
+
+		}
 
 		bool update(const Node& node, const Graph& g) {
 
@@ -184,9 +311,9 @@ namespace prototype {
 			updateDominatorSet(node, g);
 
 			// update in-set  ... that's the tricky part
-			updateAccessIn(node, g);
 //			updateInNaive(node, g);
-			updateInDom(node, g);
+//			updateInDom(node, g);
+			updateInActiveKill(node, g);
 
 			// update out-set accesses
 
@@ -207,7 +334,9 @@ namespace prototype {
 			return  old.dom != node.dom || old.strict_dom != node.strict_dom ||
 					old.immediate_dom != node.immediate_dom || old.distance != node.distance ||
 					old.before != node.before || old.after != node.after ||
-					old.accessIn != node.accessIn || old.accessOut != node.accessOut;
+					old.accessIn != node.accessIn || old.accessOut != node.accessOut ||
+					old.killedLocationsIn != node.killedLocationsIn || old.killedLocationsOut != node.killedLocationsOut ||
+					old.activeWriteIn != node.activeWriteIn || old.activeWriteOut != node.activeWriteOut;
 		}
 
 	}

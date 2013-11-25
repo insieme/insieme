@@ -258,7 +258,7 @@ namespace prototype {
 			solve(graph);
 
 			EXPECT_EQ("{x={1}}", toString(graph.getVertex(a).after));
-//			EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
+			EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
 			EXPECT_EQ("{x={5}}", toString(graph.getVertex(e).after));
 
 		}
@@ -296,8 +296,63 @@ namespace prototype {
 		solve(graph);
 
 		EXPECT_EQ("{x={1}}", toString(graph.getVertex(a).after));
-//		EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
+		EXPECT_EQ("{x={6,7}}", toString(graph.getVertex(d).before));
 		EXPECT_EQ("{x={5}}", toString(graph.getVertex(e).after));
+
+		createDotDump(graph);
+
+	}
+
+	TEST(CBA_Parallel, SeqAndParallel) {
+
+		Graph graph;
+
+		// built the graph
+		Node n0 = Node::write("x", 1);
+
+		Node n1 = Node::noop();
+		Node n2 = Node::noop();
+
+		Node n3 = Node::write("x", 2);
+		Node n4 = Node::noop();
+		Node n5 = Node::write("x", 3);
+		Node n6 = Node::noop();
+
+		Node n7 = Node::noop();
+		Node n8 = Node::noop();
+
+		Node n9 = Node::noop();
+
+
+		graph.addEdge(n0, n1, Par);
+		graph.addEdge(n0, n2, Par);
+
+		graph.addEdge(n1, n3, Seq);
+		graph.addEdge(n1, n4, Seq);
+		graph.addEdge(n3, n7, Seq);
+		graph.addEdge(n4, n7, Seq);
+
+		graph.addEdge(n2, n5, Seq);
+		graph.addEdge(n2, n6, Seq);
+		graph.addEdge(n5, n8, Seq);
+		graph.addEdge(n6, n8, Seq);
+
+		graph.addEdge(n7, n9, Par);
+		graph.addEdge(n8, n9, Par);
+
+		// solve the data flow equations
+		solve(graph);
+
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(n0).after));
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(n1).after));
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(n2).after));
+		EXPECT_EQ("{x={2}}", toString(graph.getVertex(n3).after));
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(n4).after));
+		EXPECT_EQ("{x={3}}", toString(graph.getVertex(n5).after));
+		EXPECT_EQ("{x={1}}", toString(graph.getVertex(n6).after));
+		EXPECT_EQ("{x={1,2}}", toString(graph.getVertex(n7).after));
+		EXPECT_EQ("{x={1,3}}", toString(graph.getVertex(n8).after));
+		EXPECT_EQ("{x={1,2,3}}", toString(graph.getVertex(n9).after));
 
 		createDotDump(graph);
 
