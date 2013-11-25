@@ -84,10 +84,11 @@ namespace extensions {
     public:
         PragmaHandler( const std::string& pragmaNamespace,
                         const std::string& keyword,
-                        insieme::frontend::pragma::node& re,
+                        insieme::frontend::pragma::node const& re,
                         std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> lambda);
+        PragmaHandler( PragmaHandler& pragma );
+        PragmaHandler( const PragmaHandler& pragma );
         ~PragmaHandler();
-
         const std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)>  getFunction() {
             return f;
         }
@@ -97,7 +98,7 @@ namespace extensions {
         const std::string& getKeyword() const {
             return keyw;
         }
-        const insieme::frontend::pragma::node* getToken() const;
+        insieme::frontend::pragma::node* getToken();
     };
 
     /**

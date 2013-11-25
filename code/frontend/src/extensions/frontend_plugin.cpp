@@ -45,13 +45,23 @@ namespace frontend {
 namespace extensions {
 
     // ############ PRAGMA HANDLING ############ //
-    PragmaHandler::~PragmaHandler() { }
-
-    PragmaHandler::PragmaHandler(const std::string& pragmaNamespace, const std::string& keyword, insieme::frontend::pragma::node& re,
+    PragmaHandler::PragmaHandler(const std::string& pragmaNamespace, const std::string& keyword, insieme::frontend::pragma::node const& re,
                                  std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> lambda)
                                  : f(lambda), name(pragmaNamespace), keyw(keyword), tok(re.copy()) { };
 
-    const insieme::frontend::pragma::node* PragmaHandler::getToken() const {
+    PragmaHandler::PragmaHandler( PragmaHandler& pragma  )
+                : f(pragma.f), name(pragma.name), keyw(pragma.keyw), tok(pragma.tok->copy()) {
+    }
+
+    PragmaHandler::PragmaHandler( const PragmaHandler& pragma  )
+                : f(pragma.f), name(pragma.name), keyw(pragma.keyw), tok(pragma.tok->copy()) {
+    }
+
+    PragmaHandler::~PragmaHandler() {
+        delete tok;
+    }
+
+    insieme::frontend::pragma::node* PragmaHandler::getToken() {
         return tok;
     };
 
