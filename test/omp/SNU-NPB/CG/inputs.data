@@ -1,0 +1,2 @@
+-I. -I.. -I../../common ../cg.c ../../common/print_results.c  ../../common/randdp.c ../../common/c_timers.c ../../common/wtime.c
+
