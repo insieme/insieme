@@ -243,12 +243,12 @@ namespace utils {
 
 	void HeaderTagger::addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined) const {
 
+		// check whether there is a declaration at all
+		if (!decl) return;
+
 		// the node was already annotated, what is the point of doint it again?
 		if (insieme::annotations::c::hasIncludeAttached(node))  
 			return;
-
-		// check whether there is a declaration at all
-		if (!decl) return;
 
 		if (VLOG_IS_ON(2)){
 			std::string name("UNNAMED");
@@ -291,7 +291,7 @@ namespace utils {
 
 		// use resulting header
 		insieme::annotations::c::attachInclude(node, header.string());
-	}
+		}
 
 } // end namespace utils
 } // end namespace frontend
