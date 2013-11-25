@@ -978,6 +978,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemI(const clang::Bi
 //		binary trait
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitBinaryTypeTraitExpr		(const clang::BinaryTypeTraitExpr* binTypeTraitExpr){
+
+	// this is found when using __base_of operator, clang gives already the boolean expression evaluated,
+	// is an static type resolutions, we just forward this result
 	core::ExpressionPtr retExpr =
 			convFact.builder.literal(
 					(binTypeTraitExpr->getValue())? std::string("true"): std::string("false"),

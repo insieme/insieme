@@ -636,6 +636,14 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	// create result location
 	core::TypePtr res;
 
+	//check if type is intercepted
+	if(convFact.getInterceptor().isIntercepted(type)) {
+		VLOG(2) << type << " isIntercepted";
+		res = convFact.getInterceptor().intercept(type, convFact);
+		typeCache[type] = res;
+		return res;
+	}
+
 	// assume a recursive construct for record declarations
 	if (auto recDecl = toRecordDecl(type)) {
 		std::string name = utils::getNameForRecord(recDecl, type);
@@ -654,9 +662,9 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 
 		//check if type is defined in a system header --> if so add includeAnnotation which is used
 		//in backend to avoid redeclaration of type
-		if( utils::isDefinedInSystemHeader(recDecl, convFact.getProgram().getStdLibDirs(), convFact.getProgram().getUserIncludeDirs()) ) {
+		if( convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl) ) {
 			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-			utils::addHeaderForDecl(res, recDecl, convFact.getProgram().getStdLibDirs());
+			convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 		}
 
 		frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());

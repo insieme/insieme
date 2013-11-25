@@ -1,6 +1,11 @@
+#include <iostream>
+
 struct Base{
 	int a;
+};
 
+struct Unrelated{
+	int x;
 };
 
 struct Derived : public Base{
@@ -13,7 +18,7 @@ struct Derived : public Base{
 int main (){
 
 	if (__is_base_of(Base, Derived) == true)
-		return 0;
-	else 
-		return 1;
+		std::cout << "is Base of " <<std::endl;
+	if (__is_base_of(Base, Unrelated) == false)
+		std::cout << "is NOT Base of " <<std::endl;
 }

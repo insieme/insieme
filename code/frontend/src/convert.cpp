@@ -193,8 +193,13 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), convSetup(setup), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
-		irTranslationUnit(mgr), used(false), lastTrackableLocation(nullptr)
+		program(prog), 
+		convSetup(setup), 
+		pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		irTranslationUnit(mgr), used(false),
+		lastTrackableLocation(nullptr),
+		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager()),
+		interceptor(mgr, headerTagger, setup.getInterceptions())
 {
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -326,6 +331,18 @@ tu::IRTranslationUnit Converter::convert() {
 
 	// that's all
 	return irTranslationUnit;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
+	return headerTagger;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+const frontend::utils::Interceptor& Converter::getInterceptor() const{
+	return interceptor;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -531,7 +548,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 				omp::addThreadPrivateAnnotation(globVar);
 			}
 
-			utils::addHeaderForDecl(globVar, valDecl, program.getStdLibDirs());
+			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 			varDeclMap.insert( { valDecl, globVar } );
 		} else {
 			// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
@@ -765,7 +782,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 	core::TypePtr enumTy = convertType(enumType);
 
 	string enumConstantName;
-	if( getProgram().getInterceptor().isIntercepted(enumType) ) {
+	if( getInterceptor().isIntercepted(enumType) ) {
 		//TODO move name mangling into interceptor
 		auto enumDecl = enumType->getDecl();
 		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
@@ -1124,7 +1141,8 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs(), program.getUserIncludeDirs());
+		// TODO: check if we can optimize the usage of this, consumes too much time
+		getHeaderTagger().addHeaderForDecl(retExpr, funcDecl);
 		lambdaExprCache[funcDecl] = retExpr;
 		return ;// retExpr;
 	}

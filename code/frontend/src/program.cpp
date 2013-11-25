@@ -205,20 +205,9 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	TranslationUnitImpl tranUnit;
-	const vector<path> systemHeaders;
-	const vector<path> userIncludeDirs;
-	utils::Interceptor interceptor;
 
 	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
-		tranUnit(setup, file),
-		systemHeaders(::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		userIncludeDirs(::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		//interceptor(mgr, setup.getSystemHeadersDirectories(), setup.getIncludeDirectories(), setup.getInterceptions())
-		interceptor(
-				mgr,
-				::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ),
-				::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ),
-				setup.getInterceptions())
+		tranUnit(setup, file)
 		{}
 };
 
@@ -231,9 +220,9 @@ const ClangCompiler& Program::getCompiler() const {
 	return pimpl->tranUnit.getCompiler();
 }
 
-utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
-const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->systemHeaders; }
-const vector<boost::filesystem::path>& Program::getUserIncludeDirs() const { return pimpl->userIncludeDirs; }
+//utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
+//const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->systemHeaders; }
+//const vector<boost::filesystem::path>& Program::getUserIncludeDirs() const { return pimpl->userIncludeDirs; }
 
 bool Program::isCxx() const {
 	return getCompiler().isCXX();

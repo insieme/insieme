@@ -44,10 +44,10 @@ namespace extensions {
 	insieme::core::ExpressionPtr InterceptorPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
 			if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl()) ) {
-				if(declRefExpr->hasExplicitTemplateArgs() && convFact.getProgram().getInterceptor().isIntercepted(funcDecl)) {
+				if(declRefExpr->hasExplicitTemplateArgs() && convFact.getInterceptor().isIntercepted(funcDecl)) {
 					VLOG(2) << "interceptorplugin\n";
 					//get a callable expression
-					return convFact.getProgram().getInterceptor().intercept(funcDecl, convFact, true);
+					return convFact.getInterceptor().intercept(funcDecl, convFact, true);
 				}
 			}
 		}
@@ -57,8 +57,8 @@ namespace extensions {
     bool InterceptorPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 			// check whether function should be intercected
-			if( convFact.getProgram().getInterceptor().isIntercepted(funcDecl) ) {
-				auto irExpr = convFact.getProgram().getInterceptor().intercept(funcDecl, convFact);
+			if( convFact.getInterceptor().isIntercepted(funcDecl) ) {
+				auto irExpr = convFact.getInterceptor().intercept(funcDecl, convFact);
 				convFact.addToLambdaCache(funcDecl, irExpr);
 				VLOG(2) << "interceptorplugin" << irExpr;
 				return true;
@@ -68,10 +68,10 @@ namespace extensions {
 	}
     
     core::TypePtr InterceptorPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
-		if(convFact.getProgram().getInterceptor().isIntercepted(type)) {
+		if(convFact.getInterceptor().isIntercepted(type)) {
 			VLOG(2) << "interceptorplugin\n";
 			VLOG(2) << type << " isIntercepted";
-			auto res = convFact.getProgram().getInterceptor().intercept(type, convFact);
+			auto res = convFact.getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;
 		}
@@ -83,7 +83,7 @@ namespace extensions {
 			
 			//for Converter::lookUpVariable
 			if( varDecl->hasGlobalStorage()
-				&& convFact.getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+				&& convFact.getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 				
 				//we expect globals to be literals -- get the "standard IR"which we need to change
 				core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();

@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/header_tagger.h"
 
 #include <boost/optional.hpp>
@@ -59,220 +57,195 @@ namespace utils {
 	namespace fs = boost::filesystem;
 	namespace ba = boost::algorithm;
 
-	namespace {
 
+		HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr ):
+			stdLibDirs( ::transform(stdLibDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
+			userIncludeDirs( ::transform(userIncludeDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
+			sm(srcMgr) { 
+		}
 
 		/**
-		 * class which helps finding the more suitable header for a declaration, not allways top
-		 * level since we might have a system header included deep in a includes chain.
-		 * the most apropiate header has to be computed
+		 * A utility function cutting down std-lib header files.
 		 */
-		class HeaderTagger { 
-			
-			vector<fs::path> stdLibDirs;
-			vector<fs::path> userIncludeDirs;
-			vector<fs::path> searchPath;
-			const clang::SourceManager& sm;
-		public:
+		boost::optional<fs::path> HeaderTagger::toStdLibHeader(const fs::path& path) const {
+			static const boost::optional<fs::path> fail;
 
-			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr ):
-				stdLibDirs( ::transform(stdLibDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
-				userIncludeDirs( ::transform(userIncludeDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
-				sm(srcMgr)
-			{ 
-				for (const fs::path& header : userIncludeDirs)
-					searchPath.push_back(fs::canonical(header));
-			
-				for (const fs::path& header : stdLibDirs)
-					searchPath.push_back(fs::canonical(header));
+			if (stdLibDirs.empty()) { return fail; }
 
+			if (contains(stdLibDirs, fs::canonical(path) )) {   // very expensive, keep low use
+				return fs::path();
 			}
 
-			/**
-			 * A utility function cutting down std-lib header files.
-			 */
-			boost::optional<fs::path> toStdLibHeader(const fs::path& path) const {
-				static const boost::optional<fs::path> fail;
-
-				if (stdLibDirs.empty()) { return fail; }
-
-				if (contains(stdLibDirs, fs::canonical(path) )) {
-					return fs::path();
-				}
-
-				if (!path.has_parent_path()) {
-					return fail;
-				}
-
-				// if it is within the std-lib directory, build relative path
-				auto res = toStdLibHeader(path.parent_path());
-				return (res)? (*res/path.filename()) : fail;
+			if (!path.has_parent_path()) {
+				return fail;
 			}
 
-			bool isStdLibHeader(const clang::SourceLocation& loc) const{
-				if (!loc.isValid()) return false;
-				return isStdLibHeader ( sm.getPresumedLoc(loc).getFilename());
+			// if it is within the std-lib directory, build relative path
+			auto res = toStdLibHeader(path.parent_path());
+			return (res)? (*res/path.filename()) : fail;
+		}
+
+		bool HeaderTagger::isStdLibHeader(const clang::SourceLocation& loc) const{
+			if (!loc.isValid()) return false;
+			auto fit = locationCache.find(sm.getFileID(loc));
+			if (fit != locationCache.end()){
+				return fit->second.second;
 			}
 
-			bool isStdLibHeader(const fs::path& path) const{
-				return toStdLibHeader(fs::canonical(path));
-			}
-		
-			bool isUserLibHeader(const clang::SourceLocation& loc) const{
-				if (!loc.isValid()) return false;
-				return isUserLibHeader ( sm.getPresumedLoc(loc).getFilename());
-			}	
+			std::string filename =  sm.getPresumedLoc(loc).getFilename();
+			bool isSys = isStdLibHeader (filename);
+			locationCache[sm.getFileID(loc)] = { filename, isSys };
+			return isSys;
+		}
 
-			bool isUserLibHeader(const fs::path& path) const{
-				return toUserLibHeader(path);	
-			}
-
-			boost::optional<fs::path> toUserLibHeader(const fs::path& path) const {
-				static const boost::optional<fs::path> fail;
-
-				if (userIncludeDirs.empty()) { return fail; }
-
-				if (contains(userIncludeDirs, fs::canonical(path) )) {
-					return fs::path();
-				}
-
-				if (!path.has_parent_path()) {
-					return fail;
-				}
-
-				// if it is within the user-added-include directory, build relative path
-				auto res = toUserLibHeader(path.parent_path());
-				return (res)? (*res/path.filename()) : fail;
+		bool HeaderTagger::isStdLibHeader(const fs::path& path) const{
+			return toStdLibHeader(fs::canonical(path)); // expensive, dont go crazy with this
+		}
+	
+		bool HeaderTagger::isUserLibHeader(const clang::SourceLocation& loc) const{
+			if (!loc.isValid()) return false;
+			auto fit = locationCache.find(sm.getFileID(loc));
+			if (fit != locationCache.end()){
+				return !fit->second.second;
 			}
 
+			std::string filename =  sm.getPresumedLoc(loc).getFilename();
+			bool isUser = isUserLibHeader (filename);
+			locationCache[sm.getFileID(loc)] = { filename, !isUser };
+			return isUser;
+		}	
 
-			bool isHeaderFile(const string& name) const {
-				// everything ending wiht .h or .hpp or nothing (e.g. vector) => so check for not being c,cpp,...
-				VLOG(2) << "isHeaderFile? " << name;
-				return !name.empty() &&
-						!(ba::ends_with(name, ".c") ||
-						ba::ends_with(name, ".cc") ||
-						ba::ends_with(name, ".cpp") ||
-						ba::ends_with(name, ".cxx") ||
-						ba::ends_with(name, ".C"));
+		bool HeaderTagger::isUserLibHeader(const fs::path& path) const{
+			return toUserLibHeader(path);	
+		}
+
+		boost::optional<fs::path> HeaderTagger::toUserLibHeader(const fs::path& path) const {
+			static const boost::optional<fs::path> fail;
+
+			if (userIncludeDirs.empty()) { return fail; }
+
+			if (contains(userIncludeDirs, fs::canonical(path) )) {
+				return fs::path();
 			}
 
-			string getTopLevelInclude(const clang::SourceLocation& loc) {
+			if (!path.has_parent_path()) {
+				return fail;
+			}
 
-				// if it is a dead end
-				if (!loc.isValid()) {
-					std::cout << "loc is invalid" << std::endl;
-					return "";
-				}
-
-				// get the presumed location (whatever this is, ask clang) ...
-				// ~ ploc represents the file were loc is located
-				clang::PresumedLoc ploc = sm.getPresumedLoc(loc);
-
-				// .. and retrieve the associated include
-				// ~ from where the file ploc represents was included
-				clang::SourceLocation includeLoc = ploc.getIncludeLoc();
-				
-				// check whether the stack can be continued
-				if (!includeLoc.isValid()) {
-					//VLOG(2) << "no headerfile";
-					return ""; 		// this happens when element is declared in c / cpp file => no header
-				}
-				
-				// ~ pIncludeLoc represents the file were includLoc is located
-				clang::PresumedLoc pIncludeLoc = sm.getPresumedLoc(includeLoc);
+			// if it is within the user-added-include directory, build relative path
+			auto res = toUserLibHeader(path.parent_path());
+			return (res)? (*res/path.filename()) : fail;
+		}
 
 
+		bool HeaderTagger::isHeaderFile(const string& name) const {
+			// everything ending wiht .h or .hpp or nothing (e.g. vector) => so check for not being c,cpp,...
+			VLOG(2) << "isHeaderFile? " << name;
+			return !name.empty() &&
+					!(ba::ends_with(name, ".c") ||
+					ba::ends_with(name, ".cc") ||
+					ba::ends_with(name, ".cpp") ||
+					ba::ends_with(name, ".cxx") ||
+					ba::ends_with(name, ".C"));
+		}
 
+		string HeaderTagger::getTopLevelInclude(const clang::SourceLocation& loc) const{
 
-				//*******************
-				//
-				// travel down until we are at the sourcefile then work up again
-				// if userProvided header, we need to go further
-				// if userSearchPath/systemSearch path we need to include de header
-				//
-				//*******************
-				//VLOG(2) << "presumedIncludeLoc: " << pIncludeLoc.getFilename();
-				//VLOG(2) << "included file: " << ploc.getFilename();
-
-				// descent further as long as we have a header file as presumed include loc
-				if ( isHeaderFile(pIncludeLoc.getFilename()) ) {
-
-					// check if last include was in the search path and next is not,
-					// this case is a system header included inside of a programmer include chain
-					// BUT if both are still in the search path, continue cleaning the include
-					if((	(isStdLibHeader(ploc.getFilename()) && !isStdLibHeader(sm.getPresumedLoc(includeLoc).getFilename()))
-						||	(isUserLibHeader(ploc.getFilename()) && !isUserLibHeader(sm.getPresumedLoc(includeLoc).getFilename())))
-							&& !isIntrinsicHeader(sm.getPresumedLoc(includeLoc).getFilename())) {
-						//VLOG(2) << "userProvidedHeader";
-						return ploc.getFilename();
-					}
-					
-					//VLOG(2) << "recCase " << pIncludeLoc.getFilename();
-					return getTopLevelInclude(includeLoc);
-				}
-
-				// we already visited all the headers and we are in the .c/.cpp file
-				if (isHeaderFile(ploc.getFilename())) {
-					//VLOG(2) << "incFile: " << ploc.getFilename();
-					if(isIntrinsicHeader(ploc.getFilename())) {
-						//VLOG(2) << "intrinsic";
-						return ploc.getFilename();
-					} 
-				
-					if (isStdLibHeader(ploc.getFilename()) ) {
-						//VLOG(2) << "systemInclude";
-						return ploc.getFilename(); // this happens when header file is included straight in the code
-					} 
-					
-					if (isUserLibHeader(ploc.getFilename())) {
-						//VLOG(2) << "userInclude";
-						return ploc.getFilename();
-					} 
-						
-					//VLOG(2) << "not system header";
-					return "";  // this happens when is declared in a header which is not system header
-				} 
-
-				/*
-				// we already visited all the headers and we are in the .c/.cpp file
-				if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
-					return ploc.getFilename();
-				}
-				*/
+			// if it is a dead end
+			if (!loc.isValid()) {
 				return "";
 			}
+
+			// get the presumed location (whatever this is, ask clang) ...
+			// ~ ploc represents the file were loc is located
+			clang::PresumedLoc ploc = sm.getPresumedLoc(loc);
+
+			// .. and retrieve the associated include
+			// ~ from where the file ploc represents was included
+			clang::SourceLocation includeLoc = ploc.getIncludeLoc();
 			
-			bool isIntrinsicHeader(const string& name) {
-				return toIntrinsicHeader(fs::path(name));
+			// check whether the stack can be continued
+			if (!includeLoc.isValid()) {
+				return ""; 		// this happens when element is declared in c / cpp file => no header
 			}
+			
+			// ~ pIncludeLoc represents the file were includLoc is located
+			clang::PresumedLoc pIncludeLoc = sm.getPresumedLoc(includeLoc);
 
-			boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) {
-				static const boost::optional<fs::path> fail;
-				fs::path filename = path.filename();
-				return (!filename.empty() && ba::ends_with(filename.string(), "intrin.h")) ? (filename) : fail;
-				//return !name.empty() && ba::ends_with(name, "intrin.h");
-				/*if (filename == "mmintrin.h" || filename == "xmmintrin.h" || filename == "emmintrin.h" ||
-							filename == "pmmintrin.h" || filename == "tmmintrin.h" || filename == "smmintrin.h" ||
-							filename == "nmmintrin.h" || filename == "immintrin.h" || filename == "ia32intrin.h" ||
-							filename == "x86intrin.h") {
-					return filename;
+			//*******************
+			//
+			// travel down until we are at the sourcefile then work up again
+			// if userProvided header, we need to go further
+			// if userSearchPath/systemSearch path we need to include de header
+			//
+			//*******************
+
+			// descent further as long as we have a header file as presumed include loc
+			if ( isHeaderFile(pIncludeLoc.getFilename()) ) {
+
+				// check if last include was in the search path and next is not,
+				// this case is a system header included inside of a programmer include chain
+				// BUT if both are still in the search path, continue cleaning the include
+				if (isStdLibHeader(loc) && !isStdLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+						return ploc.getFilename();
 				}
-				*/
+				if (isUserLibHeader(loc) && !isUserLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+						return ploc.getFilename();
+				}
+				
+				return getTopLevelInclude(includeLoc);
 			}
 
-		};
+			// we already visited all the headers and we are in the .c/.cpp file
+			if (isHeaderFile(ploc.getFilename())) {
+				if(isIntrinsicHeader(ploc.getFilename())) {
+					return ploc.getFilename();
+				} 
+			
+				if (isStdLibHeader(ploc.getFilename()) ) {
+					return ploc.getFilename(); // this happens when header file is included straight in the code
+				} 
+				
+				if (isUserLibHeader(ploc.getFilename())) {
+					return ploc.getFilename();
+				} 
+					
+				return "";  // this happens when is declared in a header which is not system header
+			} 
 
-	} // annonymous namespace
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			/*
+			// we already visited all the headers and we are in the .c/.cpp file
+			if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
+				return ploc.getFilename();
+			}
+			*/
+			return "";
+		}
+		
+		bool HeaderTagger::isIntrinsicHeader(const string& name) const{
+			return toIntrinsicHeader(fs::path(name));
+		}
 
+		boost::optional<fs::path> HeaderTagger::toIntrinsicHeader(const fs::path& path)const {
+			static const boost::optional<fs::path> fail;
+			fs::path filename = path.filename();
+			return (!filename.empty() && ba::ends_with(filename.string(), "intrin.h")) ? (filename) : fail;
+		}
 
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs){
-		HeaderTagger tagger(stdLibDirs, userIncludeDirs, decl->getASTContext().getSourceManager());
-		return tagger.isStdLibHeader(decl->getLocation());
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 			header tagging interface
+
+	bool HeaderTagger::isDefinedInSystemHeader (const clang::Decl* decl) const {
+		return isStdLibHeader(decl->getLocation());
 	}
 
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs) {
+	void HeaderTagger::addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined) const {
+
+		// the node was already annotated, what is the point of doint it again?
+		if (insieme::annotations::c::hasIncludeAttached(node))  
+			return;
 
 		// check whether there is a declaration at all
 		if (!decl) return;
@@ -284,11 +257,10 @@ namespace utils {
 			VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << " [clang: " << name << "]" ;
 		}
 
-		HeaderTagger tagger(stdLibDirs, userIncludeDirs, decl->getASTContext().getSourceManager());
-		string fileName = tagger.getTopLevelInclude(decl->getLocation());
+		string fileName = getTopLevelInclude(decl->getLocation());
 
 		// file must be a header file
-		if (!tagger.isHeaderFile(fileName)) {
+		if (!isHeaderFile(fileName)) {
 			VLOG(2) << "'" << fileName << "' not a headerfile";
 			return;			// not to be attached
 		}
@@ -297,19 +269,22 @@ namespace utils {
 		if (const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 			// TODO: this is just based on integration tests - to make them work, no real foundation :(
 			if( funDecl->isExternC() && 
-				!(tagger.isStdLibHeader(fileName) || tagger.isIntrinsicHeader(fileName)) ) return;
+				!(isStdLibHeader(fileName) || isIntrinsicHeader(fileName)) ) return;
 		}
 
 		// get absolute path of header file
 		fs::path header = fs::canonical(fileName);
 
 		// check if header is in STL
-		if( auto stdLibHeader = tagger.toStdLibHeader(header) ) {
+		if( auto stdLibHeader = toStdLibHeader(header) ) {
 			header = *stdLibHeader;
-		} else if( auto intrinsicHeader = tagger.toIntrinsicHeader(header) ) {
+		} else if( auto intrinsicHeader = toIntrinsicHeader(header) ) {
 			header = *intrinsicHeader;
-		} else if( auto userLibHeader = tagger.toUserLibHeader(header) ) {
-			header = *userLibHeader;
+		} else if (auto userLibHeader = toUserLibHeader(header) ) {
+			if(attachUserDefined )
+				header = *userLibHeader;
+			else
+				return;
 		}
 
 		VLOG(2) << "		header to be attached: " << header.string();
