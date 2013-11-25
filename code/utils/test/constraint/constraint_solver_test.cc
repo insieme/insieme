@@ -352,6 +352,114 @@ namespace constraint {
 	}
 
 
+	namespace {
+
+		struct IncrementConstraint : public Constraint {
+
+			TypedSetID<int> in;
+			TypedSetID<int> out;
+
+			IncrementConstraint(const TypedSetID<int>& in, const TypedSetID<int>& out)
+				: Constraint(toVector<ValueID>(in), toVector<ValueID>(out)), in(in), out(out) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const auto& sin  = ass[in];
+				auto& sout = ass[out];
+
+				// if there is not only one value in the in-set reset counter
+				if (sin.size() != 1u) {
+					sout.clear();
+					sout.insert(1);
+					return Constraint::Altered;
+				}
+
+				// if there is one value in the set, increment it
+				int value = *sin.begin();
+				if (value < 10) {
+					sout.clear();
+					sout.insert(value+1);
+					return Constraint::Altered;
+				}
+
+				// otherwise do nothing
+				return Constraint::Unchanged;
+
+			};
+			virtual bool check(const Assignment& ass) const { return true; }
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const { return out << in << "->" << out << "\n"; }
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
+
+			virtual bool hasAssignmentDependentDependencies() const { return false; }
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const { return set::toSet<std::set<ValueID>>(in); }
+
+			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
+
+		};
+
+
+		ConstraintPtr increment(const TypedSetID<int>& in, const TypedSetID<int>& out) {
+			return std::make_shared<IncrementConstraint>(in, out);
+		}
+
+	}
+
+
+	TEST(Solver, ResetConstraintsEager) {
+
+		auto s = [](int id) { return TypedSetID<int>(id); };
+
+		Constraints problem = {
+				subset   (s(1),s(2)),
+				subset	 (s(2),s(3)),
+				increment(s(3),s(1))
+		};
+
+		auto res = solve(problem);
+		EXPECT_EQ("{v1={10},v2={10},v3={10}}", toString(res));
+
+		// check the individual constraints
+		for (const auto& cur : problem) {
+			EXPECT_TRUE(cur->check(res)) << "Constraint: " << *cur;
+		}
+
+	}
+
+//	TEST(Solver, ResetConstraintsLazy) {
+//
+//		auto s = [](int id) { return TypedSetID<int>(id); };
+//
+//		Constraints problem = {
+//				subset   (s(1),s(2)),
+//				subset	 (s(2),s(3)),
+//				increment(s(3),s(1))
+//		};
+//
+//
+//		// lazy-evaluated faculty values
+//		auto resolver = [&](const std::set<ValueID>& sets)->Constraints {
+//			Constraints res;
+//			for(auto cur : sets) {
+//				int id = cur.getID();
+//				if (id == 1) {
+//					res.add(increment(s(3),s(1)));
+//				} else if (id == 2) {
+//					res.add(subset(s(1),s(2)));
+//				} else if (id == 3) {
+//					res.add(subset(s(2),s(3)));
+//				}
+//			}
+//			return res;
+//		};
+//
+//		// LazySolver
+//		auto res = solve(s(3), resolver);
+//		EXPECT_EQ("{10}", toString(res));
+//
+//	}
+
+
+
 } // end namespace set_constraint
 } // end namespace utils
 } // end namespace insieme

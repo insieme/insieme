@@ -185,10 +185,10 @@ namespace cba {
 				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state)),
 				  mgr(mgr), loc(loc), ref(ref), in_value(in_value), old_state(old_state), new_state(new_state) {}
 
-			virtual bool update(Assignment& ass) const {
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// compute updated value and add it to the result value
 				meet_assign_op_type meet_assign_op;
-				return meet_assign_op(ass[new_state], getUpdatedData(ass));
+				return meet_assign_op(ass[new_state], getUpdatedData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {
