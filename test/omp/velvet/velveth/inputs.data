@@ -1,0 +1,14 @@
+../src/tightString.c ../src/run.c ../src/recycleBin.c ../src/splay.c ../src/splayTable.c ../src/readSet.c ../src/binarySequences.c ../src/utility.c ../src/kmer.c ../src/kmerOccurenceTable.c ../src/autoOpen.c 
+../third-party/zlib-1.2.3/adler32.c
+../third-party/zlib-1.2.3/compress.c
+../third-party/zlib-1.2.3/crc32.c
+../third-party/zlib-1.2.3/deflate.c
+../third-party/zlib-1.2.3/gzio.c
+../third-party/zlib-1.2.3/infback.c
+../third-party/zlib-1.2.3/inffast.c
+../third-party/zlib-1.2.3/inflate.c
+../third-party/zlib-1.2.3/inftrees.c
+../third-party/zlib-1.2.3/trees.c
+../third-party/zlib-1.2.3/uncompr.c
+../third-party/zlib-1.2.3/zutil.c
+
