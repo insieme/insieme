@@ -133,8 +133,8 @@ TEST(Interception, SimpleInterception) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(SRC_DIR "inputs/interceptor/");
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>();
 	job.setInterception( "ns::.*" );
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptions());
 	auto tu = job.toTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 

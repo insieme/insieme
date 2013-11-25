@@ -636,14 +636,6 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	// create result location
 	core::TypePtr res;
 
-	//check if type is intercepted
-	if(convFact.getInterceptor().isIntercepted(type)) {
-		VLOG(2) << type << " isIntercepted";
-		res = convFact.getInterceptor().intercept(type, convFact);
-		typeCache[type] = res;
-		return res;
-	}
-
 	// assume a recursive construct for record declarations
 	if (auto recDecl = toRecordDecl(type)) {
 		std::string name = utils::getNameForRecord(recDecl, type);
