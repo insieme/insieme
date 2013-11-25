@@ -1,1 +1,1 @@
--DIF_CUTOFF
+-DIF_CUTOFF --omp-sema

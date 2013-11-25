@@ -78,7 +78,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
 		std::stringstream ss;
-		ss << "_anom";
+		ss << "_anon";
 		ss << (unsigned long long) decl;
 		return ss.str();
 	}

@@ -1,1 +1,1 @@
--DMANUAL_CUTOFF
+-DMANUAL_CUTOFF --omp-sema
