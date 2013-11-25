@@ -245,7 +245,7 @@ Nodes;Nodes/Sec;\n");
            fprintf(stdout, "Nodes/Sec           = %s\n", str_number_of_tasks_per_second);
 	 }
 
-         fprintf(stdout, "Execution Date      = %s\n", str_exec_date);
+//         fprintf(stdout, "Execution Date      = %s\n", str_exec_date);
          fprintf(stdout, "Execution Message   = %s\n", str_exec_message);
 
          fprintf(stdout, "Architecture        = %s\n", str_architecture);
