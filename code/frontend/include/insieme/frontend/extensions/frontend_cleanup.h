@@ -42,21 +42,13 @@
  namespace frontend {
 
 /**
- * 		Long long cleanup
- * 		=================
  *
- * 		during the translation, long long behaves like a built in type, but in the backend it is mapped into the same bitwith as a long
- * 		the problem comes when we pass it as paramenter to functions, because it produces overload, even when in the backend both functions
- * 		are going to have the same parameter type
- *
- * 		after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and staticaly 
- * 		resolved, so we wont find any problem related with typing.
- *
- * 		The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit 
- * 		overloads in 3rd party libraries (they do not make much sense anyway, do they? )
- *
+ * This is the frontend cleanup tool. 
+ * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
+ * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
+ * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code 
  */
-class LongLongExtension : public insieme::frontend::extensions::FrontendPlugin {
+class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
 		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 };
 

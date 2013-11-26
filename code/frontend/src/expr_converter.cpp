@@ -1633,8 +1633,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	}
 
 	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {
-		retIr = convFact.lookUpVariable( varDecl );
-		return retIr;
+		return (retIr = convFact.lookUpVariable( varDecl ));
 	}
 
 	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
