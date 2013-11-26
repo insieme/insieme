@@ -42,7 +42,6 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
-#include "insieme/frontend/utils/interceptor.h"   // FIXME:  to delete
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/pragma/handler.h"
@@ -228,7 +227,6 @@ class Converter :  boost::noncopyable {
 	 const clang::SourceLocation* lastTrackableLocation;
 
 	frontend::utils::HeaderTagger headerTagger;
-	frontend::utils::Interceptor  interceptor;
 
      void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
@@ -406,9 +404,8 @@ public:
 	 * of the function. The function itself should be translated by the clang declaration traverser, 
 	 * and stored in the translation unit.
 	 * @param functionDecl the function decl 
-	 * @param explicitTempArgs interceptor should add the template arguments explicitly
 	 * */
-	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl, const bool explicitTemplateArgs=false);
+	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Entry point for converting function to the right type
@@ -519,7 +516,6 @@ public:
 	 * retrives the header tagger to annotate headers
 	 */
 	const frontend::utils::HeaderTagger&  getHeaderTagger() const;
-	const frontend::utils::Interceptor&   getInterceptor() const;
 
    /**
 	* Creates the variable which should be used as a placeholder for invoking the iven

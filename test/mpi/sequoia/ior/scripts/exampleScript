@@ -1,0 +1,20 @@
+IOR START
+	testFile = /tmp/iorTest
+	filePerProc=1
+	api=POSIX
+	repetitions=2
+	verbose=1
+	RUN
+	verbose = 2
+	repetitions=1#more foo
+	#foobar
+	blockSize=10m
+	transferSize=128k
+	  
+	RUN
+	verbose = 0
+
+	#blockSize=
+	transferSize=64k
+	RUN
+IOR STOP

@@ -1,9 +1,1 @@
-length: 150, 60
-g:  0, 0
-r_cut:   1000
-sigma:   1
-epsilon: 2
-delt: 0.0002
-t_end: 1.0
-delt_vis: 0.1
-energy: 0
+example2b.par

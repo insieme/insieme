@@ -1,0 +1,1 @@
+-DIF_CUTOFF -D_OPENMP --omp-sema

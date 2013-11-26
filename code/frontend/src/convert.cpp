@@ -198,8 +198,7 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog, const Conversi
 		pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
 		lastTrackableLocation(nullptr),
-		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager()),
-		interceptor(mgr, headerTagger, setup.getInterceptions())
+		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -337,12 +336,6 @@ tu::IRTranslationUnit Converter::convert() {
 ///
 const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
 	return headerTagger;
-}
-
-//////////////////////////////////////////////////////////////////
-///
-const frontend::utils::Interceptor& Converter::getInterceptor() const{
-	return interceptor;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -781,28 +774,8 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 	assert(enumType);
 	core::TypePtr enumTy = convertType(enumType);
 
-	string enumConstantName;
-	if( getInterceptor().isIntercepted(enumType) ) {
-		//TODO move name mangling into interceptor
-		auto enumDecl = enumType->getDecl();
-		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
-		string typeName = enumDecl->getNameAsString();
-		string constantName = enumConstant->getNameAsString();
-
-		//remove typeName from qualifiedTypeName and append enumConstantName
-		size_t pos = qualifiedTypeName.find(typeName);
-		assert(pos!= std::string::npos);
-		string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
-
-		VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
-		VLOG(2) << fixedQualifiedName;
-
-		enumConstantName = fixedQualifiedName;
-	} else {
-		bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
-		enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
-	}
-
+	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
+	string enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
 	return builder.literal(enumConstantName, enumTy);
 }
 
@@ -1275,7 +1248,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
     return getCallableExpression(funcDecl);
 }
 
-core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl, const bool explicitTemplateArgs){
+core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
 	assert(funcDecl);
 	
 	// switch to the declaration containing the body (if there is one)

@@ -374,28 +374,38 @@ core::TypePtr Converter::TypeConverter::VisitExtVectorType(const ExtVectorType* 
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-	core::TypePtr subType = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-	LOG_TYPE_CONVERSION( typedefType, subType );
-	frontend_assert(subType);
+	core::TypePtr retTy = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	LOG_TYPE_CONVERSION( typedefType, retTy );
+	frontend_assert(retTy);
 
 	// typedefs take ownership of the inner type, this way, same anonimous types along translation units will
 	// be named as the typdef if any
-	if (core::GenericTypePtr symb = subType.isa<core::GenericTypePtr>()){
-		core::TypePtr trgty =  convFact.lookupTypeDetails(symb);
+	if (core::GenericTypePtr symb = retTy.isa<core::GenericTypePtr>()){
+		core::TypePtr trgTy =  convFact.lookupTypeDetails(symb);
 
 		// a new generic type will point to the previous translation unit decl
-		if (trgty.isa<core::StructTypePtr>()){
+		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
+			auto decl =  typedefType->getDecl();
 			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType);
 			core::GenericTypePtr gen = builder.genericType(name);
 
 			core::TypePtr impl = symb;
 			// if target is an annonymous type, we create a new type with the name of the typedef
-			if (trgty.as<core::StructTypePtr>()->getName()->getValue().substr(0,4) == "_anon"){
-				impl = builder.structType ( builder.stringValue( name), trgty.as<core::StructTypePtr>()->getParents(), trgty.as<core::StructTypePtr>()->getEntries());
+			if (structTy->getName()->getValue().substr(0,5) == "_anon"){
+				impl = builder.structType ( builder.stringValue( name), structTy->getParents(), structTy->getEntries());
+				
+				core::annotations::attachName(impl,name);
+
+				if( decl && convFact.getHeaderTagger().isDefinedInSystemHeader(decl) ) {
+					//if the typeDef oft the anonymous type was done in a system header we need to
+					//annotate to enable the backend to avoid re-declaring the type
+					VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
+					convFact.getHeaderTagger().addHeaderForDecl(impl, decl);
+				}
 			}
 
 			convFact.getIRTranslationUnit().addType(gen, impl);
-			return gen;
+			return (retTy = gen);
 		}
 	}
 
@@ -404,13 +414,13 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
     //typedef name annotation for struct/union messes with recursive type resolution
     //as typeDef is syntactic sugar drop the name annotation
     /*
-    if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(subType)
-		&& !subType.isa<core::StructTypePtr>() && !subType.isa<core::UnionTypePtr>()) {
+    if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(retTy)
+		&& !retTy.isa<core::StructTypePtr>() && !retTy.isa<core::UnionTypePtr>()) {
         // Adding the name of the typedef as annotation
-        core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
+        core::annotations::attachName(retTy,typedefType->getDecl()->getNameAsString());
     }
     */
-    return  subType;
+    return  retTy;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -635,14 +645,6 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 
 	// create result location
 	core::TypePtr res;
-
-	//check if type is intercepted
-	if(convFact.getInterceptor().isIntercepted(type)) {
-		VLOG(2) << type << " isIntercepted";
-		res = convFact.getInterceptor().intercept(type, convFact);
-		typeCache[type] = res;
-		return res;
-	}
 
 	// assume a recursive construct for record declarations
 	if (auto recDecl = toRecordDecl(type)) {

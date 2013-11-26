@@ -306,7 +306,6 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 	} else {
 		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 	}
-
 	frontend_assert(ident);
 
 	core::TypePtr membType;
@@ -842,7 +841,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(convFact, builder, base, membExpr);
-
 	LOG_EXPR_CONVERSION(membExpr, retIr);
 	return retIr;
 }

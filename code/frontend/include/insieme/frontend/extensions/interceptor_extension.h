@@ -37,6 +37,7 @@
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/utils/interceptor.h"
 
 namespace insieme {
 namespace frontend {
@@ -52,6 +53,17 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
     virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact); 
         
     virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+
+	private:
+
+	insieme::frontend::utils::Interceptor interceptor;
+
+	const insieme::frontend::utils::Interceptor& getInterceptor() const { return interceptor; }
+
+	public:
+
+	InterceptorPlugin(const std::set<std::string>& interceptSet) : interceptor(interceptSet) {}
+
 };
 
 }

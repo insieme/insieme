@@ -65,6 +65,7 @@ using namespace llvm;
 		boost::replace_all(str, " ", "_"); \
 		boost::replace_all(str, "(", "_"); \
 		boost::replace_all(str, ")", "_"); \
+		boost::replace_all(str, ",", "_"); \
 }
 
 
@@ -77,7 +78,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
 		std::stringstream ss;
-		ss << "_anom";
+		ss << "_anon";
 		ss << (unsigned long long) decl;
 		return ss.str();
 	}
@@ -92,10 +93,10 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 		//type name has the class name and typing
 		//
 		//     namespace::owner::myClass                 <= qualname
-		//                class  myClass<int>            <= typename
+		//                class  myClass<int, type>      <= typename
 		//                       myClass                 just the name, the key to happines
 		//      ---------------------------------
-		//     namespace::owner::myClass<int>            <= final name
+		//     namespace::owner::myClass<int, type>      <= final name
 
 		unsigned pos = typeName.find(name);
 		boost::replace_last(fullName, name, std::string(typeName.begin()+pos, typeName.end()));

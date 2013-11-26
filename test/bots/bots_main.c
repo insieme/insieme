@@ -206,7 +206,7 @@ int  bots_cutoff_value = BOTS_CUTOFF_DEF_VALUE;
 #endif
 
 // a flag added to allow bots to be used within integration tests
-int bots_print_times = 1;
+int bots_print_times = 0;
 
 /***********************************************************************
  * print_usage: 

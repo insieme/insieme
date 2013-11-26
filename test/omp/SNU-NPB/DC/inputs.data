@@ -1,0 +1,5 @@
+-I. -I.. -I../../common ../adc.c ../dc.c ../extbuild.c ../rbt.c ../jobcntl.c ../../common/c_print_results.c  ../../common/c_timers.c ../../common/wtime.c
+
+
+
+

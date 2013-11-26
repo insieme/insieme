@@ -49,6 +49,7 @@
 namespace clang {
 class Type;
 class FunctionDecl;
+class EnumConstantDecl;
 } // End clang namespace
 
 namespace insieme {
@@ -62,13 +63,8 @@ namespace utils {
 
 class Interceptor {
 public:
-	Interceptor(
-			insieme::core::NodeManager& mgr,
-			const HeaderTagger& headerTagger,
-			const std::set<std::string>& interceptSet)
-		: builder(mgr), headerTagger(headerTagger),
-		
-  		  // by default intercept std:: and __gnu_cxx:: namespaces
+	Interceptor(const std::set<std::string>& interceptSet)
+		: // by default intercept std:: and __gnu_cxx:: namespaces
 		  // __gnu_cxx is needed for the iterator of std::vector for example
 		  toIntercept(interceptSet), 
 	
@@ -77,27 +73,15 @@ public:
 	{	
 	}
 
-	void loadConfigSet(std::set<std::string> toIntercept);	
-	
 	bool isIntercepted(const string& name) const;
 	bool isIntercepted(const clang::Type* type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
 	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const ;
 	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs=false) const;
-
-	const HeaderTagger& getHeaderTagger () const {
-		return headerTagger;
-	} 
+	insieme::core::ExpressionPtr intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const;
 
 private:
-	insieme::core::IRBuilder builder;
-
-	/**
-	 * the header tagger to use when detecting headers
-	 */
-	const HeaderTagger& headerTagger;
-
 	/**
 	 * set of strings representing the regEx to be intercepted
 	 */

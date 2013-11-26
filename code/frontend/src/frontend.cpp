@@ -83,7 +83,7 @@ namespace frontend {
 
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
-        registerFrontendPlugin<extensions::InterceptorPlugin>();
+        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptions());
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<LongLongExtension>();
