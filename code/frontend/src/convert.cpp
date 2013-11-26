@@ -1121,13 +1121,22 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	}
 
 	// ---------------  check cases in wich this declaration should not be converted -------------------
+	//  checkout this stuff: http://stackoverflow.com/questions/6496545/trivial-vs-standard-layout-vs-pod
 	if (const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)){
 		// non public constructors, or non user provided ones should not be converted
 		if (!ctorDecl->isUserProvided () )
 			return;
-		else if(ctorDecl->getAccess()==clang::AccessSpecifier::AS_private)
+		else if(ctorDecl->getParent()->isTrivial())
+			return;
+		
+	}
+	if (const clang::CXXDestructorDecl* dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)){
+		if (!dtorDecl->isUserProvided () )
+			return;
+		else if(dtorDecl->getParent()->isTrivial())
 			return;
 	}
+
 
 	// --------------- convert potential recursive function -------------
 	
