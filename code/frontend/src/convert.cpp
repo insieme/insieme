@@ -518,9 +518,18 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			}
 
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
+
 			if (varDecl->isStaticLocal()){
 				globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 			}
+
+			// OMP threadPrivate
+			if (insieme::utils::set::contains (thread_private, varDecl)){
+				omp::addThreadPrivateAnnotation(globVar);
+			}
+
+			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
+			varDeclMap.insert( { valDecl, globVar } );
 
 			// some member statics might be missing because of defined in a template which was ignored
 			// since this is the fist time we get access to the complete type, we can define the
@@ -536,13 +545,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 				getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
 			}
 
-			// OMP threadPrivate
-			if (insieme::utils::set::contains (thread_private, varDecl)){
-				omp::addThreadPrivateAnnotation(globVar);
-			}
-
-			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
-			varDeclMap.insert( { valDecl, globVar } );
 		} else {
 			// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
 			// the IR variable and insert it into the map for future lookups
