@@ -131,6 +131,17 @@
 		// in the translation unit unification it might turn out that those types were actually the same one. Clean up those casts since they might drive
 		// output code into error (specially with c++)
 		{
+			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
+						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+							const auto& gen = node->getNodeManager().getLangBasic();
+							if (core::analysis::isCallOf(call, gen.getRefReinterpret())) {
+								if (call->getType() == call[0]->getType())
+									return call[0];
+							}
+						}
+						return node;
+					});
+			prog = castRemover.map(prog);
 		}
 
 		return prog;
