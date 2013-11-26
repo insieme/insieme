@@ -425,38 +425,38 @@ namespace constraint {
 
 	}
 
-//	TEST(Solver, ResetConstraintsLazy) {
-//
-//		auto s = [](int id) { return TypedSetID<int>(id); };
-//
-//		Constraints problem = {
-//				subset   (s(1),s(2)),
-//				subset	 (s(2),s(3)),
-//				increment(s(3),s(1))
-//		};
-//
-//
-//		// lazy-evaluated faculty values
-//		auto resolver = [&](const std::set<ValueID>& sets)->Constraints {
-//			Constraints res;
-//			for(auto cur : sets) {
-//				int id = cur.getID();
-//				if (id == 1) {
-//					res.add(increment(s(3),s(1)));
-//				} else if (id == 2) {
-//					res.add(subset(s(1),s(2)));
-//				} else if (id == 3) {
-//					res.add(subset(s(2),s(3)));
-//				}
-//			}
-//			return res;
-//		};
-//
-//		// LazySolver
-//		auto res = solve(s(3), resolver);
-//		EXPECT_EQ("{10}", toString(res));
-//
-//	}
+	TEST(Solver, ResetConstraintsLazy) {
+
+		auto s = [](int id) { return TypedSetID<int>(id); };
+
+		Constraints problem = {
+				subset   (s(1),s(2)),
+				subset	 (s(2),s(3)),
+				increment(s(3),s(1))
+		};
+
+
+		// lazy-evaluated faculty values
+		auto resolver = [&](const std::set<ValueID>& sets)->Constraints {
+			Constraints res;
+			for(auto cur : sets) {
+				int id = cur.getID();
+				if (id == 1) {
+					res.add(increment(s(3),s(1)));
+				} else if (id == 2) {
+					res.add(subset(s(1),s(2)));
+				} else if (id == 3) {
+					res.add(subset(s(2),s(3)));
+				}
+			}
+			return res;
+		};
+
+		// LazySolver
+		auto res = solve(s(1), resolver);
+		EXPECT_EQ("{v1={10},v2={10},v3={10}}", toString(res));
+
+	}
 
 
 

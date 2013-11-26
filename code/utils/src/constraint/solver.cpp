@@ -52,7 +52,7 @@ namespace constraint {
 	namespace {
 
 		// the data structure representing the graph this algorithm is based on
-		typedef map<ValueID, set<const Constraint*>> Edges;
+		typedef std::unordered_map<ValueID, set<const Constraint*>> Edges;
 
 		void collectDependentValues(const ValueID& id, const Edges& edges, set<ValueID>& res) {
 			// get dependent values of current step
@@ -82,9 +82,6 @@ namespace constraint {
 
 
 	Assignment solve(const Constraints& constraints, Assignment initial) {
-
-		// the data structure representing the graph this algorithm is based on
-		typedef map<ValueID, set<const Constraint*>> Edges;
 
 		// the work-list
 		vector<ValueID> workList;
@@ -126,7 +123,7 @@ namespace constraint {
 					}
 				}
 
-				// if this value has been altered (not just incremented) all dependent values need to be cleared
+				// if the output value has been altered (not just incremented) all dependent values need to be cleared
 				if (change == Constraint::Altered) {
 
 					// get updated outputs
@@ -178,15 +175,30 @@ namespace constraint {
 				resolveConstraints(cc, worklist);
 
 				// trigger update
-				auto res = cc.update(ass);
-
-				// this solver only supports incremental modifications so far
-				assert(res == Constraint::Unchanged || res == Constraint::Incremented);
+				auto change = cc.update(ass);
 
 				// register outputs in work-list
-				if (res == Constraint::Incremented) {
+				if (change != Constraint::Unchanged) {
 					for (auto cur : cc.getOutputs()) {
 						worklist.push_back(cur);
+					}
+				}
+
+				// if the output value has been altered (not just incremented) all dependent values need to be cleared
+				if (change == Constraint::Altered) {
+
+					// get updated outputs
+					auto outputs = cc.getOutputs();
+
+					// get all depending sets
+					set<ValueID> dependent = getDependentValues(outputs, edges);
+
+					// check for cycles
+//					if (dependent.contains(head)) { /* TODO: implement recovery */ }
+
+					// clear all dependent sets and re-schedule them
+					for(auto cur : dependent) {
+						if (!contains(outputs, cur)) ass.clear(cur);		// do not reset value causing this operation
 					}
 				}
 			}
