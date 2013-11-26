@@ -390,12 +390,19 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
-	// back end compiler
-	if (callExpr->isElidable () && (ctorDecl->isCopyConstructor() || ctorDecl->isMoveConstructor())){
+	// back end compiler, unleast there are more than one parameter, this case we have no way to express the 
+	// sematincs in IR. the constructor will unify those expressions into one
+	if (callExpr->isElidable () && (callExpr->getNumArgs() == 1)){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
+	
+		// a constructor returns a reference of the class type, but we might need to fix types
+		// do a ref reinterpret to the target type
+		if (retIr->getType() != refToClassTy)
+			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType))); 
+
 		return retIr;
 	}
 
