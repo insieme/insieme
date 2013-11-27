@@ -477,13 +477,15 @@ void Converter::printDiagnosis(const clang::SourceLocation& loc) {
 	clang::Preprocessor& pp = getPreprocessor();
 	// print warnings and errors:
 	while (!warnings.empty()){
-		if (getSourceManager().isLoadedSourceLocation (loc)){
-			std::cerr << "\n\nloaded location:\n";
-			std::cerr << "\t" << *warnings.begin() << std::endl;
-		}
-		else{
-			std::cerr << "\n\n";
-			pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *warnings.begin()) );
+		if (!getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
+			if (getSourceManager().isLoadedSourceLocation (loc)){
+				std::cerr << "\n\nloaded location:\n";
+				std::cerr << "\t" << *warnings.begin() << std::endl;
+			}
+			else{
+				std::cerr << "\n\n";
+				pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *warnings.begin()) );
+			}
 		}
 		warnings.erase(warnings.begin());
 	}

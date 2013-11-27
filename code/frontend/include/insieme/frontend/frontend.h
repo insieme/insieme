@@ -84,7 +84,8 @@ namespace frontend {
 			WinCrossCompile	= 1<<4,
 			TAG_MPI			= 1<<6,
 
-			ProgressBar		= 1<<7
+			ProgressBar		= 1<<7,
+			NoWarnings		= 1<<8
 		};
 
 		/**

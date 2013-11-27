@@ -69,6 +69,7 @@ namespace cmd {
 					("output-file,o", bpo::value<string>(), "the output file")
 					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
 					("progress,p", "shows a progress bar as the frontend translates the input")
+					("no-warning,w", " Inhibit all warning messages")
 			;
 
 		}
@@ -215,6 +216,9 @@ namespace cmd {
 
 			// progress bar
 			res.job.setOption(fe::ConversionJob::ProgressBar, map.count("progress"));
+
+			// inhibit warnings
+			res.job.setOption(fe::ConversionJob::NoWarnings, map.count("no-warning"));
 
             // interceptions
             if (map.count("intercept")) {
