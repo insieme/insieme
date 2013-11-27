@@ -631,6 +631,14 @@ namespace backend {
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
+		res[basic.getRefToInt()] = OP_CONVERTER({
+				return CONVERT_ARG(0);
+		}
+		);
+
+		res[basic.getIntToRef()] = OP_CONVERTER({
+				return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
+		});
 		// -- support narrow and expand --
 
 		res[basic.getRefNarrow()] = OP_CONVERTER({

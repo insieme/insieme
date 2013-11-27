@@ -658,14 +658,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.getZero(targetTy);
 			}
 			else{
-				// since we need this, we force the conversion - may god have mercy for the unfortunate soul who has to deal with it
-//				return builder.castExpr(targetTy, expr);
-				castExpr->dump();
-				std::cout << "-> at location: (" << utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << "); " << std::endl;
-				std::cout << "Expression : " <<  expr << ": " << expr->getType() << std::endl;
-				std::cout << "target type: " <<  targetTy << std::endl;
-				frontend_assert(false) << "Non NULL cast to pointer not supported!";
-				assert(false && "Non NULL casts to pointer not supported");
+				assert(targetTy.isa<core::RefTypePtr>());
+				core::TypePtr elemTy = targetTy.as<core::RefTypePtr>()->getElementType();
+				return builder.callExpr(targetTy, gen.getIntToRef(), toVector(expr, builder.getTypeLiteral(elemTy)));
 			}
 			break;
 		}
@@ -926,7 +921,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
 		// ObjC, and block pointers. (intptr_t) "help!"
 		{
-			return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(targetTy));
+			return builder.callExpr(gen.getUInt8(), gen.getRefToInt(), expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
