@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <iterator>
+
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graphviz.hpp>
@@ -67,20 +69,49 @@ namespace graph {
 	/**
 	 * A functor class capable of printing labels within dot files for nodes and edges.
 	 */
-	template <class Graph, class Printer>
+	template <class Graph, class Printer, class Decorator>
 	class label_printer {
 		Graph graph;
 		const Printer& printer;
+		const Decorator& decorator;
 	public:
-		label_printer(Graph _graph, const Printer& printer)
-			: graph(_graph), printer(printer) {}
+		label_printer(Graph _graph, const Printer& printer, const Decorator& decorator)
+			: graph(_graph), printer(printer), decorator(decorator) {}
 
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
 			out << "[label=\"";
 			printer(out, graph[v]);
-			out << "\"]";
+			out << "\" ";
+			decorator(out, graph[v]);
+			out << "]";
 		}
+	};
+
+	/**
+	 * A functor realizing no label.
+	 */
+	struct no_label {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {}
+	};
+
+	/**
+	 * A functor realizing a default to-string label.
+	 */
+	struct default_label {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {
+			out << t;
+		}
+	};
+
+	/**
+	 * A functor realizing no decoration.
+	 */
+	struct default_deco {
+		template<class T>
+		void operator()(std::ostream& out, const T& t) const {}
 	};
 
 
@@ -140,6 +171,13 @@ namespace graph {
 		}
 
 		/**
+		 * An implicit converter of this builder into the resulting graph.
+		 */
+		operator const GraphType&() const {
+			return graph;
+		}
+
+		/**
 		 * Adds a new vertex to the represented graph.
 		 *
 		 * @param vertex the new vertex
@@ -148,6 +186,26 @@ namespace graph {
 		bool addVertex(const Vertex& vertex) {
 			// use internal implementation for adding a vertex
 			return addVertexInternal(vertex).second;
+		}
+
+		/**
+		 * Obtains a reference to the internal copy of the given vertex. If the vertex
+		 * is not present, a copy will be added.
+		 *
+		 * @param vertex the vertex to be obtained
+		 * @return a reference to the internal copy of the given vertex
+		 */
+		Vertex& getVertex(const Vertex& vertex) {
+			return graph[addVertexInternal(vertex).first];
+		}
+
+		/**
+		 * Obtains the descriptor utilized within the underlying boost graph to represent
+		 * the given vertex value.
+		 */
+		vertex_descriptor getVertexDescriptor(const Vertex& vertex) const {
+			assert(vertexMap.find(vertex) != vertexMap.end());
+			return vertexMap.find(vertex)->second;
 		}
 
 		/**
@@ -194,7 +252,7 @@ namespace graph {
 		 */
 		bool containsEdge(const Vertex& source, const Vertex& sink) {
 			// check presents of source / sink vertex an finally the edge
-			return containsVertex(source) && containsVertex(sink) && boost::edge(getVertexDescriptor(source), getVertexDescriptor(sink), graph);
+			return containsVertex(source) && containsVertex(sink) && boost::edge(getVertexDescriptorInternal(source), getVertexDescriptorInternal(sink), graph);
 		}
 
 		/**
@@ -216,8 +274,8 @@ namespace graph {
 		 */
 		boost::optional<EdgeLabel> getLabel(const Vertex& source, const Vertex& sink) {
 
-			auto source_desc = getVertexDescriptor(source);
-			auto sink_desc = getVertexDescriptor(sink);
+			auto source_desc = getVertexDescriptorInternal(source);
+			auto sink_desc = getVertexDescriptorInternal(sink);
 
 			// look up edge
 			if (!source_desc || !sink_desc) {
@@ -267,14 +325,74 @@ namespace graph {
 		 * @param vertexPrinter the printer to be used for formating edge labels
 		 * @return the reference to the handed in output stream
 		 */
-		template<class VertexPrinter = print<id<Vertex>>, class EdgePrinter = print<id<EdgeLabel>>>
-		std::ostream& printGraphViz(std::ostream& out, const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter()) const {
+		template<
+			class VertexPrinter = default_label, class EdgePrinter = default_label,
+			class VertexDecorator = default_deco, class EdgeDecorator = default_deco
+		>
+		std::ostream& printGraphViz(std::ostream& out,
+				const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter(),
+				const VertexDecorator& vertexDeco = VertexDecorator(), const EdgeDecorator& edgeDeco = EdgeDecorator()
+		) const {
 			boost::write_graphviz(out, graph,
-					label_printer<GraphType, VertexPrinter>(graph, vertexPrinter),
-					label_printer<GraphType, EdgePrinter>(graph, edgePrinter)
+					label_printer<GraphType, VertexPrinter, VertexDecorator>(graph, vertexPrinter, vertexDeco),
+					label_printer<GraphType, EdgePrinter, EdgeDecorator>(graph, edgePrinter, edgeDeco)
 			);
 			return out;
 		}
+
+
+		// -- vertex iterator ------------------------------------------------------
+
+		/**
+		 * A vertex iterator implementation
+		 */
+		struct const_iterator : public std::iterator<std::forward_iterator_tag, Vertex> {
+
+			typedef typename boost::graph_traits<GraphType>::vertex_iterator vertex_iter;
+
+			const_iterator() : graph(nullptr), iter() {}
+			const_iterator(const GraphType& graph, const vertex_iter& iter) : graph(&graph), iter(iter) {}
+
+			bool operator==(const const_iterator& other) const {
+				return graph == other.graph && iter == other.iter;
+			}
+
+			bool operator!=(const const_iterator& other) const {
+				return !(*this == other);
+			}
+
+			const Vertex& operator*() const {
+				return (*graph)[*iter];
+			}
+
+			const Vertex* operator->() const {
+				return &(*graph)[*iter];
+			}
+
+			const_iterator& operator++() {
+				++iter; return *this;
+			}
+
+		private:
+
+			const GraphType* graph;
+			vertex_iter iter;
+		};
+
+		/**
+		 * Obtains a const iterator referencing the first vertex.
+		 */
+		const_iterator vertexBegin() const {
+			return const_iterator(graph, boost::vertices(graph).first);
+		}
+
+		/**
+		 * Obtains a const iterator referencing the position after the last vertex.
+		 */
+		const_iterator vertexEnd() const {
+			return const_iterator(graph, boost::vertices(graph).second);
+		}
+
 
 	private:
 
@@ -312,7 +430,7 @@ namespace graph {
 		 * @param vertex the vertex looking for
 		 * @return an optional containing the requested descriptor whenever present
 		 */
-		boost::optional<vertex_descriptor> getVertexDescriptor(const Vertex& vertex) {
+		boost::optional<vertex_descriptor> getVertexDescriptorInternal(const Vertex& vertex) const {
 			auto pos = vertexMap.find(vertex);
 			if (pos != vertexMap.end()) {
 				return boost::optional<vertex_descriptor>(pos->second);
@@ -347,24 +465,28 @@ namespace graph {
 	 * @param vertexPrinter the printer to be used for formating edge labels
 	 * @return the reference to the handed in output stream
 	 */
-	template<class OutEdgeListS,
+	template<
+			class OutEdgeListS,
 			class VertexListS,
 			class DirectedS,
 			class VertexProperty,
 			class EdgeProperty,
 			class GraphProperty,
 			class EdgeListS,
-			class VertexPrinter = print<id<VertexProperty>>,
-			class EdgePrinter = print<id<EdgeProperty>>>
-
+			class VertexPrinter = default_label,
+			class EdgePrinter = default_label,
+			class VertexDecorator = default_deco,
+			class EdgeDecorator = default_deco
+	>
 	inline std::ostream& printGraphViz(std::ostream& out,
 			boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> graph,
-			const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter()) {
+			const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter(),
+			const VertexDecorator& vertexDeco = VertexDecorator(), const EdgeDecorator& edgeDeco = EdgeDecorator()) {
 
 		typedef boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> GraphType;
 		boost::write_graphviz(out, graph,
-				label_printer<GraphType, VertexPrinter>(graph, vertexPrinter),
-				label_printer<GraphType, EdgePrinter>(graph, edgePrinter)
+				label_printer<GraphType, VertexPrinter, VertexDecorator>(graph, vertexPrinter, vertexDeco),
+				label_printer<GraphType, EdgePrinter, EdgeDecorator>(graph, edgePrinter, edgeDeco)
 		);
 		return out;
 	}

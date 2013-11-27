@@ -655,7 +655,13 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 		return mgr.getLangBasic().getRefNull();
 	}
 
-	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
+	// handle enum values
+	auto& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
+	if (enumExt.isEnumType(type)) {
+		return builder.literal(type, "0");
+	}
+
+	assert_true(core::analysis::isRefType(curType)) << "We cannot initialize any different type of non-ref - found: " << curType << "\n";
 
 	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
 

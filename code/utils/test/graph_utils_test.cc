@@ -108,7 +108,7 @@ TEST(GraphUtils, LabeledGraph) {
 
 	std::stringstream buffer;
 	graph.printGraphViz(buffer);
-	EXPECT_EQ("digraph G {\n0[label=\"1\"];\n1[label=\"2\"];\n0->1 [label=\"+\"];\n}\n", buffer.str());
+	EXPECT_EQ("digraph G {\n0[label=\"1\" ];\n1[label=\"2\" ];\n0->1 [label=\"+\" ];\n}\n", buffer.str());
 
 	EXPECT_TRUE(graph.addEdge(2, 4, '+'));
 	EXPECT_TRUE(graph.addEdge(4, 8, '+'));

@@ -205,10 +205,10 @@ namespace cba {
 				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res)),
 				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
 
-			virtual bool update(Assignment& ass) const {
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// read input data and add it to result value
 				meet_assign_op_type meet_assign_op;
-				return meet_assign_op(ass[res], getReadData(ass));
+				return meet_assign_op(ass[res], getReadData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {

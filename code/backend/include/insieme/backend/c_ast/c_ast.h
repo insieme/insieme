@@ -183,6 +183,9 @@ namespace c_ast {
 	struct NamedCompositeType : public Type {
 		IdentifierPtr name;
 		vector<VariablePtr> elements;
+		vector<ConstructorPrototypePtr> ctors;
+		DestructorPrototypePtr dtor;
+		vector<MemberFunctionPrototypePtr> members;
 		NamedCompositeType(NodeType type, const IdentifierPtr name)
 			: Type(type), name(name) {}
 		virtual bool equals(const Node& node) const;
@@ -198,9 +201,6 @@ namespace c_ast {
 
 	struct StructType : public NamedCompositeType {
 		vector<ParentPtr> parents;
-		vector<ConstructorPrototypePtr> ctors;
-		DestructorPrototypePtr dtor;
-		vector<MemberFunctionPrototypePtr> members;
 		StructType(IdentifierPtr name) : NamedCompositeType(NT_StructType, name) {}
 		virtual bool equals(const Node& node) const;
 	};

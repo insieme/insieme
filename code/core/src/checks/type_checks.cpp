@@ -272,13 +272,26 @@ OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddre
 
 }
 
+namespace {
+
+	bool isUnion(const TypePtr& type) {
+		if (type.isa<UnionTypePtr>()) return true;
+		if (auto recType = type.isa<RecTypePtr>()) {
+			return isUnion(recType->getTypeDefinition());
+		}
+		return false;
+	}
+
+}
+
+
 OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
 
 	OptionalMessageList res;
 
 	// just check whether parent type is a potential object type
 	auto type = address.as<ParentPtr>()->getType();
-	if (!analysis::isObjectType(type)) {
+	if (!analysis::isObjectType(type) || isUnion(type)) {
 		add(res, Message(address,
 				EC_TYPE_ILLEGAL_OBJECT_TYPE,
 				format("Invalid parent type - not an object: %s",
