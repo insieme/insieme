@@ -372,11 +372,14 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
-		clang::Preprocessor& pp = convFact.getPreprocessor();
-		pp.Diag(forStmt->getLocStart(),
-				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
-						std::string("For loop converted into while loop, cause: ") + e.what() )
-		);
+		if (!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
+			std::cerr << std::endl;
+			clang::Preprocessor& pp = convFact.getPreprocessor();
+			pp.Diag(forStmt->getLocStart(),
+					pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
+							std::string("For loop converted into while loop, cause: ") + e.what() )
+			);
+		}
 	}
 
 	if (addDeclStmt) {
