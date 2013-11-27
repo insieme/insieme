@@ -661,9 +661,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				// since we need this, we force the conversion - may god have mercy for the unfortunate soul who has to deal with it
 //				return builder.castExpr(targetTy, expr);
 				castExpr->dump();
-				std::cout << "-> at location: (" << utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << "); ";
-				dumpDetail(expr);
-				dumpDetail(targetTy);
+				std::cout << "-> at location: (" << utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << "); " << std::endl;
+				std::cout << "Expression : " <<  expr << ": " << expr->getType() << std::endl;
+				std::cout << "target type: " <<  targetTy << std::endl;
 				frontend_assert(false) << "Non NULL cast to pointer not supported!";
 				assert(false && "Non NULL casts to pointer not supported");
 			}
