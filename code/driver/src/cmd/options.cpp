@@ -67,7 +67,7 @@ namespace cmd {
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
-					("intercept", bpo::value<string>(), "regular expressions to be intercepted - optional")
+					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
 			;
 
 		}
