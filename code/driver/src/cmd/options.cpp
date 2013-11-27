@@ -68,6 +68,7 @@ namespace cmd {
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
 					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
+					("progress,p", "shows a progress bar as the frontend translates the input")
 			;
 
 		}
@@ -211,6 +212,9 @@ namespace cmd {
 			// enable support for OpenMP and Cilk
 			res.job.setOption(fe::ConversionJob::OpenMP, !map.count("no-omp"));
 			res.job.setOption(fe::ConversionJob::Cilk, !map.count("no-cilk"));
+
+			// progress bar
+			res.job.setOption(fe::ConversionJob::ProgressBar, map.count("progress"));
 
             // interceptions
             if (map.count("intercept")) {
