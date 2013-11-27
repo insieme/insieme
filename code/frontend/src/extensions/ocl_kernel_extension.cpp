@@ -150,6 +150,102 @@ core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* varDecl, conver
 }
 }
 
+insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	if(!llvm::isa<clang::ExtVectorElementExpr>(expr))
+		return nullptr;
+
+	const clang::ExtVectorElementExpr* vecElemExpr = llvm::cast<clang::ExtVectorElementExpr>(expr);
+
+	core::ExpressionPtr&& base = convFact.convertExpr( vecElemExpr->getBase() );
+
+	core::ExpressionPtr retIr;
+
+	llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
+
+	core::TypePtr&& exprTy = convFact.convertType( (vecElemExpr)->getType().getTypePtr() );
+	unsigned int pos = 0u;
+	core::IRBuilder builder = convFact.getIRBuilder();
+
+	//translate OpenCL accessor string to index
+	if ( accessor == "x" ) pos = 0u;
+	else if ( accessor == "y" ) pos = 1u;
+	else if ( accessor == "z" ) pos = 2u;
+	else if ( accessor == "w" ) pos = 3u;
+	else if ( (accessor.front() == 's' || accessor.front() == 'S') && accessor.size() == 2) {
+		// the input string is in a form sXXX
+		// we skip the s and return the value to get the number
+		llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
+		std::string posStr = numStr;
+
+		if(posStr.at(0) <= '9')
+		pos = posStr.at(0) - '0';
+		else if(posStr.at(0) <= 'F')
+		pos = (10 + posStr.at(0) - 'A');//convert A .. E to 10 .. 15
+		else if(posStr.at(0) <= 'e')
+		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
+		else
+		assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
+	} else if ( accessor.size() <= 16 ) { // opencl vector permutation
+		vector<core::ExpressionPtr> args;
+
+		// expression using x, y, z and w
+		auto acc = accessor.begin();
+		if(*acc == 'S' || *acc == 's') { // expression using s0 .. sE
+			++acc;// skip the s
+			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
+				if(*I <= '9')
+				pos = *I - '0';
+				else if(*I <= 'E')
+				pos = (10 + (*I)-'A'); //convert A .. E to 10 .. 15
+				else if(*I <= 'e')
+				pos = (10 + (*I)-'a');//convert a .. e to 10 .. 15
+				else
+				assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
+
+				args.push_back(builder.uintLit(pos));
+			}
+			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
+		} else {
+			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
+				args.push_back(builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+			}
+			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
+		}
+
+	} else {
+		assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
+	}
+
+	// The type of the index is always uint<4>
+	core::ExpressionPtr&& idx = builder.uintLit(pos);
+	// if the type of the vector is a refType, we deref it
+	base = convFact.tryDeref(base);
+	const core::lang::BasicGenerator& gen(builder.getLangBasic());
+
+	return (retIr = builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx));
+
+}
+
+insieme::core::TypePtr OclKernelPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+	if(!llvm::isa<clang::ExtVectorType>(type))
+		return nullptr;
+
+	const clang::ExtVectorType* vecTy = llvm::cast<clang::ExtVectorType>(type);
+
+    // get vector datatype
+ 	const QualType qt = vecTy->getElementType();
+ 	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+ 	core::TypePtr&& subType = convFact.convertType(const_cast<BuiltinType*>(buildInTy));
+
+ 	// get the number of elements
+ 	size_t num = vecTy->getNumElements();
+ 	core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(convFact.getNodeManager(), num);
+
+ 	//note: members of OpenCL vectors are never refs
+ 	return convFact.getIRBuilder().vectorType( subType, numElem);
+
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               adding OpenCL kernel annotation
@@ -241,6 +337,32 @@ assert(false && "attribute");
 
 	assert(false && "post visit ");
 	return irStmt;
+}
+*/
+
+// OpenCL vector type
+/*
+insieme::core::TypePtr OclKernelPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+                                         insieme::frontend::conversion::Converter& convFact) {
+	if(!llvm::isa<clang::FunctionProtoType>(type))
+		return irType;
+
+	const clang::FunctionProtoType* funcTy = llvm::cast<clang::FunctionProtoType>(type);
+	core::FunctionTypePtr irFuncTy = irType.as<core::FunctionTypePtr>();
+	core::TypePtr&& irRetTy = irFuncTy->getReturnType();
+
+	// If the return type is of an OpenCL vector we need to remove a reference,
+	// introduce to maintain the semantics of C argument for normal C vectors
+	if(irRetTy->getNodeType() == core::NT_VectorType) {
+		// exceptions are OpenCL vectors and gcc-vectors
+		if( funcTy->getResultType()->getUnqualifiedDesugaredType()->isExtVectorType())
+		{
+			irRetTy = convFact.tryDeref(irRetTy);
+
+		}
+	}
+
+	return irType;//convFact.getIRBuilder().functionType(irFuncTy->getParameterTypeList(), irRetTy, irFuncTy->getFunctionKind());
 }
 */
 

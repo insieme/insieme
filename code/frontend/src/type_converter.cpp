@@ -269,8 +269,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	// so that the semantics of C argument passing is maintained
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
 		// exceptions are OpenCL vectors and gcc-vectors
-		if( !funcTy->getResultType()->getUnqualifiedDesugaredType()->isExtVectorType()
-			&& !funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
+		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
 		{
 			retTy = builder.refType(retTy);
 		}
@@ -286,8 +285,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
 				// exceptions are OpenCL vectors and gcc-vectors
-				if( !currArgType->getUnqualifiedDesugaredType()->isExtVectorType()
-					&& !currArgType->getUnqualifiedDesugaredType()->isVectorType())
+				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType())
 				{
 					argTy = builder.refType(argTy);
 				}
@@ -351,23 +349,6 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 
 	auto irVecTy = builder.vectorType( subType, numElem);
 	return (retIr = core::lang::toSIMDVector(irVecTy));
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 							EXTENDEND VECTOR TYPE
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::TypeConverter::VisitExtVectorType(const ExtVectorType* vecTy) {
-   // get vector datatype
-	const QualType qt = vecTy->getElementType();
-	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
-	core::TypePtr&& subType = convert(const_cast<BuiltinType*>(buildInTy));
-
-	// get the number of elements
-	size_t num = vecTy->getNumElements();
-	core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(mgr, num);
-
-	//note: members of OpenCL vectors are never refs
-	return builder.vectorType( subType, numElem);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

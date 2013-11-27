@@ -76,6 +76,15 @@ public:
 	}
 
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
+    	core::FunctionTypePtr funTy = func.getFunctionType();
+
+    	// check if return type is an ocl vector, and if yes, if it is returned by value
+    	if(core::RefTypePtr retTy = dynamic_pointer_cast<const core::RefType>(funTy.getReturnType())) {
+    		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType()))
+    			assert(false && "returns vector");
+    	}
+
+
 //        core::AnnotationMap map = func.getAnnotations();
  //       std::cout << "Size: " << map.size() << std::endl;
 
@@ -142,7 +151,7 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-//	Logger::get(std::cerr, ERROR, 2);
+	Logger::get(std::cerr, ERROR, 0);
 
 	core::NodeManager manager;
 

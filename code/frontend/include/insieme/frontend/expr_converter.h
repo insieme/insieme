@@ -305,10 +305,6 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitArraySubscriptExpr(const clang::ArraySubscriptExpr* arraySubExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						EXT VECTOR ELEMENT EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							VAR DECLARATION REFERENCE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
@@ -375,7 +371,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, DeclRefExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
@@ -410,7 +405,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)

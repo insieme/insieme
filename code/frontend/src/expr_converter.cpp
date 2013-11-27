@@ -1108,7 +1108,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-				// check if we can use the type of the first argument as retun type
+				// check if we can use the type of the first argument as return type
 				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
 					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				} else { // let deduce it otherwise
@@ -1539,7 +1539,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXT VECTOR ELEMENT EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr) {
+/*core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr) {
 	core::ExpressionPtr&& base = Visit( vecElemExpr->getBase() );
 
 	core::ExpressionPtr retIr;
@@ -1607,7 +1607,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const cl
 
 	return (retIr = builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx));
 }
-
+*/
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -119,11 +119,11 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	EXPECT_EQ(0.0, barriers);
 
-	EXPECT_EQ(85.0, memoryAccesses);
+	EXPECT_EQ(86.0, memoryAccesses);
 
 //std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
 	EXPECT_GT(0.001, fabs(0.0235294 - relLocalmemAcc));
-	EXPECT_GT(0.001, fabs(0.188235 - computeMemoryRatio));
+	EXPECT_GT(0.001, fabs(0.1860465 - computeMemoryRatio));
 
 	EXPECT_EQ(16.0, totalComputation);
 
