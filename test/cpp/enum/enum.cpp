@@ -32,6 +32,9 @@ int main() {
 	std::cout << var1 << std::endl;	
 
 
+	// default initalization
+	Kind k2;
+
 	// enum casts
 	int a = ZERO;
 	unsigned b = ZERO;
