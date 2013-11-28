@@ -61,7 +61,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	float4 a = cos((float4)(l[3]));
 	float4* b = (float4*)src;
 	int4 n = (int4)3;
-	int4 m;// = (n & ~(a > b[0])) | n;
+	int4 m = -(~n);// = (n & ~(a > b[0])) | n;
 	b = (float4*)src ;
 	float f = 7.0f;
 	float4 ret = subfunction(a);

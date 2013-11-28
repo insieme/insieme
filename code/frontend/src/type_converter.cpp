@@ -269,7 +269,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	// so that the semantics of C argument passing is maintained
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
 		// exceptions are OpenCL vectors and gcc-vectors
-		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
+		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType()) // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
 		{
 			retTy = builder.refType(retTy);
 		}
@@ -285,7 +285,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
 				// exceptions are OpenCL vectors and gcc-vectors
-				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType())
+				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType()) // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
 				{
 					argTy = builder.refType(argTy);
 				}
