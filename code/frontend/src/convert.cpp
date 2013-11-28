@@ -380,6 +380,7 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
+			//std::cout << "converting function: " << funcDecl->getNameAsString() << std::endl;
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
@@ -1127,7 +1128,33 @@ namespace {
 				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
-				assert(false && "indirect init not implemented");
+
+				// this supports indirect init of anonymous member structs/union
+				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
+				const clang::FieldDecl* field = ind->getAnonField ();
+				assert(field);
+				init = builder.literal("this", builder.refType (classType));
+
+				// build a chain of nested access
+				clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
+				clang::IndirectFieldDecl::chain_iterator end = ind->chain_end ();
+				for (; ind_it!= end; ++ind_it){
+					assert(llvm::isa<clang::FieldDecl>(*ind_it));
+					const clang::FieldDecl* field = llvm::cast<clang::FieldDecl>(*ind_it);
+					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType().getTypePtr());
+					if ((*ind_it)->getNameAsString().empty()){
+						ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
+					}
+					else{
+						ident = builder.stringValue(field->getNameAsString());
+					}
+					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(), 
+											 init, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
+				}
+
+				// finally build the assigment
+				expr = converter.convertExpr((*it)->getInit());
+				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isInClassMemberInitializer ()){
 				assert(false && "in class member not implemented");

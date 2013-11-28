@@ -80,8 +80,9 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
 		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
 			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
-			if (!recTy->getDecl()->getNameAsString().empty() )
+			if (!recTy->getDecl()->getNameAsString().empty() ){
 				return getNameForRecord(recTy->getDecl(), recTy);
+			}
 		}
 	}
 
@@ -113,6 +114,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 	}
 
 	REMOVE_SYMBOLS(fullName);
+
 	return fullName;
 }
 
