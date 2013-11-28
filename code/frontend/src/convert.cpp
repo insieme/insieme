@@ -96,6 +96,9 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
 
+// for the console output, move somewhere 
+#include <boost/format.hpp>
+
 using namespace clang;
 using namespace insieme;
 
@@ -153,7 +156,6 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	// globals are just assigned, so do it carefully
 	if (initValue){
 		initValue = converter.getInitExpr (elementType.as<core::RefTypePtr>()->getElementType(), initValue);
-
 		// globals have a little issue with constructor initialization, backend restores right operation
 		if (isCppConstructor(initValue)) {
 			core::IRBuilder builder( initValue->getNodeManager() );
@@ -220,7 +222,7 @@ inline void printProgress (unsigned pass, unsigned cur, unsigned max){
 		i++;
 		for (; i< 100; i++) 
 			out << " ";
-		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << 100*((float)cur/(float)max) << "\% of " << max << std::flush;
+		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
 		last = a;
 	}
 }
@@ -381,9 +383,7 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
-			if (externC) {
-				annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
-			}
+			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (3, ++processed, count);
 			return;
 		}
@@ -1457,12 +1457,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 		}
 
-
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
-		std::cerr << "init expression: " << init << " : " << init->getType() << std::endl;
-
-		assert(false && "fallthrow");
+		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;
+		assert(false && "fallthrow while initializing generic typed global");
 	}
 
 	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {

@@ -76,6 +76,13 @@ using namespace llvm;
  */
 std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type){
 
+	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
+		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
+			return getNameForRecord(recTy->getDecl(), recTy);
+		}
+		std::cerr << "WARNING: Typedef might not be converted right: " << decl->getQualifiedNameAsString() << "\n";
+	}
+
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
 		std::stringstream ss;
@@ -85,7 +92,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 	}
 	std::string fullName = decl->getQualifiedNameAsString();
 
-	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)) {
+	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl) &&  !llvm::isa<clang::TypedefNameDecl>(decl)) {
 
 		std::string name = decl->getNameAsString();
 		std::string typeName = type->getCanonicalTypeInternal ().getAsString();
@@ -201,6 +208,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
 
+	// all done
 	return name;
 }
 
