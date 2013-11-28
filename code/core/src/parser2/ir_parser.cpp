@@ -1220,6 +1220,7 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E,"=",E),
 					[](Context& cur)->NodePtr {
+						if (!cur.getTerm(0).as<ExpressionPtr>().getType().isa<RefTypePtr>()) return fail(cur,"Invalid assignment target!");
 						return cur.assign(
 								cur.getTerm(0).as<ExpressionPtr>(),
 								cur.getTerm(1).as<ExpressionPtr>()
@@ -1577,11 +1578,21 @@ namespace parser {
 
 			// ------------- add parallel constructs -------------
 
-			g.addRule("S", rule(
-					seq("spawn", E, ";"),
+			g.addRule("E", rule(
+					seq("spawn", E),
 					[](Context& cur)->NodePtr {
 						return cur.parallel(cur.getTerm(0).as<ExpressionPtr>(), 1);
 					}
+			));
+
+			g.addRule("S", rule(
+					seq("sync", E, ";"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						auto group = cur.getTerm(0).as<ExpressionPtr>();
+						return cur.callExpr(basic.getUnit(), basic.getMerge(), group);
+					},
+					8		// higher priority than a variable declaration (of type sync)
 			));
 
 			g.addRule("S", rule(
