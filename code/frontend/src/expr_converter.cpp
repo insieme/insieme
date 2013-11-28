@@ -1326,7 +1326,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	case clang::UO_Plus:  return retIr = subExpr;
 	// -a
 	case clang::UO_Minus:
-		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
+				&& !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDMinus(),subExpr));
 		}
@@ -1334,7 +1335,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
 	// ~a
 	case clang::UO_Not:
-		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
+				&& !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDNot(),subExpr));
 		}
@@ -1536,78 +1538,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	return (retIr = builder.callExpr( opType, op, base, idx) );
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						EXT VECTOR ELEMENT EXPRESSION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/*core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr) {
-	core::ExpressionPtr&& base = Visit( vecElemExpr->getBase() );
 
-	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(vecElemExpr, retIr);
-
-	llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
-
-	core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-	unsigned int pos = 0u;
-
-	//translate OpenCL accessor string to index
-	if ( accessor == "x" ) pos = 0u;
-	else if ( accessor == "y" ) pos = 1u;
-	else if ( accessor == "z" ) pos = 2u;
-	else if ( accessor == "w" ) pos = 3u;
-	else if ( (accessor.front() == 's' || accessor.front() == 'S') && accessor.size() == 2) {
-		// the input string is in a form sXXX
-		// we skip the s and return the value to get the number
-		llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
-		std::string posStr = numStr;
-
-		if(posStr.at(0) <= '9')
-		pos = posStr.at(0) - '0';
-		else if(posStr.at(0) <= 'F')
-		pos = (10 + posStr.at(0) - 'A');//convert A .. E to 10 .. 15
-		else if(posStr.at(0) <= 'e')
-		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
-		else
-		frontend_assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
-	} else if ( accessor.size() <= 16 ) { // opencl vector permutation
-		vector<core::ExpressionPtr> args;
-
-		// expression using x, y, z and w
-		auto acc = accessor.begin();
-		if(*acc == 'S' || *acc == 's') { // expression using s0 .. sE
-			++acc;// skip the s
-			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
-				if(*I <= '9')
-				pos = *I - '0';
-				else if(*I <= 'E')
-				pos = (10 + (*I)-'A'); //convert A .. E to 10 .. 15
-				else if(*I <= 'e')
-				pos = (10 + (*I)-'a');//convert a .. e to 10 .. 15
-				else
-				frontend_assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
-
-				args.push_back(builder.uintLit(pos));
-			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
-		} else {
-			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
-				args.push_back(builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
-			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
-		}
-
-	} else {
-		frontend_assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
-	}
-
-	// The type of the index is always uint<4>
-	core::ExpressionPtr&& idx = builder.uintLit(pos);
-	// if the type of the vector is a refType, we deref it
-	base = convFact.tryDeref(base);
-
-	return (retIr = builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx));
-}
-*/
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
