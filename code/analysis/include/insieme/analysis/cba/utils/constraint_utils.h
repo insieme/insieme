@@ -96,9 +96,9 @@ namespace cba {
 	 * @param res the value to be updated
 	 * @param op the combination operation
 	 */
-	template<typename DataValueA, typename DataValueB, typename DataValueC, typename Op>
+	template<typename DataMgrC, typename DataValueA, typename DataValueB, typename DataValueC, typename Op>
 	utils::constraint::ConstraintPtr
-	combine(typename DataValueC::lattice_type::manager_type& mgr, const DataValueA& a, const DataValueB& b, const DataValueC& res, const Op& op) {
+	combine(DataMgrC& mgr, const DataValueA& a, const DataValueB& b, const DataValueC& res, const Op& op) {
 		typedef typename DataValueA::lattice_type lattice_a;
 		typedef typename DataValueB::lattice_type lattice_b;
 		typedef typename DataValueC::lattice_type lattice_c;

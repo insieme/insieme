@@ -68,8 +68,7 @@ namespace cba {
 		/**
 		 * The base-implementation is preventing the same arguments to be processed multiple times.
 		 */
-		typedef std::tuple<core::NodeAddress, Context> Item;
-		std::set<Item> processed;
+		std::set<ValueID> processed;
 
 	protected:
 
@@ -94,6 +93,9 @@ namespace cba {
 		 * @param constraints the set to which the resulting constraints should be added
 		 */
 		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+
+			// skip double-evaluations
+			if (!processed.insert(value).second) return;
 
 			// resolve the targeted node address and program context string
 			auto& data = cba.getValueParameters<int,Context>(value);
@@ -127,9 +129,6 @@ namespace cba {
 		 */
 		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
-			// do not resolve the same nodes multiple times
-			if (!processed.insert(Item(node,ctxt)).second) return;
-
 			// filter out invalid contexts
 			if (!isValidContext(cba, ctxt)) return;
 
@@ -153,13 +152,6 @@ namespace cba {
 		 */
 		CBA& getCBA() {
 			return cba;
-		}
-
-		/**
-		 * Marks a node / context combination to be processed (visitor will not decent into this pair again).
-		 */
-		void markProcessed(const core::NodeAddress& node, const Context& ctxt) {
-			processed.insert(Item(node,ctxt));
 		}
 
 	};

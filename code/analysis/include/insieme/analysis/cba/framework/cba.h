@@ -548,10 +548,18 @@ namespace cba {
 			return (gen) ? gen : (gen = new G(*this));
 		}
 
+		string getValueInfoString(const ValueID& value) const {
+			std::stringstream out;
+			assert_true(value2generator.find(value) != value2generator.end())
+				<< "Value " << value << " not created within this CBA context!";
+			value2generator.find(value)->second->printValueInfo(out, *this, value);
+			return out.str();
+		}
+
 	public:
 
 
-		template<typename A, typename ... Params>
+		template<typename A, typename Config, typename ... Params>
 		sc::TypedValueID<typename lattice<A>::type> getValueID(const Params& ... params) {
 			typedef std::tuple<std::type_index,Params...> params_type;
 
@@ -565,12 +573,12 @@ namespace cba {
 			}
 
 			// create new value ID
-			sc::TypedValueID<typename lattice<A>::type> res(++setCounter);		// reserve 0
+			sc::TypedValueID<typename lattice<A,Config>::type> res(++setCounter);		// reserve 0
 			forward[key] = res;
 			entry.data.insert(std::make_pair(res,key));
 
 			// fix constraint generator
-			value2generator[res] = getGenerator<typename generator<A>::type>();
+			value2generator[res] = getGenerator<typename generator<A,Config>::type>();
 
 			// done
 			return res;
@@ -584,42 +592,43 @@ namespace cba {
 			auto& map = valueMap.get<params_type>().data;
 			auto pos = map.find(id);
 			assert_true(pos != map.end())
-					<< " No entry for value ID " << id << " found.\n";
+					<< " No entry for value ID " << id << " found.\n"
+					<< " Current set-counter: " << setCounter << "\n";
 			return pos->second;
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(int id, const Context& context = Context()) {
-			return getValueID<A,int,Context>(id, context);
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(int id, const Context& context = Context()) {
+			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(const A& type, int id, const Context& context = Context()) {
-			return getValueID<A,int,Context>(id, context);
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, int id, const Context& context = Context()) {
+			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
 		}
 
 		template<typename A, typename Address, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(const A& type, const Address& stmt, const Context& context = Context()) {
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Address& stmt, const Context& context = Context()) {
 			return getSet(type, getLabel(stmt), context);
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc) {
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc) {
 
 			// TODO: get rid of the enumeration
 			if (type == Sin) {
 				struct in_state : public location_state_analysis<A,ImperativeInStateConstraintGenerator> {};
-				return getValueID<in_state,Label,Context,Location<Context>>(label, context, loc);
+				return getValueID<in_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
 			}
 
 			if (type == Stmp) {
 				struct tmp_state : public location_state_analysis<A,ImperativeOutStateConstraintGenerator> {};
-				return getValueID<tmp_state,Label,Context,Location<Context>>(label, context, loc);
+				return getValueID<tmp_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
 			}
 
 			if (type == Sout) {
 				struct out_state : public location_state_analysis<A,ImperativeOutStateConstraintGenerator> {};
-				return getValueID<out_state,Label,Context,Location<Context>>(label, context, loc);
+				return getValueID<out_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
 			}
 
 			assert_fail() << "Unsupported state-set type requested: " << type << "\n";
@@ -627,12 +636,12 @@ namespace cba {
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const A& type_loc) {
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const A& type_loc) {
 			return getSet<A, Context>(type, label, context, loc);
 		}
 
 		template<typename A, typename Address, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A>::type> getSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const A& type_loc) {
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const A& type_loc) {
 			return getSet(type, getLabel(stmt), context, loc, type_loc);
 		}
 
@@ -853,6 +862,11 @@ namespace cba {
 			}
 
 			return res;
+		}
+
+		template<typename L>
+		typename L::manager_type& getDataManager(const TypedValueID<L>& value) {
+			return getDataManager<L>();
 		}
 
 		// ----------------------- some debugging utilities ---------------------------

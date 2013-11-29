@@ -333,9 +333,6 @@ namespace cba {
 
 		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context> super;
 
-		typedef typename lattice<BaseAnalysis>::type lattice_type;
-		typedef typename lattice_type::manager_type mgr_type;
-
 		// the one location this instance is working for
 		Location<Context> location;
 
@@ -345,10 +342,6 @@ namespace cba {
 
 		ImperativeOutStateConstraintGenerator(CBA& cba)
 			: super(cba, Sin, Sout, *this), cba(cba) {
-		}
-
-		mgr_type& getDataManager() {
-			return cba.getDataManager<lattice_type>();
 		}
 
 		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
@@ -412,7 +405,7 @@ namespace cba {
 //				constraints.add(subsetIfExceeding(R_rhs, location, S_tmp, S_out));
 
 				// ---- add assignment rule ----
-				constraints.add(write(getDataManager(), this->location, R_rhs, A_value, S_tmp, S_out));
+				constraints.add(write(cba.template getDataManager(A_value), this->location, R_rhs, A_value, S_tmp, S_out));
 
 				// done
 				return;

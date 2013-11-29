@@ -303,10 +303,9 @@ namespace cba {
 
 	public:
 
-		typedef typename lattice<ValueAnalysisType>::type lattice_type;
+		typedef typename lattice<ValueAnalysisType, analysis_config<Context>>::type lattice_type;
 		typedef typename lattice_type::manager_type mgr_type;
 
-		typedef typename lattice_type::base_lattice::value_type base_value_type;
 		typedef typename lattice_type::value_type value_type;
 
 	private:
