@@ -61,10 +61,10 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	float4 a = cos((float4)(l[3]));
 	float4* b = (float4*)src;
 	int4 n = (int4)3;
-	int4 m;// = (n & ~(a > b[0])) | n;
+	int4 m = -(~n);// = (n & ~(a > b[0])) | n;
 	b = (float4*)src ;
 	float f = 7.0f;
-	subfunction(a);
+	float4 ret = subfunction(a);
 	float4 c = native_divide(a, b[3]);
 	short t[4]; 
 	short* x = t + 7lu;

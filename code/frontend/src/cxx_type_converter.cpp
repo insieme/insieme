@@ -313,7 +313,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert(false && "TemplateTypeParmType not yet handled!");
+	assert(false && "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?");
 	return retTy;
 }
 
@@ -333,12 +333,11 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
 
 		// prepend this obj to the param list
 		core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
-		paramTypes.push_back(builder.refType(classTy));
+		paramTypes.insert(paramTypes.begin(),builder.refType(classTy));
 		core::TypePtr  returnTy      = memTy.as<core::FunctionTypePtr>()->getReturnType();
 
 		// generate new member function type
-		retTy =  builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
-		return retTy;
+		return retTy =  builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
 	}
 	else {
 		frontend_assert (memPointerTy->isMemberDataPointer());
