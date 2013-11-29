@@ -930,7 +930,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 		// Capture pointer arithmetics
 		// 	Base op must be either a + or a -
-		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n";
+		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n" << "baseOp used: " << binOp->getOpcodeStr().str() << "\n";
 
 		// unpack long-long
 		if (core::analysis::isLongLong(rhs->getType()))
@@ -1157,18 +1157,20 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		}
 
 
+		//pointer arithmetic only allowed for additive operation 
+		if(baseOp == clang::BO_Add || baseOp == clang::BO_Sub) {
+			// This is the required pointer arithmetic in the case we deal with pointers
+			if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
+				rhs = doPointerArithmetic();
+				return (retIr = rhs);
+			}
 
-		// This is the required pointer arithmetic in the case we deal with pointers
-		if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
-			rhs = doPointerArithmetic();
-			return (retIr = rhs);
-		}
-
-		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
-		if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
-			std::swap(rhs, lhs);
-			rhs = doPointerArithmetic();
-			return (retIr = rhs);
+			// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
+			if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
+				std::swap(rhs, lhs);
+				rhs = doPointerArithmetic();
+				return (retIr = rhs);
+			}
 		}
 
 		// especial case to deal with the pointer distance operation
