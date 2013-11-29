@@ -40,7 +40,7 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const ContextPredecessorType pred("pred");
+	const context_predecessor_analysis pred = registerAnalysis<context_predecessor_analysis>("pred");
 
 } // end namespace cba
 } // end namespace analysis

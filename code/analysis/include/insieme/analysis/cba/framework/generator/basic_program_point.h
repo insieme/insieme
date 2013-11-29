@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
+#include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
@@ -53,6 +53,7 @@ namespace analysis {
 namespace cba {
 
 	using namespace core;
+	template<typename Context> class DataValueConstraintGenerator;
 
 	// ----------------------------------------------------------------------------------------------------------------------------
 	//
@@ -64,11 +65,11 @@ namespace cba {
 
 
 	template<typename InSetIDType, typename OutSetIDType, typename Collector, typename Context>
-	class BasicInOutConstraintGenerator : public ConstraintGenerator<Context> {
+	class BasicInOutConstraintGenerator : public DataValueConstraintGenerator<Context> {
 
 	protected:
 
-		typedef ConstraintGenerator<Context> super;
+		typedef DataValueConstraintGenerator<Context> super;
 
 		// the sets to be used for in/out states
 		const InSetIDType& Ain;
@@ -456,6 +457,14 @@ namespace cba {
 			// if target is fixed => no condition on constraint edge
 			if (targets.size() == 1u) {
 
+				// special case - call is a merge call
+				auto& basic = call->getNodeManager().getLangBasic();
+				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
+					// handle this merge operation in an extra function
+					processMergeCall(call, ctxt, constraints);
+					return;
+				}
+
 				// skip handling of literals
 				if (targets[0].isLiteral()) {
 					// we assume literals have no affect
@@ -487,6 +496,16 @@ namespace cba {
 				// just connect out of body with out of call if function fits
 				this->connectStateSetsIf(cur, F_fun, this->Aout, l_body, innerCtxt, this->Aout, l_call, ctxt, constraints);
 			}
+
+		}
+
+		void processMergeCall(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+
+			// in a merge call the new state is the merge of the state from the sequential branch and the merged in parallel thread
+
+
+
+			//
 
 		}
 

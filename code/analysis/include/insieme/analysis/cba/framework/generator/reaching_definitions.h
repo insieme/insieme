@@ -37,62 +37,59 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/entities/definition.h"
+#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
-#include "insieme/utils/printable.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// ------------------- reachable code ------------------
+	// ----------------- jobs ---------------
 
-	struct Reachable : public utils::Printable {
-		bool operator<(const Reachable& other) const { return false; }
-		bool operator==(const Reachable& other) const { return true; }
-		std::ostream& printTo(std::ostream& out) const { return out << "reachable"; };
-	};
-
-
-	template<typename Context> class ReachableInConstraintGenerator;
-	template<typename Context> class ReachableOutConstraintGenerator;
-
-	struct reachable_in_analysis  : public set_analysis<Reachable,  ReachableInConstraintGenerator> {};
-	struct reachable_out_analysis : public set_analysis<Reachable, ReachableOutConstraintGenerator> {};
-
-	extern const reachable_in_analysis Rin;
-	extern const reachable_out_analysis Rout;
-
+	template<typename C> class ReachingDefsInConstraintGenerator;
+	template<typename C> class ReachingDefsOutConstraintGenerator;
 
 	template<typename Context>
-	class ReachableInConstraintGenerator : public BasicInConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> {
+	const SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>& ReachingDefIn() {
+		static const SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator> instance("ReachingDefIn");
+		return instance;
+	}
 
-		typedef BasicInConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> super;
+	template<typename Context>
+	const SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>& ReachingDefOut() {
+		static const SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator> instance("ReachingDefOut");
+		return instance;
+	}
 
-		StatementAddress root;
+	template<typename Context>
+	class ReachingDefsInConstraintGenerator
+			: public BasicInConstraintGenerator<
+						SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
+						SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
+						ReachingDefsInConstraintGenerator<Context>,
+						Context
+					> {
 
-		bool initSet;
+		typedef BasicInConstraintGenerator<
+			SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
+			SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
+			ReachingDefsInConstraintGenerator<Context>, Context
+		> super;
+
+		// the location this constraint generator is operating on
+		Location<Context> loc;
 
 		CBA& cba;
 
 	public:
 
-		ReachableInConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout, *this), root(cba.getRoot()), initSet(false), cba(cba) { }
+		ReachingDefsInConstraintGenerator(CBA& cba, const Location<Context>& loc)
+			: super(cba, ReachingDefIn<Context>(), ReachingDefOut<Context>(), *this), cba(cba), loc(loc) { }
 
-		virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-
-			// make sure root is reachable
-			if (!initSet && node == root && ctxt == Context()) {
-				auto l = cba.getLabel(root);
-				auto R = cba.getSet(Rin, l, ctxt);
-				constraints.add(elem(Reachable(), R));
-				initSet = true;
-			}
-
-			// and all the other constraints
-			super::visit(node, ctxt, constraints);
-		}
+		virtual ~ReachingDefsInConstraintGenerator() {};
 
 		template<typename SetTypeA, typename SetTypeB>
 		void connectStateSets (
@@ -129,16 +126,32 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachableOutConstraintGenerator : public BasicOutConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> {
+	class ReachingDefsOutConstraintGenerator
+			: public BasicOutConstraintGenerator<
+			  	  	  	SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
+						SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
+						ReachingDefsOutConstraintGenerator<Context>,
+			  	  	  	Context
+			  	     > {
 
-		typedef BasicOutConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> super;
+		typedef BasicOutConstraintGenerator<
+			SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
+			SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
+			ReachingDefsOutConstraintGenerator<Context>,
+			Context
+		> super;
+
+		// the location this constraint generator is operating on
+		Location<Context> loc;
 
 		CBA& cba;
 
 	public:
 
-		ReachableOutConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout, *this), cba(cba) { }
+		ReachingDefsOutConstraintGenerator(CBA& cba, const Location<Context>& loc)
+			: super(cba, ReachingDefIn<Context>(), ReachingDefOut<Context>(), *this), cba(cba), loc(loc) { }
+
+		virtual ~ReachingDefsOutConstraintGenerator() {};
 
 		template<typename SetTypeA, typename SetTypeB>
 		void connectStateSets (

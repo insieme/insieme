@@ -40,8 +40,8 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const FunctionSetType F("F");
-	const FunctionSetType f("f");
+	const functions_analysis_data F = registerAnalysis<functions_analysis_data>("F");
+	const functions_analysis_var f = registerAnalysis<functions_analysis_var>("f");
 
 } // end namespace cba
 } // end namespace analysis

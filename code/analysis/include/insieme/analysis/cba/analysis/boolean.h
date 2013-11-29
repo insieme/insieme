@@ -50,13 +50,17 @@ namespace cba {
 
 	using std::set;
 
+	template<typename A, typename B, typename C> class DataFlowConstraintGenerator;
+
 	// ----------------- booleans analysis ---------------
 
 	template<typename C> class BooleanConstraintGenerator;
-	typedef DataAnalysisType<bool,BooleanConstraintGenerator> BooleanSetType;
 
-	extern const BooleanSetType B;
-	extern const BooleanSetType b;
+	struct boolean_analysis_data : public data_analysis<bool, BooleanConstraintGenerator> {};
+	struct boolean_analysis_var  : public data_analysis<bool, BooleanConstraintGenerator> {};
+
+	extern const boolean_analysis_data B;
+	extern const boolean_analysis_var  b;
 
 	namespace {
 
@@ -132,9 +136,9 @@ namespace cba {
 	}
 
 	template<typename Context>
-	class BooleanConstraintGenerator : public BasicDataFlowConstraintGenerator<bool,BooleanSetType,Context> {
+	class BooleanConstraintGenerator : public DataFlowConstraintGenerator<boolean_analysis_data, boolean_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<bool,BooleanSetType,Context> super;
+		typedef DataFlowConstraintGenerator<boolean_analysis_data, boolean_analysis_var, Context> super;
 
 		const core::lang::BasicGenerator& base;
 

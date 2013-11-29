@@ -235,8 +235,8 @@ namespace cba {
 
 //		std::cout << *varY << " = " << analysis.getValuesOf(varY) << "\n";
 //		std::cout << *initY << " = " << analysis.getValuesOf(initY) << "\n";
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(initY, C<Context>())));
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(varY, c<Context>())));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(initY, C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(varY, c)));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
@@ -333,7 +333,7 @@ namespace cba {
 
 		// this would be the ideal case
 		EXPECT_EQ("{AP(1)}", toString(analysis.getValuesOf(val, D)));
-//		createDotDump(analysis);
+		createDotDump(analysis);
 	}
 
 	TEST(CBA, References2) {
@@ -714,7 +714,7 @@ namespace cba {
 		EXPECT_EQ("{v1}", toString(analysis.getValuesOf(body[0].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2*v1+3}", toString(analysis.getValuesOf(body[1].as<ExpressionAddress>(), A)));
 
-		ArithmeticSetType::lattice_type::less_op_type less_op;
+		lattice<decltype(A)>::type::less_op_type less_op;
 
 		// the value of x should be unknown within the loop (although some examples are recorded)
 		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(body[3].as<ExpressionAddress>(), A));
@@ -823,7 +823,7 @@ namespace cba {
 		Formula unknown;
 
 		CBA analysis(code);
-		ArithmeticSetType::lattice_type::less_op_type less_op;
+		lattice<decltype(A)>::type::less_op_type less_op;
 		EXPECT_PRED2(less_op, unknown, analysis.getValuesOf(code[2].as<ExpressionAddress>(), A));
 
 //		createDotDump(analysis);
@@ -1153,7 +1153,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		const auto& C = cba::C<DefaultContext>();
+		const auto& C = cba::C;
 
 		// check functions
 		EXPECT_EQ("{((Lambda@0-6-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
@@ -1281,25 +1281,27 @@ namespace cba {
 		CBA analysis(code);
 
 		int i = 0;
-		i++; i++;
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		i++; i++;
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//
+//		i++;i++;
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+		i = 16;
 		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-
-		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-
-		i++;i++;
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
-		EXPECT_EQ("{0}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
+		createDotDump(analysis);
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
 
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[i++].as<ExpressionAddress>(), B)));
@@ -1603,7 +1605,7 @@ namespace cba {
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
 
 		// the analysis of code[3] should contain the unknown value
-		ArithmeticSetType::lattice_type::less_op_type less_op;
+		lattice<decltype(A)>::type::less_op_type less_op;
 		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[3].as<ExpressionAddress>(), A));
 
 		// but if the accuracy is increased by using a longer call-string it should work
@@ -1692,11 +1694,11 @@ namespace cba {
 
 		EXPECT_EQ(
 				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[],0>,<0,[],0>]],#)}",
-				toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R<DefaultContext>()))
+				toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R))
 		);
 		EXPECT_EQ(
 				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[],0>,<0,[],0>]],#)}",
-				toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R<DefaultContext>()))
+				toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R))
 		);
 
 		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));

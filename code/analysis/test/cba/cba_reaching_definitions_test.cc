@@ -37,10 +37,22 @@
 #include <gtest/gtest.h>
 
 
+#include "insieme/analysis/cba/cba.h"
+
 #include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/analysis/channels.h"
+
+#include "insieme/analysis/cba/analysis/arithmetic.h"
+#include "insieme/analysis/cba/analysis/boolean.h"
+#include "insieme/analysis/cba/analysis/simple_constant.h"
+#include "insieme/analysis/cba/analysis/callables.h"
+#include "insieme/analysis/cba/analysis/call_context.h"
+#include "insieme/analysis/cba/analysis/reachability.h"
+#include "insieme/analysis/cba/analysis/data_paths.h"
 
 #include "insieme/core/ir_builder.h"
+
+#include "insieme/utils/timer.h"
+#include "insieme/utils/test/test_utils.h"
 
 #include "cba_test.inc.h"
 
@@ -50,32 +62,20 @@ namespace cba {
 
 	using namespace core;
 
-	TEST(CBA, ChannelFlow) {
+
+	TEST(CBA, SimpleValue) {
 
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		map<string,NodePtr> symbols;
-		symbols["e"] = builder.parse("lit(\"e\":channel<int<4>,1>)");
-
 		auto in = builder.parseStmt(
 				"{"
-				"	let channel = channel<int<4>,1>;"
-				"	"
-				"	auto c = channel.create(type(int<4>), param(1));"
-				"	auto c2 = c;"
-				"	ref<channel> rc = var(c);"
-				"	"
-				"	c;"
-				"	c2;"
-				"	*rc;"
-				"	e;"
-				"	"
-				"	rc = e;"
-				"	*rc;"
-				"}",
-				symbols
+				"	let int = int<4>;"
+				"	auto a = var(0);"
+				" 	a = 1;"
+				"	a = 2;"
+				"}"
 		).as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
@@ -83,14 +83,12 @@ namespace cba {
 
 		CBA analysis(code);
 
-		const auto& C = Ch;
-
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), C)));
-
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), C)));
+//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
 
 	}
 

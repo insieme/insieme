@@ -40,8 +40,8 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const DataPathAnalysisType DP("DP");
-	const DataPathAnalysisType dp("dp");
+	const data_path_analysis_data DP = registerAnalysis<data_path_analysis_data>("DP");
+	const data_path_analysis_var dp = registerAnalysis<data_path_analysis_var>("db");
 
 } // end namespace cba
 } // end namespace analysis

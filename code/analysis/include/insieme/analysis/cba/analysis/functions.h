@@ -50,16 +50,16 @@ namespace cba {
 	// a light version only tracking functions, no context
 	template<typename C> class FunctionConstraintGenerator;
 
-	typedef DataAnalysisType<Callee,FunctionConstraintGenerator> FunctionSetType;
-	extern const FunctionSetType F;
-	extern const FunctionSetType f;
+	struct functions_analysis_data : public data_analysis<Callee, FunctionConstraintGenerator> {};
+	struct functions_analysis_var  : public data_analysis<Callee, FunctionConstraintGenerator> {};
 
-
+	extern const functions_analysis_data F;
+	extern const functions_analysis_var  f;
 
 	template<typename Context>
-	class FunctionConstraintGenerator : public BasicDataFlowConstraintGenerator<Callee,FunctionSetType,Context> {
+	class FunctionConstraintGenerator : public DataFlowConstraintGenerator<functions_analysis_data,functions_analysis_var,Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Callee,FunctionSetType,Context> super;
+		typedef DataFlowConstraintGenerator<functions_analysis_data,functions_analysis_var,Context> super;
 
 		CBA& cba;
 
