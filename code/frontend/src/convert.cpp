@@ -1131,12 +1131,10 @@ namespace {
 
 				// this supports indirect init of anonymous member structs/union
 				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
-				const clang::FieldDecl* field = ind->getAnonField ();
-				assert(field);
-				init = builder.literal("this", builder.refType (classType));
+						init = builder.literal("this", builder.refType (classType));
 
 				// build a chain of nested access
-				clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
+					clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
 				clang::IndirectFieldDecl::chain_iterator end = ind->chain_end ();
 				for (; ind_it!= end; ++ind_it){
 					assert(llvm::isa<clang::FieldDecl>(*ind_it));
