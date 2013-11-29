@@ -43,6 +43,7 @@
 
 #include "insieme/utils/constraint/lattice.h"
 
+#include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
 
 namespace insieme {
@@ -51,13 +52,113 @@ namespace cba {
 
 	using std::string;
 
+	template<typename Context>
+	struct analysis_config {
+		typedef Context context_type;
+	};
+
+	struct default_config : public analysis_config<DefaultContext> {};
+
+
+	// analysis type traits
+
+	// a type trait to extract the lattice type from a given analysis and configuration
+	template<typename A, typename C = default_config> struct lattice {
+		typedef typename A::template lattice<C>::type type;
+	};
+
+	// a type trait to extract the generator type from a given analysis and configuration
+	template<typename A, typename C = default_config> struct generator {
+		typedef typename A::template generator<C>::type type;
+	};
+
+
+	// analysis utilities
+
+	const string& getAnalysisName(std::type_index index);
+
+	template<typename T>
+	const string& getAnalysisName() {
+		return getAnalysisName(std::type_index(typeid(T)));
+	}
+
+	namespace detail {
+		void registerAnalysisName(std::type_index index, const string& name);
+	}
+
+
+
+	// -- utility definitions --
+
+
+	template<
+		typename L,
+		template<typename C> class G
+	>
+	struct analysis_base {
+		template<typename C> struct lattice   { typedef L type; };
+		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+	};
+
+
+	// -- set analysis --
+
+	template<
+		typename E,
+		template<typename C> class G
+	>
+	struct set_analysis : public analysis_base<utils::constraint::SetLattice<E>, G> {};
+
+
+	// -- data analysis --
+
+	template<
+		typename E,
+		template<typename C> class G,
+		template<typename L> class StructureLattice = FirstOrderStructureLattice
+	>
+	struct data_analysis : public analysis_base<StructureLattice<utils::constraint::SetLattice<E>>, G> {};
+
+
+	// -- context-sensitive analysis results --
+
+	template<
+		template<typename C> class E,
+		template<typename C> class G,
+		template<typename L> class StructureLattice = FirstOrderStructureLattice
+	>
+	struct dependent_data_analysis {
+		template<typename C> struct lattice   { typedef StructureLattice<utils::constraint::SetLattice<E<typename C::context_type>>> type; };
+		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+	};
+
+
+	// -- location state analysis --
+
+	template<
+		typename BaseAnalysis,							// the analysis this analysis is extending
+		template<typename C, typename A> class G		// the location state generator class (has additional parameter)
+	>
+	struct location_state_analysis {
+		template<typename C> struct lattice   { typedef typename cba::lattice<BaseAnalysis,C>::type type; };
+		template<typename C> struct generator { typedef G<typename C::context_type, BaseAnalysis> type; };
+	};
+
+
+	template<typename A>
+	A registerAnalysis(const string& name) {
+		detail::registerAnalysisName(typeid(A), name);
+		return A();
+	}
+
+
 	// ----------- analysis types ------------------
 
 	/**
 	 * An abstract base class for analysis types. Instances are expected
 	 * to be immutable global constants.
 	 */
-	class AnalysisTypeBase : public boost::noncopyable {
+	class AnalysisTypeBase : public boost::noncopyable, public utils::Printable {
 
 		/**
 		 * The name of this set for printing and debugging issues.
@@ -83,6 +184,10 @@ namespace cba {
 			return !(*this == other);
 		}
 
+		std::ostream& printTo(std::ostream& out) const {
+			return out << name;
+		}
+
 	};
 
 	// all set types are global constants => plain pointers can be used safely
@@ -99,7 +204,7 @@ namespace cba {
 		typename L,
 		template<typename C> class G
 	>
-	struct AnalysisType : public AnalysisTypeBase {
+	struct AnalysisType : public AnalysisTypeBase, public analysis_base<L,G> {
 
 		// expose member types
 		typedef L lattice_type;
@@ -141,6 +246,7 @@ namespace cba {
 		SetBasedAnalysisType(const string& name) : AnalysisType<utils::constraint::SetLattice<E>,G>(name) {}
 
 	};
+
 
 } // end namespace cba
 } // end namespace analysis

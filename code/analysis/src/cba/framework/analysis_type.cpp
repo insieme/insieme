@@ -34,63 +34,56 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/analysis/cba/framework/analysis_type.h"
 
+#include <map>
+#include <typeindex>
+#include <string>
 
-#include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/analysis/channels.h"
-
-#include "insieme/core/ir_builder.h"
-
-#include "cba_test.inc.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
+	using std::map;
+	using std::string;
+	using std::type_index;
 
-	TEST(CBA, ChannelFlow) {
+	namespace {
 
-		// a simple test cases checking the handling of simple value structs
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+		typedef map<type_index,string> analysis_names;
 
-		map<string,NodePtr> symbols;
-		symbols["e"] = builder.parse("lit(\"e\":channel<int<4>,1>)");
+		analysis_names& getAnalysisNames() {
+			static analysis_names names;
+			return names;
+		}
 
-		auto in = builder.parseStmt(
-				"{"
-				"	let channel = channel<int<4>,1>;"
-				"	"
-				"	auto c = channel.create(type(int<4>), param(1));"
-				"	auto c2 = c;"
-				"	ref<channel> rc = var(c);"
-				"	"
-				"	c;"
-				"	c2;"
-				"	*rc;"
-				"	e;"
-				"	"
-				"	rc = e;"
-				"	*rc;"
-				"}",
-				symbols
-		).as<CompoundStmtPtr>();
 
-		ASSERT_TRUE(in);
-		CompoundStmtAddress code(in);
 
-		CBA analysis(code);
+	}
 
-		const auto& C = Ch;
 
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), C)));
+	const string& getAnalysisName(std::type_index index) {
+		static const string unknown = "?";
 
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), C)));
+		// check whether type is registered internally
+		auto pos = getAnalysisNames().find(index);
+		if (pos != getAnalysisNames().end()) {
+			return pos->second;
+		}
+
+		// otherwise return default name
+		return unknown;
+	}
+
+	namespace detail {
+
+		void registerAnalysisName(std::type_index index, const string& name) {
+			assert_true(getAnalysisNames().find(index) == getAnalysisNames().end())
+					<< "Name already registered previously: " << getAnalysisNames().find(index)->second;
+			getAnalysisNames()[index] = name;
+		}
 
 	}
 

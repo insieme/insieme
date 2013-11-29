@@ -40,8 +40,8 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const BooleanSetType B("B");
-	const BooleanSetType b("b");
+	const boolean_analysis_data B = registerAnalysis<boolean_analysis_data>("B");
+	const boolean_analysis_var b  = registerAnalysis<boolean_analysis_var>("b");
 
 } // end namespace cba
 } // end namespace analysis

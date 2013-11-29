@@ -54,14 +54,17 @@ namespace cba {
 
 	using std::set;
 
+	template<typename A, typename B, typename C> class DataFlowConstraintGenerator;
+
 	// ----------------- arithmetic analysis ---------------
 
 	template<typename C> class ArithmeticConstraintGenerator;
-	typedef DataAnalysisType<Formula,ArithmeticConstraintGenerator> ArithmeticSetType;
 
-	extern const ArithmeticSetType A;
-	extern const ArithmeticSetType a;
+	struct arithmetic_analysis_data : public data_analysis<Formula, ArithmeticConstraintGenerator> {};
+	struct arithmetic_analysis_var  : public data_analysis<Formula, ArithmeticConstraintGenerator> {};
 
+	extern const arithmetic_analysis_data A;
+	extern const arithmetic_analysis_var  a;
 
 
 	namespace {
@@ -143,10 +146,10 @@ namespace cba {
 
 
 	template<typename Context>
-	class ArithmeticConstraintGenerator : public BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> {
+	class ArithmeticConstraintGenerator : public DataFlowConstraintGenerator<arithmetic_analysis_data, arithmetic_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Formula, ArithmeticSetType, Context> super;
-		typedef typename ArithmeticSetType::lattice_type::value_type value_type;
+		typedef DataFlowConstraintGenerator<arithmetic_analysis_data, arithmetic_analysis_var, Context> super;
+		typedef typename lattice<arithmetic_analysis_data>::type::value_type value_type;
 
 		const core::lang::BasicGenerator& base;
 

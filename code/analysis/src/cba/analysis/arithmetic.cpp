@@ -40,8 +40,8 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const ArithmeticSetType A("A");
-	const ArithmeticSetType a("a");
+	const arithmetic_analysis_data A = registerAnalysis<arithmetic_analysis_data>("A");
+	const arithmetic_analysis_var  a = registerAnalysis<arithmetic_analysis_var>("a");
 
 } // end namespace cba
 } // end namespace analysis
