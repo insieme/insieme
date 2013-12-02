@@ -55,7 +55,7 @@ namespace cba {
 
 	// -------------------------------------- Context Predecessor Constraints -----------------------------
 
-	template<typename C> class DataValueConstraintGenerator;
+	template<typename C, typename ... E> class DataValueConstraintGenerator;
 
 	template<typename Context>
 	class ContextPredecessorGenerator : public DataValueConstraintGenerator<Context> {			// TODO: change the base-type to something without context

@@ -36,32 +36,11 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/constraint/solver.h"
-
 namespace insieme {
-namespace analysis {
-namespace cba {
+namespace utils {
 
-	using namespace core;
-	using namespace utils::constraint;
+	// a small meta-class required for a mpl-recursion
+	template<int i> struct int_type {};
 
-	// forward declarations
-	typedef int Label;										// the type used to label code locations
-	typedef int Variable;									// the type used to identify variables
-
-	class CBA;												// the main analysis entity
-
-
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintGenerator;
-
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicInConstraintGenerator;
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicOutConstraintGenerator;
-
-
-	template<typename Context, typename AnalysisType> class ImperativeInStateConstraintGenerator;
-	template<typename Context, typename AnalysisType> class ImperativeOutStateConstraintGenerator;
-
-} // end namespace cba
-} // end namespace analysis
+} // end namespace utils
 } // end namespace insieme

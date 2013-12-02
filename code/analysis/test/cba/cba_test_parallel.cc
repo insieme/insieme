@@ -38,7 +38,10 @@
 
 
 #include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+
 #include "insieme/analysis/cba/analysis/jobs.h"
+#include "insieme/analysis/cba/analysis/references.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -50,7 +53,9 @@ namespace cba {
 
 	using namespace core;
 
-	TEST(CBA, SimpelParallel) {
+	// check reaching definitions
+
+	TEST(CBA, ReachingDefinitions) {
 
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
@@ -60,27 +65,73 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(12);"
-				"	*x;"		// should be 12
-				"	auto g = spawn x = 14;"
-				"	*x;"		// should still be 12
+				"	ref<int> x = var(10);"		// def1
+				"	*x;"		// def1 should reach this point
+				"	x = 12;"	// def2
+				"	*x;"		// def2 should reach this point
+				"	auto g = spawn x = 14;"		// def3
+				"	*x;"		// def2 should reach this point
 				"	sync g;"
-				"	*x;"		// should be 14
+				"	*x;"		// def2 and def3 should reach this point
 				"}"
 		).as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
-dumpPretty(in);
 		CBA analysis(code);
 
-//		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+		DefaultContext ctxt;
 
-		createDotDump(analysis);
+		// obtain location referenced by variable x
+		set<Reference<DefaultContext>> refs = analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getVariable(), R);
+		EXPECT_EQ(1u, refs.size()) << refs;
+		Location<DefaultContext> loc = refs.begin()->getLocation();
 
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[1], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[1], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[2], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[],0>,<0,[],0>]])}", 				toString(analysis.getValuesOf(code[2], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[],0>,<0,[],0>]])}", 				toString(analysis.getValuesOf(code[3], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[],0>,<0,[],0>]])}", 				toString(analysis.getValuesOf(code[3], RDout, ctxt, loc)));
+
+//		createDotDump(analysis);
 	}
+
+
+
+//	TEST(CBA, SimpelParallel) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	"
+//				"	ref<int> x = var(12);"
+//				"	*x;"		// should be 12
+//				"	auto g = spawn x = 14;"
+//				"	*x;"		// should still be 12
+//				"	sync g;"
+//				"	*x;"		// should be 14
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//dumpPretty(in);
+//		CBA analysis(code);
+//
+////		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+////		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+////		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//
+//		createDotDump(analysis);
+//
+//	}
 
 } // end namespace cba
 } // end namespace analysis
