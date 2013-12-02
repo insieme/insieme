@@ -393,8 +393,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	// back end compiler, unleast there are more than one parameter, this case we have no way to express the 
 	// sematincs in IR. the constructor will unify those expressions into one
 	if (callExpr->isElidable () && (callExpr->getNumArgs() == 1)){
+
+		callExpr->dump();
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
+		std::cout << " ===== ELIDABLE ========== " << std::endl << std::endl;
+		dumpPretty(retIr);
+		std::cout << " =============== " << std::endl << std::endl;
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
 	
@@ -402,6 +407,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		// do a ref reinterpret to the target type
 		if (retIr->getType() != refToClassTy)
 			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType))); 
+
+		dumpPretty(retIr);
+		std::cout << " =============== " << std::endl << std::endl;
 
 		return retIr;
 	}

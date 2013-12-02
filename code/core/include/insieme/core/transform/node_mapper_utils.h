@@ -186,7 +186,7 @@ class CachedLambdaNodeMapping : public CachedNodeMapping {
 	bool mapTypes;
 public:
 	CachedLambdaNodeMapping(const Lambda& lambda, const Filter& filter, bool mapTypes)
-		: lambda(lambda), mapTypes(mapTypes) { };
+		: lambda(lambda), filter(filter), mapTypes(mapTypes) { };
 
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		if (!mapTypes && ptr->getNodeCategory() == NC_Type) return ptr;
