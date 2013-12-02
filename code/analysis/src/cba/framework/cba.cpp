@@ -56,7 +56,7 @@ namespace cba {
 
 	CBA::CBA(const StatementAddress& root)
 		: root(root),
-		  solver([&](const set<SetID>& sets) {
+		  solver([&](const set<ValueID>& sets) {
 				Constraints res;
 				for (auto set : sets) {
 					this->addConstraintsFor(set, res);
@@ -70,19 +70,19 @@ namespace cba {
 				return res;
 		  }),
 		  setCounter(0), idCounter(0), callSiteMgr(root),
-		  callStringFilter(*this), set2container()
+		  callStringFilter(*this)
 	{
 		expect_true(core::checks::check(root).empty()) << core::checks::check(root);
 	};
 
-	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
+	void CBA::addConstraintsFor(const ValueID& value, Constraints& res) {
 
-		// get container
-		auto pos = set2container.find(set);
-		assert_true(pos != set2container.end()) << "Unknown set type encountered: " << set << "\n";
+		// obtain constraint generator
+		auto pos = value2generator.find(value);
+		assert_true(pos != value2generator.end()) << "Unknown value id encountered: " << value << "\n";
 
-		// let container create constraints
-		pos->second->addConstraintsFor(*this, set, res);
+		// let generator create constraints
+		pos->second->addConstraints(*this, value, res);
 	}
 
 	void CBA::plot(std::ostream& out) const {
@@ -95,9 +95,21 @@ namespace cba {
 
 		out << "digraph G {";
 
+		// solution resolution utility
+		auto getSolution = [&](const ValueID& value)->const string& {
+			static const string& none = "";
+			auto pos = solution.find(value);
+			return (pos != solution.end()) ? pos->second : none;
+		};
+
 		// print names of all sets
-		for(auto cur : indices) {
-			cur.second->plot(*this, solution, out);
+		for(const auto& cur : value2generator) {
+			ValueID id = cur.first;
+			// use constraint generator to format value
+			out << id << " [label=\"";
+			cur.second->printValueInfo(out, *this, id);
+			out << " = " << getSolution(id) << "\""
+						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];";
 		}
 
 		// print constraints
@@ -108,7 +120,6 @@ namespace cba {
 
 		out << "\n}\n";
 	}
-
 
 } // end namespace cba
 } // end namespace analysis

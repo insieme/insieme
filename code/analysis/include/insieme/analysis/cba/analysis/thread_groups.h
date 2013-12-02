@@ -51,23 +51,17 @@ namespace cba {
 
 	template<typename Context> class ThreadGroupConstraintGenerator;
 
-	template<typename Context>
-	const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>& ThreadGroups() {
-		static const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator> instance("ThreadGroups");
-		return instance;
-	}
+	struct thread_group_analysis_data : public dependent_data_analysis<ThreadGroup, ThreadGroupConstraintGenerator> {};
+	struct thread_group_analysis_var  : public dependent_data_analysis<ThreadGroup, ThreadGroupConstraintGenerator> {};
 
-	template<typename Context>
-	const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>& threadGroups() {
-		static const DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator> instance("threadGroups");
-		return instance;
-	}
+	extern const thread_group_analysis_data ThreadGroups;
+	extern const thread_group_analysis_var  threadGroups;
 
 
 	template<typename Context>
-	class ThreadGroupConstraintGenerator : public BasicDataFlowConstraintGenerator<ThreadGroup<Context>,DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>, Context> {
+	class ThreadGroupConstraintGenerator : public DataFlowConstraintGenerator<thread_group_analysis_data, thread_group_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<ThreadGroup<Context>,DataAnalysisType<ThreadGroup<Context>,ThreadGroupConstraintGenerator>, Context> super;
+		typedef DataFlowConstraintGenerator<thread_group_analysis_data, thread_group_analysis_var, Context> super;
 
 		CBA& cba;
 
@@ -75,7 +69,7 @@ namespace cba {
 
 	public:
 
-		ThreadGroupConstraintGenerator(CBA& cba) : super(cba, ThreadGroups<Context>(), threadGroups<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ThreadGroupConstraintGenerator(CBA& cba) : super(cba, ThreadGroups, threadGroups), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
@@ -89,7 +83,7 @@ namespace cba {
 
 			// this expression is creating a job
 			auto value = getThreadGroupFromConstructor(expr, ctxt);
-			auto G_res = cba.getSet(ThreadGroups<Context>(), expr, ctxt);
+			auto G_res = cba.getSet(ThreadGroups, expr, ctxt);
 
 			// add constraint fixing this job
 			constraints.add(elem(value, G_res));

@@ -137,8 +137,8 @@ namespace cba {
 		typedef Reference<DefaultContext> Reference;
 
 		// compute references set
-		std::set<Reference> refA = getValues(a, R<DefaultContext>());
-		std::set<Reference> refB = getValues(b, R<DefaultContext>());
+		std::set<Reference> refA = getValues(a, R);
+		std::set<Reference> refB = getValues(b, R);
 
 		// check whether there are overlapping references
 		for (const auto& a : refA) {
@@ -160,8 +160,8 @@ namespace cba {
 		typedef Reference<DefaultContext> Reference;
 
 		// compute references set
-		std::set<Reference> refA = getValues(a, R<DefaultContext>());
-		std::set<Reference> refB = getValues(b, R<DefaultContext>());
+		std::set<Reference> refA = getValues(a, R);
+		std::set<Reference> refB = getValues(b, R);
 
 		// check whether all references are overlapping
 		for (const auto& a : refA) {

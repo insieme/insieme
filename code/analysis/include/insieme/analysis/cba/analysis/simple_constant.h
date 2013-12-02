@@ -47,16 +47,20 @@ namespace cba {
 
 	// ----------------- simple constants ---------------
 
+	template<typename A, typename B, typename C> class DataFlowConstraintGenerator;
+
 	template<typename Context> class ConstantConstraintGenerator;
 
-	typedef DataAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
-	extern const SimpleConstantSetType D;
-	extern const SimpleConstantSetType d;
+	struct simple_constant_analysis_data : public data_analysis<core::ExpressionPtr, ConstantConstraintGenerator> {};
+	struct simple_constant_analysis_var  : public data_analysis<core::ExpressionPtr, ConstantConstraintGenerator> {};
+
+	extern const simple_constant_analysis_data D;
+	extern const simple_constant_analysis_var  d;
 
 	template<typename Context>
-	class ConstantConstraintGenerator : public BasicDataFlowConstraintGenerator<core::ExpressionPtr,SimpleConstantSetType,Context> {
+	class ConstantConstraintGenerator : public DataFlowConstraintGenerator<simple_constant_analysis_data, simple_constant_analysis_var ,Context> {
 
-		typedef BasicDataFlowConstraintGenerator<core::ExpressionPtr,SimpleConstantSetType,Context> super;
+		typedef DataFlowConstraintGenerator<simple_constant_analysis_data, simple_constant_analysis_var ,Context> super;
 
 		CBA& cba;
 

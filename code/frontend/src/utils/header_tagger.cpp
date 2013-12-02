@@ -122,7 +122,8 @@ namespace utils {
 		boost::optional<fs::path> HeaderTagger::toUserLibHeader(const fs::path& path) const {
 			static const boost::optional<fs::path> fail;
 
-			if (userIncludeDirs.empty()) { return fail; }
+			// FIXME somebody should check where this <command line> is coming form and avoid it
+			if (userIncludeDirs.empty() || path.string().compare("<command line>") == 0) { return fail; }
 
 			if (contains(userIncludeDirs, fs::canonical(path) )) {
 				return fs::path();

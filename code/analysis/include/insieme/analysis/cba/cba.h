@@ -72,8 +72,8 @@ namespace cba {
 	 * @param ctxt the optional context the given input expression should be considered in
 	 * @return a reference to a set of values representing the result of the analysis
 	 */
-	template<typename L, template<typename C> class G, typename Context = DefaultContext>
-	const typename L::value_type& getValues(const core::ExpressionAddress& expr, const AnalysisType<L,G>& type, const Context& ctxt = Context()) {
+	template<typename A, typename Context = DefaultContext>
+	const typename lattice<A>::type::value_type& getValues(const core::ExpressionAddress& expr, const A& type, const Context& ctxt = Context()) {
 
 		typedef std::shared_ptr<CBA> CBA_Ptr;
 

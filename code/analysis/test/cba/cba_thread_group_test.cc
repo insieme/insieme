@@ -77,7 +77,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		const auto& G = ThreadGroups<DefaultContext>();
+		const auto& G = ThreadGroups;
 
 		EXPECT_EQ("{group@0-2-1::[[0,0],[<0,[],0>,<0,[],0>]]}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), G)));
 		EXPECT_EQ("{group@0-2-1::[[0,0],[<0,[],0>,<0,[],0>]]}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), G)));

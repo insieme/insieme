@@ -34,65 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-
-#include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/analysis/channels.h"
-
-#include "insieme/core/ir_builder.h"
-
-#include "cba_test.inc.h"
+#include "insieme/analysis/cba/analysis/references.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
-
-	TEST(CBA, ChannelFlow) {
-
-		// a simple test cases checking the handling of simple value structs
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		map<string,NodePtr> symbols;
-		symbols["e"] = builder.parse("lit(\"e\":channel<int<4>,1>)");
-
-		auto in = builder.parseStmt(
-				"{"
-				"	let channel = channel<int<4>,1>;"
-				"	"
-				"	auto c = channel.create(type(int<4>), param(1));"
-				"	auto c2 = c;"
-				"	ref<channel> rc = var(c);"
-				"	"
-				"	c;"
-				"	c2;"
-				"	*rc;"
-				"	e;"
-				"	"
-				"	rc = e;"
-				"	*rc;"
-				"}",
-				symbols
-		).as<CompoundStmtPtr>();
-
-		ASSERT_TRUE(in);
-		CompoundStmtAddress code(in);
-
-		CBA analysis(code);
-
-		const auto& C = Ch;
-
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), C)));
-
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), C)));
-
-	}
+	const reference_analysis_data R = registerAnalysis<reference_analysis_data>("R");
+	const reference_analysis_var r = registerAnalysis<reference_analysis_var>("r");
 
 } // end namespace cba
 } // end namespace analysis

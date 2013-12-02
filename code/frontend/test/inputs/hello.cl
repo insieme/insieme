@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+//#include "ocl_device.h"
 
 //char4 as_char4(int);
 

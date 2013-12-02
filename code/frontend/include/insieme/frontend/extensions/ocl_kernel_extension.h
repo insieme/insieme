@@ -45,11 +45,16 @@ namespace extensions {
 
 // extension for OpenCl kernel files
 
-class OclKernelPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class OclKernelPlugin : public FrontendPlugin {
+public:
+	OclKernelPlugin() : FrontendPlugin() {
+		injectedHeaders.push_back("./ocl_device.h");
+	}
 
-	insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+private:
+	core::ExpressionPtr Visit(const clang::Expr* expr, conversion::Converter& convFact);
 
-    insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+    core::TypePtr Visit(const clang::Type* type, conversion::Converter& convFact);
 
 	virtual void PostVisit(const clang::Decl* decl, conversion::Converter& convFact);
 
