@@ -68,7 +68,7 @@ namespace cmd {
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
 					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
-					("progress,p", "shows a progress bar as the frontend translates the input")
+					("progress", "shows a progress bar as the frontend translates the input")
 					("no-warning,w", " Inhibit all warning messages")
 			;
 
