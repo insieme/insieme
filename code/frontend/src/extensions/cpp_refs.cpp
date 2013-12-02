@@ -94,10 +94,6 @@
 				return true;
 			};
 
-
-			std::cout << "visiting: \n" << std::endl;
-			dumpPretty (func);
-
 			// if return type is a cpp ref
 			if (core::analysis::isCppRef(retType) || core::analysis::isConstCppRef(retType)){
 
@@ -105,9 +101,6 @@
 				auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
 					if (core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()){
 						core::ExpressionPtr expr = retStmt->getReturnExpr();
-
-
-			std::cout << "  FIXING 1 " << std::endl;
 
 						// sometimes is easyer to return by value, ammend this
 						if (core::analysis::isCallOf(expr, gen.getRefDeref())){
@@ -127,7 +120,6 @@
 						}
 						else
 						{
-							std::cout << " not a const ref " << std::endl;
 							if (!core::analysis::isCppRef(expr->getType())){
 								expr = builder.callExpr(retType, ext.getRefIRToCpp(), expr);
 							}
@@ -141,8 +133,6 @@
 				// modify all returns at once!
 				auto returnFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
 				func = returnFixer.map(func);
-
-				dumpPretty ( func);
 			}
 			// but it could be also that we return a cppref and the return type is not cppref
 			else {
@@ -152,7 +142,6 @@
 					if (core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()){
 						core::ExpressionPtr expr = retStmt->getReturnExpr();
 
-						std::cout << "  FIXING 2 " << std::endl;
 						// we are returning a non cpp ref, uwrap it
 						if (core::analysis::isConstCppRef(expr->getType())){
 							expr = builder.callExpr(retType, ext.getRefConstCppToIR(), expr);
@@ -186,16 +175,8 @@
 			if (func->getType().as<core::FunctionTypePtr>()->isMemberFunction()){
 				auto& memberReplacements = memberMap[func->getType().as<core::FunctionTypePtr>()->getObjectType()];
 				memberReplacements [builder.normalize(oldFunc)]  = func;
-				dumpPretty ( func);
 			}
-
-			std::cout << "============" << std::endl;
 		}
-
-
-			std::cout << "*****************************" << std::endl;
-		std::cout << memberMap << std::endl;
-			std::cout << "*****************************" << std::endl;
 
 		// now fix the meta info of the classes
 		for (auto pair : memberMap){
@@ -204,28 +185,18 @@
 			core::IRBuilder builder(objTy->getNodeManager());
 			assert(objTy);
 
-			std::cout << "fix members for: " << objTy << std::endl;
 			assert(core::hasMetaInfo(objTy));
 			memberReplace_t replacements = pair.second;
 			core::ClassMetaInfo meta = core::getMetaInfo(objTy);
 			vector<core::MemberFunction> members = meta.getMemberFunctions();
 			for (core::MemberFunction& member : members){
-				std::cout << "\t\t replace: \n" << builder.normalize(member.getImplementation()) << std::endl;
-
 				auto fit = replacements.find(builder.normalize(member.getImplementation().as<core::LambdaExprPtr>()));
-
-				
-
-
 				if (fit != replacements.end()){
-					std::cout << "###########" << std::endl;
 					member = core::MemberFunction(member.getName(), fit->second, member.isVirtual(), member.isConst());
 				}
-			std::cout << "\t\t now: \n" << member<< std::endl;
 			}
 			meta.setMemberFunctions(members);
 			core::setMetaInfo(objTy, meta);
-			std::cout << "==============================" << std::endl;
 		}
 
 		return tu;

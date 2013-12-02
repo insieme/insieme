@@ -1397,15 +1397,11 @@ core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* 
 ///  CONVERT FUNCTION DECLARATION
 core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, const core::ExpressionPtr& init){
 
-	std::cout << "init expr: [" << targetType << "]"<<std::endl;
-
-
 	// null expression is allowed on globals initializations
 	if (!init) return init;
 
 	core::TypePtr elementType = lookupTypeDetails(targetType);
 	if (core::encoder::isListType(init->getType())) {
-		std::cout << "\t list: \t[" << init << "]"<<std::endl;
 		core::ExpressionPtr retIr;
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
 
@@ -1509,12 +1505,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return init.as<core::CallExprPtr>()[0];
 	}
 
-		std::cout << "\t1"<<std::endl;
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
 	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) return init;
 
-		std::cout << "\t2"<<std::endl;
 	// long long types
 	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType))
 		return init;
@@ -1522,50 +1516,35 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	////////////////////////////////////////////////////////////////////////////
 	// if the type missmatch we might need to take some things in consideration:
 
-		std::cout << "\t3"<<std::endl;
 	// constructor
 	if (isCppConstructor(init)) return init;
 
-		std::cout << "\t4"<<std::endl;
 	if (init->getType().isa<core::RefTypePtr>() &&
 		core::types::isSubTypeOf(lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()), elementType)) {
 		return builder.deref(init);
 	}
 
-		std::cout << "\t5"<<std::endl;
 	if (core::analysis::isCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), init);
-		std::cout << "\t6"<<std::endl;
-	if (core::analysis::isConstCppRef(elementType) && init->getType().isa<core::RefTypePtr>()){
-		std::cout << "init of type: " << elementType << std::endl;
-		std::cout << "init expr: " << init << std::endl;
+	if (core::analysis::isConstCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
-	}
-		std::cout << "\t7"<<std::endl;
 	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
-		std::cout << "\t8"<<std::endl;
 
 	if (IS_CPP_REF(init->getType())){
-		std::cout << "\t9"<<std::endl;
 		if (elementType.isa<core::RefTypePtr>())
 			return builder.toIRRef(init);
 		else
 			return builder.deref(builder.toIRRef(init));  // might be a call by value to a function, and we need to derref
 	}
 
-
-		std::cout << "\t10"<<std::endl;
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 
-		std::cout << "\t11"<<std::endl;
 	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType()))
 		return frontend::utils::castScalar(elementType, init);
 
-		std::cout << "\t12"<<std::endl;
 	if ( elementType.isa<core::VectorTypePtr>() ){
 		core::ExpressionPtr initVal = init;
-		std::cout << "\t13"<<std::endl;
 		if (utils::isRefVector(init->getType()))
 			initVal =  builder.deref(initVal);
 		//it can be a partial initialization
@@ -1575,7 +1554,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return utils::cast( initVal, elementType);
 	}
 
-		std::cout << "\t14"<<std::endl;
     //FIXME: check if this is enough
     //or if we need further checks
 	if (core::analysis::isVolatileType(elementType)) {
