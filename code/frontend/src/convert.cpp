@@ -1030,21 +1030,25 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
-	for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->Visit(decl, *this);
+	bool visited = false;
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        visited = plugin->Visit(decl, *this);
+        if(visited) break;
     }
 
-	// trigger the actual conversion
-	core::TypePtr res = convertType(decl->getTypeForDecl());
+	if(!visited) {
+		// trigger the actual conversion
+		core::TypePtr res = convertType(decl->getTypeForDecl());
 
-	// frequently structs and their type definitions have the same name 
-	// in this case symbol == res and should be ignored
-	if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-		auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
-		if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
-			getIRTranslationUnit().addType(symbol, res);
+		// frequently structs and their type definitions have the same name 
+		// in this case symbol == res and should be ignored
+		if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
+			auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
+			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
+				getIRTranslationUnit().addType(symbol, res);
+			}
 		}
-	}
+    }
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, *this);
