@@ -38,19 +38,18 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
- namespace insieme {
- namespace frontend {
+namespace insieme {
+namespace frontend {
 
 /**
- *
- * This is the frontend cleanup tool. 
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
- * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code 
+ * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not, 
+ * The Return stmt lacks of the information to decide, so we just return.
+ * here is the place to fix the right return value
  */
-class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
-		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+class CppRefsCleanup : public insieme::frontend::extensions::FrontendPlugin {
+	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
+
 
 
 } // frontend

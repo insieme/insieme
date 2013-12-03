@@ -57,6 +57,7 @@
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
+#include "insieme/frontend/extensions/cpp_refs.h"
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 
 
@@ -86,6 +87,7 @@ namespace frontend {
         registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptions());
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
+        registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<FrontendCleanup>();
     }
 

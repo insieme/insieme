@@ -196,7 +196,7 @@ namespace tu {
 		public:
 
 			Resolver(NodeManager& mgr, const IRTranslationUnit& unit)
-				: mgr(mgr), builder(mgr) {
+				: mgr(mgr), builder(mgr), cache(), symbolMap(), recVarMap(), recVarResolutions(), recVars(), metaInfos() {
 
 				// copy type symbols into symbol table
 				for(auto cur : unit.getTypes()) {
@@ -222,8 +222,13 @@ namespace tu {
 				// convert node itself
 				auto res = map(node);
 
+				// copy the source list to avoid invalidation of iterator
+				auto list =metaInfos;
+
 				// re-add meta information
-				for(const auto& cur : metaInfos) {
+				for(const auto& cur : list) {
+					
+					assert(cur.first.isa<core::StructTypePtr>());
 
 					// encode meta info into pure IR
 					auto encoded = core::toIR(mgr, cur.second);
@@ -255,6 +260,7 @@ namespace tu {
 				// strip off class-meta-information
 				if (auto type = ptr.isa<TypePtr>()) {
 					if (hasMetaInfo(type)) {
+						assert(ptr.isa<core::StructTypePtr>());
 						metaInfos[type] = getMetaInfo(type);
 						removeMetaInfo(type);
 					}
@@ -749,6 +755,7 @@ namespace tu {
 		// search for entry point
 		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {
+
 			if (cur.first->getStringValue() == entryPoint) {
 
 				// get the symbol
@@ -768,7 +775,6 @@ namespace tu {
 				return builder.program(toVector<core::ExpressionPtr>(lambda));
 			}
 		}
-
 
 		assert(false && "No such entry point!");
 		return core::ProgramPtr();

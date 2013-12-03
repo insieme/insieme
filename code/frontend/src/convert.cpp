@@ -380,7 +380,9 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
-			//std::cout << "converting function: " << funcDecl->getNameAsString() << std::endl;
+			//std::cout << " == converting function: " << funcDecl->getNameAsString() << std::endl;
+			//std::cout << "\t@" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << std::endl;
+
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
@@ -1178,8 +1180,6 @@ namespace {
 		//   { intializer stuff };
 		//   { original body };
 		// }
-
-		// build new
 		return builder.compoundStmt(
 				builder.compoundStmt(initList),
 				body
@@ -1528,20 +1528,30 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return builder.deref(init);
 	}
 
+	// init ref with memory location ( T b;  T& a = b; )
 	if (core::analysis::isCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), init);
+
+	// init const ref with a mem location ( T b; const int& b; )
 	if (core::analysis::isConstCppRef(elementType) && init->getType().isa<core::RefTypePtr>())
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
+
+	// init const ref with a ref, add constancy ( T& b...; const T& a = b; )
 	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
 
+	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
+	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>())
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), 
+								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init));
+
+	// from cpp ref to value or variable
 	if (IS_CPP_REF(init->getType())){
 		if (elementType.isa<core::RefTypePtr>())
 			return builder.toIRRef(init);
 		else
 			return builder.deref(builder.toIRRef(init));  // might be a call by value to a function, and we need to derref
 	}
-
 
 	if (builder.getLangBasic().isAny(elementType) ) return init;
 
