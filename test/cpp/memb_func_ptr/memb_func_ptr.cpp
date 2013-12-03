@@ -5,10 +5,13 @@ class Obj{
 		void f1 ( void) {std::cout << "f1" << std::endl;}
 		void f2 ( void) {std::cout << "f2" << std::endl;}
 		void f3 ( void) {std::cout << "f3" << std::endl;}
+
+		void g1 (int a) {std::cout << "g1" << a << std::endl;}
 };
 
 
 typedef void (Obj::*memb_func_ptr_t) ( void);
+typedef void (Obj::*memb_func_ptr2_t) ( int);
 
 memb_func_ptr_t getNull(){
 	return  0;
@@ -33,6 +36,8 @@ int main (){
 		Obj a;
 		(a.*ptr)();
 
+		// NOTICE: this calls a member function of a non existing object
+		// since it does not use any member field, no  one gave a fuck that day!
 		Obj* b;
 		(b->*ptr)();
 	}
@@ -52,6 +57,17 @@ int main (){
 		Obj* b;
 		(b->*ptr)();
 	}
+	
+	{
+		memb_func_ptr2_t ptr;
+		ptr = &Obj::g1;
+		Obj a;
+		(a.*ptr)(1);
+
+		Obj* b;
+		(b->*ptr)(2);
+	}
+
 	{
 		ptr = getNull();
 	}

@@ -153,18 +153,18 @@ void irt_abort_handler(int signum) {
 	raise(signum);
 }
 
+static bool irt_g_exit_handling_done;
+
 // the irt exit handler
 // needs to correctly shutdown all workers regardless of the situation it was called in
 void irt_exit_handler() {
-	static bool irt_exit_handling_done = false;
-
-	// only one thread may execute this routine, when it is done it sets irt_exit_handling_done true
+	// only one thread may execute this routine, when it is done it sets irt_g_exit_handling_done true
 	// every other thread which comes after simply exits
 	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
-		if (irt_exit_handling_done)
+		if (irt_g_exit_handling_done)
 			irt_thread_exit(0);
 
-	if (irt_exit_handling_done)
+	if (irt_g_exit_handling_done)
 		return;
 
 	// reset the clock frequency of the cores of all workers
@@ -176,7 +176,7 @@ void irt_exit_handler() {
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
-	irt_exit_handling_done = true;
+	irt_g_exit_handling_done = true;
 	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
@@ -283,6 +283,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
+	irt_g_exit_handling_done = false;
 
 	#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 		// initialize PAPI and check version
@@ -396,4 +397,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	// shut-down context
 	irt_context_destroy(context);
+
+	irt_exit_handler();
 }

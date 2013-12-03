@@ -66,6 +66,12 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	 */
 	insieme::core::ExpressionPtr VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) ;
 
+
+	/**
+	 *			SizeOfPackExpr
+	 */
+	insieme::core::ExpressionPtr VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact);
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
 
@@ -89,6 +95,8 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 			return VisitLambdaExpr(lambda, convFact);
 		if (const clang::CXXNullPtrLiteralExpr* nullExpr =  llvm::dyn_cast<clang::CXXNullPtrLiteralExpr>(expr))
 			return VisitCXXNullPtrLiteralExpr(nullExpr, convFact);
+		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr))
+			return VisitSizeOfPackExpr(sope, convFact);
 		return nullptr;
 	}
 

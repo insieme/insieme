@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define THREADS 2000
+#define THREADS 200
 
 int main() {
 	int i = 0;

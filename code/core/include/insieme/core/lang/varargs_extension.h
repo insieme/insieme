@@ -62,7 +62,7 @@ namespace lang {
 
         LANG_EXT_TYPE(Valist, "va_list");
 
-        LANG_EXT_LITERAL(Vaarg, "va_arg", "(ref<array<va_list,1>>, type<'a>) -> 'a");
+        LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
         LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
 	};
 }

@@ -49,11 +49,39 @@ namespace constraint {
 	using std::pair;
 	using std::vector;
 
-
-	Assignment solve(const Constraints& constraints, Assignment initial) {
+	namespace {
 
 		// the data structure representing the graph this algorithm is based on
-		typedef map<ValueID, set<const Constraint*>> Edges;
+		typedef std::unordered_map<ValueID, set<const Constraint*>> Edges;
+
+		void collectDependentValues(const ValueID& id, const Edges& edges, set<ValueID>& res) {
+			// get dependent values of current step
+			auto pos = edges.find(id);
+			if (pos == edges.end()) return;
+
+			// collect recursively all dependent value IDs
+			for(const auto& cur : pos->second) {
+				for(const auto& curID : cur->getOutputs()) {
+					if (res.insert(curID).second) {	// if the element is new
+						collectDependentValues(curID, edges, res);
+					}
+				}
+			}
+		}
+
+		set<ValueID> getDependentValues(const vector<ValueID>& ids, const Edges& edges) {
+			set<ValueID> res;
+			for(auto id : ids) {
+				collectDependentValues(id, edges, res);
+			}
+			return res;
+		}
+
+
+	}
+
+
+	Assignment solve(const Constraints& constraints, Assignment initial) {
 
 		// the work-list
 		vector<ValueID> workList;
@@ -86,12 +114,30 @@ namespace constraint {
 				const Constraint& cc = *cur;
 
 				// trigger update
-				bool change = cc.update(res);
+				auto change = cc.update(res);
 
 				// register outputs in work-list
-				if (change) {
+				if (change != Constraint::Unchanged) {
 					for (auto cur : cc.getOutputs()) {
 						workList.push_back(cur);
+					}
+				}
+
+				// if the output value has been altered (not just incremented) all dependent values need to be cleared
+				if (change == Constraint::Altered) {
+
+					// get updated outputs
+					auto outputs = cc.getOutputs();
+
+					// get all depending sets
+					set<ValueID> dependent = getDependentValues(outputs, edges);
+
+					// check for cycles
+//					if (dependent.contains(head)) { /* TODO: implement recovery */ }
+
+					// clear all dependent sets and re-schedule them
+					for(auto cur : dependent) {
+						if (!contains(outputs, cur)) res.clear(cur);		// do not reset value causing this operation
 					}
 				}
 			}
@@ -129,12 +175,30 @@ namespace constraint {
 				resolveConstraints(cc, worklist);
 
 				// trigger update
-				bool change = cc.update(ass);
+				auto change = cc.update(ass);
 
 				// register outputs in work-list
-				if (change) {
+				if (change != Constraint::Unchanged) {
 					for (auto cur : cc.getOutputs()) {
 						worklist.push_back(cur);
+					}
+				}
+
+				// if the output value has been altered (not just incremented) all dependent values need to be cleared
+				if (change == Constraint::Altered) {
+
+					// get updated outputs
+					auto outputs = cc.getOutputs();
+
+					// get all depending sets
+					set<ValueID> dependent = getDependentValues(outputs, edges);
+
+					// check for cycles
+//					if (dependent.contains(head)) { /* TODO: implement recovery */ }
+
+					// clear all dependent sets and re-schedule them
+					for(auto cur : dependent) {
+						if (!contains(outputs, cur)) ass.clear(cur);		// do not reset value causing this operation
 					}
 				}
 			}

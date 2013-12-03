@@ -100,7 +100,7 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 			}
 	}
 	//IRT_WARN("No affinity set but affinity information requested.\n");
-	return 0;
+	return -1;
 }
 
 
@@ -178,6 +178,8 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 
 void irt_set_global_affinity_policy(irt_affinity_policy policy) {
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_set_affinity(irt_get_affinity(i, policy), irt_g_workers[i]->thread);
+		irt_affinity_mask mask = irt_get_affinity(i, policy);
+		irt_set_affinity(mask, irt_g_workers[i]->thread);
+		irt_g_workers[i]->affinity = mask;
 	}
 }

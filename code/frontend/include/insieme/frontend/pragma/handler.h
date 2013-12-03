@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,6 +39,7 @@
 #include <memory>
 #include <sstream>
 #include <map>
+#include <functional>
 
 #include "insieme/frontend/sema.h"
 #include "insieme/frontend/pragma/matcher.h"
@@ -72,11 +73,11 @@ namespace frontend {
 
 namespace conversion {
 class Converter;
-} // end convert namespace 
+} // end convert namespace
 
 namespace pragma {
 
-/** 
+/**
  * Defines an interface which pragmas which would like to be automatically transferred to the
  * generated IR must implement. If not the user is responsable of handling the attachment of pragmas
  * to the IR nodes.
@@ -119,8 +120,8 @@ public:
 	 * Creates an empty pragma starting from source location startLoc and ending
 	 * ad endLoc.
 	 */
-	Pragma(const clang::SourceLocation& startLoc, 
-		   const clang::SourceLocation& endLoc, 
+	Pragma(const clang::SourceLocation& startLoc,
+		   const clang::SourceLocation& endLoc,
 		   const std::string& 			type) :
 		mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
@@ -130,9 +131,9 @@ public:
 	 * the pragma_matcher, the relative parsed list of values.
 	 *
 	 */
-	Pragma(const clang::SourceLocation& startLoc, 
-		   const clang::SourceLocation& endLoc, 
-		   const std::string& 			type, 
+	Pragma(const clang::SourceLocation& startLoc,
+		   const clang::SourceLocation& endLoc,
+		   const std::string& 			type,
 		   const MatchMap& 				mmap) : mStartLoc(startLoc), mEndLoc(endLoc), mType(type) { }
 
 	const clang::SourceLocation& getStartLocation() const { return mStartLoc; }
@@ -148,15 +149,15 @@ public:
 	/**
 	 * Returns true if the AST node associated to this pragma is a statement (clang::Stmt)
 	 */
-	bool isStatement() const { 
-		return !mTargetNode.isNull() && mTargetNode.is<clang::Stmt const*> ();	
+	bool isStatement() const {
+		return !mTargetNode.isNull() && mTargetNode.is<clang::Stmt const*> ();
 	}
 
 	/**
 	 * Returns true if the AST node associated to this pragma is a declaration (clang::Decl)
 	 */
-	bool isDecl() const { 
-		return !mTargetNode.isNull() && mTargetNode.is<clang::Decl const*> (); 
+	bool isDecl() const {
+		return !mTargetNode.isNull() && mTargetNode.is<clang::Decl const*> ();
 	}
 
 	/**
@@ -179,6 +180,45 @@ private:
 
 typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
+
+// ------------------------------------ FrontendPluginPragma ---------------------------
+class FrontendPluginPragma : public Pragma {
+ private:
+     pragma::MatchMap mMap;
+     pragma::MatchObject m;
+     const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f;
+ public:
+     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+                          const clang::SourceLocation& endLoc,
+                          const std::string&             type) : Pragma(startLoc, endLoc, type) {
+                             assert(false && "frontend pragma plugin cannot be created without a function.");
+                          }
+
+     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+                          const clang::SourceLocation& endLoc,
+                          const std::string&             type,
+                          const MatchMap&                mmap) : Pragma(startLoc, endLoc, type) {
+                             assert(false && "frontend pragma plugin cannot be created without a function.");
+                          }
+
+     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+                          const clang::SourceLocation& endLoc,
+                          const std::string& type,
+                          const MatchMap& mmap,
+                          const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> func) :
+                              Pragma(startLoc, endLoc, type), mMap(mmap), f(func) { }
+
+     const pragma::MatchObject& getMatchObject(conversion::Converter& fact) {
+         //the matchmap is only cloned once; if it was cloned before the clone method will return
+         m.cloneFromMatchMap(mMap, fact);
+         return m;
+     }
+
+     const std::function<core::NodePtr(MatchObject, core::NodePtr)> getFunction() {
+         return f;
+     }
+
+};
 
 // ------------------------------------ PragmaStmtMap ---------------------------
 /**
@@ -218,20 +258,21 @@ template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
 	pragma::node* pragma_matcher;
 	std::string base_name;
-
+    const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> func;
 public:
-	BasicPragmaHandler(clang::IdentifierInfo* 	name, 
-					   const node& 				pragma_matcher, 
-					   const std::string& 		base_name = std::string()) 
-		: PragmaHandler(name->getName().str()), 
-		  pragma_matcher(pragma_matcher.copy()), base_name(base_name) { }
+	BasicPragmaHandler(clang::IdentifierInfo* 	name,
+					   const node& 				pragma_matcher,
+					   const std::string& 		base_name = std::string(),
+                       const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f = nullptr)
+		: PragmaHandler(name->getName().str()),
+		  pragma_matcher(pragma_matcher.copy()), base_name(base_name), func(f) { }
 
-	void HandlePragma(clang::Preprocessor& 			PP, 
-					  clang::PragmaIntroducerKind 	kind, 
-					  clang::Token& 				FirstToken) 
+	void HandlePragma(clang::Preprocessor& 			PP,
+					  clang::PragmaIntroducerKind 	kind,
+					  clang::Token& 				FirstToken)
 	{
 		// '#' symbol is 1 position before
-		clang::SourceLocation&& startLoc = 
+		clang::SourceLocation&& startLoc =
 			ParserProxy::get().CurrentToken().getLocation().getLocWithOffset(-1);
 
 		MatchMap mmap;
@@ -254,8 +295,13 @@ public:
 			// which is associated to this pragma (T) and pass the matcher map in order for the
 			// pragma to initialize his internal representation. The framework will then take care
 			// of associating the pragma to the following node (i.e. a statement or a declaration).
-			static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).
-				ActOnPragma<T>( pragma_name.str(), mmap, startLoc, endLoc );
+            if(!func) {
+                static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).
+                    ActOnPragma<T>( pragma_name.str(), mmap, startLoc, endLoc);
+            } else {
+                static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).
+                    ActOnFrontendPluginPragma( pragma::PragmaPtr(new pragma::FrontendPluginPragma(startLoc, endLoc, pragma_name.str(), mmap, func)) );
+            }
 			return;
 		}
 		// In case of error, we report it to the console using the clang Diagnostics.
@@ -271,21 +317,22 @@ struct PragmaHandlerFactory {
 
 	template<class T>
 	static clang::PragmaHandler* CreatePragmaHandler(
-			clang::IdentifierInfo* name, node 
-			const& re, 
-			const std::string& base_name = std::string())
+			clang::IdentifierInfo* name, node
+			const& re,
+			const std::string& base_name = std::string(),
+            const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f = nullptr)
 	{
-		return new BasicPragmaHandler<T> (name, re, base_name);
+		return new BasicPragmaHandler<T> (name, re, base_name, f);
 	}
 };
 
-// Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes 
-core::NodePtr  attachPragma( const core::NodePtr& 			node, 
-		  				     const clang::Stmt* 				clangNode, 
+// Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes
+core::NodePtr  attachPragma( const core::NodePtr& 			node,
+		  				     const clang::Stmt* 				clangNode,
 						     conversion::Converter& 	fact );
 
-core::NodePtr  attachPragma( const core::NodePtr& 			node, 
-		  				     const clang::Decl* 				clangDecl, 
+core::NodePtr  attachPragma( const core::NodePtr& 			node,
+		  				     const clang::Decl* 				clangDecl,
 						     conversion::Converter& 	fact );
 } // end pragma namespace
 } // End frontend namespace

@@ -31,7 +31,7 @@
  *
  * INSIEME depends on several third party software packages. Please 
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
- * regarding third party software licenses.
+ * regarding third party software licenses
  */
 
 #include "insieme/core/checks/full_check.h"
@@ -77,7 +77,7 @@ namespace checks {
 			checks.push_back(make_check<UndeclaredVariableCheck>());
 
 			checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
-			checks.push_back(make_check<UndefinedCheck>());
+		//	checks.push_back(make_check<UndefinedCheck>());
 
 			checks.push_back(make_check<NarrowCheck>());
 			checks.push_back(make_check<ExpandCheck>());

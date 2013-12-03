@@ -48,36 +48,72 @@ namespace analysis {
 namespace cba {
 
 
-	template<typename Context, typename ElementSetType>
+	template<typename Context, typename BaseAnalysis>
 	class ImperativeInStateConstraintGenerator;
 
-	template<typename Context, typename ElementSetType>
+	template<typename Context, typename BaseAnalysis>
 	class ImperativeOutStateConstraintGenerator;
 
-	template<typename Context, typename ElementSetType>
-	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, ElementSetType>,Context> {
 
-		typedef BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, ElementSetType>,Context> super;
+	template<
+		typename BaseAnalysis,							// the analysis this analysis is extending
+		template<typename C, typename A> class G		// the location state generator class (has additional parameter)
+	>
+	struct location_data_analysis {
+		template<typename C> struct lattice   { typedef typename cba::lattice<BaseAnalysis,C>::type type; };
+		template<typename C> struct generator { typedef G<typename C::context_type, BaseAnalysis> type; };
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type, Location<typename C::context_type>> type; };
+	};
 
-		const ElementSetType& dataSet;
+	template<typename A>
+	struct location_data_in_analysis : public location_data_analysis<A, ImperativeInStateConstraintGenerator> {};
 
-		// the one location this instance is working for
-		Location<Context> location;
+	template<typename A>
+	struct location_data_out_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
+
+	template<typename A>
+	struct location_data_tmp_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
+
+
+
+	template<typename Context, typename BaseAnalysis>
+	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
+
+		typedef BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
 
 		CBA& cba;
 
 	public:
 
-		ImperativeInStateConstraintGenerator(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
-			: super(cba, Sin, Sout, *this), dataSet(dataSet), location(location), cba(cba) {}
+		ImperativeInStateConstraintGenerator(CBA& cba)
+			: super(cba, Sin, Sout), cba(cba) {}
 
-		void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		// TODO: the following two functions should be moved into a common base class of the In and Out State converter
+
+		/**
+		 * Produces a humna-readable representation of the value represented by the given value ID.
+		 */
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+
+			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
+			int label = std::get<1>(data);
+			const core::NodeAddress& node = cba.getStmt(label);
+			const Context& ctxt = std::get<2>(data);
+			const Location<Context>& location = std::get<3>(data);
+
+			out << value << " = Sin - " << getAnalysisName<BaseAnalysis>() << "@" << location
+						 << "[l" << label << " = " << node->getNodeType() << " : "
+						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+						 << ctxt << "]";
+		}
+
+		void connectStateSetsImpl(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 
 			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getSet(a, al, ac, location, dataSet);
-			auto s_out = cba.getSet(b, bl, bc, location, dataSet);
+			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
+			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
 
 			// state information entering the set is also leaving it
 			constraints.add(subset(s_in, s_out));
@@ -85,13 +121,13 @@ namespace cba {
 		}
 
 		template<typename E, typename L>
-		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		void connectStateSetsIfImpl(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 
 			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getSet(a, al, ac, location, dataSet);
-			auto s_out = cba.getSet(b, bl, bc, location, dataSet);
+			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
+			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
 
 			// state information entering the set is also leaving it
 			if (ac == bc) {
@@ -185,10 +221,10 @@ namespace cba {
 				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state)),
 				  mgr(mgr), loc(loc), ref(ref), in_value(in_value), old_state(old_state), new_state(new_state) {}
 
-			virtual bool update(Assignment& ass) const {
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// compute updated value and add it to the result value
 				meet_assign_op_type meet_assign_op;
-				return meet_assign_op(ass[new_state], getUpdatedData(ass));
+				return meet_assign_op(ass[new_state], getUpdatedData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {
@@ -299,32 +335,37 @@ namespace cba {
 	}
 
 
-	template<typename Context, typename ElementSetType>
-	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> {
+	template<typename Context, typename BaseAnalysis>
+	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
 
-		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, ElementSetType>,Context> super;
-
-		typedef typename ElementSetType::lattice_type lattice_type;
-		typedef typename lattice_type::manager_type mgr_type;
-
-		const ElementSetType& dataSet;
-
-		// the one location this instance is working for
-		Location<Context> location;
+		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
 
 		CBA& cba;
 
 	public:
 
-		ImperativeOutStateConstraintGenerator(CBA& cba, const ElementSetType& dataSet, const Location<Context>& location)
-			: super(cba, Sin, Sout, *this), dataSet(dataSet), location(location), cba(cba) {
+		ImperativeOutStateConstraintGenerator(CBA& cba)
+			: super(cba, Sin, Sout), cba(cba) {
 		}
 
-		mgr_type& getDataManager() {
-			return cba.getDataManager<lattice_type>();
+		/**
+		 * Produces a humna-readable representation of the value represented by the given value ID.
+		 */
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+
+			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
+			int label = std::get<1>(data);
+			const core::NodeAddress& node = cba.getStmt(label);
+			const Context& ctxt = std::get<2>(data);
+			const Location<Context>& location = std::get<3>(data);
+
+			out << value << " = Sout - " << getAnalysisName<BaseAnalysis>() << "@" << location
+						 << "[l" << label << " = " << node->getNodeType() << " : "
+						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+						 << ctxt << "]";
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& location, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
 
 			// one special case: assignments
@@ -338,42 +379,42 @@ namespace cba {
 
 //				// ---- S_out of args => S_tmp of call (only if other location is possible)
 //
-				auto R_rhs = cba.getSet(R<Context>(), l_rhs, ctxt);
-				auto S_out_rhs = cba.getSet(Sout, l_rhs, ctxt, location, dataSet);
-				auto S_out_lhs = cba.getSet(Sout, l_lhs, ctxt, location, dataSet);
-				auto S_tmp = cba.getSet(Stmp, l_call, ctxt, location, dataSet);
+				auto R_rhs = cba.getSet(R, l_rhs, ctxt);
+				auto S_out_rhs = cba.getLocationDataSet<BaseAnalysis>(Sout, l_rhs, ctxt, location);
+				auto S_out_lhs = cba.getLocationDataSet<BaseAnalysis>(Sout, l_lhs, ctxt, location);
+				auto S_tmp = cba.getLocationDataSet<BaseAnalysis>(Stmp, l_call, ctxt, location);
 				constraints.add(subsetIfExceeding(R_rhs, location, S_out_rhs, S_tmp));
 				constraints.add(subsetIfExceeding(R_rhs, location, S_out_lhs, S_tmp));
 //
 //				// ---- combine S_tmp to S_out ...
 //
 //				// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
-				auto A_value = cba.getSet(dataSet, l_lhs, ctxt);
-				auto S_out = cba.getSet(Sout, l_call, ctxt, location, dataSet);
+				auto A_value = cba.getSet<BaseAnalysis>(l_lhs, ctxt);
+				auto S_out = cba.getLocationDataSet<BaseAnalysis>(Sout, l_call, ctxt, location);
 //				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
 //
 //				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
 //				constraints.add(subsetIfExceeding(R_rhs, location, S_tmp, S_out));
 
 				// ---- add assignment rule ----
-				constraints.add(write(getDataManager(), this->location, R_rhs, A_value, S_tmp, S_out));
+				constraints.add(write(cba.template getDataManager(A_value), location, R_rhs, A_value, S_tmp, S_out));
 
 				// done
 				return;
 			}
 
 			// everything else is treated using the default procedure
-			super::visitCallExpr(call, ctxt, constraints);
+			super::visitCallExpr(call, ctxt, location, constraints);
 		}
 
 
-		void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		void connectStateSetsImpl(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 
 			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getSet(a, al, ac, location, dataSet);
-			auto s_out = cba.getSet(b, bl, bc, location, dataSet);
+			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
+			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
 
 			// state information entering the set is also leaving it
 			constraints.add(subset(s_in, s_out));
@@ -381,13 +422,13 @@ namespace cba {
 		}
 
 		template<typename E, typename L>
-		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) const {
+		void connectStateSetsIfImpl(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
 
 			// general handling - Sin = Sout
 
 			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getSet(a, al, ac, location, dataSet);
-			auto s_out = cba.getSet(b, bl, bc, location, dataSet);
+			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
+			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
 
 			// state information entering the set is also leaving it
 			constraints.add(subsetIf(value, set, s_in, s_out));

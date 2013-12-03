@@ -183,7 +183,7 @@ file(GLOB_RECURSE test_cases test/*.cc)
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
 
 if (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
-	message("Excluding runtime energy tests" )
+	message(STATUS "Excluding runtime energy tests" )
 	list(REMOVE_ITEM test_cases ${energy_test_cases})
 endif (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
 

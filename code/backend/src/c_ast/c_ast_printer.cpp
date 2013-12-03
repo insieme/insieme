@@ -41,6 +41,7 @@
 #include "insieme/utils/printable.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace insieme {
 namespace backend {
@@ -621,7 +622,7 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< print(fun->returnType) << " "
+						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
 						<< print(fun->name)
 						<< "(" << printMemberParam(fun->parameter)<< ")"
 						<< (node->fun->isConstant?" const":"")
@@ -675,33 +676,29 @@ namespace c_ast {
 				if (!composite->elements.empty()) out << ";";
 
 				// add member functions
-				if (structType) {
-
-					// todo: add ctor / dtor
+				if (composite) {
 
 					// add constructors
-					if (!structType->ctors.empty()) out << "\n    ";
-					out << join(";\n    ", structType->ctors,
+					if (!composite->ctors.empty()) out << "\n    ";
+					out << join(";\n    ", composite->ctors,
 							[&](std::ostream& out, const ConstructorPrototypePtr& cur) {
 								out << print(cur);
 					});
-					if (!structType->ctors.empty()) out << ";";
+					if (!composite->ctors.empty()) out << ";";
 
 					// add destructor
-					if (structType->dtor) out << "\n    ";
-					out << print(structType->dtor);
-					if (structType->dtor) out << ";";
+					if (composite->dtor) out << "\n    ";
+					out << print(composite->dtor);
+					if (composite->dtor) out << ";";
 
 
 					// add member functions
-					if (!structType->members.empty()) out << "\n    ";
-					out << join(";\n    ", structType->members,
+					if (!composite->members.empty()) out << "\n    ";
+					out << join(";\n    ", composite->members,
 							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
 								out << print(cur);
 					});
-					if (!structType->members.empty()) out << ";";
-
-					// todo: add ctors / dtors / member function prototypes
+					if (!composite->members.empty()) out << ";";
 
 				}
 
@@ -770,8 +767,11 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << print(fun->returnType) << " " << print(node->className) << "::" << print(fun->name)
-						<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
+				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
+					<< " " 
+					<< print(node->className) << "::" 
+					<< print(fun->name)
+					<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
 
 				// print body
 				return out << print(wrapBody(fun->body));

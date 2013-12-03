@@ -37,10 +37,33 @@
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/pragma/handler.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
+
+    // ############ PRAGMA HANDLING ############ //
+    PragmaHandler::PragmaHandler(const std::string& pragmaNamespace, const std::string& keyword, insieme::frontend::pragma::node const& re,
+                                 std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> lambda)
+                                 : f(lambda), name(pragmaNamespace), keyw(keyword), tok(re.copy()) { };
+
+    PragmaHandler::PragmaHandler( PragmaHandler& pragma  )
+                : f(pragma.f), name(pragma.name), keyw(pragma.keyw), tok(pragma.tok->copy()) {
+    }
+
+    PragmaHandler::PragmaHandler( const PragmaHandler& pragma  )
+                : f(pragma.f), name(pragma.name), keyw(pragma.keyw), tok(pragma.tok->copy()) {
+    }
+
+    PragmaHandler::~PragmaHandler() {
+        delete tok;
+    }
+
+    insieme::frontend::pragma::node* PragmaHandler::getToken() {
+        return tok;
+    };
 
     // ############ PRE CLANG STAGE ############ //
     const FrontendPlugin::macroMap& FrontendPlugin::getMacroList() const {
@@ -86,7 +109,7 @@ namespace extensions {
                                                      insieme::frontend::conversion::Converter& convFact) {
         return irStmt;
     }
-    
+
     void FrontendPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
         return;
     }
@@ -99,6 +122,12 @@ namespace extensions {
     insieme::frontend::tu::IRTranslationUnit FrontendPlugin::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
         return tu;
     }
+
+    // ############ PRAGMA HANDLING ############ //
+    const FrontendPlugin::pragmaHandlerVec& FrontendPlugin::getPragmaHandlers() const {
+        return pragmaHandlers;
+    }
+
 
 }
 }

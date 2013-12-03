@@ -42,9 +42,10 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
-#include "insieme/frontend/utils/interceptor.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/pragma/handler.h"
+
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -86,6 +87,8 @@ namespace conversion {
  */
 class Converter :  boost::noncopyable {
 
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 					Cache of already converted elements
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +118,7 @@ class Converter :  boost::noncopyable {
     StaticVarDeclMap staticVarDeclMap;
     int staticVarCount;
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 						Recursive Function resolution
+	// 					Function resolution
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
@@ -132,7 +135,6 @@ class Converter :  boost::noncopyable {
 	// TODO: remove this - not required
 	typedef const vector<core::VariablePtr>* ParameterList;
 	ParameterList curParameter;
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						Specifically marked Objects
@@ -224,6 +226,7 @@ class Converter :  boost::noncopyable {
 	 */
 	 const clang::SourceLocation* lastTrackableLocation;
 
+	frontend::utils::HeaderTagger headerTagger;
 
      void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
@@ -288,6 +291,10 @@ public:
     void addToLambdaCache(const clang::FunctionDecl* decl, core::ExpressionPtr ptr) {
         lambdaExprCache[decl] = ptr;
     }
+
+    void addToVarDeclMap(const clang::ValueDecl* decl, core::ExpressionPtr ptr) {
+    	varDeclMap[decl] = ptr;
+	}
 
     core::ExpressionPtr getLambdaFromCache(const clang::FunctionDecl* decl) {
         return lambdaExprCache[decl];
@@ -397,9 +404,8 @@ public:
 	 * of the function. The function itself should be translated by the clang declaration traverser, 
 	 * and stored in the translation unit.
 	 * @param functionDecl the function decl 
-	 */
+	 * */
 	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
-
 
 	/**
 	 * Entry point for converting function to the right type
@@ -506,6 +512,11 @@ public:
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	/**
+	 * retrives the header tagger to annotate headers
+	 */
+	const frontend::utils::HeaderTagger&  getHeaderTagger() const;
+
    /**
 	* Creates the variable which should be used as a placeholder for invoking the iven
 	* function call and isert it in the map (recVarExprMap) used to store such ariables
@@ -535,7 +546,7 @@ public:
 	}
 	
 	/**
-	 *  prints location of the last registered source location
+	 *  returns readable location of the last registered source location
 	 */
 	std::string getLastTrackableLocation() const{
 		if (lastTrackableLocation){

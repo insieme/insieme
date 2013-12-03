@@ -77,6 +77,8 @@ namespace cba {
 			  creationPoint(expr),
 			  creationContext(ctxt) {}
 
+		Location(const Location<Context>& other) =default;
+
 		const core::ExpressionAddress& getAddress() const {
 			return creationPoint;
 		}

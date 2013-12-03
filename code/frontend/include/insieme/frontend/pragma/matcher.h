@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -85,7 +85,7 @@ public:
 		std::string 			expected;
 		clang::SourceLocation 	loc;
 
-		Error(const std::string& exp, const clang::SourceLocation& loc) : 
+		Error(const std::string& exp, const clang::SourceLocation& loc) :
 			expected(exp), loc(loc) { }
 	};
 
@@ -134,18 +134,19 @@ struct option;
  */
 class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*>, public insieme::utils::Printable {
 	bool ptrOwner;
+	bool isExp;
 	clang::ASTContext* clangCtx;
 
 public:
-	ValueUnion(clang::Stmt* stmt, clang::ASTContext* ctx) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true), clangCtx(ctx) { }
+	ValueUnion(clang::Stmt* stmt, clang::ASTContext* ctx, bool isExpr=false) :
+		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true), isExp(isExpr), clangCtx(ctx) { }
 
-	ValueUnion(std::string const& str) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), 
-		ptrOwner(true), clangCtx(NULL) { }
+	ValueUnion(std::string const& str, bool isExpr=false) :
+		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)),
+		ptrOwner(true), isExp(isExpr), clangCtx(NULL) { }
 
-	ValueUnion(ValueUnion& other, bool transferOwnership=false) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), clangCtx(other.clangCtx) {
+	ValueUnion(ValueUnion& other, bool transferOwnership=false, bool isExpr=false) :
+		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), isExp(isExpr), clangCtx(other.clangCtx) {
 		if(transferOwnership) 	other.ptrOwner = false;
 		else	ptrOwner = false;
 	}
@@ -163,6 +164,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	std::string toStr() const;
+	bool isExpr() const;
 	~ValueUnion();
 };
 
@@ -181,6 +183,26 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
+class MatchObject {
+    private:
+        bool called;
+        typedef std::vector<core::VariablePtr> VarList;
+        typedef std::vector<core::ExpressionPtr> ExprList;
+        std::map<std::string, VarList> varList;
+        std::map<std::string, ExprList> exprList;
+        core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
+        core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
+    public:
+        MatchObject() : called(false) { }
+        const VarList& getVars(const std::string& s) {
+            return varList[s];
+        }
+        const ExprList& getExprs(const std::string& s) {
+            return exprList[s];
+        }
+        void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
+};
+
 typedef std::pair<bool, MatchMap> MatcherResult;
 template<clang::tok::TokenKind T> struct Tok;
 
@@ -197,9 +219,9 @@ struct node : public insieme::utils::Printable {
 	 * returned otherwise false. The MatchMap object contains the map of value derived during the
 	 * parsing.
 	 */
-	virtual bool match(clang::Preprocessor& PP, 	
-					   MatchMap& 			mmap, 
-					   ParserStack& 		errStack, 
+	virtual bool match(clang::Preprocessor& PP,
+					   MatchMap& 			mmap,
+					   ParserStack& 		errStack,
 					   size_t 				recID) const = 0;
 
 	virtual node* copy() const = 0;
@@ -335,7 +357,7 @@ class MappableNode: public node {
 	bool addToMap;
 
 public:
-	MappableNode(std::string const& str=std::string(), bool addToMap=true) 
+	MappableNode(std::string const& str=std::string(), bool addToMap=true)
 		: mapName(str), addToMap(addToMap) { }
 
 	node& operator[](const std::string& str) {
@@ -370,10 +392,10 @@ struct expr_p: public MappableNode<expr_p> {
 /**
  * Utility function for adding a token with a specific key to the matcher map.
  */
-void AddToMap(clang::tok::TokenKind tok, 
-			  clang::Token const& 	token, 
-			  bool 					resolve, 
-			  std::string const& 	map_str, 
+void AddToMap(clang::tok::TokenKind tok,
+			  clang::Token const& 	token,
+			  bool 					resolve,
+			  std::string const& 	map_str,
 			  MatchMap& 			mmap);
 
 std::string TokenToStr(clang::tok::TokenKind tok);
@@ -388,21 +410,21 @@ struct Tok: public MappableNode<Tok<T>> {
 	std::string tok;
 
 	Tok() { }
-	Tok(std::string const& str, bool addToMap = true, bool resolve=false) : 
+	Tok(std::string const& str, bool addToMap = true, bool resolve=false) :
 		MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) { }
-	
-	node* copy() const { 
-		return new Tok<T>( 
-				MappableNode<Tok<T>>::getMapName(), 
-				MappableNode<Tok<T>>::isAddToMap(), resolve 
+
+	node* copy() const {
+		return new Tok<T>(
+				MappableNode<Tok<T>>::getMapName(),
+				MappableNode<Tok<T>>::isAddToMap(), resolve
 			);
 	}
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
-			if (MappableNode<Tok<T>>::isAddToMap()) { 
-				AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); 
+			if (MappableNode<Tok<T>>::isAddToMap()) {
+				AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap);
 			}
 			return true;
 		}
@@ -430,7 +452,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 };
 
 /**
- * A var is an identifier which we have to resolve to get the actual variable identifer 
+ * A var is an identifier which we have to resolve to get the actual variable identifer
  * This is an hack which has been done to solve the problem with OpenMP regions which receive an
  * identifer as name and this could be arbitrary
  */
@@ -452,6 +474,6 @@ static expr_p expr = expr_p();
 static var_p  var  = var_p();
 
 } // End tok namespace
-} // End pragma namespace 
+} // End pragma namespace
 } // End frontend namespace
 } // End insieme namespace

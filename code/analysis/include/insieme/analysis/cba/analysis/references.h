@@ -53,32 +53,26 @@ namespace analysis {
 namespace cba {
 
 	// forward declarations
-	template<typename Context> class DataPathConstraintGenerator;
-	typedef DataAnalysisType<DataPath,DataPathConstraintGenerator> DataPathAnalysisType;
-	extern const DataPathAnalysisType DP;
-	extern const DataPathAnalysisType dp;
+	struct data_path_analysis_data;
+	struct data_path_analysis_var;
+	extern const data_path_analysis_data DP;
+	extern const data_path_analysis_var  dp;
 
 	// ----------------- references ---------------
 
 	template<typename Context> class ReferenceConstraintGenerator;
 
-	template<typename Context>
-	const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>& R() {
-		static const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator> instance("R");
-		return instance;
-	}
+	struct reference_analysis_data : public dependent_data_analysis<Reference, ReferenceConstraintGenerator> {};
+	struct reference_analysis_var  : public dependent_data_analysis<Reference, ReferenceConstraintGenerator> {};
 
-	template<typename Context>
-	const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>& r() {
-		static const DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator> instance("r");
-		return instance;
-	}
+	extern const reference_analysis_data R;
+	extern const reference_analysis_var  r;
 
 
 	template<typename Context>
-	class ReferenceConstraintGenerator : public BasicDataFlowConstraintGenerator<Reference<Context>,DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>, Context> {
+	class ReferenceConstraintGenerator : public DataFlowConstraintGenerator<reference_analysis_data, reference_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Reference<Context>,DataAnalysisType<Reference<Context>,ReferenceConstraintGenerator>, Context> super;
+		typedef DataFlowConstraintGenerator<reference_analysis_data, reference_analysis_var, Context> super;
 
 		CBA& cba;
 
@@ -86,7 +80,7 @@ namespace cba {
 
 	public:
 
-		ReferenceConstraintGenerator(CBA& cba) : super(cba, R<Context>(), r<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ReferenceConstraintGenerator(CBA& cba) : super(cba, R, r), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
@@ -102,7 +96,7 @@ namespace cba {
 			auto value = getLocation(literal, ctxt);
 			auto l_lit = cba.getLabel(literal);
 
-			auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
+			auto R_lit = cba.getSet(R, l_lit, ctxt);
 			constraints.add(elem(value, R_lit));
 
 		}
@@ -119,7 +113,7 @@ namespace cba {
 				auto value = getLocation(call, ctxt);
 				auto l_lit = cba.getLabel(call);
 
-				auto R_lit = cba.getSet(R<Context>(), l_lit, ctxt);
+				auto R_lit = cba.getSet(R, l_lit, ctxt);
 				constraints.add(elem(value, R_lit));
 
 				// done
@@ -131,9 +125,9 @@ namespace cba {
 			if (base.isRefNarrow(fun)) {
 
 				// obtain involved sets
-				auto R_in  = cba.getSet(R<Context>(), call[0], ctxt);	// the input reference
+				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
 				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
-				auto R_out = cba.getSet(R<Context>(), call, ctxt);		// the resulting context
+				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
 
 				// add constraint linking in and out values
 				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,

@@ -130,20 +130,24 @@ namespace constraint {
 
 	public:
 
+		enum UpdateResult {
+			Unchanged, Incremented, Altered
+		};
+
 		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out)
 			: inputs(in), outputs(out) {}
 
 		virtual ~Constraint() {};
 
 		virtual void init(Assignment& ass, vector<ValueID>& workList) const {
-			if (update(ass)) {
+			if (update(ass) != Unchanged) {
 				for(auto cur : getOutputs()) {
 					workList.push_back(cur);
 				}
 			}
 		}
 
-		virtual bool update(Assignment& ass) const { return false; };
+		virtual UpdateResult update(Assignment& ass) const { return Unchanged; };
 		virtual bool check(const Assignment& ass) const =0;
 
 		virtual std::ostream& writeDotEdge(std::ostream& out) const =0;
@@ -184,8 +188,8 @@ namespace constraint {
 			ComposedConstraint(const Filter& filter, const Executor& executor)
 				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs()), filter(filter), executor(executor) {}
 
-			virtual bool update(Assignment& ass) const {
-				return filter(ass) && executor.update(ass);
+			virtual UpdateResult update(Assignment& ass) const {
+				return (filter(ass) && executor.update(ass)) ? Incremented : Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {
@@ -665,6 +669,7 @@ namespace constraint {
 			virtual ~Container() {};
 			virtual void append(std::map<ValueID,string>& res) const =0;
 			virtual Container* copy() const =0;
+			virtual void clear(const ValueID& value) =0;
 		};
 
 		template<typename L>
@@ -684,6 +689,9 @@ namespace constraint {
 			}
 			virtual Container* copy() const {
 				return new TypedContainer<L>(*this);
+			}
+			virtual void clear(const ValueID& value) {
+				this->erase(value);
 			}
 		};
 
@@ -725,6 +733,12 @@ namespace constraint {
 
 		bool operator==(const Assignment& other) const {
 			return data == other.data;
+		}
+
+		void clear(const ValueID& value) {
+			for(auto& cur : data) {
+				cur.second->clear(value);
+			}
 		}
 
 		std::ostream& printTo(std::ostream& out) const {

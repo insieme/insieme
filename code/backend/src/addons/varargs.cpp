@@ -70,6 +70,7 @@ namespace addons {
 			#include "insieme/backend/operator_converter_begin.inc"
 
 			res[ext.getVaarg()] 	  = OP_CONVERTER({ 
+
 			    //const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
                 c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("va_arg"));
 

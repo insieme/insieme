@@ -64,6 +64,13 @@ endforeach(exec_file)
 # add unit test cases
 set ( ut_prefix  ut_driver_ )
 file(GLOB_RECURSE test_cases test/*.cc)
+# get measure unit tests, to be excluded if papi is not present
+file(GLOB_RECURSE measure_test_cases test/measure*.cc)
+if(NOT EXISTS ${papi_LIB})
+	message(STATUS "Excluding measure tests")
+	list(REMOVE_ITEM test_cases ${measure_test_cases})
+endif (NOT EXISTS ${papi_LIB})
+
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	

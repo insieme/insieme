@@ -36,34 +36,30 @@
 
 #include "interceptor_header.h"
 
+#pragma test "fun() -> unit{ decl ref<int<4>> v0 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v0));}"
 void intercept_simpleFunc() {
-
-#pragma test "{ decl ref<int<4>> v0 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v0));}"
-	{
-		int a = 0;
-		ns::simpleFunc(1);
-		ns::simpleFunc(a);
-	}
+	int a = 0;
+	ns::simpleFunc(1);
+	ns::simpleFunc(a);
 }
 
+#pragma test "fun() -> unit{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
 void intercept_memFunc() {
-#pragma test "{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
-	{
-		int a = 0;
-		ns::S s;
-		s.memberFunc(a);
-	}
-#pragma test "{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
-	{
-		using namespace ns;
-		int a = 0;
-		S s;
-		s.memberFunc(a);
-	}
+	int a = 0;
+	ns::S s;
+	s.memberFunc(a);
+}
+#pragma test "fun() -> unit{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
+void intercept_memFunc2() {
+	using namespace ns;
+	int a = 0;
+	S s;
+	s.memberFunc(a);
 }
 
 // only for manual compilation
 int main() {
 	intercept_simpleFunc();
-	intercept_memFunc();
+	intercept_memFunc1();
+	intercept_memFunc2();
 };

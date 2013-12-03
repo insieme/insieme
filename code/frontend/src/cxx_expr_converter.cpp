@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -42,12 +42,13 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include "clang/AST/StmtVisitor.h"
-	#include <clang/AST/DeclCXX.h>
-	#include <clang/AST/ExprCXX.h>
-	#include <clang/AST/CXXInheritance.h>
 
-	#include <clang/Basic/FileManager.h>
+#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/CXXInheritance.h>
+
+#include <clang/Basic/FileManager.h>
 #pragma GCC diagnostic pop
 
 
@@ -183,6 +184,12 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 	if (IS_CPP_REF(convFact.lookupTypeDetails(base->getType()))){
 		base = builder.toIRRef(base);
+	}
+
+	// it might be that is a function, therefore we retrieve a callable expression
+	const clang::ValueDecl *valDecl = membExpr->getMemberDecl ();
+	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)){
+		return convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
 	}
 
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
@@ -329,7 +336,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-	args = getFunctionArguments(callExpr, funcTy);
+		args = getFunctionArguments(callExpr, funcTy);
 
 		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
@@ -350,7 +357,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// unary:	operator@( left==arg(0) )
 		// binary:	operator@( left==arg(0), right==arg(1) )
 
-		convertedOp =  convFact.getCallableExpression(funcDecl);
+		convertedOp = convFact.convertExpr(callExpr->getCallee());
+
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}
@@ -382,12 +390,19 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
-	// back end compiler
-	if (callExpr->isElidable () && (ctorDecl->isCopyConstructor() || ctorDecl->isMoveConstructor())){
+	// back end compiler, unleast there are more than one parameter, this case we have no way to express the 
+	// sematincs in IR. the constructor will unify those expressions into one
+	if (callExpr->isElidable () && (callExpr->getNumArgs() == 1)){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
+	
+		// a constructor returns a reference of the class type, but we might need to fix types
+		// do a ref reinterpret to the target type
+		if (retIr->getType() != refToClassTy)
+			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType))); 
+
 		return retIr;
 	}
 
@@ -956,16 +971,50 @@ namespace {
 
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			binary member pointer Direct
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemD(const clang::BinaryOperator* exprD) {
 	// direct, ->*
 	return convertMemberFuncExecutor(exprD,convFact);
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//			binary member pointer indirect
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitBinPtrMemI(const clang::BinaryOperator* exprI) {
 	// indirect, ->*
 	return convertMemberFuncExecutor(exprI,convFact);
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//		binary trait
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitBinaryTypeTraitExpr		(const clang::BinaryTypeTraitExpr* binTypeTraitExpr){
+
+	// this is found when using __base_of operator, clang gives already the boolean expression evaluated,
+	// is an static type resolutions, we just forward this result
+	core::ExpressionPtr retExpr =
+			convFact.builder.literal(
+					(binTypeTraitExpr->getValue())? std::string("true"): std::string("false"),
+					convFact.mgr.getLangBasic().getBool());
+
+	LOG_EXPR_CONVERSION(binTypeTraitExpr, retExpr);
+	return retExpr;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//		SizeOfPack expr
+//		basically a cpp11 feature but tends to end up also in cpp03
+//		DUPLICATED INTO CPP11extension
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr) {
+	convFact.warnings.insert("SizeOfPack -(sizeof...) is supported from c++11 on");
+	//sizeOf... returns size_t --> use unsigned int
+	core::ExpressionPtr retExpr = builder.uintLit(sizeOfPackExpr->getPackLength());
+	LOG_EXPR_CONVERSION(sizeOfPackExpr, retExpr);
+	return retExpr;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -988,7 +1037,6 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
-		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

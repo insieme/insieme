@@ -55,23 +55,17 @@ namespace cba {
 
 	template<typename Context> class ChannelConstraintGenerator;
 
-	template<typename Context>
-	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& Ch() {
-		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("Ch");
-		return instance;
-	}
+	struct channel_analysis_data : public dependent_data_analysis<Channel, ChannelConstraintGenerator> {};
+	struct channel_analysis_var  : public dependent_data_analysis<Channel, ChannelConstraintGenerator> {};
 
-	template<typename Context>
-	const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>& ch() {
-		static const DataAnalysisType<Channel<Context>,ChannelConstraintGenerator> instance("ch");
-		return instance;
-	}
+	extern const channel_analysis_data Ch;
+	extern const channel_analysis_var  ch;
 
 
 	template<typename Context>
-	class ChannelConstraintGenerator : public BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> {
+	class ChannelConstraintGenerator : public DataFlowConstraintGenerator<channel_analysis_data, channel_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Channel<Context>,DataAnalysisType<Channel<Context>,ChannelConstraintGenerator>, Context> super;
+		typedef DataFlowConstraintGenerator<channel_analysis_data, channel_analysis_var, Context> super;
 
 		CBA& cba;
 
@@ -79,7 +73,7 @@ namespace cba {
 
 	public:
 
-		ChannelConstraintGenerator(CBA& cba) : super(cba, Ch<Context>(), ch<Context>()), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ChannelConstraintGenerator(CBA& cba) : super(cba, Ch, ch), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
@@ -95,7 +89,7 @@ namespace cba {
 			auto value = getChannelFromConstructor(literal, ctxt);
 			auto l_lit = cba.getLabel(literal);
 
-			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
+			auto C_lit = cba.getSet(Ch, l_lit, ctxt);
 			constraints.add(elem(value, C_lit));
 
 		}
@@ -112,7 +106,7 @@ namespace cba {
 			auto value = getChannelFromConstructor(call, ctxt);
 			auto l_lit = cba.getLabel(call);
 
-			auto C_lit = cba.getSet(Ch<Context>(), l_lit, ctxt);
+			auto C_lit = cba.getSet(Ch, l_lit, ctxt);
 			constraints.add(elem(value, C_lit));
 
 		}

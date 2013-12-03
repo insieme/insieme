@@ -80,7 +80,8 @@ int main(int argc, char *argv[]) {
   //printf("\n \t# THREADS INTERVAL \tTIME (secs.) \tPI \t\t\tERROR\n");
   //printf("\t %d \t%10ld \t%14.6lf \t%1.20f\t%g\n", NUMTHREADS, N, total_time, pi, PI25DT-pi);
   //printf("\n \t# THREADS INTERVAL \tPI \t\t\tERROR\n");
-  printf("N=%10ld \tPI=%1.20f\tERROR=%g\n", N, pi, PI25DT-pi);
+//  printf("N=%10ld \tPI=%1.20f\tERROR=%.3g\n", N, pi, PI25DT-pi);
+	printf("N=%10ld \tPI=1.10f\n",N,pi);
   return 0;
 }
 

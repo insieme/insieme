@@ -46,6 +46,7 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+	#include <clang/AST/TemplateBase.h>
 	#include <clang/AST/Decl.h>
 	#include <clang/AST/Expr.h>
 	#include <clang/AST/CXXInheritance.h>

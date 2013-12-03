@@ -78,6 +78,17 @@ namespace lang {
             return builder.genericType("enum", typeList, insieme::core::IntParamList());
 		}
 
+		/**
+         * Creates an enum type out of a genericType.
+         * @param gt The generic type representing the enumeration
+         * @return TypePtr that contains an enum type (e.g. enum<Colors>)
+         */
+		TypePtr getEnumType(const GenericTypePtr& gt) const {
+		    IRBuilder builder(getNodeManager());
+		    TypeList typeList;
+		    typeList.insert(typeList.end(), gt);
+            return builder.genericType("enum", typeList, insieme::core::IntParamList());
+		}
         /**
          * Retrieve the name of an enumeration.
          * @param type Enumeration type pointer

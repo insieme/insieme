@@ -848,11 +848,11 @@ namespace backend {
 				info->definition = definitions;
 
 				// member functions are declared within object definition
-				c_ast::StructTypePtr classDecl;
+				c_ast::NamedCompositeTypePtr classDecl;
 				if (isMember) {
 					const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
 					info->prototype = typeInfo.definition;
-					classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
+					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
 
 					// add requirement of implementation
 					info->prototype->addRequirement(info->definition);
@@ -1306,8 +1306,6 @@ namespace backend {
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
 				}
 
-
-
 				// convert the body code fragment and collect dependencies
 				c_ast::NodePtr code = converter.getStmtConverter().convert(context, body);
 				cBody = static_pointer_cast<c_ast::Statement>(code);
@@ -1329,8 +1327,8 @@ namespace backend {
 
 				const auto& type = typeManager.getTypeInfo(funType->getObjectType()).lValueType;
 
-				if (const auto& structType = type.isa<c_ast::StructTypePtr>()) {
-					return structType->name;
+				if (const auto& tagType = type.isa<c_ast::NamedCompositeTypePtr>()) {
+					return tagType->name;
 				}
 
 				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {
@@ -1340,7 +1338,6 @@ namespace backend {
 				assert(false && "Unsupported case!");
 				return c_ast::IdentifierPtr();
 			};
-
 
 			// modify function if required
 			if (funType->isMemberFunction()) {
@@ -1361,7 +1358,6 @@ namespace backend {
 			}
 			return res;
 		}
-
 
 		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
 		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external) {

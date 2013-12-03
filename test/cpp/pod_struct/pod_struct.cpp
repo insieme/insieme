@@ -11,20 +11,20 @@ struct P : public POD {
 int main() {
 	{
 		POD t;
-		std::cout << t.a << std::endl;
+		std::cout << "1: " << t.a << std::endl;
 	}
 	
 	/*
 	{
 		//TODO currently zero-initialized 
 		POD p = {};
-		std::cout << p.a << std::endl;
+		std::cout << "2: " << p.a << std::endl;
 	}
 	*/
 
 	{
 		POD p = {1};
-		std::cout << p.a << std::endl;
+		std::cout << "3: " << p.a << std::endl;
 	}
 
 	{
@@ -32,14 +32,14 @@ int main() {
 		//default-init
 		POD *f = new POD;
 		delete f;
-		std::cout << f->a << std::endl;
+		std::cout << "4: " << f->a << std::endl;
 	}
 
 	/*
 	{
 		//zero-init
 		POD *f = new POD();
-		std::cout << f->a << std::endl;
+		std::cout << "5: " << f->a << std::endl;
 		delete f;
 	}
 	*/
@@ -54,8 +54,8 @@ int main() {
 	{
 		int i = ((POD){10}).a;
 		std::cout << i << std::endl;
-		std::cout << ((POD){10}).a << std::endl;
-		std::cout << ((POD){10}).a << std::endl;
+		std::cout << "7: " <<  ((POD){10}).a << std::endl;
+		std::cout << "8: " << ((POD){10}).a << std::endl;
 	}
 
 	{

@@ -96,6 +96,9 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
 
+// for the console output, move somewhere 
+#include <boost/format.hpp>
+
 using namespace clang;
 using namespace insieme;
 
@@ -153,7 +156,6 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	// globals are just assigned, so do it carefully
 	if (initValue){
 		initValue = converter.getInitExpr (elementType.as<core::RefTypePtr>()->getElementType(), initValue);
-
 		// globals have a little issue with constructor initialization, backend restores right operation
 		if (isCppConstructor(initValue)) {
 			core::IRBuilder builder( initValue->getNodeManager() );
@@ -164,6 +166,66 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	return initValue;
 }
 
+
+inline unsigned countVars(const clang::DeclContext* declCtx){
+	unsigned count(0); 
+	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
+		unsigned& count; 
+		Counter(unsigned& count) :count (count) {}
+		void VisitVarDecl(const clang::VarDecl* var) {
+			if (!var->hasGlobalStorage()) { return; }
+			if (var->hasExternalStorage()) { return; }
+			if (var->isStaticLocal()) { return; }
+			count++;
+		}
+	} counter(count);
+	counter.traverseDeclCtx(declCtx);
+	return count;
+}
+inline unsigned countTypes(const clang::DeclContext* declCtx){
+	unsigned count(0); 
+	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
+		unsigned& count; 
+		Counter(unsigned& count) :count (count) {}
+		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { count ++; }
+		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
+			if (typedefDecl->getTypeForDecl()) count++;
+		}
+
+	} counter(count);
+	counter.traverseDeclCtx(declCtx);
+	return count;
+}
+inline unsigned countFunctions(const clang::DeclContext* declCtx){
+	unsigned count(0); 
+	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
+		unsigned& count; 
+		Counter(unsigned& count) :count (count) {}
+		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) { count++; }
+	} counter(count);
+	counter.traverseDeclCtx(declCtx);
+	return count;
+}
+
+/**
+ * some tool to print a progress bar, some day would be cool to have an infrastructure to do so
+ */
+inline void printProgress (unsigned pass, unsigned cur, unsigned max){
+	std::stringstream out;
+	static unsigned last = 0;
+	unsigned a = ((float)cur*100.0f) / (float)max;
+	if (a != last){
+		unsigned i;
+		for (i = 0; i< a; i++) 
+			out << "=";
+		out  << ">";
+		i++;
+		for (; i< 100; i++) 
+			out << " ";
+		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
+		last = a;
+	}
+}
 
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -193,8 +255,12 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), convSetup(setup), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
-		irTranslationUnit(mgr), used(false)
+		program(prog), 
+		convSetup(setup), 
+		pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		irTranslationUnit(mgr), used(false),
+		lastTrackableLocation(nullptr),
+		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
 	if (prog.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -220,13 +286,17 @@ tu::IRTranslationUnit Converter::convert() {
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
+
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
+	unsigned count = countTypes(declContext);
 	struct TypeVisitor : public analysis::PrunableDeclVisitor<TypeVisitor> {
 
 		Converter& converter;
-		TypeVisitor(Converter& converter) : converter(converter) {}
+		unsigned count;
+		unsigned processed;
+		TypeVisitor(Converter& converter, unsigned count) : converter(converter), count(count), processed(0) {}
 
         Converter& getConverter() {
             return converter;
@@ -238,6 +308,8 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (typeDecl->getLocStart());
 			converter.convertTypeDecl(typeDecl);
 			converter.untrackSourceLocation ();
+
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
@@ -246,17 +318,23 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (typedefDecl->getLocStart());
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
+
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
-	} typeVisitor(*this);
+	} typeVisitor(*this, count);
+
 
 	//typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 	typeVisitor.traverseDeclCtx (declContext);
 
 	// collect all global declarations
+	count = countVars(declContext);
 	struct GlobalVisitor : public analysis::PrunableDeclVisitor<GlobalVisitor> {
 
 		Converter& converter;
-		GlobalVisitor(Converter& converter) : converter(converter) {}
+		unsigned count;
+		unsigned processed;
+		GlobalVisitor(Converter& converter, unsigned count) : converter(converter), count (count), processed(0) {}
 
         Converter& getConverter() {
             return converter;
@@ -267,39 +345,28 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) { return; }
 			if (var->hasExternalStorage()) { return; }
 			if (var->isStaticLocal()) { return; }
-			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) { return; }
 
-			auto builder = converter.getIRBuilder();
-			// obtain type
 			converter.trackSourceLocation (var->getLocStart());
-			auto type = converter.convertType(var->getType().getTypePtr());
-
-			// all globals are mutable ..
-			auto elementType = type;
-			type = builder.refType(type);
-
-			auto literal = builder.literal(type, utils::buildNameForVariable(var));
-			if (insieme::utils::set::contains(converter.getThreadprivates(), var)) {
-				omp::addThreadPrivateAnnotation(literal);
-			}
-
-			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
-			// ones in lookUpVariable
-			auto initValue = convertInitForGlobal(converter, var, type);
+			converter.lookUpVariable(var);
 			converter.untrackSourceLocation();
 
-			converter.getIRTranslationUnit().addGlobal(literal, initValue);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (2, ++processed, count);
 		}
-	} varVisitor(*this);
+	} varVisitor(*this, count);
 
 	varVisitor.traverseDeclCtx(declContext);
 
 	// collect all global declarations
+	count = countFunctions(declContext);
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
 
 		Converter& converter;
 		bool externC;
-		FunctionVisitor(Converter& converter, bool Ccode) : converter(converter), externC(Ccode) {}
+		unsigned count;
+		unsigned processed;
+		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned processed=0) 
+		: converter(converter), externC(Ccode), count(count), processed(processed)
+		{}
 
         Converter& getConverter() {
             return converter;
@@ -307,22 +374,21 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
 			bool isC =  link->getLanguage () == clang::LinkageSpecDecl::lang_c;
-			FunctionVisitor vis(converter, isC);
+			FunctionVisitor vis(converter, isC, count);
 			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
 		}
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
-			//if (!funcDecl->doesThisDeclarationHaveABody()) return;
+			//std::cout << "converting function: " << funcDecl->getNameAsString() << std::endl;
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
-			if (externC) {
-				annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
-			}
+			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (3, ++processed, count);
 			return;
 		}
-	} funVisitor(*this, false);
+	} funVisitor(*this, false, count);
 
 	funVisitor.traverseDeclCtx(declContext);
 
@@ -338,6 +404,8 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+	//frontend done
+	std::cout << std::endl;
 
 //	std::cout << " ==================================== " << std::endl;
 //	std::cout << getIRTranslationUnit() << std::endl;
@@ -345,6 +413,12 @@ tu::IRTranslationUnit Converter::convert() {
 
 	// that's all
 	return irTranslationUnit;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
+	return headerTagger;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -404,12 +478,15 @@ void Converter::printDiagnosis(const clang::SourceLocation& loc) {
 	clang::Preprocessor& pp = getPreprocessor();
 	// print warnings and errors:
 	while (!warnings.empty()){
-		if (getSourceManager().isLoadedSourceLocation (loc)){
-			std::cerr << "loaded location:\n";
-			std::cerr << "\t" << *warnings.begin() << std::endl;
-		}
-		else{
-			pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *warnings.begin()) );
+		if (!getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
+			if (getSourceManager().isLoadedSourceLocation (loc)){
+				std::cerr << "\n\nloaded location:\n";
+				std::cerr << "\t" << *warnings.begin() << std::endl;
+			}
+			else{
+				std::cerr << "\n\n";
+				pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *warnings.begin()) );
+			}
 		}
 		warnings.erase(warnings.begin());
 	}
@@ -439,7 +516,6 @@ core::TypePtr Converter::tryDeref(const core::TypePtr& type) const {
 ///
 core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	VLOG(1) << "LOOKUP Variable: " << valDecl->getNameAsString();
-	if (VLOG_IS_ON(1)) valDecl->dump();
 	
 	// Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
 	auto varCacheHit = varDeclMap.find(valDecl);
@@ -447,136 +523,140 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// variable found in the map
 		return varCacheHit->second;
 	}
+	
 
-	for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->Visit(valDecl, *this);
+    bool visited = false;
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        visited = plugin->Visit(valDecl, *this);
+        if(visited) break;
     }
 
-	// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
-	// to the map for successive lookups
+    if(!visited) {
+		if (VLOG_IS_ON(1)) valDecl->dump();
 
-	// Conversion of the variable type
-	QualType&& varTy = valDecl->getType();
-	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
-	assert(irType && "type conversion for variable failed");
+		// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
+		// to the map for successive lookups
 
-	VLOG(2)	<< "clang type: " << varTy.getAsString();
-	VLOG(2)	<< "ir type:    " << irType;
+		// Conversion of the variable type
+		QualType&& varTy = valDecl->getType();
+		core::TypePtr&& irType = convertType( varTy.getTypePtr() );
+		assert(irType && "type conversion for variable failed");
 
-	//// check whenever the variable is marked to be volatile
-	if (varTy.isVolatileQualified()) {
-		irType = builder.volatileType(irType);
-	}
+		VLOG(2)	<< "clang type: " << varTy.getAsString();
+		VLOG(2)	<< "ir type:    " << irType;
 
-	bool isOclVector = !!varTy->getUnqualifiedDesugaredType()->isExtVectorType();
-	bool isGCCVector = !!varTy->getUnqualifiedDesugaredType()->isVectorType();
-	if (!(varTy.isConstQualified() ||    						// is a constant
-		 varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
- 	 	 (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
-		 ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
-		   isOclVector || isGCCVector) ))) {
-		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
-		// only exception are OpenCL vectors and gcc-vectors
-		irType = builder.refType(irType);
-	}
-	else{
-		// beware of const pointers
-		if (utils::isRefArray(irType) && varTy.isConstQualified()) {
+		//// check whenever the variable is marked to be volatile
+		if (varTy.isVolatileQualified()) {
+			irType = builder.volatileType(irType);
+		}
+
+		bool isOclVector = !!varTy->getUnqualifiedDesugaredType()->isExtVectorType();
+		bool isGCCVector = !!varTy->getUnqualifiedDesugaredType()->isVectorType();
+		if (!(varTy.isConstQualified() ||    						// is a constant
+			varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
+			(isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
+			((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
+			isOclVector || isGCCVector) ))) {
+			// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
+			// only exception are OpenCL vectors and gcc-vectors
 			irType = builder.refType(irType);
 		}
-	}
-
-	// if is a global variable, a literal will be generated, with the qualified name
-	// (two qualified names can not coexist within the same TU)
-	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
-	if (varDecl && varDecl->hasGlobalStorage()) {
-		VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
-		// we could look for it in the cache, but is fast to create a new one, and we can not get
-		// rid if the qualified name function
-		std::string name = utils::buildNameForVariable(varDecl);
-		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
-			name = varDecl->getQualifiedNameAsString();
+		else{
+			// beware of const pointers
+			if (utils::isRefArray(irType) && varTy.isConstQualified()) {
+				irType = builder.refType(irType);
+			}
 		}
 
- 		if(varDecl->isStaticLocal()) {
-			VLOG(2)	<< "         isStaticLocal";
-            if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
-                name = staticVarDeclMap.find(varDecl)->second;
-            } else {
-                std::stringstream ss;
-                //get source location and src file path
-                //hash this string to create unique variable names
-                clang::FullSourceLoc f(varDecl->getLocation(),getSourceManager());
-                std::hash<std::string> str_hash;
-                ss << name << str_hash(getSourceManager().getFileEntryForID(f.getFileID())->getName()) << staticVarCount++;
-                staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl,ss.str()));
-                name = ss.str();
-            }
-        }
+		// if is a global variable, a literal will be generated, with the qualified name
+		// (two qualified names can not coexist within the same TU)
+		const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
+		if (varDecl && varDecl->hasGlobalStorage()) {
+			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
+			// we could look for it in the cache, but is fast to create a new one, and we can not get
+			// rid if the qualified name function
+			std::string name = utils::buildNameForVariable(varDecl);
 
-		// global/static variables are always leftsides (refType) -- solves problem with const
-		if(!irType.isa<core::RefTypePtr>() ) {
-			irType = builder.refType(irType);
+			if(varDecl->isStaticLocal()) {
+				VLOG(2)	<< varDecl->getQualifiedNameAsString() << "         isStaticLocal";
+				if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
+					name = staticVarDeclMap.find(varDecl)->second;
+				} else {
+					std::stringstream ss;
+					//get source location and src file path
+					//hash this string to create unique variable names
+					clang::FullSourceLoc f(varDecl->getLocation(),getSourceManager());
+					std::hash<std::string> str_hash;
+					ss << name << str_hash(getSourceManager().getFileEntryForID(f.getFileID())->getName()) << staticVarCount++;
+					staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl,ss.str()));
+					name = ss.str();
+				}
+			}
+
+			// global/static variables are always leftsides (refType) -- solves problem with const
+			if(!irType.isa<core::RefTypePtr>() ) {
+				irType = builder.refType(irType);
+			}
+
+			if (varDecl->isStaticLocal()){
+				if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
+				irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
+			}
+
+			core::ExpressionPtr globVar =  builder.literal(name, irType);
+
+			if (varDecl->isStaticLocal()){
+				globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
+			}
+
+			// OMP threadPrivate
+			if (insieme::utils::set::contains (thread_private, varDecl)){
+				omp::addThreadPrivateAnnotation(globVar);
+			}
+
+			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
+			varDeclMap.insert( { valDecl, globVar } );
+
+			// some member statics might be missing because of defined in a template which was ignored
+			// since this is the fist time we get access to the complete type, we can define the
+			// suitable initialization
+			// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
+			if( !varDecl->isStaticLocal() && !varDecl->hasExternalStorage()) {
+				//we don't add StaticLocal and External variables to the TU.globals
+				//static local are initialized at first entry of their scope
+				//extern vars are take care of by someone else
+				
+				VLOG(2)	<< varDecl->getQualifiedNameAsString() << "         is added to TU globals";
+				auto initValue = convertInitForGlobal(*this, varDecl, irType);
+				getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
+			}
+
+		} else {
+			// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
+			// the IR variable and insert it into the map for future lookups
+			core::VariablePtr&& var = builder.variable( irType );
+			VLOG(2) << "IR variable " << var.getType()->getNodeType() << " " << var<<":"<<varDecl->getNameAsString();
+			VLOG(2) << "IR var type " << var.getType();
+
+			if ( !valDecl->getNameAsString().empty() ) {
+				// Add the C name of this variable as annotation
+				core::annotations::attachName(var,varDecl->getNameAsString());
+			}
+			
+			varDeclMap.insert( { valDecl, var } );
 		}
 
-		if (varDecl->isStaticLocal()){
-			if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
-			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
+		if(annotations::c::hasIncludeAttached(irType)) {
+			VLOG(2) << " header " << annotations::c::getAttachedInclude(irType);
 		}
-
-		core::ExpressionPtr globVar =  builder.literal(name, irType);
-		if (varDecl->isStaticLocal()){
-			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
-		}
-
-		// some member statics might be missing because of defined in a template which was ignored
-		// since this is the fist time we get access to the complete type, we can define the
-		// suitable initialization
-		// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
-		if (varDecl->isStaticDataMember() && !getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
-			VLOG(2)	<< "         is static data member";
-			auto initValue = convertInitForGlobal(*this, varDecl, irType);
-			// as we don't see them in the globalVisitor we have to take care of them here
-			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
-		}
-
-		// OMP threadPrivate
- 		if (insieme::utils::set::contains (thread_private, varDecl)){
-			omp::addThreadPrivateAnnotation(globVar);
-		}
-
-		utils::addHeaderForDecl(globVar, valDecl, program.getStdLibDirs());
-		varDeclMap.insert( { valDecl, globVar } );
-
-		for(auto plugin : this->getConversionSetup().getPlugins()) {
-			plugin->PostVisit(valDecl, *this);
-		}
-
-		return globVar;
-	}
-
-	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
-	// the IR variable and insert it into the map for future lookups
-	core::VariablePtr&& var = builder.variable( irType );
-	VLOG(2) << "IR variable " << var.getType()->getNodeType() << " " << var<<":"<<varDecl->getNameAsString();
-	VLOG(2) << "IR var type " << var.getType();
-
-	varDeclMap.insert( { valDecl, var } );
-
-	if ( !valDecl->getNameAsString().empty() ) {
-		// Add the C name of this variable as annotation
-		core::annotations::attachName(var,varDecl->getNameAsString());
-	}
-
-	if(annotations::c::hasIncludeAttached(irType)) {
-		VLOG(2) << " header " << annotations::c::getAttachedInclude(irType);
 	}
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
 		plugin->PostVisit(valDecl, *this);
 	}
 
-	return var;
+	VLOG(2) << varDeclMap[valDecl];
+	return varDeclMap[valDecl];
 }
 
 //////////////////////////////////////////////////////////////////
@@ -661,7 +741,13 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 		return mgr.getLangBasic().getRefNull();
 	}
 
-	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
+	// handle enum values
+	auto& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
+	if (enumExt.isEnumType(type)) {
+		return builder.literal(type, "0");
+	}
+
+	assert_true(core::analysis::isRefType(curType)) << "We cannot initialize any different type of non-ref - found: " << curType << "\n";
 
 	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
 
@@ -707,7 +793,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 		printDiagnosis(definition->getLocStart());
 
 		//TODO we should visit only staticlocal!!! change to isStaticLocal
-		//if (definition->hasGlobalStorage()) {
 		if (definition->isStaticLocal()) {
 			// is the declaration of a variable with global storage, this means that is an static
 			// static needs to be initialized during first execution of function.
@@ -784,27 +869,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 	core::TypePtr enumTy = convertType(enumType);
 
 	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
-	string enumConstantName;
-	if( getProgram().getInterceptor().isIntercepted(enumType) ) {
-		//TODO move name mangling into interceptor
-		auto enumDecl = enumType->getDecl();
-		string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
-		string typeName = enumDecl->getNameAsString();
-		string constantName = enumConstant->getNameAsString();
-
-		//remove typeName from qualifiedTypeName and append enumConstantName
-		size_t pos = qualifiedTypeName.find(typeName);
-		assert(pos!= std::string::npos);
-		string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
-
-		VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
-		VLOG(2) << fixedQualifiedName;
-
-		enumConstantName = fixedQualifiedName;
-	} else {
-		enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
-	}
-
+	string enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
 	return builder.literal(enumConstantName, enumTy);
 }
 
@@ -965,21 +1030,25 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
-	for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->Visit(decl, *this);
+	bool visited = false;
+    for(auto plugin : this->getConversionSetup().getPlugins()) {
+        visited = plugin->Visit(decl, *this);
+        if(visited) break;
     }
 
-	// trigger the actual conversion
-	core::TypePtr res = convertType(decl->getTypeForDecl());
+	if(!visited) {
+		// trigger the actual conversion
+		core::TypePtr res = convertType(decl->getTypeForDecl());
 
-	// frequently structs and their type definitions have the same name 
-	// in this case symbol == res and should be ignored
-	if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-		auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
-		if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
-			getIRTranslationUnit().addType(symbol, res);
+		// frequently structs and their type definitions have the same name 
+		// in this case symbol == res and should be ignored
+		if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
+			auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
+			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
+				getIRTranslationUnit().addType(symbol, res);
+			}
 		}
-	}
+    }
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, *this);
@@ -1063,7 +1132,31 @@ namespace {
 				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
-				assert(false && "indirect init not implemented");
+
+				// this supports indirect init of anonymous member structs/union
+				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
+						init = builder.literal("this", builder.refType (classType));
+
+				// build a chain of nested access
+					clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
+				clang::IndirectFieldDecl::chain_iterator end = ind->chain_end ();
+				for (; ind_it!= end; ++ind_it){
+					assert(llvm::isa<clang::FieldDecl>(*ind_it));
+					const clang::FieldDecl* field = llvm::cast<clang::FieldDecl>(*ind_it);
+					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType().getTypePtr());
+					if ((*ind_it)->getNameAsString().empty()){
+						ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
+					}
+					else{
+						ident = builder.stringValue(field->getNameAsString());
+					}
+					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(), 
+											 init, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
+				}
+
+				// finally build the assigment
+				expr = converter.convertExpr((*it)->getInit());
+				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isInClassMemberInitializer ()){
 				assert(false && "in class member not implemented");
@@ -1094,19 +1187,12 @@ namespace {
 	}
 }
 
+
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
 void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
-
-	// check whether function should be intersected
-	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
-		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
-		lambdaExprCache[funcDecl] = irExpr;
-		VLOG(2) << "\tintercepted: " << irExpr;
-		return; //irExpr;
-	}
 
 	// obtain function type
 	auto funcTy = convertFunctionType(funcDecl);
@@ -1137,24 +1223,43 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			lambdaExprCache[funcDecl] = retExpr;
 			return ; //retExpr;
 		}
+		
+		//-----------------------------------------------------------------------------------------------------
+		//     						Handle of 'special' built-in functions
+		//-----------------------------------------------------------------------------------------------------
+		if (funcDecl->getNameAsString() == "__builtin_alloca") {
+			auto retExpr = builder.literal("alloca", funcTy);
+			lambdaExprCache[funcDecl] = retExpr;
+			return; 
+		}
 
 		// handle extern functions
 		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs(), program.getUserIncludeDirs());
+		// TODO: check if we can optimize the usage of this, consumes too much time
+		getHeaderTagger().addHeaderForDecl(retExpr, funcDecl);
 		lambdaExprCache[funcDecl] = retExpr;
 		return ;// retExpr;
 	}
 
 	// ---------------  check cases in wich this declaration should not be converted -------------------
+	//  checkout this stuff: http://stackoverflow.com/questions/6496545/trivial-vs-standard-layout-vs-pod
 	if (const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)){
 		// non public constructors, or non user provided ones should not be converted
 		if (!ctorDecl->isUserProvided () )
 			return;
-		else if(ctorDecl->getAccess()==clang::AccessSpecifier::AS_private)
+		else if(ctorDecl->getParent()->isTrivial())
+			return;
+		
+	}
+	if (const clang::CXXDestructorDecl* dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)){
+		if (!dtorDecl->isUserProvided () )
+			return;
+		else if(dtorDecl->getParent()->isTrivial())
 			return;
 	}
+
 
 	// --------------- convert potential recursive function -------------
 	
@@ -1207,8 +1312,11 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << lambda << " + function declaration: " << funcDecl;
 	}
 
+	// FIXME: this might have some performance impact
 	// if we are dealing with a memberFunction, retrieve meta-info and update it
 	if (funcTy->isMember()) {
+		//FIXME create map from classType to vector<metainfo> in TU
+		//FIXME merge that map, and at programm generation merge the metainfo together
 		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
 		classType = lookupTypeDetails(classType);
 
@@ -1254,11 +1362,15 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		return pos->second;		// done
 	}
 
+	bool visited = false;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->Visit(funcDecl, *this);
+        visited = plugin->Visit(funcDecl, *this);
+        if(visited) break;
     }
 
-    convertFunctionDeclImpl(funcDecl);
+	if(!visited) {
+		convertFunctionDeclImpl(funcDecl);
+    }
 
     for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(funcDecl, *this);
@@ -1278,12 +1390,6 @@ core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* 
 	auto pos = lambdaExprCache.find(funcDecl);
 	if (pos != lambdaExprCache.end()) {
 		return pos->second;		// done
-	}
-
-	// check whether function should be intercected
-	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
-		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
-		return irExpr;
 	}
 
 	// otherwise, build a litteral (with callable type)
@@ -1362,19 +1468,28 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 
 		// desperate times call for desperate measures
+		// TODO: this might require some more work
+		// this is a blind initialization of a generic targetType we know nothing about
 		if (core::GenericTypePtr&& gen = elementType.isa<core::GenericTypePtr>()){
-			// TODO: this might require some more work
-			// this is a blind initialization of a generic targetType we know nothing about
-			vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
-			return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
-		}
 
+			// TODO: getting an empty list? how it got produced?
+			if (inits.empty()){
+				return builder.callExpr(mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(gen));
+			}
+
+			if (core::encoder::isListType(inits[0]->getType())){
+				vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
+				return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
+			}
+			else{
+				return inits[0];
+			}
+		}
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
-		std::cerr << "init expression: " << init << " : " << init->getType() << std::endl;
-
-		assert(false && "fallthrow");
+		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;
+		assert(false && "fallthrow while initializing generic typed global");
 	}
 
 	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {

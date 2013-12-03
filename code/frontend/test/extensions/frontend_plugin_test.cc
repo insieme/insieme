@@ -67,16 +67,64 @@ bool postStmtVisited = false;
 bool tuVisited = false;
 bool progVisited = false;
 
+insieme::core::NodeManager manager;
+
 class ClangTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
 public:
-    ClangTestPlugin() {
-        macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
-        injectedHeaders.push_back("injectedHeader.h");
-    }
+    ClangTestPlugin(int N=0) {
+        if(N==0) {
+            macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
+            injectedHeaders.push_back("injectedHeader.h");
+        }
+        if(N==1) {
+            macros.insert(std::make_pair<std::string,std::string>("A",""));
+            kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
+        }
+        if(N==2) {
+            using namespace insieme::frontend::pragma;
+            using namespace insieme::core;
 
-    ClangTestPlugin(bool kidnapping) {
-        macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
-        kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
+            macros.insert(std::make_pair<std::string,std::string>("A",""));
+            injectedHeaders.push_back("injectedHeader.h");
+
+            auto var_list = tok::var >> *(~tok::comma >> tok::var);
+
+            node&& x =  var_list["private"] >> kwd("num_threads") >> tok::l_paren >>
+                        tok::expr["num_threads"] >> tok::r_paren >> tok::eod;
+
+            node&& y =  kwd("auto") >> tok::eod;
+
+            //pragma that should be matched: #pragma te loop x num_threads(x*2)
+            auto a = insieme::frontend::extensions::PragmaHandler("te", "loop", x,
+                            [](MatchObject object, NodePtr node) {
+                                EXPECT_TRUE(object.getVars("private").size() && object.getExprs("num_threads").size());
+                                EXPECT_TRUE(object.getVars("private")[0]);
+                                EXPECT_TRUE(object.getExprs("num_threads")[0]);
+                                LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "15");
+                                ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
+                                return stmt;
+                            });
+            //pragma that should be matched: #pragma te scheduling auto
+            auto b = insieme::frontend::extensions::PragmaHandler("te", "scheduling", y,
+                            [](MatchObject object, NodePtr node) {
+                                EXPECT_EQ ("return 15", toString(*node));
+                                LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+                                ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
+                                return stmt;
+                            });
+            //pragma that should be matched: #pragma te barrier
+            auto c = insieme::frontend::extensions::PragmaHandler("te", "barrier", tok::eod,
+                            [](MatchObject object, NodePtr node) {
+                                LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "0");
+                                ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
+                                return stmt;
+                            });
+
+
+            pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(a));
+            pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(b));
+            pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(c));
+        }
     }
 
     //TYPE VISITOR
@@ -222,7 +270,7 @@ TEST(PreClangStage, HeaderKidnapping) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>(true);
+    job.registerFrontendPlugin<ClangTestPlugin>(1);
     //execute job
     auto program = job.execute(mgr);
   	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
@@ -252,6 +300,40 @@ TEST(PostClangStage, IRVisit) {
  	EXPECT_TRUE(tuVisited);
 }
 
+/**
+ *  This test checks if the user plugin
+ *  pragma handler is working correctly.
+ *  for normal pragmas, deattached pragmas
+ *  and stmts with multiple pragmas
+ */
+TEST(PragmaHandlerTest, PragmaTest) {
+    //initialization
+    insieme::core::NodeManager mgr;
+    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    job.registerFrontendPlugin<ClangTestPlugin>(2);
+    //execute job
+    //checks also if handling for stmts that are
+    //attached with multiple pragmas is working
+
+    //pragma one changes the return value from 42 to 15
+    //pragma two which is attached to the same stmt
+    //changes it to 12. the deattached stmt adds a return 0;
+    //stmt at the end of the compound (where the pragma actually is placed)
+    auto program = job.execute(mgr);
+    auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
+    std::stringstream code;
+    code << (*targetCode);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(code, line)) {
+        lines.push_back(line);
+    }
+    //check if our de-attached pragma was matched and handled
+    EXPECT_TRUE(lines[lines.size()-4].find("return 0;") != std::string::npos);
+    EXPECT_TRUE(lines[lines.size()-3].find("}") != std::string::npos);
+    //check if the other pragma handlers provided the correct result
+    EXPECT_TRUE(code.str().find("return 12;") != std::string::npos);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //    Decls visitor
@@ -301,7 +383,7 @@ TEST(DeclsStage, MatchVisits) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(SRC_DIR "/inputs/decls.cpp");
-	
+
 	varsPre  = varsPost = 0;
 	funcsPre = funsPost = 0;
 	typesPre = typesPost = 0;
@@ -316,9 +398,9 @@ TEST(DeclsStage, MatchVisits) {
 //	std::cout << funcsPre  <<" , " << funsPost << std::endl;
 //	std::cout << typesPre  <<" , " << typesPost<< std::endl;
 
-	EXPECT_EQ (10, varsPre);  
+	EXPECT_EQ (10, varsPre);
 	EXPECT_EQ (18, funcsPre);   // this is weird, but works
-	EXPECT_EQ (6, typesPre);	
+	EXPECT_EQ (6, typesPre);
 
 	EXPECT_EQ (varsPre, varsPost);
 	EXPECT_EQ (funcsPre, funsPost);

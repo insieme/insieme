@@ -1,0 +1,87 @@
+AMG2013
+
+General description:
+
+AMG2013 is a parallel algebraic multigrid solver for linear systems arising from
+problems on unstructured grids.  The driver provided with AMG2013 builds linear 
+systems for various 3-dimensional problems.
+AMG2013 is written in ISO-C.  It is an SPMD code which uses MPI and OpenMP 
+threading within MPI tasks. Parallelism is achieved by data decomposition. The 
+driver provided with AMG2013 achieves this decomposition by simply subdividing 
+the grid into logical P x Q x R (in 3D) chunks of equal size.
+For more information, see the amg2013.readme file in the docs directory of the
+distribution.
+%==========================================================================
+%==========================================================================
+
+Building the Code
+
+AMG2013 uses a simple Makefile system for building the code.  All compiler and
+link options are set by modifying the file 'amg2013/Makefile.include'
+appropriately.  
+
+To build the code, first modify the 'Makefile.include' file appropriately, 
+(it is recommended to use the options -DHYPRE_NO_GLOBAL_PARTITION -DHYPRE_LONG_LONG )
+then type (in the amg2013 directory)
+
+  make
+
+Other available targets are
+
+  make clean        (deletes .o files)
+  make veryclean    (deletes .o files, libraries, and executables)
+
+To configure the code to run with:
+
+1 - MPI only , add '-DTIMER_USE_MPI' to the 'INCLUDE_CFLAGS' line in the 
+   'Makefile.include' file and use a valid MPI.
+2 - OpenMP with MPI, add '-DHYPRE_USING_OPENMP -DTIMER_USE_MPI' to 
+   'INCLUDE_CFLAGS' and add vendor dependent compilation flag for OMP
+3 - to use the assumed partition (recommended for several thousand processors 
+    or more), add '-DHYPRE_NO_GLOBAL_PARTITION' 
+4 - to be able to solve problems that are larger than 2^31-1,
+    add '-DHYPRE_LONG_LONG'
+
+%==========================================================================
+%==========================================================================
+
+Figure of Merit (FOM)
+
+There are 2 FOMs printed out at the end of each run:
+system_size / setup_time
+system_size * #iterations / solve time
+
+It is sufficient to focus on the second one:
+system_size * #iterations / solve time
+
+%==========================================================================
+%==========================================================================
+
+Test Runs
+
+1. Required test runs
+
+mpirun -np <8*px*py*pz> amg2013 -pooldist 1 -r 12 12 12 -P px py pz 
+
+This will generate a problem with 82,944 variables per MPI process leading to 
+a total system size of 663,552*px*py*pz.
+
+The domain (for a 2-dimensional projection of the domain see mg_grid_labels.pdf) 
+can be scaled up by increasing the values for px, py and pz.
+ 
+Note that if one wants to experiment with different MPI/OpenMP combinations
+per node, which require a different number of MPI tasks per node,  the refinement
+factor needs to be changed accordingly to keep the same problem size per node,
+e.g. if one wants to double the number of OpenMP threads, but use half the number 
+of MPI tasks, one should use -r 12 12 24 -P px py pz/2 to keep the same overall 
+problem size.
+
+2. Optional larger problem
+
+mpirun -np <8*px*py*pz> amg2013 -pooldist 1 -r 24 24 24 -P px py pz 
+
+This will generate a problem with 663,552 variables per process leading to 
+a total system size of 5,308,416*px*py*pz and solve it using conjugate gradient
+preconditioned with AMG. If one wants to use AMG-GMRES(10) append -solver 2 .
+
+

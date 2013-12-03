@@ -137,19 +137,18 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
 
-		// of the first node after a return is a constructor, copy constructor
-		// we are returning a value.
-
-		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
-		// call a constructor on return in any case
-/*		if (retExpr->getNodeType() == core::NT_CallExpr){
+		// but we DO NOT call a constructor on return in EXCEPT if :
+		// 			- when we are actually creating a new object out of more than one paramenter, then we have no way to 
+		// 			  return that tuple to construct afterwards 
+		if (retExpr->getNodeType() == core::NT_CallExpr){
 			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
-				if(ty.isConstructor() && ctorExpr->getConstructor()->isCopyConstructor()){
+				// FIXME: build a test of return values
+				if(ty.isConstructor() && retExpr.as<core::CallExprPtr>()->getArguments().size()==2){ // two args, first is this, second the obj to copy
 					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
 				}
 			}
 		}
-*/
+
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
@@ -169,8 +168,10 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 				}
 			}
 		}
-		// this case is by value
-		retExpr = builder.deref(retExpr);
+
+		// return  by value
+		if (retExpr->getType().isa<core::RefTypePtr>()) 
+			retExpr = builder.deref(retExpr);
 	}
 	else if ((cleanups= llvm::dyn_cast<clang::ExprWithCleanups>(retStmt->getRetValue())) != NULL){
 		// do nothing, should be already OK
@@ -267,7 +268,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
     if(retStmt.size()==0){
 		convFact.trackSourceLocation(stmt->getLocStart());
         retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

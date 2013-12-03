@@ -54,9 +54,10 @@
 #include "insieme/core/annotations/naming.h"
 
 #include "insieme/frontend/extensions/cpp11_extension.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
-#include "insieme/frontend/extensions/long_long_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup.h"
 
 
 namespace insieme {
@@ -82,9 +83,10 @@ namespace frontend {
 
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
+        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptions());
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
-        registerFrontendPlugin<LongLongExtension>();
+        registerFrontendPlugin<FrontendCleanup>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {

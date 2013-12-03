@@ -47,7 +47,6 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/utils/interceptor.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -154,13 +153,33 @@ public:
 		// register 'mpi' pragma
 		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
+        // check for frontend plugins pragma handlers
+         // and add user provided pragmas to be handled
+         // by insieme
+        std::map<std::string,clang::PragmaNamespace *> pragmaNamespaces;
+        for(auto plugin : setup.getPlugins()) {
+            for(auto ph : plugin->getPragmaHandlers()) {
+                std::string name = ph->getName();
+                // if the pragma namespace is not registered already
+                // create and register it and store it in the map of pragma namespaces
+                if(pragmaNamespaces.find(name) == pragmaNamespaces.end()) {
+                    pragmaNamespaces[name] = new clang::PragmaNamespace(name);
+                    mClang.getPreprocessor().AddPragmaHandler(pragmaNamespaces[name]);
+                }
+                // add the user provided pragma handler
+                pragmaNamespaces[name]->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<pragma::Pragma>(
+                                                            mClang.getPreprocessor().getIdentifierInfo(ph->getKeyword()),
+                                                            *ph->getToken(), ph->getName(), ph->getFunction()));
+
+            }
+        }
 		//  FIXME: preprocess here or in indexer?
 		//clang::ASTConsumer emptyCons;
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 
 		parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
-		
+
 		if(mClang.getDiagnostics().hasErrorOccurred()) {
 			// errors are always fatal
 			throw ClangParsingError(mFileName);
@@ -185,20 +204,9 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	TranslationUnitImpl tranUnit;
-	const vector<path> systemHeaders;
-	const vector<path> userIncludeDirs;
-	utils::Interceptor interceptor;
 
 	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
-		tranUnit(setup, file),
-		systemHeaders(::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		userIncludeDirs(::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		//interceptor(mgr, setup.getSystemHeadersDirectories(), setup.getIncludeDirectories(), setup.getInterceptions())
-		interceptor(
-				mgr, 
-				::transform(setup.getSystemHeadersDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ),
-				::transform(setup.getIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } ), 
-				setup.getInterceptions())
+		tranUnit(setup, file)
 		{}
 };
 
@@ -211,9 +219,8 @@ const ClangCompiler& Program::getCompiler() const {
 	return pimpl->tranUnit.getCompiler();
 }
 
-utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
-const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->systemHeaders; }
-const vector<boost::filesystem::path>& Program::getUserIncludeDirs() const { return pimpl->userIncludeDirs; }
+//const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->systemHeaders; }
+//const vector<boost::filesystem::path>& Program::getUserIncludeDirs() const { return pimpl->userIncludeDirs; }
 
 bool Program::isCxx() const {
 	return getCompiler().isCXX();

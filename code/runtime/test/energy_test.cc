@@ -129,36 +129,70 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
-	rapl_energy_data data;
-	data.number_of_cpus = irt_get_num_sockets();
-	double package[data.number_of_cpus];
-	double mc[data.number_of_cpus];
-	double cores[data.number_of_cpus];
-	data.package = package;
-	data.mc = mc;
-	data.cores = cores;
 
-	rapl_energy_data data2;
-	data2.number_of_cpus = irt_get_num_sockets();
-	double package2[data2.number_of_cpus];
-	double mc2[data2.number_of_cpus];
-	double cores2[data2.number_of_cpus];
-	data2.package = package2;
-	data2.mc = mc2;
-	data2.cores = cores2;
-	
-	// take a reading, sleep for 100 ms and take another reading
-	irt_get_energy_consumption(&data);
-	irt_nanosleep(1e8);
-	irt_get_energy_consumption(&data2);
+	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
 
-	for(uint32 i = 0; i < data.number_of_cpus; ++i) {
-		EXPECT_LT(0.1, data2.package[i] - data.package[i]);
-		EXPECT_LT(data2.package[i] - data.package[i], 100);
-		EXPECT_LT(0.1, data2.cores[i] - data.cores[i]);
-		EXPECT_LT(data2.cores[i] - data.cores[i], 100);
-		EXPECT_LT(data2.mc[i] - data.mc[i], 100); // mc readings are not present on all CPUs, therefore they can be 0
-		//printf("socket %u package: %f J, cores: %f J, memory controller: %f J\n", i, data2.package[i] - data.package[i], data2.cores[i] - data.cores[i], data2.mc[i] - data.mc[i]);
+	// try each socket once
+	for(uint32 socketid = 0; socketid < irt_get_num_sockets(); ++socketid) {
+
+		uint32 workerid = 0;
+
+		// init affinity map to 0
+		for(uint32 coreid = 0; coreid < IRT_MAX_WORKERS; ++coreid)
+			policy.fixed_map[coreid] = 0;
+
+		// set affinity map to use all cores of the current socket
+		for(uint32 coreid = socketid * irt_get_num_cores_per_socket(); coreid < (socketid+1) * irt_get_num_cores_per_socket(); ++coreid) {
+			policy.fixed_map[workerid++] = coreid;
+			//printf("%d\n", policy.fixed_map[coreid]);
+		}
+
+		// set afinity
+		irt_set_global_affinity_policy(policy);
+
+		rapl_energy_data data;
+		data.number_of_cpus = irt_get_num_numa_nodes();
+		double package[data.number_of_cpus];
+		double mc[data.number_of_cpus];
+		double cores[data.number_of_cpus];
+		data.package = package;
+		data.mc = mc;
+		data.cores = cores;
+
+		rapl_energy_data data2;
+		data2.number_of_cpus = irt_get_num_numa_nodes();
+		double package2[data2.number_of_cpus];
+		double mc2[data2.number_of_cpus];
+		double cores2[data2.number_of_cpus];
+		data2.package = package2;
+		data2.mc = mc2;
+		data2.cores = cores2;
+		
+		// take a reading, sleep for 100 ms and take another reading
+		irt_get_energy_consumption(&data);
+		irt_nanosleep(1e8);
+		irt_get_energy_consumption(&data2);
+
+		// check rapl readings
+		for(uint32 i = 0; i < data.number_of_cpus; ++i) {
+			//printf("socket %u package: %f J, cores: %f J, memory controller: %f J\n", i, data2.package[i] - data.package[i], data2.cores[i] - data.cores[i], data2.mc[i] - data.mc[i]);
+			// current socket must hold valid readings
+			if(i == socketid) {
+				EXPECT_LT(0.001, data2.package[i] - data.package[i]);
+				EXPECT_LT(data2.package[i] - data.package[i], 100);
+				EXPECT_LT(0.001, data2.cores[i] - data.cores[i]);
+				EXPECT_LT(data2.cores[i] - data.cores[i], 100);
+				EXPECT_LT(data2.mc[i] - data.mc[i], 100); // mc readings are not present on all CPUs, therefore they can be 0
+			// readings for all other sockets must be zero
+			} else {
+				EXPECT_EQ(0.0, data.package[i]);
+				EXPECT_EQ(0.0, data2.package[i]);
+				EXPECT_EQ(0.0, data.cores[i]);
+				EXPECT_EQ(0.0, data2.cores[i]);
+				EXPECT_EQ(0.0, data.mc[i]);
+				EXPECT_EQ(0.0, data2.mc[i]);
+			}
+		}
 	}
 }
 
@@ -168,7 +202,10 @@ TEST(energy, dvfs) {
 }
 
 TEST(energy, rapl) {
-	uint32 wcount = irt_get_default_worker_count();
+	// since we need PAPI working for the next line, explicitely call the init function here
+	irt_initialize_papi();
+	// since we test each socket once, use all cores of a single socket
+	uint32 wcount = irt_get_num_cores_per_socket();
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 1, NULL);
 }
 

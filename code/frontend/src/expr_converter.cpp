@@ -127,6 +127,24 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
+	core::LiteralPtr size;
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+		return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
+				getSizeOfType(builder, vecTy->getElementType()));
+	}
+	// in case of ref<'a>, recurr on 'a
+	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+		return getSizeOfType(builder, refTy->getElementType());
+	}
+
+	return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
 
@@ -288,7 +306,6 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 	} else {
 		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 	}
-
 	frontend_assert(ident);
 
 	core::TypePtr membType;
@@ -709,82 +726,38 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	core::ExpressionPtr irNode;
     LOG_EXPR_CONVERSION(callExpr, irNode);
 
+	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
+	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
+
+	bool needsMPIMarkerNode = false;
+	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'> 
+	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
-
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		irNode = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>();
-		const core::FunctionTypePtr funcTy = irNode->getType().as<core::FunctionTypePtr>() ;
-		const clang::FunctionDecl* definition = NULL;
-
-		// collects the type of each argument of the expression
-		ExpressionList&& args = getFunctionArguments( callExpr, funcDecl);
-
-		// No definition has been found in any translation unit,
-		// we mark this function as extern. and return
-		if (!definition) {
-
-			//-----------------------------------------------------------------------------------------------------
-			//     						Handle of 'special' built-in functions
-			//-----------------------------------------------------------------------------------------------------
-			if (funcDecl->getNameAsString() == "__builtin_alloca" && callExpr->getNumArgs() == 1) {
-				irNode = builder.literal("alloca", funcTy);
-				return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
-			}
-
-			//build callExpr
-			irNode = builder.callExpr(funcTy->getReturnType(), irNode, args);
-
-			// In the case this is a call to MPI, attach the loc annotation, handlling of those
-			// statements will be then applied by mpi_sema
-			std::string callName = funcDecl->getNameAsString();
-			if (callName.compare(0, 4, "MPI_") == 0) {
-
-				auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
-
-				// add a marker node because multiple istances of the same MPI call must be distinct
-				irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
-
-				irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-								convertClangSrcLoc(convFact.getSourceManager(), loc.first),
-								convertClangSrcLoc(convFact.getSourceManager(), loc.second))
-				);
-			}
-
-			return irNode;
-		}
-
-		// =====  We found a definition for funcion, need to be translated ======
-
-		frontend_assert(definition) << "No definition found for function\n";
-
-		return (irNode = builder.callExpr(funcTy->getReturnType(), irNode, args));
+		//FIXME changing type to fit "free" -- with refDelete
+		funcTy = convFact.convertFunctionType(funcDecl);
+		
+		needsMPIMarkerNode = (funcDecl->getNameAsString().compare(0, 4, "MPI_") == 0);
 	}
 
+	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
+	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
+	
+	// In the case this is a call to MPI, attach the loc annotation, handlling of those
+	// statements will be then applied by mpi_sema
+	if (needsMPIMarkerNode) {
+		auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
 
-	// if there callee is not a fuctionDecl we need to use other method.
-	// it might be a pointer to function.
-	if ( callExpr->getCallee() ) {
-		core::ExpressionPtr funcPtr = convFact.tryDeref(Visit(callExpr->getCallee()));
-		core::TypePtr subTy = funcPtr->getType();
+		// add a marker node because multiple istances of the same MPI call must be distinct
+		irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
-		if (subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) {
-
-			subTy = subTy.as<core::SingleElementTypePtr>()->getElementType();
-			funcPtr = builder.callExpr(subTy, builder.getLangBasic().getArraySubscript1D(), funcPtr, builder.uintLit(0));
-
-		}
-
-		frontend_assert( subTy->getNodeType() == core::NT_FunctionType) << "Using () operator on a non function object\n";
-
-		auto funcTy = subTy.as<core::FunctionTypePtr>();
-
-		ExpressionList&& args = getFunctionArguments(callExpr, funcTy);
-		irNode = builder.callExpr(funcPtr, args);
-		return irNode;
+		irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+						convertClangSrcLoc(convFact.getSourceManager(), loc.first),
+						convertClangSrcLoc(convFact.getSourceManager(), loc.second))
+		);
 	}
 
-	frontend_assert( false ) << "Call expression not referring a function\n";
-	return core::ExpressionPtr();
+	return irNode;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -841,20 +814,23 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 	core::ExpressionPtr irNode;
     LOG_EXPR_CONVERSION(expr, irNode);
 
-	switch (expr->getKind()) {
-	case clang::UETT_SizeOf: {
-		core::TypePtr&& type = expr->isArgumentType() ?
+	core::TypePtr&& type = expr->isArgumentType() ?
 		convFact.convertType( expr->getArgumentType().getTypePtr() ) :
 		convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-		return (irNode = getSizeOfType(builder, type));
-	}
-	case clang::UETT_AlignOf:
-	case clang::UETT_VecStep:
-	default:
-	frontend_assert(false)<< "Kind of expressions not handled\n";
-	return core::ExpressionPtr();
-}
 
+	switch (expr->getKind()) {
+		case clang::UETT_SizeOf: {
+			return (irNode = getSizeOfType(builder, type));
+		}
+		case clang::UETT_AlignOf:{
+			return (irNode = getAlignOfType(builder, type));
+		}
+		case clang::UETT_VecStep:{
+			frontend_assert(false)<< "vecStep Kind of expressions not handled\n";
+		 }
+	}
+
+	return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -865,7 +841,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(convFact, builder, base, membExpr);
-
 	LOG_EXPR_CONVERSION(membExpr, retIr);
 	return retIr;
 }
@@ -880,6 +855,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
+
+	frontend_assert(lhs) << "no left side could be translated";
+	frontend_assert(rhs) << "no right side could be translated";
+	frontend_assert(exprTy) << "no type for expression";
+
 
 	// handle of volatile variables
 	if (binOp->getOpcode() != clang::BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
@@ -950,7 +930,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 		// Capture pointer arithmetics
 		// 	Base op must be either a + or a -
-		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n";
+		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n" << "baseOp used: " << binOp->getOpcodeStr().str() << "\n";
 
 		// unpack long-long
 		if (core::analysis::isLongLong(rhs->getType()))
@@ -1128,7 +1108,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-				// check if we can use the type of the first argument as retun type
+				// check if we can use the type of the first argument as return type
 				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
 					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				} else { // let deduce it otherwise
@@ -1177,18 +1157,20 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		}
 
 
+		//pointer arithmetic only allowed for additive operation 
+		if(baseOp == clang::BO_Add || baseOp == clang::BO_Sub) {
+			// This is the required pointer arithmetic in the case we deal with pointers
+			if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
+				rhs = doPointerArithmetic();
+				return (retIr = rhs);
+			}
 
-		// This is the required pointer arithmetic in the case we deal with pointers
-		if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
-			rhs = doPointerArithmetic();
-			return (retIr = rhs);
-		}
-
-		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
-		if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
-			std::swap(rhs, lhs);
-			rhs = doPointerArithmetic();
-			return (retIr = rhs);
+			// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
+			if (!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
+				std::swap(rhs, lhs);
+				rhs = doPointerArithmetic();
+				return (retIr = rhs);
+			}
 		}
 
 		// especial case to deal with the pointer distance operation
@@ -1346,7 +1328,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	case clang::UO_Plus:  return retIr = subExpr;
 	// -a
 	case clang::UO_Minus:
-		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
+				&& !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDMinus(),subExpr));
 		}
@@ -1354,7 +1337,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
 	// ~a
 	case clang::UO_Not:
-		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()) {
+		if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
+				&& !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			return (retIr = builder.callExpr(ext.getSIMDNot(),subExpr));
 		}
@@ -1556,77 +1540,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	return (retIr = builder.callExpr( opType, op, base, idx) );
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						EXT VECTOR ELEMENT EXPRESSION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr Converter::ExprConverter::VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr) {
-	core::ExpressionPtr&& base = Visit( vecElemExpr->getBase() );
-
-	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(vecElemExpr, retIr);
-
-	llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
-
-	core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-	unsigned int pos = 0u;
-
-	//translate OpenCL accessor string to index
-	if ( accessor == "x" ) pos = 0u;
-	else if ( accessor == "y" ) pos = 1u;
-	else if ( accessor == "z" ) pos = 2u;
-	else if ( accessor == "w" ) pos = 3u;
-	else if ( (accessor.front() == 's' || accessor.front() == 'S') && accessor.size() == 2) {
-		// the input string is in a form sXXX
-		// we skip the s and return the value to get the number
-		llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
-		std::string posStr = numStr;
-
-		if(posStr.at(0) <= '9')
-		pos = posStr.at(0) - '0';
-		else if(posStr.at(0) <= 'F')
-		pos = (10 + posStr.at(0) - 'A');//convert A .. E to 10 .. 15
-		else if(posStr.at(0) <= 'e')
-		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
-		else
-		frontend_assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
-	} else if ( accessor.size() <= 16 ) { // opencl vector permutation
-		vector<core::ExpressionPtr> args;
-
-		// expression using x, y, z and w
-		auto acc = accessor.begin();
-		if(*acc == 'S' || *acc == 's') { // expression using s0 .. sE
-			++acc;// skip the s
-			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
-				if(*I <= '9')
-				pos = *I - '0';
-				else if(*I <= 'E')
-				pos = (10 + (*I)-'A'); //convert A .. E to 10 .. 15
-				else if(*I <= 'e')
-				pos = (10 + (*I)-'a');//convert a .. e to 10 .. 15
-				else
-				frontend_assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
-
-				args.push_back(builder.uintLit(pos));
-			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
-		} else {
-			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
-				args.push_back(builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
-			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
-		}
-
-	} else {
-		frontend_assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
-	}
-
-	// The type of the index is always uint<4>
-	core::ExpressionPtr&& idx = builder.uintLit(pos);
-	// if the type of the vector is a refType, we deref it
-	base = convFact.tryDeref(base);
-
-	return (retIr = builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx));
-}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
@@ -1653,8 +1566,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	}
 
 	if ( const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl()) ) {
-		retIr = convFact.lookUpVariable( varDecl );
-		return retIr;
+		return (retIr = convFact.lookUpVariable( varDecl ));
 	}
 
 	if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl()) ) {
@@ -1800,10 +1712,10 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		if(retIr)
 			break;
     }
+
     if(!retIr){
 		convFact.trackSourceLocation(expr->getLocStart());
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
-		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

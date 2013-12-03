@@ -55,12 +55,6 @@ namespace analysis {
 	class GlobalVarCollector;
 }
 
-namespace utils {
-	class Interceptor;
-	class Indexer;
-	class FunctionDependencyGraph;
-}
-
 namespace pragma {
 class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
@@ -127,11 +121,6 @@ public:
 	~Program();
 
 	const ClangCompiler& getCompiler() const;
-
-	utils::Interceptor& getInterceptor() const;
-
-	const vector<boost::filesystem::path>& getStdLibDirs() const;
-	const vector<boost::filesystem::path>& getUserIncludeDirs() const;
 
 	bool isCxx() const;
 

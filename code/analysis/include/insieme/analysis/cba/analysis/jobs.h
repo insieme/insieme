@@ -51,29 +51,23 @@ namespace cba {
 
 	template<typename Context> class JobConstraintGenerator;
 
-	template<typename Context>
-	const DataAnalysisType<Job<Context>,JobConstraintGenerator>& Jobs() {
-		static const DataAnalysisType<Job<Context>,JobConstraintGenerator> instance("Jobs");
-		return instance;
-	}
+	struct job_analysis_data : public dependent_data_analysis<Job, JobConstraintGenerator> {};
+	struct job_analysis_var  : public dependent_data_analysis<Job, JobConstraintGenerator> {};
 
-	template<typename Context>
-	const DataAnalysisType<Job<Context>,JobConstraintGenerator>& jobs() {
-		static const DataAnalysisType<Job<Context>,JobConstraintGenerator> instance("jobs");
-		return instance;
-	}
+	extern const job_analysis_data Jobs;
+	extern const job_analysis_var  jobs;
 
 
 	template<typename Context>
-	class JobConstraintGenerator : public BasicDataFlowConstraintGenerator<Job<Context>,DataAnalysisType<Job<Context>,JobConstraintGenerator>, Context> {
+	class JobConstraintGenerator : public DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Job<Context>,DataAnalysisType<Job<Context>,JobConstraintGenerator>, Context> super;
+		typedef DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> super;
 
 		CBA& cba;
 
 	public:
 
-		JobConstraintGenerator(CBA& cba) : super(cba, Jobs<Context>(), jobs<Context>()), cba(cba) { };
+		JobConstraintGenerator(CBA& cba) : super(cba, Jobs, jobs), cba(cba) { };
 
 		using super::elem;
 
@@ -81,7 +75,7 @@ namespace cba {
 
 			// this expression is creating a job
 			auto value = getJobFromConstructor(job, ctxt);
-			auto J_res = cba.getSet(Jobs<Context>(), job, ctxt);
+			auto J_res = cba.getSet(Jobs, job, ctxt);
 
 			// add constraint fixing this job
 			constraints.add(elem(value, J_res));

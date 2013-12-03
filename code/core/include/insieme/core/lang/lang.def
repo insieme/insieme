@@ -404,6 +404,9 @@ LITERAL(RefDeref,  		"ref.deref",  			"(src<'a>) -> 'a")
 LITERAL(SrcToRef,		"src.to.ref",			"(src<'a>) -> ref<'a>")
 LITERAL(SinkToRef,		"sink.to.ref",			"(sink<'a>) -> ref<'a>")
 
+LITERAL(RefToInt,		"ref.to.int",			"(ref<'a>) -> uint<8>")
+LITERAL(IntToRef,		"int.to.ref",			"(uint<8>, type<'a>) -> ref<'a>")
+
 DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
 DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap); r = v; return r; }")
 DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
@@ -447,7 +450,6 @@ OPERATION(Gen, Mod, 	 "gen.mod", "('a,'a)->'a")
 OPERATION(Gen, And, 	 "gen.and", "('a,'a)->'a")
 OPERATION(Gen, Or, 	 	 "gen.or",  "('a,'a)->'a")
 OPERATION(Gen, Xor, 	 "gen.xor", "('a,'a)->'a")
-
 OPERATION(Gen, LShift, 	 "gen.lshift", "('a,'a)->'a")
 OPERATION(Gen, RShift, 	 "gen.rshift", "('a,'a)->'a")
 
@@ -458,8 +460,11 @@ OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
 OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
 OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 
+// generic unary ops
+OPERATION(Gen, Not,      "gen.not",    "('a) -> 'a")
+
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
-GROUP(GenBitwiseOp, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
+GROUP(GenBitwiseOp, GenNot, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
 GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp )
 
