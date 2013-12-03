@@ -70,6 +70,8 @@ void irt_log_init() {
 	}
 	irt_g_log_file = fopen(buffer, "w+");
 
+	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create insieme_runtime_log");
+
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
 
 	irt_log_comment("Compile-time settings:");
@@ -132,6 +134,8 @@ void irt_log_setting_u(const char* name, uint64 value) {
 }
 
 void irt_log(const char* format, ...) {
+	if(irt_g_log_file == NULL)
+		return;
     va_list args;
     va_start(args, format);
     vfprintf(irt_g_log_file, format, args);
@@ -140,6 +144,8 @@ void irt_log(const char* format, ...) {
 }
 
 void irt_log_cleanup() {
+	if(irt_g_log_file == NULL)
+		return;
 	irt_log_setting_u("irt_g_time_ticks_per_sec", irt_g_time_ticks_per_sec);
 	irt_log("# Runtime logging completed on %s\n", _irt_time_string());
 	fclose(irt_g_log_file);
