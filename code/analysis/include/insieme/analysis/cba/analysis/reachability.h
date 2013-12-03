@@ -78,9 +78,9 @@ namespace cba {
 	public:
 
 		ReachableInConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout, *this), root(cba.getRoot()), initSet(false), cba(cba) { }
+			: super(cba, Rin, Rout), root(cba.getRoot()), initSet(false), cba(cba) { }
 
-		virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+		void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
 			// make sure root is reachable
 			if (!initSet && node == root && ctxt == Context()) {
@@ -92,38 +92,6 @@ namespace cba {
 
 			// and all the other constraints
 			super::visit(node, ctxt, constraints);
-		}
-
-		template<typename SetTypeA, typename SetTypeB>
-		void connectStateSets (
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
-
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
-			constraints.add(subset(A, B));
-		}
-
-		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf (
-					const E& value, const TypedValueID<L>& set,
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
-
-			if (ac != bc) {
-				auto pre = cba.getSet(pred, bc.callContext.back());
-				auto A = cba.getSet(a, al, ac);
-				auto B = cba.getSet(b, bl, bc);
-				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
-			} else {
-				auto A = cba.getSet(a, al, ac);
-				auto B = cba.getSet(b, bl, bc);
-				constraints.add(subsetIf(value, set, A, B));
-			}
 		}
 
 	};
@@ -138,22 +106,13 @@ namespace cba {
 	public:
 
 		ReachableOutConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout, *this), cba(cba) { }
+			: super(cba, Rin, Rout), cba(cba) { }
 
-		template<typename SetTypeA, typename SetTypeB>
-		void connectStateSets (
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
-
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
-			constraints.add(subset(A, B));
-		}
-
+		/**
+		 * Here we need a special handling (not considering reachability) since it is what we try to compute.
+		 */
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf (
+		void connectStateSetsIfImpl (
 					const E& value, const TypedValueID<L>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,

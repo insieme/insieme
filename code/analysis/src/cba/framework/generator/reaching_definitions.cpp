@@ -34,33 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/constraint/solver.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
-	using namespace utils::constraint;
-
-	// forward declarations
-	typedef int Label;										// the type used to label code locations
-	typedef int Variable;									// the type used to identify variables
-
-	class CBA;												// the main analysis entity
-
-
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintGenerator;
-
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicInConstraintGenerator;
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicOutConstraintGenerator;
-
-
-	template<typename Context, typename AnalysisType> class ImperativeInStateConstraintGenerator;
-	template<typename Context, typename AnalysisType> class ImperativeOutStateConstraintGenerator;
+	const reaching_def_in_analysis  RDin  = registerAnalysis< reaching_def_in_analysis>( "RDin");
+	const reaching_def_out_analysis RDout = registerAnalysis<reaching_def_out_analysis>("RDout");
 
 } // end namespace cba
 } // end namespace analysis

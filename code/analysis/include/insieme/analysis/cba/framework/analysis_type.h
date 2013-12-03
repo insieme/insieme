@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <typeindex>
 #include <string>
 #include <functional>
 
@@ -43,6 +44,7 @@
 
 #include "insieme/utils/constraint/lattice.h"
 
+#include "insieme/analysis/cba/framework/_forward_decl.h"
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
 
@@ -72,18 +74,24 @@ namespace cba {
 		typedef typename A::template generator<C>::type type;
 	};
 
+	template<typename A, typename C = default_config> struct params {
+		typedef typename A::template params<C>::type type;
+	};
+
 
 	// analysis utilities
 
-	const string& getAnalysisName(std::type_index index);
+	typedef std::type_index AnalysisType;
+
+	const string& getAnalysisName(AnalysisType index);
 
 	template<typename T>
 	const string& getAnalysisName() {
-		return getAnalysisName(std::type_index(typeid(T)));
+		return getAnalysisName(AnalysisType(typeid(T)));
 	}
 
 	namespace detail {
-		void registerAnalysisName(std::type_index index, const string& name);
+		void registerAnalysisName(AnalysisType index, const string& name);
 	}
 
 
@@ -93,11 +101,13 @@ namespace cba {
 
 	template<
 		typename L,
-		template<typename C> class G
+		template<typename C> class G,
+		typename ... Params
 	>
 	struct analysis_base {
 		template<typename C> struct lattice   { typedef L type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+		template<typename C> struct params    { typedef std::tuple<Params...> type; };
 	};
 
 
@@ -107,7 +117,9 @@ namespace cba {
 		typename E,
 		template<typename C> class G
 	>
-	struct set_analysis : public analysis_base<utils::constraint::SetLattice<E>, G> {};
+	struct set_analysis : public analysis_base<utils::constraint::SetLattice<E>, G> {
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
+	};
 
 
 	// -- data analysis --
@@ -117,10 +129,23 @@ namespace cba {
 		template<typename C> class G,
 		template<typename L> class StructureLattice = FirstOrderStructureLattice
 	>
-	struct data_analysis : public analysis_base<StructureLattice<utils::constraint::SetLattice<E>>, G> {};
+	struct data_analysis : public analysis_base<StructureLattice<utils::constraint::SetLattice<E>>, G> {
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
+	};
 
 
 	// -- context-sensitive analysis results --
+
+	template<
+		template<typename C> class E,
+		template<typename C> class G
+	>
+	struct dependent_set_analysis {
+		template<typename C> struct lattice   { typedef utils::constraint::SetLattice<E<typename C::context_type>> type; };
+		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
+	};
+
 
 	template<
 		template<typename C> class E,
@@ -130,18 +155,22 @@ namespace cba {
 	struct dependent_data_analysis {
 		template<typename C> struct lattice   { typedef StructureLattice<utils::constraint::SetLattice<E<typename C::context_type>>> type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
 	};
 
 
 	// -- location state analysis --
 
+	template<typename C> class Location;
+
 	template<
-		typename BaseAnalysis,							// the analysis this analysis is extending
-		template<typename C, typename A> class G		// the location state generator class (has additional parameter)
+		template<typename C> class E,
+		template<typename C> class G
 	>
-	struct location_state_analysis {
-		template<typename C> struct lattice   { typedef typename cba::lattice<BaseAnalysis,C>::type type; };
-		template<typename C> struct generator { typedef G<typename C::context_type, BaseAnalysis> type; };
+	struct location_based_set_analysis {
+		template<typename C> struct lattice   { typedef utils::constraint::SetLattice<E<typename C::context_type>> type; };
+		template<typename C> struct generator { typedef G<typename C::context_type> type; };
+		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type, Location<typename C::context_type>> type; };
 	};
 
 
@@ -150,102 +179,6 @@ namespace cba {
 		detail::registerAnalysisName(typeid(A), name);
 		return A();
 	}
-
-
-	// ----------- analysis types ------------------
-
-	/**
-	 * An abstract base class for analysis types. Instances are expected
-	 * to be immutable global constants.
-	 */
-	class AnalysisTypeBase : public boost::noncopyable, public utils::Printable {
-
-		/**
-		 * The name of this set for printing and debugging issues.
-		 */
-		const string name;
-
-	protected:
-
-		AnalysisTypeBase(const string& name) : name(name) {}
-
-	public:
-
-		const string& getName() const {
-			return name;
-		}
-
-		bool operator==(const AnalysisTypeBase& other) const {
-			// the identity of a analysis type is fixed by its address
-			return this == &other;
-		}
-
-		bool operator!=(const AnalysisTypeBase& other) const {
-			return !(*this == other);
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			return out << name;
-		}
-
-	};
-
-	// all set types are global constants => plain pointers can be used safely
-	typedef const AnalysisTypeBase* AnalysisTypePtr;
-
-	/**
-	 * A special type of analysis type fixing the value type of the analysis results and
-	 * class definitions implementing analysis.
-	 *
-	 * @tparam L the lattice forming the result of this analysis
-	 * @tparam G the constraint generator implementation implementing the represented analysis.
-	 */
-	template<
-		typename L,
-		template<typename C> class G
-	>
-	struct AnalysisType : public AnalysisTypeBase, public analysis_base<L,G> {
-
-		// expose member types
-		typedef L lattice_type;
-		template<typename T> struct resolver_type { typedef G<T> type; };
-
-		/**
-		 * A simple constructor just forwarding the name of the resulting set.
-		 */
-		AnalysisType(const string& name) : AnalysisTypeBase(name) {}
-
-	};
-
-
-	template<
-		typename E,
-		template<typename C> class G,
-		template<typename L> class StructureLattice = FirstOrderStructureLattice
-	>
-	struct DataAnalysisType : public AnalysisType<StructureLattice<utils::constraint::SetLattice<E>>, G> {
-
-		/**
-		 * A simple constructor just forwarding the name of the resulting set.
-		 */
-		DataAnalysisType(const string& name) : AnalysisType<StructureLattice<utils::constraint::SetLattice<E>>, G>(name) {}
-
-	};
-
-	// TODO: remove this set based analysis type once it is no longer needed (just introduced for
-	//			refactoring)
-	template<
-		typename E,
-		template<typename C> class G
-	>
-	struct SetBasedAnalysisType : public AnalysisType<utils::constraint::SetLattice<E>, G> {
-
-		/**
-		 * A simple constructor just forwarding the name of the resulting set.
-		 */
-		SetBasedAnalysisType(const string& name) : AnalysisType<utils::constraint::SetLattice<E>,G>(name) {}
-
-	};
 
 
 } // end namespace cba

@@ -479,6 +479,78 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, ExternalLiterals) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		map<string,NodePtr> symbols;
+		symbols["e"] = builder.literal("e", builder.parseType("ref<int<4>>"));
+
+		auto code = builder.parseStmt(
+				"{"
+				"	*e;"
+				"	e = 1;"
+				"	*e;"
+				"	e = 2;"
+				"	*e;"
+				"	e = 3;"
+				"	*e;"
+				"}",
+				symbols
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(code);
+
+		CompoundStmtAddress root(code);
+		CBA analysis(root);
+
+		// check whether globals are propery handled
+		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	// Known Bug: Variables can not be external - TODO: let external references reference two shared, common location (they may alias each other)!
+
+//	TEST(CBA, ExternalVariables) {
+//
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		map<string,NodePtr> symbols;
+//		symbols["e"] = builder.variable(builder.parseType("ref<int<4>>"), 1);
+//
+//		auto code = builder.parseStmt(
+//				"{"
+//				"	*e;"
+//				"	e = 1;"
+//				"	*e;"
+//				"	e = 2;"
+//				"	*e;"
+//				"	e = 3;"
+//				"	*e;"
+//				"}",
+//				symbols
+//		).as<CompoundStmtPtr>();
+//
+//		EXPECT_TRUE(code);
+//
+//		CompoundStmtAddress root(code);
+//		CBA analysis(root);
+//
+//		// check whether globals are propery handled
+//		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
+//
+//		createDotDump(analysis);
+//	}
+
 	TEST(CBA, IfStmt1) {
 
 		NodeManager mgr;

@@ -46,10 +46,6 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// forward declarations of the analysis type token
-	template<typename L, template<typename C> class G>
-	struct AnalysisType;
-
 	/**
 	 * The main facade function for utilizing the constraint-based analysis framework (CBA).
 	 *

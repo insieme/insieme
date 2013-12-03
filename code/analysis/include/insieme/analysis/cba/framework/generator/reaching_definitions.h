@@ -38,7 +38,7 @@
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/definition.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+#include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -49,137 +49,94 @@ namespace cba {
 
 	// ----------------- jobs ---------------
 
-	template<typename C> class ReachingDefsInConstraintGenerator;
-	template<typename C> class ReachingDefsOutConstraintGenerator;
+	template<typename Context> class ReachingDefInConstraintGenerator;
+	template<typename Context> class ReachingDefOutConstraintGenerator;
+
+	struct reaching_def_in_analysis  : public location_based_set_analysis<Definition,  ReachingDefInConstraintGenerator> {};
+	struct reaching_def_out_analysis : public location_based_set_analysis<Definition, ReachingDefOutConstraintGenerator> {};
+
+	extern const reaching_def_in_analysis  RDin;
+	extern const reaching_def_out_analysis RDout;
 
 	template<typename Context>
-	const SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>& ReachingDefIn() {
-		static const SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator> instance("ReachingDefIn");
-		return instance;
-	}
-
-	template<typename Context>
-	const SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>& ReachingDefOut() {
-		static const SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator> instance("ReachingDefOut");
-		return instance;
-	}
-
-	template<typename Context>
-	class ReachingDefsInConstraintGenerator
-			: public BasicInConstraintGenerator<
-						SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
-						SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
-						ReachingDefsInConstraintGenerator<Context>,
-						Context
-					> {
+	class ReachingDefInConstraintGenerator
+		: public BasicInConstraintGenerator<
+		  	  reaching_def_in_analysis,
+		  	  reaching_def_out_analysis,
+		  	  ReachingDefInConstraintGenerator<Context>,
+		  	  Context,
+		  	  Location<Context>
+		  > {
 
 		typedef BasicInConstraintGenerator<
-			SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
-			SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
-			ReachingDefsInConstraintGenerator<Context>, Context
-		> super;
-
-		// the location this constraint generator is operating on
-		Location<Context> loc;
+			  	  reaching_def_in_analysis,
+			  	  reaching_def_out_analysis,
+			  	  ReachingDefInConstraintGenerator<Context>,
+			  	  Context,
+			  	  Location<Context>
+			 > super;
 
 		CBA& cba;
 
 	public:
 
-		ReachingDefsInConstraintGenerator(CBA& cba, const Location<Context>& loc)
-			: super(cba, ReachingDefIn<Context>(), ReachingDefOut<Context>(), *this), cba(cba), loc(loc) { }
-
-		virtual ~ReachingDefsInConstraintGenerator() {};
-
-		template<typename SetTypeA, typename SetTypeB>
-		void connectStateSets (
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
-
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
-			constraints.add(subset(A, B));
-		}
-
-		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf (
-					const E& value, const TypedValueID<L>& set,
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
-
-			if (ac != bc) {
-				auto pre = cba.getSet(pred, bc.callContext.back());
-				auto A = cba.getSet(a, al, ac);
-				auto B = cba.getSet(b, bl, bc);
-				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
-			} else {
-				auto A = cba.getSet(a, al, ac);
-				auto B = cba.getSet(b, bl, bc);
-				constraints.add(subsetIf(value, set, A, B));
-			}
-		}
+		ReachingDefInConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
 
 	};
 
 	template<typename Context>
-	class ReachingDefsOutConstraintGenerator
-			: public BasicOutConstraintGenerator<
-			  	  	  	SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
-						SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
-						ReachingDefsOutConstraintGenerator<Context>,
-			  	  	  	Context
-			  	     > {
+	class ReachingDefOutConstraintGenerator
+		: public BasicOutConstraintGenerator<
+		  	  reaching_def_in_analysis,
+		  	  reaching_def_out_analysis,
+		  	  ReachingDefOutConstraintGenerator<Context>,
+		  	  Context,
+		  	  Location<Context>
+		  > {
 
 		typedef BasicOutConstraintGenerator<
-			SetBasedAnalysisType<Definition<Context>,ReachingDefsInConstraintGenerator>,
-			SetBasedAnalysisType<Definition<Context>,ReachingDefsOutConstraintGenerator>,
-			ReachingDefsOutConstraintGenerator<Context>,
-			Context
-		> super;
+				  reaching_def_in_analysis,
+				  reaching_def_out_analysis,
+				  ReachingDefOutConstraintGenerator<Context>,
+				  Context,
+				  Location<Context>
+			 > super;
 
-		// the location this constraint generator is operating on
-		Location<Context> loc;
 
 		CBA& cba;
 
 	public:
 
-		ReachingDefsOutConstraintGenerator(CBA& cba, const Location<Context>& loc)
-			: super(cba, ReachingDefIn<Context>(), ReachingDefOut<Context>(), *this), cba(cba), loc(loc) { }
+		ReachingDefOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
 
-		virtual ~ReachingDefsOutConstraintGenerator() {};
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			const auto& base = call->getNodeManager().getLangBasic();
 
-		template<typename SetTypeA, typename SetTypeB>
-		void connectStateSets (
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
+			// one special case: assignments
+			auto fun = call.as<CallExprPtr>()->getFunctionExpr();
+			if (!base.isRefAssign(fun)) {
 
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
-			constraints.add(subset(A, B));
-		}
+				// use default treatment
+				super::visitCallExpr(call, ctxt, loc, constraints);
 
-		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf (
-					const E& value, const TypedValueID<L>& set,
-					const SetTypeA& a, Label al, const Context& ac,
-					const SetTypeB& b, Label bl, const Context& bc,
-					Constraints& constraints
-				) const {
+				// done
+				return;
+			}
 
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
-			constraints.add(subsetIf(value, set, A, B));
+			// TODO: check referenced location
+			//		- if not referenced => out = in
+			//		- if only reference => in definitions are not forwarded
+			//		- if on of many => in definition + local definition
+
+
+			auto value = Definition<Context>(call, ctxt);
+			auto RD_out = cba.getSet(RDout, call, ctxt, loc);
+
+			constraints.add(elem(value, RD_out));
+
 		}
 
 	};
-
 
 } // end namespace cba
 } // end namespace analysis

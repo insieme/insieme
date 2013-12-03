@@ -34,33 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/constraint/solver.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/analysis/cba/framework/analysis_type.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using namespace core;
-	using namespace utils::constraint;
 
-	// forward declarations
-	typedef int Label;										// the type used to label code locations
-	typedef int Variable;									// the type used to identify variables
+	template<typename C> class DummyGenerator {};
 
-	class CBA;												// the main analysis entity
+	#define EXPECT_EQ_TYPE(_T1,_T2) \
+		EXPECT_EQ(typeid(_T1), typeid(_T2)) << typeid(_T1).name() << " vs. " << typeid(_T2).name();
 
+	TEST(CBA_Analysis_Types, BasicProperties) {
 
-	template<typename A, typename B, typename C> class BasicDataFlowConstraintGenerator;
+		// this mostly checks whether type traits are working - if it compiles it is fine
 
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicInConstraintGenerator;
-	template<typename A, typename B, typename C, typename D, typename ... E> class BasicOutConstraintGenerator;
+		// check the lattice
+		typedef typename lattice<set_analysis<int, DummyGenerator>, default_config>::type::value_type int_set;
+		EXPECT_EQ_TYPE(std::set<int>, int_set);
 
+		// check the generator
+		typedef typename generator<set_analysis<int, DummyGenerator>, default_config>::type dummy_gen;
+		EXPECT_EQ_TYPE(DummyGenerator<DefaultContext>, dummy_gen);
 
-	template<typename Context, typename AnalysisType> class ImperativeInStateConstraintGenerator;
-	template<typename Context, typename AnalysisType> class ImperativeOutStateConstraintGenerator;
+		// check the parameters
+		typedef typename params<set_analysis<int, DummyGenerator>, default_config>::type param_type;
+		typedef std::tuple<AnalysisType,Label,DefaultContext> should_param_type;
+		EXPECT_EQ_TYPE(should_param_type, param_type);
+
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

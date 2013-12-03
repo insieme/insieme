@@ -631,10 +631,10 @@ namespace cba {
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
 						auto R_trg = this->cba.getSet(R, l_trg, ctxt);
-						for(auto loc : this->cba.template getLocations<Context>()) {
+						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
+							auto S_in = this->cba.getLocationDataSet(Sin, l_call, ctxt, loc, A);
 							constraints.add(read(loc, R_trg, S_in, A_call));
 						}
 					}
