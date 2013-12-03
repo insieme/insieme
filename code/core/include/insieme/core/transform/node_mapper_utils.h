@@ -179,23 +179,30 @@ public:
 
 };
 
-template<typename Lambda>
+template<typename Lambda, typename Filter>
 class CachedLambdaNodeMapping : public CachedNodeMapping {
 	Lambda lambda;
+	Filter filter;
 	bool mapTypes;
 public:
-	CachedLambdaNodeMapping(Lambda lambda, bool mapTypes)
+	CachedLambdaNodeMapping(const Lambda& lambda, const Filter& filter, bool mapTypes)
 		: lambda(lambda), mapTypes(mapTypes) { };
 
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		if (!mapTypes && ptr->getNodeCategory() == NC_Type) return ptr;
+		if (!filter(ptr)) return ptr;
 		return lambda(ptr->substitute(ptr->getNodeManager(), *this));
 	}
 };
 
+template<typename Lambda, typename Filter>
+CachedLambdaNodeMapping<Lambda, Filter> makeCachedLambdaMapper(const Lambda& lambda, const Filter& filter, bool mapTypes = false) {
+	return CachedLambdaNodeMapping<Lambda,Filter>(lambda, filter, mapTypes);
+}
+
 template<typename Lambda>
-CachedLambdaNodeMapping<Lambda> makeCachedLambdaMapper(Lambda lambda, bool mapTypes = false) {
-	return CachedLambdaNodeMapping<Lambda>(lambda, mapTypes);
+CachedLambdaNodeMapping<Lambda, AcceptAll<NodePtr>> makeCachedLambdaMapper(const Lambda& lambda, bool mapTypes = false) {
+	return makeCachedLambdaMapper(lambda, AcceptAll<NodePtr>(), mapTypes);
 }
 
 } // end namespace transform

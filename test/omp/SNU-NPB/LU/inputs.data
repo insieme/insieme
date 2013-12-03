@@ -1,0 +1,9 @@
+-I. -I.. -I../../common
+../lu.c ../read_input.c ../domain.c ../setcoeff.c ../setbv.c ../exact.c ../setiv.c ../erhs.c ../ssor.c ../rhs.c ../l2norm.c ../jacld.c ../blts.c ../jacu.c ../buts.c ../error.c ../syncs.c ../pintgr.c ../verify.c
+../../common/print_results.c  
+../../common/c_timers.c 
+../../common/wtime.c
+
+
+
+

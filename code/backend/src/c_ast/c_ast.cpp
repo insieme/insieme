@@ -196,7 +196,11 @@ namespace c_ast {
 	bool NamedCompositeType::equals(const Node& node) const {
 		assert(dynamic_cast<const NamedCompositeType*>(&node));
 		auto other = static_cast<const NamedCompositeType&>(node);
-		return *name == *other.name && ::equals(elements, other.elements, equal_target<VariablePtr>());
+		return *name == *other.name &&
+				::equals(elements, other.elements, equal_target<VariablePtr>()) &&
+				::equals(ctors, other.ctors, equal_target<ConstructorPrototypePtr>()) &&
+				((!dtor && !other.dtor) || (dtor && other.dtor && *dtor == *other.dtor)) &&
+				::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>());
 	}
 
 	bool Parent::equals(const Node& node) const {
@@ -215,10 +219,7 @@ namespace c_ast {
 		assert(dynamic_cast<const StructType*>(&node));
 		auto other = static_cast<const StructType&>(node);
 		return NamedCompositeType::equals(other) &&
-				::equals(parents, other.parents, equal_target<ParentPtr>()) &&
-				::equals(ctors, other.ctors, equal_target<ConstructorPrototypePtr>()) &&
-				((!dtor && !other.dtor) || (dtor && other.dtor && *dtor == *other.dtor)) &&
-				::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>());
+				::equals(parents, other.parents, equal_target<ParentPtr>());
 	}
 
 	bool FunctionType::equals(const Node& node) const {

@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/frontend/utils/clang_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -43,11 +44,36 @@ namespace extensions {
 
 	insieme::core::ExpressionPtr InterceptorPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
+
 			if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl()) ) {
-				if(declRefExpr->hasExplicitTemplateArgs() && convFact.getInterceptor().isIntercepted(funcDecl)) {
+				if(declRefExpr->hasExplicitTemplateArgs() && getInterceptor().isIntercepted(funcDecl)) {
 					VLOG(2) << "interceptorplugin\n";
-					//get a callable expression
-					return convFact.getInterceptor().intercept(funcDecl, convFact, true);
+					//returns a callable expression
+					return getInterceptor().intercept(funcDecl, convFact, true);
+				}
+			}
+
+			if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl() ) ) {
+				const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
+				if( getInterceptor().isIntercepted(enumType) ) {
+					/*core::TypePtr enumTy = convFact.convertType(enumType);
+					auto enumDecl = enumType->getDecl();
+					std::string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
+					std::string typeName = enumDecl->getNameAsString();
+					std::string constantName = enumConstant->getNameAsString();
+
+					//remove typeName from qualifiedTypeName and append enumConstantName
+					size_t pos = qualifiedTypeName.find(typeName);
+					assert(pos!= std::string::npos);
+					std::string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+
+					VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
+					VLOG(2) << fixedQualifiedName;
+
+					std::string enumConstantName = fixedQualifiedName;
+					return convFact.getIRBuilder().literal(enumConstantName, enumTy);
+					*/
+					return getInterceptor().intercept(enumConstant, convFact);
 				}
 			}
 		}
@@ -57,8 +83,8 @@ namespace extensions {
     bool InterceptorPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 			// check whether function should be intercected
-			if( convFact.getInterceptor().isIntercepted(funcDecl) ) {
-				auto irExpr = convFact.getInterceptor().intercept(funcDecl, convFact);
+			if( getInterceptor().isIntercepted(funcDecl) ) {
+				auto irExpr = getInterceptor().intercept(funcDecl, convFact);
 				convFact.addToLambdaCache(funcDecl, irExpr);
 				VLOG(2) << "interceptorplugin" << irExpr;
 				return true;
@@ -68,10 +94,10 @@ namespace extensions {
 	}
     
     core::TypePtr InterceptorPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
-		if(convFact.getInterceptor().isIntercepted(type)) {
+		if(getInterceptor().isIntercepted(type)) {
 			VLOG(2) << "interceptorplugin\n";
 			VLOG(2) << type << " isIntercepted";
-			auto res = convFact.getInterceptor().intercept(type, convFact);
+			auto res = getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;
 		}
@@ -83,7 +109,7 @@ namespace extensions {
 			
 			//for Converter::lookUpVariable
 			if( varDecl->hasGlobalStorage()
-				&& convFact.getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+				&& getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 				
 				//we expect globals to be literals -- get the "standard IR"which we need to change
 				core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();

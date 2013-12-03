@@ -82,6 +82,13 @@ namespace cba {
 	// forward declaration
 	class StateSetType;
 
+	template<typename Context, typename ElementSetType>
+	class ImperativeInStateConstraintGenerator;
+
+	template<typename Context, typename ElementSetType>
+	class ImperativeOutStateConstraintGenerator;
+
+
 	// since every state set type is a global constant we can use plain pointer
 	typedef const StateSetType* StateSetTypePtr;
 
@@ -90,7 +97,7 @@ namespace cba {
 	 * sets attached to pairs of statements and locations (standard
 	 * sets are only attached to statements).
 	 */
-	class StateSetType {
+	class StateSetType : public utils::Printable {
 
 		/**
 		 * The name of this set for printing and debugging issues.
@@ -115,12 +122,21 @@ namespace cba {
 		bool operator!=(const StateSetType& other) const {
 			return !(*this == other);
 		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << name;
+		}
 	};
 
 	// TODO: make those an enum
 	extern const StateSetType Sin;		// in-state of statements
 	extern const StateSetType Sout;		// out-state of statements
 	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
+
+
+	template<typename A> struct location_data_in_analysis;
+	template<typename A> struct location_data_out_analysis;
+	template<typename A> struct location_data_tmp_analysis;
 
 
 
@@ -137,210 +153,24 @@ namespace cba {
 	typedef SingleIndex ElementIndex; 		// for arrays / vectors
 	typedef FieldIndex ComponentIndex; 		// for tuples
 
+	typedef sc::ValueID ValueID;
 
 	class CBA : public boost::noncopyable {
 
-
-		typedef sc::ValueID SetID;
 		typedef sc::LazySolver Solver;
 
 		struct ContainerBase {
 			virtual ~ContainerBase() {}
-			virtual std::size_t getNumSets() const =0;
-
-			virtual void addConstraintsFor(CBA& cba, const SetID& set, Constraints& res) const =0;
-			virtual void plot(const CBA& cba, const std::map<SetID,string>& solution, std::ostream& out) const =0;
 		};
 
 		template<typename Context>
-		struct Container : public ContainerBase {
-
-			typedef tuple<AnalysisTypePtr, int, Context> SetKey;
-			typedef tuple<StateSetTypePtr, AnalysisTypePtr, Location<Context>> LocationSetKey;
-			typedef tuple<LocationSetKey, Label, Context> StateSetKey;
-
-			typedef ConstraintGenerator<Context>* ConstraintGeneratorPtr;
-
-			// a data structure managing constraint generators
-			std::set<ConstraintGeneratorPtr> generator;
-			std::map<AnalysisTypePtr, ConstraintGeneratorPtr> settype2generator;			// maps a set type to a generator
-			std::map<std::type_index, ConstraintGeneratorPtr> generatorIndex;			// to prevent the same type of generator being used multiple times
-			std::map<LocationSetKey, ConstraintGeneratorPtr> locationGenerator;
-
-			// set ID maps
-			std::map<SetKey, SetID> sets;
-			std::map<StateSetKey, SetID> stateSets;
-
-			// reverse maps for sets (for resolution)
-			std::unordered_map<SetID, SetKey> set2key;
-			std::unordered_map<SetID, StateSetKey> set2statekey;
+		class Container : public ContainerBase {
 
 			utils::Lazy<std::vector<Context>> contexts;
 			utils::Lazy<std::vector<Location<Context>>> locations;
 			map<std::size_t, std::vector<Callable<Context>>> callables;
 
-			~Container() {
-				for(auto cur : generator) delete cur;
-			}
-
-			template<typename L, template<typename C> class R>
-			sc::TypedValueID<L> getSet(CBA& cba, const AnalysisType<L,R>& type, int id, const Context& context) {
-				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
-				SetKey key(&type, id, context);
-				auto pos = sets.find(key);
-				if (pos != sets.end()) {
-					return sc::TypedValueID<L>(pos->second);
-				}
-
-				// make sure generator is installed
-				getGenerator(cba, type);
-
-				// create a new set
-				SetID newSet(++cba.setCounter);		// reserve 0
-				sets[key] = newSet;
-				set2key[newSet] = key;
-				return sc::TypedValueID<L>(newSet);
-			}
-
-			template<typename L, template<typename C> class G>
-			sc::TypedValueID<L> getSet(CBA& cba, const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
-				assert_true(cba.isValid(context)) << "Context " << context << " is not valid; valid contexts: " << getContexts(cba) << "\n";
-				StateSetKey key(LocationSetKey(&type, &type_loc, loc), label, context);
-				auto pos = stateSets.find(key);
-				if (pos != stateSets.end()) {
-					return pos->second;
-				}
-
-				// TODO: make sure generator are present!
-
-				// create new set
-				sc::TypedValueID<L> newSet(++cba.setCounter);		// reserve 0
-				stateSets[key] = newSet;
-				set2statekey[newSet] = key;
-				return newSet;
-			}
-
-			template<template<typename C> class G>
-			G<Context>* getGenerator(CBA& cba) {
-				std::type_index key = typeid(G<Context>);
-				auto pos = generatorIndex.find(key);
-				if (pos != generatorIndex.end()) {
-					return static_cast<G<Context>*>(pos->second);
-				}
-
-				G<Context>* res = new G<Context>(cba);
-				generator.insert(res);
-				generatorIndex[key] = res;
-				return res;
-			}
-
-			template<typename L, template<typename C> class G>
-			G<Context>& getGenerator(CBA& cba, const AnalysisType<L,G>& type) {
-				auto pos = settype2generator.find(&type);
-				if (pos != settype2generator.end()) {
-					return static_cast<G<Context>&>(*pos->second);
-				}
-
-				// create and register a new instance
-				G<Context>* res = getGenerator<G>(cba);
-				settype2generator[&type] = res;
-
-				// also location generator instances
-				registerLocationConstraintGenerators(cba, type);
-
-				return *res;
-			}
-
-			template<typename L, template<typename C> class G>
-			typename std::enable_if<is_data_struct_lattice<L>::value,void>::type
-			registerLocationConstraintGenerators(CBA& cba, const AnalysisType<L,G>& type) {
-				// also location generator instances
-				for(const auto& loc : getLocations(cba)) {
-					auto in  = new ImperativeInStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
-					auto out = new ImperativeOutStateConstraintGenerator<Context,AnalysisType<L,G>>(cba, type, loc);
-					generator.insert(in);
-					generator.insert(out);
-					locationGenerator[LocationSetKey(&Sin,  &type, loc)] = in;
-					locationGenerator[LocationSetKey(&Sout, &type, loc)] = out;
-				}
-			}
-
-			template<typename L, template<typename C> class G>
-			typename std::enable_if<!is_data_struct_lattice<L>::value,void>::type
-			registerLocationConstraintGenerators(CBA& cba, const AnalysisType<L,G>& type) { }
-
-
-			ConstraintGeneratorPtr getGenerator(const AnalysisTypeBase& type) const {
-				auto pos = settype2generator.find(&type);
-				return (pos != settype2generator.end()) ? pos->second : ConstraintGeneratorPtr();
-			}
-
-			virtual void addConstraintsFor(CBA& cba, const SetID& set, Constraints& res) const {
-				// check standard set keys
-				{
-					auto pos = set2key.find(set);
-					if (pos != set2key.end()) {
-
-						const SetKey& key = pos->second;
-
-						int id = std::get<1>(key);
-						if (id == 0) return;		// nothing to do here
-						const auto& type = *std::get<0>(key);
-						const Context& context = std::get<2>(key);
-
-						auto generator = getGenerator(type);
-						assert_true(generator) << "No generator registered for type " << type.getName() << "\n";
-
-						// get targeted node
-						core::StatementAddress trg = cba.getStmt(id);
-						if (!trg) {
-							// it is a variable
-							trg = cba.getVariable(id);
-						}
-
-						// this should have worked
-						assert(trg && "Unable to obtain target!");
-
-						// run resolution
-						generator->addConstraints(trg, context, res);
-
-						// done
-						return;
-					}
-				}
-
-				// try a state formula
-				{
-					auto pos = set2statekey.find(set);
-					if (pos != set2statekey.end()) {
-						const StateSetKey& key = pos->second;
-
-						// get targeted node
-						core::StatementAddress trg = cba.getStmt(std::get<1>(key));
-
-						// run resolution
-						if (trg) {
-							auto type = std::get<0>(key);
-
-							// ignore temporaries
-							if (std::get<0>(type) == &Stmp) return;
-
-							// obtain generator
-							auto pos = locationGenerator.find(type);
-							assert_true(pos != locationGenerator.end()) << "No generator registered for type " << std::get<0>(type)->getName() << "/" << std::get<1>(type)->getName() << "\n";
-
-							// add constraints
-							pos->second->addConstraints(trg, std::get<2>(key), res);
-						}
-
-						// done
-						return;
-					}
-				}
-
-				// an unknown set?
-				assert_true(false) << "Unknown set encountered: " << set << "\n";
-			}
+		public:
 
 			const std::vector<Context>& getContexts(CBA& cba) {
 				if (contexts) return contexts;
@@ -413,49 +243,6 @@ namespace cba {
 				return res;
 			}
 
-			virtual std::size_t getNumSets() const {
-				return sets.size() + stateSets.size();
-			}
-
-			virtual void plot(const CBA& cba, const std::map<SetID,string>& solution, std::ostream& out) const {
-
-				// a utility obtaining the address of a label
-				auto getAddress = [&](const Label l)->StatementAddress {
-					if (l == 0) return cba.root;
-					auto res = cba.getStmt(l);
-					return (res) ? res : cba.getVariable(l);
-				};
-
-				auto getSolution = [&](const SetID& set)->const string& {
-					static const string& none = "";
-					auto pos = solution.find(set);
-					return (pos != solution.end()) ? pos->second : none;
-				};
-
-				// name sets
-				for(auto cur : sets) {
-					string setName = std::get<0>(cur.first)->getName();
-					auto pos = getAddress(std::get<1>(cur.first));
-					out << "\n\t" << cur.second
-							<< " [label=\"" << cur.second << " = " << setName
-								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " = " << core::printer::PrettyPrinter(pos, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : " << std::get<2>(cur.first) << "]"
-							<< " = " << getSolution(cur.second) << "\""
-							<< ((cba.solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
-				}
-
-				for(auto cur : stateSets) {
-					auto& loc = std::get<0>(cur.first);
-					string setName = std::get<0>(loc)->getName();
-					string dataName = std::get<1>(loc)->getName();
-					auto pos = getAddress(std::get<1>(cur.first));
-					out << "\n\t" << cur.second
-							<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<2>(loc)
-								<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
-							<< " = " << getSolution(cur.second) << "\""
-							<< ((cba.solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
-				}
-			}
-
 		};
 
 		typedef utils::TypedMap<Container, ContainerBase> index_map_type;
@@ -467,8 +254,11 @@ namespace cba {
 		// a counter to be incremented for generating fresh set ids
 		int setCounter;
 
-		// the index for all set ids, call sites and locations for individual context types
+		// the container for all contexts, call sites and locations for individual context types
 		index_map_type indices;
+
+		std::map<ValueID, ConstraintGenerator*> value2generator;				// maps value IDs to their associated generator instances
+		std::map<std::type_index, ConstraintGenerator*> generatorIndex;			// to prevent the same type of generator being used multiple times
 
 		// two caches for resolving labels and variables
 		int idCounter;
@@ -485,11 +275,13 @@ namespace cba {
 		// a utility helping to reduce the list of allowed call contexts
 		CallStringFilter callStringFilter;
 
-		std::unordered_map<SetID, ContainerBase*> set2container;
-
 	public:
 
 		CBA(const core::StatementAddress& root);
+
+		~CBA() {
+			for(auto cur : generatorIndex) delete cur.second;
+		}
 
 		// basic functionality
 
@@ -503,39 +295,146 @@ namespace cba {
 
 		// -- main entry point for running analysis --
 
-		template<typename L, template<typename C> class G, typename C = DefaultContext>
-		const typename L::value_type& getValuesOf(const core::ExpressionAddress& expr, const AnalysisType<L,G>& set, const C& ctxt = C()) {
-			auto id = getSet(set, getLabel(expr), ctxt);
+		template<typename A, typename Context = DefaultContext>
+		const typename lattice<A,analysis_config<Context>>::type::value_type&
+		getValuesOf(const core::StatementAddress& expr, const A& a, const Context& ctxt = Context()) {
+			auto id = getSet(a, getLabel(expr), ctxt);
+			return solver.solve(id)[id];
+		}
+
+		template<typename A, typename Context, typename ... Rest>
+		const typename lattice<A,analysis_config<Context>>::type::value_type&
+		getValuesOf(const core::StatementAddress& expr, const A& a, const Context& ctxt, const Rest& ... rest) {
+			auto id = getSet(a, getLabel(expr), ctxt, rest...);
 			return solver.solve(id)[id];
 		}
 
 
 		// -- set management --
 
-		template<typename L, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, int id, const Context& context = Context()) {
-			Container<Context>& container = getContainer<Context>();
-			sc::TypedValueID<L> res = container.getSet(*this, type, id, context);
-			set2container[res] = &container;
+	private:
+
+		struct ValueMapBase {
+			virtual ~ValueMapBase() {}
+		};
+
+		template<typename T>
+		struct ValueMap : public ValueMapBase {
+			map<std::type_index,map<T,ValueID>> values;
+			map<ValueID,T> data;
+		};
+
+		utils::TypedMap<ValueMap, ValueMapBase> valueMap;
+
+
+		template<typename G>
+		ConstraintGenerator* getGenerator() {
+			auto& gen = generatorIndex[typeid(G)];
+			return (gen) ? gen : (gen = new G(*this));
+		}
+
+
+		template<typename A, typename Config>
+		sc::TypedValueID<typename lattice<A,Config>::type> getValueIDInternal(const typename params<A,Config>::type& key) {
+			typedef typename params<A,Config>::type params_type;
+
+			// try looking previously assigned value ID
+			auto& entry = valueMap.get<params_type>();
+			auto& forward = entry.values[typeid(A)];
+			auto pos = forward.find(key);
+			if (pos != forward.end()) {
+				return pos->second;
+			}
+
+			// create new value ID
+			sc::TypedValueID<typename lattice<A,Config>::type> res(++setCounter);		// reserve 0
+			forward[key] = res;
+			entry.data.insert(std::make_pair(res,key));
+
+			// fix constraint generator
+			value2generator[res] = getGenerator<typename generator<A,Config>::type>();
+
+			// done
 			return res;
 		}
 
-		template<typename L, typename Address, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const AnalysisType<L,G>& type, const Address& stmt, const Context& context = Context()) {
+	public:
+
+		template<typename A, typename Config, typename ... Params>
+		sc::TypedValueID<typename lattice<A,Config>::type> getValueID(const Params& ... params) {
+			typedef std::tuple<AnalysisType,Params...> params_type;
+			return getValueIDInternal<A,Config>(params_type(typeid(A), params...));
+		}
+
+		template<typename ... Params>
+		const std::tuple<AnalysisType,Params...>& getValueParameters(const ValueID& id) const {
+			typedef std::tuple<AnalysisType,Params...> params_type;
+
+			// navigate through two-level index to obtain parameters
+			auto& map = valueMap.get<params_type>().data;
+			auto pos = map.find(id);
+			assert_true(pos != map.end())
+					<< " No entry for value ID " << id << " found.\n"
+					<< " Current set-counter: " << setCounter << "\n";
+			return pos->second;
+		}
+
+		template<typename A, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(int id, const Context& context = Context()) {
+			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
+		}
+
+		template<typename A, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, int id, const Context& context = Context()) {
+			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
+		}
+
+		template<typename A, typename Address, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Address& stmt, const Context& context = Context()) {
 			return getSet(type, getLabel(stmt), context);
 		}
 
-		template<typename L, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
-			Container<Context>& container = getContainer<Context>();
-			sc::TypedValueID<L> res = container.getSet(*this, type, label, context, loc, type_loc);
-			set2container[res] = &container;
-			return res;
+		template<typename A, typename Context, typename ... Rest>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, int id, const Context& ctxt, const Rest& ... rest) {
+			return getValueID<A,analysis_config<Context>,int,Context,Rest...>(id, ctxt, rest...);
 		}
 
-		template<typename L, typename Address, template<typename C> class G, typename Context = DefaultContext>
-		sc::TypedValueID<L> getSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const AnalysisType<L,G>& type_loc) {
-			return getSet(type, getLabel(stmt), context, loc, type_loc);
+		template<typename A, typename Address, typename Context, typename ... Rest>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Address& stmt, const Context& ctxt, const Rest& ... rest) {
+			return getSet(type, getLabel(stmt), ctxt, rest...);
+		}
+
+		template<typename A, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc) {
+
+			// TODO: get rid of the enumeration
+			if (type == Sin) {
+				typedef location_data_in_analysis<A> in_state;
+				return getValueID<in_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
+			}
+
+			if (type == Stmp) {
+				typedef location_data_tmp_analysis<A> tmp_state;
+				return getValueID<tmp_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
+			}
+
+			if (type == Sout) {
+				typedef location_data_out_analysis<A> out_state;
+				return getValueID<out_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
+			}
+
+			assert_fail() << "Unsupported state-set type requested: " << type << "\n";
+			return 0;
+		}
+
+		template<typename A, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const A& type_loc) {
+			return getLocationDataSet<A, Context>(type, label, context, loc);
+		}
+
+		template<typename A, typename Address, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const A& type_loc) {
+			return getLocationDataSet(type, getLabel(stmt), context, loc, type_loc);
 		}
 
 		// -- label management --
@@ -757,16 +656,17 @@ namespace cba {
 			return res;
 		}
 
+		template<typename L>
+		typename L::manager_type& getDataManager(const TypedValueID<L>& value) {
+			return getDataManager<L>();
+		}
+
 		// ----------------------- some debugging utilities ---------------------------
 
 		void plot(std::ostream& out = std::cout) const;
 
 		std::size_t getNumSets() const {
-			std::size_t sum = 0;
-			for(auto cur : indices) {
-				sum += cur.second->getNumSets();
-			}
-			return sum;
+			return value2generator.size();
 		}
 
 		std::size_t getNumConstraints() const {
@@ -778,7 +678,7 @@ namespace cba {
 		template<typename T>
 		Container<T>& getContainer() { return indices.get<T>(); }
 
-		void addConstraintsFor(const SetID& set, Constraints& res);
+		void addConstraintsFor(const ValueID& value, Constraints& res);
 
 	};
 
@@ -796,5 +696,7 @@ namespace cba {
  * This include has to follow the CBA class definition due to dependencies and needs to
  * be always included whenever the CBA class is included. That is why it is located at
  * the end of the file and must not be moved to the top.
+ *
+ * TODO: remove this by creating analysis tokens for Sin/Sout/Stmp
  */
 #include "insieme/analysis/cba/framework/generator/mutable_data.h"

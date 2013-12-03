@@ -1,0 +1,10 @@
+-I. -I.. -I../../common 
+../ft.c
+../../common/print_results.c  
+../../common/c_timers.c 
+../../common/wtime.c
+../../common/randdp.c
+
+
+
+

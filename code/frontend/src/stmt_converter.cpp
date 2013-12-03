@@ -164,7 +164,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 		// expression is of array (or vector) type we are sure we have to return a reference, in the
 		// other case we can safely deref the retExpr
 		if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-						(!clangTy.getUnqualifiedType()->isExtVectorType() && !clangTy.getUnqualifiedType()->isVectorType())) {
+						(!clangTy.getUnqualifiedType()->isVectorType())) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
 			retTy = builder.refType(retTy);
 			retExpr = utils::cast(retExpr, retTy);
 		}
@@ -175,9 +175,9 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 
 		if (retExpr->getType()->getNodeType() == core::NT_RefType) {
 
-			// Obviously Ocl vectors are an exception and must be handled like scalars
+			// Obviously vectors are an exception and must be handled like scalars
 			// no reference returned
-			if (clangTy->isExtVectorType() || clangTy->isVectorType()) {
+			if (clangTy->isVectorType()) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
 				retExpr = utils::cast(retExpr, retTy);
 			}
 
@@ -372,11 +372,14 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
-		clang::Preprocessor& pp = convFact.getPreprocessor();
-		pp.Diag(forStmt->getLocStart(),
-				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
-						std::string("For loop converted into while loop, cause: ") + e.what() )
-		);
+		if (!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
+			std::cerr << std::endl;
+			clang::Preprocessor& pp = convFact.getPreprocessor();
+			pp.Diag(forStmt->getLocStart(),
+					pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
+							std::string("For loop converted into while loop, cause: ") + e.what() )
+			);
+		}
 	}
 
 	if (addDeclStmt) {

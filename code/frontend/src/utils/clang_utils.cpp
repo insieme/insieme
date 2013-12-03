@@ -65,6 +65,8 @@ using namespace llvm;
 		boost::replace_all(str, " ", "_"); \
 		boost::replace_all(str, "(", "_"); \
 		boost::replace_all(str, ")", "_"); \
+		boost::replace_all(str, ",", "_"); \
+		boost::replace_all(str, "*", "_"); \
 }
 
 
@@ -74,16 +76,26 @@ using namespace llvm;
  */
 std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type){
 
+	// beware of aliasing types, if we find a typedef, better to use the inner type
+	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
+		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
+			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
+			if (!recTy->getDecl()->getNameAsString().empty() ){
+				return getNameForRecord(recTy->getDecl(), recTy);
+			}
+		}
+	}
+
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
 		std::stringstream ss;
-		ss << "_anom";
+		ss << "_anon";
 		ss << (unsigned long long) decl;
 		return ss.str();
 	}
 	std::string fullName = decl->getQualifiedNameAsString();
 
-	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)) {
+	if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl) &&  !llvm::isa<clang::TypedefNameDecl>(decl)) {
 
 		std::string name = decl->getNameAsString();
 		std::string typeName = type->getCanonicalTypeInternal ().getAsString();
@@ -92,16 +104,17 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* ty
 		//type name has the class name and typing
 		//
 		//     namespace::owner::myClass                 <= qualname
-		//                class  myClass<int>            <= typename
+		//                class  myClass<int, type>      <= typename
 		//                       myClass                 just the name, the key to happines
 		//      ---------------------------------
-		//     namespace::owner::myClass<int>            <= final name
+		//     namespace::owner::myClass<int, type>      <= final name
 
 		unsigned pos = typeName.find(name);
 		boost::replace_last(fullName, name, std::string(typeName.begin()+pos, typeName.end()));
 	}
 
 	REMOVE_SYMBOLS(fullName);
+
 	return fullName;
 }
 
@@ -199,6 +212,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
 
+	// all done
 	return name;
 }
 

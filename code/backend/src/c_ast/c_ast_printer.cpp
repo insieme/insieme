@@ -676,33 +676,29 @@ namespace c_ast {
 				if (!composite->elements.empty()) out << ";";
 
 				// add member functions
-				if (structType) {
-
-					// todo: add ctor / dtor
+				if (composite) {
 
 					// add constructors
-					if (!structType->ctors.empty()) out << "\n    ";
-					out << join(";\n    ", structType->ctors,
+					if (!composite->ctors.empty()) out << "\n    ";
+					out << join(";\n    ", composite->ctors,
 							[&](std::ostream& out, const ConstructorPrototypePtr& cur) {
 								out << print(cur);
 					});
-					if (!structType->ctors.empty()) out << ";";
+					if (!composite->ctors.empty()) out << ";";
 
 					// add destructor
-					if (structType->dtor) out << "\n    ";
-					out << print(structType->dtor);
-					if (structType->dtor) out << ";";
+					if (composite->dtor) out << "\n    ";
+					out << print(composite->dtor);
+					if (composite->dtor) out << ";";
 
 
 					// add member functions
-					if (!structType->members.empty()) out << "\n    ";
-					out << join(";\n    ", structType->members,
+					if (!composite->members.empty()) out << "\n    ";
+					out << join(";\n    ", composite->members,
 							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
 								out << print(cur);
 					});
-					if (!structType->members.empty()) out << ";";
-
-					// todo: add ctors / dtors / member function prototypes
+					if (!composite->members.empty()) out << ";";
 
 				}
 

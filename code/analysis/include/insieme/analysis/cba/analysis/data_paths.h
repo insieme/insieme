@@ -58,21 +58,25 @@ namespace cba {
 
 	// ----------------- references ---------------
 
-	template<typename Context> class ConstantConstraintGenerator;
-	typedef DataAnalysisType<core::ExpressionPtr,ConstantConstraintGenerator> SimpleConstantSetType;
-	extern const SimpleConstantSetType D;
-	extern const SimpleConstantSetType d;
+	struct simple_constant_analysis_data;
+	struct simple_constant_analysis_var;
 
-	template<typename Context> class DataPathConstraintGenerator;
-	typedef DataAnalysisType<DataPath,DataPathConstraintGenerator> DataPathAnalysisType;
-	extern const DataPathAnalysisType DP;
-	extern const DataPathAnalysisType dp;
+	extern const simple_constant_analysis_data D;
+	extern const simple_constant_analysis_var  d;
+
+	template<typename C> class DataPathConstraintGenerator;
+
+	struct data_path_analysis_data : public data_analysis<DataPath, DataPathConstraintGenerator> {};
+	struct data_path_analysis_var  : public data_analysis<DataPath, DataPathConstraintGenerator> {};
+
+	extern const data_path_analysis_data DP;
+	extern const data_path_analysis_var  dp;
 
 
 	template<typename Context>
-	class DataPathConstraintGenerator : public BasicDataFlowConstraintGenerator<DataPath, DataPathAnalysisType, Context> {
+	class DataPathConstraintGenerator : public DataFlowConstraintGenerator<data_path_analysis_data, data_path_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<DataPath,DataPathAnalysisType, Context> super;
+		typedef DataFlowConstraintGenerator<data_path_analysis_data, data_path_analysis_var, Context> super;
 
 		CBA& cba;
 

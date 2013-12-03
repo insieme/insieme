@@ -47,35 +47,30 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	template<typename A, typename B, typename C> class DataFlowConstraintGenerator;
+
 	// ----------------- inter-procedural control flow ------------------
 
 	template<typename C> class ControlFlowConstraintGenerator;
 
-	template<typename Context>
-	const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& C() {
-		static const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("C");
-		return instance;
-	}
+	struct control_flow_analysis_data : public dependent_data_analysis<Callable, ControlFlowConstraintGenerator> {};
+	struct control_flow_analysis_var  : public dependent_data_analysis<Callable, ControlFlowConstraintGenerator> {};
 
-	template<typename Context>
-	const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>& c() {
-		static const DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator> instance("c");
-		return instance;
-	}
-
+	extern const control_flow_analysis_data C;
+	extern const control_flow_analysis_var  c;
 
 
 	template<typename Context>
-	class ControlFlowConstraintGenerator : public BasicDataFlowConstraintGenerator<Callable<Context>, DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> {
+	class ControlFlowConstraintGenerator : public DataFlowConstraintGenerator<control_flow_analysis_data, control_flow_analysis_var, Context> {
 
-		typedef BasicDataFlowConstraintGenerator<Callable<Context>, DataAnalysisType<Callable<Context>,ControlFlowConstraintGenerator>, Context> super;
+		typedef DataFlowConstraintGenerator<control_flow_analysis_data, control_flow_analysis_var, Context> super;
 
 		CBA& cba;
 
 	public:
 
 		ControlFlowConstraintGenerator(CBA& cba)
-			: super(cba, C<Context>(), c<Context>()), cba(cba) { };
+			: super(cba, C, c), cba(cba) { };
 
 		using super::elem;
 
@@ -91,7 +86,7 @@ namespace cba {
 			auto value = Callable<Context>(literal);
 			auto l_lit = cba.getLabel(literal);
 
-			auto C_lit = cba.getSet(C<Context>(), l_lit, ctxt);
+			auto C_lit = cba.getSet(C, l_lit, ctxt);
 			constraints.add(elem(value, C_lit));
 
 		}
@@ -105,7 +100,7 @@ namespace cba {
 			auto value = Callable<Context>(lambda);
 			auto label = cba.getLabel(lambda);
 
-			constraints.add(elem(value, cba.getSet(C<Context>(), label, ctxt)));
+			constraints.add(elem(value, cba.getSet(C, label, ctxt)));
 
 			// TODO: handle recursions
 
@@ -120,7 +115,7 @@ namespace cba {
 			auto value = Callable<Context>(bind, ctxt);
 			auto label = cba.getLabel(bind);
 
-			auto C_bind = cba.getSet(C<Context>(), label, ctxt);
+			auto C_bind = cba.getSet(C, label, ctxt);
 			constraints.add(elem(value, C_bind));
 
 		}

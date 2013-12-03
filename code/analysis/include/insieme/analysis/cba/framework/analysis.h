@@ -48,44 +48,48 @@ namespace cba {
 
 	// --- forward definitions of analysis utilized by the framework ---
 
-	template<typename C> class ControlFlowConstraintGenerator;
-	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& C();
-	template<typename T> const DataAnalysisType<Callable<T>,ControlFlowConstraintGenerator>& c();
+	struct control_flow_analysis_data;
+	struct control_flow_analysis_var;
+	extern const control_flow_analysis_data C;
+	extern const control_flow_analysis_var  c;
 
 	template<typename C> class Reference;
-	template<typename C> class ReferenceConstraintGenerator;
-	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& R();
-	template<typename C> const DataAnalysisType<Reference<C>,ReferenceConstraintGenerator>& r();
+	struct reference_analysis_data;
+	struct reference_analysis_var;
+	extern const reference_analysis_data R;
+	extern const reference_analysis_var  r;
 
 	template<typename C> class Channel;
-	template<typename C> class ChannelConstraintGenerator;
-	template<typename C> const DataAnalysisType<Channel<C>,ChannelConstraintGenerator>& Ch();
-	template<typename C> const DataAnalysisType<Channel<C>,ChannelConstraintGenerator>& ch();
+	struct channel_analysis_data;
+	struct channel_analysis_var;
+	extern const channel_analysis_data Ch;
+	extern const channel_analysis_var  ch;
 
-	class Callee;
-	template<typename C> class FunctionConstraintGenerator;
-	extern const DataAnalysisType<Callee,FunctionConstraintGenerator> F;
-	extern const DataAnalysisType<Callee,FunctionConstraintGenerator> f;
+	struct functions_analysis_data;
+	struct functions_analysis_var;
+	extern const functions_analysis_data F;
+	extern const functions_analysis_var  f;
 
-	template<typename C> class ContextPredecessorGenerator;
-	extern const SetBasedAnalysisType<Label,ContextPredecessorGenerator> pred;
+	struct context_predecessor_analysis;
+	extern const context_predecessor_analysis pred;
 
 	struct Reachable;
-	template<typename C> class ReachableInConstraintGenerator;
-	extern const SetBasedAnalysisType<Reachable,ReachableInConstraintGenerator> Rin;
+	struct reachable_in_analysis;
+	extern const reachable_in_analysis Rin;
+	struct reachable_out_analysis;
+	extern const reachable_out_analysis Rout;
 
-	template<typename C> class ReachableOutConstraintGenerator;
-	extern const SetBasedAnalysisType<Reachable,ReachableOutConstraintGenerator> Rout;
+	struct arithmetic_analysis_data;
+	struct arithmetic_analysis_var;
+	extern const arithmetic_analysis_data A;
+	extern const arithmetic_analysis_var  a;
 
-	class Formula;
-	template<typename C> class ArithmeticConstraintGenerator;
-	extern const DataAnalysisType<Formula,ArithmeticConstraintGenerator> A;
-	extern const DataAnalysisType<Formula,ArithmeticConstraintGenerator> a;
+	struct boolean_analysis_data;
+	struct boolean_analysis_var;
+	extern const boolean_analysis_data B;
+	extern const boolean_analysis_var  b;
 
-	template<typename C> class BooleanConstraintGenerator;
-	extern const DataAnalysisType<bool,BooleanConstraintGenerator> B;
-	extern const DataAnalysisType<bool,BooleanConstraintGenerator> b;
-
+	// -- memory location data analysis --
 
 } // end namespace cba
 } // end namespace analysis

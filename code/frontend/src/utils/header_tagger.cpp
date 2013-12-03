@@ -122,7 +122,9 @@ namespace utils {
 		boost::optional<fs::path> HeaderTagger::toUserLibHeader(const fs::path& path) const {
 			static const boost::optional<fs::path> fail;
 
-			if (userIncludeDirs.empty()) { return fail; }
+			// FIXME somebody should check where this <command line> is coming form and avoid it
+			//if (userIncludeDirs.empty() || path.string().compare("<command line>") == 0) { return fail; }
+			if (userIncludeDirs.empty() ) { return fail; }
 
 			if (contains(userIncludeDirs, fs::canonical(path) )) {
 				return fs::path();
@@ -171,6 +173,11 @@ namespace utils {
 			
 			// ~ pIncludeLoc represents the file were includLoc is located
 			clang::PresumedLoc pIncludeLoc = sm.getPresumedLoc(includeLoc);
+
+			if( isInjectedHeader(pIncludeLoc) ){
+				//the header was injected -- has no valid filename ("<command line">)
+				return "";
+			}
 
 			//*******************
 			//
@@ -227,6 +234,11 @@ namespace utils {
 		bool HeaderTagger::isIntrinsicHeader(const string& name) const{
 			return toIntrinsicHeader(fs::path(name));
 		}
+		bool HeaderTagger::isInjectedHeader(const clang::PresumedLoc& ploc) const{
+			//NOTE: the "-include" of clang is what we call injectedHeaders
+			//injected headers are "included" from a file called "<command line>" (by clang)
+			return std::strcmp("<command line>",ploc.getFilename()) == 0;
+		}
 
 		boost::optional<fs::path> HeaderTagger::toIntrinsicHeader(const fs::path& path)const {
 			static const boost::optional<fs::path> fail;
@@ -243,12 +255,12 @@ namespace utils {
 
 	void HeaderTagger::addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined) const {
 
+		// check whether there is a declaration at all
+		if (!decl) return;
+
 		// the node was already annotated, what is the point of doint it again?
 		if (insieme::annotations::c::hasIncludeAttached(node))  
 			return;
-
-		// check whether there is a declaration at all
-		if (!decl) return;
 
 		if (VLOG_IS_ON(2)){
 			std::string name("UNNAMED");
@@ -291,7 +303,7 @@ namespace utils {
 
 		// use resulting header
 		insieme::annotations::c::attachInclude(node, header.string());
-	}
+		}
 
 } // end namespace utils
 } // end namespace frontend

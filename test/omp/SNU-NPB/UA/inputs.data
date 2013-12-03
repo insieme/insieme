@@ -1,0 +1,9 @@
+-I. -I.. -I../../common 
+../ua.c ../convect.c ../diffuse.c ../adapt.c ../move.c ../mason.c ../precond.c ../utils.c ../verify.c ../setup.c ../transfer.c
+../../common/print_results.c  
+../../common/c_timers.c 
+../../common/wtime.c
+
+
+
+

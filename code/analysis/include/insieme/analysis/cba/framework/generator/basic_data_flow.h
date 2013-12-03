@@ -38,8 +38,8 @@
 
 #include <map>
 
-#include "insieme/analysis/cba/framework/constraint_generator.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
+#include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
 
 #include "insieme/analysis/cba/framework/entities/data_index.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
@@ -205,10 +205,10 @@ namespace cba {
 				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res)),
 				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
 
-			virtual bool update(Assignment& ass) const {
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// read input data and add it to result value
 				meet_assign_op_type meet_assign_op;
-				return meet_assign_op(ass[res], getReadData(ass));
+				return meet_assign_op(ass[res], getReadData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {
@@ -293,27 +293,26 @@ namespace cba {
 
 
 	template<
-		typename T,
-		typename AnalysisType,
+		typename ValueAnalysisType,
+		typename VariableAnalysisType,
 		typename Context
 	>
-	class BasicDataFlowConstraintGenerator : public ConstraintGenerator<Context> {
+	class DataFlowConstraintGenerator : public DataValueConstraintGenerator<Context> {
 
-		typedef ConstraintGenerator<Context> super;
+		typedef DataValueConstraintGenerator<Context> super;
 
 	public:
 
-		typedef typename AnalysisType::lattice_type lattice_type;
+		typedef typename lattice<ValueAnalysisType, analysis_config<Context>>::type lattice_type;
 		typedef typename lattice_type::manager_type mgr_type;
 
-		typedef typename lattice_type::base_lattice::value_type base_value_type;
 		typedef typename lattice_type::value_type value_type;
 
 	private:
 
 		// the two set types to deal with
-		const AnalysisType& A;		// the value set (labels -> values)
-		const AnalysisType& a;		// the variable set (variables -> values)
+		const ValueAnalysisType& A;		// the value set (labels -> values)
+		const VariableAnalysisType& a;		// the variable set (variables -> values)
 
 		CBA& cba;
 
@@ -321,7 +320,7 @@ namespace cba {
 
 	public:
 
-		BasicDataFlowConstraintGenerator(CBA& cba, const AnalysisType& A, const AnalysisType& a)
+		DataFlowConstraintGenerator(CBA& cba, const ValueAnalysisType& A, const VariableAnalysisType& a)
 			: super(cba), A(A), a(a), cba(cba), valueMgr(cba.getDataManager<lattice_type>()) { };
 
 		mgr_type& getValueManager() {
@@ -396,7 +395,7 @@ namespace cba {
 			// let it be handled by the definition point
 			VariableAddress def = getDefinitionPoint(variable);
 			if (def != variable) {
-				addConstraints(def, ctxt, constraints);
+				visit(def, ctxt, constraints);
 				return;
 			}
 
@@ -512,7 +511,7 @@ namespace cba {
 
 									// get value of function called by bind call
 									auto l_fun_bind_call = cba.getLabel(bindCall->getFunctionExpr());
-									auto C_fun_bind_call = cba.getSet(C<Context>(), l_fun_bind_call, bindCallCtxt);
+									auto C_fun_bind_call = cba.getSet(C, l_fun_bind_call, bindCallCtxt);
 
 									// add constraints for all potential contexts the closure could be created
 									for(const auto& bindCtxt : cba.getValidContexts<Context>()) {
@@ -631,11 +630,11 @@ namespace cba {
 					if (base.isRefDeref(targets[0].getDefinition())) {
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
-						auto R_trg = this->cba.getSet(R<Context>(), l_trg, ctxt);
-						for(auto loc : this->cba.template getLocations<Context>()) {
+						auto R_trg = this->cba.getSet(R, l_trg, ctxt);
+						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getSet(Sin, l_call, ctxt, loc, A);
+							auto S_in = this->cba.getLocationDataSet(Sin, l_call, ctxt, loc, A);
 							constraints.add(read(loc, R_trg, S_in, A_call));
 						}
 					}
@@ -757,6 +756,19 @@ namespace cba {
 			return isBoundValueInFreeBind(node.as<ExpressionAddress>());
 		}
 
+	};
+
+
+
+	template<
+		typename T,
+		typename AnalysisType,
+		typename Context
+	>
+	struct BasicDataFlowConstraintGenerator : DataFlowConstraintGenerator<AnalysisType,AnalysisType,Context> {
+
+		BasicDataFlowConstraintGenerator(CBA& cba, const AnalysisType& A, const AnalysisType& a)
+			: DataFlowConstraintGenerator<AnalysisType,AnalysisType,Context>(cba,A,a) { };
 	};
 
 

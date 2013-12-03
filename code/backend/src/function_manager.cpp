@@ -848,11 +848,11 @@ namespace backend {
 				info->definition = definitions;
 
 				// member functions are declared within object definition
-				c_ast::StructTypePtr classDecl;
+				c_ast::NamedCompositeTypePtr classDecl;
 				if (isMember) {
 					const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
 					info->prototype = typeInfo.definition;
-					classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
+					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
 
 					// add requirement of implementation
 					info->prototype->addRequirement(info->definition);
@@ -1327,8 +1327,8 @@ namespace backend {
 
 				const auto& type = typeManager.getTypeInfo(funType->getObjectType()).lValueType;
 
-				if (const auto& structType = type.isa<c_ast::StructTypePtr>()) {
-					return structType->name;
+				if (const auto& tagType = type.isa<c_ast::NamedCompositeTypePtr>()) {
+					return tagType->name;
 				}
 
 				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {

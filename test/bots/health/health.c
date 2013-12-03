@@ -423,7 +423,7 @@ void sim_village_par(struct Village *village)
    vlist = village->forward;
    while(vlist)
    {
-#pragma omp task untied if((sim_level - village->level) < bots_cutoff_value)
+#pragma omp task untied if ((sim_level - village->level) < bots_cutoff_value)
       sim_village_par(vlist);
       vlist = vlist->next;
    }

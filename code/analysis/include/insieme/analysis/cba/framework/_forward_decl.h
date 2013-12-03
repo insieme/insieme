@@ -55,12 +55,12 @@ namespace cba {
 
 	template<typename A, typename B, typename C> class BasicDataFlowConstraintGenerator;
 
-	template<typename A, typename B, typename C, typename D> class BasicInConstraintGenerator;
-	template<typename A, typename B, typename C, typename D> class BasicOutConstraintGenerator;
+	template<typename A, typename B, typename C, typename D, typename ... E> class BasicInConstraintGenerator;
+	template<typename A, typename B, typename C, typename D, typename ... E> class BasicOutConstraintGenerator;
 
 
-	template<typename Context, typename ElementType> class ImperativeInStateConstraintGenerator;
-	template<typename Context, typename ElementType> class ImperativeOutStateConstraintGenerator;
+	template<typename Context, typename AnalysisType> class ImperativeInStateConstraintGenerator;
+	template<typename Context, typename AnalysisType> class ImperativeOutStateConstraintGenerator;
 
 } // end namespace cba
 } // end namespace analysis

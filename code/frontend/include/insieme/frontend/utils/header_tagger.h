@@ -96,6 +96,8 @@ namespace utils {
 			string getTopLevelInclude(const clang::SourceLocation& loc) const;
 			
 			bool isIntrinsicHeader(const string& name) const;
+			
+			bool isInjectedHeader(const clang::PresumedLoc& ploc) const;
 
 			boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
 

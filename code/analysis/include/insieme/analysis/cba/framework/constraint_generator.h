@@ -50,100 +50,43 @@ namespace cba {
 	// forward declaration
 	class CBA;
 
+	namespace sc = insieme::utils::constraint;
+
+
 	// -------------------- Constraint Generator ---------------------------
 
 	// the type used for lists of constraints
 	typedef utils::constraint::Constraints Constraints;
 
-	// declaration of utility function
-	template<typename Context> bool isValidContext(CBA& cba, const Context& context);
-
 	/**
-	 * A base class for classes capable of lazily resolving set constraints while processing constraint
-	 * based analysis.
-	 *
-	 * Essentially, a constraint resolver is an IR visitor generating for a given node (addressed by its
-	 * address) and a call / thread context constraints. In general, every resolver is only supposed to
-	 * generate in-constraints for the requested target set specified by the address and context parameter.
+	 * A generic base class for generators capable of resolving value constraints for individual values.
 	 */
-	template<typename Context>
-	class ConstraintGenerator : public core::IRVisitor<void, core::Address, const Context&, Constraints&> {
-
-		// a short-cut for the base class
-		typedef core::IRVisitor<void, core::Address, const Context&, Constraints&> super;
+	struct ConstraintGenerator {
 
 		/**
-		 * The base-implementation is preventing the same arguments to be processed multiple times.
+		 * A virtual destructor since only derived classes of this type will be utilized.
 		 */
-		typedef std::tuple<core::NodeAddress, Context> Item;
-		std::set<Item> processed;
-
-	protected:
+		virtual ~ConstraintGenerator() {}
 
 		/**
-		 * The analysis context this resolver is working for. Every instance may only be utilized by
-		 * a single CBA instance.
-		 */
-		CBA& cba;
-
-	public:
-
-		ConstraintGenerator(CBA& cba)
-			: processed(), cba(cba) {}
-
-		/**
-		 * The main entry function for resolving constraints for the given node and context. Constraints
-		 * will be added to the given list.
+		 * The main interface function conducting the actual resolution of contstraints for the given
+		 * value by utilizing the given cba context.
 		 *
-		 * @param node the node for which constraints shell be generated - details regarding the set covered
-		 * 			by this resolver are implementation specific.
-		 * @param ctxt the call context to be considered for the constraint generation
+		 * @param cba the context within which the resolution of the constraints should occur
+		 * @param value the value for which constraints should be obtained
+		 * @param constraints the constraint set to be extended
 		 */
-		void addConstraints(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-			// just forward call to visit-process
-			visit(node, ctxt, constraints);
-		}
+		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) =0;
 
 		/**
-		 * Overrides the standard visit function of the super type and realizes the guard avoiding the
-		 * repeated evaluation of identical argument types.
+		 * Requests this constraint generator to print a human readable description of the given
+		 * value ID to the given output stream (to be utilized within debug prints and dot plots).
+		 *
+		 * @param out the stream to be printing to
+		 * @param cba the context within which the given value is utilized
+		 * @param value the value to be formated
 		 */
-		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-
-			// do not resolve the same nodes multiple times
-			if (!processed.insert(Item(node,ctxt)).second) return;
-
-			// filter out invalid contexts
-			if (!isValidContext(cba, ctxt)) return;
-
-			// for valid content => std procedure
-			visitInternal(node, ctxt, constraints);
-		}
-
-	protected:
-
-		/**
-		 * An entry point to be intersected in case sub-classes would like to customize the entry point of the
-		 * constraint resolution process (after the cache and ctxt has been checked).
-		 */
-		virtual void visitInternal(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
-			// by default, just forward call to visit
-			super::visit(node, ctxt, constraints);
-		}
-
-		/**
-		 * Provides access to the context
-		 */
-		CBA& getCBA() {
-			return cba;
-		}
-
-		/**
-		 * Marks a node / context combination to be processed (visitor will not decent into this pair again).
-		 */
-		void markProcessed(const core::NodeAddress& node, const Context& ctxt) {
-			processed.insert(Item(node,ctxt));
-		}
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const =0;
 
 	};
 

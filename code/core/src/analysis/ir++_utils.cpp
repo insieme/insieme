@@ -92,6 +92,7 @@ namespace analysis {
 			return !type->getNodeManager().getLangBasic().isPrimitive(type);
 		case NT_StructType:
 		case NT_TypeVariable:
+		case NT_UnionType:
 			return true;			// all this types are always object types
 		case NT_RecType:
 			return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());

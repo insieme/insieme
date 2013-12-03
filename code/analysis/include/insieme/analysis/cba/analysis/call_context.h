@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+#include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
 
 #include "insieme/analysis/cba/analysis/functions.h"
 
@@ -48,20 +48,23 @@ namespace cba {
 	// -------------------- Context Constraints ------------
 
 	template<typename C> class ContextPredecessorGenerator;
-	typedef SetBasedAnalysisType<Label,ContextPredecessorGenerator> ContextPredecessorType;
 
-	extern const ContextPredecessorType pred;
+	struct context_predecessor_analysis : public set_analysis<Label, ContextPredecessorGenerator> {};
+
+	extern const context_predecessor_analysis pred;
 
 	// -------------------------------------- Context Predecessor Constraints -----------------------------
 
+	template<typename C, typename ... E> class DataValueConstraintGenerator;
+
 	template<typename Context>
-	class ContextPredecessorGenerator : public ConstraintGenerator<Context> {
+	class ContextPredecessorGenerator : public DataValueConstraintGenerator<Context> {			// TODO: change the base-type to something without context
 
 		CBA& cba;
 
 	public:
 
-		ContextPredecessorGenerator(CBA& cba) : ConstraintGenerator<Context>(cba), cba(cba) {}
+		ContextPredecessorGenerator(CBA& cba) : DataValueConstraintGenerator<Context>(cba), cba(cba) {}
 
 	private:
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,6 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/utils/interceptor.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -220,7 +219,6 @@ const ClangCompiler& Program::getCompiler() const {
 	return pimpl->tranUnit.getCompiler();
 }
 
-//utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 //const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->systemHeaders; }
 //const vector<boost::filesystem::path>& Program::getUserIncludeDirs() const { return pimpl->userIncludeDirs; }
 

@@ -67,6 +67,12 @@ namespace analysis {
 	static inline bool isObjectType(const StructTypePtr& type) { return true; }
 
 	/**
+	 * a Union can also have member functions, therefore it should be also in the
+	 * Object clasification
+	 */
+	static inline bool isObjectType(const UnionTypePtr& type) { return true; }
+
+	/**
 	 * A shortcut for the isObjectType function above obtaining the result
 	 * statically since any generic type is a valid object type.
 	 */

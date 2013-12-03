@@ -42,6 +42,7 @@
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/SourceManager.h>
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 using namespace clang;
@@ -98,14 +99,28 @@ std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager 
 std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
 	if (l.isValid()){
 		if (l.isFileID()) {
-			if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE"; 
+			//if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE"; 
+			if (sm.isLoadedSourceLocation(l) ) { return "PRELOADED MODULE"; }
+
 			return l.printToString(sm);
 		}
+
 		if (l.isMacroID()){
+			//FIXME: what do we do here? somehow clang fails
+			/*
+			std::cout << "SLoc isMacroID\n";
+		
+			auto sl = sm.getSpellingLoc(l);
+			if (sm.isLoadedSourceLocation(sl) ) { return "PRELOADED MODULE"; }
+			if(sl.isValid()) {
+				return sl.printToString(sm);
+			}
+
 			PresumedLoc pl = sm.getPresumedLoc(l);
 			if (pl.isValid()){
 				return string(pl.getFilename());
 			}
+			*/
 		}
 	}
 	return string("UNKNOWN FILE");
