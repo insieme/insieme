@@ -52,6 +52,9 @@ namespace cba {
 	class ImperativeInStateConstraintGenerator;
 
 	template<typename Context, typename BaseAnalysis>
+	class ImperativeTmpStateConstraintGenerator;
+
+	template<typename Context, typename BaseAnalysis>
 	class ImperativeOutStateConstraintGenerator;
 
 
@@ -69,11 +72,10 @@ namespace cba {
 	struct location_data_in_analysis : public location_data_analysis<A, ImperativeInStateConstraintGenerator> {};
 
 	template<typename A>
-	struct location_data_out_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
+	struct location_data_tmp_analysis : public location_data_analysis<A, ImperativeTmpStateConstraintGenerator> {};
 
 	template<typename A>
-	struct location_data_tmp_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
-
+	struct location_data_out_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
 
 
 	template<typename Context, typename BaseAnalysis>
@@ -137,6 +139,55 @@ namespace cba {
 				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, s_in, s_out));
 			}
 		}
+	};
+
+
+	template<typename Context, typename BaseAnalysis>
+	struct ImperativeTmpStateConstraintGenerator : public ConstraintGenerator {
+
+		ImperativeTmpStateConstraintGenerator(CBA&) {}
+
+		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+			// nothing to do here
+
+			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			Label label = std::get<1>(data);
+			const auto& call = cba.getStmt(label).as<CallExprAddress>();
+			const auto& ctxt = std::get<2>(data);
+			const auto& loc  = std::get<3>(data);
+
+			// obtain
+			auto S_tmp = cba.getLocationDataSet<BaseAnalysis>(Stmp, label, ctxt, loc);
+			assert_eq(value, S_tmp) << "Queried a non S_tmp id!";
+
+			// create constraints
+			for(const auto& cur : call) {
+				auto l_arg = cba.getLabel(cur);
+				auto S_out = cba.getLocationDataSet<BaseAnalysis>(Sout, l_arg, ctxt, loc);
+				constraints.add(subset(S_out, S_tmp));
+			}
+
+			// and the function
+			auto l_fun = cba.getLabel(call->getFunctionExpr());
+			constraints.add(subset(cba.getLocationDataSet<BaseAnalysis>(Sout, l_fun, ctxt, loc), S_tmp));
+
+		}
+
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+
+			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			Label label = std::get<1>(data);
+			const auto& stmt = cba.getStmt(label);
+			const auto& ctxt = std::get<2>(data);
+			const auto& loc = std::get<3>(data);
+
+			out << value << " = Stmp - " << getAnalysisName<BaseAnalysis>() << "@" << loc
+				 << "[l" << label << " = " << stmt->getNodeType() << " : "
+				 << stmt << " = " << core::printer::PrettyPrinter(stmt, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+				 << ctxt << "]";
+
+		}
+
 	};
 
 	namespace {
@@ -379,16 +430,13 @@ namespace cba {
 
 //				// ---- S_out of args => S_tmp of call (only if other location is possible)
 //
-				auto R_rhs = cba.getSet(R, l_rhs, ctxt);
-				auto S_out_rhs = cba.getLocationDataSet<BaseAnalysis>(Sout, l_rhs, ctxt, location);
-				auto S_out_lhs = cba.getLocationDataSet<BaseAnalysis>(Sout, l_lhs, ctxt, location);
 				auto S_tmp = cba.getLocationDataSet<BaseAnalysis>(Stmp, l_call, ctxt, location);
-				constraints.add(subsetIfExceeding(R_rhs, location, S_out_rhs, S_tmp));
-				constraints.add(subsetIfExceeding(R_rhs, location, S_out_lhs, S_tmp));
 //
 //				// ---- combine S_tmp to S_out ...
 //
 //				// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
+
+				auto R_rhs = cba.getSet(R, l_rhs, ctxt);
 				auto A_value = cba.getSet<BaseAnalysis>(l_lhs, ctxt);
 				auto S_out = cba.getLocationDataSet<BaseAnalysis>(Sout, l_call, ctxt, location);
 //				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
