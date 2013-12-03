@@ -72,7 +72,7 @@ namespace cba {
 		Definition()
 			: utils::HashableImmutableData<Definition<Context>>(combineHashes(core::CallExprAddress(), Context())) {}
 
-		Definition(const core::CallExprAddress& expr, const Context& ctxt)
+		Definition(const core::CallExprAddress& expr, const Context& ctxt = Context())
 			: utils::HashableImmutableData<Definition<Context>>(combineHashes(expr, ctxt)),
 			  definitionPoint(expr),
 			  definitionContext(ctxt) {}
