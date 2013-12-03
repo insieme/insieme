@@ -72,7 +72,7 @@ namespace cba {
 		Location()
 			: utils::HashableImmutableData<Location<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
 
-		Location(const core::ExpressionAddress& expr, const Context& ctxt)
+		Location(const core::ExpressionAddress& expr, const Context& ctxt = Context())
 			: utils::HashableImmutableData<Location<Context>>(combineHashes(expr, ctxt)),
 			  creationPoint(expr),
 			  creationContext(ctxt) {}

@@ -41,6 +41,7 @@ namespace analysis {
 namespace cba {
 
 	const reaching_def_in_analysis  RDin  = registerAnalysis< reaching_def_in_analysis>( "RDin");
+	const reaching_def_tmp_analysis RDtmp = registerAnalysis<reaching_def_tmp_analysis>("RDtmp");
 	const reaching_def_out_analysis RDout = registerAnalysis<reaching_def_out_analysis>("RDout");
 
 } // end namespace cba

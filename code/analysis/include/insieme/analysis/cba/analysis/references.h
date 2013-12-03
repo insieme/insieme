@@ -80,17 +80,23 @@ namespace cba {
 
 	public:
 
-		ReferenceConstraintGenerator(CBA& cba) : super(cba, R, r), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ReferenceConstraintGenerator(CBA& cba)
+//			: super(cba, R, r, getUnknownExternalReference(cba)),
+		    : super(cba, R, r),
+			  cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
-			// and default handling
-			super::visitLiteral(literal, ctxt, constraints);
-
 			// only interested in memory location constructors
-			if (!isMemoryConstructor(literal)) return;
+			if (!isMemoryConstructor(literal)) {
+				// default handling for those
+				if (literal->getType().isa<RefTypePtr>()) {
+					super::visitLiteral(literal, ctxt, constraints);
+				}
+				return;
+			}
 
 			// add constraint literal \in R(lit)
 			auto value = getLocation(literal, ctxt);
@@ -138,6 +144,20 @@ namespace cba {
 
 			}
 		}
+
+	private:
+
+//		static typename super::value_type getUnknownExternalReference(CBA& cba) {
+//
+//			auto& mgr = cba.getRoot()->getNodeManager();
+//			IRBuilder builder(mgr);
+//			auto type = mgr.getLangBasic().getAnyRef();
+//
+//			set<Reference<Context>> res;
+//			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_A", type)))));
+//			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_B", type)))));
+//			return cba.getDataManager<typename lattice<reference_analysis_data, analysis_config<Context>>::type>().atomic(res);
+//		}
 
 	};
 

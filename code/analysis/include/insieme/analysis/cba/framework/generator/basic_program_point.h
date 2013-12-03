@@ -509,13 +509,13 @@ namespace cba {
 			// if target is fixed => no condition on constraint edge
 			if (targets.size() == 1u) {
 
-				// special case - call is a merge call
-				auto& basic = call->getNodeManager().getLangBasic();
-				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
-					// handle this merge operation in an extra function
-					processMergeCall(call, ctxt, params..., constraints);
-					return;
-				}
+//				// special case - call is a merge call
+//				auto& basic = call->getNodeManager().getLangBasic();
+//				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
+//					// handle this merge operation in an extra function
+//					processMergeCall(call, ctxt, params..., constraints);
+//					return;
+//				}
 
 				// skip handling of literals
 				if (targets[0].isLiteral()) {

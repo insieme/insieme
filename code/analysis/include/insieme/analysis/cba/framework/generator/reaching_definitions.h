@@ -50,13 +50,158 @@ namespace cba {
 	// ----------------- jobs ---------------
 
 	template<typename Context> class ReachingDefInConstraintGenerator;
+	template<typename Context> class ReachingDefTmpConstraintGenerator;
 	template<typename Context> class ReachingDefOutConstraintGenerator;
 
 	struct reaching_def_in_analysis  : public location_based_set_analysis<Definition,  ReachingDefInConstraintGenerator> {};
+	struct reaching_def_tmp_analysis : public location_based_set_analysis<Definition,  ReachingDefTmpConstraintGenerator> {};
 	struct reaching_def_out_analysis : public location_based_set_analysis<Definition, ReachingDefOutConstraintGenerator> {};
 
 	extern const reaching_def_in_analysis  RDin;
+	extern const reaching_def_tmp_analysis RDtmp;
 	extern const reaching_def_out_analysis RDout;
+
+	namespace {
+
+		template<
+			typename Context,
+			typename ReachingDefValue,
+			typename RefValue
+		>
+		class ReachingDefConstraint : public Constraint {
+
+			typedef typename ReachingDefValue::meet_assign_op_type meet_assign_op;
+			typedef typename ReachingDefValue::less_op_type less_op;
+
+			const Location<Context> loc;
+			const Definition<Context> def;
+			const TypedValueID<ReachingDefValue> in;
+			const TypedValueID<ReachingDefValue> out;
+			const TypedValueID<RefValue> ref;
+
+		public:
+
+			ReachingDefConstraint(
+					const Location<Context>& loc, const Definition<Context>& def,
+					const TypedValueID<ReachingDefValue>& in, const TypedValueID<ReachingDefValue>& out,
+					const TypedValueID<RefValue>& ref)
+				: Constraint(toVector<ValueID>(in, ref), toVector<ValueID>(out)),
+				  loc(loc), def(def), in(in), out(out), ref(ref) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op less;
+
+				// get reference to current value
+				set<Definition<Context>>& value = ass[out];
+
+				// compute new value
+				set<Definition<Context>> updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op less;
+				return less(getUpdatedValue(ass), ass[out]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				return
+					out << ref << " -> " << this->out << "[label=\"" << *this << "\"]\n"
+						<< in << " -> " << this->out << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+
+				const set<Reference<Context>>& refs = ass[ref];
+
+				bool isDefinition = any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; });
+				bool isNotUnique  = !(refs.size() == 1u && *refs.begin() == Reference<Context>(loc));
+
+				return
+					out << ref << " -> " << this->out << "[label=\"" << loc << " touched by " << ref << "\"" << ((isDefinition)?"":" style=dotted") << "]\n"
+						<< in << " -> " << this->out << "[label=\"if not " << ref << " uniquely address " << loc << "\"" << ((isNotUnique)?"":" style=dotted") << "]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
+			}
+
+			virtual bool hasAssignmentDependentDependencies() const {
+				return true;
+			}
+
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// create result set
+				std::set<ValueID> res;
+
+				// we always have to read the ref set
+				res.insert(ref);
+
+				// check whether reference is unique
+				const set<Reference<Context>>& refs = ass[ref];
+				if (refs.empty()) return res;
+				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) return res;
+
+				// if not, we also need the in set
+				res.insert(in);
+				return res;
+			}
+
+		private:
+
+			set<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
+
+				set<Definition<Context>> res;
+
+				// check reference
+				const set<Reference<Context>>& refs = ass[ref];
+
+				// if still empty => nothing happens
+				if (refs.empty()) return res;
+
+				// check whether a local reference is included
+
+				// if it is only referencing the observed location => it is a new definition
+				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) {
+					res.insert(def);
+					return res;
+				}
+
+				// otherwise out is subset of in
+				const set<Definition<Context>>& in_values = ass[in];
+				res.insert(in_values.begin(), in_values.end());
+
+				// and if loc is referenced, this one might be a new definition
+				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; })) {
+					res.insert(def);
+				}
+
+				// done
+				return res;
+			}
+
+		};
+
+
+		template<typename RefValue, typename RDValue, typename Context>
+		ConstraintPtr reachingDef(const Location<Context>& loc, const Definition<Context>& def, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& in_state, const TypedValueID<RDValue>& out_state) {
+			return std::make_shared<ReachingDefConstraint<Context,RDValue,RefValue>>(loc, def, in_state, out_state, updatedRef);
+		}
+
+	}
+
 
 	template<typename Context>
 	class ReachingDefInConstraintGenerator
@@ -81,6 +226,47 @@ namespace cba {
 	public:
 
 		ReachingDefInConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+
+	};
+
+	template<typename Context>
+	struct ReachingDefTmpConstraintGenerator : public ConstraintGenerator {
+
+		ReachingDefTmpConstraintGenerator(CBA&) {}
+
+		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+			// nothing to do here
+
+			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			Label label = std::get<1>(data);
+			const auto& call = cba.getStmt(label).as<CallExprAddress>();
+			const auto& ctxt = std::get<2>(data);
+			const auto& loc  = std::get<3>(data);
+
+			// obtain
+			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);
+			assert_eq(value, RD_tmp) << "Queried a non RD_tmp id!";
+
+			// create constraints
+			for(const auto& cur : call) {
+				auto RD_out = cba.getSet(RDout, cur, ctxt, loc);
+				constraints.add(subset(RD_out, RD_tmp));
+			}
+
+			// and the function
+			constraints.add(subset(cba.getSet(RDout, call->getFunctionExpr(), ctxt, loc), RD_tmp));
+
+		}
+
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+
+			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			const auto& stmt = cba.getStmt(std::get<1>(data));
+			const auto& ctxt = std::get<2>(data);
+			const auto& loc = std::get<3>(data);
+
+			out << "RDtmp : " << stmt << " : " << ctxt << " : " << loc;
+		}
 
 	};
 
@@ -128,11 +314,16 @@ namespace cba {
 			//		- if only reference => in definitions are not forwarded
 			//		- if on of many => in definition + local definition
 
+			// collect effects of parameters (and function evaluation) into RDtmp
 
-			auto value = Definition<Context>(call, ctxt);
-			auto RD_out = cba.getSet(RDout, call, ctxt, loc);
 
-			constraints.add(elem(value, RD_out));
+			// get involved sets
+			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+			auto RD_out = cba.getSet(RDout, call, ctxt, loc);		// the definitions
+			auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+
+			// add constraint
+			constraints.add(reachingDef(loc, Definition<Context>(call, ctxt), R_trg, RD_tmp, RD_out));
 
 		}
 

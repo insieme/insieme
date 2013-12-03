@@ -158,7 +158,7 @@ namespace cba {
 	public:
 
 		ArithmeticConstraintGenerator(CBA& cba)
-			: super(cba, cba::A, cba::a),
+			: super(cba, cba::A, cba::a, cba.getDataManager<lattice<arithmetic_analysis_data>::type>().atomic(utils::set::toSet<set<Formula>>(Formula()))),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)
 		{ };
@@ -168,11 +168,12 @@ namespace cba {
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
-			// and default handling
-			super::visitLiteral(literal, ctxt, constraints);
-
 			// only interested in integer literals
-			if (!base.isInt(literal->getType())) return;
+			if (!base.isInt(literal->getType())) {
+				// default handling for all others
+				super::visitLiteral(literal, ctxt, constraints);
+				return;
+			}
 
 			// add constraint literal \in A(lit)
 			auto value = core::arithmetic::toFormula(literal);
