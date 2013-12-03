@@ -1180,8 +1180,6 @@ namespace {
 		//   { intializer stuff };
 		//   { original body };
 		// }
-
-		// build new
 		return builder.compoundStmt(
 				builder.compoundStmt(initList),
 				body
