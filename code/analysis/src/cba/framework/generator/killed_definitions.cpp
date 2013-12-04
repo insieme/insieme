@@ -34,15 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+#include "insieme/analysis/cba/framework/generator/killed_definitions.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const reaching_defs_in_analysis  RDin  = registerAnalysis< reaching_defs_in_analysis>( "RDin");
-	const reaching_defs_tmp_analysis RDtmp = registerAnalysis<reaching_defs_tmp_analysis>("RDtmp");
-	const reaching_defs_out_analysis RDout = registerAnalysis<reaching_defs_out_analysis>("RDout");
+	const killed_defs_in_analysis  KDin  = registerAnalysis< killed_defs_in_analysis>( "KDin");
+	const killed_defs_tmp_analysis KDtmp = registerAnalysis<killed_defs_tmp_analysis>("KDtmp");
+	const killed_defs_out_analysis KDout = registerAnalysis<killed_defs_out_analysis>("KDout");
 
 } // end namespace cba
 } // end namespace analysis

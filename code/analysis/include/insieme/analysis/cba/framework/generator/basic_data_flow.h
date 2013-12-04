@@ -318,10 +318,12 @@ namespace cba {
 
 		mgr_type& valueMgr;
 
+		value_type unknown;		// the value to be assigned to unknown values
+
 	public:
 
-		DataFlowConstraintGenerator(CBA& cba, const ValueAnalysisType& A, const VariableAnalysisType& a)
-			: super(cba), A(A), a(a), cba(cba), valueMgr(cba.getDataManager<lattice_type>()) { };
+		DataFlowConstraintGenerator(CBA& cba, const ValueAnalysisType& A, const VariableAnalysisType& a, const value_type& unknown = value_type())
+			: super(cba), A(A), a(a), cba(cba), valueMgr(cba.getDataManager<lattice_type>()), unknown(unknown) { };
 
 		mgr_type& getValueManager() {
 			return valueMgr;
@@ -373,7 +375,9 @@ namespace cba {
 		}
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
-			// nothing to do by default => should be overloaded by sub-classes
+			// external literals are by default unknown values - could be overloaded by sub-classes
+			auto A_lit = cba.getSet(A, literal, ctxt);
+			constraints.add(subset(unknown, A_lit));
 		}
 
 		void visitVariable(const VariableAddress& variable, const Context& ctxt, Constraints& constraints) {
@@ -402,8 +406,11 @@ namespace cba {
 			// ok - this is the definition point
 			// => check type of variable (determined by parent)
 
-			// no parent: free variable, nothing to do
-			if (def.isRoot()) return;
+			// no parent: free variable, needs to assume an unknown value
+			if (def.isRoot()) {
+				constraints.add(subset(unknown, a_var));
+				return;
+			}
 
 			// so, there should be a parent
 			auto parent = def.getParentAddress();

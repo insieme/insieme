@@ -34,16 +34,23 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+#pragma once
+
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
-namespace analysis {
-namespace cba {
+namespace frontend {
 
-	const reaching_defs_in_analysis  RDin  = registerAnalysis< reaching_defs_in_analysis>( "RDin");
-	const reaching_defs_tmp_analysis RDtmp = registerAnalysis<reaching_defs_tmp_analysis>("RDtmp");
-	const reaching_defs_out_analysis RDout = registerAnalysis<reaching_defs_out_analysis>("RDout");
+/**
+ * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not, 
+ * The Return stmt lacks of the information to decide, so we just return.
+ * here is the place to fix the right return value
+ */
+class CppRefsCleanup : public insieme::frontend::extensions::FrontendPlugin {
+	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+};
 
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+
+
+} // frontend
+} // insieme

@@ -147,7 +147,7 @@ namespace cba {
 	public:
 
 		BooleanConstraintGenerator(CBA& cba)
-			: super(cba, cba::B, cba::b),
+			: super(cba, cba::B, cba::b, cba.getDataManager<lattice<boolean_analysis_data>::type>().atomic(utils::set::toSet<set<bool>>(true, false))),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)
 		{ };
@@ -158,11 +158,12 @@ namespace cba {
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
-			// and default handling
-			super::visitLiteral(literal, ctxt, constraints);
-
 			// only interested in boolean literals
-			if (!base.isBool(literal->getType())) return;
+			if (!base.isBool(literal->getType())) {
+				// default handling for the rest
+				super::visitLiteral(literal, ctxt, constraints);
+				return;
+			}
 
 			// add constraint literal \in A(lit)
 			bool isTrue = base.isTrue(literal);

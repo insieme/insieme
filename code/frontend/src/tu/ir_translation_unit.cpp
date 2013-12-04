@@ -196,7 +196,7 @@ namespace tu {
 		public:
 
 			Resolver(NodeManager& mgr, const IRTranslationUnit& unit)
-				: mgr(mgr), builder(mgr) {
+				: mgr(mgr), builder(mgr), cache(), symbolMap(), recVarMap(), recVarResolutions(), recVars(), metaInfos() {
 
 				// copy type symbols into symbol table
 				for(auto cur : unit.getTypes()) {
@@ -222,8 +222,11 @@ namespace tu {
 				// convert node itself
 				auto res = map(node);
 
+				// copy the source list to avoid invalidation of iterator
+				auto list =metaInfos;
+
 				// re-add meta information
-				for(const auto& cur : metaInfos) {
+				for(const auto& cur : list) {
 
 					// encode meta info into pure IR
 					auto encoded = core::toIR(mgr, cur.second);
@@ -389,6 +392,21 @@ namespace tu {
 				// right ref type
 				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
 					auto call = res.as<CallExprPtr>();
+
+					if (!call[0]->getType().isa<RefTypePtr>()){
+						std::cout << "composite without ref" << std::endl;
+						dumpPretty(res);
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " the element is:" << std::endl;
+						dumpPretty(call[0]);
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " the element type is:" << std::endl;
+						dumpPretty(call[0]->getType());
+					}
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
@@ -749,6 +767,7 @@ namespace tu {
 		// search for entry point
 		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {
+
 			if (cur.first->getStringValue() == entryPoint) {
 
 				// get the symbol
@@ -768,7 +787,6 @@ namespace tu {
 				return builder.program(toVector<core::ExpressionPtr>(lambda));
 			}
 		}
-
 
 		assert(false && "No such entry point!");
 		return core::ProgramPtr();

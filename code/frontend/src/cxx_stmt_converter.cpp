@@ -83,7 +83,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStm
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
 
-	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
 	LOG_STMT_CONVERSION(retStmt, stmt);
 
@@ -92,101 +91,28 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 		return stmt;
 	}
 
-	if(llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
-		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) ||
-		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue())) {
-		return stmt;
-	}
-
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
 	// check if the return must be converted or not to a reference,
 	// is easy to check if the value has being derefed or not
-	if (gen.isPrimitive(retExpr->getType()))
+	if (gen.isPrimitive(retExpr->getType())){
 			return stmt;
-
-	// if the function returns references, we wont realize, there is no cast, and the inner
-	// expresion might have  no reference type
-	// if there is no copy constructor on return... it seems that this is the case in which a
-	// ref is returned
-	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
-//	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
-
-	// we only operate this on classes
-	clang::CastExpr* cast;
-	clang::CXXConstructExpr* ctorExpr;
-	clang::ExprWithCleanups*  cleanups;
-	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
-		switch(cast->getCastKind () ){
-			case CK_NoOp : // make constant
-
-				if (core::analysis::isCppRef(retExpr->getType())){
-					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), retExpr);
-				}
-				else if (!core::analysis::isConstCppRef(retExpr->getType())){
-					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
-				}
-
-				break;
-			case CK_LValueToRValue: //deref, not a ref
-			default:
-				break;
-		}
-	}
-	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
-	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
-	// this is produced by the AST, but we should delegate this matters to the backend compiler
-
-		// but we DO NOT call a constructor on return in EXCEPT if :
-		// 			- when we are actually creating a new object out of more than one paramenter, then we have no way to 
-		// 			  return that tuple to construct afterwards 
-		if (retExpr->getNodeType() == core::NT_CallExpr){
-			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
-				// FIXME: build a test of return values
-				if(ty.isConstructor() && retExpr.as<core::CallExprPtr>()->getArguments().size()==2){ // two args, first is this, second the obj to copy
-					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
-				}
-			}
-		}
-
-		// fist of all, have a look of what is behind the deRef
-		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
-			retExpr = retExpr.as<core::CallExprPtr>()[0];
-		}
-
-		if(IS_CPP_REF(retExpr->getType())){
-			// we are returning a value, peel out the reference, or deref it
-			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) ||
-				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
-				retExpr = retExpr.as<core::CallExprPtr>()->getArgument(0);
-			else{
-				if (core::analysis::isCppRef(retExpr->getType())){
-					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr);
-				}
-				else if (core::analysis::isConstCppRef(retExpr->getType())){
-					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), retExpr);
-				}
-			}
-		}
-
-		// return  by value
-		if (retExpr->getType().isa<core::RefTypePtr>()) 
-			retExpr = builder.deref(retExpr);
-	}
-	else if ((cleanups= llvm::dyn_cast<clang::ExprWithCleanups>(retStmt->getRetValue())) != NULL){
-		// do nothing, should be already OK
-	}
-	else{
-		// not a cast, it is a ref then... only if not array
-		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
-			!IS_CPP_REF(retExpr->getType())){
-				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
-		}
 	}
 
-	stmtList.push_back(builder.returnStmt(retExpr));
-	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+	// return by value ALWAYS, will fix this in a second pass (check cpp_ref plugin)
+	//   - var(undefined (Obj))    
+	//   - ctor(undefined(Obj))
+	//   - vx (where type is ref<Obj<..>>)
+	//   		all this casses, by value!
+	//   all of those cases result in an expression typed ref<obj>
+	if (retExpr->getType().isa<core::RefTypePtr>()){
+		if (core::analysis::isObjectType(retExpr->getType().as<core::RefTypePtr>()->getElementType())){
+			vector<core::StatementPtr> stmtList;
+			stmtList.push_back(builder.returnStmt(builder.deref(retExpr)));
+			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+			stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+		}
+	}
 
 	return stmt;
 }
@@ -222,6 +148,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 		core::VariablePtr var;
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
 			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+
 
 			var = builder.variable(exceptionTy);
 

@@ -241,6 +241,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
 		core::ExpressionPtr left  = convFact.convertExpr(binOp->getLHS());
 		core::ExpressionPtr right = convFact.convertExpr(binOp->getRHS());
+		if (!incrementExpr->getType().isa<core::RefTypePtr>()) throw LoopNormalizationError("unhandled induction variable type");
 		core::ExpressionPtr value = convFact.getIRBuilder().deref(incrementExpr);
 			
 		bool isRight = false;

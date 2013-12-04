@@ -52,5 +52,6 @@ class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
 		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 };
 
+
 } // frontend
 } // insieme
