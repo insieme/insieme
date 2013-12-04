@@ -39,6 +39,7 @@
 #include <set>
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace utils {
@@ -74,17 +75,28 @@ namespace constraint {
 	};
 
 
-	// forward declarations for set lattice
-	template<typename E> struct set_meet_assign_op;
-	template<typename E> struct set_less_op;
+	// forward declarations for set lattice operations
+	template<typename E> struct set_union_meet_assign_op;
+	template<typename E> struct set_union_less_op;
+
+	template<typename E> struct set_intersect_meet_assign_op;
+	template<typename E> struct set_intersect_less_op;
+
+	template<typename E>
+	struct SetUnionLattice : public Lattice<std::set<E>, set_union_meet_assign_op<E>, set_union_less_op<E>> {};
+
+	// the special set type utilized for intersection lattices (supporting the representation of all elements)
+	template<typename E> class iset;
+
+	template<typename E>
+	struct SetIntersectLattice : public Lattice<iset<E>, set_intersect_meet_assign_op<E>, set_intersect_less_op<E>> {};
 
 	/**
 	 * A utility definition for set lattices defining the proper operations based
 	 * on an element type. The partial order is defined by the sub-set relation.
 	 */
 	template<typename E>
-	struct SetLattice : public Lattice<std::set<E>, set_meet_assign_op<E>, set_less_op<E>> {};
-
+	struct SetLattice : public SetUnionLattice<E> {};
 
 	// ----------------------------------------------------------------
 	// 						utility definition
@@ -124,7 +136,7 @@ namespace constraint {
 
 
 	template<typename E>
-	struct set_meet_assign_op {
+	struct set_union_meet_assign_op {
 		bool operator()(std::set<E>& trg, const E& element) const {
 			return trg.insert(element).second;
 		}
@@ -142,12 +154,85 @@ namespace constraint {
 	};
 
 	template<typename E>
-	struct set_less_op {
+	struct set_union_less_op {
 		bool operator()(const E& e, const std::set<E>& a) const {
 			return a.find(e) != a.end();
 		}
 		bool operator()(const std::set<E>& a, const std::set<E>& b) const {
 			return set::isSubset(a, b);
+		}
+	};
+
+
+	template<typename E>
+	struct iset : public std::set<E>, public utils::Printable {
+		bool universal;
+		iset() : universal(true) {}
+		std::ostream& printTo(std::ostream& out) const {
+			if (universal) return out << "{-all-}";
+			return out << static_cast<const std::set<E>&>(*this);
+		}
+	};
+
+
+	template<typename E>
+	struct set_intersect_meet_assign_op {
+		bool operator()(iset<E>& trg, const E& element) const {
+
+			// deal with universe
+			if (trg.universal) {
+				trg.universal = false;
+				assert_true(trg.empty()) << trg;
+				trg.insert(element);
+				return true;
+			}
+
+			// handle others
+			if (trg.size() == 1u && *trg.begin() == element) return false;
+			trg.clear();
+			trg.insert(element);
+			return true;
+		}
+		bool operator()(iset<E>& trg, const iset<E>& src) const {
+
+			// handle universal sets
+			if (trg.universal) {
+
+				// if both are universal, there is nothing to do
+				if (src.universal) return false;
+
+				// otherwise the result will be the src
+				trg = src;
+				return true;
+			}
+
+			// compute the intersection
+			bool changed = false;
+
+			// this is strange code, but it is the simplest stack overflow could come up with
+			// http://stackoverflow.com/questions/2874441/deleting-elements-from-stl-set-while-iterating
+			for(auto it = trg.begin(); it != trg.end(); ) {
+				if (!contains(src, *it)) {
+					trg.erase(it++);
+					changed = true;
+				} else {
+					++it;
+				}
+			}
+
+			return changed;
+		}
+	};
+
+	template<typename E>
+	struct set_intersect_less_op {
+		bool operator()(const E& e, const iset<E>& a) const {
+			return a.empty() || (a.size() == 1u && *a.begin() == e);
+		}
+		bool operator()(const iset<E>& a, const iset<E>& b) const {
+			if (a.universal) return true;
+			if (b.universal) return false;
+			return set::isSubset(b, a);		// note: reverse order!
 		}
 	};
 

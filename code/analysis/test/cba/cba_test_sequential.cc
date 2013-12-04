@@ -506,12 +506,12 @@ namespace cba {
 		CBA analysis(root);
 
 		// check whether globals are propery handled
-//		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
 
-		createDotDump(analysis);
+//		createDotDump(analysis);
 	}
 
 	// Known Bug: Variables can not be external - TODO: let external references reference two shared, common location (they may alias each other)!

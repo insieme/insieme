@@ -39,6 +39,7 @@
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/definition.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -47,54 +48,60 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// ----------------- jobs ---------------
+	// ----------------- killed definitions ---------------
 
-	template<typename Context> class ReachingDefsInConstraintGenerator;
-	template<typename Context> class ReachingDefsTmpConstraintGenerator;
-	template<typename Context> class ReachingDefsOutConstraintGenerator;
+	template<typename Context> class KilledDefsInConstraintGenerator;
+	template<typename Context> class KilledDefsTmpConstraintGenerator;
+	template<typename Context> class KilledDefsOutConstraintGenerator;
 
-	struct reaching_defs_in_analysis  : public location_based_set_analysis<Definition,  ReachingDefsInConstraintGenerator> {};
-	struct reaching_defs_tmp_analysis : public location_based_set_analysis<Definition,  ReachingDefsTmpConstraintGenerator> {};
-	struct reaching_defs_out_analysis : public location_based_set_analysis<Definition, ReachingDefsOutConstraintGenerator> {};
+	template<template<typename C> class G>
+	struct kill_set_analysis : public location_based_set_analysis<Definition, G> {
+		template<typename C> struct lattice   { typedef utils::constraint::SetIntersectLattice<Definition<typename C::context_type>> type; };
+	};
 
-	extern const reaching_defs_in_analysis  RDin;
-	extern const reaching_defs_tmp_analysis RDtmp;
-	extern const reaching_defs_out_analysis RDout;
+	struct killed_defs_in_analysis  : public kill_set_analysis< KilledDefsInConstraintGenerator> {};
+	struct killed_defs_tmp_analysis : public kill_set_analysis<KilledDefsTmpConstraintGenerator> {};
+	struct killed_defs_out_analysis : public kill_set_analysis<KilledDefsOutConstraintGenerator> {};
+
+	extern const killed_defs_in_analysis  KDin;
+	extern const killed_defs_tmp_analysis KDtmp;
+	extern const killed_defs_out_analysis KDout;
 
 	namespace {
 
 		template<
 			typename Context,
+			typename KilledDefValue,
 			typename ReachingDefValue,
 			typename RefValue
 		>
-		class ReachingDefsConstraint : public Constraint {
+		class KilledDefsConstraint : public Constraint {
 
-			typedef typename ReachingDefValue::less_op_type less_op;
+			typedef typename KilledDefValue::less_op_type less_op;
 
 			const Location<Context> loc;
-			const Definition<Context> def;
-			const TypedValueID<ReachingDefValue> in;
-			const TypedValueID<ReachingDefValue> out;
+			const TypedValueID<KilledDefValue> in;
+			const TypedValueID<KilledDefValue> out;
+			const TypedValueID<ReachingDefValue> reaching_in;
 			const TypedValueID<RefValue> ref;
 
 		public:
 
-			ReachingDefsConstraint(
-					const Location<Context>& loc, const Definition<Context>& def,
-					const TypedValueID<ReachingDefValue>& in, const TypedValueID<ReachingDefValue>& out,
-					const TypedValueID<RefValue>& ref)
-				: Constraint(toVector<ValueID>(in, ref), toVector<ValueID>(out)),
-				  loc(loc), def(def), in(in), out(out), ref(ref) {}
+			KilledDefsConstraint(
+					const Location<Context>& loc,
+					const TypedValueID<KilledDefValue>& in, const TypedValueID<KilledDefValue>& out,
+					const TypedValueID<ReachingDefValue>& reaching_in, const TypedValueID<RefValue>& ref)
+				: Constraint(toVector<ValueID>(in, ref, reaching_in), toVector<ValueID>(out)),
+				  loc(loc), in(in), out(out), reaching_in(reaching_in), ref(ref) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				const static less_op less;
 
 				// get reference to current value
-				set<Definition<Context>>& value = ass[out];
+				iset<Definition<Context>>& value = ass[out];
 
 				// compute new value
-				set<Definition<Context>> updated = getUpdatedValue(ass);
+				iset<Definition<Context>> updated = getUpdatedValue(ass);
 
 				// check whether something has changed
 				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
@@ -116,24 +123,18 @@ namespace cba {
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
 				return
-					out << ref << " -> " << this->out << "[label=\"" << *this << "\"]\n"
-						<< in << " -> " << this->out << "[label=\"" << *this << "\"]\n";
+					out << in << " -> " << this->out << "[label=\"" << *this << "\"]\n"
+						<< reaching_in << " -> " << this->out << "[label=\"" << *this << "\"]\n";
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
-
-				const set<Reference<Context>>& refs = ass[ref];
-
-				bool isDefinition = any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; });
-				bool isNotUnique  = !(refs.size() == 1u && *refs.begin() == Reference<Context>(loc));
-
 				return
-					out << ref << " -> " << this->out << "[label=\"" << loc << " touched by " << ref << "\"" << ((isDefinition)?"":" style=dotted") << "]\n"
-						<< in << " -> " << this->out << "[label=\"if not " << ref << " uniquely address " << loc << "\"" << ((isNotUnique)?"":" style=dotted") << "]\n";
+					out << in << " -> " << this->out << "[label=\"" << in << " sub " << this->out << "\"]\n"
+						<< reaching_in << " -> " << this->out << "[label=\"if killed\"" << ((isKill(ass))?"":" style=dotted") << "]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
+				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
 			}
 
 			virtual bool hasAssignmentDependentDependencies() const {
@@ -145,46 +146,38 @@ namespace cba {
 				// create result set
 				std::set<ValueID> res;
 
-				// we always have to read the ref set
+				// ref and in are always required
 				res.insert(ref);
-
-				// check whether reference is unique
-				const set<Reference<Context>>& refs = ass[ref];
-				if (refs.empty()) return res;
-				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) return res;
-
-				// if not, we also need the in set
 				res.insert(in);
+
+				// reaching_in is required if reference is matched
+				if (isKill(ass)) {
+					res.insert(reaching_in);
+				}
+
 				return res;
 			}
 
 		private:
 
-			set<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
-
-				set<Definition<Context>> res;
+			bool isKill(const Assignment& ass) const {
 
 				// check reference
 				const set<Reference<Context>>& refs = ass[ref];
 
-				// if still empty => nothing happens
-				if (refs.empty()) return res;
+				// check whether this definition is addressing the full memory location
+				return refs.size() == 1u && *refs.begin() == Reference<Context>(loc);
+			}
 
-				// check whether a local reference is included
+			iset<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
+
+				iset<Definition<Context>> res = ass[in];		// all in-values are always included
+				res.universal = false;
 
 				// if it is only referencing the observed location => it is a new definition
-				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) {
-					res.insert(def);
-					return res;
-				}
-
-				// otherwise out is subset of in
-				const set<Definition<Context>>& in_values = ass[in];
-				res.insert(in_values.begin(), in_values.end());
-
-				// and if loc is referenced, this one might be a new definition
-				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; })) {
-					res.insert(def);
+				if (isKill(ass)) {
+					const set<Definition<Context>>& reaching = ass[reaching_in];
+					res.insert(reaching.begin(), reaching.end());
 				}
 
 				// done
@@ -194,28 +187,28 @@ namespace cba {
 		};
 
 
-		template<typename RefValue, typename RDValue, typename Context>
-		ConstraintPtr reachingDefs(const Location<Context>& loc, const Definition<Context>& def, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& in_state, const TypedValueID<RDValue>& out_state) {
-			return std::make_shared<ReachingDefsConstraint<Context,RDValue,RefValue>>(loc, def, in_state, out_state, updatedRef);
+		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
+		ConstraintPtr killedDefs(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state) {
+			return std::make_shared<KilledDefsConstraint<Context,KDValue,RDValue,RefValue>>(loc, in_state, out_state, reaching_in, updatedRef);
 		}
 
 	}
 
 
 	template<typename Context>
-	class ReachingDefsInConstraintGenerator
+	class KilledDefsInConstraintGenerator
 		: public BasicInConstraintGenerator<
-		  	  reaching_defs_in_analysis,
-		  	  reaching_defs_out_analysis,
-		  	  ReachingDefsInConstraintGenerator<Context>,
+		  	  killed_defs_in_analysis,
+		  	  killed_defs_out_analysis,
+		  	  KilledDefsInConstraintGenerator<Context>,
 		  	  Context,
 		  	  Location<Context>
 		  > {
 
 		typedef BasicInConstraintGenerator<
-			  	  reaching_defs_in_analysis,
-			  	  reaching_defs_out_analysis,
-			  	  ReachingDefsInConstraintGenerator<Context>,
+			  	  killed_defs_in_analysis,
+			  	  killed_defs_out_analysis,
+			  	  KilledDefsInConstraintGenerator<Context>,
 			  	  Context,
 			  	  Location<Context>
 			 > super;
@@ -224,14 +217,14 @@ namespace cba {
 
 	public:
 
-		ReachingDefsInConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		KilledDefsInConstraintGenerator(CBA& cba) : super(cba, KDin, KDout), cba(cba) {}
 
 	};
 
 	template<typename Context>
-	struct ReachingDefsTmpConstraintGenerator : public ConstraintGenerator {
+	struct KilledDefsTmpConstraintGenerator : public ConstraintGenerator {
 
-		ReachingDefsTmpConstraintGenerator(CBA&) {}
+		KilledDefsTmpConstraintGenerator(CBA&) {}
 
 		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
 			// nothing to do here
@@ -243,17 +236,17 @@ namespace cba {
 			const auto& loc  = std::get<3>(data);
 
 			// obtain
-			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);
-			assert_eq(value, RD_tmp) << "Queried a non RD_tmp id!";
+			auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);
+			assert_eq(value, KD_tmp) << "Queried a non KD_tmp id!";
 
 			// create constraints
 			for(const auto& cur : call) {
-				auto RD_out = cba.getSet(RDout, cur, ctxt, loc);
-				constraints.add(subset(RD_out, RD_tmp));
+				auto KD_out = cba.getSet(KDout, cur, ctxt, loc);
+				constraints.add(subset(KD_out, KD_tmp));
 			}
 
 			// and the function
-			constraints.add(subset(cba.getSet(RDout, call->getFunctionExpr(), ctxt, loc), RD_tmp));
+			constraints.add(subset(cba.getSet(KDout, call->getFunctionExpr(), ctxt, loc), KD_tmp));
 
 		}
 
@@ -264,25 +257,25 @@ namespace cba {
 			const auto& ctxt = std::get<2>(data);
 			const auto& loc = std::get<3>(data);
 
-			out << "RDtmp : " << stmt << " : " << ctxt << " : " << loc;
+			out << "KDtmp : " << stmt << " : " << ctxt << " : " << loc;
 		}
 
 	};
 
 	template<typename Context>
-	class ReachingDefsOutConstraintGenerator
+	class KilledDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
-		  	  reaching_defs_in_analysis,
-		  	  reaching_defs_out_analysis,
-		  	  ReachingDefsOutConstraintGenerator<Context>,
+		  	  killed_defs_in_analysis,
+		  	  killed_defs_out_analysis,
+		  	  KilledDefsOutConstraintGenerator<Context>,
 		  	  Context,
 		  	  Location<Context>
 		  > {
 
 		typedef BasicOutConstraintGenerator<
-				  reaching_defs_in_analysis,
-				  reaching_defs_out_analysis,
-				  ReachingDefsOutConstraintGenerator<Context>,
+				  killed_defs_in_analysis,
+				  killed_defs_out_analysis,
+				  KilledDefsOutConstraintGenerator<Context>,
 				  Context,
 				  Location<Context>
 			 > super;
@@ -292,7 +285,7 @@ namespace cba {
 
 	public:
 
-		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		KilledDefsOutConstraintGenerator(CBA& cba) : super(cba, KDin, KDout), cba(cba) {}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
@@ -313,16 +306,18 @@ namespace cba {
 			//		- if only reference => in definitions are not forwarded
 			//		- if on of many => in definition + local definition
 
-			// collect effects of parameters (and function evaluation) into RDtmp
+			// collect effects of parameters (and function evaluation) into KDtmp
 
 
 			// get involved sets
-			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
-			auto RD_out = cba.getSet(RDout, call, ctxt, loc);		// the definitions
+			auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+			auto KD_out = cba.getSet(KDout, call, ctxt, loc);		// the definitions
 			auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
 
+			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the call
+
 			// add constraint
-			constraints.add(reachingDefs(loc, Definition<Context>(call, ctxt), R_trg, RD_tmp, RD_out));
+			constraints.add(killedDefs(loc, R_trg, RD_tmp, KD_tmp, KD_out));
 
 		}
 

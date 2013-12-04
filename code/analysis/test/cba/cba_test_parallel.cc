@@ -39,6 +39,7 @@
 
 #include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+#include "insieme/analysis/cba/framework/generator/killed_definitions.h"
 
 #include "insieme/analysis/cba/analysis/jobs.h"
 #include "insieme/analysis/cba/analysis/references.h"
@@ -105,7 +106,7 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-	TEST(CBA, ReachingDefinitions_SequentialFlow) {
+	TEST(CBA, Definitions_SequentialFlow) {
 
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
@@ -120,9 +121,9 @@ namespace cba {
 				"	"
 				"	ref<int> x = var(10);"		// def1
 				"	ref<int> y = var(10);"		// def2
-				"	c;"							// RD(x) = { def1 }, RD(y) = { def2 }
+				"	c;"							// RD(x) = { def1 }, RD(y) = { def2 }, KD(x) = {}, KD(y) = {}
 				"	x = 12;"					// def3
-				"	c;"							// RD(x) = { def3 }, RD(y) = { def2 }
+				"	c;"							// RD(x) = { def3 }, RD(y) = { def2 }, KD(x) = { def1 }, KD(y) = {}
 				"	if (c) {"
 				"		x = 14;"				// def4
 				"		y = 16;"				// def5
@@ -155,25 +156,58 @@ namespace cba {
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[2],  RDin, ctxt, y)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[2], RDout, ctxt, y)));
 
+		EXPECT_EQ("{}", 	toString(analysis.getValuesOf(code[2],  KDin, ctxt, x)));
+		EXPECT_EQ("{}", 	toString(analysis.getValuesOf(code[2], KDout, ctxt, x)));
+		EXPECT_EQ("{}", 	toString(analysis.getValuesOf(code[2],  KDin, ctxt, y)));
+		EXPECT_EQ("{}", 	toString(analysis.getValuesOf(code[2], KDout, ctxt, y)));
+
+
+
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]])}", 				toString(analysis.getValuesOf(code[4],  RDin, ctxt, x)));
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]])}", 				toString(analysis.getValuesOf(code[4], RDout, ctxt, x)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[4],  RDin, ctxt, y)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[4], RDout, ctxt, y)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[4],  KDin, ctxt, x)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[4], KDout, ctxt, x)));
+		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[4],  KDin, ctxt, y)));
+		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[4], KDout, ctxt, y)));
+
+
 
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 					toString(analysis.getValuesOf(code[6],  RDin, ctxt, x)));
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 					toString(analysis.getValuesOf(code[6], RDout, ctxt, x)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[6],  RDin, ctxt, y)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, y)));
 
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[6],  KDin, ctxt, x)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[6], KDout, ctxt, x)));
+		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[6],  KDin, ctxt, y)));
+		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[6], KDout, ctxt, y)));
+
+
+
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 					toString(analysis.getValuesOf(code[7],  RDin, ctxt, x)));
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 					toString(analysis.getValuesOf(code[7], RDout, ctxt, x)));
 		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[7],  RDin, ctxt, y)));
 		EXPECT_EQ("{(0-7,[[0,0],[<0,[],0>,<0,[],0>]])}", 														toString(analysis.getValuesOf(code[7], RDout, ctxt, y)));
 
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[7],  KDin, ctxt, x)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[7], KDout, ctxt, x)));
+		EXPECT_EQ("{}", 																						toString(analysis.getValuesOf(code[7],  KDin, ctxt, y)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[7], KDout, ctxt, y)));
+
+
+
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 		toString(analysis.getValuesOf(code[8],  RDin, ctxt, x)));
 		EXPECT_EQ("{(0-3,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-0,[[0,0],[<0,[],0>,<0,[],0>]])}", 		toString(analysis.getValuesOf(code[8], RDout, ctxt, x)));
 		EXPECT_EQ("{(0-7,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[8],  RDin, ctxt, y)));
 		EXPECT_EQ("{(0-7,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[8], RDout, ctxt, y)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[8],  KDin, ctxt, x)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 											toString(analysis.getValuesOf(code[8], KDout, ctxt, x)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[8],  KDin, ctxt, y)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-1,[[0,0],[<0,[],0>,<0,[],0>]]),(0-5-1-1,[[0,0],[<0,[],0>,<0,[],0>]])}", 	toString(analysis.getValuesOf(code[8], KDout, ctxt, y)));
 
 //		createDotDump(analysis);
 	}
