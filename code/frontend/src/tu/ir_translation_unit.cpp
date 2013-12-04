@@ -227,8 +227,6 @@ namespace tu {
 
 				// re-add meta information
 				for(const auto& cur : list) {
-					
-					assert(cur.first.isa<core::StructTypePtr>());
 
 					// encode meta info into pure IR
 					auto encoded = core::toIR(mgr, cur.second);
