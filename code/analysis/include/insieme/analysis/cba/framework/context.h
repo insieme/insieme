@@ -136,7 +136,7 @@ namespace cba {
 		Sequence<T,s>& operator>>=(const T& elem) {
 			if (empty) return *this;
 			this->invalidateHash();
-			for(int i=(s-1); i>=0; --i) {
+			for(int i=(s-1); i>0; --i) {
 				sequence[i] = sequence[i-1];
 			}
 			sequence[0] = elem;
@@ -159,7 +159,6 @@ namespace cba {
 			return utils::hashList(sequence);
 		}
 	};
-
 
 	// ---------- sequence enumeration -----------------------
 
