@@ -564,7 +564,7 @@ std::cout << "Invalid number of bodies " << bodies << "\n";
 
 				auto threadContext = spawnContext.threadContext;
 				threadContext >>= thread_id(cba.getLabel(spawnPoint), spawnContext.callContext);
-				auto innerContext = Context(spawnContext.callContext, threadContext);
+				auto innerContext = Context(typename Context::call_context(), threadContext);		// call context in thread is default one again
 
 				auto KD_out_set = cba.getSet(KDout, body, innerContext, loc);
 				thread_out_states.push_back(KD_out_set);

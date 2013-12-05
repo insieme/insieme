@@ -531,6 +531,27 @@ namespace cba {
 
 							}
 
+							// it might also be the case that the bind is called as the body of a job (most jobs have bind-bodies)
+//							const typename Context::thread_id& threadID = ctxt.threadContext[0];
+//							auto l_spawn_call = threadID.getSpawnLabel();
+//							const auto& spawnCtxt = threadID.getSpawnContext();
+//
+//							// check whether current flow is not within the top-level thread
+//							if (l_spawn_call == 0) continue;	// in this case we do not have to consider this option
+
+							// What we have to do here:
+							// 		- for all potential thread contexts the spawn could be executed in
+							//		- get the jobs started at the spawn points
+							//		- get the bodies of those jobs sing the callables-analysis
+							//		- check whether any of those callables is the current bind - if so, take the context and transfer the variable value
+
+//							Label l_job_label = cba.getLabel(cba.getStmt(l_spawn_call).as<CallExprAddress>()[0]);
+//							auto J_spawned_jobs = cba.getSet(Jobs, l_job_label, spawnCtxt);
+
+							// for all jobs in all contexts ... or also just for all jobs in J_spawned_job!!
+							//		=> find a nice way to implement this option
+
+
 							// done
 							continue;
 						}
