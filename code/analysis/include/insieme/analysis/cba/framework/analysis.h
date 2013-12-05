@@ -89,6 +89,16 @@ namespace cba {
 	extern const boolean_analysis_data B;
 	extern const boolean_analysis_var  b;
 
+	struct job_analysis_data;
+	struct job_analysis_var;
+	extern const job_analysis_data Jobs;
+	extern const job_analysis_var  jobs;
+
+	struct thread_group_analysis_data;
+	struct thread_group_analysis_var;
+	extern const thread_group_analysis_data ThreadGroups;
+	extern const thread_group_analysis_var  threadGroups;
+
 	// -- memory location data analysis --
 
 } // end namespace cba

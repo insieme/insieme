@@ -37,9 +37,15 @@
 #pragma once
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
+#include "insieme/analysis/cba/framework/analysis.h"
+
 #include "insieme/analysis/cba/framework/entities/definition.h"
+
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 #include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+
+#include "insieme/analysis/cba/analysis/jobs.h"
+#include "insieme/analysis/cba/analysis/thread_groups.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -69,128 +75,11 @@ namespace cba {
 
 	namespace {
 
-		template<
-			typename Context,
-			typename KilledDefValue,
-			typename ReachingDefValue,
-			typename RefValue
-		>
-		class KilledDefsConstraint : public Constraint {
-
-			typedef typename KilledDefValue::less_op_type less_op;
-
-			const Location<Context> loc;
-			const TypedValueID<KilledDefValue> in;
-			const TypedValueID<KilledDefValue> out;
-			const TypedValueID<ReachingDefValue> reaching_in;
-			const TypedValueID<RefValue> ref;
-
-		public:
-
-			KilledDefsConstraint(
-					const Location<Context>& loc,
-					const TypedValueID<KilledDefValue>& in, const TypedValueID<KilledDefValue>& out,
-					const TypedValueID<ReachingDefValue>& reaching_in, const TypedValueID<RefValue>& ref)
-				: Constraint(toVector<ValueID>(in, ref, reaching_in), toVector<ValueID>(out)),
-				  loc(loc), in(in), out(out), reaching_in(reaching_in), ref(ref) {}
-
-			virtual Constraint::UpdateResult update(Assignment& ass) const {
-				const static less_op less;
-
-				// get reference to current value
-				iset<Definition<Context>>& value = ass[out];
-
-				// compute new value
-				iset<Definition<Context>> updated = getUpdatedValue(ass);
-
-				// check whether something has changed
-				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
-
-				// check whether new value is proper subset
-				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
-
-				// update value
-				value = updated;
-
-				// return change-summary
-				return res;
-			}
-
-			virtual bool check(const Assignment& ass) const {
-				const static less_op less;
-				return less(getUpdatedValue(ass), ass[out]);
-			}
-
-			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-				return
-					out << in << " -> " << this->out << "[label=\"" << *this << "\"]\n"
-						<< reaching_in << " -> " << this->out << "[label=\"" << *this << "\"]\n";
-			}
-
-			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
-				return
-					out << in << " -> " << this->out << "[label=\"" << in << " sub " << this->out << "\"]\n"
-						<< reaching_in << " -> " << this->out << "[label=\"if killed\"" << ((isKill(ass))?"":" style=dotted") << "]\n";
-			}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
-			}
-
-			virtual bool hasAssignmentDependentDependencies() const {
-				return true;
-			}
-
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-
-				// create result set
-				std::set<ValueID> res;
-
-				// ref and in are always required
-				res.insert(ref);
-				res.insert(in);
-
-				// reaching_in is required if reference is matched
-				if (isKill(ass)) {
-					res.insert(reaching_in);
-				}
-
-				return res;
-			}
-
-		private:
-
-			bool isKill(const Assignment& ass) const {
-
-				// check reference
-				const set<Reference<Context>>& refs = ass[ref];
-
-				// check whether this definition is addressing the full memory location
-				return refs.size() == 1u && *refs.begin() == Reference<Context>(loc);
-			}
-
-			iset<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
-
-				iset<Definition<Context>> res = ass[in];		// all in-values are always included
-				res.universal = false;
-
-				// if it is only referencing the observed location => it is a new definition
-				if (isKill(ass)) {
-					const set<Definition<Context>>& reaching = ass[reaching_in];
-					res.insert(reaching.begin(), reaching.end());
-				}
-
-				// done
-				return res;
-			}
-
-		};
-
-
 		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
-		ConstraintPtr killedDefs(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state) {
-			return std::make_shared<KilledDefsConstraint<Context,KDValue,RDValue,RefValue>>(loc, in_state, out_state, reaching_in, updatedRef);
-		}
+		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state);
+
+		template<typename TGValue, typename KDValue, typename Context>
+		ConstraintPtr killedDefsMerge(CBA& cba, const Location<Context>& loc, const TypedValueID<TGValue>& threadGroup, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state);
 
 	}
 
@@ -287,41 +176,405 @@ namespace cba {
 
 		KilledDefsOutConstraintGenerator(CBA& cba) : super(cba, KDin, KDout), cba(cba) {}
 
+		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			// we can stop at the creation point - no definitions will be killed before
+			if (loc.getAddress() == addr) {
+
+				auto KD_out = cba.getSet(KDout, loc.getAddress(), ctxt, loc);
+				constraints.add(elem(iset<Definition<Context>>::empty(), KD_out));
+				return;
+			}
+
+			// all others should be handled as usual
+			super::visit(addr, ctxt, loc, constraints);
+		}
+
+		// TODO: the parallel evaluation of call-arguments may kill multiple definitions => here the union needs to be formed instead of the
+		//		 the intersection.
+
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
 
-			// one special case: assignments
+			// a special case: assignments
 			auto fun = call.as<CallExprPtr>()->getFunctionExpr();
-			if (!base.isRefAssign(fun)) {
+			if (base.isRefAssign(fun)) {
 
-				// use default treatment
-				super::visitCallExpr(call, ctxt, loc, constraints);
+				// check referenced location
+				//		- if not referenced => out = in
+				//		- if only reference => in definitions are not forwarded
+				//		- if on of many => in definition + local definition
+				// all handled by the killedDefs constraint
+
+				// get involved sets
+				auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+				auto KD_out = cba.getSet(KDout, call, ctxt, loc);		// the definitions
+				auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+
+				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the call
+
+				// add constraint
+				constraints.add(killedDefsAssign(loc, R_trg, RD_tmp, KD_tmp, KD_out));
 
 				// done
 				return;
 			}
 
-			// TODO: check referenced location
-			//		- if not referenced => out = in
-			//		- if only reference => in definitions are not forwarded
-			//		- if on of many => in definition + local definition
+			// another special case: parallel merge
+			if (base.isMerge(fun)) {
 
-			// collect effects of parameters (and function evaluation) into KDtmp
+				// In this case we have to:
+				//		- compute the set of merged thread groups
+				//		- if there is only one (100% save to assume it is this group) we can
+				//		  merge the killed definitions at the end of the thread group with the killed definitions of the in-set
+				//		- otherwise we can not be sure => no operation
+
+				// get involved sets
+				auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);
+				auto KD_out = cba.getSet(KDout, call, ctxt, loc);
+
+				auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+
+				// add constraint
+				constraints.add(killedDefsMerge(cba, loc, tg, KD_tmp, KD_out));
+
+				// done
+				return;
+			}
 
 
-			// get involved sets
-			auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
-			auto KD_out = cba.getSet(KDout, call, ctxt, loc);		// the definitions
-			auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
 
-			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the call
+			// use default treatment
+			super::visitCallExpr(call, ctxt, loc, constraints);
 
-			// add constraint
-			constraints.add(killedDefs(loc, R_trg, RD_tmp, KD_tmp, KD_out));
-
+			// done
+			return;
 		}
 
 	};
+
+	namespace {
+
+		// -- assign constraint ---------
+
+		template<
+			typename Context,
+			typename KilledDefValue,
+			typename ReachingDefValue,
+			typename RefValue
+		>
+		class KilledDefsAssignConstraint : public Constraint {
+
+			typedef typename KilledDefValue::less_op_type less_op;
+
+			const Location<Context> loc;
+			const TypedValueID<KilledDefValue> in;
+			const TypedValueID<KilledDefValue> out;
+			const TypedValueID<ReachingDefValue> reaching_in;
+			const TypedValueID<RefValue> ref;
+
+		public:
+
+			KilledDefsAssignConstraint(
+					const Location<Context>& loc,
+					const TypedValueID<KilledDefValue>& in, const TypedValueID<KilledDefValue>& out,
+					const TypedValueID<ReachingDefValue>& reaching_in, const TypedValueID<RefValue>& ref)
+				: Constraint(toVector<ValueID>(in, ref, reaching_in), toVector<ValueID>(out), true),
+				  loc(loc), in(in), out(out), reaching_in(reaching_in), ref(ref) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op less;
+
+				// get reference to current value
+				iset<Definition<Context>>& value = ass[out];
+
+				// compute new value
+				iset<Definition<Context>> updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op less;
+				return less(getUpdatedValue(ass), ass[out]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				return
+					out << in << " -> " << this->out << "[label=\"" << *this << "\"]\n"
+						<< reaching_in << " -> " << this->out << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				return
+					out << in << " -> " << this->out << "[label=\"" << in << " sub " << this->out << "\"]\n"
+						<< reaching_in << " -> " << this->out << "[label=\"if killed\"" << ((isKill(ass))?"":" style=dotted") << "]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
+			}
+
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// create result set
+				std::set<ValueID> res;
+
+				// ref and in are always required
+				res.insert(ref);
+				res.insert(in);
+
+				// reaching_in is required if reference is matched
+				if (isKill(ass)) {
+					res.insert(reaching_in);
+				}
+
+				return res;
+			}
+
+		private:
+
+			bool isKill(const Assignment& ass) const {
+
+				// check reference
+				const set<Reference<Context>>& refs = ass[ref];
+
+				// check whether this definition is addressing the full memory location
+				return refs.size() == 1u && *refs.begin() == Reference<Context>(loc);
+			}
+
+			iset<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
+
+				iset<Definition<Context>> res = ass[in];		// all in-values are always included
+				res.universal = false;
+
+				// if it is only referencing the observed location => it is a new definition
+				if (isKill(ass)) {
+					const set<Definition<Context>>& reaching = ass[reaching_in];
+					res.insert(reaching.begin(), reaching.end());
+				}
+
+				// done
+				return res;
+			}
+
+		};
+
+
+		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
+		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state) {
+			return std::make_shared<KilledDefsAssignConstraint<Context,KDValue,RDValue,RefValue>>(loc, in_state, out_state, reaching_in, updatedRef);
+		}
+
+
+		// -- merge constraint ---------
+
+		template<
+			typename Context,
+			typename ThreadGroupValue,
+			typename KilledDefValue
+		>
+		class KilledDefsMergeConstraint : public Constraint {
+
+			typedef typename KilledDefValue::less_op_type less_op;
+
+			CBA& cba;
+			const Location<Context> loc;
+			const TypedValueID<ThreadGroupValue> thread_group;
+			const TypedValueID<KilledDefValue> in_state;
+			const TypedValueID<KilledDefValue> out_state;
+
+			// the killed thread states to be merged in (only if thread_group points to a single thread)
+			mutable vector<TypedValueID<KilledDefValue>> thread_out_states;
+			mutable vector<ValueID> dependencies;
+
+		public:
+
+			KilledDefsMergeConstraint(
+					CBA& cba,
+					const Location<Context>& loc,
+					const TypedValueID<ThreadGroupValue>& thread_group,
+					const TypedValueID<KilledDefValue>& in_state,
+					const TypedValueID<KilledDefValue>& out_state)
+				: Constraint(toVector<ValueID>(thread_group, in_state), toVector<ValueID>(out_state), true, true),
+				  cba(cba), loc(loc), thread_group(thread_group), in_state(in_state), out_state(out_state) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op less;
+
+				// update dependencies
+				bool changed = updateDynamicDependencies(ass);
+				if (changed) return Constraint::DependencyChanged;
+
+				// get reference to current value
+				iset<Definition<Context>>& value = ass[out_state];
+
+				// compute new value
+				iset<Definition<Context>> updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op less;
+				return less(getUpdatedValue(ass), ass[out_state]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+
+				// print merged in thread dependencies
+				for(const auto& cur : thread_out_states) {
+					out << cur << " -> " << out_state << "[label=\"" << *this << "\"]\n";
+				}
+
+				// and the default dependencies
+				return
+					out << thread_group << " -> " << this->out_state << "[label=\"" << *this << "\"]\n"
+						<< in_state << " -> " << this->out_state << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+
+				// print dynamic dependencies
+				updateDynamicDependencies(ass);
+				for(const auto& cur : dependencies) {
+					out << cur << " -> " << out_state << "[label=\"depends\"]\n";
+				}
+
+				// and the default dependencies
+				return
+					out << thread_group << " -> " << this->out_state << "[label=\"merges\"" << ((thread_out_states.empty())?" style=dotted":"") << "]\n"
+						<< in_state << " -> " << this->out_state << "[label=\"merges\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "if " << thread_group << " is unique merging killed set of group and " << in_state << " into " << out_state;
+			}
+
+// TODO: switch to vectors
+			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// create result set
+				std::set<ValueID> res;
+
+				// thread groups and in-state values are always required
+				res.insert(thread_group);
+				res.insert(in_state);
+
+				// update thread out state list and thereby all dynamic dependencies
+				updateDynamicDependencies(ass);
+				for(auto cur : dependencies) {
+					res.insert(cur);
+				}
+
+				// done
+				return res;
+			}
+
+		private:
+
+			bool updateDynamicDependencies(const Assignment& ass) const {
+
+std::cout << "Updating thread-out-states ...\n";
+				// clear lists
+				thread_out_states.clear();
+				vector<ValueID> newDependencies;
+
+				// get set of merged threads
+				const set<ThreadGroup<Context>>& groups = ass[thread_group];
+
+				// if there is not exactly one thread => no states to merge (TODO: maybe not, we can still compute the intersection of all thread groups)
+				if (groups.size() != 1u) {
+std::cout << "Invalid number of groups: " << groups << "\n";
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// get merged group
+				const ThreadGroup<Context>& group = *groups.begin();
+
+				// get spawning point of threads
+				auto spawnPoint = group.getAddress().template as<CallExprAddress>();
+
+				// get potential list of jobs to be started at spawn point
+				auto jobValue = cba.getSet(Jobs, spawnPoint[0], group.getContext());
+				newDependencies.push_back(jobValue);
+				const set<Job<Context>>& jobs = ass[jobValue];
+
+				// if there is more than 1 candidate => we are done (TODO: maybe not, we can still compute the intersection of jobs)
+				if (jobs.size() != 1u) {
+std::cout << "Invalid number of jobs " << jobs << "\n";
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// compute out_state sets of threads
+				const JobExprAddress job = jobs.begin()->getAddress();
+				assert_true(job->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
+				auto body = job->getDefaultExpr();
+
+				const Context& spawnContext = group.getContext();
+
+				// TODO: consider possibility of multiple threads
+				typedef typename Context::thread_id thread_id;
+
+				auto threadContext = spawnContext.threadContext;
+				threadContext >>= thread_id(cba.getLabel(spawnPoint), spawnContext.callContext);
+				auto innerContext = Context(spawnContext.callContext, threadContext);
+
+				auto KD_out_set = cba.getSet(KDout, body, innerContext, loc);
+				thread_out_states.push_back(KD_out_set);
+				newDependencies.push_back(KD_out_set);
+
+				auto res = (newDependencies != dependencies);
+				dependencies = newDependencies;
+std::cout << "New Dependencies: " << dependencies << " - change: " << res << "\n";
+				return res;
+			}
+
+			iset<Definition<Context>> getUpdatedValue(const Assignment& ass) const {
+
+				iset<Definition<Context>> res = ass[in_state];		// all in-values are always included
+
+				// merge in effects of thread-out-states if there are any
+				for(const auto& cur : thread_out_states) {
+					const iset<Definition<Context>>& out = ass[cur];
+					res.insert(out.begin(), out.end());
+				}
+
+				// done
+				return res;
+			}
+
+		};
+
+
+		template<typename TGValue, typename KDValue, typename Context>
+		ConstraintPtr killedDefsMerge(CBA& cba, const Location<Context>& loc, const TypedValueID<TGValue>& threadGroup, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state) {
+			return std::make_shared<KilledDefsMergeConstraint<Context,TGValue,KDValue>>(cba,loc,threadGroup,in_state,out_state);
+		}
+	}
 
 } // end namespace cba
 } // end namespace analysis

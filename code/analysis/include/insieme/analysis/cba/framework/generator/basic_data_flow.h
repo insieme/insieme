@@ -202,7 +202,7 @@ namespace cba {
 		public:
 
 			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
-				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res)),
+				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res), true),
 				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -229,10 +229,6 @@ namespace cba {
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
-			}
-
-			virtual bool hasAssignmentDependentDependencies() const {
-				return true;
 			}
 
 			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {

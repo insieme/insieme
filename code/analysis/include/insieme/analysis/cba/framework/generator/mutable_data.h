@@ -269,7 +269,7 @@ namespace cba {
 					const Location<Context> loc,
 					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& in_value,
 					const TypedValueID<ValueLattice>& old_state, const TypedValueID<ValueLattice>& new_state)
-				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state)),
+				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state), true),
 				  mgr(mgr), loc(loc), ref(ref), in_value(in_value), old_state(old_state), new_state(new_state) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -299,10 +299,6 @@ namespace cba {
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
-			}
-
-			virtual bool hasAssignmentDependentDependencies() const {
-				return true;
 			}
 
 			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
@@ -414,6 +410,17 @@ namespace cba {
 						 << "[l" << label << " = " << node->getNodeType() << " : "
 						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
 						 << ctxt << "]";
+		}
+
+		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			// we can stop at the creation point - no definitions will be killed before
+			if (loc.getAddress() == addr) {
+				// the default initialization value is the default value (bottom value of lattice)
+				return;
+			}
+
+			// all others should be handled as usual
+			super::visit(addr, ctxt, loc, constraints);
 		}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& location, Constraints& constraints) {

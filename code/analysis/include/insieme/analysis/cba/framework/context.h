@@ -123,32 +123,32 @@ namespace cba {
 			return sequence[index];
 		}
 
-		Sequence<T,s>& operator<<=(const Label& label) {
+		Sequence<T,s>& operator<<=(const T& elem) {
 			if (empty) return *this;
 			this->invalidateHash();
 			for(unsigned i=0; i<(s-1); ++i) {
 				sequence[i] = sequence[i+1];
 			}
-			sequence[s-1] = label;
+			sequence[s-1] = elem;
 			return *this;
 		}
 
-		Sequence<T,s>& operator>>=(const Label& label) {
+		Sequence<T,s>& operator>>=(const T& elem) {
 			if (empty) return *this;
 			this->invalidateHash();
 			for(int i=(s-1); i>=0; --i) {
 				sequence[i] = sequence[i-1];
 			}
-			sequence[0] = label;
+			sequence[0] = elem;
 			return *this;
 		}
 
-		Sequence<T,s> operator<<(const Label& label) const {
-			return Sequence(*this)<<=label;
+		Sequence<T,s> operator<<(const T& elem) const {
+			return Sequence(*this)<<=elem;
 		}
 
-		Sequence<T,s> operator>>(const Label& label) const {
-			return Sequence(*this)>>=label;
+		Sequence<T,s> operator>>(const T& elem) const {
+			return Sequence(*this)>>=elem;
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
@@ -228,6 +228,9 @@ namespace cba {
 
 		ThreadID() : spawn(0), spawnContext(), id(0) {}
 
+		ThreadID(Label spawn, const Sequence<Label,s>& context, int id = 0)
+			: spawn(spawn), spawnContext(context), id(id) {}
+
 		bool operator==(const ThreadID& other) const {
 			return spawn == other.spawn && id == other.id && spawnContext == other.spawnContext;
 		}
@@ -252,22 +255,20 @@ namespace cba {
 	 */
 	template<
 		unsigned call_context_size = 2,
-		unsigned thread_context_size = 2,
-		unsigned thread_spawn_context_size = 0
+		unsigned thread_context_size = 2
 	>
 	struct Context :
 			public utils::Printable,
-			public utils::HashableMutableData<Context<call_context_size, thread_context_size, thread_spawn_context_size>> {
+			public utils::HashableMutableData<Context<call_context_size, thread_context_size>> {
 
 		enum {
 			call_ctxt_size 			= call_context_size,
-			thread_ctxt_size 		= thread_context_size,
-			thread_spawn_ctxt_size 	= thread_spawn_context_size
+			thread_ctxt_size 		= thread_context_size
 		};
 
 		typedef Sequence<Label, call_context_size> call_context;
 
-		typedef ThreadID<thread_spawn_context_size> thread_id;
+		typedef ThreadID<call_context_size> thread_id;
 		typedef Sequence<thread_id, thread_context_size> thread_context;
 
 		call_context callContext;
@@ -312,8 +313,8 @@ namespace cba {
 		}
 	};
 
-	typedef Context<0,0,0> NoContext;
-	typedef Context<2,2,0> DefaultContext;
+	typedef Context<0,0> NoContext;
+	typedef Context<2,2> DefaultContext;
 
 } // end namespace cba
 } // end namespace analysis

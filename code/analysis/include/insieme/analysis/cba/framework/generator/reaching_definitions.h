@@ -84,7 +84,7 @@ namespace cba {
 					const Location<Context>& loc, const Definition<Context>& def,
 					const TypedValueID<ReachingDefValue>& in, const TypedValueID<ReachingDefValue>& out,
 					const TypedValueID<RefValue>& ref)
-				: Constraint(toVector<ValueID>(in, ref), toVector<ValueID>(out)),
+				: Constraint(toVector<ValueID>(in, ref), toVector<ValueID>(out), true),
 				  loc(loc), def(def), in(in), out(out), ref(ref) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -134,10 +134,6 @@ namespace cba {
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
-			}
-
-			virtual bool hasAssignmentDependentDependencies() const {
-				return true;
 			}
 
 			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
@@ -293,6 +289,19 @@ namespace cba {
 	public:
 
 		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+
+		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			// we can stop at the creation point - no definitions will be killed before
+			if (loc.getAddress() == addr) {
+
+				auto RD_out = cba.getSet(RDout, loc.getAddress(), ctxt, loc);
+				constraints.add(elem(set<Definition<Context>>(), RD_out));
+				return;
+			}
+
+			// all others should be handled as usual
+			super::visit(addr, ctxt, loc, constraints);
+		}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();

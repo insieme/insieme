@@ -532,8 +532,8 @@ namespace cba {
 			return isValid(seq.getSequence());
 		}
 
-		template<unsigned a, unsigned b, unsigned c>
-		bool isValid(const Context<a,b,c>& ctxt) {
+		template<unsigned a, unsigned b>
+		bool isValid(const Context<a,b>& ctxt) {
 			return isValid(ctxt.callContext);
 		}
 
@@ -679,6 +679,28 @@ namespace cba {
 		Container<T>& getContainer() { return indices.get<T>(); }
 
 		void addConstraintsFor(const ValueID& value, Constraints& res);
+
+
+	private:
+
+		// --------------------- Data Storages ---------------------------------------
+
+		// a set of utility functions to attach arbitrary data to a CBA instance that
+		// can be shared by constraint generators.
+
+		utils::HeterogenousContainer datastore;
+
+	public:
+
+		template<typename T, typename ... Args>
+		T& getDataStore(const Args& ... args) {
+			return datastore.getInstance<T>(args...);
+		}
+
+		template<typename T, typename ... Args>
+		const T& getDataStore(const Args& ... args) const {
+			return datastore.getInstance<T>(args...);
+		}
 
 	};
 
