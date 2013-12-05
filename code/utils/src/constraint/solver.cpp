@@ -113,8 +113,14 @@ namespace constraint {
 			for (const Constraint* cur : edges[head]) {
 				const Constraint& cc = *cur;
 
-				// trigger update
-				auto change = cc.update(res);
+				auto change = Constraint::Unchanged;
+
+				do {
+
+					// trigger update
+					change = cc.update(res);
+
+				} while(change == Constraint::DependencyChanged);
 
 				// register outputs in work-list
 				if (change != Constraint::Unchanged) {
@@ -171,11 +177,17 @@ namespace constraint {
 			for (const Constraint* cur : edges[head]) {
 				const Constraint& cc = *cur;
 
-				// add and resolve list of used filters
-				resolveConstraints(cc, worklist);
+				auto change = Constraint::Unchanged;
 
-				// trigger update
-				auto change = cc.update(ass);
+				do {
+
+					// add and resolve list of used filters
+					resolveConstraints(cc, worklist);
+
+					// trigger update
+					change = cc.update(ass);
+
+				} while(change == Constraint::DependencyChanged);
 
 				// register outputs in work-list
 				if (change != Constraint::Unchanged) {
@@ -216,6 +228,11 @@ namespace constraint {
 		auto pos = resolvedConstraints.find(&cur);
 		if (pos != resolvedConstraints.end()) {
 			return false;
+		}
+
+		// assert that all constraints with dynamic dependencies have unresolved inputs
+		if (cur.hasDynamicDependencies()) {
+			return true;
 		}
 
 		// check dependencies

@@ -49,6 +49,7 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/typed_map.h"
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/constraint/lattice.h"
 
 namespace insieme {
@@ -128,14 +129,20 @@ namespace constraint {
 		std::vector<ValueID> inputs;
 		std::vector<ValueID> outputs;
 
+		bool assignmentDependentDependencies;		// there is a fixed list, but only partially used
+		bool dynamicDependencies;					// there is a flexible list
+
 	public:
 
 		enum UpdateResult {
-			Unchanged, Incremented, Altered
+			Unchanged, Incremented, Altered, DependencyChanged
 		};
 
-		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out)
-			: inputs(in), outputs(out) {}
+		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out,
+				bool assignmentDependentDependencies = false, bool dynamicDependencies = false)
+			: inputs(in), outputs(out),
+			  assignmentDependentDependencies(assignmentDependentDependencies || dynamicDependencies),
+			  dynamicDependencies(dynamicDependencies) {}
 
 		virtual ~Constraint() {};
 
@@ -156,8 +163,13 @@ namespace constraint {
 		const std::vector<ValueID>& getInputs() const { return inputs; };
 		const std::vector<ValueID>& getOutputs() const { return outputs; };
 
-		virtual bool hasAssignmentDependentDependencies() const =0;
-		virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const =0;
+		bool hasAssignmentDependentDependencies() const { return assignmentDependentDependencies; };
+		bool hasDynamicDependencies() const { return dynamicDependencies; }
+
+		virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+			assert_false(assignmentDependentDependencies) << "Needs to be implemented by constraints exhibiting assignment based dependencies.";
+			return std::set<ValueID>(inputs.begin(), inputs.end());
+		}
 
 	};
 
@@ -186,7 +198,7 @@ namespace constraint {
 		public:
 
 			ComposedConstraint(const Filter& filter, const Executor& executor)
-				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs()), filter(filter), executor(executor) {}
+				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs(), !Filter::is_true), filter(filter), executor(executor) {}
 
 			virtual UpdateResult update(Assignment& ass) const {
 				return (filter(ass) && executor.update(ass)) ? Incremented : Unchanged;
@@ -219,10 +231,6 @@ namespace constraint {
 				label << "]\n";
 				executor.writeDotEdge(out, label.str());
 				return out;
-			}
-
-			virtual bool hasAssignmentDependentDependencies() const {
-				return !Filter::is_true;
 			}
 
 			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {

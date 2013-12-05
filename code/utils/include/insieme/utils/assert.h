@@ -103,4 +103,5 @@
 // ------ derived definitions ------
 
 #define assert_fail() assert_true(false)
+#define assert_false(_COND) assert_true(!(_COND))
 #define assert_not_implemented() assert_fail() << "Not implemented!"
