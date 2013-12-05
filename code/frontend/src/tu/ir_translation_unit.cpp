@@ -227,8 +227,6 @@ namespace tu {
 
 				// re-add meta information
 				for(const auto& cur : list) {
-					
-					assert(cur.first.isa<core::StructTypePtr>());
 
 					// encode meta info into pure IR
 					auto encoded = core::toIR(mgr, cur.second);
@@ -260,7 +258,6 @@ namespace tu {
 				// strip off class-meta-information
 				if (auto type = ptr.isa<TypePtr>()) {
 					if (hasMetaInfo(type)) {
-						assert(ptr.isa<core::StructTypePtr>());
 						metaInfos[type] = getMetaInfo(type);
 						removeMetaInfo(type);
 					}
@@ -395,6 +392,21 @@ namespace tu {
 				// right ref type
 				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
 					auto call = res.as<CallExprPtr>();
+
+					if (!call[0]->getType().isa<RefTypePtr>()){
+						std::cout << "composite without ref" << std::endl;
+						dumpPretty(res);
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " the element is:" << std::endl;
+						dumpPretty(call[0]);
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " ================================================================= " << std::endl;
+						std::cout << " the element type is:" << std::endl;
+						dumpPretty(call[0]->getType());
+					}
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
