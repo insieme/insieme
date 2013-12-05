@@ -494,6 +494,12 @@ namespace cba {
 
 			bool updateDynamicDependencies(const Assignment& ass) const {
 
+				// TODO: this is a prototype implementation
+				//	  Required:
+				//			- cleanup
+				//			- move this to base class
+
+
 std::cout << "Updating thread-out-states ...\n";
 				// clear lists
 				thread_out_states.clear();
@@ -529,11 +535,28 @@ std::cout << "Invalid number of jobs " << jobs << "\n";
 					return res;
 				}
 
-				// compute out_state sets of threads
-				const JobExprAddress job = jobs.begin()->getAddress();
-				assert_true(job->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
-				auto body = job->getDefaultExpr();
+				// obtain body of job
+				const Job<Context>& job = *jobs.begin();
+				const JobExprAddress& jobExpr = job.getAddress();
+				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
 
+				// get set containing list of bodies
+				auto C_body = cba.getSet(C, jobExpr->getDefaultExpr(), job.getContext());
+
+				// get list of body functions
+				newDependencies.push_back(C_body);
+				const std::set<Callable<Context>>& bodies = ass[C_body];
+				if (bodies.size() != 1u) {
+std::cout << "Invalid number of bodies " << bodies << "\n";
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// get the body of the job
+				auto body = bodies.begin()->getBody();
+
+				// get state at end of the body
 				const Context& spawnContext = group.getContext();
 
 				// TODO: consider possibility of multiple threads
