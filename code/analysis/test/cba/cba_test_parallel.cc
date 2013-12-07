@@ -186,7 +186,7 @@ namespace cba {
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
 		CBA analysis(code);
-
+dumpPretty(code);
 		DefaultContext ctxt;
 
 		// obtain location referenced by variable x
@@ -231,7 +231,7 @@ namespace cba {
 //		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], KDout, ctxt, loc)));
 
 
-//		createDotDump(analysis);
+		createDotDump(analysis);
 	}
 
 
