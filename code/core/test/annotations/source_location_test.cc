@@ -1,0 +1,262 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#include <vector>
+
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/dump/binary_dump.h"
+
+namespace insieme {
+namespace core {
+namespace annotations {
+
+	TEST(TextPosition, Basic) {
+
+		TextPosition a(10,3);
+		TextPosition b(10,5);
+		TextPosition c(11,1);
+		TextPosition d(11,6);
+
+		// to string should work
+		EXPECT_EQ("10:3", toString(a));
+
+		// also check equality
+		EXPECT_EQ(a,a);
+		EXPECT_NE(a,b);
+
+		// and the less-than implementation
+		EXPECT_LT(a,b);
+		EXPECT_LT(a,c);
+		EXPECT_LT(a,d);
+
+		EXPECT_GT(b,a);
+		EXPECT_GT(c,b);
+
+	}
+
+	TEST(Location, Basic) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TextPosition a(10,3);
+		TextPosition b(10,5);
+
+		NodePtr node = builder.compoundStmt();
+
+		EXPECT_FALSE(hasAttachedLocation(node));
+
+		// attach a location
+		attachLocation(node, "test.txt", a, b);
+
+		EXPECT_TRUE(hasAttachedLocation(node));
+
+		// retrieve the location
+		EXPECT_EQ("test.txt@10:3-10:5", toString(getAttachedLocation(node)));
+
+
+		// attach the same location a second time
+		attachLocation(node, "test.txt", a, b);
+
+		// should not have changed anything
+		EXPECT_TRUE(hasAttachedLocation(node));
+		EXPECT_EQ("test.txt@10:3-10:5", toString(getAttachedLocation(node)));
+
+
+		// attach a different location
+		attachLocation(node, "test.txt", b, b);
+
+		// should not have changed anything
+		EXPECT_TRUE(hasAttachedLocation(node));
+		EXPECT_EQ("-shared node-", toString(getAttachedLocation(node)));
+
+	}
+
+	TEST(Location, Migration) {
+
+		core::NodeManager mgrA;
+		core::IRBuilder builder(mgrA);
+
+		TextPosition pos(10,5);
+
+		// just add and remove some name tagging
+		auto litA = builder.stringLit("testA");
+		auto litB = builder.stringLit("testB");
+		auto litC = builder.stringLit("testC");
+
+
+		EXPECT_NE(litA, litB);
+
+		attachLocation(litB, "test.txt", pos);
+		attachLocation(litC, Location::getShared());
+
+		EXPECT_FALSE(hasAttachedLocation(litA));
+		EXPECT_TRUE(hasAttachedLocation(litB));
+		EXPECT_TRUE(hasAttachedLocation(litC));
+
+		EXPECT_FALSE(getAttachedLocation(litB).isShared());
+		EXPECT_TRUE(getAttachedLocation(litC).isShared());
+
+		core::NodeManager mgrB;
+
+		EXPECT_FALSE(hasAttachedLocation(mgrB.get(litA)));
+		EXPECT_TRUE(hasAttachedLocation(mgrB.get(litB)));
+		EXPECT_TRUE(hasAttachedLocation(mgrB.get(litC)));
+
+		EXPECT_EQ(getAttachedLocation(litB), getAttachedLocation(mgrB.get(litB)));
+		EXPECT_EQ(getAttachedLocation(litC), getAttachedLocation(mgrB.get(litC)));
+
+		EXPECT_FALSE(getAttachedLocation(mgrB.get(litB)).isShared());
+		EXPECT_TRUE(getAttachedLocation(mgrB.get(litC)).isShared());
+
+	}
+
+	TEST(Location, Clone) {
+
+		core::NodeManager mgrA;
+		core::IRBuilder builder(mgrA);
+
+		TextPosition pos(10,5);
+
+		// just add and remove some name tagging
+		auto litA = builder.stringLit("testA");
+
+		attachLocation(litA, "test.txt", pos);
+
+		EXPECT_TRUE(hasAttachedLocation(litA));
+		EXPECT_FALSE(getAttachedLocation(litA).isShared());
+		EXPECT_TRUE(mgrA.addressesLocal(getAttachedLocation(litA).getFileValue()));
+
+		// clone annotation to another manager
+		core::NodeManager mgrB;
+		auto litB = mgrB.get(litA);
+		EXPECT_EQ(getAttachedLocation(litA), getAttachedLocation(litB));
+
+		EXPECT_TRUE(hasAttachedLocation(litB));
+		EXPECT_FALSE(getAttachedLocation(litB).isShared());
+		EXPECT_TRUE(mgrB.addressesLocal(getAttachedLocation(litB).getFileValue()));
+
+		EXPECT_FALSE(mgrA.addressesLocal(getAttachedLocation(litB).getFileValue()));
+		EXPECT_FALSE(mgrB.addressesLocal(getAttachedLocation(litA).getFileValue()));
+	}
+
+	TEST(Location, Dump) {
+
+		core::NodeManager mgrA;
+		core::IRBuilder builder(mgrA);
+
+		TextPosition pos(10,5);
+
+		// just add and remove some name tagging
+		auto litA = builder.stringLit("testA");
+		auto litB = builder.stringLit("testB");
+		auto litC = builder.stringLit("testC");
+
+
+		EXPECT_NE(litA, litB);
+		EXPECT_NE(litA, litC);
+		EXPECT_NE(litB, litC);
+
+		attachLocation(litB, "test.txt", pos);
+		attachLocation(litC, Location::getShared());
+
+		EXPECT_FALSE(hasAttachedLocation(litA));
+		EXPECT_TRUE(hasAttachedLocation(litB));
+		EXPECT_TRUE(hasAttachedLocation(litC));
+
+		// ---- dump and restore both literals -----
+
+		using std::ios_base;
+		using std::stringstream;
+
+		{
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			core::dump::binary::dumpIR(buffer, litA);
+
+			// reload IR using a different node manager
+			core::NodeManager mgr;
+			core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
+
+			ASSERT_TRUE(restored.isa<core::LiteralPtr>());
+			EXPECT_FALSE(hasAttachedLocation(restored.as<core::LiteralPtr>()));
+
+		}
+
+		{
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			core::dump::binary::dumpIR(buffer, litB);
+
+			// reload IR using a different node manager
+			core::NodeManager mgr;
+			core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
+
+			ASSERT_TRUE(restored.isa<core::LiteralPtr>());
+			EXPECT_TRUE(hasAttachedLocation(restored.as<core::LiteralPtr>()));
+			EXPECT_EQ(getAttachedLocation(litB), getAttachedLocation(restored));
+			EXPECT_TRUE(mgr.addressesLocal(getAttachedLocation(restored).getFileValue()));
+		}
+
+		{
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			core::dump::binary::dumpIR(buffer, litC);
+
+			// reload IR using a different node manager
+			core::NodeManager mgr;
+			core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
+
+			ASSERT_TRUE(restored.isa<core::LiteralPtr>());
+			EXPECT_TRUE(hasAttachedLocation(restored.as<core::LiteralPtr>()));
+			EXPECT_EQ(getAttachedLocation(litC), getAttachedLocation(restored));
+		}
+	}
+
+
+} // end namespace analysis
+} // end namespace core
+} // end namespace insieme
