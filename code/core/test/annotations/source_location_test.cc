@@ -257,6 +257,40 @@ namespace annotations {
 	}
 
 
+	TEST(Location, LocationDeduction) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	1;"		// this should be shared => unknown location, but approximated
+				"	2;"		// this should be distinct
+				"	1;"		// cause some sharing
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		// mark locations
+		attachLocation(code, "test.txt", TextPosition(0, 0), TextPosition(4, 0));
+		attachLocation(code[0], "test.txt", 1, 4);
+		attachLocation(code[1], "test.txt", 2, 4);
+		attachLocation(code[2], "test.txt", 3, 4);
+
+		EXPECT_TRUE(getLocation(code));
+		EXPECT_TRUE(getLocation(code[0]));
+		EXPECT_TRUE(getLocation(code[1]));
+		EXPECT_TRUE(getLocation(code[2]));
+
+		EXPECT_EQ("test.txt@0:0-4:0", toString(*getLocation(code)));
+		EXPECT_EQ("test.txt@0:0-2:4", toString(*getLocation(code[0])));
+		EXPECT_EQ("test.txt@2:4", toString(*getLocation(code[1])));
+		EXPECT_EQ("test.txt@2:4-4:0", toString(*getLocation(code[2])));
+
+	}
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

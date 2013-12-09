@@ -155,6 +155,96 @@ namespace annotations {
 		}
 	}
 
+	namespace {
+
+		LocationOpt getPredecessorLocation(const NodeAddress& node) {
+			static const LocationOpt fail;
+
+			// check whether parent is a compound stmt
+			if (node.isRoot()) return fail;
+
+			CompoundStmtAddress compound = node.getParentAddress().isa<CompoundStmtAddress>();
+			if (!compound) return fail;
+
+			int index = node.getIndex();
+			for(int i = index-1; i>=0; i--) {
+				// see whether one of the predecessors has a location annotation
+				if (auto loc = getLocation(compound[i].getAddressedNode())) {
+					return loc;
+				}
+			}
+
+			// check whether there is a location annotation on the parent
+			LocationOpt loc = getLocation(compound.getAddressedNode());
+			if (loc) {
+				return Location(loc->getFileValue(), loc->getStart(), loc->getStart());
+			}
+
+			// done
+			return fail;
+		}
+
+		LocationOpt getSuccessorLocation(const NodeAddress& node) {
+			static const LocationOpt fail;
+
+			// check whether parent is a compound stmt
+			if (node.isRoot()) return fail;
+
+			CompoundStmtAddress compound = node.getParentAddress().isa<CompoundStmtAddress>();
+			if (!compound) return fail;
+
+			std::size_t index = node.getIndex();
+			for(std::size_t i = index+1; i<compound.size(); i++) {
+				// see whether one of the predecessors has a location annotation
+				if (auto loc = getLocation(compound[i].getAddressedNode())) {
+					return loc;
+				}
+			}
+
+			// check whether there is a location annotation on the parent
+			LocationOpt loc = getLocation(compound.getAddressedNode());
+			if (loc) {
+				return Location(loc->getFileValue(), loc->getEnd(), loc->getEnd());
+			}
+
+			// done
+			return fail;
+		}
+
+		LocationOpt getApproximatedLocation(const NodeAddress& node) {
+			LocationOpt before = getPredecessorLocation(node);
+			if (!before) return LocationOpt();
+			LocationOpt after = getSuccessorLocation(node);
+			if (!after) return LocationOpt();
+			return Location(before->getFileValue(), before->getEnd(), after->getStart());
+		}
+	}
+
+
+	LocationOpt getLocation(const NodeAddress& node) {
+
+		const NodePtr& cur = node;
+
+		// check whether current node has a location annotation
+		if (hasAttachedLocation(cur)) {
+			const Location& loc = getAttachedLocation(cur);
+			if (!loc.isShared()) return loc;		// shared nodes are skipped
+		}
+
+		// check whether this is the root node
+		if (node.isRoot()) return LocationOpt(); // could not find a location
+
+		// check whether the position could be approximated
+		if (auto res = getApproximatedLocation(node)) return res;
+
+		// check parent
+		return getLocation(node.getParentAddress());
+	}
+
+	LocationOpt getLocation(const NodePtr& node) {
+		return getLocation(NodeAddress(node));
+	}
+
 } // end namespace annotations
 } // end namespace core
 } // end namespace insieme

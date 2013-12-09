@@ -37,8 +37,12 @@
 #pragma once
 
 #include <string>
+
+#include <boost/optional.hpp>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_values.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node_annotation.h"
 
 #include "insieme/utils/printable.h"
@@ -131,12 +135,12 @@ namespace annotations {
 	 * @param args the arguments to be utilized to construct a location
 	 * @return the given node
 	 */
-	 template<typename T, typename ... Args>
-     const T& attachLocationGen(const T& node, const Args& ... args) {
-	    const core::NodePtr& cur = node;
-        attachLocation(cur, args...);
-        return node;
-	 }
+	template<typename T, typename ... Args>
+	const T& attachLocationGen(const T& node, const Args& ... args) {
+		const core::NodePtr& cur = node;
+		attachLocation(cur, args...);
+		return node;
+	}
 
 
 	// -- Location Data Structure ----------------------------------------------
@@ -331,6 +335,37 @@ namespace annotations {
 		}
 	};
 
+
+	// -- Address Extensions ---------------------------------------------------
+
+	// an optional location
+	typedef boost::optional<Location> LocationOpt;
+
+	/**
+	 * Tries to obtain a source-code location most precisely describing the location of the given node
+	 * within the original source code.
+	 *
+	 * @param node the node which's location should be determined
+	 * @return the obtained location, if any
+	 */
+	LocationOpt getLocation(const NodePtr& node);
+
+	/**
+	 * Tries to obtain a source-code location most precisely describing the location of the given node
+	 * within the original source code.
+	 *
+	 * @param node the node which's location should be determined
+	 * @return the obtained location, if any
+	 */
+	LocationOpt getLocation(const NodeAddress& node);
+
+	/**
+	 * A generic version of the function above.
+	 */
+	template<typename T>
+	LocationOpt getLocation(const Address<T>& addr) {
+		return getLocation(addr.template as<NodeAddress>());
+	}
 
 } // end namespace annotations
 } // end namespace core
