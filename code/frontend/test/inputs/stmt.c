@@ -119,10 +119,10 @@ void unary_op_test() {
 	#pragma test "gen.pre.dec(v100)"
 	--a;
 
-	#pragma test "(( *v100)<<2)"
+	#pragma test "gen.lshift(( *v100), 2)"
 	a << 2;
 
-	#pragma test "(int.to.uint(( *v100), 4)<<2)"
+	#pragma test "gen.lshift(int.to.uint(( *v100), 4), 2)"
 	(unsigned int)a << 2;
 }
 

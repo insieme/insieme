@@ -240,6 +240,14 @@ namespace cba {
 			return spawnContext < other.spawnContext;
 		}
 
+		Label getSpawnLabel() const {
+			return spawn;
+		}
+
+		const Sequence<Label,s>& getSpawnContext() const {
+			return spawnContext;
+		}
+
 		std::ostream& printTo(std::ostream& out) const {
 			return out << "<" << spawn << "," << spawnContext << "," << id << ">";
 		};

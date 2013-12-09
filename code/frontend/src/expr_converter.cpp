@@ -986,7 +986,15 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			}
 			// rightside will become the current operation
 			//  a += 1   =>    a = a + 1
-			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
+	
+	        core::ExpressionPtr opFunc;
+            if(binOp->isShiftAssignOp() || binOp->getOpcode() == clang::BO_XorAssign || binOp->getOpcode() == clang::BO_OrAssign || binOp->getOpcode() == clang::BO_AndAssign) {
+			    opFunc = gen.getOperator(gen.getAlpha(), op);
+            }
+            else {
+                opFunc = gen.getOperator(exprTy, op);
+            }
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 		}
 
 	}
@@ -1202,8 +1210,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = gen.getOperator(lhs->getType(), op);
+
+            if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
+			    opFunc = gen.getOperator(gen.getAlpha(), op);
+            }
+            else {
+			    VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+			    opFunc = gen.getOperator(lhs->getType(), op);
+            }
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			frontend_assert((*lhsTy == *rhsTy)) << "Comparing incompatible types\n";
