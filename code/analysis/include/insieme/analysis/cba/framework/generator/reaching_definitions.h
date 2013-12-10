@@ -202,6 +202,7 @@ namespace cba {
 	class ReachingDefsInConstraintGenerator
 		: public BasicInConstraintGenerator<
 		  	  reaching_defs_in_analysis,
+		  	  reaching_defs_tmp_analysis,
 		  	  reaching_defs_out_analysis,
 		  	  ReachingDefsInConstraintGenerator<Context>,
 		  	  Context,
@@ -210,6 +211,7 @@ namespace cba {
 
 		typedef BasicInConstraintGenerator<
 			  	  reaching_defs_in_analysis,
+			  	  reaching_defs_tmp_analysis,
 			  	  reaching_defs_out_analysis,
 			  	  ReachingDefsInConstraintGenerator<Context>,
 			  	  Context,
@@ -220,7 +222,7 @@ namespace cba {
 
 	public:
 
-		ReachingDefsInConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		ReachingDefsInConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDout), cba(cba) {}
 
 	};
 
@@ -269,6 +271,7 @@ namespace cba {
 	class ReachingDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
 		  	  reaching_defs_in_analysis,
+		  	  reaching_defs_tmp_analysis,
 		  	  reaching_defs_out_analysis,
 		  	  ReachingDefsOutConstraintGenerator<Context>,
 		  	  Context,
@@ -277,6 +280,7 @@ namespace cba {
 
 		typedef BasicOutConstraintGenerator<
 				  reaching_defs_in_analysis,
+				  reaching_defs_tmp_analysis,
 				  reaching_defs_out_analysis,
 				  ReachingDefsOutConstraintGenerator<Context>,
 				  Context,
@@ -288,7 +292,7 @@ namespace cba {
 
 	public:
 
-		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDout), cba(cba) {}
 
 		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			// we can stop at the creation point - no definitions will be killed before

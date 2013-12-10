@@ -88,6 +88,7 @@ namespace cba {
 	class KilledDefsInConstraintGenerator
 		: public BasicInConstraintGenerator<
 		  	  killed_defs_in_analysis,
+		  	  killed_defs_tmp_analysis,
 		  	  killed_defs_out_analysis,
 		  	  KilledDefsInConstraintGenerator<Context>,
 		  	  Context,
@@ -96,6 +97,7 @@ namespace cba {
 
 		typedef BasicInConstraintGenerator<
 			  	  killed_defs_in_analysis,
+			  	  killed_defs_tmp_analysis,
 			  	  killed_defs_out_analysis,
 			  	  KilledDefsInConstraintGenerator<Context>,
 			  	  Context,
@@ -106,7 +108,7 @@ namespace cba {
 
 	public:
 
-		KilledDefsInConstraintGenerator(CBA& cba) : super(cba, KDin, KDout), cba(cba) {}
+		KilledDefsInConstraintGenerator(CBA& cba) : super(cba, KDin, KDtmp, KDout), cba(cba) {}
 
 	};
 
@@ -155,6 +157,7 @@ namespace cba {
 	class KilledDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
 		  	  killed_defs_in_analysis,
+		  	  killed_defs_tmp_analysis,
 		  	  killed_defs_out_analysis,
 		  	  KilledDefsOutConstraintGenerator<Context>,
 		  	  Context,
@@ -163,6 +166,7 @@ namespace cba {
 
 		typedef BasicOutConstraintGenerator<
 				  killed_defs_in_analysis,
+				  killed_defs_tmp_analysis,
 				  killed_defs_out_analysis,
 				  KilledDefsOutConstraintGenerator<Context>,
 				  Context,
@@ -174,7 +178,7 @@ namespace cba {
 
 	public:
 
-		KilledDefsOutConstraintGenerator(CBA& cba) : super(cba, KDin, KDout), cba(cba) {}
+		KilledDefsOutConstraintGenerator(CBA& cba) : super(cba, KDin, KDtmp, KDout), cba(cba) {}
 
 		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			// we can stop at the creation point - no definitions will be killed before

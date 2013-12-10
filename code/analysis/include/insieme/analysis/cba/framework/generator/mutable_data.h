@@ -79,16 +79,16 @@ namespace cba {
 
 
 	template<typename Context, typename BaseAnalysis>
-	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
+	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
 
-		typedef BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
+		typedef BasicInConstraintGenerator<StateSetType, StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
 
 		CBA& cba;
 
 	public:
 
 		ImperativeInStateConstraintGenerator(CBA& cba)
-			: super(cba, Sin, Sout), cba(cba) {}
+			: super(cba, Sin, Stmp, Sout), cba(cba) {}
 
 		// TODO: the following two functions should be moved into a common base class of the In and Out State converter
 
@@ -383,16 +383,16 @@ namespace cba {
 
 
 	template<typename Context, typename BaseAnalysis>
-	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
+	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
 
-		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
+		typedef BasicOutConstraintGenerator<StateSetType, StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
 
 		CBA& cba;
 
 	public:
 
 		ImperativeOutStateConstraintGenerator(CBA& cba)
-			: super(cba, Sin, Sout), cba(cba) {
+			: super(cba, Sin, Stmp, Sout), cba(cba) {
 		}
 
 		/**
@@ -487,6 +487,11 @@ namespace cba {
 
 			// state information entering the set is also leaving it
 			constraints.add(subsetIf(value, set, s_in, s_out));
+		}
+
+		template<typename SetType, typename Node, typename Ctxt, typename ... Params>
+		auto getSet(const StateSetType& type, const Node& node, const Ctxt& ctxt, const Params& ... params) -> decltype(cba.getLocationDataSet<BaseAnalysis>(type, node, ctxt, params...)) {
+			return cba.getLocationDataSet<BaseAnalysis>(type, node, ctxt, params...);
 		}
 	};
 
