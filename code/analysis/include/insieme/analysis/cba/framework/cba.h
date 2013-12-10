@@ -537,7 +537,7 @@ namespace cba {
 			return isValid(ctxt.callContext);
 		}
 
-		template<typename Context = DefaultContext>
+		template<typename Context>
 		const vector<Context>& getValidContexts() {
 			return getContainer<Context>().getContexts(*this);
 		}

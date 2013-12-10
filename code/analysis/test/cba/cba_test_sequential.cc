@@ -211,7 +211,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
-				"	auto y = (int z)->unit {};"
+				"	auto y = (int<4> z)->unit {};"
 				"	y(14);"
 				"	y(16);"
 				"}"
@@ -259,7 +259,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
-				"	auto y = (int z)->int<4> { return 10; };"
+				"	auto y = (int<4> z)->int<4> { return 10; };"
 				"	int<4> z = y(x);"
 				"}"
 		).as<CompoundStmtPtr>();
@@ -1567,7 +1567,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		auto contexts = toString(analysis.getValidContexts());
+		auto contexts = toString(analysis.getValidContexts<DefaultContext>());
 
 		EXPECT_PRED2(containsSubString, contexts, "[0,0]");
 		EXPECT_PRED2(containsSubString, contexts, "[1,1]");
@@ -1611,7 +1611,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		auto contexts = toString(analysis.getValidContexts());
+		auto contexts = toString(analysis.getValidContexts<DefaultContext>());
 
 
 		EXPECT_PRED2(   containsSubString, contexts, "[0,0]");

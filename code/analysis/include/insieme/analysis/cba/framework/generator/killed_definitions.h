@@ -317,7 +317,7 @@ namespace cba {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
 				return
 					out << in << " -> " << this->out << "[label=\"" << in << " sub " << this->out << "\"]\n"
-						<< reaching_in << " -> " << this->out << "[label=\"if killed\"" << ((isKill(ass))?"":" style=dotted") << "]\n";
+						<< reaching_in << " -> " << this->out << "[label=\"if killed (" << ref << " == {" << loc << "})\"" << ((isKill(ass))?"":" style=dotted") << "]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -500,7 +500,6 @@ namespace cba {
 				//			- move this to base class
 
 
-std::cout << "Updating thread-out-states ...\n";
 				// clear lists
 				thread_out_states.clear();
 				vector<ValueID> newDependencies;
@@ -510,7 +509,6 @@ std::cout << "Updating thread-out-states ...\n";
 
 				// if there is not exactly one thread => no states to merge (TODO: maybe not, we can still compute the intersection of all thread groups)
 				if (groups.size() != 1u) {
-std::cout << "Invalid number of groups: " << groups << "\n";
 					auto res = (newDependencies != dependencies);
 					dependencies = newDependencies;
 					return res;
@@ -529,7 +527,6 @@ std::cout << "Invalid number of groups: " << groups << "\n";
 
 				// if there is more than 1 candidate => we are done (TODO: maybe not, we can still compute the intersection of jobs)
 				if (jobs.size() != 1u) {
-std::cout << "Invalid number of jobs " << jobs << "\n";
 					auto res = (newDependencies != dependencies);
 					dependencies = newDependencies;
 					return res;
@@ -547,7 +544,6 @@ std::cout << "Invalid number of jobs " << jobs << "\n";
 				newDependencies.push_back(C_body);
 				const std::set<Callable<Context>>& bodies = ass[C_body];
 				if (bodies.size() != 1u) {
-std::cout << "Invalid number of bodies " << bodies << "\n";
 					auto res = (newDependencies != dependencies);
 					dependencies = newDependencies;
 					return res;
@@ -572,7 +568,6 @@ std::cout << "Invalid number of bodies " << bodies << "\n";
 
 				auto res = (newDependencies != dependencies);
 				dependencies = newDependencies;
-std::cout << "New Dependencies: " << dependencies << " - change: " << res << "\n";
 				return res;
 			}
 

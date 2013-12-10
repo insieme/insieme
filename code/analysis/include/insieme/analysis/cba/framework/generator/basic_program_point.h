@@ -245,6 +245,26 @@ namespace cba {
 				// it is one => no change in context
 				this->connectSets(this->Ain, bind, ctxt, this->Ain, call, ctxt, args..., constraints);
 
+			} else if (ctxt.isEmptyCallContext()) {
+
+				// if the call context is empty, we are probably in the root of a thread
+				if (ctxt.isEmptyThreadContext()) return;	// if context is empty, we are not in a thread!
+
+				// get thread call context
+				const auto& spawnID = ctxt.threadContext.front();
+				const auto& spwanStmt = cba.getStmt(spawnID.getSpawnLabel());
+				const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+
+				assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
+					<< "Not yet supporting nested threads!\n";
+
+				// connect to spawn location (but we have to guess the thread context)
+				// TODO: this should actually be Atmp ...
+				this->connectSets(this->Ain, spwanStmt, spawnCtxt, this->Ain, call, ctxt, args..., constraints);
+
+
+//				assert_not_implemented() << "Return from thread not supported yet!";
+
 			} else {
 
 				// it is no direct call => change in context possible
