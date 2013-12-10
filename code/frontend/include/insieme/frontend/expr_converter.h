@@ -163,6 +163,12 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), arg);
 				}
 				else if (core::analysis::isConstCppRef(funcParamTy)) {
+					// Note, const refs extend lifetime of values, therefore materialize the value into a ref
+					if (!arg->getType().isa<core::RefTypePtr>()) {
+						arg =  builder.callExpr(builder.refType(arg->getType()), 
+												mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), 
+												arg);
+					}
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
 				}
 				else if (core::analysis::isCppRef(argTy)) {

@@ -122,6 +122,10 @@ namespace annotations {
 	const NodePtr& attachLocation(const NodePtr& node, const string& file, const TextPosition& pos) {
 		return attachLocation(node, file, pos, pos);
 	}
+	
+	const NodePtr& attachLocation(const NodePtr& node, const string& file, unsigned startLine, unsigned startColumn, unsigned endLine, unsigned endColumn){
+		return attachLocation (node, file, TextPosition(startLine, startColumn), TextPosition(endLine, endColumn));
+	}
 
 	const NodePtr& attachLocation(const NodePtr& node, const string& file, const TextPosition& start, const TextPosition& end) {
 		if (!node) return node;

@@ -76,6 +76,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include <iconv.h>
 
@@ -1740,8 +1741,16 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
         retIr = plugin->PostVisit(expr, retIr, convFact);
 	}
 
+	// attach location annotation
+	if (expr->getLocStart().isValid()){
+		auto presStart =  convFact.getSourceManager().getPresumedLoc(expr->getLocStart());
+		auto presEnd =  convFact.getSourceManager().getPresumedLoc(expr->getLocEnd());
+		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
+	}
+
 	// check for OpenMP annotations
-	return omp::attachOmpAnnotation(retIr, expr, convFact);
+	retIr =  omp::attachOmpAnnotation(retIr, expr, convFact);
+	return retIr;
 }
 
 } // End conversion namespace

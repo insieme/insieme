@@ -122,6 +122,20 @@ namespace annotations {
 	 *
 	 * @param node the node to attach a location to
 	 * @param file the source file to be referenced
+	 * @param startLine start possition line number
+	 * @param startColumn start possition column number
+	 * @param endLine end possition line number
+	 * @param endColumn end possition column number
+	 * @return the node handed in
+	 */
+	const NodePtr& attachLocation(const NodePtr& node, const string& file, unsigned startLine, unsigned startColumn, unsigned endLine, unsigned endColumn);
+
+	/**
+	 * Updates the location attached to the given node and returns
+	 * the handed in node.
+	 *
+	 * @param node the node to attach a location to
+	 * @param file the source file to be referenced
 	 * @param start the start of the source code location to be covered
 	 * @param end the end of the source code location to be covered
 	 * @return the node handed in

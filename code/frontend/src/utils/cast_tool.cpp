@@ -586,12 +586,15 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		{
 			// if inner expression is not ref.... it might be a compound initializer
-			core::ExpressionPtr retIr = expr;
 			if (!IS_IR_REF(exprTy)){
-				retIr = builder.callExpr(gen.getRefVar(),expr);
+				expr = builder.callExpr(gen.getRefVar(),expr);
 			}
 
-			return builder.callExpr(gen.getRefVectorToRefArray(), retIr);
+			if (core::analysis::isAnyCppRef(exprTy)){
+				expr = core::analysis::unwrapCppRef(expr);
+			}
+
+			return builder.callExpr(gen.getRefVectorToRefArray(), expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////

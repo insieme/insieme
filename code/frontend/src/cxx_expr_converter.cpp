@@ -88,6 +88,7 @@
 #include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/annotations/source_location.h"
 
 using namespace clang;
 using namespace insieme;
@@ -1046,6 +1047,13 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
     // call frontend plugin post visitors
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retIr = plugin->PostVisit(expr, retIr, convFact);
+	}
+
+	// attach location annotation
+	if (expr->getLocStart().isValid()){
+		auto presStart =  convFact.getSourceManager().getPresumedLoc(expr->getLocStart());
+		auto presEnd =  convFact.getSourceManager().getPresumedLoc(expr->getLocEnd());
+		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
 	}
 
 	// check for OpenMP annotations

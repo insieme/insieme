@@ -863,6 +863,7 @@ namespace {
 		// deduce return type
 		core::TypeList argumentTypes;
 		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		assert_true(types::deduceReturnType(funType, argumentTypes, false) ) << "type could not be deduced, \nfun: " << functionExpr << " \nfunc type: " << funType << "\n args: " << arguments << " \n args types: "<< argumentTypes;
 		return types::deduceReturnType(funType, argumentTypes);
 	}
 
