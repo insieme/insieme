@@ -180,6 +180,24 @@ namespace analysis {
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
+	bool isAnyCppRef(const TypePtr& type){
+		return isCppRef(type) || isConstCppRef(type);
+	}
+
+	ExpressionPtr unwrapCppRef (const ExpressionPtr& expr){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+		if (isCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefCppToIR(), expr);
+		}
+		else if (isConstCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
+		}
+		else{
+			assert(false && "could not unwrapp Cpp ref, is it a cpp ref?");
+		}
+	}
+
 	// --------------------------- data member pointer -----------------------------------
 	
 	bool isMemberPointer (const TypePtr& type){
