@@ -78,6 +78,16 @@ namespace cba {
 		typedef typename A::template params<C>::type type;
 	};
 
+	// a type trait obtaining the operation to be utilized for merging multiple sequential control flows
+	template<typename A, typename C> struct one_meet_assign_op_type {
+		typedef typename A::template one_meet_assign_op_type<C>::type type;
+	};
+
+	// a type trait obtaining the operation to be utilized for merging multiple parallel control flows
+	template<typename A, typename C> struct all_meet_assign_op_type {
+		typedef typename A::template all_meet_assign_op_type<C>::type type;
+	};
+
 
 	// analysis utilities
 
@@ -108,6 +118,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef L type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
 		template<typename C> struct params    { typedef std::tuple<Params...> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename L::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename L::meet_assign_op_type type; };
 	};
 
 
@@ -144,6 +156,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef utils::constraint::SetLattice<E<typename C::context_type>> type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
 	};
 
 
@@ -156,6 +170,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef StructureLattice<utils::constraint::SetLattice<E<typename C::context_type>>> type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
 	};
 
 
@@ -171,6 +187,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef utils::constraint::SetLattice<E<typename C::context_type>> type; };
 		template<typename C> struct generator { typedef G<typename C::context_type> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type, Location<typename C::context_type>> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
 	};
 
 

@@ -66,6 +66,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef typename cba::lattice<BaseAnalysis,C>::type type; };
 		template<typename C> struct generator { typedef G<typename C::context_type, BaseAnalysis> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type, Location<typename C::context_type>> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
 	};
 
 	template<typename A>

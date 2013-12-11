@@ -519,6 +519,9 @@ namespace cba {
 			typedef typename Lattice::value_type value_type;
 			typedef typename Lattice::less_op_type less_op;
 
+			typedef typename all_meet_assign_op_type<ThreadOutAnalysisType,analysis_config<Context>>::type all_meet_assign_op_type;
+			typedef typename one_meet_assign_op_type<ThreadOutAnalysisType,analysis_config<Context>>::type one_meet_assign_op_type;
+
 			CBA& cba;
 			const ThreadOutAnalysisType& out;
 			const TypedValueID<ThreadGroupValue> thread_group;
@@ -541,7 +544,7 @@ namespace cba {
 					const TypedValueID<Lattice>& out_state,
 					const ExtraParams& ... params)
 				: Constraint(toVector<ValueID>(thread_group, in_state), toVector<ValueID>(out_state), true, true),
-				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(params...) {}
+				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(std::make_tuple(params...)) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				const static less_op less;
@@ -709,16 +712,28 @@ namespace cba {
 			}
 
 			value_type getUpdatedValue(const Assignment& ass) const {
+				static const all_meet_assign_op_type all_meet_assign;
+				static const one_meet_assign_op_type one_meet_assign;
+
 
 				value_type res = ass[in_state];		// all in-values are always included
 
+				// if there is no thread-out-state known, we are done
+				if (thread_out_states.empty()) return res;
+
+				// combine thread_out_states
+
 				// merge in effects of thread-out-states if there are any
+				value_type merged;
 				for(const auto& cur : thread_out_states) {
 					const value_type& out = ass[cur];
 
-					// TODO: use here a merge-operator determined by the lattice
-					res.insert(out.begin(), out.end());
+					// merge in effects
+					one_meet_assign(merged, out);
 				}
+
+				// combine the all- and one-path effects
+				all_meet_assign(res, merged);
 
 				// done
 				return res;
@@ -728,13 +743,13 @@ namespace cba {
 
 			template<int i, typename ValueType, typename Tuple, typename ... Args>
 			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-			getValueID(const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) {
+			getValueID(const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) const {
 				return getValueID(type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
 			}
 
 			template<typename ValueType, typename Tuple, typename ... Args>
 			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-			getValueID(const ValueType& type, const utils::int_type<sizeof...(ExtraParams)>& c, const Tuple& t, const Args& ... args) {
+			getValueID(const ValueType& type, const utils::int_type<sizeof...(ExtraParams)>& c, const Tuple& t, const Args& ... args) const {
 				return cba.getSet(type, args...);
 			}
 
@@ -790,28 +805,28 @@ namespace cba {
 			// if target is fixed => no condition on constraint edge
 			if (targets.size() == 1u) {
 
-//				// special case - call is a merge call
-//				auto& basic = call->getNodeManager().getLangBasic();
-//				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
-//
-//					// In this case we have to:
-//					//		- compute the set of merged thread groups
-//					//		- if there is only one (100% save to assume it is this group) we can
-//					//		  merge the killed definitions at the end of the thread group with the killed definitions of the in-set
-//					//		- otherwise we can not be sure => no operation
-//
-//					// get involved sets
-//					auto A_tmp = static_cast<Derived*>(this)->getSet(this->Atmp, call, ctxt, params...);
-//					auto A_out = static_cast<Derived*>(this)->getSet(this->Aout, call, ctxt, params...);
-//
-//					auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
-//
-//					// add constraint
-//					constraints.add(parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
-//
-//					// done
-//					return;
-//				}
+				// special case - call is a merge call
+				auto& basic = call->getNodeManager().getLangBasic();
+				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
+
+					// In this case we have to:
+					//		- compute the set of merged thread groups
+					//		- if there is only one (100% save to assume it is this group) we can
+					//		  merge the killed definitions at the end of the thread group with the killed definitions of the in-set
+					//		- otherwise we can not be sure => no operation
+
+					// get involved sets
+					auto A_tmp = cba.getSet(this->Atmp, call, ctxt, params...);
+					auto A_out = cba.getSet(this->Aout, call, ctxt, params...);
+
+					auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+
+					// add constraint
+					constraints.add(parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
+
+					// done
+					return;
+				}
 
 				// skip handling of literals
 				if (targets[0].isLiteral()) {

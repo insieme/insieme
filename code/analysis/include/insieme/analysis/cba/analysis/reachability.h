@@ -132,7 +132,7 @@ namespace cba {
 	template<typename Context>
 	class ReachableTmpConstraintGenerator : public BasicTmpConstraintGenerator<reachable_tmp_analysis, reachable_out_analysis, Context> {
 
-		typedef BasicTmpConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableTmpConstraintGenerator<Context>, Context> super;
+		typedef BasicTmpConstraintGenerator<reachable_tmp_analysis, reachable_out_analysis, Context> super;
 
 	public:
 
