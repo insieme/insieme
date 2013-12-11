@@ -149,23 +149,23 @@ namespace cba {
 					Constraints& constraints
 				) const {
 
-			if (ac != bc) {
-				auto pre = cba.getSet(pred, bc.callContext.back());
-				auto A = cba.getSet(a, al, ac, params...);
-				auto B = cba.getSet(b, bl, bc, params...);
-				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
-			} else {
-				auto A = cba.getSet(a, al, ac, params...);
-				auto B = cba.getSet(b, bl, bc, params...);
-				constraints.add(subsetIf(value, set, A, B));
-			}
+			// simple version (no check of contexts)
+			auto A = cba.getSet(a, al, ac, params...);
+			auto B = cba.getSet(b, bl, bc, params...);
+			constraints.add(subsetIf(value, set, A, B));
+
+//			if (ac != bc) {
+//				auto pre = cba.getSet(pred, bc.callContext.back());
+//				auto A = cba.getSet(a, al, ac, params...);
+//				auto B = cba.getSet(b, bl, bc, params...);
+//				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
+//			} else {
+//				auto A = cba.getSet(a, al, ac, params...);
+//				auto B = cba.getSet(b, bl, bc, params...);
+//				constraints.add(subsetIf(value, set, A, B));
+//			}
 		}
 
-		template<typename SetType, typename Node, typename Ctxt, typename ... Params>
-		typename lattice<SetType,analysis_config<Ctxt>>::type
-		getSet(const SetType& type, const Node& node, const Ctxt& ctxt, const Params& ... params) {
-			return cba.getSet(type, node, ctxt, params...);
-		}
 	};
 
 
@@ -744,11 +744,6 @@ namespace cba {
 		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename DataValue, typename ... ExtraParams>
 		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const TypedValueID<DataValue>& in_state, const TypedValueID<DataValue>& out_state, const ExtraParams& ... params) {
 			return std::make_shared<ParallelMergeConstraint<Context,ThreadOutAnalysisType,TGValue,DataValue,ExtraParams...>>(cba,out,threadGroup,in_state,out_state, params...);
-		}
-
-		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename ... ExtraParams>
-		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const StateSetType& in_state, const StateSetType& out_state, const ExtraParams& ... params) {
-			return ConstraintPtr();
 		}
 
 	}
