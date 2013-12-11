@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct inner_s;
-struct outer_s;
-
 typedef struct inner_s {
 	struct outer_s *outer;
 	int i;

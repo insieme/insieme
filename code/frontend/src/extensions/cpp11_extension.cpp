@@ -187,7 +187,6 @@ void Cpp11Plugin::PostVisit(const clang::Decl* decl,  insieme::frontend::convers
 
 			// update the meta info of the class
 			core::TypePtr classType = thisExpr->getType().as<core::RefTypePtr>().getElementType();
-			classType = convFact.lookupTypeDetails(classType);
 			core::ClassMetaInfo classInfo = core::getMetaInfo(classType);
 			const vector<core::MemberFunction>& old = classInfo.getMemberFunctions();
 			assert(old.size() ==1);

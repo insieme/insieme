@@ -1,8 +1,5 @@
 #include <stdio.h>
 
-struct inner_s;
-struct outer_s;
-
 typedef struct inner_s {
 		struct outer_s* _outer;
 } inner_t;
