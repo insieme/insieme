@@ -349,14 +349,16 @@ core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr e
 			else resIr = expr;
 			break;
         case 17:
-            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr, 0);
+            resIr = builder.callExpr(gen.getInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
+			if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getIntPrecisionFix(), resIr, bytes);
 			break;
 		case 22:
 			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getUintPrecisionFix(), expr, bytes);
 			else resIr = expr;
 			break;
         case 27:
-            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr, 0);
+            resIr = builder.callExpr(gen.getUInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
+			if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getUintPrecisionFix(), resIr, bytes);
 			break;
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getRealPrecisionFix(), expr, bytes);
