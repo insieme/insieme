@@ -185,9 +185,10 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 	// now fix the meta info of the classes
 	for (auto pair : memberMap){
 		// meta info is attached to retrieve the full type
-		core::TypePtr objTy = lookupTypeDetails(pair.first, tu);
-		core::IRBuilder builder(objTy->getNodeManager());
+		//core::TypePtr objTy = lookupTypeDetails(pair.first, tu);
+		core::TypePtr objTy = pair.first;
 		assert(objTy);
+		core::IRBuilder builder(objTy->getNodeManager());
 
 		assert(core::hasMetaInfo(objTy));
 		memberReplace_t replacements = pair.second;

@@ -1318,9 +1318,12 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		//FIXME create map from classType to vector<metainfo> in TU
 		//FIXME merge that map, and at programm generation merge the metainfo together
 		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
-		classType = lookupTypeDetails(classType);
 
-		core::ClassMetaInfo classInfo = core::getMetaInfo(classType);
+		core::ClassMetaInfo classInfo;
+		if (core::hasMetaInfo(classType)){
+			classInfo = core::getMetaInfo(classType);
+		}
+
 		if (funcTy->isConstructor())
 			classInfo.addConstructor(lambda);
 		else if (funcTy->isDestructor()){
@@ -1335,8 +1338,6 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 		core::setMetaInfo(classType, classInfo);
 	}
-
-
 
 	// update cache
 	assert_eq(lambdaExprCache[funcDecl], symbol) << "Don't touch this!";
