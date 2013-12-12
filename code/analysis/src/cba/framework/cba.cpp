@@ -45,9 +45,9 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const StateSetType Sin("Sin");			// in-state of statements
-	const StateSetType Sout("Sout");		// out-state of statements
-	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
+//	const StateSetType Sin("Sin");			// in-state of statements
+//	const StateSetType Sout("Sout");		// out-state of statements
+//	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
 
 
 	using std::set;

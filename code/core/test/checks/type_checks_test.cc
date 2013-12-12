@@ -432,7 +432,7 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 	ExpressionPtr err1 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeB));
 	ExpressionPtr err2 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identC), builder.getTypeLiteral(typeB));
 	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(basic.getUnit(), fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<MemberAccessElementTypeCheck>();
@@ -483,7 +483,7 @@ TEST(MemberAccessElementTypeCheck, References) {
 	ExpressionPtr err1 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeB));
 	ExpressionPtr err2 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identC), builder.getTypeLiteral(typeB));
 	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(basic.getUnit(), fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<MemberAccessElementTypeCheck>();
@@ -520,7 +520,7 @@ TEST(ComponentAccessTypeCheck, Basic) {
 	ExpressionPtr err1 = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeB));
 	ExpressionPtr err2 = builder.callExpr(fun, var, builder.uintLit(5), builder.getTypeLiteral(typeB));
 	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.uintLit(0), builder.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(basic.getUnit(), fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<ComponentAccessTypeCheck>();
@@ -561,7 +561,7 @@ TEST(ComponentAccessTypeCheck, References) {
 	ExpressionPtr err1 = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeB));
 	ExpressionPtr err2 = builder.callExpr(fun, var, builder.uintLit(5), builder.getTypeLiteral(typeB));
 	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.uintLit(0), builder.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(basic.getUnit(), fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<ComponentAccessTypeCheck>();

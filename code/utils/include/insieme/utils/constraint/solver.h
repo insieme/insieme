@@ -646,7 +646,7 @@ namespace constraint {
 		Constraints(const std::initializer_list<ConstraintPtr>& list) : data(list) {}
 
 		void add(const ConstraintPtr& constraint) {
-			data.push_back(constraint);
+			if(constraint) data.push_back(constraint);
 		}
 
 		void add(const Constraints& constraints) {

@@ -125,109 +125,9 @@ namespace prototype_2 {
 			return set_union(toVector(first, rest...));
 		}
 
-
-		void updateDominatorSet(const Node& node, const Graph& g) {
-			auto& dom = node.dom;
-
-			// ---- node distance -----
-
-			node.distance[node.getID()] = 0;
-			forEachPred(node, g, [&](const Node& cur) {
-				for(auto e : cur.distance) {
-					auto pos = node.distance.find(e.first);
-					if (pos == node.distance.end()) {
-						node.distance[e.first] = e.second+1;
-					} else {
-						node.distance[e.first] = std::min(pos->second, e.second+1);
-					}
-				}
-			});
-
-
-			// ---- dominator list -----
-
-			// local node is always included
-			dom.insert(node.getID());
-
-			// intersect dominators of predecessors
-			vector<set<ID>> preDom;
-			forEachPred(node, g, [&](const Node& pred) {
-				preDom.push_back(pred.dom);
-			});
-
-			if (preDom.empty()) return;
-
-			auto intersect = preDom[0];
-			for(auto cur : preDom) {
-				intersect = utils::set::intersect(intersect, cur);
-			}
-
-			// add intersection of pre-decessor dominators
-			dom.insert(intersect.begin(), intersect.end());
-
-			// update strict dominator set
-			node.strict_dom = dom;
-			node.strict_dom.erase(node.getID());
-
-			// --- immediate dominator ------
-
-			// update immediate dominator
-
-			if (!node.strict_dom.empty()) {
-				ID idom = *node.strict_dom.begin();
-				auto dist = node.distance[idom];
-				for (auto cur : node.strict_dom) {
-					if (node.distance[cur] < dist) {
-						idom = cur;
-						dist = node.distance[cur];
-					}
-				}
-				node.immediate_dom.insert(idom);
-				assert_le(node.immediate_dom.size(), 1u);
-			}
-
-		}
-
 		void updateAccessIn(const Node& node, const Graph& graph) {
 			forEachPred(node, graph, [&](const Node& pred) {
 				node.accessIn = merge(node.accessIn, pred.accessOut);
-			});
-		}
-
-
-		void updateInNaive(const Node& node, const Graph& graph) {
-			// update set of accessed values
-			updateAccessIn(node, graph);
-
-			// just merge all the input sets
-			forEachPred(node, graph, [&](const Node& pred) {
-				node.before = merge(node.before, pred.after);
-			});
-		}
-
-		void updateInDom(const Node& node, const Graph& graph) {
-
-			// update set of accessed values
-			updateAccessIn(node, graph);
-
-			// skip while idom is not known
-			if (node.immediate_dom.empty()) return;
-			assert_eq(node.immediate_dom.size(), 1u) << "Node: " << node;
-
-			// get idom id
-			ID idom = *node.immediate_dom.begin();
-
-			// get variables written since immediate dominating node
-			const set<Var>& accessed = node.accessIn[idom];		// get variables written since acc
-
-			// merge input sets
-			forEachPred(node, graph, [&](const Node& pred) {
-				for(auto cur : pred.after) {
-					// only if written in no branch or in this branch
-					if (!contains(accessed, cur.first) || contains(pred.accessOut[idom], cur.first)) {
-						node.before[cur.first].insert(cur.second.begin(), cur.second.end());
-					}
-				}
 			});
 		}
 
@@ -238,29 +138,24 @@ namespace prototype_2 {
 			// update kill-in set - union of all kill-out sets
 
 			// collect all in-kill sets of parallel and sequential edges
-			vector<set<ID>> inSeq;
-			vector<set<ID>> inPar;
+			vector<set<ID>> inAll;
+			vector<set<ID>> inOne;
 			forEachInEdge(node, graph, [&](const Edge& e, const Node& pred) {
-				if (e == All) inSeq.push_back(pred.killedLocationsOut);
-				if (e == One) inPar.push_back(pred.killedLocationsOut);
+				if (e == All) inAll.push_back(pred.killedLocationsOut);
+				if (e == One) inOne.push_back(pred.killedLocationsOut);
 			});
 
-			if (inSeq.empty() && inPar.empty()) {
+			if (inAll.empty() && inOne.empty()) {
 				node.killedLocationsIn.clear();
-			} else if (inSeq.empty()) {
-				node.killedLocationsIn = set_union(inPar);
-			} else if (inPar.empty()) {
-				node.killedLocationsIn = set_intersect(inSeq);
+			} else if (inOne.empty()) {
+				node.killedLocationsIn = set_union(inAll);
+			} else if (inAll.empty()) {
+				node.killedLocationsIn = set_intersect(inOne);
 			} else {
 				node.killedLocationsIn = set_union(
-						set_intersect(inSeq), set_union(inPar)
+						set_union(inAll), set_intersect(inOne)
 				);
 			}
-
-//			node.killedLocationsIn.clear();
-//			forEachPred(node, graph, [&](const Node& pred) {
-//				node.killedLocationsIn.insert(pred.killedLocationsOut.begin(), pred.killedLocationsOut.end());
-//			});
 
 
 			// -- active write set ---------------------------------------
@@ -307,12 +202,7 @@ namespace prototype_2 {
 			// create a backup of the old state
 			Node old = node;
 
-			// update dominator set
-			updateDominatorSet(node, g);
-
 			// update in-set  ... that's the tricky part
-//			updateInNaive(node, g);
-//			updateInDom(node, g);
 			updateInActiveKill(node, g);
 
 			// update out-set accesses

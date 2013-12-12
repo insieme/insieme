@@ -63,7 +63,7 @@ namespace transform {
 			"		a = b+3; "
 			"		a = b+3;"
 			"	}"
-			"	c = a;"
+			"	c = *a;"
 			"	c; "
 			"}"
 		);
@@ -79,7 +79,7 @@ namespace transform {
 					"{}; "
 					"ref.assign(v1, int.add(v3, 3));"
 				"} else {}; "
-				"ref.assign(v2, v1); "
+				"ref.assign(v2, ref.deref(v1)); "
 				"v2;"
 			"}"
 			, toString(*ret));
@@ -96,9 +96,9 @@ namespace transform {
 			"	ref<int<4>> a = 10; "
 			"	ref<int<4>> b = 10; "
 			"	ref<int<4>> c = 20; "
-			"	a = c;"
-			"	c = b;"
-			"	b = a;"
+			"	a = *c;"
+			"	c = *b;"
+			"	b = *a;"
 			"	a; "
 			"}"
 		);
@@ -119,11 +119,11 @@ namespace transform {
 			"	ref<int<4>> a = 10; "
 			"	ref<int<4>> i=0; "
 			"	while( i < 2 ) { "
-			"		a = i; "
+			"		a = *i; "
 			"		i = i+1; "
 			"	} "
 			"	ref<int<4>> c = 20; "
-			"	a = c;"
+			"	a = *c;"
 			"	a; "
 			"}"
 		);
@@ -146,7 +146,7 @@ namespace transform {
 			"		a = i; "
 			"	} "
 			"	ref<int<4>> c = 20; "
-			"	a = c;"
+			"	a = *c;"
 			"	a; "
 			"}"
 		);
@@ -173,8 +173,8 @@ namespace transform {
 			"	ref<int<4>> a = 10; "
 			"	ref<int<4>> c = 20; "
 			"	s.a = a+c; "
-			"	c = a;"
-			"	s.a = c; "
+			"	c = *a;"
+			"	s.a = *c; "
 			"	s.a; "
 			"}", symbols
 		);

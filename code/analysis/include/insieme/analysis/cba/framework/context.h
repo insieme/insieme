@@ -307,6 +307,16 @@ namespace cba {
 			return false;
 		}
 
+		bool isEmptyCallContext() const {
+			const static decltype(callContext) empty;
+			return callContext == empty;
+		}
+
+		bool isEmptyThreadContext() const {
+			const static decltype(threadContext) empty;
+			return threadContext == empty;
+		}
+
 		std::ostream& printTo(std::ostream& out) const {
 			out << "[";
 			if (call_context::size > 0) out << callContext;

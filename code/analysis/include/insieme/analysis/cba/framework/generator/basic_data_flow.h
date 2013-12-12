@@ -40,6 +40,7 @@
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/mutable_data.h"
 
 #include "insieme/analysis/cba/framework/entities/data_index.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
@@ -52,6 +53,7 @@
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/functions.h"
 #include "insieme/analysis/cba/analysis/call_context.h"
+#include "insieme/analysis/cba/analysis/jobs.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
@@ -532,6 +534,54 @@ namespace cba {
 							}
 
 							// it might also be the case that the bind is called as the body of a job (most jobs have bind-bodies)
+							if (ctxt.isEmptyCallContext()) {
+
+								// if the call context is empty, we are probably in the root of a thread
+								if (ctxt.isEmptyThreadContext()) continue;	// if context is empty, we are not in a thread!
+
+								// get thread call context
+								const auto& spawnID = ctxt.threadContext.front();
+								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprAddress>();
+								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+
+								assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
+									<< "Not yet supporting nested threads!\n";
+
+								// get list of jobs - TODO: do this once at a cached place
+								vector<Job<Context>> jobs;
+								visitDepthFirstOnce(cba.getRoot(), [&](const JobExprAddress& job) {
+									for(const auto& jobCtxt : cba.getValidContexts<Context>()) {
+										jobs.push_back(Job<Context>(job, jobCtxt));
+									}
+								});
+
+								// this is a two-stage requirement
+								//		- the job must be correct
+								//		- the job must have the current bind as its body
+								//		- in this case we can forward the captured value
+
+								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+
+								// for each job ...
+								for(const auto& job : jobs) {
+
+									auto job_body = cba.getSet(C, job.getAddress().getDefaultExpr(), job.getContext());
+
+									// ... and for each potential bind context
+									for(const auto& bindCtxt : cba.getValidContexts<Context>()) {
+
+										// get value of argument within bind context
+										auto A_bind_arg = cba.getSet(A, l_arg, bindCtxt);
+
+										// if job and bind is fitting => connect bound value with variable
+										constraints.add(subsetIf(job, J_spawned_job, Callable<Context>(bind, bindCtxt), job_body, A_bind_arg, a_var));
+									}
+
+
+								}
+
+							}
+
 //							const typename Context::thread_id& threadID = ctxt.threadContext[0];
 //							auto l_spawn_call = threadID.getSpawnLabel();
 //							const auto& spawnCtxt = threadID.getSpawnContext();
@@ -658,7 +708,7 @@ namespace cba {
 						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getLocationDataSet(Sin, l_call, ctxt, loc, A);
+							auto S_in = this->cba.getSet(Sin<ValueAnalysisType>(), l_call, ctxt, loc);
 							constraints.add(read(loc, R_trg, S_in, A_call));
 						}
 					}

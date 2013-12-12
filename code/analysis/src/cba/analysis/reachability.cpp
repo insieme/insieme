@@ -41,6 +41,7 @@ namespace analysis {
 namespace cba {
 
 	const reachable_in_analysis Rin = registerAnalysis<reachable_in_analysis>("Rin");
+	const reachable_tmp_analysis Rtmp = registerAnalysis<reachable_tmp_analysis>("Rtmp");
 	const reachable_out_analysis Rout = registerAnalysis<reachable_out_analysis>("Rout");
 
 } // end namespace cba

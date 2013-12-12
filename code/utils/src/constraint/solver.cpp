@@ -120,6 +120,13 @@ namespace constraint {
 					// trigger update
 					change = cc.update(res);
 
+					if (change == Constraint::DependencyChanged) {
+						// update dependencies
+						for(const auto& cur : cc.getUsedInputs(res)) {
+							edges[cur].insert(&cc);
+						}
+					}
+
 				} while(change == Constraint::DependencyChanged);
 
 				// register outputs in work-list
@@ -179,13 +186,20 @@ namespace constraint {
 
 				auto change = Constraint::Unchanged;
 
-				do {
+				// add and resolve list of used filters
+				resolveConstraints(cc, worklist);
 
-					// add and resolve list of used filters
-					resolveConstraints(cc, worklist);
+				do {
 
 					// trigger update
 					change = cc.update(ass);
+
+					if (change == Constraint::DependencyChanged) {
+						// update dependencies
+						for(const auto& cur : cc.getUsedInputs(ass)) {
+							edges[cur].insert(&cc);
+						}
+					}
 
 				} while(change == Constraint::DependencyChanged);
 

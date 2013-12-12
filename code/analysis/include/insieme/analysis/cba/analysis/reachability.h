@@ -55,19 +55,22 @@ namespace cba {
 
 
 	template<typename Context> class ReachableInConstraintGenerator;
+	template<typename Context> class ReachableTmpConstraintGenerator;
 	template<typename Context> class ReachableOutConstraintGenerator;
 
 	struct reachable_in_analysis  : public set_analysis<Reachable,  ReachableInConstraintGenerator> {};
+	struct reachable_tmp_analysis : public set_analysis<Reachable, ReachableTmpConstraintGenerator> {};
 	struct reachable_out_analysis : public set_analysis<Reachable, ReachableOutConstraintGenerator> {};
 
 	extern const reachable_in_analysis Rin;
+	extern const reachable_tmp_analysis Rtmp;
 	extern const reachable_out_analysis Rout;
 
 
 	template<typename Context>
-	class ReachableInConstraintGenerator : public BasicInConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> {
+	class ReachableInConstraintGenerator : public BasicInConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> {
 
-		typedef BasicInConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> super;
+		typedef BasicInConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> super;
 
 		StatementAddress root;
 
@@ -78,7 +81,7 @@ namespace cba {
 	public:
 
 		ReachableInConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout), root(cba.getRoot()), initSet(false), cba(cba) { }
+			: super(cba, Rin, Rtmp, Rout), root(cba.getRoot()), initSet(false), cba(cba) { }
 
 		void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
@@ -97,16 +100,16 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachableOutConstraintGenerator : public BasicOutConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> {
+	class ReachableOutConstraintGenerator : public BasicOutConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> {
 
-		typedef BasicOutConstraintGenerator<reachable_in_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> super;
+		typedef BasicOutConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableOutConstraintGenerator<Context>,Context> super;
 
 		CBA& cba;
 
 	public:
 
 		ReachableOutConstraintGenerator(CBA& cba)
-			: super(cba, Rin, Rout), cba(cba) { }
+			: super(cba, Rin, Rtmp, Rout), cba(cba) { }
 
 		/**
 		 * Here we need a special handling (not considering reachability) since it is what we try to compute.
@@ -126,6 +129,16 @@ namespace cba {
 
 	};
 
+	template<typename Context>
+	class ReachableTmpConstraintGenerator : public BasicTmpConstraintGenerator<reachable_tmp_analysis, reachable_out_analysis, Context> {
+
+		typedef BasicTmpConstraintGenerator<reachable_tmp_analysis, reachable_out_analysis, Context> super;
+
+	public:
+
+		ReachableTmpConstraintGenerator(CBA& cba) : super(cba, Rtmp, Rout) {}
+
+	};
 
 } // end namespace cba
 } // end namespace analysis
