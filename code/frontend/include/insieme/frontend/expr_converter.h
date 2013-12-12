@@ -171,11 +171,8 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 					}
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
 				}
-				else if (core::analysis::isCppRef(argTy)) {
-					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
-				}
-				else if (core::analysis::isConstCppRef(argTy)) {
-					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
+				else if (core::analysis::isAnyCppRef(argTy)) {
+					arg =  core::analysis::unwrapCppRef(arg);
 				}
 				else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)) {
 					arg = insieme::frontend::utils::castScalar(funcParamTy, arg);

@@ -96,7 +96,7 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
 
-// for the console output, move somewhere 
+// for the console output, move somewhere
 #include <boost/format.hpp>
 
 using namespace clang;
@@ -168,9 +168,9 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 
 
 inline unsigned countVars(const clang::DeclContext* declCtx){
-	unsigned count(0); 
+	unsigned count(0);
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
-		unsigned& count; 
+		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
 		void VisitVarDecl(const clang::VarDecl* var) {
 			if (!var->hasGlobalStorage()) { return; }
@@ -183,9 +183,9 @@ inline unsigned countVars(const clang::DeclContext* declCtx){
 	return count;
 }
 inline unsigned countTypes(const clang::DeclContext* declCtx){
-	unsigned count(0); 
+	unsigned count(0);
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
-		unsigned& count; 
+		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { count ++; }
 		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
@@ -197,9 +197,9 @@ inline unsigned countTypes(const clang::DeclContext* declCtx){
 	return count;
 }
 inline unsigned countFunctions(const clang::DeclContext* declCtx){
-	unsigned count(0); 
+	unsigned count(0);
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
-		unsigned& count; 
+		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) { count++; }
 	} counter(count);
@@ -216,11 +216,11 @@ inline void printProgress (unsigned pass, unsigned cur, unsigned max){
 	unsigned a = ((float)cur*100.0f) / (float)max;
 	if (a != last){
 		unsigned i;
-		for (i = 0; i< a; i++) 
+		for (i = 0; i< a; i++)
 			out << "=";
 		out  << ">";
 		i++;
-		for (; i< 100; i++) 
+		for (; i< 100; i++)
 			out << " ";
 		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
 		last = a;
@@ -364,7 +364,7 @@ tu::IRTranslationUnit Converter::convert() {
 		bool externC;
 		unsigned count;
 		unsigned processed;
-		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned processed=0) 
+		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned processed=0)
 		: converter(converter), externC(Ccode), count(count), processed(processed)
 		{}
 
@@ -518,14 +518,14 @@ core::TypePtr Converter::tryDeref(const core::TypePtr& type) const {
 ///
 core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	VLOG(1) << "LOOKUP Variable: " << valDecl->getNameAsString();
-	
+
 	// Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
 	auto varCacheHit = varDeclMap.find(valDecl);
 	if (varCacheHit != varDeclMap.end()) {
 		// variable found in the map
 		return varCacheHit->second;
 	}
-	
+
 
     bool visited = false;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
@@ -627,7 +627,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 				//we don't add StaticLocal and External variables to the TU.globals
 				//static local are initialized at first entry of their scope
 				//extern vars are take care of by someone else
-				
+
 				VLOG(2)	<< varDecl->getQualifiedNameAsString() << "         is added to TU globals";
 				auto initValue = convertInitForGlobal(*this, varDecl, irType);
 				getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
@@ -644,7 +644,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 				// Add the C name of this variable as annotation
 				core::annotations::attachName(var,varDecl->getNameAsString());
 			}
-			
+
 			varDeclMap.insert( { valDecl, var } );
 		}
 
@@ -828,7 +828,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			core::TypePtr initExprType;
 			if(var->getType().isa<core::RefTypePtr>())
 				initExprType = var->getType().as<core::RefTypePtr>()->getElementType();
-			else if (IS_CPP_REF(var->getType()))
+			else if (core::analysis::isAnyCppRef(var->getType()))
 				initExprType = var->getType();
 			 else{
 				// is a constant variable (left side is not ref, right side does not need to create refvar)
@@ -844,7 +844,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			assert(initExpr && "not correct initialization of the variable");
 
 			// some Cpp cases do not create new var
-			if (!IS_CPP_REF(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
+			if (!core::analysis::isAnyCppRef(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
 			}
 
@@ -1042,7 +1042,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		// trigger the actual conversion
 		core::TypePtr res = convertType(decl->getTypeForDecl());
 
-		// frequently structs and their type definitions have the same name 
+		// frequently structs and their type definitions have the same name
 		// in this case symbol == res and should be ignored
 		if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
 			auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
@@ -1112,13 +1112,13 @@ namespace {
 										  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membTy));
 
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-				if (!IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					IS_CPP_REF(expr->getType())){
+				if (!core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					core::analysis::isAnyCppRef(expr->getType())){
 					expr = builder.deref(builder.toIRRef(expr));
 				}
 				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
-				else if(IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					!IS_CPP_REF(expr->getType())) {
+				else if(core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					!core::analysis::isAnyCppRef(expr->getType())) {
 
 					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
 						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
@@ -1152,7 +1152,7 @@ namespace {
 					else{
 						ident = builder.stringValue(field->getNameAsString());
 					}
-					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(), 
+					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(),
 											 init, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
 				}
 
@@ -1223,14 +1223,14 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			lambdaExprCache[funcDecl] = retExpr;
 			return ; //retExpr;
 		}
-		
+
 		//-----------------------------------------------------------------------------------------------------
 		//     						Handle of 'special' built-in functions
 		//-----------------------------------------------------------------------------------------------------
 		if (funcDecl->getNameAsString() == "__builtin_alloca") {
 			auto retExpr = builder.literal("alloca", funcTy);
 			lambdaExprCache[funcDecl] = retExpr;
-			return; 
+			return;
 		}
 
 		// handle extern functions
@@ -1251,7 +1251,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			return;
 		else if(ctorDecl->getParent()->isTrivial())
 			return;
-		
+
 	}
 	if (const clang::CXXDestructorDecl* dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)){
 		if (!dtorDecl->isUserProvided () )
@@ -1262,7 +1262,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 
 	// --------------- convert potential recursive function -------------
-	
+
 	// -- assume function is recursive => add variable to lambda expr cache --
 	core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
 	lambdaExprCache[funcDecl] = symbol;
@@ -1383,7 +1383,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
 	assert(funcDecl);
-	
+
 	// switch to the declaration containing the body (if there is one)
 	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
 
@@ -1543,11 +1543,11 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>())
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), 
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
 								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init));
 
 	// from cpp ref to value or variable
-	if (IS_CPP_REF(init->getType())){
+	if (core::analysis::isAnyCppRef(init->getType())){
 		if (elementType.isa<core::RefTypePtr>())
 			return builder.toIRRef(init);
 		else

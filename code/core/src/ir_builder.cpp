@@ -1634,7 +1634,7 @@ ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
 
 ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-	assert(ref && (analysis::isCppRef(ref->getType()) || analysis::isConstCppRef(ref->getType())));
+	assert(ref && (analysis::isAnyCppRef(ref->getType())));
 
 	// see whether this is a value which has just been wrapped
 	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
