@@ -112,10 +112,10 @@ namespace constraint {
 
 		EXPECT_EQ("[v1,v2]", toString(constraint->getInputs()));
 		EXPECT_EQ("[v3]", toString(constraint->getOutputs()));
-		EXPECT_EQ("{v1}", toString(constraint->getUsedInputs(ass)));
+		EXPECT_EQ("[v1]", toString(constraint->getUsedInputs(ass)));
 
 		ass[a].insert(0);
-		EXPECT_EQ("{v1,v2}", toString(constraint->getUsedInputs(ass)));
+		EXPECT_EQ("[v1,v2]", toString(constraint->getUsedInputs(ass)));
 
 	}
 
@@ -151,7 +151,7 @@ namespace constraint {
 
 		c = subsetIf( 3, s2, s2, s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
-		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
@@ -163,7 +163,7 @@ namespace constraint {
 
 		c = subsetIfBigger(s1, 1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
-		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIfBigger(s1, 5, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
@@ -393,7 +393,7 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
 			virtual bool hasAssignmentDependentDependencies() const { return false; }
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const { return set::toSet<std::set<ValueID>>(in); }
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const { return toVector<ValueID>(in); }
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
 
@@ -496,11 +496,11 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out) const { assert_not_implemented(); return out; }
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> res;
-				res.insert(set);
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(set);
 				const std::set<TypedSetID<int>>& sets = ass[set];
-				res.insert(sets.begin(), sets.end());
+				res.insert(res.end(), sets.begin(), sets.end());
 				return res;
 			}
 

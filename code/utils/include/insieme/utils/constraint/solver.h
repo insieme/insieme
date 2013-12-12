@@ -135,7 +135,7 @@ namespace constraint {
 	public:
 
 		enum UpdateResult {
-			Unchanged, Incremented, Altered, DependencyChanged
+			Unchanged, Incremented, Altered
 		};
 
 		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out,
@@ -166,9 +166,13 @@ namespace constraint {
 		bool hasAssignmentDependentDependencies() const { return assignmentDependentDependencies; };
 		bool hasDynamicDependencies() const { return dynamicDependencies; }
 
-		virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+		virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+			return dynamicDependencies;		// return whether something might have changed
+		}
+
+		virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
 			assert_false(assignmentDependentDependencies) << "Needs to be implemented by constraints exhibiting assignment based dependencies.";
-			return std::set<ValueID>(inputs.begin(), inputs.end());
+			return inputs;
 		}
 
 	};
@@ -233,8 +237,8 @@ namespace constraint {
 				return out;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> used;
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> used;
 				filter.addUsedInputs(ass, used);
 				if (filter(ass)) executor.addUsedInputs(ass, used);
 				return used;
@@ -259,7 +263,7 @@ namespace constraint {
 				static const ValueIDs empty;
 				return empty;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {}
 		};
 
 		template<typename A, typename B>
@@ -276,7 +280,7 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return combine(a.getInputs(), b.getInputs());
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				a.addUsedInputs(ass, used);
 				if (a(ass)) b.addUsedInputs(ass, used);
 			}
@@ -298,8 +302,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -318,8 +322,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -340,8 +344,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -414,7 +418,7 @@ namespace constraint {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
 				out << "e" << (int*)&e << " -> " << a << " " << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				// nothing
 			}
 		};
@@ -444,8 +448,8 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << b << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -482,8 +486,8 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -524,9 +528,9 @@ namespace constraint {
 				out << a << " -> " << r << label << "\n";
 				out << b << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
-				used.insert(b);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
+				used.push_back(b);
 			}
 		};
 
@@ -845,7 +849,7 @@ namespace constraint {
 
 		void resolveConstraints(const Constraint& cur, vector<ValueID>& worklist);
 
-		void resolveConstraints(const std::set<ValueID>& sets, vector<ValueID>& worklist);
+		void resolveConstraints(const std::vector<ValueID>& values, vector<ValueID>& worklist);
 
 	};
 
