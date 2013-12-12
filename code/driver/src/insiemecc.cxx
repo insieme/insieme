@@ -55,6 +55,7 @@
 
 #include "insieme/driver/cmd/options.h"
 #include "insieme/driver/object_file_utils.h"
+#include "insieme/core/checks/full_check.h"
 
 
 using namespace std;
@@ -145,6 +146,22 @@ int main(int argc, char** argv) {
 
 	// convert src file to target code
     auto program = options.job.execute(mgr);
+
+    {
+    	std::cout << "Dumping program ...\n";
+    	// save program as library - for faster debugging
+		fe::tu::IRTranslationUnit unit(mgr);
+		co::IRBuilder builder(mgr);
+		co::LambdaExprPtr main = program[0].as<co::LambdaExprPtr>();
+		unit.addFunction(builder.literal("main", main->getType()), main);
+
+		dr::saveLib(unit, "_full_main.o");
+    }
+
+//    {
+//    	std::cout << "Running semantic checks ...\n";
+//    	std::cout << "Errors:\n" << co::checks::check(program);
+//    }
 
 	// Step 3: produce output code
 	//		This part converts the processed code into C-99 target code using the
