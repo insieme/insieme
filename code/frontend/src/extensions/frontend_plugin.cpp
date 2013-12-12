@@ -91,9 +91,31 @@ namespace extensions {
         return stmtutils::StmtWrapper();
     }
 
-    bool FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
-        return false;
+    insieme::core::NodePtr FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
+        if(llvm::isa<clang::FunctionDecl>(decl)) {
+            return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), convFact);
+        }
+        if(llvm::isa<clang::ValueDecl>(decl)) {
+            return this->ValueDeclVisit(llvm::cast<clang::ValueDecl>(decl), convFact);
+        }
+        if(llvm::isa<clang::TypeDecl>(decl)) {
+            return this->TypeDeclVisit(llvm::cast<clang::TypeDecl>(decl), convFact);
+        }
+        return nullptr;
     }
+
+    insieme::core::TypePtr FrontendPlugin::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+        return nullptr;
+    }
+
+    insieme::core::ExpressionPtr FrontendPlugin::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+        return nullptr;
+    }
+
+    insieme::core::ExpressionPtr FrontendPlugin::ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+        return nullptr;
+    }
+
 
     insieme::core::ExpressionPtr FrontendPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                            insieme::frontend::conversion::Converter& convFact) {

@@ -982,6 +982,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			}
 			// rightside will become the current operation
 			//  a += 1   =>    a = a + 1
+	
+            auto compOp = llvm::cast<clang::CompoundAssignOperator>(binOp);
+
+            if(compOp->getComputationLHSType() != binOp->getType()) {
+                exprTy = convFact.convertType(compOp->getComputationLHSType().getTypePtr());
+                subExprLHS = frontend::utils::castScalar(exprTy, subExprLHS);
+            }
 
 	        core::ExpressionPtr opFunc;
             if(binOp->isShiftAssignOp() || binOp->getOpcode() == clang::BO_XorAssign || binOp->getOpcode() == clang::BO_OrAssign || binOp->getOpcode() == clang::BO_AndAssign) {
@@ -990,7 +997,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
             else {
                 opFunc = gen.getOperator(exprTy, op);
             }
+
 			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
+
+            if(compOp->getComputationResultType() != binOp->getType()) {
+                rhs = frontend::utils::castScalar(convFact.convertType( GET_TYPE_PTR(binOp) ), rhs);
+            } 
 		}
 
 	}

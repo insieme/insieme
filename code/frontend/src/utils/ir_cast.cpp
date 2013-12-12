@@ -51,6 +51,7 @@
 
 #include "insieme/core/types/subtyping.h"
 #include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/core/lang/enum_extension.h"
 
 
 #define CAST(expr, type) convertExprToType(builder, expr, type)
@@ -144,7 +145,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							SCALAR CASTING
 	///////////////////////////////////////////////////////////////////////////////////////
-	if( gen.isPrimitive (trgTy) && gen.isPrimitive(argTy))
+	if( (gen.isPrimitive (trgTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(trgTy))
+        && (gen.isPrimitive(argTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)))
 		return castScalar (trgTy, expr);
 
 	///////////////////////////////////////////////////////////////////////////////////////
