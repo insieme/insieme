@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
 	// if it is compile only or if it should become an object file => save it
 	if (compileOnly || createSharedObject) {
-		auto res = options.job.toTranslationUnit(mgr);
+		auto res = options.job.toIRTranslationUnit(mgr);
 		dr::saveLib(res, options.outFile);
 		return dr::isInsiemeLib(options.outFile) ? 0 : 1;
 	}

@@ -239,8 +239,8 @@ namespace frontend {
 
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 	// just delegate operation to converter
-	Program program(manager, unit, setup);
-	conversion::Converter c(manager, program, setup);
+	TranslationUnit tu(manager, unit, setup);
+	conversion::Converter c(manager, tu, setup);
 	// add them and fire the conversion
 	return c.convert();
 }
@@ -253,16 +253,16 @@ namespace conversion {
 
 //////////////////////////////////////////////////////////////////
 ///
-Converter::Converter(core::NodeManager& mgr, const Program& prog, const ConversionSetup& setup) :
+Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), 
+		translationUnit(tu), 
 		convSetup(setup), 
-		pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
 		lastTrackableLocation(nullptr),
 		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
-	if (prog.isCxx()){
+	if (translationUnit.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 		exprConvPtr = std::make_shared<CXXExprConverter>(*this);
 		stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
@@ -272,8 +272,8 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog, const Conversi
 		stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 	}
 	// tag the translation unit with as C++ if case
-	irTranslationUnit.setCXX(prog.isCxx());
-	assert_true (irTranslationUnit.isEmpty()) << "the translation unit is not empty, should be before we start";
+	irTranslationUnit.setCXX(translationUnit.isCxx());
+	assert_true (irTranslationUnit.isEmpty()) << "the ir translation unit is not empty, should be before we start";
 	
 }
 
@@ -395,7 +395,7 @@ tu::IRTranslationUnit Converter::convert() {
 	funVisitor.traverseDeclCtx(declContext);
 
 	// handle entry points (marked using insieme pragmas)
-	for(pragma::PragmaPtr pragma : program.getPragmaList()) {
+	for(pragma::PragmaPtr pragma : translationUnit.getPragmaList()) {
 		// only interested in insieme-mark pragmas
 		if (pragma->getType() != "insieme::mark") continue;
 		const pragma::Pragma& insiemePragma = *pragma;

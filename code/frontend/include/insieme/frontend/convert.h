@@ -41,7 +41,7 @@
 #include <functional>
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/pragma/handler.h"
@@ -201,7 +201,7 @@ class Converter :  boost::noncopyable {
 	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
-	const Program& program;
+	const TranslationUnit& translationUnit;
 	const ConversionSetup& convSetup;
 
 	/**
@@ -214,7 +214,7 @@ class Converter :  boost::noncopyable {
 	bool used;
 
 	/**
-	 * Attach annotations to a C function of the input program.
+	 * Attach annotations to a C function of the input translation unit.
 	 *
 	 * returns the a MarkerExprPtr if a marker node has to be added and the passed node else
 	 */
@@ -232,7 +232,7 @@ class Converter :  boost::noncopyable {
 
 public:
 
-	Converter(core::NodeManager& mgr, const Program& program, const ConversionSetup& setup = ConversionSetup());
+	Converter(core::NodeManager& mgr, const TranslationUnit& translationUnit, const ConversionSetup& setup = ConversionSetup());
 
 	// should only be run once
 	tu::IRTranslationUnit convert();
@@ -244,12 +244,12 @@ public:
 	core::NodeManager& getNodeManager() const {
 		return mgr;
 	}
-	const Program& getProgram() const {
-		return program;
+	const TranslationUnit& getTranslationUnit() const {
+		return translationUnit;
 	}
 
 	const ClangCompiler& getCompiler() const {
-		return program.getCompiler();
+		return translationUnit.getCompiler();
 	}
 
 	clang::Preprocessor& getPreprocessor() const {
@@ -340,9 +340,9 @@ public:
 	}
 
 	/**
-	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
+	 * Returns a reference to the IR data structure used to represent a variable of the input C code.
 	 *
-	 * The function guarantees that the same variable in the input program is always represented in the
+	 * The function guarantees that the same variable in the input code is always represented in the
 	 * IR with the same generated Variable and in the case of access to global variables, a reference
 	 * to a member of the global data structure is returned.
 	 */

@@ -40,7 +40,6 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_address.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {

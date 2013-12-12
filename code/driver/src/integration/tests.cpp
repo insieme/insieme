@@ -79,7 +79,7 @@ namespace integration {
 	}
 
 	frontend::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
-		return toJob(*this).toTranslationUnit(manager);
+		return toJob(*this).toIRTranslationUnit(manager);
 	}
 
 	namespace fs = boost::filesystem;

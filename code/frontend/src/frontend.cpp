@@ -98,7 +98,7 @@ namespace frontend {
     }
 
 
-	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
+	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
 		// plugin initialization
@@ -126,6 +126,8 @@ namespace frontend {
 			if (setup.hasOption(ConversionSetup::Cilk)) {
 				res = cilk::applySema(res, manager);
 			}
+
+			//FIXME: who takes care of applying MPI sema/OCL
 
             // maybe a visitor wants to manipulate the IR program
             for(auto plugin : setup.getPlugins())
@@ -156,7 +158,7 @@ namespace frontend {
 //		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
 
 		// load and merge all files into a single translation unit
-		auto unit = toTranslationUnit(tmpMgr);
+		auto unit = toIRTranslationUnit(tmpMgr);
 
 		// convert units to a single program
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);

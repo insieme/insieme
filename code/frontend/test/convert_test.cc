@@ -194,7 +194,7 @@ namespace frontend {
 		// check the resulting translation unit
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
-		auto irtu = ConversionJob(file).toTranslationUnit(manager);
+		auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
 //		std::cout << irtu << "\n";
 
 		// there should be 3 function symbols
@@ -258,7 +258,7 @@ namespace frontend {
 		// check the resulting translation unit
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
-		auto irtu = ConversionJob(file).toTranslationUnit(manager);
+		auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
 //		std::cout << irtu << "\n";
 
 		// just test whether this works
