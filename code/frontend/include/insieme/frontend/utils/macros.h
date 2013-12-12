@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,9 +54,6 @@
 
 #define GET_ARRAY_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
-#define IS_CPP_REF(type) \
-	(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type))
 
 #define IS_IR_REF(type) \
 	(type->getNodeType() == core::NT_RefType)
@@ -126,7 +123,7 @@
 
 /*****************************************************************************************************
  *      ASSERT macros
- *      asserts specific for the frontend, they make use of some featues that can only be found in 
+ *      asserts specific for the frontend, they make use of some featues that can only be found in
  *      frontend
 *****************************************************************************************************/
 

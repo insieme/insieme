@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -410,8 +410,8 @@ namespace tu {
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
-						if (*(tmp->getType()) != *(call->getType())  && 
-							IS_CPP_REF(tmp->getType().as<RefTypePtr>()->getElementType()))
+						if (*(tmp->getType()) != *(call->getType())  &&
+							core::analysis::isAnyCppRef(tmp->getType().as<RefTypePtr>()->getElementType()))
 							res = builder.toIRRef(builder.deref(tmp));
 						else
 							res = tmp;
@@ -425,13 +425,13 @@ namespace tu {
 					if (call[0]->getType().isa<StructTypePtr>()){
 						auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type might changed, we have to unwrap it
-						if (IS_CPP_REF(tmp->getType()))
+						if (core::analysis::isAnyCppRef(tmp->getType()))
 							res = builder.deref(builder.toIRRef(tmp));
 						else
 							res = tmp;
 					}
 				}
-		
+
 				// also fix type literals
 				if (core::analysis::isTypeLiteral(res)) {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
@@ -661,8 +661,8 @@ namespace tu {
 					});
 				}
 			}
-			
-			core::IRBuilder builder(internalMainFunc->getNodeManager());	
+
+			core::IRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
 			// check all usedliterals if they are used as global and the global type is vector
@@ -670,7 +670,7 @@ namespace tu {
 			// us ref.vector.to.ref.array
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
-				auto findLit = [&](const NodePtr& node) { 
+				auto findLit = [&](const NodePtr& node) {
 					const LiteralPtr& usedLit = node.as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
@@ -681,9 +681,9 @@ namespace tu {
 					if (!globalTy.isa<RefTypePtr>()) return false;
 
 					return usedLit->getStringValue() == global->getStringValue() &&
-						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&						
-						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&							
-						types::isSubTypeOf(globalTy, usedLitTy); 
+						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&
+						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&
+						types::isSubTypeOf(globalTy, usedLitTy);
 				};
 
 				if(any(usedLiterals,findLit)) {
@@ -695,7 +695,7 @@ namespace tu {
 					usedLiterals.erase(toReplace);
 					usedLiterals.insert(global);
 
-					//fix the access 
+					//fix the access
 					ExpressionPtr replacement = builder.callExpr( toReplace.getType(), builder.getLangBasic().getRefVectorToRefArray(), global);
 
 					replacements.insert( {toReplace, replacement} );
@@ -763,7 +763,7 @@ namespace tu {
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
-		
+
 		// search for entry point
 		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {
