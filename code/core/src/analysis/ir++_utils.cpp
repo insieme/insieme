@@ -121,7 +121,7 @@ namespace analysis {
 	}
 
 	bool isPureVirtual(const NodePtr& node) {
-		return isPureVirtual(node.isa<CallExprPtr>());
+		return node && isPureVirtual(node.isa<CallExprPtr>());
 	}
 
 

@@ -286,6 +286,9 @@ namespace analysis {
 
 	NodePtr normalize(const NodePtr& node) {
 
+		// handle null pointer
+		if (!node) return node;
+
 		// short cut for constructs not including any variables
 		if (node->getNodeCategory() == NC_Type || node->getNodeType() == NT_Literal) {
 			return node;
