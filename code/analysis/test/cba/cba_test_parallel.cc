@@ -270,72 +270,6 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-//	TEST(CBA_Parallel, DiamondNoAssign) {
-//
-//			Graph graph;
-//
-//			Node a = Node::write("x", 0);
-//			Node b = Node::noop();
-//			Node c = Node::noop();
-//			Node d = Node::read("x");
-//
-//			graph.addEdge(a,b, Par);
-//			graph.addEdge(a,c, Par);
-//			graph.addEdge(b,d, Par);
-//			graph.addEdge(c,d, Par);
-//
-//			solve(graph);
-//
-//			EXPECT_EQ("{x={0}}", toString(graph.getVertex(d).before));
-//
-//			createDotDump(graph);
-//
-//		}
-//
-//		TEST(CBA_Parallel, DiamondOneAssign) {
-//
-//			Graph graph;
-//
-//			Node a = Node::write("x", 0);
-//			Node b = Node::write("x", 1);
-//			Node c = Node::noop();
-//			Node d = Node::read("x");
-//
-//			graph.addEdge(a,b, Par);
-//			graph.addEdge(a,c, Par);
-//			graph.addEdge(b,d, Par);
-//			graph.addEdge(c,d, Par);
-//
-//			solve(graph);
-//
-//			EXPECT_EQ("{x={1}}", toString(graph.getVertex(d).before));
-//
-//			createDotDump(graph);
-//
-//		}
-//
-//		TEST(CBA_Parallel, DiamondTwoAssign) {
-//
-//			Graph graph;
-//
-//			Node a = Node::write("x", 0);
-//			Node b = Node::write("x", 1);
-//			Node c = Node::write("x", 2);
-//			Node d = Node::read("x");
-//
-//			graph.addEdge(a,b, Par);
-//			graph.addEdge(a,c, Par);
-//			graph.addEdge(b,d, Par);
-//			graph.addEdge(c,d, Par);
-//
-//			solve(graph);
-//
-//			EXPECT_EQ("{x={1,2}}", toString(graph.getVertex(d).before));
-//
-//			createDotDump(graph);
-//
-//		}
-
 	TEST(CBA, DiamondNoAssign) {
 
 		// a simple test cases checking the handling of simple value structs
@@ -430,51 +364,51 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-	TEST(CBA, DiamondMultipleVariables) {
-
-		// a simple test cases checking the handling of simple value structs
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto in = builder.parseStmt(
-				"{"
-				"	let int = int<4>;"
-				"	"
-				"	ref<int> x = var(0);"
-				"	ref<int> y = var(0);"
-				"	ref<int> z = var(0);"
-				"	x = 1;"
-				"	y = 1;"
-				"	z = 1;"
-				"	auto t1 = spawn {"
-				"		y = 2;"
-				"		z = 2;"
-				"	};"
-				"	auto t2 = spawn {"
-				"		z = 3;"
-				"	};"
-				"	sync t1;"
-				"	sync t2;"
-				"	*x;"		// should be 1
-				"	*y;"		// should be 2
-				"	*z;"		// should be 2 or 3
-				"}"
-		).as<CompoundStmtPtr>();
-
-		ASSERT_TRUE(in);
-		CompoundStmtAddress code(in);
-		CBA analysis(code);
-
-		// obtain location referenced by variable x
-
-		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
-		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
-
-		auto value = toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A));
-		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
-
-//		createDotDump(analysis);
-	}
+//	TEST(CBA, DiamondMultipleVariables) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	"
+//				"	ref<int> x = var(0);"
+//				"	ref<int> y = var(0);"
+//				"	ref<int> z = var(0);"
+//				"	x = 1;"
+//				"	y = 1;"
+//				"	z = 1;"
+//				"	auto t1 = spawn {"
+//				"		y = 2;"
+//				"		z = 2;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		z = 3;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	*x;"		// should be 1
+//				"	*y;"		// should be 2
+//				"	*z;"		// should be 2 or 3
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//		CBA analysis(code);
+//
+//		// obtain location referenced by variable x
+//
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
+//
+//		auto value = toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A));
+//		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
+//
+////		createDotDump(analysis);
+//	}
 
 } // end namespace cba
 } // end namespace analysis
