@@ -527,13 +527,16 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	}
 
 
-    bool visited = false;
+    core::NodePtr result = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        visited = plugin->Visit(valDecl, *this);
-        if(visited) break;
+        result = plugin->Visit(valDecl, *this);
+        if(core::ExpressionPtr re = result.isa<core::ExpressionPtr>()) {
+            varDeclMap[valDecl] = re;
+            break;
+        }
     }
 
-    if(!visited) {
+    if(!result) {
 		if (VLOG_IS_ON(1)) valDecl->dump();
 
 		// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
@@ -1032,25 +1035,28 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
-	bool visited = false;
+	core::TypePtr res = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        visited = plugin->Visit(decl, *this);
-        if(visited) break;
+        core::NodePtr result = plugin->Visit(decl, *this);
+        if(result) {
+            res = result.as<core::TypePtr>();
+            break;
+        }
     }
 
-	if(!visited) {
+	if(!res) {
 		// trigger the actual conversion
-		core::TypePtr res = convertType(decl->getTypeForDecl());
+		res = convertType(decl->getTypeForDecl());
+	}
 
-		// frequently structs and their type definitions have the same name
-		// in this case symbol == res and should be ignored
-		if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-			auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
-			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
-				getIRTranslationUnit().addType(symbol, res);
-			}
+    // frequently structs and their type definitions have the same name
+	// in this case symbol == res and should be ignored
+	if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
+		auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
+		if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
+			getIRTranslationUnit().addType(symbol, res);
 		}
-    }
+	}
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, *this);
@@ -1363,13 +1369,27 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		return pos->second;		// done
 	}
 
-	bool visited = false;
+	core::NodePtr result = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        visited = plugin->Visit(funcDecl, *this);
-        if(visited) break;
+        result = plugin->Visit(funcDecl, *this);
+        if(core::ExpressionPtr res = result.isa<core::ExpressionPtr>()) {
+            //if plugin does not return a symbol, create the symbol
+            //and check if the plugin returned a lambda expr.
+            //add this lambda expr to the ir tu and fill the lambda cache
+            if(core::LiteralPtr symb = res.isa<core::LiteralPtr>()) {
+                addToLambdaCache(funcDecl, symb);
+            } else {
+                auto funcTy = convertFunctionType(funcDecl);
+                core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+                assert(res.isa<core::LambdaExprPtr>() && "if the plugin does not return a symbol it must return a lambda expresion");
+                addToLambdaCache(funcDecl, symbol);
+                getIRTranslationUnit().addFunction(symbol, res.as<core::LambdaExprPtr>());
+            }
+            break;
+        };
     }
 
-	if(!visited) {
+	if(!result) {
 		convertFunctionDeclImpl(funcDecl);
     }
 
