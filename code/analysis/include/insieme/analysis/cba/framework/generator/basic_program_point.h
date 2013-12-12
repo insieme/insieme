@@ -503,7 +503,7 @@ namespace cba {
 	};
 
 
-	namespace {
+	namespace detail {
 
 		// -- merge constraint (for merging parallel control flows) ---------
 
@@ -523,7 +523,7 @@ namespace cba {
 			typedef typename one_meet_assign_op_type<ThreadOutAnalysisType,analysis_config<Context>>::type one_meet_assign_op_type;
 
 			CBA& cba;
-			const ThreadOutAnalysisType& out;
+			const ThreadOutAnalysisType& out;						// the type of analysis / values to be aggregated from the exit node of the threads
 			const TypedValueID<ThreadGroupValue> thread_group;
 			const TypedValueID<Lattice> in_state;
 			const TypedValueID<Lattice> out_state;
@@ -548,10 +548,6 @@ namespace cba {
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				const static less_op less;
-
-				// update dependencies
-				bool changed = updateDynamicDependencies(ass);
-				if (changed) return Constraint::DependencyChanged;
 
 				// get reference to current value
 				auto& value = ass[out_state];
@@ -608,19 +604,19 @@ namespace cba {
 				return out << "if " << thread_group << " is unique merging killed set of group and " << in_state << " into " << out_state;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
 
 				// create result set
-				std::set<ValueID> res;
+				std::vector<ValueID> res;
 
 				// thread groups and in-state values are always required
-				res.insert(thread_group);
-				res.insert(in_state);
+				res.push_back(thread_group);
+				res.push_back(in_state);
 
 				// update thread out state list and thereby all dynamic dependencies
 				updateDynamicDependencies(ass);
 				for(auto cur : dependencies) {
-					res.insert(cur);
+					res.push_back(cur);
 				}
 
 				// done
@@ -822,7 +818,7 @@ namespace cba {
 					auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
 
 					// add constraint
-					constraints.add(parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
+					constraints.add(detail::parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
 
 					// done
 					return;

@@ -54,6 +54,10 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	// forward definitions
+	struct reaching_defs_tmp_analysis;
+	extern const reaching_defs_tmp_analysis RDtmp;
+
 	// ----------------- killed definitions ---------------
 
 	template<typename Context> class KilledDefsInConstraintGenerator;
@@ -306,18 +310,18 @@ namespace cba {
 				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
 
 				// create result set
-				std::set<ValueID> res;
+				std::vector<ValueID> res;
 
 				// ref and in are always required
-				res.insert(ref);
-				res.insert(in);
+				res.push_back(ref);
+				res.push_back(in);
 
 				// reaching_in is required if reference is matched
 				if (isKill(ass)) {
-					res.insert(reaching_in);
+					res.push_back(reaching_in);
 				}
 
 				return res;

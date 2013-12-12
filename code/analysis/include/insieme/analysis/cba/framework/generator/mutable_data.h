@@ -40,6 +40,8 @@
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+#include "insieme/analysis/cba/framework/entities/definition.h"
 
 #include "insieme/analysis/cba/analysis/data_paths.h"
 
@@ -47,6 +49,10 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	// --- forward declaration ---
+	struct reaching_defs_out_analysis;
+	extern const reaching_defs_out_analysis RDout;
+	// ---------------------------
 
 	template<typename Context, typename BaseAnalysis>
 	class ImperativeInStateConstraintGenerator;
@@ -292,18 +298,18 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> res;
-				res.insert(ref);
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(ref);
 
 				// the old state is needed if reference is not unique
 				if (!isUniquelyReferenced(ass)) {
-					res.insert(old_state);
+					res.push_back(old_state);
 				}
 
 				// the in value is required in case the covered location is referenced
 				if (isReferenced(ass)) {
-					res.insert(in_value);
+					res.push_back(in_value);
 				}
 
 				return res;
@@ -370,6 +376,155 @@ namespace cba {
 			return std::make_shared<WriteConstraint<ValueLattice,RefLattice, Context>>(mgr, loc, ref, in_value, old_state, new_state);
 		}
 
+		/**
+		 * A custom constraint for merging the state of locations at parallel merging points.
+		 */
+		template<
+			typename BaseAnalyis,
+			typename ReachingDefValue,
+			typename ValueLattice,
+			typename Context
+		>
+		struct ParallelStateMergeConstraint : public Constraint {
+
+			typedef typename ValueLattice::manager_type mgr_type;
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+//			typedef typename ValueLattice::projection_op_type projection_op_type;
+//			typedef typename ValueLattice::mutation_op_type mutation_op_type;
+
+			// the analysis instance this constraint is part of
+			CBA& cba;
+
+			// the location which's data should be merged
+			Location<Context> loc;
+
+			// the set of definitions reaching the merge point
+			TypedValueID<ReachingDefValue> reachingDefs;
+
+			// the value of the memory location leaving the merge operation (output)
+			TypedValueID<ValueLattice> out_value;
+
+			// the internal set of values to be merged
+			mutable vector<TypedValueID<ValueLattice>> definedValues;		// this is the set of values defined at the point of reaching definitions
+
+		public:
+
+			ParallelStateMergeConstraint(
+					CBA& cba,
+					Location<Context> loc,
+					const TypedValueID<ReachingDefValue>& reachingDefs,
+					const TypedValueID<ValueLattice>& out_value)
+				: Constraint(toVector<ValueID>(reachingDefs), toVector<ValueID>(out_value), true, true),
+				  cba(cba), loc(loc), reachingDefs(reachingDefs), out_value(out_value), definedValues() {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op_type less;
+
+				// get reference to current value
+				auto& value = ass[out_value];
+
+				// compute new value
+				auto updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op_type less;
+				return less(getUpdatedValue(ass), ass[out_value]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+
+				// print merged in thread dependencies
+				for(const auto& cur : definedValues) {
+					out << cur << " -> " << out_value << "[label=\"merges\"]\n";
+				}
+
+				// and the default dependencies
+				return out << reachingDefs << " -> " << out_value << "[label=\"defines\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				return writeDotEdge(out);
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "merging definitions of " << reachingDefs << " into " << out_value;
+			}
+
+			virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+				vector<TypedValueID<ValueLattice>> newDefs;
+
+				const set<Definition<Context>>& defs = ass[reachingDefs];
+				for(const Definition<Context>& cur : defs) {
+
+					// get the current value
+					newDefs.push_back(cba.getSet(Sout<BaseAnalyis>(), cur.getAddress(), cur.getContext(), loc));
+				}
+
+				// check whether something has changed
+				bool changed = (definedValues != newDefs);
+
+				// update values depending on
+				definedValues = newDefs;
+
+				// return whether there has been a change
+				return changed;
+			}
+
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// start result set
+				std::vector<ValueID> res;
+
+				// reaching definition value is always included
+				res.push_back(reachingDefs);
+
+				// as are all referenced values
+				for(auto cur : definedValues) {
+					res.push_back(cur);
+				}
+
+				// done
+				return res;
+			}
+
+		private:
+
+			value_type getUpdatedValue(const Assignment& ass) const {
+				static const meet_assign_op_type meet_assign;
+
+				// merge value of all reaching definitions
+				value_type res;
+				for(auto cur : definedValues) {
+					meet_assign(res, ass[cur]);
+				}
+
+				// return merged result
+				return res;
+			}
+
+		};
+
+
+		template<typename BaseAnalysis, typename ReachingDefValue, typename ValueLattice, typename Context>
+		ConstraintPtr combineDefs(CBA& cba, const Location<Context>& loc, const TypedValueID<ReachingDefValue>& rd, const TypedValueID<ValueLattice>& out) {
+			return std::make_shared<ParallelStateMergeConstraint<BaseAnalysis, ReachingDefValue, ValueLattice, Context>>(cba, loc, rd, out);
+		}
+
 	}
 
 
@@ -402,7 +557,7 @@ namespace cba {
 		}
 
 		/**
-		 * Produces a humna-readable representation of the value represented by the given value ID.
+		 * Produces a human-readable representation of the value represented by the given value ID.
 		 */
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
 
@@ -459,6 +614,18 @@ namespace cba {
 
 				// ---- add assignment rule ----
 				constraints.add(write(cba.template getDataManager(A_value), location, R_rhs, A_value, S_tmp, S_out));
+
+				// done
+				return;
+			}
+
+			if (base.isMerge(fun)) {
+
+				// instead of following the standard behavior we are simply combining reaching definitions here
+				auto l_call = cba.getLabel(call);
+				auto rd  = cba.getSet(RDout, l_call, ctxt, location);
+				auto out = cba.getSet(Sout<BaseAnalysis>(), l_call, ctxt, location);
+				constraints.add(combineDefs<BaseAnalysis>(cba, location, rd, out));
 
 				// done
 				return;

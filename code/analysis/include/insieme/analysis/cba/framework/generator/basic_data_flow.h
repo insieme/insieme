@@ -128,9 +128,9 @@ namespace cba {
 					out << cur.second << " -> " << res << label;
 				});
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				for(const auto& cur : elements) {
-					used.insert(cur.second);
+					used.push_back(cur.second);
 				}
 			}
 		};
@@ -169,8 +169,8 @@ namespace cba {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << in << " -> " << res << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(in);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(in);
 			}
 		};
 
@@ -233,10 +233,10 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> res;
-				res.insert(ref);
-				if (isReferenced(ass)) res.insert(loc_value);
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(ref);
+				if (isReferenced(ass)) res.push_back(loc_value);
 				return res;
 			}
 

@@ -44,6 +44,8 @@ namespace cba {
 	const reaching_defs_tmp_analysis RDtmp = registerAnalysis<reaching_defs_tmp_analysis>("RDtmp");
 	const reaching_defs_out_analysis RDout = registerAnalysis<reaching_defs_out_analysis>("RDout");
 
+	const reaching_defs_merge_analysis RDmerge = registerAnalysis<reaching_defs_merge_analysis>("RDmerge");;
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
