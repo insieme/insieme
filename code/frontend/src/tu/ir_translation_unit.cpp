@@ -193,6 +193,9 @@ namespace tu {
 			typedef utils::map::PointerMap<TypePtr, core::ClassMetaInfo> MetaInfoMap;
 			MetaInfoMap metaInfos;
 
+			// a performance utility recording whether sub-trees contain recursive variables or not
+			utils::map::PointerMap<NodePtr, bool> containsRecVars;
+
 		public:
 
 			Resolver(NodeManager& mgr, const IRTranslationUnit& unit)
@@ -232,10 +235,10 @@ namespace tu {
 					auto encoded = core::toIR(mgr, cur.second);
 
 					// resolve meta info
-					auto resolved = map(encoded);
+					auto resolved = core::fromIR(map(encoded));
 
 					// restore resolved meta info for resolved type
-					setMetaInfo(map(cur.first), core::fromIR(resolved));
+					setMetaInfo(map(cur.first), resolved);
 				}
 
 				// clear meta-infos for next run
@@ -342,7 +345,9 @@ namespace tu {
 								auto definition = recType->getDefinition();
 								if (definition.size() > 1) {
 									for(auto cur : definition) {
-										recVarResolutions[cur->getVariable()] = builder.recType(cur->getVariable(), definition);
+										auto recType = builder.recType(cur->getVariable(), definition);
+										recVarResolutions[cur->getVariable()] = recType;
+										containsRecVars[recType] = false;
 									}
 								}
 							}
@@ -370,7 +375,9 @@ namespace tu {
 							auto definition = res.as<LambdaExprPtr>()->getDefinition();
 							if (definition.size() > 1) {
 								for(auto cur : definition) {
-									recVarResolutions[cur->getVariable()] = builder.lambdaExpr(cur->getVariable(), definition);
+									auto recFun = builder.lambdaExpr(cur->getVariable(), definition);
+									recVarResolutions[cur->getVariable()] = recFun;
+									containsRecVars[recFun] = false;
 								}
 							}
 						}
@@ -440,11 +447,7 @@ namespace tu {
 				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
 					cache[ptr] = res;
-				} else if (ptr.isa<TypePtr>() && !hasFreeTypeVariables(res)) {
-					// cache closed types
-					cache[ptr] = res;
-				} else if (ptr.isa<StatementPtr>() && !analysis::hasFreeVariable(res, [&](const VariablePtr& var)->bool { return recVars.find(var) != recVars.end(); })) {
-					// cache closed statements
+				} else if (!containsRecursiveVariable(res)) {
 					cache[ptr] = res;
 				}
 
@@ -635,6 +638,24 @@ namespace tu {
 				}
 
 				// that's it
+				return res;
+			}
+
+
+			bool containsRecursiveVariable(const NodePtr& node) {
+
+				// check cached values
+				auto pos = containsRecVars.find(node);
+				if (pos != containsRecVars.end()) return pos->second;
+
+				// determine whether result contains a recursive variable
+				bool res = recVars.contains(node) ||
+						any(node->getChildList(), [&](const NodePtr& cur)->bool { return containsRecursiveVariable(cur); });
+
+				// save result
+				containsRecVars[node] = res;
+
+				// and return it
 				return res;
 			}
 
