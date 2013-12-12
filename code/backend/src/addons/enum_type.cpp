@@ -91,6 +91,10 @@ namespace addons {
 			info->rValueType = typeType;
 			info->externalType = typeType;
 
+			// externalizer & internalizer
+			info->externalize = &type_info_utils::NoOp;
+			info->internalize = &type_info_utils::NoOp;
+
 			//set declaration and definition
 			c_ast::NodePtr typed;
 			string enumtypedef = "enum " + name;

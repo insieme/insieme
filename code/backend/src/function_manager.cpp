@@ -63,6 +63,7 @@
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace backend {
@@ -218,9 +219,11 @@ namespace backend {
 			});
 		}
 
-	}
-
-	namespace {
+		core::StructTypePtr getClassType(const core::FunctionTypePtr& funType) {
+			core::TypePtr type = funType->getObjectType();
+			if (auto recType = type.isa<core::RecTypePtr>()) type = recType->unroll();
+			return type.as<core::StructTypePtr>();
+		}
 
 		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
 
@@ -853,7 +856,6 @@ namespace backend {
 					const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
-
 					// add requirement of implementation
 					info->prototype->addRequirement(info->definition);
 				}
@@ -1077,6 +1079,11 @@ namespace backend {
 					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
 				}
 
+				void visitIfStmt(const core::IfStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+					// iterate through sub-statements
+					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
+				}
+
 				void visitSwitchStmt(const core::SwitchStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
 					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
@@ -1093,6 +1100,10 @@ namespace backend {
 				}
 
 				void visitDeclarationStmt(const core::DeclarationStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+					// we can stop here
+				}
+
+				void visitTryCatchStmt(const core::TryCatchStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// we can stop here
 				}
 
@@ -1136,6 +1147,7 @@ namespace backend {
 				switch(node->getNodeType()) {
 				case core::NT_StructType:
 				case core::NT_GenericType:
+				case core::NT_RecType:
 					return mgr->create(converter.getNameManager().getName(node));
 				case core::NT_Parent:
 					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
@@ -1153,7 +1165,6 @@ namespace backend {
 				return c_ast::IdentifierPtr();
 			}
 
-
 			std::pair<c_ast::Constructor::InitializationList,core::CompoundStmtPtr> extractInitializer(const Converter& converter, const core::LambdaPtr& ctor, ConversionContext& context) {
 				auto mgr = converter.getCNodeManager();
 
@@ -1161,7 +1172,7 @@ namespace backend {
 				c_ast::Constructor::InitializationList initializer;
 
 				// obtain class type
-				core::StructTypePtr classType = ctor->getType()->getObjectType().as<core::StructTypePtr>();
+				core::StructTypePtr classType = getClassType(ctor->getType());
 
 				// obtain list of parameters
 				core::VariableList params(ctor->getParameters().begin() + 1, ctor->getParameters().end());
@@ -1404,6 +1415,7 @@ namespace backend {
 			::transform_range(make_paired_range(paramTypes, function->parameter), std::back_inserter(call->arguments),
 					[&](const std::pair<core::TypePtr, c_ast::VariablePtr>& cur)->c_ast::ExpressionPtr {
 						if (external) {
+							assert_true(typeManager.getTypeInfo(cur.first).externalize) << "Missing externalizer for type " << *cur.first;
 							return typeManager.getTypeInfo(cur.first).externalize(manager, cur.second);
 						}
 						return cur.second;
