@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/program.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
 

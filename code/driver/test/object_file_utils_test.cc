@@ -53,7 +53,7 @@ namespace driver {
 		core::NodeManager mgr;
 
 		fe::ConversionJob job(SRC_DIR "/hello_world.c");
-		auto unit = job.toTranslationUnit(mgr);
+		auto unit = job.toIRTranslationUnit(mgr);
 
 		// save tu to temporary file
 		auto file = fs::unique_path(fs::temp_directory_path() / "tmp%%%%%%%%.o");

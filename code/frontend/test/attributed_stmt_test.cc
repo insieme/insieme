@@ -43,7 +43,7 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/logging.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -84,9 +84,7 @@ TEST(AttributedStmtTest, FileTest) {
     //4 PRAGMAS HAVE BEEN MATCHED AND THE ATTRIBUTEDSTMTs
     //HAVE BEEN CREATED CORRECTLY
 	NodeManager manager;
-	fe::ConversionJob job;
-	fe::Program prog(manager, job);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/omp_for.c") );
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_for.c");
 
 	clang::TranslationUnitDecl * tudecl = tu.getCompiler().getASTContext().getTranslationUnitDecl();
 	for(clang::DeclContext::decl_iterator it=tudecl->decls_begin(); it!=tudecl->decls_end(); ++it) {

@@ -42,7 +42,7 @@
 #include <boost/filesystem.hpp>
 
 //movement of this line will lead to compile errors
-#include "insieme/frontend/program.h"
+//#include "insieme/frontend/translation_unit.h"
 
 // Minimum size of the context string reported by the error checker
 // (context will be extended when smaller)
@@ -466,24 +466,6 @@ int main(int argc, char** argv) {
 	core::ProgramPtr program = core::Program::get(manager);
 	try {
 		if(!options.InputFiles.empty()) {
-
-//			auto inputFiles = options.InputFiles;
-//			fe::Program p(manager, options);
-//
-//			utils::measureTimeFor<INFO>("Frontend.load [clang]",
-//					[&]() { p.addTranslationUnits(options); }
-//				);
-//
-//			// do the actual clang to IR conversion
-//			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
-//					[&]() { return p.convert(); }
-//				);
-//
-//			// cleanup
-//			doCleanup(program, options);
-//
-//			// run OpenCL frontend
-//			applyOpenCLFrontend(program, options);
 
 			// run frontend conversion
 			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",

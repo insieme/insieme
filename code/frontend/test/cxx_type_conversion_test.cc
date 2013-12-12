@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -47,10 +47,6 @@
 
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
-
-// clang [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
 
 using namespace insieme;
 using namespace insieme::core;

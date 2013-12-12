@@ -55,9 +55,6 @@
 #define GET_ARRAY_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
 
-#define IS_CPP_REF(type) \
-	(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type))
-
 #define IS_IR_REF(type) \
 	(type->getNodeType() == core::NT_RefType)
 
@@ -126,7 +123,7 @@
 
 /*****************************************************************************************************
  *      ASSERT macros
- *      asserts specific for the frontend, they make use of some featues that can only be found in 
+ *      asserts specific for the frontend, they make use of some featues that can only be found in
  *      frontend
 *****************************************************************************************************/
 

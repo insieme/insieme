@@ -400,7 +400,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		tu::IRTranslationUnit toTranslationUnit(core::NodeManager& manager) const;
+		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
 
 	};
 
