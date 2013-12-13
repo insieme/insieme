@@ -364,51 +364,51 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-//	TEST(CBA, DiamondMultipleVariables) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	let int = int<4>;"
-//				"	"
-//				"	ref<int> x = var(0);"
-//				"	ref<int> y = var(0);"
-//				"	ref<int> z = var(0);"
-//				"	x = 1;"
-//				"	y = 1;"
-//				"	z = 1;"
-//				"	auto t1 = spawn {"
-//				"		y = 2;"
-//				"		z = 2;"
-//				"	};"
-//				"	auto t2 = spawn {"
-//				"		z = 3;"
-//				"	};"
-//				"	sync t1;"
-//				"	sync t2;"
-//				"	*x;"		// should be 1
-//				"	*y;"		// should be 2
-//				"	*z;"		// should be 2 or 3
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//		CBA analysis(code);
-//
-//		// obtain location referenced by variable x
-//
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
-//
-//		auto value = toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A));
-//		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
-//
-////		createDotDump(analysis);
-//	}
+	TEST(CBA, DiamondMultipleVariables) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(0);"
+				"	ref<int> y = var(0);"
+				"	ref<int> z = var(0);"
+				"	x = 1;"
+				"	y = 1;"
+				"	z = 1;"
+				"	auto t1 = spawn {"
+				"		y = 2;"
+				"		z = 2;"
+				"	};"
+				"	auto t2 = spawn {"
+				"		z = 3;"
+				"	};"
+				"	sync t1;"
+				"	sync t2;"
+				"	*x;"		// should be 1
+				"	*y;"		// should be 2
+				"	*z;"		// should be 2 or 3
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
+
+		auto value = toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A));
+		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
+
+//		createDotDump(analysis);
+	}
 
 } // end namespace cba
 } // end namespace analysis
