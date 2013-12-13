@@ -692,7 +692,7 @@ namespace tu {
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
 				auto findLit = [&](const NodePtr& node) {
-					const LiteralPtr& usedLit = node.as<LiteralPtr>();
+					const LiteralPtr& usedLit = resolver.apply(node).as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
 					const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
@@ -709,8 +709,8 @@ namespace tu {
 
 				if(any(usedLiterals,findLit)) {
 					// get the literal
-					LiteralPtr toReplace = (*std::find_if(usedLiterals.begin(), usedLiterals.end(), findLit)).as<LiteralPtr>();
-					LiteralPtr global = cur.first;
+					LiteralPtr toReplace = resolver.apply((*std::find_if(usedLiterals.begin(), usedLiterals.end(), findLit)).as<LiteralPtr>());
+					LiteralPtr global = resolver.apply(cur.first);
 
 					//update usedLiterals to the "new" literal
 					usedLiterals.erase(toReplace);
