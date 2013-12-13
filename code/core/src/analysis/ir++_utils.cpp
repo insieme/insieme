@@ -121,7 +121,7 @@ namespace analysis {
 	}
 
 	bool isPureVirtual(const NodePtr& node) {
-		return isPureVirtual(node.isa<CallExprPtr>());
+		return node && isPureVirtual(node.isa<CallExprPtr>());
 	}
 
 
@@ -178,6 +178,31 @@ namespace analysis {
 	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
 		assert(isCppRef(cppRefType) || isConstCppRef(cppRefType));
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
+	}
+
+	bool isAnyCppRef(const TypePtr& type){
+		return isCppRef(type) || isConstCppRef(type);
+	}
+
+	ExpressionPtr unwrapCppRef (const ExpressionPtr& originalExpr){
+		ExpressionPtr expr = originalExpr;
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+
+		if (expr->getType().isa<core::RefTypePtr>()){
+			expr = builder.deref(expr);
+		}
+
+		if (isCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefCppToIR(), expr);
+		}
+		else if (isConstCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
+		}
+
+		// error fallthrow
+		assert(false && "could not unwrapp Cpp ref, is it a cpp ref?");
+		return ExpressionPtr();
 	}
 
 	// --------------------------- data member pointer -----------------------------------

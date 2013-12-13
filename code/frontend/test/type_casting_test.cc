@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -60,7 +60,7 @@ using namespace insieme::frontend::conversion;
 namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ ConversionFactory convFactory( manager, prog );\
+	{ ConversionFactory convFactory( manager, tu);\
 	clang::BuiltinType builtin(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.convertType( &builtin ); \
 	EXPECT_TRUE(convType); \
@@ -70,15 +70,15 @@ namespace fe = insieme::frontend;
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	fe::Program prog(manager, SRC_DIR "/inputs/casts.c");
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/casts.c");
 	
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		Converter convFactory( mgr, prog );
+		Converter convFactory( mgr, tu);
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 

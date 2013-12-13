@@ -101,6 +101,14 @@ namespace cba {
 
 	// -- memory location data analysis --
 
+	template<typename A> struct location_data_in_analysis;
+	template<typename A> struct location_data_tmp_analysis;
+	template<typename A> struct location_data_out_analysis;
+
+	template<typename A> const location_data_in_analysis<A>& Sin();
+	template<typename A> const location_data_tmp_analysis<A>& Stmp();
+	template<typename A> const location_data_out_analysis<A>& Sout();
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

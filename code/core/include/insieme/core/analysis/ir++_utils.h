@@ -161,6 +161,20 @@ namespace analysis {
 	 */
 	TypePtr getCppRefElementType(const TypePtr& cppRefType);
 
+	/**
+	 * checks whenever the underlying type is a cpp reference o const cpp reference
+	 * @param type the type to check
+	 * @return if fulfills the requirements to be a cpp ref
+	 */
+	bool isAnyCppRef(const TypePtr& type);
+
+	/*
+	 * To Ir ref provides a method to unwrap any cpp ref to expose the inner IR ref (and therefore be able to manipulate it)
+	 * @param expr, the expression to unwrap
+	 * @return the expression which unwraps the object
+	 */
+	ExpressionPtr unwrapCppRef (const ExpressionPtr& expr);
+
 	// --------------------------- data member pointer -----------------------------------
 	
 	/** 

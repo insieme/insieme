@@ -76,6 +76,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include <iconv.h>
 
@@ -364,7 +365,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 	core::TypePtr irType = value->getType();
 
 	// CPP references are Left side exprs but need to be IRized
-	if (IS_CPP_REF(irType)) {
+	if (core::analysis::isAnyCppRef(irType)) {
 		return builder.toIRRef(value);
 	}
 
@@ -438,14 +439,9 @@ core::ExpressionPtr Converter::ExprConverter::asRValue(const core::ExpressionPtr
 
 	// CPP ref are not Right values, return a ref
 	core::TypePtr irType = value->getType();
-	if (core::analysis::isCppRef(irType)) {
+	if (core::analysis::isAnyCppRef(irType)) {
 		frontend_assert(false) << "check if ever used!\n";
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
-	}
-
-	if (core::analysis::isConstCppRef(irType)) {
-		frontend_assert(false) << "check if ever used!\n";
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
+		return core::analysis::unwrapCppRef(value);
 	}
 
 	// check whether value is parameter to the current function
@@ -730,19 +726,19 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
 
 	bool needsMPIMarkerNode = false;
-	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'> 
+	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
 		//FIXME changing type to fit "free" -- with refDelete
 		funcTy = convFact.convertFunctionType(funcDecl);
-		
+
 		needsMPIMarkerNode = (funcDecl->getNameAsString().compare(0, 4, "MPI_") == 0);
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
 	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
-	
+
 	// In the case this is a call to MPI, attach the loc annotation, handlling of those
 	// statements will be then applied by mpi_sema
 	if (needsMPIMarkerNode) {
@@ -980,13 +976,33 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// get basic element type
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			// beware of cpp refs, to operate, we need to deref the value in the left side
-			if(IS_CPP_REF(subExprLHS->getType()) ){
+			if(core::analysis::isAnyCppRef(subExprLHS->getType()) ){
 				subExprLHS = builder.toIRRef( subExprLHS);
 				subExprLHS = convFact.tryDeref(subExprLHS);
 			}
 			// rightside will become the current operation
 			//  a += 1   =>    a = a + 1
-			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
+	
+            auto compOp = llvm::cast<clang::CompoundAssignOperator>(binOp);
+
+            if(compOp->getComputationLHSType() != binOp->getType()) {
+                exprTy = convFact.convertType(compOp->getComputationLHSType().getTypePtr());
+                subExprLHS = frontend::utils::castScalar(exprTy, subExprLHS);
+            }
+
+	        core::ExpressionPtr opFunc;
+            if(binOp->isShiftAssignOp() || binOp->getOpcode() == clang::BO_XorAssign || binOp->getOpcode() == clang::BO_OrAssign || binOp->getOpcode() == clang::BO_AndAssign) {
+			    opFunc = gen.getOperator(gen.getAlpha(), op);
+            }
+            else {
+                opFunc = gen.getOperator(exprTy, op);
+            }
+
+			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
+
+            if(compOp->getComputationResultType() != binOp->getType()) {
+                rhs = frontend::utils::castScalar(convFact.convertType( GET_TYPE_PTR(binOp) ), rhs);
+            } 
 		}
 
 	}
@@ -1157,7 +1173,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		}
 
 
-		//pointer arithmetic only allowed for additive operation 
+		//pointer arithmetic only allowed for additive operation
 		if(baseOp == clang::BO_Add || baseOp == clang::BO_Sub) {
 			// This is the required pointer arithmetic in the case we deal with pointers
 			if (!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
@@ -1202,8 +1218,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = gen.getOperator(lhs->getType(), op);
+
+            if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
+			    opFunc = gen.getOperator(gen.getAlpha(), op);
+            }
+            else {
+			    VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+			    opFunc = gen.getOperator(lhs->getType(), op);
+            }
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			frontend_assert((*lhsTy == *rhsTy)) << "Comparing incompatible types\n";
@@ -1245,7 +1267,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 
 		core::TypePtr type = subExpr->getType();
         //if we have a cpp ref we have to unwrap it
-        if(IS_CPP_REF(type)) {
+        if(core::analysis::isAnyCppRef(type)) {
             subExpr = builder.toIRRef(subExpr);
             type = subExpr->getType();
         }
@@ -1726,8 +1748,16 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
         retIr = plugin->PostVisit(expr, retIr, convFact);
 	}
 
+	// attach location annotation
+	if (expr->getLocStart().isValid()){
+		auto presStart =  convFact.getSourceManager().getPresumedLoc(expr->getLocStart());
+		auto presEnd =  convFact.getSourceManager().getPresumedLoc(expr->getLocEnd());
+		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
+	}
+
 	// check for OpenMP annotations
-	return omp::attachOmpAnnotation(retIr, expr, convFact);
+	retIr =  omp::attachOmpAnnotation(retIr, expr, convFact);
+	return retIr;
 }
 
 } // End conversion namespace

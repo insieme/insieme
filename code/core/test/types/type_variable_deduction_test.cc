@@ -603,8 +603,11 @@ TEST(TypeVariableDeduction, ArrayRefElementBug) {
 	TypePtr vector = builder.vectorType(uint4, builder.concreteIntTypeParam(5));
 	TypePtr ref = builder.refType(vector);
 
-	CallExprPtr call = builder.callExpr(basic.getArrayRefElem1D(),
-			toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1")));
+	CallExprPtr call = builder.callExpr(
+			basic.getUnit(),
+			basic.getArrayRefElem1D(),
+			toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1"))
+	);
 
 	auto res = getTypeVariableInstantiation(manager, call);
 	EXPECT_FALSE(res); // this is in deed not a valid call!

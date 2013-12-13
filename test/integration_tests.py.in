@@ -790,7 +790,11 @@ def main(argv=None):
 
 	# setput enviroment variables for spetial libraries lookup
 	os.environ['BOOST_ROOT'] = '@BOOST_ROOT@'
-	os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib:'+os.environ['LD_LIBRARY_PATH']
+	if 'LD_LIBRARY_PATH' in os.environ:
+		os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib:'+os.environ['LD_LIBRARY_PATH']
+	else:
+		os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib'
+		
 
 	config = configparser.ConfigParser()
 	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))

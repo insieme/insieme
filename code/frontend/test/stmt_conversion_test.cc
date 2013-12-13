@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -57,16 +57,12 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
 #include "test_utils.inc"
-
-// clang [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -107,17 +103,17 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/stmt.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
-	fe::conversion::Converter convFactory( mgr, prog );
+	fe::conversion::Converter convFactory( mgr, tu );
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement()) {

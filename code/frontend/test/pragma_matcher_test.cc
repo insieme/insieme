@@ -40,7 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
@@ -69,10 +69,10 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/pragmas.c");
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/pragmas.c");
 
-	const PragmaList& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	std::cout << "****************************************" << std::endl;
 	std::cout << "****************************************" << std::endl;
@@ -252,9 +252,9 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/pragma2.c");
-	const PragmaList& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/pragma2.c");
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	std::cout << "****************************************" << std::endl;
 	std::cout << "****************************************" << std::endl;
@@ -328,9 +328,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
 
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/omp_parallel.c" );
-	const PragmaList& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_parallel.c" );
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -464,9 +464,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/omp_for.c");
-	const PragmaList& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_for.c");
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -609,9 +609,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 TEST(PragmaMatcherTest, RecursiveFunctions) {
 
 	NodeManager manager;
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/rec.c");
-	const PragmaList& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/rec.c");
+	const PragmaList& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 2);

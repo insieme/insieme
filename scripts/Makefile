@@ -34,7 +34,6 @@ PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
 CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
-OPENMPI	:= ${PREFIX}/openmpi-$(shell ${AWK_CMD} openmpi_install.sh | cut -d= -f2 )
 
 NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
 NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
@@ -194,10 +193,6 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 ## OpenMPI
-${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC} ${LIBTOOL}
-	@echo "#### INSTALL OpenMPI ${OPENMPI} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh openmpi_install.sh
-	@echo "@@@@ Done! @@@@"
 
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \

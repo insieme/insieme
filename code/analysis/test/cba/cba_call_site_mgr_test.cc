@@ -163,7 +163,7 @@ namespace cba {
 				"	let f = (()=>unit g)->unit { g(); };"
 
 				"	f(()->unit { });"			// a function passing as an argument
-				"	f(()=> 2);"					// a bind passed as an argument
+				"	f(()=> unit);"				// a bind passed as an argument
 				"	f(lit(\"x\":()->unit));"	// a literal passed as an argument
 
 				"}"
@@ -208,7 +208,7 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	let f = (int x)->int { f(x); };"		// a recursive function
+				"	let f = (int<4> x)->int<4> { f(x); };"		// a recursive function
 				"	f(3);"									// a direct call to a recursive function
 
 				"	auto g = f;"
@@ -257,8 +257,8 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	let f,g = "
-				"			(int x)->int { g(x); },"
-				"			(int x)->int { f(x); };"		// tow mutually recursive functions
+				"			(int<4> x)->int<4> { g(x); },"
+				"			(int<4> x)->int<4> { f(x); };"		// tow mutually recursive functions
 				"	f(3);"									// a direct call to a recursive function f
 				"}"
 		).as<CompoundStmtPtr>();
@@ -303,8 +303,8 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	let f,g = "
-				"			(int x)->int { g(x); f(x); },"
-				"			(int x)->int { f(x); g(x); };"		// tow mutually recursive functions with mutliple recursive calls
+				"			(int<4> x)->int<4> { g(x); f(x); },"
+				"			(int<4> x)->int<4> { f(x); g(x); };"		// tow mutually recursive functions with mutliple recursive calls
 				"	f(3);"										// a direct call to a recursive function f
 				"}"
 		).as<CompoundStmtPtr>();

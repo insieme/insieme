@@ -49,6 +49,7 @@ namespace clang {
     class Decl;
     class Type;
     class FunctionDecl;
+    class TypeDecl;
     class ValueDecl;
 }
 
@@ -131,8 +132,11 @@ namespace extensions {
         virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
-        virtual bool Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
-
+        core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        // ############ CLANG STAGE POST VISIT ############ //
         virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                        insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,

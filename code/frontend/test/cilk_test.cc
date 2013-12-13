@@ -40,7 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
@@ -64,17 +64,17 @@ TEST(Cilk, Pragmas) {
 
 	ConversionSetup setup;
 	setup.setOption(ConversionSetup::Cilk);
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/hello.cilk", setup);
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/hello.cilk", setup);
 
-	const auto& pl = prog.getPragmaList();
-	const ClangCompiler& comp = prog.getCompiler();
+	const auto& pl = tu.getPragmaList();
+	const ClangCompiler& comp = tu.getCompiler();
 
 
 	// check number of annotations
 	EXPECT_EQ((size_t) 4, pl.size());
 
 	// check version before cilk-sema is applied
-//	auto raw = prog.convert();
+//	auto raw = tu.convert();
 //	dump(raw);
 //	dumpDetail(raw);
 

@@ -193,6 +193,9 @@ namespace tu {
 			typedef utils::map::PointerMap<TypePtr, core::ClassMetaInfo> MetaInfoMap;
 			MetaInfoMap metaInfos;
 
+			// a performance utility recording whether sub-trees contain recursive variables or not
+			utils::map::PointerMap<NodePtr, bool> containsRecVars;
+
 		public:
 
 			Resolver(NodeManager& mgr, const IRTranslationUnit& unit)
@@ -232,10 +235,10 @@ namespace tu {
 					auto encoded = core::toIR(mgr, cur.second);
 
 					// resolve meta info
-					auto resolved = map(encoded);
+					auto resolved = core::fromIR(map(encoded));
 
 					// restore resolved meta info for resolved type
-					setMetaInfo(map(cur.first), core::fromIR(resolved));
+					setMetaInfo(map(cur.first), resolved);
 				}
 
 				// clear meta-infos for next run
@@ -342,7 +345,9 @@ namespace tu {
 								auto definition = recType->getDefinition();
 								if (definition.size() > 1) {
 									for(auto cur : definition) {
-										recVarResolutions[cur->getVariable()] = builder.recType(cur->getVariable(), definition);
+										auto recType = builder.recType(cur->getVariable(), definition);
+										recVarResolutions[cur->getVariable()] = recType;
+										containsRecVars[recType] = false;
 									}
 								}
 							}
@@ -370,7 +375,9 @@ namespace tu {
 							auto definition = res.as<LambdaExprPtr>()->getDefinition();
 							if (definition.size() > 1) {
 								for(auto cur : definition) {
-									recVarResolutions[cur->getVariable()] = builder.lambdaExpr(cur->getVariable(), definition);
+									auto recFun = builder.lambdaExpr(cur->getVariable(), definition);
+									recVarResolutions[cur->getVariable()] = recFun;
+									containsRecVars[recFun] = false;
 								}
 							}
 						}
@@ -410,8 +417,8 @@ namespace tu {
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
-						if (*(tmp->getType()) != *(call->getType())  && 
-							IS_CPP_REF(tmp->getType().as<RefTypePtr>()->getElementType()))
+						if (*(tmp->getType()) != *(call->getType())  &&
+							core::analysis::isAnyCppRef(tmp->getType().as<RefTypePtr>()->getElementType()))
 							res = builder.toIRRef(builder.deref(tmp));
 						else
 							res = tmp;
@@ -425,13 +432,13 @@ namespace tu {
 					if (call[0]->getType().isa<StructTypePtr>()){
 						auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type might changed, we have to unwrap it
-						if (IS_CPP_REF(tmp->getType()))
+						if (core::analysis::isAnyCppRef(tmp->getType()))
 							res = builder.deref(builder.toIRRef(tmp));
 						else
 							res = tmp;
 					}
 				}
-		
+
 				// also fix type literals
 				if (core::analysis::isTypeLiteral(res)) {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
@@ -440,11 +447,7 @@ namespace tu {
 				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
 					cache[ptr] = res;
-				} else if (ptr.isa<TypePtr>() && !hasFreeTypeVariables(res)) {
-					// cache closed types
-					cache[ptr] = res;
-				} else if (ptr.isa<StatementPtr>() && !analysis::hasFreeVariable(res, [&](const VariablePtr& var)->bool { return recVars.find(var) != recVars.end(); })) {
-					// cache closed statements
+				} else if (!containsRecursiveVariable(res)) {
 					cache[ptr] = res;
 				}
 
@@ -638,6 +641,24 @@ namespace tu {
 				return res;
 			}
 
+
+			bool containsRecursiveVariable(const NodePtr& node) {
+
+				// check cached values
+				auto pos = containsRecVars.find(node);
+				if (pos != containsRecVars.end()) return pos->second;
+
+				// determine whether result contains a recursive variable
+				bool res = recVars.contains(node) ||
+						any(node->getChildList(), [&](const NodePtr& cur)->bool { return containsRecursiveVariable(cur); });
+
+				// save result
+				containsRecVars[node] = res;
+
+				// and return it
+				return res;
+			}
+
 		};
 
 
@@ -661,8 +682,8 @@ namespace tu {
 					});
 				}
 			}
-			
-			core::IRBuilder builder(internalMainFunc->getNodeManager());	
+
+			core::IRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
 			// check all usedliterals if they are used as global and the global type is vector
@@ -670,7 +691,7 @@ namespace tu {
 			// us ref.vector.to.ref.array
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
-				auto findLit = [&](const NodePtr& node) { 
+				auto findLit = [&](const NodePtr& node) {
 					const LiteralPtr& usedLit = node.as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
@@ -681,9 +702,9 @@ namespace tu {
 					if (!globalTy.isa<RefTypePtr>()) return false;
 
 					return usedLit->getStringValue() == global->getStringValue() &&
-						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&						
-						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&							
-						types::isSubTypeOf(globalTy, usedLitTy); 
+						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&
+						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&
+						types::isSubTypeOf(globalTy, usedLitTy);
 				};
 
 				if(any(usedLiterals,findLit)) {
@@ -695,7 +716,7 @@ namespace tu {
 					usedLiterals.erase(toReplace);
 					usedLiterals.insert(global);
 
-					//fix the access 
+					//fix the access
 					ExpressionPtr replacement = builder.callExpr( toReplace.getType(), builder.getLangBasic().getRefVectorToRefArray(), global);
 
 					replacements.insert( {toReplace, replacement} );
@@ -763,7 +784,7 @@ namespace tu {
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
-		
+
 		// search for entry point
 		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {

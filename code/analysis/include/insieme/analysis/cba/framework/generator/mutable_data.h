@@ -40,6 +40,8 @@
 
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
+#include "insieme/analysis/cba/framework/entities/definition.h"
 
 #include "insieme/analysis/cba/analysis/data_paths.h"
 
@@ -47,6 +49,10 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	// --- forward declaration ---
+	struct reaching_defs_out_analysis;
+	extern const reaching_defs_out_analysis RDout;
+	// ---------------------------
 
 	template<typename Context, typename BaseAnalysis>
 	class ImperativeInStateConstraintGenerator;
@@ -66,6 +72,8 @@ namespace cba {
 		template<typename C> struct lattice   { typedef typename cba::lattice<BaseAnalysis,C>::type type; };
 		template<typename C> struct generator { typedef G<typename C::context_type, BaseAnalysis> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType, Label, typename C::context_type, Location<typename C::context_type>> type; };
+		template<typename C> struct one_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
+		template<typename C> struct all_meet_assign_op_type { typedef typename lattice<C>::type::meet_assign_op_type type; };
 	};
 
 	template<typename A>
@@ -77,20 +85,50 @@ namespace cba {
 	template<typename A>
 	struct location_data_out_analysis : public location_data_analysis<A, ImperativeOutStateConstraintGenerator> {};
 
+	template<typename A>
+	const location_data_in_analysis<A>& Sin() {
+		static const location_data_in_analysis<A> instance;
+		return instance;
+	}
+
+	template<typename A>
+	const location_data_tmp_analysis<A>& Stmp() {
+		static const location_data_tmp_analysis<A> instance;
+		return instance;
+	}
+
+	template<typename A>
+	const location_data_out_analysis<A>& Sout() {
+		static const location_data_out_analysis<A> instance;
+		return instance;
+	}
 
 	template<typename Context, typename BaseAnalysis>
-	class ImperativeInStateConstraintGenerator : public BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
+	class ImperativeInStateConstraintGenerator :
+			public BasicInConstraintGenerator<
+				location_data_in_analysis<BaseAnalysis>,
+				location_data_tmp_analysis<BaseAnalysis>,
+				location_data_out_analysis<BaseAnalysis>,
+				ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,
+				Context,
+				Location<Context>
+			> {
 
-		typedef BasicInConstraintGenerator<StateSetType, StateSetType,ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
+		typedef BasicInConstraintGenerator<
+				location_data_in_analysis<BaseAnalysis>,
+				location_data_tmp_analysis<BaseAnalysis>,
+				location_data_out_analysis<BaseAnalysis>,
+				ImperativeInStateConstraintGenerator<Context, BaseAnalysis>,
+				Context,
+				Location<Context>
+			> super;
 
 		CBA& cba;
 
 	public:
 
 		ImperativeInStateConstraintGenerator(CBA& cba)
-			: super(cba, Sin, Sout), cba(cba) {}
-
-		// TODO: the following two functions should be moved into a common base class of the In and Out State converter
+			: super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()), cba(cba) {}
 
 		/**
 		 * Produces a humna-readable representation of the value represented by the given value ID.
@@ -109,69 +147,28 @@ namespace cba {
 						 << ctxt << "]";
 		}
 
-		void connectStateSetsImpl(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
-
-			// general handling - Sin = Sout
-
-			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
-			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
-
-			// state information entering the set is also leaving it
-			constraints.add(subset(s_in, s_out));
-
-		}
-
-		template<typename E, typename L>
-		void connectStateSetsIfImpl(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
-
-			// general handling - Sin = Sout
-
-			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
-			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
-
-			// state information entering the set is also leaving it
-			if (ac == bc) {
-				constraints.add(subsetIf(value, set, s_in, s_out));
-			} else {
-				auto pre = cba.getSet(pred, bc.callContext.back());
-				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, s_in, s_out));
-			}
-		}
 	};
 
 
 	template<typename Context, typename BaseAnalysis>
-	struct ImperativeTmpStateConstraintGenerator : public ConstraintGenerator {
+	class ImperativeTmpStateConstraintGenerator :
+			public BasicTmpConstraintGenerator<
+				location_data_tmp_analysis<BaseAnalysis>,
+				location_data_out_analysis<BaseAnalysis>,
+				Context,
+				Location<Context>
+			> {
 
-		ImperativeTmpStateConstraintGenerator(CBA&) {}
+		typedef BasicTmpConstraintGenerator<
+			location_data_tmp_analysis<BaseAnalysis>,
+			location_data_out_analysis<BaseAnalysis>,
+			Context,
+			Location<Context>
+		> super;
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
-			// nothing to do here
+	public:
 
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
-			Label label = std::get<1>(data);
-			const auto& call = cba.getStmt(label).as<CallExprAddress>();
-			const auto& ctxt = std::get<2>(data);
-			const auto& loc  = std::get<3>(data);
-
-			// obtain
-			auto S_tmp = cba.getLocationDataSet<BaseAnalysis>(Stmp, label, ctxt, loc);
-			assert_eq(value, S_tmp) << "Queried a non S_tmp id!";
-
-			// create constraints
-			for(const auto& cur : call) {
-				auto l_arg = cba.getLabel(cur);
-				auto S_out = cba.getLocationDataSet<BaseAnalysis>(Sout, l_arg, ctxt, loc);
-				constraints.add(subset(S_out, S_tmp));
-			}
-
-			// and the function
-			auto l_fun = cba.getLabel(call->getFunctionExpr());
-			constraints.add(subset(cba.getLocationDataSet<BaseAnalysis>(Sout, l_fun, ctxt, loc), S_tmp));
-
-		}
+		ImperativeTmpStateConstraintGenerator(CBA& cba) : super(cba, Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()) {}
 
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
 
@@ -301,18 +298,18 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> res;
-				res.insert(ref);
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(ref);
 
 				// the old state is needed if reference is not unique
 				if (!isUniquelyReferenced(ass)) {
-					res.insert(old_state);
+					res.push_back(old_state);
 				}
 
 				// the in value is required in case the covered location is referenced
 				if (isReferenced(ass)) {
-					res.insert(in_value);
+					res.push_back(in_value);
 				}
 
 				return res;
@@ -379,24 +376,188 @@ namespace cba {
 			return std::make_shared<WriteConstraint<ValueLattice,RefLattice, Context>>(mgr, loc, ref, in_value, old_state, new_state);
 		}
 
+		/**
+		 * A custom constraint for merging the state of locations at parallel merging points.
+		 */
+		template<
+			typename BaseAnalyis,
+			typename ReachingDefValue,
+			typename ValueLattice,
+			typename Context
+		>
+		struct ParallelStateMergeConstraint : public Constraint {
+
+			typedef typename ValueLattice::manager_type mgr_type;
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+//			typedef typename ValueLattice::projection_op_type projection_op_type;
+//			typedef typename ValueLattice::mutation_op_type mutation_op_type;
+
+			// the analysis instance this constraint is part of
+			CBA& cba;
+
+			// the location which's data should be merged
+			Location<Context> loc;
+
+			// the set of definitions reaching the merge point
+			TypedValueID<ReachingDefValue> reachingDefs;
+
+			// the value of the memory location leaving the merge operation (output)
+			TypedValueID<ValueLattice> out_value;
+
+			// the internal set of values to be merged
+			mutable vector<TypedValueID<ValueLattice>> definedValues;		// this is the set of values defined at the point of reaching definitions
+
+		public:
+
+			ParallelStateMergeConstraint(
+					CBA& cba,
+					Location<Context> loc,
+					const TypedValueID<ReachingDefValue>& reachingDefs,
+					const TypedValueID<ValueLattice>& out_value)
+				: Constraint(toVector<ValueID>(reachingDefs), toVector<ValueID>(out_value), true, true),
+				  cba(cba), loc(loc), reachingDefs(reachingDefs), out_value(out_value), definedValues() {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op_type less;
+
+				// get reference to current value
+				auto& value = ass[out_value];
+
+				// compute new value
+				auto updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op_type less;
+				return less(getUpdatedValue(ass), ass[out_value]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+
+				// print merged in thread dependencies
+				for(const auto& cur : definedValues) {
+					out << cur << " -> " << out_value << "[label=\"merges\"]\n";
+				}
+
+				// and the default dependencies
+				return out << reachingDefs << " -> " << out_value << "[label=\"defines\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				return writeDotEdge(out);
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "merging definitions of " << reachingDefs << " into " << out_value;
+			}
+
+			virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+				vector<TypedValueID<ValueLattice>> newDefs;
+
+				const set<Definition<Context>>& defs = ass[reachingDefs];
+				for(const Definition<Context>& cur : defs) {
+
+					// get the current value
+					newDefs.push_back(cba.getSet(Sout<BaseAnalyis>(), cur.getAddress(), cur.getContext(), loc));
+				}
+
+				// check whether something has changed
+				bool changed = (definedValues != newDefs);
+
+				// update values depending on
+				definedValues = newDefs;
+
+				// return whether there has been a change
+				return changed;
+			}
+
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// start result set
+				std::vector<ValueID> res;
+
+				// reaching definition value is always included
+				res.push_back(reachingDefs);
+
+				// as are all referenced values
+				for(auto cur : definedValues) {
+					res.push_back(cur);
+				}
+
+				// done
+				return res;
+			}
+
+		private:
+
+			value_type getUpdatedValue(const Assignment& ass) const {
+				static const meet_assign_op_type meet_assign;
+
+				// merge value of all reaching definitions
+				value_type res;
+				for(auto cur : definedValues) {
+					meet_assign(res, ass[cur]);
+				}
+
+				// return merged result
+				return res;
+			}
+
+		};
+
+
+		template<typename BaseAnalysis, typename ReachingDefValue, typename ValueLattice, typename Context>
+		ConstraintPtr combineDefs(CBA& cba, const Location<Context>& loc, const TypedValueID<ReachingDefValue>& rd, const TypedValueID<ValueLattice>& out) {
+			return std::make_shared<ParallelStateMergeConstraint<BaseAnalysis, ReachingDefValue, ValueLattice, Context>>(cba, loc, rd, out);
+		}
+
 	}
 
 
 	template<typename Context, typename BaseAnalysis>
-	class ImperativeOutStateConstraintGenerator : public BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> {
+	class ImperativeOutStateConstraintGenerator :
+			public BasicOutConstraintGenerator<
+					location_data_in_analysis<BaseAnalysis>,
+					location_data_tmp_analysis<BaseAnalysis>,
+					location_data_out_analysis<BaseAnalysis>,
+					ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,
+					Context,
+					Location<Context>
+			> {
 
-		typedef BasicOutConstraintGenerator<StateSetType, StateSetType,ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,Context, Location<Context>> super;
+		typedef BasicOutConstraintGenerator<
+				location_data_in_analysis<BaseAnalysis>,
+				location_data_tmp_analysis<BaseAnalysis>,
+				location_data_out_analysis<BaseAnalysis>,
+				ImperativeOutStateConstraintGenerator<Context, BaseAnalysis>,
+				Context,
+				Location<Context>
+		> super;
 
 		CBA& cba;
 
 	public:
 
 		ImperativeOutStateConstraintGenerator(CBA& cba)
-			: super(cba, Sin, Sout), cba(cba) {
+			: super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()), cba(cba) {
 		}
 
 		/**
-		 * Produces a humna-readable representation of the value represented by the given value ID.
+		 * Produces a human-readable representation of the value represented by the given value ID.
 		 */
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
 
@@ -437,7 +598,7 @@ namespace cba {
 
 //				// ---- S_out of args => S_tmp of call (only if other location is possible)
 //
-				auto S_tmp = cba.getLocationDataSet<BaseAnalysis>(Stmp, l_call, ctxt, location);
+				auto S_tmp = cba.getSet(Stmp<BaseAnalysis>(), l_call, ctxt, location);
 //
 //				// ---- combine S_tmp to S_out ...
 //
@@ -445,7 +606,7 @@ namespace cba {
 
 				auto R_rhs = cba.getSet(R, l_rhs, ctxt);
 				auto A_value = cba.getSet<BaseAnalysis>(l_lhs, ctxt);
-				auto S_out = cba.getLocationDataSet<BaseAnalysis>(Sout, l_call, ctxt, location);
+				auto S_out = cba.getSet(Sout<BaseAnalysis>(), l_call, ctxt, location);
 //				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
 //
 //				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
@@ -458,36 +619,22 @@ namespace cba {
 				return;
 			}
 
+			if (base.isMerge(fun)) {
+
+				// instead of following the standard behavior we are simply combining reaching definitions here
+				auto l_call = cba.getLabel(call);
+				auto rd  = cba.getSet(RDout, l_call, ctxt, location);
+				auto out = cba.getSet(Sout<BaseAnalysis>(), l_call, ctxt, location);
+				constraints.add(combineDefs<BaseAnalysis>(cba, location, rd, out));
+
+				// done
+				return;
+			}
+
 			// everything else is treated using the default procedure
 			super::visitCallExpr(call, ctxt, location, constraints);
 		}
 
-
-		void connectStateSetsImpl(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
-
-			// general handling - Sin = Sout
-
-			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
-			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
-
-			// state information entering the set is also leaving it
-			constraints.add(subset(s_in, s_out));
-
-		}
-
-		template<typename E, typename L>
-		void connectStateSetsIfImpl(const E& value, const TypedValueID<L>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, const Location<Context>& location, Constraints& constraints) const {
-
-			// general handling - Sin = Sout
-
-			// get Sin set		TODO: add context to locations
-			auto s_in = cba.getLocationDataSet<BaseAnalysis>(a, al, ac, location);
-			auto s_out = cba.getLocationDataSet<BaseAnalysis>(b, bl, bc, location);
-
-			// state information entering the set is also leaving it
-			constraints.add(subsetIf(value, set, s_in, s_out));
-		}
 	};
 
 

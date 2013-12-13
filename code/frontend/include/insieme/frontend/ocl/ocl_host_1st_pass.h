@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/utils/logging.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
 
 namespace insieme {

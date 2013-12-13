@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -79,20 +79,17 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-        
-    bool InterceptorPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
-		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-			// check whether function should be intercected
-			if( getInterceptor().isIntercepted(funcDecl) ) {
-				auto irExpr = getInterceptor().intercept(funcDecl, convFact);
-				convFact.addToLambdaCache(funcDecl, irExpr);
-				VLOG(2) << "interceptorplugin" << irExpr;
-				return true;
-			}
-		}
-    	return false;
+
+    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact) {
+        // check whether function should be intercected
+        if( getInterceptor().isIntercepted(funcDecl) ) {
+            auto irExpr = getInterceptor().intercept(funcDecl, convFact);
+            VLOG(2) << "interceptorplugin" << irExpr;
+            return irExpr;
+        }
+    	return nullptr;
 	}
-    
+
     core::TypePtr InterceptorPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
 		if(getInterceptor().isIntercepted(type)) {
 			VLOG(2) << "interceptorplugin\n";
@@ -103,47 +100,47 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-	
+
 	void InterceptorPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
-			
+
 			//for Converter::lookUpVariable
 			if( varDecl->hasGlobalStorage()
 				&& getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
-				
+
 				//we expect globals to be literals -- get the "standard IR"which we need to change
 				core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
 				assert(globalLit);
 				VLOG(2) << globalLit;
-					
+
 				auto globals = convFact.getIRTranslationUnit().getGlobals();
 
-				//varDecl in the cache has "name" we need "qualifiedName" 
+				//varDecl in the cache has "name" we need "qualifiedName"
 				auto name = varDecl->getQualifiedNameAsString();
 				auto replacement = convFact.getIRBuilder().literal(name,globalLit->getType());
-				
+
 				//migrate possible annotations
 				core::transform::utils::migrateAnnotations(globalLit, replacement);
 
 				//standard way only add nonstaticlocal and nonexternal to the globals
 				if( !varDecl->isStaticLocal() && !varDecl->hasExternalStorage() ) {
-					auto git = std::find_if(globals.begin(), globals.end(), 
-							[&](const insieme::frontend::tu::IRTranslationUnit::Global& cur)->bool { 
-								return *globalLit == *cur.first; 
+					auto git = std::find_if(globals.begin(), globals.end(),
+							[&](const insieme::frontend::tu::IRTranslationUnit::Global& cur)->bool {
+								return *globalLit == *cur.first;
 							});
 					assert(git != globals.end() && "only remove the intercepted globals which were added in the standard way");
 					if (varDecl->isStaticDataMember()) {
 						//remove varDecl from TU -- as they are declared by the intercepted party
-						if( git != globals.end() ) { 
-							globals.erase(git); 
+						if( git != globals.end() ) {
+							globals.erase(git);
 							VLOG(2) << "removed from TU.globals";
-						} 
+						}
 					} else {
 						// replace in TU the "wrong" literal with the "simple" name with the qualified name
-						if( git != globals.end() ) { 
-							git->first = replacement; 
+						if( git != globals.end() ) {
+							git->first = replacement;
 							VLOG(2) << "replaced in TU.globals";
-						} 
+						}
 					}
 				}
 

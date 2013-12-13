@@ -56,14 +56,10 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
-
-// clang [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -104,16 +100,16 @@ TEST(CppConversion, FileTest) {
 
 	NodeManager manager;
 
-	fe::Program prog(manager, SRC_DIR "/inputs/cpp.cpp");
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/cpp.cpp");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 //		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-//		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
+//		fe::conversion::ConversionFactory convFact( mgr, tu, true/*=isCXX*/ );
 //		convFact.setTranslationUnit(&tu);
 /*
 		if(tp.isStatement()){

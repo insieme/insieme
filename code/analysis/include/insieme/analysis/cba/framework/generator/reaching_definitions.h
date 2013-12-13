@@ -39,6 +39,7 @@
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/definition.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/generator/killed_definitions.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -47,7 +48,12 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-	// ----------------- jobs ---------------
+	// forward definitions
+	struct killed_defs_out_analysis;
+	extern const killed_defs_out_analysis KDout;
+
+
+	// ----------------- reaching definitions ---------------
 
 	template<typename Context> class ReachingDefsInConstraintGenerator;
 	template<typename Context> class ReachingDefsTmpConstraintGenerator;
@@ -60,6 +66,12 @@ namespace cba {
 	extern const reaching_defs_in_analysis  RDin;
 	extern const reaching_defs_tmp_analysis RDtmp;
 	extern const reaching_defs_out_analysis RDout;
+
+
+	// a auxiliary value type utilized within merge nodes for code-reuse
+	template<typename Context> class ReachingDefsMergeConstraintGenerator;
+	struct reaching_defs_merge_analysis : public location_based_set_analysis<Definition, ReachingDefsMergeConstraintGenerator> {};
+	extern const reaching_defs_merge_analysis RDmerge;
 
 	namespace {
 
@@ -136,13 +148,13 @@ namespace cba {
 				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
 			}
 
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
 
 				// create result set
-				std::set<ValueID> res;
+				std::vector<ValueID> res;
 
 				// we always have to read the ref set
-				res.insert(ref);
+				res.push_back(ref);
 
 				// check whether reference is unique
 				const set<Reference<Context>>& refs = ass[ref];
@@ -150,7 +162,7 @@ namespace cba {
 				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) return res;
 
 				// if not, we also need the in set
-				res.insert(in);
+				res.push_back(in);
 				return res;
 			}
 
@@ -202,6 +214,7 @@ namespace cba {
 	class ReachingDefsInConstraintGenerator
 		: public BasicInConstraintGenerator<
 		  	  reaching_defs_in_analysis,
+		  	  reaching_defs_tmp_analysis,
 		  	  reaching_defs_out_analysis,
 		  	  ReachingDefsInConstraintGenerator<Context>,
 		  	  Context,
@@ -210,6 +223,7 @@ namespace cba {
 
 		typedef BasicInConstraintGenerator<
 			  	  reaching_defs_in_analysis,
+			  	  reaching_defs_tmp_analysis,
 			  	  reaching_defs_out_analysis,
 			  	  ReachingDefsInConstraintGenerator<Context>,
 			  	  Context,
@@ -220,48 +234,18 @@ namespace cba {
 
 	public:
 
-		ReachingDefsInConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		ReachingDefsInConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDout), cba(cba) {}
 
 	};
 
 	template<typename Context>
-	struct ReachingDefsTmpConstraintGenerator : public ConstraintGenerator {
+	class ReachingDefsTmpConstraintGenerator : public BasicTmpConstraintGenerator<reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> {
 
-		ReachingDefsTmpConstraintGenerator(CBA&) {}
+		typedef BasicTmpConstraintGenerator<reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> super;
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
-			// nothing to do here
+	public:
 
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
-			Label label = std::get<1>(data);
-			const auto& call = cba.getStmt(label).as<CallExprAddress>();
-			const auto& ctxt = std::get<2>(data);
-			const auto& loc  = std::get<3>(data);
-
-			// obtain
-			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);
-			assert_eq(value, RD_tmp) << "Queried a non RD_tmp id!";
-
-			// create constraints
-			for(const auto& cur : call) {
-				auto RD_out = cba.getSet(RDout, cur, ctxt, loc);
-				constraints.add(subset(RD_out, RD_tmp));
-			}
-
-			// and the function
-			constraints.add(subset(cba.getSet(RDout, call->getFunctionExpr(), ctxt, loc), RD_tmp));
-
-		}
-
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
-
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
-			const auto& stmt = cba.getStmt(std::get<1>(data));
-			const auto& ctxt = std::get<2>(data);
-			const auto& loc = std::get<3>(data);
-
-			out << "RDtmp : " << stmt << " : " << ctxt << " : " << loc;
-		}
+		ReachingDefsTmpConstraintGenerator(CBA& cba) : super(cba, RDtmp, RDout) {}
 
 	};
 
@@ -269,6 +253,7 @@ namespace cba {
 	class ReachingDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
 		  	  reaching_defs_in_analysis,
+		  	  reaching_defs_tmp_analysis,
 		  	  reaching_defs_out_analysis,
 		  	  ReachingDefsOutConstraintGenerator<Context>,
 		  	  Context,
@@ -277,6 +262,7 @@ namespace cba {
 
 		typedef BasicOutConstraintGenerator<
 				  reaching_defs_in_analysis,
+				  reaching_defs_tmp_analysis,
 				  reaching_defs_out_analysis,
 				  ReachingDefsOutConstraintGenerator<Context>,
 				  Context,
@@ -288,7 +274,7 @@ namespace cba {
 
 	public:
 
-		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDout), cba(cba) {}
+		ReachingDefsOutConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDout), cba(cba) {}
 
 		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			// we can stop at the creation point - no definitions will be killed before
@@ -308,33 +294,126 @@ namespace cba {
 
 			// one special case: assignments
 			auto fun = call.as<CallExprPtr>()->getFunctionExpr();
-			if (!base.isRefAssign(fun)) {
+			if (base.isRefAssign(fun)) {
 
-				// use default treatment
-				super::visitCallExpr(call, ctxt, loc, constraints);
+				// TODO: check referenced location
+				//		- if not referenced => out = in
+				//		- if only reference => in definitions are not forwarded
+				//		- if on of many => in definition + local definition
+
+				// collect effects of parameters (and function evaluation) into RDtmp
+
+
+				// get involved sets
+				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+				auto RD_out = cba.getSet(RDout, call, ctxt, loc);		// the definitions
+				auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+
+				// add constraint
+				constraints.add(reachingDefs(loc, Definition<Context>(call, ctxt), R_trg, RD_tmp, RD_out));
 
 				// done
 				return;
 			}
 
-			// TODO: check referenced location
-			//		- if not referenced => out = in
-			//		- if only reference => in definitions are not forwarded
-			//		- if on of many => in definition + local definition
+			// other special case: merge
+			if (base.isMerge(fun)) {
 
-			// collect effects of parameters (and function evaluation) into RDtmp
+				// In this case we have to:
+				// 		- get the union of the reaching definitions of all merged threads (=> RDmerge)
+				//		- subtract the set of killed definitions (KDout of merge call)
+
+				// get involved sets
+				auto RD_merge = cba.getSet(RDmerge, call, ctxt, loc);
+				auto KD_out = cba.getSet(KDout, call, ctxt, loc);
+				auto RD_out = cba.getSet(RDout, call, ctxt, loc);
+
+				// compute set difference
+				constraints.add(subsetBinary(RD_merge, KD_out, RD_out, [](const set<Definition<Context>>& a, const iset<Definition<Context>>& b)->set<Definition<Context>> {
+					auto res = a;
+					for(auto cur : b) {
+						res.erase(cur);
+					}
+					return res;
+				}));
+
+				// done
+				return;
+
+			}
 
 
-			// get involved sets
-			auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
-			auto RD_out = cba.getSet(RDout, call, ctxt, loc);		// the definitions
-			auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+			// use default treatment
+			super::visitCallExpr(call, ctxt, loc, constraints);
 
-			// add constraint
-			constraints.add(reachingDefs(loc, Definition<Context>(call, ctxt), R_trg, RD_tmp, RD_out));
 
 		}
 
+	};
+
+	// forward definition
+	namespace detail {
+		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename DataValue, typename ... ExtraParams>
+		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const TypedValueID<DataValue>& in_state, const TypedValueID<DataValue>& out_state, const ExtraParams& ... params);
+	}
+
+
+	template<typename Context>
+	class ReachingDefsMergeConstraintGenerator
+		: public BasicOutConstraintGenerator<
+			  reaching_defs_in_analysis,
+			  reaching_defs_tmp_analysis,
+			  reaching_defs_merge_analysis,
+			  ReachingDefsMergeConstraintGenerator<Context>,
+			  Context,
+			  Location<Context>
+		  > {
+
+		typedef BasicOutConstraintGenerator<
+				  reaching_defs_in_analysis,
+				  reaching_defs_tmp_analysis,
+				  reaching_defs_merge_analysis,
+				  ReachingDefsMergeConstraintGenerator<Context>,
+				  Context,
+				  Location<Context>
+			 > super;
+
+
+		CBA& cba;
+
+	public:
+
+		ReachingDefsMergeConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDmerge), cba(cba) {}
+
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			const auto& base = call->getNodeManager().getLangBasic();
+
+			// one special case: assignments
+			auto fun = call.as<CallExprPtr>()->getFunctionExpr();
+
+			// other special case: merge
+			if (base.isMerge(fun)) {
+
+				// In this case we have utilize the base implementation with a minor modification
+
+				// get involved sets
+				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);
+				auto RD_merge = cba.getSet(RDmerge, call, ctxt, loc);
+
+				auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+
+				// add constraint									v---v   this is the change, by default it would be RDmerge again
+				constraints.add(detail::parallelMerge<Context>(cba, RDout, tg, RD_tmp, RD_merge, loc));
+
+				// done
+				return;
+			}
+
+
+			// use default treatment
+			super::visitCallExpr(call, ctxt, loc, constraints);
+
+		}
 	};
 
 } // end namespace cba

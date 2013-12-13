@@ -44,22 +44,19 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
+#include "insieme/frontend/sema.h"
 
 #include "insieme/utils/logging.h"
 
+#include "clang/AST/ASTConsumer.h"
 
 namespace insieme {
 namespace frontend {
 
-namespace analysis {
-	class GlobalVarCollector;
-}
-
 namespace pragma {
-class Pragma;
-typedef std::shared_ptr<Pragma> PragmaPtr;
-
-typedef std::vector<PragmaPtr> PragmaList;
+	class Pragma;
+	typedef std::shared_ptr<Pragma> PragmaPtr;
+	typedef std::vector<PragmaPtr> PragmaList;
 }
 
 // ------------------------------------ TranslationUnit ---------------------------
@@ -68,63 +65,23 @@ typedef std::vector<PragmaPtr> PragmaList;
  * instantiated by clang), and the pragmas encountred during the processing of the translation unit.
  */
 class TranslationUnit: public boost::noncopyable {
-protected:
+
+	insieme::core::NodeManager& mMgr;
 	path 					mFileName;
+	const ConversionSetup	setup;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
 
-public:
-	TranslationUnit(const ConversionSetup& setup, const path& file)
-    : mFileName(file), mClang(setup, file) { }
+	//needed for for setting up the clang-compiler
+	clang::ASTConsumer emptyCons;
+    insieme::frontend::InsiemeSema mSema;
 
-	/**
-	 * Returns a list of pragmas defined in the translation unit
-	 */
-	const pragma::PragmaList& getPragmaList() const {
-		return mPragmaList;
-	}
-
-	const ClangCompiler& getCompiler() const {
-		return mClang;
-	}
-
-	const path& getFileName() const {
-		return mFileName;
-	}
-
-};
-
-
-// ------------------------------------ Program ---------------------------
-/**
- * A program is made of a set of compilation units, we need to keep this object so we can create a
- * complete call graph and thus determine which part of the input program should be handled by
- * insieme and which should be kept as the original.
- */
-class Program: public boost::noncopyable {
-
-	class ProgramImpl;
-	typedef ProgramImpl* ProgramImplPtr;
-	ProgramImplPtr pimpl;
-
-	// Reference to the NodeManager used to convert the translation units into IR code
-	insieme::core::NodeManager& mMgr;
-
-	const ConversionSetup config;
-
+	//FIXME: needed for what? maybe for ParserProxy
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
+
 public:
-
-	Program(core::NodeManager& mgr, const path& file, const ConversionSetup& setup = ConversionSetup());
-
-	~Program();
-
-	const ClangCompiler& getCompiler() const;
-
-	bool isCxx() const;
-
-	const pragma::PragmaList& getPragmaList() const;
+	TranslationUnit(insieme::core::NodeManager& mgr, const path& file,  const ConversionSetup& setup = ConversionSetup());
 
 	class PragmaIterator : public std::iterator<std::input_iterator_tag,insieme::frontend::pragma::PragmaPtr> {
 	public:
@@ -141,19 +98,41 @@ public:
 
 		void inc();
 
-		friend class Program;
+		friend class TranslationUnit;
 	public:
 		bool operator!=(const PragmaIterator& iter) const;
 		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
 		pragma::PragmaPtr operator*() const;
 		PragmaIterator& operator++() { inc(); return *this; }
 	};
+
 	/**
 	 * Returns the list of registered pragmas across the translation units
 	 */
 	PragmaIterator pragmas_begin() const;
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
+
+	/**
+	 * Returns a list of pragmas defined in the translation unit
+	 */
+	const pragma::PragmaList& getPragmaList() const { return mPragmaList; }
+
+	const ClangCompiler& getCompiler() const { return mClang; }
+
+	const path& getFileName() const { return mFileName; }
+	
+	bool isCxx() const { return getCompiler().isCXX(); }
+
+	// getters
+	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
+	const clang::Preprocessor& getPreprocessor() const { return getCompiler().getPreprocessor(); }
+
+	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
+	const clang::ASTContext& getASTContext() const { return getCompiler().getASTContext(); }
+
+	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
+	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
 };
 

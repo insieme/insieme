@@ -52,6 +52,7 @@
 #include "insieme/driver/object_file_utils.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_class_info.h"
 
 
 using namespace std;
@@ -62,6 +63,120 @@ using namespace insieme::core;
 using namespace insieme::driver;
 namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
+
+
+namespace{
+
+	bool typeMemberCheck(const core::TypePtr& a, const core::TypePtr& b, const core::TypePtr& c = core::TypePtr()){
+		if (a != b){
+			std::cout << "constructor uses a different type as target\n";
+			std::cout << "it should be: " << b << "\n";
+			if (c && a == c){
+				std::cout << "NOTE: it is bind to the expanded version: " << c << "\n";
+			}
+			return false;
+		}
+		return true;
+	}
+
+	void PerformChecks (const frontend::tu::IRTranslationUnit& tu){
+	
+		unsigned count =  0;
+		std::cout << " =======================================================" << std::endl;
+		std::cout << "  checking " << tu.getTypes().size() << " types" << std::endl;
+		std::cout << " =======================================================" << std::endl;
+
+		for (const auto& pair : tu.getTypes()){
+			if (pair.second.isa<core::StructTypePtr>()){
+
+				// retrieve metainfo for the object.
+				//  those objects should not fail, this test does not really make sense, frontend assertion enforce the right behaviour of this, 
+				//  it never failed, but i wont remove it since is not very expensive
+				if (hasMetaInfo(pair.second)){
+					std::cout << "object: " << pair.second  << " should not have metainfo" << std::endl;
+					count++;
+				}
+				else if (hasMetaInfo(pair.first)){
+					auto& meta = getMetaInfo(pair.first);
+
+					// check that any ctor uses the right owner object
+					for (auto ctor : meta.getConstructors()){
+						if (!ctor->getType().as<core::FunctionTypePtr>().isConstructor()){
+							std::cout << "\n member function is not a constructor\n";
+							dumpPretty(ctor);
+							count++;
+						}
+
+						if (!typeMemberCheck(ctor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)){
+							dumpPretty(ctor);
+							count ++;
+						}
+					}
+					
+					// check that dtor uses the right owner object
+					const auto& dtor = meta.getDestructor();
+					if (dtor){
+						if (!dtor->getType().as<core::FunctionTypePtr>().isDestructor()){
+							std::cout << "\n member function is not a destructor\n";
+							dumpPretty(dtor);
+							count++;
+						}
+
+						if (!typeMemberCheck(dtor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)){
+							dumpPretty(dtor);
+							count ++;
+						}
+					}
+
+					// check that any method uses the right owner object
+					for (auto member : meta.getMemberFunctions()){
+						if (!member.getImplementation()->getType().as<core::FunctionTypePtr>().isMemberFunction()){
+							std::cout << "\n member function is not a member function\n";
+							dumpPretty(member.getImplementation());
+							count++;
+						}
+
+						if (!typeMemberCheck(member.getImplementation()->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)){
+							dumpPretty(member.getImplementation());
+							count ++;
+						}
+					}
+				}
+				
+				// stop on 10
+				if (count > 10){
+					std::cout << " ...  only first " << count << " errors shown " << std::endl;
+					return;
+				}
+			}
+		}
+
+		if (count != 0)
+			return;
+
+		std::cout << " =======================================================" << std::endl;
+		std::cout << "  checking: " << tu.getFunctions().size() << " functions" << std::endl;
+		std::cout << " =======================================================" << std::endl;
+		count =  0;
+		for (auto cur : tu.getFunctions()) {
+			auto messages = checks::check(cur.second);
+
+			if (!messages.empty()){
+				std::cout << "semantic errors in:  " << cur.first->getStringValue() << std::endl;
+				dumpPretty (cur.second);
+				for (auto err : messages.getErrors() ){
+					std::cout << err << std::endl << std::endl;
+					if (count++ > 10){
+						std::cout << " ...  only first " << count << " errors shown " << std::endl;
+						return;
+					}
+				}
+			}
+		}
+	}
+
+
+} // anonymous namespace
 
 
 /**
@@ -102,23 +217,7 @@ int main(int argc, char** argv) {
 
 	// perform sematic checks (do not print other output)
 	if (options.semanticChecks){
-		std::cout << "checking: " << tu.getFunctions().size() << " functions" << std::endl;
-		for (auto cur : tu.getFunctions()) {
-			auto messages = checks::check(cur.second);
-
-			if (!messages.empty()){
-				std::cout << "semantic errors in:  " << cur.first->getStringValue() << std::endl;
-				unsigned count =  0;
-				for (auto err : messages.getErrors() ){
-					std::cout << err << std::endl << std::endl;
-					if (++count == 10){
-						std::cout << messages.getErrors().size() << " errors found, 10 shown" << std::endl;
-						return 1;
-					}
-				}
-				return 1;
-			}
-		}
+		PerformChecks(tu);
 		return 0;
 	}
 

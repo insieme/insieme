@@ -88,6 +88,7 @@
 #include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/annotations/source_location.h"
 
 using namespace clang;
 using namespace insieme;
@@ -138,7 +139,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::Call
 				if (param){
 
 					tmp = convFact.lookUpVariable( param->getDecl() );
-					if (!IS_CPP_REF(tmp->getType())){
+					if (!core::analysis::isAnyCppRef(tmp->getType())){
 						tmp = convFact.tryDeref(tmp);
 					}
 					else{
@@ -182,7 +183,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 
 	// get the base we want to access to
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-	if (IS_CPP_REF(convFact.lookupTypeDetails(base->getType()))){
+	if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(base->getType()))){
 		base = builder.toIRRef(base);
 	}
 
@@ -195,7 +196,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
 
 	// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
-	if (retIr->getType().isa<core::RefTypePtr>() && IS_CPP_REF(retIr->getType().as<core::RefTypePtr>()->getElementType()))
+	if (retIr->getType().isa<core::RefTypePtr>() && core::analysis::isAnyCppRef(retIr->getType().as<core::RefTypePtr>()->getElementType()))
 		retIr = builder.deref(retIr);
 
 	return retIr;
@@ -210,7 +211,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 	// if is a prameter and is a cpp ref, avoid going further to avoid wrapping issues
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		retIr = convFact.lookUpVariable( parmDecl );
-		if (IS_CPP_REF(retIr->getType())){
+		if (core::analysis::isAnyCppRef(retIr->getType())){
 			return retIr;
 		}
 	}
@@ -250,8 +251,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	if (!methodDecl){
-		// no method declaration... this is call to something else. 
-		// what else is callable??? just a pointer, 
+		// no method declaration... this is call to something else.
+		// what else is callable??? just a pointer,
 		//  INTRODUCING: member function pointer!
 
 		// now we have the function to call, we create the call expression with the right paramenters
@@ -275,7 +276,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 		// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 		// index the first element
 		ownerObj = getCArrayElemRef(builder, ownerObj);
-		if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
+		if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(ownerObj->getType())))
 			ownerObj = builder.toIRRef(ownerObj);
 
 		// if owner object is not a ref is the case of a call on a return value which has not
@@ -331,7 +332,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// get "this-object"
 		core::ExpressionPtr ownerObj = convFact.convertExpr(callExpr->getArg(0));
 
-		if (IS_CPP_REF(ownerObj->getType()))
+		if (core::analysis::isAnyCppRef(ownerObj->getType()))
 			ownerObj = builder.toIRRef(ownerObj);
 
 		// get arguments
@@ -390,7 +391,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
-	// back end compiler, unleast there are more than one parameter, this case we have no way to express the 
+	// back end compiler, unleast there are more than one parameter, this case we have no way to express the
 	// sematincs in IR. the constructor will unify those expressions into one
 	if (callExpr->isElidable () && (callExpr->getNumArgs() == 1)){
 
@@ -398,11 +399,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
-	
+
 		// a constructor returns a reference of the class type, but we might need to fix types
 		// do a ref reinterpret to the target type
 		if (retIr->getType() != refToClassTy)
-			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType))); 
+			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
 
 		return retIr;
 	}
@@ -912,7 +913,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
 	// is a left side value, no need to materialize. has being handled by a temporary expression
-	if(IS_CPP_REF(retIr->getType()) || gen.isRef(retIr->getType()))
+	if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
 	else
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
@@ -1046,6 +1047,13 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
     // call frontend plugin post visitors
 	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retIr = plugin->PostVisit(expr, retIr, convFact);
+	}
+
+	// attach location annotation
+	if (expr->getLocStart().isValid()){
+		auto presStart =  convFact.getSourceManager().getPresumedLoc(expr->getLocStart());
+		auto presEnd =  convFact.getSourceManager().getPresumedLoc(expr->getLocEnd());
+		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
 	}
 
 	// check for OpenMP annotations

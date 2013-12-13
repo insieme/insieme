@@ -186,7 +186,7 @@ namespace cba {
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
 		CBA analysis(code);
-dumpPretty(code);
+
 		DefaultContext ctxt;
 
 		// obtain location referenced by variable x
@@ -197,45 +197,174 @@ dumpPretty(code);
 
 		// -- reaching definitions --
 
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[1], RDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[1], RDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[2], RDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 					toString(analysis.getValuesOf(code[2], RDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[3], RDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[3], RDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[5], RDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[5], RDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
-//
-//
-//		// -- killed definitions --
-//
-//		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[1], KDin, ctxt, loc)));
-//		EXPECT_EQ("{}", 												toString(analysis.getValuesOf(code[1], KDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{}", 														toString(analysis.getValuesOf(code[2], KDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[2], KDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[3], KDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[3], KDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[5], KDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[5], KDout, ctxt, loc)));
-//
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], KDin, ctxt, loc)));
-//		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], KDout, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[1], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[1], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[2], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 					toString(analysis.getValuesOf(code[2], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[3], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[3], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[5], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 				toString(analysis.getValuesOf(code[5], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDtmp, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
 
 
-		createDotDump(analysis);
+		// -- killed definitions --
+
+		EXPECT_EQ("{}", 														toString(analysis.getValuesOf(code[1], KDin, ctxt, loc)));
+		EXPECT_EQ("{}", 														toString(analysis.getValuesOf(code[1], KDout, ctxt, loc)));
+
+		EXPECT_EQ("{}", 														toString(analysis.getValuesOf(code[2], KDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[2], KDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[3], KDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[3], KDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[5], KDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[5], KDout, ctxt, loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], KDin, ctxt, loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], KDout, ctxt, loc)));
+
+//		createDotDump(analysis);
 	}
 
 
-//	TEST(CBA, SimpelParallel) {
+	TEST(CBA, SimpelParallel) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(12);"
+				"	*x;"		// should be 12
+				"	auto g = spawn x = 14;"
+				"	*x;"		// should still be 12
+				"	sync g;"
+				"	*x;"		// should be 14
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, DiamondNoAssign) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(12);"
+				"	x = 1;"
+				"	auto t1 = spawn *x;"
+				"	auto t2 = spawn *x;"
+				"	sync t1;"
+				"	sync t2;"
+				"	*x;"		// should be 1
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, DiamondOneAssign) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(12);"
+				"	x = 1;"
+				"	auto t1 = spawn x = 2;"
+				"	auto t2 = spawn *x;"
+				"	sync t1;"
+				"	sync t2;"
+				"	*x;"		// should be 2
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, DiamondTwoAssign) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	"
+				"	ref<int> x = var(12);"
+				"	x = 1;"
+				"	auto t1 = spawn x = 2;"
+				"	auto t2 = spawn x = 3;"
+				"	sync t1;"
+				"	sync t2;"
+				"	*x;"		// should be 2 or 3
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		auto value = toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A));
+		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
+
+//		createDotDump(analysis);
+	}
+
+//	TEST(CBA, DiamondMultipleVariables) {
 //
 //		// a simple test cases checking the handling of simple value structs
 //		NodeManager mgr;
@@ -245,26 +374,40 @@ dumpPretty(code);
 //				"{"
 //				"	let int = int<4>;"
 //				"	"
-//				"	ref<int> x = var(12);"
-//				"	*x;"		// should be 12
-//				"	auto g = spawn x = 14;"
-//				"	*x;"		// should still be 12
-//				"	sync g;"
-//				"	*x;"		// should be 14
+//				"	ref<int> x = var(0);"
+//				"	ref<int> y = var(0);"
+//				"	ref<int> z = var(0);"
+//				"	x = 1;"
+//				"	y = 1;"
+//				"	z = 1;"
+//				"	auto t1 = spawn {"
+//				"		y = 2;"
+//				"		z = 2;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		z = 3;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	*x;"		// should be 1
+//				"	*y;"		// should be 2
+//				"	*z;"		// should be 2 or 3
 //				"}"
 //		).as<CompoundStmtPtr>();
 //
 //		ASSERT_TRUE(in);
 //		CompoundStmtAddress code(in);
-//dumpPretty(in);
 //		CBA analysis(code);
 //
-////		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
-////		EXPECT_EQ("{12}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
-////		EXPECT_EQ("{14}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//		// obtain location referenced by variable x
 //
-//		createDotDump(analysis);
+//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
 //
+//		auto value = toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A));
+//		EXPECT_TRUE(value == "{2,3}" || value == "{3,2}") << value;
+//
+////		createDotDump(analysis);
 //	}
 
 } // end namespace cba

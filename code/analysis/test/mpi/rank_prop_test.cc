@@ -64,8 +64,8 @@ TEST(RankPropagation, PropagateConstantNoControl) {
  
     auto addresses = builder.parseAddresses(
 		"${"
-		"	let MPI_Comm_rank = lit(\"MPI_Comm_rank\" : (int, ref<int>) -> int); "
-		"	let MPI_Comm_size = lit(\"MPI_Comm_size\" : (int, ref<int>) -> int); "
+		"	let MPI_Comm_rank = lit(\"MPI_Comm_rank\" : (int<4>, ref<int<4>>) -> int<4>); "
+		"	let MPI_Comm_size = lit(\"MPI_Comm_size\" : (int<4>, ref<int<4>>) -> int<4>); "
 
 		"	ref<int<4>> a = 0;"
 		"	ref<int<4>> s = 0;"
@@ -108,8 +108,8 @@ TEST(RankPropagation, PropagateConstantControl) {
  
     auto addresses = builder.parseAddresses(
 		"${"
-		"	let MPI_Comm_rank = lit(\"MPI_Comm_rank\" : (int, ref<int>) -> int); "
-		"	let MPI_Comm_size = lit(\"MPI_Comm_size\" : (int, ref<int>) -> int); "
+		"	let MPI_Comm_rank = lit(\"MPI_Comm_rank\" : (int<4>, ref<int<4>>) -> int<4>); "
+		"	let MPI_Comm_size = lit(\"MPI_Comm_size\" : (int<4>, ref<int<4>>) -> int<4>); "
 
 		"	ref<int<4>> a = 0;"
 		"	ref<int<4>> s = 0;"
