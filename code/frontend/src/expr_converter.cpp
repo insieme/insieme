@@ -472,7 +472,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
     LOG_EXPR_CONVERSION(intLit, retExpr);
 
 	std::string value;
-	if (!intLit->getValue().isNegative()) {
+	if (intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType() || !intLit->getValue().isNegative()) {
 		value = toString(intLit->getValue().getLimitedValue());
 	}
 	else{
