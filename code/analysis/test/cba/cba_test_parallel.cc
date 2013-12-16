@@ -410,6 +410,198 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, DiamondNoAssignStructure) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let point = struct { int x; int y; };"
+				"	"
+				"	ref<point> x = var((point){0,0});"
+				"	"
+				"	auto t1 = spawn {"
+				"		*x;"
+				"	};"
+				"	auto t2 = spawn {"
+				"		*x;"
+				"	};"
+				"	sync t1;"
+				"	sync t2;"
+				"	"
+				"	*x;"		// should be (0,0)
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+
+		// obtain location referenced by variable x
+
+		EXPECT_EQ("[x={0},y={0}]", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+//	TEST(CBA, DiamondOneAssignStructure) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	let point = struct { int x; int y; };"
+//				"	"
+//				"	ref<point> x = var((point){0,0});"
+//				"	"
+//				"	auto t1 = spawn {"
+//				"		x.x = 1;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		*x;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	"
+//				"	*x;"		// should be (0,0)
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//		CBA analysis(code);
+//
+//		// obtain location referenced by variable x
+//
+//		EXPECT_EQ("[x={1},y={0}]", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//
+//		createDotDump(analysis);
+//	}
+//
+//	TEST(CBA, DiamondTwoAssignNoRaceStructure) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	let point = struct { int x; int y; };"
+//				"	"
+//				"	ref<point> x = var((point){0,0});"
+//				"	"
+//				"	auto t1 = spawn {"
+//				"		x.x = 1;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		x.y = 2;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	"
+//				"	*x;"		// should be (0,0)
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//		CBA analysis(code);
+//
+//		// obtain location referenced by variable x
+//
+//		EXPECT_EQ("[x={1},y={2}]", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//
+//		createDotDump(analysis);
+//	}
+//
+//	TEST(CBA, DiamondTwoAssignRaceStructure) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	let point = struct { int x; int y; };"
+//				"	"
+//				"	ref<point> x = var((point){0,0});"
+//				"	"
+//				"	auto t1 = spawn {"
+//				"		x.x = 1;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		x.x = 2;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	"
+//				"	*x;"		// should be (0,0)
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//		CBA analysis(code);
+//
+//		// obtain location referenced by variable x
+//
+//		EXPECT_EQ("[x={1,2},y={0}]", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+//
+//		createDotDump(analysis);
+//	}
+//
+//	TEST(CBA, DiamondMultipleStructures) {
+//
+//		// a simple test cases checking the handling of simple value structs
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto in = builder.parseStmt(
+//				"{"
+//				"	let int = int<4>;"
+//				"	let point = struct { int x; int y; };"
+//				"	"
+//				"	ref<point> x = var((point){0,0});"
+//				"	ref<point> y = var((point){0,0});"
+//				"	ref<point> z = var((point){0,0});"
+//				"	"
+//				"	auto t1 = spawn {"
+//				"		y.x = 1;"
+//				"		z.x = 1;"
+//				"	};"
+//				"	auto t2 = spawn {"
+//				"		z.y = 2;"
+//				"	};"
+//				"	sync t1;"
+//				"	sync t2;"
+//				"	"
+//				"	*x;"		// should be (0,0)
+//				"	*y;"		// should be (1,0)
+//				"	*z;"		// should be (1,2)
+//				"}"
+//		).as<CompoundStmtPtr>();
+//
+//		ASSERT_TRUE(in);
+//		CompoundStmtAddress code(in);
+//		CBA analysis(code);
+//
+//		// obtain location referenced by variable x
+//
+//		EXPECT_EQ("[x={0},y={0}]", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[x={1},y={0}]", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
+//		EXPECT_EQ("[x={1},y={2}]", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), A)));
+//
+////		createDotDump(analysis);
+//	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
