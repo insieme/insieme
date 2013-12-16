@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,7 +44,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
 
 	/**
-	 * lambda expressions are used before defined, so we'll map the pointers here, so after definition 
+	 * lambda expressions are used before defined, so we'll map the pointers here, so after definition
 	 * we can fix the capture list.
 	 */
 	std::map <const clang::Decl*, const clang::LambdaExpr*> lambdaMap;
@@ -112,7 +112,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	 * a post visit in needed to:
 	 * 		- fix caputed variables in lambdas
 	 */
-	virtual void PostVisit(const clang::Decl* decl,  insieme::frontend::conversion::Converter& convFact) ;
+    virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact);
 
 };
 

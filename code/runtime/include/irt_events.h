@@ -71,9 +71,10 @@ void irt_##__short__##_event_remove(irt_##__subject__##_id __short__##_id, irt_#
 void irt_##__short__##_event_trigger(irt_##__subject__##_id wi_id, irt_##__short__##_event_code event_code); \
 /* Triggers the event event_code on ##__short__##_id without increasing its occurance count. \
  * This will execute (and potentially remove) all the associated event handlers */ \
-void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id wi_id, irt_##__short__##_event_code event_code);
-
-
+void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id wi_id, irt_##__short__##_event_code event_code); \
+/* Triggers the event event_code on ##__short__##_id, which is guaranteed to have a table entry, without increasing its occurance count. \
+ * This will execute (and potentially remove) all the associated event handlers */ \
+void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code);
 
 // WI events //////////////////////////////////////
 

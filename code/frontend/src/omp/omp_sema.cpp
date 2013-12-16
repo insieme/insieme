@@ -806,7 +806,7 @@ namespace {
 		// do not visit types
 		GlobalDeclarationCollector() : IRVisitor<bool, core::Address>(false) {}
 
-		bool visitNode(const core::NodeAddress& node) { return true; }	// does not need to decent deeper
+		bool visitNode(const core::NodeAddress& node) { return true; }	// does not need to descent deeper
 
 		bool visitDeclarationStmt(const core::DeclarationStmtAddress& cur) {
 			core::DeclarationStmtPtr decl = cur.getAddressedNode();

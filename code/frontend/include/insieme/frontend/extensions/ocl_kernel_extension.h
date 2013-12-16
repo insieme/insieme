@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,9 @@ private:
 
     core::TypePtr Visit(const clang::Type* type, conversion::Converter& convFact);
 
-	virtual void PostVisit(const clang::Decl* decl, conversion::Converter& convFact);
+    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
+    virtual insieme::core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, insieme::frontend::conversion::Converter& convFact);
+    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
 
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };

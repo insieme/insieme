@@ -46,6 +46,25 @@
 
 // ============================================================================ Scheduling (general)
 
+static inline void _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi, bool pool) {
+	// if other full, find random worker
+	bool success = false;
+	while(!success) {
+		success = irt_cwb_push_back(pool ? &target->sched_data.pool : &target->sched_data.queue, wi);
+		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+	}
+	irt_signal_worker(target);
+}
+static inline void _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi, bool pool) {
+	// if other full, find random worker
+	bool success = false;
+	while(!success) {
+		success = irt_cwb_push_front(pool ? &target->sched_data.pool : &target->sched_data.queue, wi);
+		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+	}
+	irt_signal_worker(target);
+}
+
 void irt_scheduling_init_worker(irt_worker* self) {
 	irt_cwb_init(&self->sched_data.pool);
 	irt_cwb_init(&self->sched_data.queue);
@@ -56,19 +75,13 @@ void irt_scheduling_init_worker(irt_worker* self) {
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
-	irt_cwb_push_back(&self->sched_data.pool, yielding_wi);
+	_irt_cwb_try_push_back(self, yielding_wi, true);
 	self->cur_wi = NULL;
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	if(irt_cwb_size(&target->sched_data.pool) >= IRT_CWBUFFER_LENGTH-2) {
-		irt_cwb_push_front(&irt_worker_get_current()->sched_data.pool, wi);
-		// TODO run immediate if self also full
-	} else {
-		irt_cwb_push_front(&target->sched_data.pool, wi);
-		irt_signal_worker(target);
-	}
+	_irt_cwb_try_push_front(target, wi, true);
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
@@ -102,14 +115,21 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 }
 
 #ifdef IRT_TASK_OPT
+#define IRT_NUM_TASK_VARIANTS 4
 uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) {
 	int64 demand = wo->sched_data.demand;
-	if(demand > IRT_CWBUFFER_LENGTH/2) {
+	if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-1))/(IRT_NUM_TASK_VARIANTS*2)) {
 		return 0;
-	} else if(demand > IRT_CWBUFFER_LENGTH/4) {
+	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-2))/(IRT_NUM_TASK_VARIANTS*2)) {
 		return 1;
-	} else if(demand > 0) {
+	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-3))/(IRT_NUM_TASK_VARIANTS*2)) {
 		return 2;
+	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-4))/(IRT_NUM_TASK_VARIANTS*2)) {
+	//	return 3;
+	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-5))/(IRT_NUM_TASK_VARIANTS*2)) {
+	//	return 4;
+	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-6))/(IRT_NUM_TASK_VARIANTS*2)) {
+	//	return 5;
 	}
 	return 3;
 }
@@ -173,9 +193,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 #ifdef IRT_STEAL_SELF_PUSH_FRONT
-	irt_cwb_push_front(&target->sched_data.queue, wi);
+	_irt_cwb_try_push_front(target, wi, false);
 #else
-	irt_cwb_push_back(&target->sched_data.queue, wi);
+	_irt_cwb_try_push_back(target, wi, false);
 #endif
 }
 

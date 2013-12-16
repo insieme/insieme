@@ -29,30 +29,29 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
-#ifndef IRT_CWBUFFER_LENGTH
-#define IRT_CWBUFFER_LENGTH 32
-#endif //IRT_CWBUFFER_LENGTH
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
-#include "utils/circular_work_buffers.h"
 
-#define IRT_SCHED_UBER_STEAL_ATTEMPTS 8
+// extension for OpenCl host files
 
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_worker *wake_target;
-} irt_cw_data;
+class OclHostPlugin : public FrontendPlugin {
+public:
 
-#define irt_worker_scheduling_data irt_cw_data
+private:
+    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
+};
 
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
-
+} //namespace plugin
+} //namespace frontend
+} //namespace extensions

@@ -47,6 +47,8 @@ static inline irt_work_group* _irt_wg_new() {
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg->redistribute_data_array);
+	// TODO
+	// we cannot just delete the wg here, it might be joined on later
 	//free(wg);
 }
 
@@ -79,7 +81,7 @@ irt_work_group* irt_wg_create() {
 	irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_CREATED, wg->id);
 	return wg;
 }
-void irt_wg_destroy(irt_work_group* wg) {
+void irt_wg_end(irt_work_group* wg) {
 	irt_wg_event_register_id tgid;
 	tgid.full = wg->id.full;
 	tgid.cached = NULL;
@@ -95,7 +97,7 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1) == wg->local_member_count) {
 		irt_wg_event_trigger_existing(wg->id, IRT_WG_EV_COMPLETED);
-		irt_wg_destroy(wg);
+		irt_wg_end(wg);
 	}
 }
 
@@ -144,14 +146,16 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	IRT_ASSERT(wg->id.index != 0, IRT_ERR_INTERNAL, "WG 0 barrier");
 	_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
 	irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
-	IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
+	//IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
+	irt_wg_event_register_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 	// check if last
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		// remove own handler from event register
 		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
+		// trigger barrier completion
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
-		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
 		// suspend
 		irt_inst_region_suspend(swi);
@@ -232,7 +236,7 @@ void irt_wg_barrier_smart(irt_work_group* wg) {
 	}
 }
 inline void irt_wg_barrier(irt_work_group* wg) {
-	irt_wg_barrier_smart(wg);
+	irt_wg_barrier_scheduled(wg);
 }
 
 
@@ -266,7 +270,6 @@ void irt_wg_join(irt_work_group* wg) {
 	_irt_wg_join_event_data clo = {swi, self};
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
 	irt_work_group_id wgid = wg->id;
-	//IRT_ASSERT((wgid.thread<100) && (wgid.index<100000), IRT_ERR_INTERNAL, "BLA! t: %d, id: %d", wgid.thread, wgid.index); // TODO DEBUG remove!
 	int64 occ = irt_wg_event_check_exists_and_register(wgid, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_suspend(swi);

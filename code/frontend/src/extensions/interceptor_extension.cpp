@@ -101,7 +101,7 @@ namespace extensions {
 		return nullptr;
 	}
 
-	void InterceptorPlugin::PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
+    core::ExpressionPtr InterceptorPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
 
 			//for Converter::lookUpVariable
@@ -150,6 +150,7 @@ namespace extensions {
 				VLOG(2) << convFact.lookUpVariable(varDecl);
 			}
 		}
+        return nullptr;
 	}
 }
 }

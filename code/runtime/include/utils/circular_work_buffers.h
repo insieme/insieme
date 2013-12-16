@@ -105,7 +105,7 @@ static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
 	return (wb->state.top_val - wb->state.bot_val) & IRT_CWBUFFER_MASK;
 }
 
-void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
+static inline bool irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
 	irt_cwb_state state, newstate;
 	for(;;) {
@@ -115,7 +115,7 @@ void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 		newstate.all = state.all;
 		newstate.top_update = (newstate.top_update+1) & IRT_CWBUFFER_MASK;
 		if(newstate.top_update == state.bot_update 
-			|| newstate.top_update == state.bot_val) continue; // not enough space in buffer, would be full after op
+			|| newstate.top_update == state.bot_val) return false; // not enough space in buffer, would be full after op
 		// if we reach this point and no changes happened, we can perform our op
 		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // repeat if state change since check
 	}
@@ -125,9 +125,10 @@ void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
 	//irt_atomic_bool_compare_and_swap(&wb->state.top_val, wb->state.top_val, newstate.top_update);
 	__irt_unused bool x = (wb->items[newstate.top_update] = wi) && (wb->state.top_val = newstate.top_update);
+	return true;
 }
 
-static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
+static inline bool irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
 	irt_cwb_state state, newstate;
 	for(;;) {
@@ -137,7 +138,7 @@ static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 		newstate.all = state.all;
 		newstate.bot_update = (newstate.bot_update-1) & IRT_CWBUFFER_MASK;
 		if(newstate.bot_update == state.top_update 
-			|| newstate.bot_update == state.top_val) continue; // not enough space in buffer, would be full after op
+			|| newstate.bot_update == state.top_val) return false; // not enough space in buffer, would be full after op
 		// if we reach this point and no changes happened, we can perform our op
 		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all)) break; // repeat if state change since check
 	}
@@ -147,6 +148,7 @@ static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
 	//irt_atomic_bool_compare_and_swap(&wb->state.bot_val, wb->state.bot_val, newstate.bot_update);
 	__irt_unused bool x = (wb->items[newstate.bot_val] = wi) && (wb->state.bot_val = newstate.bot_update);
+	return true;
 }
 
 static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {

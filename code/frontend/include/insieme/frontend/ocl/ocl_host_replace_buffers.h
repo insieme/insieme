@@ -29,30 +29,47 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/frontend/frontend.h"
 
-#ifndef IRT_CWBUFFER_LENGTH
-#define IRT_CWBUFFER_LENGTH 32
-#endif //IRT_CWBUFFER_LENGTH
+namespace insieme {
+namespace frontend {
+namespace ocl {
 
-#include "utils/circular_work_buffers.h"
+namespace {
+}
 
-#define IRT_SCHED_UBER_STEAL_ATTEMPTS 8
+// definitions
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::TypePtr> ExprTyMap;
 
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_worker *wake_target;
-} irt_cw_data;
+/*
+ * Replaces cl_mem/icl_buffer variables with INSPIRE arrays
+ */
+class BufferMapper: public core::transform::CachedNodeMapping {
+	const core::NodePtr resolveElement(const core::NodePtr& ptr);
+};
 
-#define irt_worker_scheduling_data irt_cw_data
 
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
-
+/*
+ * Collects cl_mem/icl_buffer expressions, identifies the correct IR type and replaces them with INSPIRE arrays
+ */
+class BufferReplacer {
+public:
+	BufferReplacer(core::ProgramPtr& prog);
+private:
+//	BufferMapper bufferMapper;
+	ExprTyMap clMemTypes;
+	core::ExpressionMap clMemReplacements;
+	core::ProgramPtr& prog;
+};
+} //namespace ocl
+} //namespace frontend
+} //namespace insieme
