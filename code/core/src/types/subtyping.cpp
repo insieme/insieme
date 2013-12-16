@@ -53,12 +53,16 @@ namespace types {
 namespace {
 
 	void addParents(const ParentsPtr& parents, TypeSet& res) {
-		for(auto cur : parents) res.insert(cur->getType());
+		for(auto cur : parents) {
+			res.insert(cur->getType());
+			if (auto recType = cur->getType().isa<RecTypePtr>()) res.insert(recType->unroll());
+		}
 	}
 
 	void addParents(const TypePtr& type, TypeSet& res) {
 		if (StructTypePtr cur = type.isa<StructTypePtr>()) addParents(cur->getParents(), res);
 		if (GenericTypePtr cur = type.isa<GenericTypePtr>()) addParents(cur->getParents(), res);
+		if (RecTypePtr cur = type.isa<RecTypePtr>()) addParents(cur->unroll(), res);
 	}
 
 	const TypeSet getSuperTypes(const TypePtr& type) {
@@ -152,14 +156,8 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 	// check for recursive types
 	if (subType->getNodeType() == NT_RecType || superType->getNodeType() == NT_RecType) {
 
-		// if both are they have to be equivalent
-		if (subType->getNodeType() == NT_RecType && superType->getNodeType() == NT_RecType) {
-			return subType == superType;
-		}
-
-		// if only one is, it needs to be unrolled
+		// since they are not equivalent we have to compare the unrolled version of the sub with the super type
 		if (subType->getNodeType() == NT_RecType) {
-			assert(superType->getNodeType() != NT_RecType);
 			return isSubTypeOf(subType.as<RecTypePtr>()->unroll(), superType);
 		}
 
