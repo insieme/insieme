@@ -36,8 +36,6 @@
 
 #include "declarations.h"
 
-#include <stdint.h>
-
 #ifdef IRT_ENABLE_INSTRUMENTATION
 void irt_dbg_print_worker_events(int32 wid, int32 num) {
 	int32 s = irt_g_workers[wid]->instrumentation_event_data->number_of_elements-1;
