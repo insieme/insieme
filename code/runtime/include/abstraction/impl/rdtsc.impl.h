@@ -76,4 +76,8 @@
 		return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
 	}
 
+	bool irt_time_ticks_constant() { 
+		return true; 
+	}
+
 #endif

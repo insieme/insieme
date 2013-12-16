@@ -293,14 +293,12 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	if(binary_format) {
 
 		/*
-		 * TODO: this format description is outdated and wrong
-		 *
 		 * dump everything in binary according to the following format:
 		 * (note: the strings are written without the termination character '\0'!)
 		 *
 		 *  8 byte: char, file version identifier, must read "INSIEME1"!
 		 * -------------------------------------------------------------
-		 *  4 byte: uint32, number of event names (=n)
+		 *  4 byte: uint32, number of event name table entries (=n)
 		 *  4 byte: char, event group identifier 1
 		 * 60 byte: char, event name identifier 1
 		 *  4 byte: char, event group identifier 2
@@ -312,18 +310,19 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		 * 60 byte: char, event name identifier n
 		 * -------------------------------------------------------------
 		 *  8 byte: uint64, number of events (=m)
-		 *  4 byte: uint32, event id 1
-		 *  8 byte: uint64, subject id 1
 		 *  8 byte: uint64, timestamp (nanoseconds) 1
-		 *  4 byte: uint32, event id 2
-		 *  8 byte: uint64, subject id 2
-		 *  8 byte: uint64, timestamp (nanoseconds) 2
+		 *  2 byte: uint16, event id 1
+		 *  2 byte: uint16, thread id 1
+		 *  4 byte: uint32, target index 1
+		 *  2 byte: uint16, event id 2
+		 *  2 byte: uint16, thread id 2
+		 *  4 byte: uint32, target index 2
 		 *  ...
 		 *  ...
 		 *  ...
-		 *  4 byte: uint32, event id m
-		 *  8 byte: uint64, subject id m
-		 *  8 byte: uint64, timestamp (nanoseconds) m
+		 *  2 byte: uint16, event id m
+		 *  2 byte: uint16, thread id m
+		 *  4 byte: uint32, target index m
 		 * -------------------------------------------------------------
 		 * EOF
 		 */

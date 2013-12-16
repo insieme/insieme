@@ -164,6 +164,17 @@ int64 irt_##__short__##_event_check_exists_and_register(irt_##__subject__##_id _
 uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
 	return irt_##__short__##_event_check_gt_and_register(__short__##_id, event_code, handler, 0); \
 } \
+void irt_##__short__##_event_register_existing_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
+	irt_##__short__##_event_register_id id; \
+	id.full = __short__##_id.full; \
+	id.cached = NULL; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(id); \
+	irt_spin_lock(&reg->lock); \
+	/* insert additional handler */ \
+	handler->next = reg->handler[event_code]; \
+	reg->handler[event_code] = handler; \
+	irt_spin_unlock(&reg->lock); \
+} \
  \
 void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
 	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
@@ -226,10 +237,32 @@ void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id __short__##
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	/* put new reg on reuse list if it was not used */ \
 	if(reg != newreg) { \
-		irt_worker* self = irt_worker_get_current(); \
-		newreg->lookup_table_next = self->__short__##_ev_register_list; \
-		self->__short__##_ev_register_list = newreg; \
+	irt_worker* self = irt_worker_get_current(); \
+	newreg->lookup_table_next = self->__short__##_ev_register_list; \
+	self->__short__##_ev_register_list = newreg; \
 	} \
+	irt_spin_lock(&reg->lock); \
+	/* go through all event handlers */ \
+	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
+	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
+	while(cur != NULL) { \
+	nex = cur->next; \
+	if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+	if(prev == NULL) reg->handler[event_code] = nex; \
+			else prev->next = nex; \
+	} else { /* else keep the handler in the list */ \
+	prev = cur; \
+	} \
+	cur = nex; \
+	} \
+	irt_spin_unlock(&reg->lock); \
+} \
+ \
+ void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_register_id id; \
+	id.full = __short__##_id.full; \
+	id.cached = NULL; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(id); \
 	irt_spin_lock(&reg->lock); \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \

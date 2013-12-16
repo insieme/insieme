@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -144,15 +144,13 @@ insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType*
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //  Decls post visit
-
-void Cpp11Plugin::PostVisit(const clang::Decl* decl,  insieme::frontend::conversion::Converter& convFact) {
+core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
 	if (const clang::CXXMethodDecl* method= llvm::dyn_cast<clang::CXXMethodDecl>(decl)){
-
 	// we need to substitute any captured usage name by the reference to the local copy
 	// 		- retrieve the operator() (.. )  func
 	// 		- create this->_mX access for captured vars
 	// 		- substitute every usage by member access
-	
+
 		// if is the declaration of a lambda that has being processed before
 		auto fit = lambdaMap.find(method);
 		if (fit != lambdaMap.end()){
@@ -199,6 +197,7 @@ void Cpp11Plugin::PostVisit(const clang::Decl* decl,  insieme::frontend::convers
 			lambdaMap.erase(method);
 		}
 	}
+	return nullptr;
 }
 
 

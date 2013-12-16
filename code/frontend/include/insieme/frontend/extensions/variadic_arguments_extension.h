@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,7 +40,7 @@
 
 using namespace insieme;
 
-class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin { 
+class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
     virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
 
@@ -52,7 +52,7 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
     virtual core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
                                     insieme::frontend::conversion::Converter& convFact) ;
 
-    virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+    virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
 
 	virtual insieme::core::ProgramPtr  IRVisit(insieme::core::ProgramPtr& prog);
 };

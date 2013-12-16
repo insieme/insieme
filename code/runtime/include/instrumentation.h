@@ -152,3 +152,40 @@ typedef enum _irt_inst_region_mode {
 void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode);
 void irt_inst_region_set_mode_for_region(irt_context* context, region_id id, irt_inst_region_mode mode);
 
+
+// -----------------------------------------------------------------------------------------------------------------
+//													File Format
+// -----------------------------------------------------------------------------------------------------------------
+
+/*
+ *  8 byte: char, file version identifier, must read "INSIEME1"!
+ * -------------------------------------------------------------
+ *  4 byte: uint32, number of event name table entries (=n)
+ *  4 byte: char, event group identifier 1
+ * 60 byte: char, event name identifier 1
+ *  4 byte: char, event group identifier 2
+ * 60 byte: char, event name identifier 2
+ * ...
+ * ...
+ * ...
+ *  4 byte: char, event group identifier n
+ * 60 byte: char, event name identifier n
+ * -------------------------------------------------------------
+ *  8 byte: uint64, number of events (=m)
+ *  8 byte: uint64, timestamp (nanoseconds) 1
+ *  2 byte: uint16, event id 1
+ *  2 byte: uint16, thread id 1
+ *  4 byte: uint32, target index 1
+ *  2 byte: uint16, event id 2
+ *  2 byte: uint16, thread id 2
+ *  4 byte: uint32, target index 2
+ *  ...
+ *  ...
+ *  ...
+ *  2 byte: uint16, event id m
+ *  2 byte: uint16, thread id m
+ *  4 byte: uint32, target index m
+ * -------------------------------------------------------------
+ * EOF
+ * (note: the strings are written without the termination character '\0'!)
+ */
