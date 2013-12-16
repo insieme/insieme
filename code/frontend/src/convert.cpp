@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -255,8 +255,8 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		translationUnit(tu), 
-		convSetup(setup), 
+		translationUnit(tu),
+		convSetup(setup),
 		pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
 		lastTrackableLocation(nullptr),
@@ -274,7 +274,7 @@ Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const Co
 	// tag the translation unit with as C++ if case
 	irTranslationUnit.setCXX(translationUnit.isCxx());
 	assert_true (irTranslationUnit.isEmpty()) << "the ir translation unit is not empty, should be before we start";
-	
+
 }
 
 tu::IRTranslationUnit Converter::convert() {
@@ -657,7 +657,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	}
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
-		plugin->PostVisit(valDecl, *this);
+		plugin->PostVisit(valDecl, varDeclMap[valDecl], *this);
 	}
 
 	VLOG(2) << varDeclMap[valDecl];
@@ -1059,7 +1059,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	}
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->PostVisit(decl, *this);
+        plugin->PostVisit(decl, res, *this);
     }
 }
 
@@ -1393,12 +1393,14 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		convertFunctionDeclImpl(funcDecl);
     }
 
+    core::ExpressionPtr expr = getCallableExpression(funcDecl);
+
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->PostVisit(funcDecl, *this);
+        plugin->PostVisit(funcDecl, expr, *this);
     }
 
     // the function has already been converted
-    return getCallableExpression(funcDecl);
+    return expr;
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){

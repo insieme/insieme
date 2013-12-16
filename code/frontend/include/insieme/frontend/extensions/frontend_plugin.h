@@ -132,7 +132,7 @@ namespace extensions {
         virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
         virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
-        core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+        insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
         virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
         virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
         virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& convFact);
@@ -143,8 +143,10 @@ namespace extensions {
                                                  insieme::frontend::conversion::Converter& convFact);
         virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
                                                  insieme::frontend::conversion::Converter& convFact);
-        virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
-
+        insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir, insieme::frontend::conversion::Converter& convFact);
+        virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr type, insieme::frontend::conversion::Converter& convFact);
+        virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,  insieme::frontend::conversion::Converter& convFact);
+        virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, insieme::core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
         // ############ POST CLANG STAGE ############ //
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);

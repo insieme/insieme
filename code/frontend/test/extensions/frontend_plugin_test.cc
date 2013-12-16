@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -349,17 +349,21 @@ struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
         return nullptr;
     }
 
-	virtual void PostVisit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
-		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
-			funsPost++;
-		}
-		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
-			varsPost++;
-		}
-		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
-			typesPost++;
-		}
-	}
+    virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
+        funsPost++;
+        return nullptr;
+    }
+
+	virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
+        varsPost++;
+        return nullptr;
+    }
+
+    virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, frontend::conversion::Converter& convFact) {
+        typesPost++;
+        return nullptr;
+    }
+
 };
 
 

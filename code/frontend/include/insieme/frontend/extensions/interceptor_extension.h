@@ -52,7 +52,7 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
     virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
 
-    virtual void PostVisit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+    virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
 
 	private:
 
