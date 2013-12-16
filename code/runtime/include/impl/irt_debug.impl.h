@@ -144,6 +144,7 @@ void _irt_dbg_wi_list_print(_irt_dbg_wi_list *l) {
 	printf(")\n");
 }
 
+#ifdef IRT_ENABLE_INSTRUMENTATION
 void irt_dbg_print_active_wis() {
 	// store current index on each worker's event list
 	uint64 *worker_ev_indices = (uint64*)calloc(irt_g_worker_count, sizeof(uint64));
@@ -199,3 +200,8 @@ void irt_dbg_print_active_wis() {
 	free(worker_ev_indices);
 	_irt_dbg_wi_list_clear(&active_wis);
 }
+#else //IRT_ENABLE_INSTRUMENTATION
+void irt_dbg_print_active_wis() {
+	printf("Active WI tracking requires instrumentation.\n");
+}
+#endif //IRT_ENABLE_INSTRUMENTATION
