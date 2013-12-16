@@ -33,7 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
+#include <stdlib.h>
 #include "CL/cl.h"
 //#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
 cl_program program = NULL;

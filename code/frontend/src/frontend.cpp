@@ -59,6 +59,7 @@
 #include "insieme/frontend/extensions/asm_extension.h"
 #include "insieme/frontend/extensions/cpp_refs.h"
 #include "insieme/frontend/extensions/frontend_cleanup.h"
+#include "insieme/frontend/extensions/ocl_host_extension.h"
 
 
 namespace insieme {
@@ -89,6 +90,8 @@ namespace frontend {
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<FrontendCleanup>();
+        if(flags & OpenCL)
+        	registerFrontendPlugin<extensions::OclHostPlugin>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
@@ -164,11 +167,11 @@ namespace frontend {
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
 		// apply OpenCL conversion
-		if(hasOption(OpenCL)) {
+/*		if(hasOption(OpenCL)) {
 			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
 			res = oclHostCompiler.compile();
 		}
-
+*/
 		// strip of OMP annotation since those may contain references to local nodes
 		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
 			cur->remAnnotation(omp::BaseAnnotation::KEY);
