@@ -41,7 +41,7 @@
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -66,9 +66,9 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 	NodeManager manager;
 
-	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/insieme_datarange.c");
+	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/insieme_datarange.c");
 
-	EXPECT_NE(prog.pragmas_begin(), prog.pragmas_end());
+	EXPECT_NE(tu.pragmas_begin(), tu.pragmas_end());
 /*
 	std::cout << "PragmaList " << std::endl;
 	for(auto I = pl.begin(); I != pl.end(); ++I)

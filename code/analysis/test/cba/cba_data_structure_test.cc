@@ -231,17 +231,17 @@ namespace cba {
 
 		CBA analysis(code);
 
-		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#)}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#)}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R)));
 
-		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.a)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.b)}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.a)}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-1-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.b)}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), R)));
 
-		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c)}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c.a)}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.c.b)}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), R)));
-		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[],0>,<0,[],0>]],#.r)}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.c)}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.c.a)}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.c.b)}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-2-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#.r)}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), R)));
 
 //		createDotDump(analysis);
 	}

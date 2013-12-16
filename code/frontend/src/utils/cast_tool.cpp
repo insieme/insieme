@@ -259,7 +259,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr e
 	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
 	// handle it carefully
-	if (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) {
+	if (core::analysis::isAnyCppRef(targetTy)) {
 		return expr;
 	}
 
@@ -283,7 +283,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr e
 			targetTy = gen.getUInt8();
 
 	}
-	
+
 	// cast from long long
 	if (core::analysis::isLongLong (exprTy)){
 		expr = core::analysis::castFromLongLong( expr);
@@ -349,14 +349,16 @@ core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr e
 			else resIr = expr;
 			break;
         case 17:
-            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr, 0);
+            resIr = builder.callExpr(gen.getInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
+			if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getIntPrecisionFix(), resIr, bytes);
 			break;
 		case 22:
 			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getUintPrecisionFix(), expr, bytes);
 			else resIr = expr;
 			break;
         case 27:
-            resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr, 0);
+            resIr = builder.callExpr(gen.getUInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
+			if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getUintPrecisionFix(), resIr, bytes);
 			break;
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) resIr = doCast(gen.getRealPrecisionFix(), expr, bytes);
@@ -527,7 +529,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			}
 
 			// this is CppRef -> ref
-			if (IS_CPP_REF(expr->getType())){
+			if (core::analysis::isAnyCppRef(expr->getType())){
 				expr = builder.deref(builder.toIRRef(expr));
 			}
 
@@ -586,12 +588,15 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		{
 			// if inner expression is not ref.... it might be a compound initializer
-			core::ExpressionPtr retIr = expr;
 			if (!IS_IR_REF(exprTy)){
-				retIr = builder.callExpr(gen.getRefVar(),expr);
+				expr = builder.callExpr(gen.getRefVar(),expr);
 			}
 
-			return builder.callExpr(gen.getRefVectorToRefArray(), retIr);
+			if (core::analysis::isAnyCppRef(exprTy)){
+				expr = core::analysis::unwrapCppRef(expr);
+			}
+
+			return builder.callExpr(gen.getRefVectorToRefArray(), expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -733,7 +738,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 		{
 			//if we have a cpp ref we have to unwrap the expression
-			if(IS_CPP_REF(expr->getType())) {
+			if(core::analysis::isAnyCppRef(expr->getType())) {
 				expr = builder.toIRRef(expr);
 			}
 			//the target type is a ref type because lvalue
@@ -809,11 +814,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			expr = getCArrayElemRef(builder, expr);
 
 			// unwrap CppRef if CppRef
-			if (core::analysis::isCppRef(exprTy)){
-				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-			}
-			else if (core::analysis::isConstCppRef(exprTy)){
-				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+			if (core::analysis::isAnyCppRef(exprTy)){
+				expr = core::analysis::unwrapCppRef(expr);
 			}
 
 			clang::CastExpr::path_const_iterator it;

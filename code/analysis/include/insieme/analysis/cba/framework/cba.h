@@ -73,73 +73,6 @@ namespace cba {
 
 	namespace sc = insieme::utils::constraint;
 
-
-
-	// TODO: find a better place for this too
-
-	// ----------------- imperative analysis ---------------
-
-	// forward declaration
-	class StateSetType;
-
-	template<typename Context, typename ElementSetType>
-	class ImperativeInStateConstraintGenerator;
-
-	template<typename Context, typename ElementSetType>
-	class ImperativeOutStateConstraintGenerator;
-
-
-	// since every state set type is a global constant we can use plain pointer
-	typedef const StateSetType* StateSetTypePtr;
-
-	/**
-	 * The state set type is a special type of set type referencing
-	 * sets attached to pairs of statements and locations (standard
-	 * sets are only attached to statements).
-	 */
-	class StateSetType : public utils::Printable {
-
-		/**
-		 * The name of this set for printing and debugging issues.
-		 */
-		const string name;
-
-	public:
-
-		StateSetType(const string& name) : name(name) {}
-
-	public:
-
-		const string& getName() const {
-			return name;
-		}
-
-		bool operator==(const StateSetType& other) const {
-			// the identity of a set type is fixed by its address
-			return this == &other;
-		}
-
-		bool operator!=(const StateSetType& other) const {
-			return !(*this == other);
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			return out << name;
-		}
-	};
-
-	// TODO: make those an enum
-	extern const StateSetType Sin;		// in-state of statements
-	extern const StateSetType Sout;		// out-state of statements
-	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
-
-
-	template<typename A> struct location_data_in_analysis;
-	template<typename A> struct location_data_out_analysis;
-	template<typename A> struct location_data_tmp_analysis;
-
-
-
 	// fix the types of indices utilized for fields, elements and tuple-components
 	// TODO: make index types generic!
 	typedef NominalIndex<
@@ -404,38 +337,6 @@ namespace cba {
 			return getSet(type, getLabel(stmt), ctxt, rest...);
 		}
 
-		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc) {
-
-			// TODO: get rid of the enumeration
-			if (type == Sin) {
-				typedef location_data_in_analysis<A> in_state;
-				return getValueID<in_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
-			}
-
-			if (type == Stmp) {
-				typedef location_data_tmp_analysis<A> tmp_state;
-				return getValueID<tmp_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
-			}
-
-			if (type == Sout) {
-				typedef location_data_out_analysis<A> out_state;
-				return getValueID<out_state,analysis_config<Context>,Label,Context,Location<Context>>(label, context, loc);
-			}
-
-			assert_fail() << "Unsupported state-set type requested: " << type << "\n";
-			return 0;
-		}
-
-		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, Label label, const Context& context, const Location<Context>& loc, const A& type_loc) {
-			return getLocationDataSet<A, Context>(type, label, context, loc);
-		}
-
-		template<typename A, typename Address, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getLocationDataSet(const StateSetType& type, const Address& stmt, const Context& context, const Location<Context>& loc, const A& type_loc) {
-			return getLocationDataSet(type, getLabel(stmt), context, loc, type_loc);
-		}
 
 		// -- label management --
 
@@ -532,12 +433,12 @@ namespace cba {
 			return isValid(seq.getSequence());
 		}
 
-		template<unsigned a, unsigned b, unsigned c>
-		bool isValid(const Context<a,b,c>& ctxt) {
+		template<unsigned a, unsigned b>
+		bool isValid(const Context<a,b>& ctxt) {
 			return isValid(ctxt.callContext);
 		}
 
-		template<typename Context = DefaultContext>
+		template<typename Context>
 		const vector<Context>& getValidContexts() {
 			return getContainer<Context>().getContexts(*this);
 		}
@@ -680,6 +581,28 @@ namespace cba {
 
 		void addConstraintsFor(const ValueID& value, Constraints& res);
 
+
+	private:
+
+		// --------------------- Data Storages ---------------------------------------
+
+		// a set of utility functions to attach arbitrary data to a CBA instance that
+		// can be shared by constraint generators.
+
+		utils::HeterogenousContainer datastore;
+
+	public:
+
+		template<typename T, typename ... Args>
+		T& getDataStore(const Args& ... args) {
+			return datastore.getInstance<T>(args...);
+		}
+
+		template<typename T, typename ... Args>
+		const T& getDataStore(const Args& ... args) const {
+			return datastore.getInstance<T>(args...);
+		}
+
 	};
 
 	template<typename Context>
@@ -691,12 +614,3 @@ namespace cba {
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
-
-/**
- * This include has to follow the CBA class definition due to dependencies and needs to
- * be always included whenever the CBA class is included. That is why it is located at
- * the end of the file and must not be moved to the top.
- *
- * TODO: remove this by creating analysis tokens for Sin/Sout/Stmp
- */
-#include "insieme/analysis/cba/framework/generator/mutable_data.h"

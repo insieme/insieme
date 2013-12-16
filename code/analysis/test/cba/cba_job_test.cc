@@ -78,8 +78,8 @@ namespace cba {
 
 		const auto& J = Jobs;
 
-		EXPECT_EQ("{job@0-1-1::[[0,0],[<0,[],0>,<0,[],0>]]}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), J)));
-		EXPECT_EQ("{job@0-1-1::[[0,0],[<0,[],0>,<0,[],0>]]}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), J)));
+		EXPECT_EQ("{job@0-1-1::[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), J)));
+		EXPECT_EQ("{job@0-1-1::[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), J)));
 
 	}
 

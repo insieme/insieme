@@ -46,7 +46,7 @@
 #include <clang/AST/Decl.h>
 #pragma GCC diagnostic pop
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -65,7 +65,7 @@ using namespace insieme::frontend::conversion;
 namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ Converter convFactory( manager, prog );\
+	{ Converter convFactory( manager, tu);\
 	clang::BuiltinType builtin(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.convertType( &builtin ); \
 	EXPECT_TRUE(convType); \
@@ -76,7 +76,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/stmt.c");		// just using some dummy file ..
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -346,21 +346,21 @@ TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
-	fe::Program prog(manager, SRC_DIR "/inputs/types.c");
+	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/types.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
 
-	fe::conversion::Converter convFactory( mgr, prog );
+	fe::conversion::Converter convFactory( mgr, tu );
 	convFactory.convert();
 
 	auto resolve = [&](const core::NodePtr& cur) {
 		return convFactory.getIRTranslationUnit().resolve(cur);
 	};
 
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 

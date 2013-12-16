@@ -455,7 +455,7 @@ namespace dump {
 					data[length] = '\0';
 
 					// register string value
-					return string(data);
+					return string(data, length);
 				}
 
 				void loadConverter(std::istream& in) {

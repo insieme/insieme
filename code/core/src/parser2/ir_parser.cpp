@@ -1585,6 +1585,13 @@ namespace parser {
 					}
 			));
 
+			g.addRule("E", rule(
+					seq("spawn", S),
+					[](Context& cur)->NodePtr {
+						return cur.parallel(cur.getTerm(0).as<StatementPtr>(), 1);
+					}
+			));
+
 			g.addRule("S", rule(
 					seq("sync", E, ";"),
 					[](Context& cur)->NodePtr {

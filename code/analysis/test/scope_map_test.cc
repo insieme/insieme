@@ -153,7 +153,7 @@ TEST(VariableScopeMap, Lambda) {
 			"	ref<int<4>> a = 0; "
 			"	a = 1; "
 			"	${ "
-			"		(ref<int<4>> a) -> int<4> ${ return a+1; }$ (3);"
+			"		(int<4> a) -> int<4> ${ return a+1; }$ (3);"
 			"		a = 4; "
 			"	}$ "
 			"	a = 6; "

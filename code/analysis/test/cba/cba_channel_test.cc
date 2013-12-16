@@ -85,12 +85,12 @@ namespace cba {
 
 		const auto& C = Ch;
 
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), C)));
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), C)));
+		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), C)));
+		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), C)));
+		EXPECT_EQ("{(0-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), C)));
+		EXPECT_EQ("{(0,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), C)));
 
-		EXPECT_EQ("{(0,[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), C)));
+		EXPECT_EQ("{(0,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), C)));
 
 	}
 

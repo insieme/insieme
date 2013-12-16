@@ -38,6 +38,8 @@
 
 #include "insieme/utils/constraint/solver.h"
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace utils {
 namespace constraint {
@@ -110,10 +112,10 @@ namespace constraint {
 
 		EXPECT_EQ("[v1,v2]", toString(constraint->getInputs()));
 		EXPECT_EQ("[v3]", toString(constraint->getOutputs()));
-		EXPECT_EQ("{v1}", toString(constraint->getUsedInputs(ass)));
+		EXPECT_EQ("[v1]", toString(constraint->getUsedInputs(ass)));
 
 		ass[a].insert(0);
-		EXPECT_EQ("{v1,v2}", toString(constraint->getUsedInputs(ass)));
+		EXPECT_EQ("[v1,v2]", toString(constraint->getUsedInputs(ass)));
 
 	}
 
@@ -149,7 +151,7 @@ namespace constraint {
 
 		c = subsetIf( 3, s2, s2, s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
-		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
@@ -161,7 +163,7 @@ namespace constraint {
 
 		c = subsetIfBigger(s1, 1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
-		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIfBigger(s1, 5, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
@@ -391,7 +393,7 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
 			virtual bool hasAssignmentDependentDependencies() const { return false; }
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const { return set::toSet<std::set<ValueID>>(in); }
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const { return toVector<ValueID>(in); }
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
 
@@ -458,6 +460,139 @@ namespace constraint {
 
 	}
 
+
+	namespace {
+
+		struct DynamicConstraint : public Constraint {
+
+			TypedSetID<TypedSetID<int>> set;			// the set containing elements to be aggregated
+			TypedSetID<int> out;						// the result set
+
+			DynamicConstraint(const TypedSetID<TypedSetID<int>>& set, const TypedSetID<int>& out)
+				: Constraint(toVector<ValueID>(set), toVector<ValueID>(out), true, true), set(set), out(out) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				bool changed = false;
+				const std::set<TypedSetID<int>>& sets = ass[set];
+				for(auto cur : sets) {
+					for(auto e : (const std::set<int>&)(ass[cur])) {
+						changed = ass[out].insert(e).second || changed;
+					}
+				}
+				return (changed) ? Constraint::Incremented : Constraint::Unchanged;
+			};
+
+			virtual bool check(const Assignment& ass) const {
+				const std::set<int>& value = ass[out];
+				const std::set<TypedSetID<int>>& sets = ass[set];
+				for(auto cur : sets) {
+					for(auto e : (const std::set<int>&)(ass[cur])) {
+						if (!contains(value, e)) return false;
+					}
+				}
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const { assert_not_implemented(); return out; }
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
+
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(set);
+				const std::set<TypedSetID<int>>& sets = ass[set];
+				res.insert(res.end(), sets.begin(), sets.end());
+				return res;
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const { return out << "union(all s in " << set << ") sub " << this->out; }
+
+		};
+
+
+		ConstraintPtr collect(const TypedSetID<TypedSetID<int>>& sets, const TypedSetID<int>& out) {
+			return std::make_shared<DynamicConstraint>(sets, out);
+		}
+
+
+		typedef std::map<ValueID, std::vector<ConstraintPtr>> ConstraintMap;
+
+		struct MapResolver {
+
+			ConstraintMap map;
+
+		public:
+
+			MapResolver(const ConstraintMap& map) : map(map) {}
+
+			Constraints operator()(const std::set<ValueID>& values) const {
+				Constraints res;
+
+				for(auto value : values) {
+					auto pos = map.find(value);
+					if (pos != map.end()) {
+						for(auto cur : pos->second) {
+							res.add(cur);
+						}
+					}
+				}
+				return res;
+			}
+
+		};
+	}
+
+	TEST(Solver, DynamicDependenciesEager) {
+
+		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto m = [](int id) { return TypedSetID<TypedSetID<int>>(id); };
+
+		Constraints problem = {
+				elem	 ( 1, s(1)),
+				elem	 ( 2, s(1)),
+				elem	 ( 4, s(2)),
+				elem	 ( 6, s(2)),
+				elem	 ( 8, s(3)),
+				elem	 (10, s(4)),
+				elem	 (s(1), m(10)),
+				elemIf	 (2, s(5), s(2), m(10)),
+				elemIf   (4, s(5), s(3), m(10)),
+				collect  (m(10), s(5))
+		};
+
+		auto res = solve(problem);
+		EXPECT_EQ("{v10={v1,v2,v3},v1={1,2},v2={4,6},v3={8},v4={10},v5={1,2,4,6,8}}", toString(res));
+
+		// check the individual constraints
+		for (const auto& cur : problem) {
+			EXPECT_TRUE(cur->check(res)) << "Constraint: " << *cur;
+		}
+
+	}
+
+	TEST(Solver, DynamicDependenciesLazy) {
+
+		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto m = [](int id) { return TypedSetID<TypedSetID<int>>(id); };
+
+		ConstraintMap map;
+
+		map[s(1)] = toVector(elem(1, s(1)), elem( 2, s(1)));
+		map[s(2)] = toVector(elem(4, s(2)), elem( 6, s(2)));
+		map[s(3)] = toVector(elem(8, s(3)));
+		map[s(4)] = toVector(elem(10, s(4)));
+		map[s(5)] = toVector(collect  (m(10), s(5)));
+
+		map[m(10)] = toVector(
+				elem(s(1), m(10)),
+				elemIf(2, s(5), s(2), m(10)),
+				elemIf(4, s(5), s(3), m(10))
+		);
+
+		// LazySolver
+		auto res = solve(s(5), MapResolver(map));
+		EXPECT_EQ("{v10={v1,v2,v3},v1={1,2},v2={4,6},v3={8},v5={1,2,4,6,8}}", toString(res));
+
+	}
 
 
 } // end namespace set_constraint

@@ -49,6 +49,7 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/typed_map.h"
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/constraint/lattice.h"
 
 namespace insieme {
@@ -128,14 +129,20 @@ namespace constraint {
 		std::vector<ValueID> inputs;
 		std::vector<ValueID> outputs;
 
+		bool assignmentDependentDependencies;		// there is a fixed list, but only partially used
+		bool dynamicDependencies;					// there is a flexible list
+
 	public:
 
 		enum UpdateResult {
 			Unchanged, Incremented, Altered
 		};
 
-		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out)
-			: inputs(in), outputs(out) {}
+		Constraint(const std::vector<ValueID>& in, const std::vector<ValueID>& out,
+				bool assignmentDependentDependencies = false, bool dynamicDependencies = false)
+			: inputs(in), outputs(out),
+			  assignmentDependentDependencies(assignmentDependentDependencies || dynamicDependencies),
+			  dynamicDependencies(dynamicDependencies) {}
 
 		virtual ~Constraint() {};
 
@@ -156,8 +163,17 @@ namespace constraint {
 		const std::vector<ValueID>& getInputs() const { return inputs; };
 		const std::vector<ValueID>& getOutputs() const { return outputs; };
 
-		virtual bool hasAssignmentDependentDependencies() const =0;
-		virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const =0;
+		bool hasAssignmentDependentDependencies() const { return assignmentDependentDependencies; };
+		bool hasDynamicDependencies() const { return dynamicDependencies; }
+
+		virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+			return dynamicDependencies;		// return whether something might have changed
+		}
+
+		virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			assert_false(assignmentDependentDependencies) << "Needs to be implemented by constraints exhibiting assignment based dependencies.";
+			return inputs;
+		}
 
 	};
 
@@ -186,7 +202,7 @@ namespace constraint {
 		public:
 
 			ComposedConstraint(const Filter& filter, const Executor& executor)
-				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs()), filter(filter), executor(executor) {}
+				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs(), !Filter::is_true), filter(filter), executor(executor) {}
 
 			virtual UpdateResult update(Assignment& ass) const {
 				return (filter(ass) && executor.update(ass)) ? Incremented : Unchanged;
@@ -221,12 +237,8 @@ namespace constraint {
 				return out;
 			}
 
-			virtual bool hasAssignmentDependentDependencies() const {
-				return !Filter::is_true;
-			}
-
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> used;
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> used;
 				filter.addUsedInputs(ass, used);
 				if (filter(ass)) executor.addUsedInputs(ass, used);
 				return used;
@@ -251,7 +263,7 @@ namespace constraint {
 				static const ValueIDs empty;
 				return empty;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {}
 		};
 
 		template<typename A, typename B>
@@ -268,7 +280,7 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return combine(a.getInputs(), b.getInputs());
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				a.addUsedInputs(ass, used);
 				if (a(ass)) b.addUsedInputs(ass, used);
 			}
@@ -290,8 +302,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -310,8 +322,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -332,8 +344,8 @@ namespace constraint {
 			ValueIDs getInputs() const {
 				return toVector<ValueID>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -406,7 +418,7 @@ namespace constraint {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
 				out << "e" << (int*)&e << " -> " << a << " " << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				// nothing
 			}
 		};
@@ -436,8 +448,8 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << b << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -474,8 +486,8 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
 			}
 		};
 
@@ -516,9 +528,9 @@ namespace constraint {
 				out << a << " -> " << r << label << "\n";
 				out << b << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(a);
-				used.insert(b);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
+				used.push_back(b);
 			}
 		};
 
@@ -638,7 +650,7 @@ namespace constraint {
 		Constraints(const std::initializer_list<ConstraintPtr>& list) : data(list) {}
 
 		void add(const ConstraintPtr& constraint) {
-			data.push_back(constraint);
+			if(constraint) data.push_back(constraint);
 		}
 
 		void add(const Constraints& constraints) {
@@ -837,7 +849,7 @@ namespace constraint {
 
 		void resolveConstraints(const Constraint& cur, vector<ValueID>& worklist);
 
-		void resolveConstraints(const std::set<ValueID>& sets, vector<ValueID>& worklist);
+		void resolveConstraints(const std::vector<ValueID>& values, vector<ValueID>& worklist);
 
 	};
 

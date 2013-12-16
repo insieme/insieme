@@ -817,19 +817,19 @@ TEST(Scop, BuildScop) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 	
-	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
-	ExpressionPtr arrAcc = builder.callExpr( 
+	VariablePtr var = Variable::get(mgr, builder.refType(mgr.getLangBasic().getUInt4()));
+	ExpressionPtr arrAcc = builder.deref(builder.callExpr(
 		mgr.getLangBasic().getArrayRefElem1D(), 
 		builder.callExpr( 
 			mgr.getLangBasic().getArrayRefElem1D(), 
-			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			builder.variable( builder.refType(builder.arrayType(builder.arrayType(mgr.getLangBasic().getUInt4()))) ),
 			iter1
 		),
 		iter2
-	);
+	));
 
 	StatementPtr stmt = builder.callExpr( mgr.getLangBasic().getRefAssign(), var, arrAcc );
 	
@@ -866,19 +866,19 @@ TEST(Transformations, Interchange) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 	
-	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
-	ExpressionPtr arrAcc = builder.callExpr( 
+	VariablePtr var = Variable::get(mgr, builder.refType(mgr.getLangBasic().getUInt4()));
+	ExpressionPtr arrAcc = builder.deref(builder.callExpr(
 		mgr.getLangBasic().getArrayRefElem1D(), 
 		builder.callExpr( 
 			mgr.getLangBasic().getArrayRefElem1D(), 
-			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			builder.variable( builder.refType(builder.arrayType(builder.arrayType(mgr.getLangBasic().getUInt4()))) ),
 			iter1
 		),
 		iter2
-	);
+	));
 
 	StatementPtr stmt = builder.callExpr( mgr.getLangBasic().getRefAssign(), var, arrAcc );
 	
@@ -906,7 +906,7 @@ TEST(Transformations, Interchange) {
 	
 	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
 				 "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
-				 	"ref.assign(v3, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v7), v8));"
+				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v7), v8)));"
 				  "};"
 			   "}", toString(*ir));
 
@@ -918,7 +918,7 @@ TEST(Transformations, Interchange) {
 	ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v3, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v10), v9));"
+						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v10), v9)));"
 					"};"
 				"}", toString(*ir));
 }
@@ -927,21 +927,21 @@ TEST(Transformations, Tiling) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 
-	VariablePtr iterTile = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iterTile = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 	
-	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
-	ExpressionPtr arrAcc = builder.callExpr( 
+	VariablePtr var = Variable::get(mgr, builder.refType(mgr.getLangBasic().getUInt4()));
+	ExpressionPtr arrAcc = builder.deref(builder.callExpr(
 		mgr.getLangBasic().getArrayRefElem1D(), 
 		builder.callExpr( 
 			mgr.getLangBasic().getArrayRefElem1D(), 
-			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			builder.variable( builder.refType(builder.arrayType(builder.arrayType(mgr.getLangBasic().getUInt4()))) ),
 			iter1
 		),
 		iter2
-	);
+	));
 
 	StatementPtr stmt = builder.callExpr( 
 					mgr.getLangBasic().getRefAssign(), 
@@ -967,7 +967,7 @@ TEST(Transformations, Tiling) {
 	NodePtr ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v8), v9));"
+						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v8), v9)));"
 					"};"
 				"}", toString(*ir));
 
@@ -1012,7 +1012,7 @@ TEST(Transformations, Tiling) {
 	EXPECT_EQ( "for(int<4> v11 = 0 .. int.add(100, 1) : 25) {"
 					"for(int<4> v12 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
 						"for(int<4> v13 = 0 .. int.add(100, 1) : 1) {"
-							"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v12), v13));"
+							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v12), v13)));"
 						"};"
 					"};"
 				"}", toString(*ir));
@@ -1023,31 +1023,31 @@ TEST(Transformations, Fusion) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 	
-	VariablePtr fusedIter = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr fusedIter = Variable::get(mgr, mgr.getLangBasic().getUInt4());
 
-	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
-	ExpressionPtr arrAcc1 = builder.callExpr( 
+	VariablePtr var = Variable::get(mgr, builder.refType(mgr.getLangBasic().getUInt4()));
+	ExpressionPtr arrAcc1 = builder.deref(builder.callExpr(
 		mgr.getLangBasic().getArrayRefElem1D(), 
 		builder.callExpr( 
 			mgr.getLangBasic().getArrayRefElem1D(), 
-			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			builder.variable( builder.refType(builder.arrayType(builder.arrayType(mgr.getLangBasic().getUInt4()))) ),
 			iter1
 		),
 		iter2
-	);
+	));
 
-	ExpressionPtr arrAcc2 = builder.callExpr( 
+	ExpressionPtr arrAcc2 = builder.deref(builder.callExpr(
 		mgr.getLangBasic().getArrayRefElem1D(), 
 		builder.callExpr( 
 			mgr.getLangBasic().getArrayRefElem1D(), 
-			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			builder.variable( builder.refType(builder.arrayType(builder.arrayType(mgr.getLangBasic().getUInt4()))) ),
 			iter2
 		),
 		iter1
-	);
+	));
 
 	StatementPtr stmt1 = builder.callExpr( 
 					mgr.getLangBasic().getRefAssign(), 
@@ -1058,7 +1058,7 @@ TEST(Transformations, Fusion) {
 	StatementPtr stmt2 = builder.callExpr( 
 					mgr.getLangBasic().getRefAssign(), 
 					var,
-					builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), var, arrAcc2)
+					builder.callExpr( mgr.getLangBasic().getUnsignedIntAdd(), builder.deref(var), arrAcc2)
 				);
 
 	
@@ -1111,10 +1111,10 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v9), 0));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v9), 0)));"
 			   "}; "
 			   "for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v10), 0)));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v10), 0))));"
 				"};"
 			  "}", toString(*ir));
 
@@ -1153,11 +1153,11 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v11 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v11), 0)); "
-					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v11), 0)));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v11), 0))); "
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v11), 0))));"
 				"}; "
 				"for(int<4> v12 = 91 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, int.add(v4, rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v12), 0)));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v12), 0))));"
 				"};"
 			  "}", toString(*ir));
 }

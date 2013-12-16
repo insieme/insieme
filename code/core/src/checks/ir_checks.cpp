@@ -38,7 +38,7 @@
 
 #include <algorithm>
 #include "insieme/utils/container_utils.h"
-
+#include "insieme/core/annotations/source_location.h"
 
 namespace insieme {
 namespace core {
@@ -102,6 +102,14 @@ std::ostream& Message::printTo(std::ostream& out) const {
 		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
 			out << *cur.first << ":" << cur.second;
 		});
+	}
+
+	// source location
+	auto origin = getOrigin();
+	if (origin.isValid()) {
+		if (auto loc = annotations::getLocation(origin)) {
+			out << " - " << *loc;
+		}
 	}
 
 	// .. and conclude with the message.

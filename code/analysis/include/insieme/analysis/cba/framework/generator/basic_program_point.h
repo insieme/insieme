@@ -44,9 +44,13 @@
 
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
+#include "insieme/analysis/cba/analysis/jobs.h"
+#include "insieme/analysis/cba/analysis/thread_groups.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+
+#include "insieme/utils/int_type.h"
 
 namespace insieme {
 namespace analysis {
@@ -66,6 +70,7 @@ namespace cba {
 
 	template<
 		typename InSetIDType,			// the type of the in-set handled by this constraint generator
+		typename TmpSetIDType,			// the type of the tmp-set handled by this constraint generator (temporal results within call expressions and others)
 		typename OutSetIDType, 			// the type of the out-set handled by this constraint generator
 		typename Derived, 				// the derived constraint generator type
 		typename Context,
@@ -79,14 +84,15 @@ namespace cba {
 
 		// the sets to be used for in/out states
 		const InSetIDType& Ain;
+		const TmpSetIDType& Atmp;
 		const OutSetIDType& Aout;
 
 		CBA& cba;
 
 	public:
 
-		BasicInOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout)
-			: super(cba), Ain(Ain), Aout(Aout), cba(cba) {}
+		BasicInOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const TmpSetIDType& Atmp, const OutSetIDType& Aout)
+			: super(cba), Ain(Ain), Atmp(Atmp), Aout(Aout), cba(cba) {}
 
 	protected:
 
@@ -143,37 +149,44 @@ namespace cba {
 					Constraints& constraints
 				) const {
 
-			if (ac != bc) {
-				auto pre = cba.getSet(pred, bc.callContext.back());
-				auto A = cba.getSet(a, al, ac, params...);
-				auto B = cba.getSet(b, bl, bc, params...);
-				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
-			} else {
-				auto A = cba.getSet(a, al, ac, params...);
-				auto B = cba.getSet(b, bl, bc, params...);
-				constraints.add(subsetIf(value, set, A, B));
-			}
+			// simple version (no check of contexts)
+			auto A = cba.getSet(a, al, ac, params...);
+			auto B = cba.getSet(b, bl, bc, params...);
+			constraints.add(subsetIf(value, set, A, B));
+
+//			if (ac != bc) {
+//				auto pre = cba.getSet(pred, bc.callContext.back());
+//				auto A = cba.getSet(a, al, ac, params...);
+//				auto B = cba.getSet(b, bl, bc, params...);
+//				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
+//			} else {
+//				auto A = cba.getSet(a, al, ac, params...);
+//				auto B = cba.getSet(b, bl, bc, params...);
+//				constraints.add(subsetIf(value, set, A, B));
+//			}
 		}
+
 	};
 
 
 	template<
 		typename InSetIDType,
+		typename TmpSetIDType,
 		typename OutSetIDType,
 		typename Derived,
 		typename Context,
 		typename ... ExtraParams
 	>
-	class BasicInConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Derived, Context, ExtraParams...> {
+	class BasicInConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, TmpSetIDType, OutSetIDType, Derived, Context, ExtraParams...> {
 
-		typedef BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Derived, Context, ExtraParams...> super;
+		typedef BasicInOutConstraintGenerator<InSetIDType, TmpSetIDType, OutSetIDType, Derived, Context, ExtraParams...> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicInConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout)
-			: super(cba, Ain, Aout), cba(cba) {}
+		BasicInConstraintGenerator(CBA& cba, const InSetIDType& Ain, const TmpSetIDType& Atmp, const OutSetIDType& Aout)
+			: super(cba, Ain, Atmp, Aout), cba(cba) {}
 
 		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callee& callee, const ExtraParams& ... args, Constraints& constraints) {
 
@@ -244,6 +257,26 @@ namespace cba {
 
 				// it is one => no change in context
 				this->connectSets(this->Ain, bind, ctxt, this->Ain, call, ctxt, args..., constraints);
+
+			} else if (ctxt.isEmptyCallContext()) {
+
+				// if the call context is empty, we are probably in the root of a thread
+				if (ctxt.isEmptyThreadContext()) return;	// if context is empty, we are not in a thread!
+
+				// get thread call context
+				const auto& spawnID = ctxt.threadContext.front();
+				const auto& spwanStmt = cba.getStmt(spawnID.getSpawnLabel());
+				const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+
+				assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
+					<< "Not yet supporting nested threads!\n";
+
+				// connect to spawn location (but we have to guess the thread context)
+				// TODO: this should actually be Atmp ...
+				this->connectSets(this->Ain, spwanStmt, spawnCtxt, this->Ain, call, ctxt, args..., constraints);
+
+
+//				assert_not_implemented() << "Return from thread not supported yet!";
 
 			} else {
 
@@ -469,23 +502,282 @@ namespace cba {
 		}
 	};
 
+
+	namespace detail {
+
+		// -- merge constraint (for merging parallel control flows) ---------
+
+		template<
+			typename Context,
+			typename ThreadOutAnalysisType,
+			typename ThreadGroupValue,
+			typename Lattice,
+			typename ... ExtraParams
+		>
+		class ParallelMergeConstraint : public Constraint {
+
+			typedef typename Lattice::value_type value_type;
+			typedef typename Lattice::less_op_type less_op;
+
+			typedef typename all_meet_assign_op_type<ThreadOutAnalysisType,analysis_config<Context>>::type all_meet_assign_op_type;
+			typedef typename one_meet_assign_op_type<ThreadOutAnalysisType,analysis_config<Context>>::type one_meet_assign_op_type;
+
+			CBA& cba;
+			const ThreadOutAnalysisType& out;						// the type of analysis / values to be aggregated from the exit node of the threads
+			const TypedValueID<ThreadGroupValue> thread_group;
+			const TypedValueID<Lattice> in_state;
+			const TypedValueID<Lattice> out_state;
+
+			const std::tuple<ExtraParams...> params;
+
+			// the killed thread states to be merged in (only if thread_group points to a single thread)
+			mutable vector<TypedValueID<Lattice>> thread_out_states;
+			mutable vector<ValueID> dependencies;
+
+		public:
+
+			ParallelMergeConstraint(
+					CBA& cba,
+					const ThreadOutAnalysisType& out,
+					const TypedValueID<ThreadGroupValue>& thread_group,
+					const TypedValueID<Lattice>& in_state,
+					const TypedValueID<Lattice>& out_state,
+					const ExtraParams& ... params)
+				: Constraint(toVector<ValueID>(thread_group, in_state), toVector<ValueID>(out_state), true, true),
+				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(std::make_tuple(params...)) {}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				const static less_op less;
+
+				// get reference to current value
+				auto& value = ass[out_state];
+
+				// compute new value
+				auto updated = getUpdatedValue(ass);
+
+				// check whether something has changed
+				if (less(value,updated) && less(updated,value)) return Constraint::Unchanged;
+
+				// check whether new value is proper subset
+				auto res = (less(value, updated) ? Constraint::Incremented : Constraint::Altered);
+
+				// update value
+				value = updated;
+
+				// return change-summary
+				return res;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+				const static less_op less;
+				return less(getUpdatedValue(ass), ass[out_state]);
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+
+				// print merged in thread dependencies
+				for(const auto& cur : thread_out_states) {
+					out << cur << " -> " << out_state << "[label=\"" << *this << "\"]\n";
+				}
+
+				// and the default dependencies
+				return
+					out << thread_group << " -> " << this->out_state << "[label=\"" << *this << "\"]\n"
+						<< in_state << " -> " << this->out_state << "[label=\"" << *this << "\"]\n";
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+
+				// print dynamic dependencies
+				updateDynamicDependencies(ass);
+				for(const auto& cur : dependencies) {
+					out << cur << " -> " << out_state << "[label=\"depends\"]\n";
+				}
+
+				// and the default dependencies
+				return
+					out << thread_group << " -> " << this->out_state << "[label=\"merges\"" << ((thread_out_states.empty())?" style=dotted":"") << "]\n"
+						<< in_state << " -> " << this->out_state << "[label=\"merges\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "if " << thread_group << " is unique merging killed set of group and " << in_state << " into " << out_state;
+			}
+
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+
+				// create result set
+				std::vector<ValueID> res;
+
+				// thread groups and in-state values are always required
+				res.push_back(thread_group);
+				res.push_back(in_state);
+
+				// update thread out state list and thereby all dynamic dependencies
+				updateDynamicDependencies(ass);
+				for(auto cur : dependencies) {
+					res.push_back(cur);
+				}
+
+				// done
+				return res;
+			}
+
+		private:
+
+			bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// TODO: this is a prototype implementation
+				//	  Required:
+				//			- cleanup
+				//	  Done:
+				//			- move this to base class
+
+
+				// clear lists
+				thread_out_states.clear();
+				vector<ValueID> newDependencies;
+
+				// get set of merged threads
+				const set<ThreadGroup<Context>>& groups = ass[thread_group];
+
+				// if there is not exactly one thread => no states to merge (TODO: maybe not, we can still compute the intersection of all thread groups)
+				if (groups.size() != 1u) {
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// get merged group
+				const ThreadGroup<Context>& group = *groups.begin();
+
+				// get spawning point of threads
+				auto spawnPoint = group.getAddress().template as<CallExprAddress>();
+
+				// get potential list of jobs to be started at spawn point
+				auto jobValue = cba.getSet(Jobs, spawnPoint[0], group.getContext());
+				newDependencies.push_back(jobValue);
+				const set<Job<Context>>& jobs = ass[jobValue];
+
+				// if there is more than 1 candidate => we are done (TODO: maybe not, we can still compute the intersection of jobs)
+				assert_le(jobs.size(), 1u) << "Only direct dependency supported so far!";
+				if (jobs.size() != 1u) {
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// obtain body of job
+				const Job<Context>& job = *jobs.begin();
+				const JobExprAddress& jobExpr = job.getAddress();
+				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
+
+				// get set containing list of bodies
+				auto C_body = cba.getSet(C, jobExpr->getDefaultExpr(), job.getContext());
+
+				// get list of body functions
+				newDependencies.push_back(C_body);
+				const std::set<Callable<Context>>& bodies = ass[C_body];
+				assert_le(bodies.size(), 1u) << "Only direct dependency supported so far!";
+				if (bodies.size() != 1u) {
+					auto res = (newDependencies != dependencies);
+					dependencies = newDependencies;
+					return res;
+				}
+
+				// get the body of the job
+				auto body = bodies.begin()->getBody();
+
+				// get state at end of the body
+				const Context& spawnContext = group.getContext();
+
+				// TODO: consider possibility of multiple threads
+				typedef typename Context::thread_id thread_id;
+
+				auto threadContext = spawnContext.threadContext;
+				threadContext >>= thread_id(cba.getLabel(spawnPoint), spawnContext.callContext);
+				auto innerContext = Context(typename Context::call_context(), threadContext);		// call context in thread is default one again
+
+				auto out_set = getValueID(out, utils::int_type<0>(), params, body, innerContext);
+				thread_out_states.push_back(out_set);
+				newDependencies.push_back(out_set);
+
+				auto res = (newDependencies != dependencies);
+				dependencies = newDependencies;
+				return res;
+			}
+
+			value_type getUpdatedValue(const Assignment& ass) const {
+				static const all_meet_assign_op_type all_meet_assign;
+				static const one_meet_assign_op_type one_meet_assign;
+
+
+				value_type res = ass[in_state];		// all in-values are always included
+
+				// if there is no thread-out-state known, we are done
+				if (thread_out_states.empty()) return res;
+
+				// combine thread_out_states
+
+				// merge in effects of thread-out-states if there are any
+				value_type merged;
+				for(const auto& cur : thread_out_states) {
+					const value_type& out = ass[cur];
+
+					// merge in effects
+					one_meet_assign(merged, out);
+				}
+
+				// combine the all- and one-path effects
+				all_meet_assign(res, merged);
+
+				// done
+				return res;
+			}
+
+		private:
+
+			template<int i, typename ValueType, typename Tuple, typename ... Args>
+			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
+			getValueID(const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) const {
+				return getValueID(type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
+			}
+
+			template<typename ValueType, typename Tuple, typename ... Args>
+			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
+			getValueID(const ValueType& type, const utils::int_type<sizeof...(ExtraParams)>& c, const Tuple& t, const Args& ... args) const {
+				return cba.getSet(type, args...);
+			}
+
+		};
+
+
+		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename DataValue, typename ... ExtraParams>
+		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const TypedValueID<DataValue>& in_state, const TypedValueID<DataValue>& out_state, const ExtraParams& ... params) {
+			return std::make_shared<ParallelMergeConstraint<Context,ThreadOutAnalysisType,TGValue,DataValue,ExtraParams...>>(cba,out,threadGroup,in_state,out_state, params...);
+		}
+
+	}
+
+
 	template<
 		typename InSetIDType,
+		typename TmpSetIDType,
 		typename OutSetIDType,
-		typename Collector,
+		typename Derived,
 		typename Context,
 		typename ... ExtraParams
 	>
-	class BasicOutConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context, ExtraParams...> {
+	class BasicOutConstraintGenerator : public BasicInOutConstraintGenerator<InSetIDType, TmpSetIDType, OutSetIDType, Derived, Context, ExtraParams...> {
 
-		typedef BasicInOutConstraintGenerator<InSetIDType, OutSetIDType, Collector, Context, ExtraParams...> super;
+		typedef BasicInOutConstraintGenerator<InSetIDType, TmpSetIDType, OutSetIDType, Derived, Context, ExtraParams...> super;
 
 		CBA& cba;
 
 	public:
 
-		BasicOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const OutSetIDType& Aout)
-			: super(cba, Ain, Aout), cba(cba) {}
+		BasicOutConstraintGenerator(CBA& cba, const InSetIDType& Ain, const TmpSetIDType& Atmp, const OutSetIDType& Aout)
+			: super(cba, Ain, Atmp, Aout), cba(cba) {}
 
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
@@ -509,13 +801,28 @@ namespace cba {
 			// if target is fixed => no condition on constraint edge
 			if (targets.size() == 1u) {
 
-//				// special case - call is a merge call
-//				auto& basic = call->getNodeManager().getLangBasic();
-//				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
-//					// handle this merge operation in an extra function
-//					processMergeCall(call, ctxt, params..., constraints);
-//					return;
-//				}
+				// special case - call is a merge call
+				auto& basic = call->getNodeManager().getLangBasic();
+				if (core::analysis::isCallOf(call.as<CallExprPtr>(), basic.getMerge())) {
+
+					// In this case we have to:
+					//		- compute the set of merged thread groups
+					//		- if there is only one (100% save to assume it is this group) we can
+					//		  merge the killed definitions at the end of the thread group with the killed definitions of the in-set
+					//		- otherwise we can not be sure => no operation
+
+					// get involved sets
+					auto A_tmp = cba.getSet(this->Atmp, call, ctxt, params...);
+					auto A_out = cba.getSet(this->Aout, call, ctxt, params...);
+
+					auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+
+					// add constraint
+					constraints.add(detail::parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
+
+					// done
+					return;
+				}
 
 				// skip handling of literals
 				if (targets[0].isLiteral()) {
@@ -548,16 +855,6 @@ namespace cba {
 				// just connect out of body with out of call if function fits
 				this->connectStateSetsIf(cur, F_fun, this->Aout, l_body, innerCtxt, this->Aout, l_call, ctxt, params..., constraints);
 			}
-
-		}
-
-		void processMergeCall(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
-
-			// in a merge call the new state is the merge of the state from the sequential branch and the merged in parallel thread
-
-
-
-			//
 
 		}
 
@@ -663,6 +960,92 @@ namespace cba {
 
 	};
 
+
+	template<
+		typename TmpValueType,
+		typename OutValueType,
+		typename Context,
+		typename ... ExtraParams
+	>
+	class BasicTmpConstraintGenerator : public ConstraintGenerator {
+
+		const TmpValueType& Atmp;
+		const OutValueType& Aout;
+
+	public:
+
+		BasicTmpConstraintGenerator(CBA& cba, const TmpValueType& Atmp, const OutValueType& Aout)
+			: Atmp(Atmp), Aout(Aout) {}
+
+		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+			// nothing to do here
+
+			const auto& data = cba.getValueParameters<Label,Context,ExtraParams...>(value);
+			Label label = std::get<1>(data);
+			const auto& call = cba.getStmt(label).as<CallExprAddress>();
+
+			// obtain properly typed value ID instance
+			auto A_tmp = getValueID(cba, Atmp, utils::int_type<2>(), data, call);
+			assert_eq(value, A_tmp) << "Queried a value set of invalid type!";
+
+			// create constraints
+			for(const auto& cur : call) {
+				auto A_out = getValueID(cba, Aout, utils::int_type<2>(), data, cur);
+				constraints.add(subset(A_out, A_tmp));
+			}
+
+			// and the function
+			auto A_fun = getValueID(cba, Aout, utils::int_type<2>(), data, call->getFunctionExpr());
+			constraints.add(subset(A_fun, A_tmp));
+
+		}
+
+		/**
+		 * Produces a human-readable representation of the value represented by the given value ID.
+		 */
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+
+			auto& data = cba.getValueParameters<int,Context,ExtraParams...>(value);
+			int label = std::get<1>(data);
+			const core::NodeAddress& node = cba.getStmt(label);
+
+			out << value << " = " << getAnalysisName(std::get<0>(data)) <<
+					"[l" << label << " = " << node->getNodeType() << " : "
+						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : ";
+
+			// print remaining set parameters (including context)
+			printParams(out, utils::int_type<2>(), data);
+
+			// done
+			out << "]";
+		}
+
+	private:
+
+		template<int i, typename ValueType, typename Tuple, typename ... Args>
+		sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
+		getValueID(CBA& cba, const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) {
+			return getValueID(cba, type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
+		}
+
+		template<typename ValueType, typename Tuple, typename ... Args>
+		sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
+		getValueID(CBA& cba, const ValueType& type, const utils::int_type<sizeof...(ExtraParams)+3>& c, const Tuple& t, const Args& ... args) {
+			return cba.getSet(type, args...);
+		}
+
+		template<int i, typename Tuple>
+		void printParams(std::ostream& out, const utils::int_type<i>& c, const Tuple& t) const {
+			out << std::get<i>(t) << ",";
+			printParams(out, utils::int_type<i+1>(), t);
+		}
+
+		template<typename Tuple>
+		void printParams(std::ostream& out, const utils::int_type<sizeof...(ExtraParams)+2>& c, const Tuple& t) const {
+			out << std::get<sizeof...(ExtraParams)+2>(t);
+		}
+
+	};
 
 
 } // end namespace cba

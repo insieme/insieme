@@ -40,6 +40,7 @@
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
+#include "insieme/analysis/cba/framework/generator/mutable_data.h"
 
 #include "insieme/analysis/cba/framework/entities/data_index.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
@@ -52,6 +53,7 @@
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/functions.h"
 #include "insieme/analysis/cba/analysis/call_context.h"
+#include "insieme/analysis/cba/analysis/jobs.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
@@ -126,9 +128,9 @@ namespace cba {
 					out << cur.second << " -> " << res << label;
 				});
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				for(const auto& cur : elements) {
-					used.insert(cur.second);
+					used.push_back(cur.second);
 				}
 			}
 		};
@@ -167,8 +169,8 @@ namespace cba {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << in << " -> " << res << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
-				used.insert(in);
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(in);
 			}
 		};
 
@@ -202,7 +204,7 @@ namespace cba {
 		public:
 
 			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
-				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res)),
+				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res), true),
 				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -231,14 +233,10 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
 			}
 
-			virtual bool hasAssignmentDependentDependencies() const {
-				return true;
-			}
-
-			virtual std::set<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::set<ValueID> res;
-				res.insert(ref);
-				if (isReferenced(ass)) res.insert(loc_value);
+			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+				std::vector<ValueID> res;
+				res.push_back(ref);
+				if (isReferenced(ass)) res.push_back(loc_value);
 				return res;
 			}
 
@@ -535,6 +533,75 @@ namespace cba {
 
 							}
 
+							// it might also be the case that the bind is called as the body of a job (most jobs have bind-bodies)
+							if (ctxt.isEmptyCallContext()) {
+
+								// if the call context is empty, we are probably in the root of a thread
+								if (ctxt.isEmptyThreadContext()) continue;	// if context is empty, we are not in a thread!
+
+								// get thread call context
+								const auto& spawnID = ctxt.threadContext.front();
+								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprAddress>();
+								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+
+								assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
+									<< "Not yet supporting nested threads!\n";
+
+								// get list of jobs - TODO: do this once at a cached place
+								vector<Job<Context>> jobs;
+								visitDepthFirstOnce(cba.getRoot(), [&](const JobExprAddress& job) {
+									for(const auto& jobCtxt : cba.getValidContexts<Context>()) {
+										jobs.push_back(Job<Context>(job, jobCtxt));
+									}
+								});
+
+								// this is a two-stage requirement
+								//		- the job must be correct
+								//		- the job must have the current bind as its body
+								//		- in this case we can forward the captured value
+
+								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+
+								// for each job ...
+								for(const auto& job : jobs) {
+
+									auto job_body = cba.getSet(C, job.getAddress().getDefaultExpr(), job.getContext());
+
+									// ... and for each potential bind context
+									for(const auto& bindCtxt : cba.getValidContexts<Context>()) {
+
+										// get value of argument within bind context
+										auto A_bind_arg = cba.getSet(A, l_arg, bindCtxt);
+
+										// if job and bind is fitting => connect bound value with variable
+										constraints.add(subsetIf(job, J_spawned_job, Callable<Context>(bind, bindCtxt), job_body, A_bind_arg, a_var));
+									}
+
+
+								}
+
+							}
+
+//							const typename Context::thread_id& threadID = ctxt.threadContext[0];
+//							auto l_spawn_call = threadID.getSpawnLabel();
+//							const auto& spawnCtxt = threadID.getSpawnContext();
+//
+//							// check whether current flow is not within the top-level thread
+//							if (l_spawn_call == 0) continue;	// in this case we do not have to consider this option
+
+							// What we have to do here:
+							// 		- for all potential thread contexts the spawn could be executed in
+							//		- get the jobs started at the spawn points
+							//		- get the bodies of those jobs sing the callables-analysis
+							//		- check whether any of those callables is the current bind - if so, take the context and transfer the variable value
+
+//							Label l_job_label = cba.getLabel(cba.getStmt(l_spawn_call).as<CallExprAddress>()[0]);
+//							auto J_spawned_jobs = cba.getSet(Jobs, l_job_label, spawnCtxt);
+
+							// for all jobs in all contexts ... or also just for all jobs in J_spawned_job!!
+							//		=> find a nice way to implement this option
+
+
 							// done
 							continue;
 						}
@@ -641,7 +708,7 @@ namespace cba {
 						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
 							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getLocationDataSet(Sin, l_call, ctxt, loc, A);
+							auto S_in = this->cba.getSet(Sin<ValueAnalysisType>(), l_call, ctxt, loc);
 							constraints.add(read(loc, R_trg, S_in, A_call));
 						}
 					}

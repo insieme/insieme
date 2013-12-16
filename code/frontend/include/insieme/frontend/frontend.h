@@ -326,6 +326,13 @@ namespace frontend {
 		ConversionJob(const vector<path>& files, const vector<path>& includeDirs = vector<path>())
 			: ConversionSetup(includeDirs), files(files) {
 			assert(!files.empty());
+
+            // The user defined headers path is extended with c source files directories
+            auto inc = ConversionSetup::getIncludeDirectories();
+            for(auto cur : files) {
+                inc.push_back(cur.parent_path());
+            }
+            ConversionSetup::setIncludeDirectories(inc);
 		}
 
 		/**
@@ -393,7 +400,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		tu::IRTranslationUnit toTranslationUnit(core::NodeManager& manager) const;
+		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
 
 	};
 

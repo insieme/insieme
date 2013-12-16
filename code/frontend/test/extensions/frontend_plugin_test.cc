@@ -48,7 +48,6 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -57,7 +56,6 @@
 
 using namespace insieme;
 
-bool declVisited = false;
 bool typeVisited = false;
 bool exprVisited = false;
 bool stmtVisited = false;
@@ -163,11 +161,6 @@ public:
         return irStmt;
 	}
 
-	virtual bool Visit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
-        declVisited = true;
-        return false;
-	}
-
 	virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog) {
         progVisited = true;
         return prog;
@@ -206,7 +199,6 @@ TEST(ClangStage, Conversion) {
     insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
 
-	EXPECT_FALSE(declVisited);
 	EXPECT_FALSE(typeVisited);
 	EXPECT_FALSE(stmtVisited);
 	EXPECT_FALSE(exprVisited);
@@ -220,8 +212,6 @@ TEST(ClangStage, Conversion) {
 	EXPECT_TRUE(postTypeVisited);
 	EXPECT_TRUE(postStmtVisited);
 	EXPECT_TRUE(postExprVisited);
-	EXPECT_TRUE(declVisited);
-
 }
 
 /**
@@ -343,39 +333,37 @@ TEST(PragmaHandlerTest, PragmaTest) {
 	int typesPre, typesPost;
 
 struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
-	virtual bool Visit    (const clang::Decl* decl, frontend::conversion::Converter& convFact) {
-		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
-		//	std::cout << " ########## FUNcT ################## " << std::endl;
-		//	decl->dump();
-		//	std::cout << " ################################### " << std::endl;
-			funcsPre++;
-		}
-		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
-			//std::cout << " ########## VAR ################## " << std::endl;
-			//decl->dump();
-			//std::cout << " ################################### " << std::endl;
-			varsPre++;
-		}
-		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
-	//		std::cout << " ########## TYPE ################## " << std::endl;
-	//		decl->dump();
-	//		std::cout << decl->getDeclKindName() <<std::endl;
-	//		std::cout << " ################################### " << std::endl;
-			typesPre++;
-		}
-		return false;
-	}
-	virtual void PostVisit(const clang::Decl* decl, frontend::conversion::Converter& convFact) {
-		if (llvm::dyn_cast<clang::FunctionDecl>(decl)){
-			funsPost++;
-		}
-		else if (llvm::dyn_cast<clang::VarDecl>(decl)){
-			varsPost++;
-		}
-		else if (llvm::dyn_cast<clang::TypeDecl>(decl)){
-			typesPost++;
-		}
-	}
+
+    virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, frontend::conversion::Converter& convFact) {
+        funcsPre++;
+        return nullptr;
+    }
+
+	virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, frontend::conversion::Converter& convFact) {
+        varsPre++;
+        return nullptr;
+    }
+
+    virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, frontend::conversion::Converter& convFact) {
+        typesPre++;
+        return nullptr;
+    }
+
+    virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
+        funsPost++;
+        return nullptr;
+    }
+
+	virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
+        varsPost++;
+        return nullptr;
+    }
+
+    virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, frontend::conversion::Converter& convFact) {
+        typesPost++;
+        return nullptr;
+    }
+
 };
 
 

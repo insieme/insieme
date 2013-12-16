@@ -64,22 +64,22 @@ namespace cba {
 		typedef DefaultContext Context;
 
 		Context c;
-		EXPECT_EQ("[[0,0],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 
 		c.callContext <<= 1;
-		EXPECT_EQ("[[0,1],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[0,1],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 
 		c.callContext = c.callContext << 2;
-		EXPECT_EQ("[[1,2],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[1,2],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 
 		c.callContext = c.callContext << 3;
-		EXPECT_EQ("[[2,3],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[2,3],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 
 		c.callContext = c.callContext >> 4;
-		EXPECT_EQ("[[4,2],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[4,2],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 
 		c.callContext >>= 5;
-		EXPECT_EQ("[[5,4],[<0,[],0>,<0,[],0>]]", toString(c));
+		EXPECT_EQ("[[5,4],[<0,[0,0],0>,<0,[0,0],0>]]", toString(c));
 	}
 
 
@@ -211,7 +211,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
-				"	auto y = (int z)->unit {};"
+				"	auto y = (int<4> z)->unit {};"
 				"	y(14);"
 				"	y(16);"
 				"}"
@@ -235,8 +235,8 @@ namespace cba {
 
 //		std::cout << *varY << " = " << analysis.getValuesOf(varY) << "\n";
 //		std::cout << *initY << " = " << analysis.getValuesOf(initY) << "\n";
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(initY, C)));
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(varY, c)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(initY, C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(varY, c)));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
@@ -259,7 +259,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
-				"	auto y = (int z)->int<4> { return 10; };"
+				"	auto y = (int<4> z)->int<4> { return 10; };"
 				"	int<4> z = y(x);"
 				"}"
 		).as<CompoundStmtPtr>();
@@ -1231,12 +1231,12 @@ namespace cba {
 		const auto& C = cba::C;
 
 		// check functions
-		EXPECT_EQ("{((Lambda@0-6-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{((Lambda@0-10-3-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()[1], C)));
-		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[],0>,<0,[],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{((Lambda@0-6-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-10-3-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[10].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{((Lambda@0-1-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{((Lambda@0-0-1-2-0-1),[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[12].as<CallExprAddress>()[1], C)));
 
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
@@ -1567,7 +1567,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		auto contexts = toString(analysis.getValidContexts());
+		auto contexts = toString(analysis.getValidContexts<DefaultContext>());
 
 		EXPECT_PRED2(containsSubString, contexts, "[0,0]");
 		EXPECT_PRED2(containsSubString, contexts, "[1,1]");
@@ -1611,7 +1611,7 @@ namespace cba {
 
 		CBA analysis(code);
 
-		auto contexts = toString(analysis.getValidContexts());
+		auto contexts = toString(analysis.getValidContexts<DefaultContext>());
 
 
 		EXPECT_PRED2(   containsSubString, contexts, "[0,0]");
@@ -1682,10 +1682,10 @@ namespace cba {
 		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[3].as<ExpressionAddress>(), A));
 
 		// but if the accuracy is increased by using a longer call-string it should work
-		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A, Context<3,0,0>())));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A, Context<3,0>())));
 
 		// yet still not for larger recursive functions
-		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0,0>()));
+		EXPECT_PRED2(less_op, Formula(), analysis.getValuesOf(code[4].as<ExpressionAddress>(), A, Context<3,0>()));
 
 //		createDotDump(analysis);
 	}
@@ -1766,11 +1766,11 @@ namespace cba {
 		CBA analysis(code);
 
 		EXPECT_EQ(
-				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[],0>,<0,[],0>]],#)}",
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,1],[<0,[0,0],0>,<0,[0,0],0>]],#)}",
 				toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), R))
 		);
 		EXPECT_EQ(
-				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[],0>,<0,[],0>]],#)}",
+				"{(0-0-1-2-0-1-2-0-0-1-2-0-1-2-0-1,[[0,2],[<0,[0,0],0>,<0,[0,0],0>]],#)}",
 				toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), R))
 		);
 

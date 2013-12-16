@@ -732,7 +732,8 @@ namespace backend {
 			addInfo(ptr, res);
 
 			auto& nameMgr = converter.getNameManager();
-			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+//			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+			core::ClassMetaInfo info = core::getMetaInfo(ptr);
 			auto& funMgr = converter.getFunctionManager();
 
 			// add constructors
@@ -1476,11 +1477,6 @@ namespace backend {
 
 				// combine them and updated within type info map (not being owned by the pointer)
 				newInfo->declaration = declaration;
-
-				// also take over the actual type definitions
-				newInfo->lValueType = curInfo->lValueType;
-				newInfo->rValueType = curInfo->rValueType;
-				newInfo->externalType = curInfo->externalType;
 
 				// remove old information
 				delete curInfo;

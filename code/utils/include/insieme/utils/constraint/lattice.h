@@ -167,11 +167,14 @@ namespace constraint {
 	template<typename E>
 	struct iset : public std::set<E>, public utils::Printable {
 		bool universal;
-		iset() : universal(true) {}
+		iset(bool universal = true) : universal(universal) {}
 		std::ostream& printTo(std::ostream& out) const {
 			if (universal) return out << "{-all-}";
 			return out << static_cast<const std::set<E>&>(*this);
 		}
+
+		static iset<E> all()   { return iset<E>(true); }
+		static iset<E> empty() { return iset<E>(false); }
 	};
 
 

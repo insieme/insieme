@@ -11,8 +11,8 @@ OPT_FLAGS="-mtune=native -O3"
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-wget -nc ftp://ftp.linux.student.kuleuven.be/pub/people/skimo/isl/isl-$VERSION.tar.bz2
-
+#wget -nc ftp://ftp.linux.student.kuleuven.be/pub/people/skimo/isl/isl-$VERSION.tar.bz2
+wget -nc http://isl.gforge.inria.fr/isl-$VERSION.tar.bz2
 RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
@@ -23,7 +23,7 @@ cd isl-$VERSION
 
 echo "#### Building isl library ####"
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+#export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 CC=$CC CXX=$CXX CFLAGS=$OPT_FLAGS LDFLAGS=$OPT_FLAGS ./configure --prefix=$PREFIX/isl-$VERSION \
 	--with-gmp=system \

@@ -113,6 +113,13 @@ namespace constraint {
 			for (const Constraint* cur : edges[head]) {
 				const Constraint& cc = *cur;
 
+				// update dynamic dependencies if necessary
+				if (cc.hasDynamicDependencies() && cc.updatedDynamicDependencies(res)) {
+					for(const auto& cur : cc.getUsedInputs(res)) {
+						edges[cur].insert(&cc);
+					}
+				}
+
 				// trigger update
 				auto change = cc.update(res);
 
@@ -159,7 +166,7 @@ namespace constraint {
 		vector<ValueID> worklist;
 
 		// 1. start by resolving requested sets
-		resolveConstraints(sets, worklist);
+		resolveConstraints(std::vector<ValueID>(sets.begin(), sets.end()), worklist);
 
 		// 2. solve constraints
 		while(!worklist.empty()) {
@@ -170,6 +177,13 @@ namespace constraint {
 			// process outgoing edges
 			for (const Constraint* cur : edges[head]) {
 				const Constraint& cc = *cur;
+
+				// update dynamic dependencies if necessary
+				if (cc.hasDynamicDependencies() && cc.updatedDynamicDependencies(ass)) {
+					for(const auto& cur : cc.getUsedInputs(ass)) {
+						edges[cur].insert(&cc);
+					}
+				}
 
 				// add and resolve list of used filters
 				resolveConstraints(cc, worklist);
@@ -218,6 +232,11 @@ namespace constraint {
 			return false;
 		}
 
+		// assert that all constraints with dynamic dependencies have unresolved inputs
+		if (cur.hasDynamicDependencies()) {
+			return true;
+		}
+
 		// check dependencies
 		bool hasUnresolvedInputs = any(cur.getInputs(), [&](const ValueID& cur) { return resolved.find(cur) == resolved.end(); });
 		if (!hasUnresolvedInputs) resolvedConstraints.insert(&cur);
@@ -233,14 +252,14 @@ namespace constraint {
 		resolveConstraints(cur.getUsedInputs(ass), worklist);
 	}
 
-	void LazySolver::resolveConstraints(const std::set<ValueID>& sets, vector<ValueID>& worklist) {
+	void LazySolver::resolveConstraints(const std::vector<ValueID>& values, vector<ValueID>& worklist) {
 
 		// if there is nothing to do => done
-		if (sets.empty()) return;
+		if (values.empty()) return;
 
 		// filter out sets already resolved
 		std::set<ValueID> missing;
-		for(auto cur : sets) {
+		for(auto cur : values) {
 			if (!contains(resolved, cur)) missing.insert(cur);
 		}
 
@@ -269,6 +288,11 @@ namespace constraint {
 
 			// collect missing inputs
 			if (cur->hasAssignmentDependentDependencies()) {
+				// update dynamic dependencies if required
+				if (cur->hasDynamicDependencies()) {
+					cur->updatedDynamicDependencies(ass);
+				}
+
 				// we need to obtain the used inputs
 				for (auto set : cur->getUsedInputs(ass)) {
 					if (!contains(resolved, set)) {
@@ -286,7 +310,7 @@ namespace constraint {
 		}
 
 		// resolve next generation
-		resolveConstraints(nextGeneration, worklist);
+		resolveConstraints(std::vector<ValueID>(nextGeneration.begin(), nextGeneration.end()), worklist);
 	}
 
 

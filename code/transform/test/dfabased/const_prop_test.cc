@@ -98,7 +98,7 @@ namespace transform {
 			"		int<4> b = a+2; "
 			"		a = b+a;"
 			"	}"
-			"	c = a;"
+			"	c = *a;"
 			"	*c; "
 			"}"
 		);
@@ -113,7 +113,7 @@ namespace transform {
 					"int<4> v3 = int.add(10, 2); "
 					"ref.assign(v1, 22);"
 				"} else {}; "
-				"ref.assign(v2, v1); "
+				"ref.assign(v2, ref.deref(v1)); "
 				"ref.deref(v2);"
 			"}", toString(*ret));
 
@@ -127,7 +127,7 @@ namespace transform {
 					"int<4> v3 = 12; "
 					"ref.assign(v1, 22);"
 				"}; "
-				"ref.assign(v2, v1); "
+				"ref.assign(v2, 22); "
 				"22;"
 			"}", toString(*ret));
 

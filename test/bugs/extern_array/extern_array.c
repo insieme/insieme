@@ -17,5 +17,8 @@ int main()
 	printf("%d\n", extern_array[10]);
 	printf("%d\n", extern_array2[10]);
 	
+	return extern_arrayStruct[10].das;
+	printf("%d\n", extern_arrayStruct[10].das);
+	
 	return extern_array[10];
 }

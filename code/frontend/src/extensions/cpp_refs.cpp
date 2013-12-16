@@ -66,22 +66,22 @@ namespace {
    }
 }  // empty namespace
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-                                                                                                                
-insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){ 
-                                                                                                               
-	// only cpp                                                                                                 
-	if (!tu.isCXX()) return tu;                                                                                 
-                                                                                                                
-	memberFunctionReplacement_t memberMap;                                                                      
-                                                                                                                
-	// for each of the functions                                                                                
-	for (auto& pair : tu.getFunctions()){                                                                       
-		core::ExpressionPtr lit = pair.first;                                                                   
-		core::LambdaExprPtr func = pair.second;                                                                 
-		core::LambdaExprPtr oldFunc = pair.second;                                                              
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
+
+	// only cpp
+	if (!tu.isCXX()) return tu;
+
+	memberFunctionReplacement_t memberMap;
+
+	// for each of the functions
+	for (auto& pair : tu.getFunctions()){
+		core::ExpressionPtr lit = pair.first;
+		core::LambdaExprPtr func = pair.second;
+		core::LambdaExprPtr oldFunc = pair.second;
 		core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
 		assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
@@ -99,7 +99,7 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 		};
 
 		// if return type is a cpp ref
-		if (core::analysis::isCppRef(retType) || core::analysis::isConstCppRef(retType)){
+		if (core::analysis::isAnyCppRef(retType)){
 
 			// wrap all returns with a cpp ref conversion
 			auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
@@ -128,7 +128,7 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 							expr = builder.callExpr(retType, ext.getRefIRToCpp(), expr);
 						}
 					}
-					
+
 					return builder.returnStmt(expr);
 				}
 				return node;
@@ -147,11 +147,8 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 					core::ExpressionPtr expr = retStmt->getReturnExpr();
 
 					// we are returning a non cpp ref, uwrap it
-					if (core::analysis::isConstCppRef(expr->getType())){
-						expr = builder.callExpr(retType, ext.getRefConstCppToIR(), expr);
-					}
-					else if (core::analysis::isCppRef(expr->getType())){
-						expr = builder.callExpr(retType, ext.getRefCppToIR(), expr);
+					if (core::analysis::isAnyCppRef(expr->getType())){
+						expr = core::analysis::unwrapCppRef(expr);
 					}
 
 					// are we returning by value? deref
@@ -185,9 +182,10 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 	// now fix the meta info of the classes
 	for (auto pair : memberMap){
 		// meta info is attached to retrieve the full type
-		core::TypePtr objTy = lookupTypeDetails(pair.first, tu);
-		core::IRBuilder builder(objTy->getNodeManager());
+		//core::TypePtr objTy = lookupTypeDetails(pair.first, tu);
+		core::TypePtr objTy = pair.first;
 		assert(objTy);
+		core::IRBuilder builder(objTy->getNodeManager());
 
 		assert(core::hasMetaInfo(objTy));
 		memberReplace_t replacements = pair.second;
