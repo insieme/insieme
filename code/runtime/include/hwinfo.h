@@ -105,12 +105,16 @@ uint32 irt_get_num_threads_per_core() {
 	if(__irt_g_cached_threads_per_core_count == 0)
 		_irt_setup_hardware_info();
 
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
+
 	return __irt_g_cached_threads_per_core_count;
 }
 
 uint32 irt_get_num_cores_per_socket() {
 	if(__irt_g_cached_cores_per_socket_count == 0)
 		_irt_setup_hardware_info();
+
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
 
 	return __irt_g_cached_cores_per_socket_count;
 }
@@ -119,12 +123,16 @@ uint32 irt_get_num_sockets() {
 	if(__irt_g_cached_sockets_count == 0)
 		_irt_setup_hardware_info();
 
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
+
 	return __irt_g_cached_sockets_count;
 }
 
 uint32 irt_get_num_numa_nodes() {
 	if(__irt_g_cached_numa_nodes_count == 0)
 		_irt_setup_hardware_info();
+
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
 
 	return __irt_g_cached_numa_nodes_count;
 }
