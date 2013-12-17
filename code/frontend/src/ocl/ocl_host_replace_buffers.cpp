@@ -170,8 +170,12 @@ void BufferReplacer::collectInformation() {
 			// extract type form size argument
 			ExpressionPtr size;
 			TypePtr type;
-			bool success = extractSizeFromSizeof(createBuffer->getVarBinding("size").getValue().as<ExpressionPtr>(), size, type, false);
-			assert(success && "cannot extract size and type from size paramater fo clCreateBuffer");
+#ifdef	NDEBUG
+			extractSizeFromSizeof(createBuffer->getVarBinding("size").getValue().as<ExpressionPtr>(), size, type, false);
+#else
+			assert(extractSizeFromSizeof(createBuffer->getVarBinding("size").getValue().as<ExpressionPtr>(), size, type, false)
+					&& "cannot extract size and type from size paramater fo clCreateBuffer");
+#endif
 			ExpressionPtr hostPtr = createBuffer->getVarBinding("host_ptr").getValue().as<ExpressionPtr>();
 
 			// get the buffer expression
@@ -187,8 +191,11 @@ void BufferReplacer::collectInformation() {
 }
 
 void BufferReplacer::generateReplacements() {
-/*	for_each(clMemMeta, [&](std::pair<core::ExpressionPtr, ClMemMetaInfo> meta) {
-		std::cout << meta->first << " "  << meta->second.type << std::endl;
+/*	for_each(clMemMeta, [&](std::pair<core::ExpressionPtr, ClMemMetaInfo>& meta) {
+		std::cout << meta.first << " "  << meta.second.type << std::endl;
+
+		// local variable case
+//		if()
 	});
 */
 }
