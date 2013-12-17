@@ -45,10 +45,32 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+
+// enums corresponding to the flags in clCreateBuffer
+enum CreateBufferFlags {
+		CL_MEM_READ_WRITE = 0,
+		CL_MEM_WRITE_ONLY,
+		CL_MEM_READ_ONLY,
+		CL_MEM_USE_HOST_PTR,
+		CL_MEM_ALLOC_HOST_PTR,
+		CL_MEM_COPY_HOST_PTR,
+		size
+};
 }
 
+struct ClMemMetaInfo {
+	ClMemMetaInfo() : size(), type(), flags(), hostPtr() {}
+	ClMemMetaInfo(core::ExpressionPtr& size, core::TypePtr& type, std::set<enum CreateBufferFlags> flags, core::ExpressionPtr& hostPtr)
+		: size(size), type(type), flags(flags), hostPtr(hostPtr) {}
+
+	core::ExpressionPtr size;
+	core::TypePtr type;
+	std::set<enum CreateBufferFlags> flags;
+	core::ExpressionPtr hostPtr;
+};
+
 // definitions
-typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::TypePtr> ExprTyMap;
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, ClMemMetaInfo > ClMemMetaMap;
 
 /*
  * Replaces cl_mem/icl_buffer variables with INSPIRE arrays
@@ -66,9 +88,12 @@ public:
 	BufferReplacer(core::ProgramPtr& prog);
 private:
 //	BufferMapper bufferMapper;
-	ExprTyMap clMemTypes;
+	ClMemMetaMap clMemMeta;
 	core::ExpressionMap clMemReplacements;
 	core::ProgramPtr& prog;
+
+	void collectInformation();
+	void generateReplacements();
 };
 } //namespace ocl
 } //namespace frontend
