@@ -141,6 +141,11 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 	return ptr;
 }
 
+BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
+	collectInformation();
+	generateReplacements();
+}
+
 void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
 
@@ -171,7 +176,7 @@ void BufferReplacer::collectInformation() {
 
 			// get the buffer expression
 			ExpressionPtr lhs = createBuffer->getVarBinding("buffer").getValue().as<ExpressionPtr>();
-			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
+//			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
 			// add gathered information to clMemMetaMap
 			this->clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, hostPtr);
@@ -181,9 +186,11 @@ void BufferReplacer::collectInformation() {
 
 }
 
-BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
-	collectInformation();
-	generateReplacements();
+void BufferReplacer::generateReplacements() {
+/*	for_each(clMemMeta, [&](std::pair<core::ExpressionPtr, ClMemMetaInfo> meta) {
+		std::cout << meta->first << " "  << meta->second.type << std::endl;
+	});
+*/
 }
 
 } //namespace ocl

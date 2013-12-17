@@ -45,6 +45,7 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+}
 
 // enums corresponding to the flags in clCreateBuffer
 enum CreateBufferFlags {
@@ -56,7 +57,6 @@ enum CreateBufferFlags {
 		CL_MEM_COPY_HOST_PTR,
 		size
 };
-}
 
 struct ClMemMetaInfo {
 	ClMemMetaInfo() : size(), type(), flags(), hostPtr() {}
