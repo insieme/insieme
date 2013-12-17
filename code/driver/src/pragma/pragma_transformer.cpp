@@ -39,9 +39,9 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include "insieme/annotations/transform.h"
-#include "insieme/annotations/c/location.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transformations.h"
@@ -54,15 +54,12 @@ using namespace insieme;
 
 namespace {
 
-utils::SourceLocation getStartLocation(const core::NodePtr& node) {
+core::annotations::Location getStartLocation(const core::NodePtr& node) {
 
-	typedef std::shared_ptr<annotations::c::CLocAnnotation> LocationPtr;
-
-	if (LocationPtr loc = node->getAnnotation( annotations::c::CLocAnnotation::KEY ) ) {
-		return loc->getStartLoc();
+	if (core::annotations::hasAttachedLocation(node)) {
+		return core::annotations::getAttachedLocation(node);
 	}
-	return utils::SourceLocation();
-
+	return core::annotations::Location::getShared();
 }
 
 } // end anonymous namespace
