@@ -549,7 +549,7 @@ namespace types {
 		}
 
 		// use private node manager for computing results
-		NodeManager internalManager;
+		NodeManager internalManager(manager);
 
 		// ---------------------------------- Variable Renaming -----------------------------------------
 		//

@@ -52,16 +52,7 @@ void irt_scheduling_init_worker(irt_worker* self) {
 }
 
 void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
-	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	if(irt_cwb_size(queue) >= 1 && target->sched_data.wake_target) {
-		irt_worker *t = target->sched_data.wake_target;
-		target->sched_data.wake_target = NULL;
-		irt_cwb_push_front(&t->sched_data.queue, wi);
-		irt_signal_worker(t);
-	} else {
-		irt_cwb_push_front(queue, wi);
-		if(target->state == IRT_WORKER_STATE_SLEEPING) irt_signal_worker(target);
-	}
+	irt_scheduling_assign_wi(target, wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
@@ -87,17 +78,27 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 }
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
-	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	irt_signal_worker(target);
-	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH/2 && target->sched_data.wake_target) {
-		irt_worker *t = target->sched_data.wake_target;
-		target->sched_data.wake_target = NULL;
-		irt_cwb_push_front(&t->sched_data.queue, wi);
-		irt_signal_worker(t);
-	} else {
-		irt_cwb_push_front(queue, wi);
+	if(irt_cwb_push_front(&target->sched_data.queue, wi)) {
+		// pushing to target worked, everything is fine
 		irt_signal_worker(target);
+		return;
 	}
+	// target full, try wake target
+	target = target->sched_data.wake_target;
+	if(target) {
+		if(irt_cwb_push_front(&target->sched_data.queue, wi)) {
+			// pushed to wake target, everything is fine
+			irt_signal_worker(target);
+			return;
+		}
+	}
+	// target and wake target failed, try first self and then random until it works
+	irt_worker* self = irt_worker_get_current();
+	target = self;
+	while(!irt_cwb_push_front(&target->sched_data.queue, wi)) {
+		target = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
+	}
+	irt_signal_worker(target);
 }
 
 bool irt_scheduling_worker_sleep(irt_worker *self) {

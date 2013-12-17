@@ -351,7 +351,7 @@ namespace backend {
 			auto lambda = core::transform::instantiate(manager, fun.as<core::LambdaExprPtr>(), map);
 
 			// check result
-			assert(lambda && lambda != fun && "Lambda-Instantiation failed!");
+			assert_true(lambda && lambda != fun) << "Lambda-Instantiation failed!" << "\nType: " << *lambda->getType(); // << "\nLambda: " << *lambda;
 			assert(!core::analysis::isGeneric(lambda->getType()) && "Still generic!");
 
 			// produce new call expression

@@ -917,6 +917,9 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replace
 
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool limitScope) {
 
+	// check whether there is something to do
+	if (*toReplace == *replacement) return mgr.get(root);
+
 	if (limitScope && toReplace->getNodeType() == NT_Variable) {
 		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement);
 	}
@@ -926,6 +929,9 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toRepla
 }
 
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope) {
+	// check whether there is something to do
+	if (*toReplace == *replacement) return mgr.get(root);
+
 	if(limitScope) {
 		auto mapper = ::VariableReplacer(mgr, toReplace, replacement);
 		return applyReplacer(mgr, root, mapper);
@@ -1050,6 +1056,22 @@ ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const Expression
 
 	// handle call expressions externally
 	if (CallExprPtr call = newExpr.isa<CallExprPtr>()) {
+
+		// check old function / argument types have changed
+		if (CallExprPtr oldCall = oldExpr.isa<CallExprPtr>()) {
+
+			bool changed = call.size() != oldCall.size();		// check number of parameters
+			changed = changed || (oldCall->getFunctionExpr()->getType() != call->getFunctionExpr()->getType());
+
+			// check argument types
+			for(std::size_t i = 0; !changed && i < call.size(); i++) {
+				changed = !types::isSubTypeOf(call[i]->getType(), oldCall[i]->getType());
+			}
+
+			// if nothing has changed, consider new type to be accurate
+			if (!changed) return newExpr;
+		}
+
 		return defaultCallExprTypeRecovery(call);
 	}
 
