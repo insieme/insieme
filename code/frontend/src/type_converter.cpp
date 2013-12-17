@@ -52,8 +52,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
-#include "insieme/core/lang/complex_extension.h"
 
+#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
 
@@ -131,8 +131,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	// char types
 	case BuiltinType::Char_U:
 	case BuiltinType::UChar:		return gen.getUInt1();
-	case BuiltinType::Char16:		return gen.getWChar16();
-	case BuiltinType::Char32:		return gen.getWChar32();
+	case BuiltinType::Char16:		return gen.getWChar16(); //TODO c++11 specific builtin
+	case BuiltinType::Char32:		return gen.getWChar32(); //TODO c++11 specific builtin
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
 	case BuiltinType::WChar_S:		return gen.getWChar32();
@@ -158,7 +158,7 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::LongDouble:	return gen.getLongDouble();
 
 	// not supported types
-	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //gen.getAnyRef(); //FIXME how do we handle the std::nullptr_t??
+	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //TODO c++11 specific builtin type for nullptr literal
 	case BuiltinType::Overload:
 	case BuiltinType::Dependent:
 	default:
@@ -188,18 +188,19 @@ core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* buli
 // The IR representation for such array will be: vector<int<4>,404>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return convFact.convertType( arrTy->desugar().getTypePtr() );
+		return (retTy = convFact.convertType( arrTy->desugar().getTypePtr() ));
 
 	size_t arrSize = *arrTy->getSize().getRawData();
 	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
 	frontend_assert(elemTy) << "Conversion of array element type failed.\n";
 
-	core::TypePtr&& retTy = builder.vectorType(
+	 retTy = builder.vectorType(
 			elemTy, core::ConcreteIntTypeParam::get(mgr, arrSize)
 		);
-	LOG_TYPE_CONVERSION( arrTy, retTy );
 	return retTy;
 }
 
@@ -212,15 +213,16 @@ core::TypePtr Converter::TypeConverter::VisitConstantArrayType(const ConstantArr
 // The representation for such array will be: ref<array<int<4>,1>>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return convert( arrTy->desugar().getTypePtr() );
+		return (retTy = convert( arrTy->desugar().getTypePtr() ));
 
 	auto elemTy = convert( arrTy->getElementType().getTypePtr() );
 	frontend_assert(elemTy ) << "Conversion of array element type failed.\n";
 
-	auto retTy = builder.arrayType( elemTy );
-	LOG_TYPE_CONVERSION( arrTy, retTy );
+	retTy = builder.arrayType( elemTy );
 	return retTy;
 }
 
@@ -238,15 +240,16 @@ core::TypePtr Converter::TypeConverter::VisitIncompleteArrayType(const Incomplet
 // he representation for such array will be: array<int<4>,1>( expr() )
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return convert( arrTy->desugar().getTypePtr() );
+		return (retTy = convert( arrTy->desugar().getTypePtr() ));
 
 	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
 	frontend_assert(elemTy ) << "Conversion of array element type failed.\n";
 
-	core::TypePtr retTy = builder.arrayType( elemTy );
-	LOG_TYPE_CONVERSION( arrTy, retTy );
+	retTy = builder.arrayType( elemTy );
 	return retTy;
 }
 
