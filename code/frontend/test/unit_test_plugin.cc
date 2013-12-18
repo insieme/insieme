@@ -121,7 +121,9 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 			}
 		}
 
-		if(const clang::ComplexType* complexType = llvm::dyn_cast<clang::ComplexType>(type)) {
+		//if(const clang::ComplexType* complexType = llvm::dyn_cast<clang::ComplexType>(type)) {
+		if(llvm::isa<clang::ComplexType>(type)) {
+			//check if it is a IR complexType
 			EXPECT_TRUE(convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::ComplexExtension>().isComplexType(irType));
 		}
 	
@@ -137,6 +139,9 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 				TypePtr&& elemTy = convFact.convertType( constArrType->getElementType().getTypePtr() );
 				EXPECT_TRUE( *elemTy == *vecType.getElementType());
 
+				//checking size
+				size_t arrSize = *constArrType->getSize().getRawData();
+				EXPECT_EQ( toString(*vecType.getSize()),toString(arrSize));
 			} 
 
 			/*TODO how to get this clang type node?
@@ -156,6 +161,70 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 				TypePtr&& elemTy = convFact.convertType( varArrType->getElementType().getTypePtr() );
 				EXPECT_TRUE( *elemTy == *arrType.getElementType());
 			}
+		}
+
+		//if(const clang::FunctionType* funcType = llvm::dyn_cast<clang::FunctionType>(type)) {
+		if(llvm::isa<clang::FunctionType>(type)) {
+			//check isFunctionType
+			EXPECT_TRUE(irType.isa<FunctionTypePtr>());
+			auto funcTy = irType.as<FunctionTypePtr>();
+			
+			//check return type
+			auto retTy = funcTy.getReturnType();
+			if(retTy.isa<RefTypePtr>()) {
+				//check ref for vector/array irTypes
+				auto refTy = retTy.as<RefTypePtr>();
+				EXPECT_TRUE(refTy.getElementType().isa<VectorTypePtr>() || refTy.getElementType().isa<ArrayTypePtr>());
+
+				//TODO check for OCL/GCC vector Types --> shouldn't have ref
+				// this checks only if SIMDvectors are used without ref, probably not enough
+				EXPECT_FALSE(insieme::core::lang::isSIMDVector(irType));
+			}
+
+			if(const clang::FunctionProtoType* funcProtoType = llvm::dyn_cast<clang::FunctionProtoType>(type)) {
+				auto parameterTypes = funcTy.getParameterTypes();
+
+				//check variadic
+				if(funcProtoType->isVariadic()) {
+					auto varTy = parameterTypes.back();
+					//TODO add check if varTy is IR VarList
+
+					//check number of arguments --> Variadic arguments are represented as extra
+					//argument in IR!
+					EXPECT_EQ(funcProtoType->getNumArgs() + 1, parameterTypes.size());
+				} else {
+					//check number of arguments
+					EXPECT_EQ(funcProtoType->getNumArgs(), parameterTypes.size());
+				}
+
+
+				//check ref for vector/array irTypes of arguments
+				for(auto t : parameterTypes) {
+					if(retTy.isa<RefTypePtr>()) {
+						//check ref for vector/array irTypes
+						auto refTy = retTy.as<RefTypePtr>();
+						EXPECT_TRUE(refTy.getElementType().isa<VectorTypePtr>() || refTy.getElementType().isa<ArrayTypePtr>());
+		
+						
+						//TODO check for OCL/GCC vector Types --> shouldn't have ref
+						// this checks only if SIMDvectors are used without ref, probably not enough
+						EXPECT_FALSE(insieme::core::lang::isSIMDVector(irType));
+					} 
+				}
+
+				//check single "void" arg is removed
+				if(funcProtoType->getNumArgs() == 1 && funcProtoType->getArgType(0).getTypePtr()->isVoidType()) {
+					EXPECT_EQ(parameterTypes.size(), 0);
+				}
+
+				
+			}
+		}
+
+		//if(const clang::VectorType* vecType = llvm::dyn_cast<clang::VectorType>(type)) {
+		if(llvm::isa<clang::VectorType>(type)) {
+			//check if irType is a IR SIMDtype
+			EXPECT_TRUE(insieme::core::lang::isSIMDVector(irType));
 		}
 
 		return irType;
@@ -327,15 +396,40 @@ TEST(TypeConversion, ArrayType) {
 				double doubleArr[4+400];
 			}
 			{
+				//constant array (size 404)
+				int intAarr[404][4+400];
+				double doubleArr[404][4+400];
+			}
+			{
 				//constant array (size 1)
 				int intArr[] = {0};
 				double doubleArr[] = {0};
 			}
 			{
+				//constant array ([2][1])
+				int intArr[][1] = {{0},{0}};
+				double doubleArr[][1] = {{0},{0}};
+			}
+
+			{
 				//variable array
 				int x = 10;
 				int intArr[x + fun()];
 				double doubleArr[x + fun()];
+			}
+			
+			{
+				//variable array
+				int x = 10;
+				int intArr[1][x + fun()];
+				double doubleArr[1][x + fun()];
+			}
+			{
+				//variable array
+				int x = 10;
+				int intArr[x+fun()][x + fun()];
+				double doubleArr[x+fun()][x + fun()];
+
 			} 
 			return 0;
 		}
@@ -347,6 +441,63 @@ TEST(TypeConversion, ArrayType) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	std::cout << job.toIRTranslationUnit(mgr);
+	//std::cout << job.toIRTranslationUnit(mgr);
+}
 
+TEST(TypeConversion, FunctionType) {
+	fe::Source src(
+		R"(
+
+		void fun_v_() { }
+		void fun_v_v(void) { }
+		int fun_i_() { return 10; }
+		int fun_i_v(void) { return 10; }
+		int fun_i_i(int a) { return 10; }
+		int fun_i_ia(int a[]) { return 10; }
+		int fun_i_ip(int* a) { return 10; }
+		int fun_i_i_var(int a, ...) { return 10; }
+
+		int main() {
+			
+			return 0;
+		}
+			
+		)"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
+	//std::cout << job.toIRTranslationUnit(mgr);
+}
+
+TEST(TypeConversion, SIMDVectorType) {
+	fe::Source src(
+		R"(
+
+		int __attribute__((vector_size(4*sizeof(int)))) fun() { 
+			int __attribute__((vector_size(4*sizeof(int)))) vectorInt4;
+			return vectorInt4;
+		}
+
+		int __attribute__((vector_size(4*sizeof(int)))) fun1(int __attribute__((vector_size(4*sizeof(int)))) arg) { 
+			return arg;
+		}
+
+		int main() {
+			int __attribute__((vector_size(4*sizeof(int)))) vectorInt4;
+			fun();
+			fun1(vectorInt4);
+			return 0;
+		}
+			
+		)"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
+	std::cout << job.toIRTranslationUnit(mgr);
 }
