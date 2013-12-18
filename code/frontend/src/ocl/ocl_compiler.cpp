@@ -40,11 +40,11 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
@@ -893,7 +893,7 @@ public:
                 bool workGroupSizeDefined = false;
 
                 const string& cName = insieme::core::annotations::hasNameAttached(func) ? insieme::core::annotations::getAttachedName(func) : "";
-                auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
+                auto sourceLoc = core::annotations::getLocation(func);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
 
                 if(!funcAnnotation)
@@ -1154,8 +1154,7 @@ public:
                     if(!cName.empty())
                         insieme::core::annotations::attachName(newFunc,cName);
                     // put source location annotation to it if existent
-                    if(sourceLoc)
-                        newFunc->addAnnotation(sourceLoc);
+					if(sourceLoc) core::annotations::attachLocationGen(newFunc, sourceLoc.get());
                     // put the datarange annotation that was on the body before on the kernel function
                     if(datarange) {
 						//perform replacements of variables in pragma

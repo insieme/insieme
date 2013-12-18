@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -66,7 +66,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
-#include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "clang/Basic/FileManager.h"
@@ -84,19 +83,6 @@
 
 using namespace clang;
 using namespace insieme;
-
-namespace {
-
-// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
-annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
-	FileID&& fileId = sm.getMainFileID();
-	assert(!fileId.isInvalid() && "File is not valid!");
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	assert(fileEntry);
-	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
-};
-
-} // End empty namespace
 
 namespace insieme {
 namespace frontend {
