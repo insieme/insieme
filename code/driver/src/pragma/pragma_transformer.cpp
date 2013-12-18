@@ -67,7 +67,7 @@ namespace insieme {
 namespace driver {
 namespace pragma {
 
-core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
+core::ProgramPtr applyTransformations(const core::ProgramPtr& program) {
 	using namespace insieme::transform;
 
 	insieme::utils::map::PointerMap<insieme::core::NodePtr, insieme::core::NodePtr> replacements;

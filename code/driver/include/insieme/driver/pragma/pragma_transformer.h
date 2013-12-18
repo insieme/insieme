@@ -42,7 +42,7 @@ namespace insieme {
 namespace driver {
 namespace pragma {
 
-core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program);
+core::ProgramPtr applyTransformations(const core::ProgramPtr& program);
 
 } // end pragma namespace
 } // end driver namespace
