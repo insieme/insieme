@@ -57,8 +57,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/annotations/c/location.h"
-
 
 namespace fe = insieme::frontend;
 
@@ -67,11 +65,6 @@ namespace exprutils {
 using namespace insieme;
 
 //FIXME cleanup this namespace, document and find out if there is real usage
-
-/**
- * Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
- */
-annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc);
 
 /**
  * Returns a string of the text within the source range of the input stream

@@ -42,12 +42,12 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/unused.h"
 
-#include "insieme/annotations/c/location.h"
 #include "insieme/annotations/mpi/mpi_annotations.h"
 
 namespace insieme {
@@ -134,12 +134,12 @@ void attachMPIStmtPragma( const core::NodePtr& 				node,
 				);
 				throw MPIFrontendError();
 			}
-			assert (mpiCall.getParentNode()->hasAnnotation(annotations::c::CLocAnnotation::KEY) &&
+			assert (core::annotations::hasAttachedLocation(mpiCall.getParentNode()) &&
 				"MPI stmt not carrying location annotation"
 			);
 
 			LOG(DEBUG) << "@ Statement at location ["
-					   << *mpiCall.getParentNode()->getAnnotation(annotations::c::CLocAnnotation::KEY)
+					   << *core::annotations::getLocation(mpiCall.getParentNode())
 					   << "] has an MPI pragma attached: id = " << mpiPragma->id();
 
 			mpiCall.getParentNode()->addAnnotation(

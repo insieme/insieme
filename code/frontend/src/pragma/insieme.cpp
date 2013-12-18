@@ -42,11 +42,12 @@
 #include "insieme/annotations/info.h"
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
-#include "insieme/annotations/c/location.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/annotations/source_location.h"
 
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "clang/Basic/FileManager.h"
 
@@ -289,22 +290,6 @@ void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* 
     }
 }
 
-namespace {
-
-using namespace insieme::annotations;
-
-c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
-	clang::FileID&& fileId = sm.getFileID(loc);
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	return annotations::c::SourceLocation(
-			fileEntry->getName(), 
-			sm.getSpellingLineNumber(loc), 
-			sm.getSpellingColumnNumber(loc)
-		);
-};
-
-} // end anonymous namespace
-
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
 	std::string intLit = *val->get<std::string*>();
 	return insieme::utils::numeric_cast<unsigned>( intLit.c_str() );
@@ -360,13 +345,7 @@ void attach(const clang::SourceLocation& 	startLoc,
 	// we also attach information related to the current position of the statement in a way
 	// we are able to point back the user to the pragma location if for example the transformation
 	// failed to be applied for any reason
-	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = std::make_pair(startLoc, endLoc);
-
-	node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-			convertClangSrcLoc(fact.getSourceManager(), loc.first),
-			convertClangSrcLoc(fact.getSourceManager(), loc.second))
-	);
-
+	utils::attachLocationFromClang(node, fact.getSourceManager(), startLoc, endLoc);
 }
 
 void attach(const clang::SourceLocation& startLoc,

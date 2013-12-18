@@ -478,7 +478,7 @@ int main(int argc, char** argv) {
 			// Check for annotations on IR nodes relative to transformations which should be applied,
 			// and applies them.
 			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
-					[&]() { return insieme::driver::pragma::applyTransfomrations(program); } );
+					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
 
 			printIR(program, options);
 

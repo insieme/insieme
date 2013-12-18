@@ -53,7 +53,6 @@
 
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/annotations/c/location.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"

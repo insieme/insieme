@@ -161,6 +161,14 @@ namespace lang {
         */
         bool isComplexType(const insieme::core::ExpressionPtr& expr) const;
 
+		/**
+        * Check if the given type is a complex type 
+        * @param type the complex number struct type 
+        * @return boolean value
+        */
+        bool isComplexType(const insieme::core::TypePtr& expr) const;
+
+
         /**
         * Returns the inner type of a complex number
         * @param expr the complex number expression

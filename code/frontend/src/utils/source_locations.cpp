@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/core/ir_builder.h"
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
@@ -124,6 +125,34 @@ std::string location(clang::SourceLocation const& l, clang::SourceManager const&
 		}
 	}
 	return string("UNKNOWN FILE");
+}
+
+clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc) {
+	if (sm.isMacroArgExpansion(loc)) {
+		loc = sm.getExpansionLoc(loc);
+	}
+	return loc;
+}
+
+core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
+	// check file validity
+	FileID&& fileId = sm.getMainFileID();
+	assert(!fileId.isInvalid() && "File is not valid!");
+	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	assert(fileEntry);
+	// update macro locations, if required
+	start = getExpansionLoc(sm, start);
+	end = getExpansionLoc(sm, end);
+	// generate location object
+	core::IRBuilder builder(man);
+	return core::annotations::Location(builder.stringValue(fileEntry->getName()),
+		core::annotations::TextPosition(sm.getSpellingLineNumber(start), sm.getSpellingColumnNumber(start)),
+		core::annotations::TextPosition(sm.getSpellingLineNumber(end), sm.getSpellingColumnNumber(end)));
+}
+
+const core::NodePtr& attachLocationFromClang(const core::NodePtr& node, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
+	core::annotations::Location l = convertClangSrcLoc(node.getNodeManager(), sm, start, end);
+	return core::annotations::attachLocation(node, l);
 }
 
 } // End util namespace

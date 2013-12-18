@@ -41,13 +41,13 @@
 
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/annotations/c/location.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -92,24 +92,7 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 } // end std namespace
 
 namespace exprutils {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
-annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc) {
-
-	clang::SourceLocation cloc = loc;
-	if (sm.isMacroArgExpansion(cloc)) {
-		cloc = sm.getExpansionLoc(cloc);
-	}
-
-	clang::FileID&& fileId = sm.getFileID( sm.getSpellingLoc(cloc) );
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	assert(fileEntry && "File cannot be NULL");
-
-	return annotations::c::SourceLocation(fileEntry->getName(), sm.getExpansionLineNumber(cloc),
-			sm.getExpansionColumnNumber(cloc));
-}
-
+	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start) {
@@ -744,13 +727,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	if (needsMPIMarkerNode) {
 		auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
 
-		// add a marker node because multiple istances of the same MPI call must be distinct
+		// add a marker node because multiple instances of the same MPI call must be distinct
 		irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
-		irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-						convertClangSrcLoc(convFact.getSourceManager(), loc.first),
-						convertClangSrcLoc(convFact.getSourceManager(), loc.second))
-		);
+		// attach location
+		utils::attachLocationFromClang(irNode, convFact.getSourceManager(), loc.first, loc.second);
 	}
 
 	return irNode;

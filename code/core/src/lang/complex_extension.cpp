@@ -128,6 +128,21 @@ namespace lang {
             }
             return false;
         }
+       
+       /**
+        * Check if the given type is a complex type 
+        * @param type the complex number struct type 
+        * @return boolean value
+        */
+        bool ComplexExtension::isComplexType(const insieme::core::TypePtr& type) const {
+            if(type.isa<insieme::core::StructTypePtr>())
+                return true;
+            if(type.isa<insieme::core::RefTypePtr>()) {
+                if(type.as<insieme::core::RefTypePtr>().getElementType().isa<insieme::core::StructTypePtr>())
+                    return true;
+            }
+            return false;
+        }
 
         /**
         * Returns the inner type of a complex number

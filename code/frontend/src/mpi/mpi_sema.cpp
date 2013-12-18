@@ -43,7 +43,6 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/annotations/mpi/mpi_annotations.h"
-#include "insieme/annotations/c/location.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/file_rewriter.h"
@@ -95,18 +94,19 @@ core::ProgramPtr handleMPICalls( const core::ProgramPtr& program, bool tag) {
 		LOG(INFO) << "Non annotated calls: " << std::distance(twin.first, twin.second);
 		utils::Rewriter::CodeModificationList modifications;
 
-		size_t id=0;
-		for_each(twin.first, twin.second, [&] (const CallExprAddress& curr) { 
-				assert(curr.getParentNode()->hasAnnotation(annotations::c::CLocAnnotation::KEY));
-				const utils::SourceLocation& loc = 
-					curr.getParentNode()->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
+		// TODO: needs to be adapted to new source locations
+		//size_t id=0;
+		//for_each(twin.first, twin.second, [&](const CallExprAddress& curr) {
+				//assert(core::annotations::hasAttachedLocation(curr.getParentNode()));
+				//const utils::SourceLocation& loc = 
+				//	curr.getParentNode()->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
 
-				utils::SourceLocation annLoc( loc.getFileName(), loc.getLine(), 0);
+				//utils::SourceLocation annLoc( loc.getFileName(), loc.getLine(), 0);
 
-				std::ostringstream ss;
-				ss << "#pragma mpi id(" << ++id << ") dep()";
-				modifications.insert( utils::Rewriter::CodeModification( annLoc, ss.str() ) );
-			});
+				//std::ostringstream ss;
+				//ss << "#pragma mpi id(" << ++id << ") dep()";
+				//modifications.insert( utils::Rewriter::CodeModification( annLoc, ss.str() ) );
+		//	});
 
 		utils::Rewriter::writeBack(modifications);
 
