@@ -429,12 +429,13 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 //					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
-
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( tagType, retTy );
 	// test whether we can get a definiton
 	auto def = findDefinition(tagType);
 	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		core::TypePtr retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
 		if (!tagType->getDecl()->getNameAsString().empty()) {
 			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
 		}
@@ -522,7 +523,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	}
 
 	// build a struct or union IR type
-	core::TypePtr retTy = handleTagType(def, structElements);
+	retTy = handleTagType(def, structElements);
 
 	// Adding the name of the C struct as annotation
 	if (!recDecl->getNameAsString().empty()) {
@@ -538,13 +539,13 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 // struct S, or via a qualified name, e.g., N::M::type, or both
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitElaboratedType(const ElaboratedType* elabType) {
-
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( elabType, retTy );
 	// elabType->dump();
 	//elabType->desugar().getTypePtr()->dump();
 	//std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 
-	VLOG(2) << "elabtype " << elabType << "\n";
-	return convert( elabType->getNamedType().getTypePtr() );
+	return (retTy = convert( elabType->getNamedType().getTypePtr() ));
 }
 
 

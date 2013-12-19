@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -72,8 +72,7 @@ void reportRecord( std::ostream& 					ss,
 {
 	std::vector<std::string> list;
 	std::transform(errs.begin(), errs.end(), back_inserter(list),
-			[](const ParserStack::Error& pe) { return pe.expected; }
-		);
+			[](const ParserStack::Error& pe) { return pe.expected; });
 
 	ss << boost::join(list, " | ");
 	ss << std::endl;
@@ -166,7 +165,9 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
     } else {
         for(auto m : mmap) {
             for(unsigned i=0; i<m.second.size(); i++) {
-                if(!m.second[i]->isExpr()) {
+                if(m.second[i]->isString()) {
+                    stringMap[m.first] = (m.second[i]->toStr());
+				} else if(!m.second[i]->isExpr()) {
                     varList[m.first].push_back(getVar(m.second[i], fact));
                 } else {
                     exprList[m.first].push_back(getExpr(m.second[i], fact));
