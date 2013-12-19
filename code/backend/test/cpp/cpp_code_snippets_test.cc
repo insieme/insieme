@@ -702,12 +702,12 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "A var_1(10);");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(4), y(var_2) {");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t y) : x(4), y(y) {");
 		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
 
 		EXPECT_PRED2(notContainsSubString, code, "(*this).x = 4;");
@@ -759,13 +759,13 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2);");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(var_2) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3) : A(var_2), y(var_3) {");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t var_3) : A(x), y(var_3) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -814,13 +814,13 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2, 3);");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2), y(var_3) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3, int32_t var_4) : A(var_2, var_3 + var_4), z(var_4) {");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y(y) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t var_4) : A(x, y + var_4), z(var_4) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -862,12 +862,12 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "A var_1(1, 2);");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2) {");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

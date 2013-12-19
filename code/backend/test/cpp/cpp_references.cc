@@ -100,12 +100,12 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "void f(int32_t& var");
-		EXPECT_PRED2(containsSubString, code, "void g(int32_t* var");
+		EXPECT_PRED2(containsSubString, code, "void f(int32_t& x");
+		EXPECT_PRED2(containsSubString, code, "void g(int32_t* x");
 		EXPECT_PRED2(containsSubString, code, "int32_t a = 12;");
 		EXPECT_PRED2(containsSubString, code, "int32_t& b = a;");
 		EXPECT_PRED2(containsSubString, code, "int32_t* c = &b;");
@@ -172,7 +172,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
