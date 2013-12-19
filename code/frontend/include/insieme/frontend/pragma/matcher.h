@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -165,6 +165,7 @@ public:
 
 	std::string toStr() const;
 	bool isExpr() const;
+	bool isString() const { return is<std::string*>(); }
 	~ValueUnion();
 };
 
@@ -190,6 +191,7 @@ class MatchObject {
         typedef std::vector<core::ExpressionPtr> ExprList;
         std::map<std::string, VarList> varList;
         std::map<std::string, ExprList> exprList;
+        std::map<std::string, std::string> stringMap;
         core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
         core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
     public:
@@ -200,6 +202,10 @@ class MatchObject {
         const ExprList& getExprs(const std::string& s) {
             return exprList[s];
         }
+        const std::string& getString(const std::string& k) {
+            return stringMap[k];
+        }
+
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
 };
 

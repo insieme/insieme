@@ -1043,6 +1043,8 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		}
 	}
 
+	pragma::attachPragma(res,decl,*this);
+
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);
     }

@@ -54,7 +54,9 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/pattern/ir_pattern.h"
+//#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/simd_vector.h"
@@ -64,16 +66,40 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
+#include "insieme/frontend/pragma/insieme.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
+using namespace fe::pragma;
 
-	
 
+class UnitTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugin {
+	std::map<NodePtr, std::string> symbolicTests;
+	std::map<NodePtr, std::string> resolvedTests;
+
+public:
+	UnitTestPlugin() {
+		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
+		auto unitTestSymbolicPragma = insieme::frontend::extensions::PragmaHandler("unittest", "symbolic", tok::string_literal["expected"] >> tok::eod,
+			[&](MatchObject mo, NodePtr node) {
+				symbolicTests[node] = mo.getString("expected");
+				return node;
+			});
+		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
+		auto unitTestResolvedPragma = insieme::frontend::extensions::PragmaHandler("unittest", "resolved", tok::string_literal["expected"] >> tok::eod,
+			[&](MatchObject mo, NodePtr node) {
+				resolvedTests[node] = mo.getString("expected");
+				return node;
+			});
+
+		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(unitTestSymbolicPragma));
+		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(unitTestResolvedPragma));
+	}
+
+private:
 
 	insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType, insieme::frontend::conversion::Converter& convFact) {
 		EXPECT_TRUE(irType);
@@ -135,12 +161,13 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 				EXPECT_TRUE(irType.isa<VectorTypePtr>());
 
 				//checking elementType
-				VectorTypePtr vecType = irType.as<VectorTypePtr>();
-				TypePtr&& elemTy = convFact.convertType( constArrType->getElementType().getTypePtr() );
-				EXPECT_TRUE( *elemTy == *vecType.getElementType());
+				//VectorTypePtr vecType = irType.as<VectorTypePtr>();
+				//TypePtr&& elemTy = convFact.convertType( constArrType->getElementType().getTypePtr() );
+				//EXPECT_TRUE( *elemTy == *vecType.getElementType());
 
 				//checking size
 				size_t arrSize = *constArrType->getSize().getRawData();
+				VectorTypePtr vecType = irType.as<VectorTypePtr>();
 				EXPECT_EQ( toString(*vecType.getSize()),toString(arrSize));
 			} 
 
@@ -157,9 +184,9 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 				EXPECT_TRUE(irType.isa<ArrayTypePtr>());
 				
 				//checking elementType
-				ArrayTypePtr arrType = irType.as<ArrayTypePtr>();
-				TypePtr&& elemTy = convFact.convertType( varArrType->getElementType().getTypePtr() );
-				EXPECT_TRUE( *elemTy == *arrType.getElementType());
+				//ArrayTypePtr arrType = irType.as<ArrayTypePtr>();
+				//TypePtr&& elemTy = convFact.convertType( varArrType->getElementType().getTypePtr() );
+				//EXPECT_TRUE( *elemTy == *arrType.getElementType());
 			}
 		}
 
@@ -227,14 +254,88 @@ class UnitTestBuiltinTypes : public insieme::frontend::extensions::FrontendPlugi
 			EXPECT_TRUE(insieme::core::lang::isSIMDVector(irType));
 		}
 
+		//if(llvm::isa<clang::TypedefType>(type)) { }
+		
+		if(const clang::PointerType* pointerType = llvm::dyn_cast<clang::PointerType>(type)) { 
+			if(pointerType->isVoidPointerType()) {
+				//check void* to be anyRef
+				EXPECT_TRUE(convFact.getIRBuilder().getLangBasic().isAnyRef(irType));
+			} else if(pointerType->isFunctionPointerType()) {
+			//function pointers stay as function type
+				EXPECT_TRUE(irType.isa<FunctionTypePtr>());
+			} else {
+				//ref<array<T>> for normal pointers
+				EXPECT_TRUE(irType.isa<RefTypePtr>());
+				auto refType = irType.as<RefTypePtr>(); 
+				EXPECT_TRUE(refType->getElementType().isa<ArrayTypePtr>());
+			}
+		}
+
+		//TODO
+		//if(llvm::isa<clang::TagType>(type)) { }
+		//if(llvm::isa<clang::TagType>(type)) {
+		if(const clang::RecordType* recType = llvm::dyn_cast<clang::RecordType>(type)) { 
+			//we expect only a symbol with the name of the RecordType
+			EXPECT_TRUE(irType.isa<GenericTypePtr>()) << "ir type: " << irType << " clang type" << type;
+
+			//TODO how to check details?
+			//EXPECT_TRUE(convFact.lookupTypeDetails(irType).isa<StructTypePtr>()) << "ir type: " << irType << " clang type" << type;
+		}
+		
+		if(llvm::isa<clang::EnumType>(type)) {
+			const auto& ext= convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::EnumExtension>();
+			EXPECT_TRUE(ext.isEnumType(irType)) << "ir type: " << irType << " clang type" << type;
+			//TODO how to check the details?
+		}
+		
 		return irType;
+	}
+
+	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+		auto print = [&](const NodePtr& node) {
+			return toString(
+				printer::PrettyPrinter(analysis::normalize(node), 
+					printer::PrettyPrinter::PRINT_SINGLE_LINE | printer::PrettyPrinter::NO_LET_BINDINGS
+				)
+			);
+		};
+
+		for(auto st : symbolicTests) {
+			auto nodeToTest = st.first;
+			auto expectedIRStr = st.second;
+			if(nodeToTest.isa<GenericTypePtr>()) {
+				EXPECT_EQ(expectedIRStr, '\"'+print(tu[nodeToTest.as<GenericTypePtr>()])+'\"');
+			} else if(nodeToTest.isa<StatementPtr>()) {
+				EXPECT_EQ(expectedIRStr, '\"'+print(nodeToTest.as<StatementPtr>())+'\"');
+			} else {
+				EXPECT_TRUE(false) << "something went wrong";
+			}
+		}
+		
+		for(auto rt : resolvedTests) {
+			auto nodeToTest = rt.first;
+			auto expectedIRStr = rt.second;
+			if(nodeToTest.isa<GenericTypePtr>()) {
+				auto symbolic = nodeToTest.as<GenericTypePtr>();
+				auto resolved = tu.resolve(symbolic);
+				EXPECT_EQ(expectedIRStr, '\"'+print(resolved)+'\"');
+			} else if(nodeToTest.isa<StatementPtr>()) {
+				auto symbolic = nodeToTest.as<StatementPtr>();
+				auto resolved = tu.resolve(symbolic);
+
+				EXPECT_EQ(expectedIRStr, '\"'+print(resolved)+'\"');
+			} else {
+				EXPECT_TRUE(false) << "something went wrong";
+			}
+		}
+		return tu;
 	}
 };
 
 TEST(TypeConversion, C99_BuiltinTypes) {
 	fe::Source src(
 		R"(
-			#include <wchar.h>
+			#include <stddef.h> //needed for wchar_t
 			_Bool b;
 			
 			unsigned char uc;
@@ -264,8 +365,13 @@ TEST(TypeConversion, C99_BuiltinTypes) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.setStandard(fe::ConversionSetup::C99);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+	
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, CPP03_BuiltinTypes) {
@@ -305,8 +411,12 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.setStandard(fe::ConversionSetup::Cxx03);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, CPP11_BuiltinTypes) {
@@ -349,8 +459,12 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.setStandard(fe::ConversionSetup::Cxx11);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, ComplexType) {
@@ -379,8 +493,12 @@ TEST(TypeConversion, ComplexType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+	
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, ArrayType) {
@@ -440,8 +558,12 @@ TEST(TypeConversion, ArrayType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+	
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, FunctionType) {
@@ -468,8 +590,12 @@ TEST(TypeConversion, FunctionType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	//std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
 }
 
 TEST(TypeConversion, SIMDVectorType) {
@@ -498,6 +624,181 @@ TEST(TypeConversion, SIMDVectorType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestBuiltinTypes>();
-	std::cout << job.toIRTranslationUnit(mgr);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
+}
+
+TEST(TypeConversion, PointerType) {
+	fe::Source src(
+		R"(
+
+		int* fun(int* i) { return i; }
+
+		int main() {
+			void* vp;
+			int* ip;
+
+			void** vpp;
+			int** ipp;
+
+			void (*fp)();
+		}
+			
+		)"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	//std::cout << tu << std::endl;
+}
+
+TEST(TypeConversion, StructType) {
+	fe::Source src(
+		R"(
+
+		#pragma test "struct X <member:int<4>>"
+		struct X {
+			int member;
+		};
+
+		int main() {
+			struct X x;
+			x.member = 10;
+		}
+			
+		)"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+	//std::cout << tu << std::endl;
+
+	/*
+	auto pragmafilter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+
+	auto resolve = [&](const core::NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
+
+	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
+
+		if(tp.isStatement()) {
+            StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+		} else {
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl() ))->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
+			}
+		}
+
+	}
+	*/
+}
+
+TEST(TypeConversion, RecStructType) {
+	fe::Source src(
+		R"delim(
+
+		struct X;
+		struct Y;
+
+		#pragma unittest symbolic "struct X <py:ref<array<Y,1>>>"
+		#pragma unittest resolved "rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}"
+		struct X {
+			struct Y* py;
+		};
+
+		#pragma unittest symbolic "struct Y <px:ref<array<X,1>>>"
+		#pragma unittest resolved "rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}"
+		struct Y {
+			struct X* px;
+		};
+
+		int main() {
+			{
+				#pragma unittest symbolic "decl ref<X> v0 =  var(struct{py:=ref.reinterpret(ref.null, type<array<Y,1>>)})"
+				#pragma unittest resolved "decl ref<rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}> v0 =  var(struct{py:=ref.reinterpret(ref.null, type<array<rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>},1>>)})"
+				struct X x = {0};
+			}
+			{
+				struct Y y = {0};
+			}
+		}
+			
+		)delim"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+	std::cout << tu << std::endl;
+
+
+	auto print = [&](const NodePtr& node) {
+			return toString(
+					printer::PrettyPrinter(analysis::normalize(node), 
+					printer::PrettyPrinter::PRINT_SINGLE_LINE | printer::PrettyPrinter::NO_LET_BINDINGS
+			)
+		);
+	};
+
+	//with symbols
+	auto X = builder.genericType("X");
+	EXPECT_EQ("struct X <py:ref<array<Y,1>>>", print(tu[X]));
+
+	auto Y = builder.genericType("Y");
+	EXPECT_EQ("struct Y <px:ref<array<X,1>>>", print(tu[Y]));
+
+	//with resolved symbols
+	auto resolvedX = tu.resolve(X);
+	EXPECT_EQ("rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}", print(resolvedX));
+
+	auto resolvedY = tu.resolve(Y);
+	EXPECT_EQ("rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}", print(resolvedY));
+}
+
+TEST(TypeConversion, EnumType) {
+	fe::Source src(
+		R"(
+
+		enum ENUM { ENUM_CONST_0=0, ENUM_CONST_1=1 };
+
+		int main() {
+			enum ENUM e;
+			e = ENUM_CONST_0;
+			e = ENUM_CONST_1;
+		}
+			
+		)"
+	);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+	job.registerFrontendPlugin<UnitTestPlugin>();
+
+	//start conversion
+	auto tu = job.toIRTranslationUnit(mgr);
+
+//	std::cout << tu << std::endl;
 }
