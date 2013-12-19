@@ -70,8 +70,8 @@ struct ClMemMetaInfo {
 };
 
 // definitions
-typedef insieme::utils::map::PointerMap<core::ExpressionPtr, ClMemMetaInfo > ClMemMetaMap;
-
+typedef insieme::utils::map::PointerMap<core::ExpressionAddress, ClMemMetaInfo > ClMemMetaMap;
+typedef insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> ExpressionAddressMap;
 /*
  * Replaces cl_mem/icl_buffer variables with INSPIRE arrays
  */
@@ -89,7 +89,7 @@ public:
 private:
 //	BufferMapper bufferMapper;
 	ClMemMetaMap clMemMeta;
-	core::ExpressionMap clMemReplacements;
+	ExpressionAddressMap clMemReplacements;
 	core::ProgramPtr& prog;
 
 	void collectInformation();
