@@ -36,9 +36,12 @@
 
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/utils/logging.h"
+#include "insieme/analysis/cba/analysis.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/subtyping.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -148,6 +151,7 @@ BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
 
 void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
+	ProgramAddress pA(prog->getChild(0));
 
 	TreePatternPtr clCreateBuffer = irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
 			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << pattern::any);
@@ -156,8 +160,8 @@ void BufferReplacer::collectInformation() {
 	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
 			var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
-	visitDepthFirst(prog, [&](const NodePtr& node) {
-		MatchOpt createBuffer = bufferPattern->matchPointer(node);
+	visitDepthFirst(pA, [&](const NodeAddress& node) {
+		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
 
 		if(createBuffer) {
 			NodePtr flagArg = createBuffer->getVarBinding("flags").getValue();
@@ -179,7 +183,7 @@ void BufferReplacer::collectInformation() {
 			ExpressionPtr hostPtr = createBuffer->getVarBinding("host_ptr").getValue().as<ExpressionPtr>();
 
 			// get the buffer expression
-			ExpressionPtr lhs = createBuffer->getVarBinding("buffer").getValue().as<ExpressionPtr>();
+			ExpressionAddress lhs = createBuffer->getVarBinding("buffer").getValue().as<ExpressionAddress>();
 //			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
 			// add gathered information to clMemMetaMap
@@ -191,13 +195,61 @@ void BufferReplacer::collectInformation() {
 }
 
 void BufferReplacer::generateReplacements() {
-/*	for_each(clMemMeta, [&](std::pair<core::ExpressionPtr, ClMemMetaInfo>& meta) {
-		std::cout << meta.first << " "  << meta.second.type << std::endl;
+	NodeManager& mgr = prog.getNodeManager();
+	IRBuilder builder(mgr);
+
+	TypePtr clMemTy;
+
+	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
+		ExpressionAddress bufferExpr = meta.first;
+		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
+	//			std::cout << node << std::endl;
+		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
+			if(GenericTypePtr gt = dynamic_pointer_cast<const GenericType>(node)) {
+				if(gt.toString().compare("_cl_mem") == 0)
+					clMemTy = gt;
+			}
+		}, true, true);
+
+			std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
+
+		TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
+		bool alreadyThereAndCorrect = false;
+
+		// check if there is already a replacement for the current expression (or an alias of it) with a different type
+		for_each(clMemReplacements, [&](std::pair<ExpressionAddress, ExpressionPtr> replacement) {
+			if(replacement.first == bufferExpr/* || analysis::cba::isAlias(replacement.first, bufferExpr)*/) {
+				std::cout << "repty " << replacement.second << std::endl;
+				std::cout << "newTy " << newType << std::endl;
+				if(replacement.second->getType() != newType) {
+					if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the new type is subtype of the current one, replace the type
+						//newType = replacement.second->getType();
+						bufferExpr = replacement.first; // do not add aliases to the replacement map
+					} else if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the current type is subtype of the new type, do nothing
+						alreadyThereAndCorrect = true;
+						return;
+					} else // if the types are not related, fail
+						assert(false && "Buffer used twice with different types. Not supported in Insieme.");
+				} else
+					alreadyThereAndCorrect = true;
+			}
+		});
+
+		if(alreadyThereAndCorrect) return;
 
 		// local variable case
-//		if()
+		if(VariableAddress var = dynamic_address_cast<const Variable>(bufferExpr)) {
+			clMemReplacements[var] = builder.variable(newType);
+		}
+		// global variable case
+		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
+			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
+		}
 	});
-*/
+
+	for_each(clMemReplacements, [&](std::pair<ExpressionPtr, ExpressionPtr> replacement) {
+		std::cout << replacement.first->getType() << " -> " << replacement.second->getType() << std::endl;
+	});
 }
 
 } //namespace ocl
