@@ -177,7 +177,8 @@ private:
 			}
 			*/
 
-			if(const clang::VariableArrayType* varArrType = llvm::dyn_cast<clang::VariableArrayType>(type)) {
+			if(llvm::isa<clang::VariableArrayType>(type)) {
+			//if(const clang::VariableArrayType* varArrType = llvm::dyn_cast<clang::VariableArrayType>(type)) {
 				//VariableArray turns into array<int<4>,1>
 				
 				//checking array type
@@ -274,7 +275,8 @@ private:
 		//TODO
 		//if(llvm::isa<clang::TagType>(type)) { }
 		//if(llvm::isa<clang::TagType>(type)) {
-		if(const clang::RecordType* recType = llvm::dyn_cast<clang::RecordType>(type)) { 
+		//if(const clang::RecordType* recType = llvm::dyn_cast<clang::RecordType>(type)) { 
+		if(llvm::isa<clang::RecordType>(type)) {
 			//we expect only a symbol with the name of the RecordType
 			EXPECT_TRUE(irType.isa<GenericTypePtr>()) << "ir type: " << irType << " clang type" << type;
 
