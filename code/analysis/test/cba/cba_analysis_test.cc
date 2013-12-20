@@ -430,12 +430,14 @@ namespace cba {
 
 		StatementAddress sa(code);
 
-		VariableAddress var1, var2,  var3, a, b;
+		VariableAddress var1_1, var1_2, var2,  var3, a, b;
 
 		visitDepthFirst(sa, [&](const NodeAddress& node) {
 			if(annotations::hasNameAttached(node)) {
-				if(annotations::getAttachedName(node).compare("var1") == 0)
-					var1 = node.as<VariableAddress>();
+				if(!var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
+					var1_1 = node.as<VariableAddress>();
+				if(var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
+					var1_2 = node.as<VariableAddress>();
 				if(annotations::getAttachedName(node).compare("var2") == 0)
 					var2 = node.as<VariableAddress>();
 				if(annotations::getAttachedName(node).compare("var3") == 0)
@@ -447,9 +449,10 @@ namespace cba {
 			}
 		});
 
-/*		EXPECT_TRUE(isAlias(var1, a));
+		EXPECT_TRUE(isAlias(var1_1, var1_2));
+/*		EXPECT_TRUE(isAlias(var1_1, a));
 		EXPECT_TRUE(isAlias(a, var3));
-		EXPECT_TRUE(isAlias(var1, var3));
+		EXPECT_TRUE(isAlias(var1_1, var3));
 
 		EXPECT_FALSE(isAlias(var1, var2));
 		EXPECT_TRUE(isAlias(var2, b)); // is this an alias? In a sequential program the value of var2 and b will always be the same, even though b is not ref
