@@ -135,8 +135,28 @@ std::set<Enum> getFlags(const NodePtr& flagExpr) {
 		recursiveFlagCheck(cast->getSubExpression(), flags);
 	} else
 		LOG(ERROR) << "No flags found in " << flagExpr << "\nUsing default settings";
-
 	return flags;
+}
+
+ExpressionAddress extractVariable(ExpressionAddress expr) {
+	const lang::BasicGenerator& gen = expr->getNodeManagerPtr()->getLangBasic();
+
+	if(expr->getNodeType() == NT_Variable) // return variable
+		return expr;
+
+	if(expr->getNodeType() == NT_Literal) // return literal, e.g. global varialbe
+		return expr;
+
+	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(expr)) {
+		if(gen.isSubscriptOperator(call->getFunctionExpr()))
+			return expr;
+
+		if(gen.isCompositeRefElem(call->getFunctionExpr())) {
+			return expr;
+		}
+	}
+
+	return expr;
 }
 }
 
@@ -201,7 +221,7 @@ void BufferReplacer::generateReplacements() {
 	TypePtr clMemTy;
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
-		ExpressionAddress bufferExpr = meta.first;
+		ExpressionAddress bufferExpr = extractVariable(meta.first);
 		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
 	//			std::cout << node << std::endl;
 		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
@@ -211,7 +231,7 @@ void BufferReplacer::generateReplacements() {
 			}
 		}, true, true);
 
-			std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
+//std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
 
 		TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
 		bool alreadyThereAndCorrect = false;
@@ -222,10 +242,10 @@ void BufferReplacer::generateReplacements() {
 				std::cout << "repty " << replacement.second << std::endl;
 				std::cout << "newTy " << newType << std::endl;
 				if(replacement.second->getType() != newType) {
-					if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the new type is subtype of the current one, replace the type
+					if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the new type is subtype of the current one, replace the type
 						//newType = replacement.second->getType();
 						bufferExpr = replacement.first; // do not add aliases to the replacement map
-					} else if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the current type is subtype of the new type, do nothing
+					} else if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the current type is subtype of the new type, do nothing
 						alreadyThereAndCorrect = true;
 						return;
 					} else // if the types are not related, fail
