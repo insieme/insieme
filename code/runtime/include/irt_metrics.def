@@ -1,0 +1,70 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+/**
+ * This macro file defines the metrics supported by the performance instrumentation
+ * system.
+ * 
+ */
+ 
+#include "instrumentation.h"
+
+#ifndef METRIC
+#define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, START_CODE, END_CODE ) 
+#endif
+
+#ifndef GROUP
+#define GROUP( NAME, VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, START_CODE, END_CODE )
+#endif
+
+// Single Metrics
+
+GROUP(cpu_time_group, , {}, {}, {}, {})
+
+METRIC(cpu_time,				0,						ns,		uint64_t,	"%lu",		IRT_HW_SCOPE_CORE,	IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
+	{ wi->inst_data->last_cpu_time = irt_time_ticks(); } , \
+	{ wi->inst_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_data->last_cpu_time; } \
+)
+
+GROUP(socket_occupancy_group, , {}, {}, {}, {})
+
+METRIC(socket_occupancy,		0,						N,		double,		"%lf",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
+	{ wi->inst_data->last_socket_occupancy = 42; }, \
+	{ wi->inst_data->aggregated_socket_occupancy = 42; } \
+)
+
+#undef METRIC
+#undef GROUP
