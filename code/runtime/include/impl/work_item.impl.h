@@ -131,22 +131,18 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
 	wi->wg_memberships = NULL;
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	wi->region = NULL;
-	wi->last_timestamp = 0;
-#endif //IRT_ENABLE_REGION_INSTRUMENTATION
 #ifdef IRT_ASTEROIDEA_STACKS
 	wi->stack_available = false;
 #endif //IRT_ASTEROIDEA_STACKS
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_inst_region_wi_init(wi);
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
 	_irt_wi_init(self, retval, range, impl_id, params);
 	if(self->cur_wi != NULL) {
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		if(self->cur_wi->region != NULL) retval->region = self->cur_wi->region;
-#endif //IRT_ENABLE_REGION_INSTRUMENTATION
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children);
 	}
@@ -229,10 +225,12 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_inst_region_suspend(swi);
+		//irt_inst_region_suspend(swi);
+		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_inst_region_continue(swi);
+		irt_inst_region_start_measurements(swi);
+		//irt_inst_region_continue(swi);
 	}
 }
 
@@ -266,7 +264,8 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_inst_region_suspend(wi);
+//		irt_inst_region_suspend(wi);
+		irt_inst_region_end_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 #ifdef IRT_ASTEROIDEA_STACKS
 		// make stack available for children
@@ -276,7 +275,8 @@ void irt_wi_join_all(irt_work_item* wi) {
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
-		irt_inst_region_continue(wi);
+//		irt_inst_region_continue(wi);
+		irt_inst_region_start_measurements(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi
 		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
@@ -291,7 +291,11 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
-	irt_inst_region_suspend(wi);
+//	irt_inst_region_suspend(wi);
+	if(wi->inst_region_list->length > 0) {
+		irt_inst_region_end_measurements(wi);
+		irt_inst_propagate_data_from_wi_to_cur_region(wi);
+	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
 	// check for fragment, handle

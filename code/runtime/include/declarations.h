@@ -141,4 +141,4 @@ typedef struct _irt_worker irt_worker;
 
 /* ------------------------------ region instrumentation ----- */
 
-typedef struct _irt_inst_region_data irt_inst_region_data;
+//typedef struct _irt_inst_region_data irt_inst_region_data;

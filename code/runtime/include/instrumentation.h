@@ -45,18 +45,13 @@
 #define IRT_ENABLE_INSTRUMENTATION
 #endif
 
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-#define IRT_ENABLE_REGION_INSTRUMENTATION
-#endif
-
 #ifndef IRT_ENABLE_INSTRUMENTATION
 //#define IRT_ENABLE_INSTRUMENTATION
 #endif
-#ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-//#define IRT_ENABLE_REGION_INSTRUMENTATION
-#endif
 
-//#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
+#ifndef IRT_ENABLE_REGION_INSTRUMENTATION
+#define IRT_ENABLE_REGION_INSTRUMENTATION
+#endif
 
 #define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
 	struct _irt_##__type__##_table { \
@@ -67,18 +62,11 @@
 }; \
 typedef struct _irt_##__type__##_table irt_##__table__##_table; \
 
-
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-#include "papi.h"
-#endif
-
 // functions for creating and destroying performance tables
 
 irt_instrumentation_event_data_table* irt_inst_create_event_data_table();
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table();
 
 void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table);
-void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table);
 
 // initialization functions
 
@@ -123,35 +111,65 @@ void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event 
 //													Regions
 // -----------------------------------------------------------------------------------------------------------------
 
-typedef uint32 region_id;
+typedef uint64 region_id;
 
-// -------------------- region markers ---------------------
+uint32 irt_g_inst_metric_count = 0;
+uint32 irt_g_inst_group_count = 0;
 
-void irt_inst_region_start(irt_context* context, irt_worker* worker, region_id id);
-void irt_inst_region_end(irt_context* context, irt_worker* worker, region_id id);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+uint32_t irt_g_metric_##_name__##_id;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+uint32_t irt_g_metric_group_##_name__##_id;
+#include "irt_metrics.def"
 
-// a special variation of region start / end for pfor-regions (accounting for the parallel execution)
-// TODO: unify the two variants
-void irt_inst_region_start_pfor(irt_context* context, region_id id);
-void irt_inst_region_end_pfor(irt_context* context, region_id id, uint64 walltime, uint64 cputime);
+typedef enum {
+	IRT_HW_SCOPE_CORE,
+	IRT_HW_SCOPE_SOCKET,
+	IRT_HW_SCOPE_SYSTEM,
+	IRT_HW_SCOPE_NUM_SCOPES
+} IRT_HW_SCOPES;
 
-void irt_inst_region_suspend(irt_work_item* wi);
-void irt_inst_region_continue(irt_work_item* wi);
+typedef enum {
+	IRT_METRIC_AGGREGATOR_SUM,
+	IRT_METRIC_AGGREGATOR_AVG,
+	IRT_METRIC_NUM_AGGREGATORS,
+} IRT_METRIC_AGGREGATORS;
 
-// ------------------ management operations ----------------
+typedef struct {
+	uint64 num_executions;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+	_data_type__ aggregated_##_name__;
+#include "irt_metrics.def"
+} irt_inst_region_struct;
 
+typedef struct {
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+	_data_type__ last_##_name__; \
+	_data_type__ aggregated_##_name__;
+#include "irt_metrics.def"
+} irt_inst_wi_struct;
+
+typedef struct {
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+	_var_decls__;
+#include "irt_metrics.def"
+} irt_inst_context_struct;
+
+typedef struct {
+	irt_inst_region_struct** items;
+	uint64 length;
+	uint64 size;
+} irt_inst_region_list;
+
+void irt_inst_metrics_init();
+void irt_inst_metrics_finalize();
 void irt_inst_region_init(irt_context* context);
 void irt_inst_region_finalize(irt_context* context);
-
-typedef enum _irt_inst_region_mode {
-	IRT_INST_REGION_NONE,
-	IRT_INST_REGION_AGGREGATED,
-	IRT_INST_REGION_DETAIL
-} irt_inst_region_mode;
-
-void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode);
-void irt_inst_region_set_mode_for_region(irt_context* context, region_id id, irt_inst_region_mode mode);
-
+void irt_inst_region_start(irt_work_item* wi, irt_inst_region_struct* region);
+void irt_inst_region_suspend(irt_work_item* wi);
+void irt_inst_region_resume(region_id id);
+void irt_inst_region_end(region_id id);
+void irt_inst_region_wi_init(irt_work_item* wi);
 
 // -----------------------------------------------------------------------------------------------------------------
 //													File Format

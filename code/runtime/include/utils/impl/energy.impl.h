@@ -46,11 +46,11 @@
 #endif
 
 void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
-        //for(uint32 core = 0; core < data->number_of_cpus; ++core) {
-                data->package = -1.0;
-                data->mc = -1.0;
-                data->cores = -1.0;
-        //}	
+        for(uint32 core = 0; core < data->number_of_cpus; ++core) {
+                data->package[core] = -1.0;
+                data->mc[core] = -1.0;
+                data->cores[core] = -1.0;
+        }	
 }
 
 void irt_energy_select_instrumentation_method() {

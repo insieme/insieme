@@ -94,9 +94,8 @@ struct _irt_work_item {
 #endif
 	irt_wi_scheduling_data sched_data;
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	// region association for instrumentation
-	irt_region* region;
-	uint64 last_timestamp;
+	irt_inst_wi_struct* inst_data;
+	irt_inst_region_list* inst_region_list;
 #endif
 	union {
 		char param_storage[IRT_WI_PARAM_BUFFER_SIZE];
