@@ -90,10 +90,12 @@ static inline double irt_get_wtime() {
 
 // a wrapper for a call marking the start of a region
 static inline void ir_inst_region_start(region_id id) {
-	irt_inst_region_start(irt_context_get_current(), irt_worker_get_current(), id);
+//	printf("STARTING REGION %u\n", id);
+	irt_inst_region_start(id);
 }
 
 // a wrapper for a call marking the end of a region
 static inline void ir_inst_region_end(region_id id) {
-	irt_inst_region_end(irt_context_get_current(), irt_worker_get_current(), id);
+//	printf("ENDING REGION %u\n", id);
+	irt_inst_region_end(id);
 }
