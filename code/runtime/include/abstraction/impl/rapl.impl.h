@@ -38,6 +38,11 @@
 
 #include <math.h>
 #include "irt_inttypes.h"
+#include "abstraction/msr.h"
+#include "hwinfo.h"
+#include "utils/affinity.h"
+#include "worker.h"
+#include "abstraction/rapl.h"
 #include "abstraction/impl/msr.impl.h"
 
 #ifdef _MSC_VER
@@ -51,33 +56,35 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 	uint64 result = 0;
 	double energy_units = -1.0;
 
-	bool socket_mask[data->number_of_cpus];
-
-	for(uint32 i = 0; i < data->number_of_cpus; ++i) {
-		socket_mask[i] = false;
-		data->package[i] = 0.0;
-		data->cores[i] = 0.0;
-		data->mc[i] = 0.0;
-	}
+	data->package = 0.0;
+	data->cores = 0.0;
+	data->mc = 0.0;
 
 	// mark sockets that should be measured (i.e. that have cores which have workers running on them)
+	uint32 num_sockets = irt_get_num_sockets();
+	bool socket_mask[num_sockets];
+
+	for(uint32 i = 0; i < num_sockets; ++i)
+		socket_mask[i] = false;
+
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		uint32 coreid = irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity);
 		if(coreid != -1)
 			socket_mask[coreid / irt_get_num_cores_per_socket()] = true;
 	}
 
-	for(uint32 socket_id = 0; socket_id < data->number_of_cpus; ++socket_id) {
+	// do the actual measurement, sum over all sockets
+	for(uint32 socket_id = 0; socket_id < num_sockets; ++socket_id) {
 		if(socket_mask[socket_id]) {
 			if((file = _irt_open_msr(socket_id * irt_get_num_cores_per_socket())) > 0) {
 				if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
 					energy_units = pow(0.5, (double) ((result >> 8) & 0x1F));
 					if ((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-						data->package[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
+						data->package += (double) (result & 0xFFFFFFFF) * energy_units;
 					if ((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-						data->mc[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
+						data->mc += (double) (result & 0xFFFFFFFF) * energy_units;
 					if ((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-						data->cores[socket_id] = (double) (result & 0xFFFFFFFF) * energy_units;
+						data->cores += (double) (result & 0xFFFFFFFF) * energy_units;
 				}
 				_irt_close_msr(file);
 			}

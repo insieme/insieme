@@ -41,6 +41,7 @@
  */
  
 #include "instrumentation.h"
+#include "irt_instrumentation_includes.h"
 
 #ifndef METRIC
 #define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, START_CODE, END_CODE ) 
@@ -54,14 +55,24 @@
 
 GROUP(cpu_time_group, , {}, {}, {}, {})
 
-METRIC(cpu_time,				0,						ns,		uint64_t,	"%lu",		IRT_HW_SCOPE_CORE,	IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
+METRIC(cpu_time,			0,	ns,		uint64_t,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
 	{ wi->inst_data->last_cpu_time = irt_time_ticks(); } , \
 	{ wi->inst_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_data->last_cpu_time; } \
 )
 
+GROUP(energy_group, rapl_energy_data rapl_data, {}, {}, \
+	{ irt_get_energy_consumption(&(irt_context_get_current()->inst_group_support_data.rapl_data)); }, \
+	{ irt_get_energy_consumption(&(irt_context_get_current()->inst_group_support_data.rapl_data)); } \
+)
+
+METRIC(cpu_energy,				1,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
+	{ wi->inst_data->last_cpu_energy = irt_context_get_current()->inst_group_support_data.rapl_data.package; }, \
+	{ wi->inst_data->aggregated_cpu_energy = irt_context_get_current()->inst_group_support_data.rapl_data.package - wi->inst_data->last_cpu_energy; } \
+)
+
 GROUP(socket_occupancy_group, , {}, {}, {}, {})
 
-METRIC(socket_occupancy,		0,						N,		double,		"%lf",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
+METRIC(socket_occupancy,		2,						N,		double,		"%lf",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
 	{ wi->inst_data->last_socket_occupancy = 42; }, \
 	{ wi->inst_data->aggregated_socket_occupancy = 42; } \
 )
