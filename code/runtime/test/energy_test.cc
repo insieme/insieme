@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#define IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#define IRT_USE_PAPI
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 #define IRT_RUNTIME_TUNING
 
@@ -168,18 +168,12 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 }
 
 TEST(energy, dvfs) {
-#ifndef IRT_USE_PAPI
-#error "IRT_USE_PAPI not defined, but PAPI is reqiured to run this test"
-#endif
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
 }
 
 TEST(energy, rapl) {
-#ifndef IRT_USE_PAPI
-#error "IRT_USE_PAPI not defined, but PAPI is reqiured to run this test"
-#endif
-	// since we need PAPI working for the next line, explicitely call the init function here
+	// since we need PAPI working for the next line, explicitly call the init function here
 	irt_initialize_papi();
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_get_num_cores_per_socket();
