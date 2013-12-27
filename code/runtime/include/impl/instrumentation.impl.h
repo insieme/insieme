@@ -41,9 +41,11 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include "utils/timing.h"
+#include "utils/energy.h"
 #include "utils/memory.h"
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
+#include "irt_instrumentation_includes.h"
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
@@ -672,6 +674,10 @@ void irt_inst_region_wi_init(irt_work_item* wi) {
 	wi->inst_data->last_##_name__ = 0; \
 	wi->inst_data->aggregated_##_name__ = 0;
 #include "irt_metrics.def"
+}
+
+void irt_region_instrumentation_setup() {
+	irt_energy_select_instrumentation_method();
 }
 
 // stop a region, do not remove it from the region stack of the WI

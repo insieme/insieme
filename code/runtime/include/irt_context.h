@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 #include "client_app.h"
+#include "instrumentation.h"
 
 #ifdef USE_OPENCL
 #include "irt_ocl.h"

@@ -38,7 +38,7 @@
 
 #include <unistd.h>
 
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#ifdef IRT_USE_PAPI
 #include "papi.h"
 #endif
 #include "error_handling.h"
@@ -78,7 +78,7 @@ void _irt_set_num_cpus(uint32 num) {
 }
 
 int32 _irt_setup_hardware_info() {
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#ifdef IRT_USE_PAPI
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
 	if(hwinfo == NULL) {

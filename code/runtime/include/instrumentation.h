@@ -170,6 +170,7 @@ void irt_inst_region_suspend(irt_work_item* wi);
 void irt_inst_region_resume(region_id id);
 void irt_inst_region_end(region_id id);
 void irt_inst_region_wi_init(irt_work_item* wi);
+void irt_region_instrumentation_setup();
 
 // -----------------------------------------------------------------------------------------------------------------
 //													File Format

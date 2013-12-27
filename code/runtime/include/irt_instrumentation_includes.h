@@ -29,39 +29,12 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
 #include "utils/energy.h"
-
-#ifdef _WIN32
-	#warning "RAPL energy measurements in Windows are not supported!"
-#else
-	#include "utils/energy.h"
-	#include "abstraction/impl/rapl.impl.h"
-#endif
-
-void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
-	data->package = -1.0;
-	data->mc = -1.0;
-	data->cores = -1.0;
-}
-
-void irt_energy_select_instrumentation_method() {
-#ifdef IRT_USE_PAPI
-	bool papi_available = true;
-#else
-	bool papi_available = false;
-#endif
-	if(irt_rapl_is_supported() && papi_available) {
-		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
-		irt_log_setting_s("irt energy measurement method", "rapl");
-	} else {
-		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
-		irt_log_setting_s("irt energy measurement method", "none");
-	}
-}
+#include "utils/timing.h"
