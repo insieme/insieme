@@ -150,23 +150,7 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 		// set afinity
 		irt_set_global_affinity_policy(policy);
 
-		rapl_energy_data data;
-		data.number_of_cpus = irt_get_num_numa_nodes();
-		double package[data.number_of_cpus];
-		double mc[data.number_of_cpus];
-		double cores[data.number_of_cpus];
-		data.package = package;
-		data.mc = mc;
-		data.cores = cores;
-
-		rapl_energy_data data2;
-		data2.number_of_cpus = irt_get_num_numa_nodes();
-		double package2[data2.number_of_cpus];
-		double mc2[data2.number_of_cpus];
-		double cores2[data2.number_of_cpus];
-		data2.package = package2;
-		data2.mc = mc2;
-		data2.cores = cores2;
+		rapl_energy_data data, data2;
 		
 		// take a reading, sleep for 100 ms and take another reading
 		irt_get_energy_consumption(&data);
@@ -174,34 +158,27 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 		irt_get_energy_consumption(&data2);
 
 		// check rapl readings
-		for(uint32 i = 0; i < data.number_of_cpus; ++i) {
-			//printf("socket %u package: %f J, cores: %f J, memory controller: %f J\n", i, data2.package[i] - data.package[i], data2.cores[i] - data.cores[i], data2.mc[i] - data.mc[i]);
-			// current socket must hold valid readings
-			if(i == socketid) {
-				EXPECT_LT(0.001, data2.package[i] - data.package[i]);
-				EXPECT_LT(data2.package[i] - data.package[i], 100);
-				EXPECT_LT(0.001, data2.cores[i] - data.cores[i]);
-				EXPECT_LT(data2.cores[i] - data.cores[i], 100);
-				EXPECT_LT(data2.mc[i] - data.mc[i], 100); // mc readings are not present on all CPUs, therefore they can be 0
-			// readings for all other sockets must be zero
-			} else {
-				EXPECT_EQ(0.0, data.package[i]);
-				EXPECT_EQ(0.0, data2.package[i]);
-				EXPECT_EQ(0.0, data.cores[i]);
-				EXPECT_EQ(0.0, data2.cores[i]);
-				EXPECT_EQ(0.0, data.mc[i]);
-				EXPECT_EQ(0.0, data2.mc[i]);
-			}
-		}
+		EXPECT_LT(0.001, data2.package - data.package);
+		EXPECT_LT(data2.package - data.package, 100);
+		EXPECT_LT(0.001, data2.cores - data.cores);
+		EXPECT_LT(data2.cores - data.cores, 100);
+		// mc readings are not present on all CPUs, therefore they can be 0
+		EXPECT_LT(data2.mc - data.mc, 100);
 	}
 }
 
 TEST(energy, dvfs) {
+#ifndef IRT_USE_PAPI
+#error "IRT_USE_PAPI not defined, but PAPI is reqiured to run this test"
+#endif
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
 }
 
 TEST(energy, rapl) {
+#ifndef IRT_USE_PAPI
+#error "IRT_USE_PAPI not defined, but PAPI is reqiured to run this test"
+#endif
 	// since we need PAPI working for the next line, explicitely call the init function here
 	irt_initialize_papi();
 	// since we test each socket once, use all cores of a single socket
