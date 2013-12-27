@@ -35,7 +35,7 @@
  */
 
 #define IRT_ENABLE_REGION_INSTRUMENTATION
-#define IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#define IRT_USE_PAPI
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 #define IRT_RUNTIME_TUNING
 
@@ -53,6 +53,7 @@ irt_type g_insieme_type_table[] = {
 void insieme_wi_startup_implementation_simple(irt_work_item* wi);
 void insieme_wi_startup_implementation_nested(irt_work_item* wi);
 void insieme_wi_startup_implementation_repeated_execution(irt_work_item* wi);
+void insieme_wi_startup_implementation_rapl(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_simple, NULL, 0, NULL, 0, NULL }
@@ -66,16 +67,21 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_repeated_execution[]
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_repeated_execution, NULL, 0, NULL, 0, NULL }
 };
 
+irt_wi_implementation_variant g_insieme_wi_startup_variants_rapl[] = {
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_rapl, NULL, 0, NULL, 0, NULL }
+};
+
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants_simple },
 	{ 1, g_insieme_wi_startup_variants_nested },
-	{ 1, g_insieme_wi_startup_variants_repeated_execution }
+	{ 1, g_insieme_wi_startup_variants_repeated_execution },
+	{ 1, g_insieme_wi_startup_variants_rapl }
 };
 
 // initialization
 void insieme_init_context_common(irt_context* context) {
 	context->type_table_size = 1;
-	context->impl_table_size = 2;
+	context->impl_table_size = 4;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
@@ -98,6 +104,7 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 	ir_inst_region_start(0);
+	sleep(1);
 	ir_inst_region_end(0);
 
 	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
@@ -138,18 +145,63 @@ void insieme_wi_startup_implementation_repeated_execution(irt_work_item* wi) {
 	EXPECT_EQ(reg0->num_executions, 1e6 + 1);
 }
 
-TEST(instrumentation, simple) {
+void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
+
+	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
+	uint32 workerid = 0;
+
+	// init affinity map to 0
+	for(uint32 coreid = 0; coreid < IRT_MAX_WORKERS; ++coreid)
+		policy.fixed_map[coreid] = 0;
+
+	// set affinity map to use all cores of the current socket
+	for(uint32 coreid = 0; coreid < irt_get_num_sockets() * irt_get_num_cores_per_socket(); ++coreid) {
+		policy.fixed_map[workerid++] = coreid;
+		//printf("%d\n", policy.fixed_map[coreid]);
+	}
+
+	// set afinity
+	irt_set_global_affinity_policy(policy);
+
+
+	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
+
+	ir_inst_region_start(0);
+	irt_nanosleep(1e8);
+	ir_inst_region_end(0);
+
+	EXPECT_GT(reg0->aggregated_cpu_energy, 0);
+	EXPECT_LT(reg0->aggregated_cpu_energy, 100);
+	EXPECT_GT(reg0->aggregated_cores_energy, 0);
+	EXPECT_LT(reg0->aggregated_cores_energy, 100);
+	// mc readings are not present on all CPUs, therefore they can be 0
+	EXPECT_LT(reg0->aggregated_memory_controller_energy, 100);
+}
+
+TEST(region_instrumentation, simple) {
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 0, NULL);
 }
 
-TEST(instrumentation, nested) {
+TEST(region_instrumentation, nested) {
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context_nested, &insieme_cleanup_context, 1, NULL);
 }
 
-TEST(instrumentation, repeated_execution) {
+TEST(region_instrumentation, repeated_execution) {
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 2, NULL);
 }
 
+TEST(region_instrumentation, rapl) {
+#ifndef IRT_USE_PAPI
+	printf("warning: PAPI not available, not testing RAPL\n");
+	return;
+#endif
+	if(!irt_rapl_is_supported()) {
+		printf("warning: RAPL not available, not testing it\n");
+		return;
+	}
+	uint32 wcount = irt_get_default_worker_count();
+	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 3, NULL);
+}
