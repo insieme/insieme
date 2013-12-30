@@ -474,6 +474,8 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {}
 //
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 // make sure scheduling policy is fixed to static
 #if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
 	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
@@ -625,9 +627,6 @@ void _irt_inst_region_stack_pop(irt_work_item* wi) {
 
 //	printf("after pop length: %u %lu %p\n", list->length, wi->id, wi);
 }
-
-//irt_g_inst_measure_##_name__ = true; \
-//					irt_g_inst_group_##_group__##membership_count++; \
 
 void irt_inst_region_start_measurements(irt_work_item* wi) {
 //	printf("starting measurements\n");
@@ -798,3 +797,26 @@ void irt_region_instrumentation_setup() {
 //	if(list.length > 0)
 //		irt_inst_region_start(wi, list.items[list.length-1]);
 //}
+
+#else  // if not IRT_ENABLE_REGION_INSTRUMENTATION
+
+void irt_inst_metrics_init() { }
+void irt_inst_metrics_finalize() { }
+void irt_inst_select_region_instrumentation_metrics(const char* selection) { }
+void irt_inst_set_region_instrumentation_from_env() { }
+void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) { }
+void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) { }
+void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_struct* region) { }
+void _irt_inst_region_stack_pop(irt_work_item* wi) { }
+void irt_inst_region_start_measurements(irt_work_item* wi) { }
+void irt_inst_region_end_measurements(irt_work_item* wi) { }
+void irt_inst_region_init(irt_context* context) { }
+void irt_inst_region_debug_output() { }
+void irt_inst_region_output() { }
+void irt_inst_region_finalize(irt_context* context) { }
+void irt_inst_region_start(region_id id) { }
+void irt_inst_region_end(region_id id) { }
+void irt_inst_region_wi_init(irt_work_item* wi) { }
+void irt_region_instrumentation_setup() { }
+
+#endif //IRT_ENABLE_REGION_INSTRUMENTATION

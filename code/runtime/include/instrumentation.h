@@ -50,7 +50,7 @@
 #endif
 
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-#define IRT_ENABLE_REGION_INSTRUMENTATION
+//#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
 #define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
@@ -171,11 +171,19 @@ typedef struct {
 
 void irt_inst_metrics_init();
 void irt_inst_metrics_finalize();
+void irt_inst_select_region_instrumentation_metrics(const char* selection);
+void irt_inst_set_region_instrumentation_from_env();
+void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi);
+void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi);
+void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_struct* region);
+void _irt_inst_region_stack_pop(irt_work_item* wi);
+void irt_inst_region_start_measurements(irt_work_item* wi);
+void irt_inst_region_end_measurements(irt_work_item* wi);
 void irt_inst_region_init(irt_context* context);
+void irt_inst_region_debug_output();
+void irt_inst_region_output();
 void irt_inst_region_finalize(irt_context* context);
-void irt_inst_region_start(irt_work_item* wi, irt_inst_region_struct* region);
-void irt_inst_region_suspend(irt_work_item* wi);
-void irt_inst_region_resume(region_id id);
+void irt_inst_region_start(region_id id);
 void irt_inst_region_end(region_id id);
 void irt_inst_region_wi_init(irt_work_item* wi);
 void irt_region_instrumentation_setup();

@@ -292,10 +292,12 @@ void irt_wi_end(irt_work_item* wi) {
 
 	// instrumentation update
 //	irt_inst_region_suspend(wi);
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	if(wi->inst_region_list->length > 0) {
 		irt_inst_region_end_measurements(wi);
 		irt_inst_propagate_data_from_wi_to_cur_region(wi);
 	}
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
 	// check for fragment, handle
