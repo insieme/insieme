@@ -111,7 +111,7 @@ void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event 
 //													Regions
 // -----------------------------------------------------------------------------------------------------------------
 
-typedef uint64 region_id;
+typedef uint32 region_id;
 
 uint32 irt_g_inst_metric_count = 0;
 uint32 irt_g_inst_group_count = 0;
