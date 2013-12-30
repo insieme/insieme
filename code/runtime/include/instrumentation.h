@@ -137,6 +137,7 @@ typedef enum {
 
 typedef struct {
 	uint64 num_executions;
+	irt_spinlock lock;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
 	_data_type__ aggregated_##_name__;
 #include "irt_metrics.def"

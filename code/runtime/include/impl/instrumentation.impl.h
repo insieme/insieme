@@ -511,10 +511,12 @@ void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) {
 //		printf("more than one region\n");
 		irt_inst_region_struct* cur = list->items[list->length-1];
 		irt_inst_region_struct* parent = list->items[list->length-2];
+		irt_spin_lock(&(parent->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
 		parent->aggregated_##_name__ += cur->aggregated_##_name__; \
 //		cur->aggregated_##_name__ = 0;
 #include "irt_metrics.def"
+		irt_spin_unlock(&(parent->lock));
 	}
 }
 
@@ -531,6 +533,7 @@ void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) {
 
 	IRT_ASSERT(cur_region != NULL, IRT_ERR_INSTRUMENTATION, "Region pointer of a WI is NULL");
 
+	irt_spin_lock(&(cur_region->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
 	switch(_aggregation__) { \
 	case IRT_METRIC_AGGREGATOR_AVG: \
@@ -542,6 +545,7 @@ void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) {
 	} \
 	wi->inst_data->aggregated_##_name__ = 0;
 #include "irt_metrics.def"
+	irt_spin_unlock(&(cur_region->lock));
 }
 
 void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_struct* region) {
@@ -598,6 +602,7 @@ void irt_inst_region_init(irt_context* context) {
 	context->inst_region_data = (irt_inst_region_struct*)malloc(context->num_regions * sizeof(irt_inst_region_struct));
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		context->inst_region_data[i].num_executions = 0;
+		irt_spin_init(&context->inst_region_data[i].lock);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
 		context->inst_region_data[i].aggregated_##_name__ = 0;
 #include "irt_metrics.def"
@@ -606,7 +611,7 @@ void irt_inst_region_init(irt_context* context) {
 
 void irt_inst_region_output() {
 	uint32 num_regions = irt_context_get_current()->num_regions;
-	printf("%u regions:\n", num_regions);
+	printf("%u region(s):\n", num_regions);
 	for(uint32 i = 0; i < num_regions; ++i) {
 		printf("region %u:\n", i);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
@@ -617,6 +622,9 @@ void irt_inst_region_output() {
 
 void irt_inst_region_finalize(irt_context* context) {
 	irt_inst_region_output();
+	for(uint32 i = 0; i < context->num_regions; ++i) {
+		irt_spin_destroy(&context->inst_region_data[i].lock);
+	}
 	free(context->inst_region_data);
 }
 
