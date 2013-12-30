@@ -56,8 +56,9 @@ struct _irt_context {
 	uint32 impl_table_size;
 	irt_wi_implementation* impl_table;
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	// TODO: moved this into an #ifdef and have the backend only set it when actually required
 	uint32 num_regions;													// initialized by compiler
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_region_struct* inst_region_data;							// initialized by runtime
 	irt_inst_context_struct inst_group_support_data;					// initialized by runtime
 #endif
