@@ -556,6 +556,10 @@ void irt_inst_set_region_instrumentation_from_env() {
 	}
 }
 
+irt_inst_region_struct* irt_inst_region_get_current(irt_work_item* wi) {
+	return wi->inst_region_list->items[wi->inst_region_list->length-1];
+}
+
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) {
 	irt_inst_region_list* list = wi->inst_region_list;
 	// if there is a parent region, add cur values to it (i.e. inclusive measurements, not exclusive)
@@ -581,7 +585,7 @@ void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) {
 //	if(wi->inst_region_list->length < 1)
 //		return;
 
-	irt_inst_region_struct* cur_region = wi->inst_region_list->items[wi->inst_region_list->length-1];
+	irt_inst_region_struct* cur_region = irt_inst_region_get_current(wi);
 
 	IRT_ASSERT(cur_region != NULL, IRT_ERR_INSTRUMENTATION, "Region pointer of a WI is NULL");
 
@@ -732,7 +736,7 @@ void irt_inst_region_start(region_id id) {
 //	irt_inst_region_start(irt_wi_get_current(), &(context->inst_region_data[id]));
 	// if a region is already present (=being measured), stop current measurements
 	if(wi->inst_region_list->length > 0) {
-		IRT_ASSERT((wi->inst_region_list->items[wi->inst_region_list->length - 1]) != region, IRT_ERR_INSTRUMENTATION, "Region %u start encountered, but this region was already started", id)
+		IRT_ASSERT(irt_inst_region_get_current(wi) != region, IRT_ERR_INSTRUMENTATION, "Region %u start encountered, but this region was already started", id)
 		irt_inst_region_end_measurements(wi);
 		irt_inst_propagate_data_from_wi_to_cur_region(wi);
 	}
@@ -750,7 +754,7 @@ void irt_inst_region_end(region_id id) {
 
 	IRT_ASSERT(wi->inst_region_list->length > 0, IRT_ERR_INSTRUMENTATION, "Region end occurred while no region was started")
 
-	irt_inst_region_struct* cur = wi->inst_region_list->items[wi->inst_region_list->length - 1];
+	irt_inst_region_struct* cur = irt_inst_region_get_current(wi);
 
 	IRT_ASSERT(cur == &(irt_context_get_current()->inst_region_data[id]), IRT_ERR_INSTRUMENTATION, "Region end id %u did not match current open region", id)
 
