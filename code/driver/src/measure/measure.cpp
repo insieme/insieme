@@ -101,7 +101,14 @@ namespace measure {
 		 */
 		struct none {
 			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
-				return Quantity::invalid(metric->getUnit());
+				// slightly hacky: the none() extractor can be used for metrics that do not require any
+				// aggregation, i.e. when a metric occurs exactly once - for metrics occurring more often,
+				// we'd lose information and hence bail out with an invalid quantity as a result
+				vector<Quantity> res = data.getAll(region, metric);
+				if(res.size() == 1)
+					return res[0];
+				else
+					return Quantity::invalid(metric->getUnit());
 			}
 			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
 		};
@@ -912,6 +919,16 @@ namespace measure {
 		auto modifiedCompiler = compiler;
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
+		// enable papi only if at least one metric requires it
+		bool usePapi = any(getDependencyClosureLeafs(metrics), [&](const MetricPtr& cur) {
+			if(cur->getName().find("PAPI") != std::string::npos)
+				return true;
+			return false;
+		});
+
+		if(usePapi)
+			modifiedCompiler.addFlag("-DIRT_ENABLE_PAPI");
+
 		// build target code
 		auto binFile = buildBinary(regions, modifiedCompiler);
 
@@ -943,11 +960,6 @@ namespace measure {
 
 		// extract name of executable
 		std::string executable = bfs::path(binary).filename().string();
-
-		// see whether aggregated log can be utilized
-		bool aggregatedOnly = all(getDependencyClosureLeafs(metrics), [](const MetricPtr& cur) {
-			return cur == Metric::WALL_TIME || cur == Metric::CPU_TIME || cur == Metric::NUM_EXEC;
-		});
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
@@ -1004,11 +1016,9 @@ namespace measure {
 				std::map<string,string> mod_env = env;
 				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
 					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
-					mod_env["IRT_INST_REGION_MODE"] = "detail";
-				} else {
-					// fix region instrumentation mode
-					mod_env["IRT_INST_REGION_MODE"] = aggregatedOnly?"aggregated":"detail";
 				}
+
+				mod_env["IRT_ENABLE_REGION_INSTRUMENTATION"] = "true";
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
@@ -1083,7 +1093,7 @@ namespace measure {
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");

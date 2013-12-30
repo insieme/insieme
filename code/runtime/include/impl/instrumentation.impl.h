@@ -681,14 +681,14 @@ void irt_inst_region_output() {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_REGION_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_REGION_OUTPUT_PATH_ENV);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Error creating directory for region data: %s", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Error using directory %s for region data: %s", outputprefix, strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
 
@@ -700,7 +700,7 @@ void irt_inst_region_output() {
 	// write header
 	fprintf(outputfile, "#subject,id");
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-		fprintf(outputfile, "," #_name__);
+		fprintf(outputfile, "," #_name__ "(%s)", #_unit__);
 #include "irt_metrics.def"
 	fprintf(outputfile, "\n");
 
