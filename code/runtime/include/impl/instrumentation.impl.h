@@ -409,7 +409,7 @@ void irt_inst_set_all_instrumentation_from_env() {
 		}
 
 		char* types = getenv(IRT_INST_WORKER_EVENT_TYPES_ENV);
-		if(!types) {
+		if(!types || strcmp(types, "") == 0) {
 			irt_inst_set_all_instrumentation(true);
 			irt_inst_set_db_instrumentation(false);
 			irt_log_setting_s("IRT_INST_WORKER_EVENT_TYPES", "WI,WO,WG,DI");
@@ -490,7 +490,6 @@ void irt_inst_metrics_init() {
 #include "irt_metrics.def"
 	irt_g_inst_metric_count = metric_id;
 	irt_g_inst_group_count = group_id;
-
 	// initialize groups
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
 	_init_code__;
@@ -502,6 +501,57 @@ void irt_inst_metrics_finalize() {
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
 _finalize_code__;
 #include "irt_metrics.def"
+}
+
+// selectively enable region instrumentation metrics - NOTE: a NULL pointer as an argument will enable all metrics!
+void irt_inst_select_region_instrumentation_metrics(const char* selection) {
+	char enabled_types[4096];
+	uint16 enabled_types_counter = 0;
+
+	if(!selection || strcmp(selection, "") == 0) {
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+		irt_g_inst_measure_##_name__ = true; \
+		irt_g_inst_group_##_group__##membership_count++; \
+		enabled_types_counter += sprintf(&(enabled_types[enabled_types_counter]), "%s,", #_name__);
+#include "irt_metrics.def"
+	} else {
+		// need to copy string since strtok requires it to be non-const
+		char selection_copy[strlen(selection)];
+		strcpy(selection_copy, selection);
+		// tokenize
+		char* tok = strtok(selection_copy, ",");
+		char log_output[128];
+		uint32 log_output_counter = 0;
+
+		do {
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+			if(strcmp(tok, #_name__) == 0) { \
+				irt_g_inst_measure_##_name__ = true; \
+				irt_g_inst_group_##_group__##membership_count++; \
+				enabled_types_counter += sprintf(&(enabled_types[enabled_types_counter]), "%s,", #_name__); \
+			}
+#include "irt_metrics.def"
+		} while((tok = strtok(NULL, ",")) != NULL);
+	}
+
+	// remove the last comma and replace with termination symbol
+	enabled_types[enabled_types_counter-1] = '\0';
+	irt_log_setting_s("IRT_INST_REGION_INSTRUMENTATION_TYPES", enabled_types);
+}
+
+void irt_inst_set_region_instrumentation_from_env() {
+	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "true") == 0) {
+		irt_log_setting_s("IRT_INST_REGION_INSTRUMENTATION", "enabled");
+
+		char* metrics = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);
+		irt_inst_select_region_instrumentation_metrics(metrics);
+	} else {
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+		irt_g_inst_measure_##_name__ = false; \
+		irt_g_inst_group_##_group__##membership_count = 0;
+#include "irt_metrics.def"
+		irt_log_setting_s("IRT_INST_REGION_INSTRUMENTATION", "disabled");
+	}
 }
 
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) {
@@ -576,24 +626,32 @@ void _irt_inst_region_stack_pop(irt_work_item* wi) {
 //	printf("after pop length: %u %lu %p\n", list->length, wi->id, wi);
 }
 
+//irt_g_inst_measure_##_name__ = true; \
+//					irt_g_inst_group_##_group__##membership_count++; \
+
 void irt_inst_region_start_measurements(irt_work_item* wi) {
 //	printf("starting measurements\n");
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
-	_start_code__;
+	if(irt_g_inst_group_##_name__##membership_count > 0)\
+		_start_code__;
 #include "irt_metrics.def"
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-	_start_code__;
+	if(irt_g_inst_measure_##_name__)\
+		_start_code__;
 #include "irt_metrics.def"
 }
 
 void irt_inst_region_end_measurements(irt_work_item* wi) {
 //	printf("stopping measurements\n");
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
-	_end_code__;
+	if(irt_g_inst_group_##_name__##membership_count > 0)\
+		_end_code__;
 #include "irt_metrics.def"
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-	_end_code__; \
-	wi->inst_data->last_##_name__ = 0;
+	if(irt_g_inst_measure_##_name__) { \
+		_end_code__; \
+		wi->inst_data->last_##_name__ = 0; \
+	}
 #include "irt_metrics.def"
 //	printf("stopped measurements, cpu time so far: %lu\n", wi->inst_data->aggregated_cpu_time);
 }
@@ -724,6 +782,7 @@ void irt_inst_region_wi_init(irt_work_item* wi) {
 
 void irt_region_instrumentation_setup() {
 	irt_energy_select_instrumentation_method();
+	irt_inst_set_region_instrumentation_from_env();
 }
 
 // stop a region, do not remove it from the region stack of the WI

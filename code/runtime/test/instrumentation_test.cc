@@ -103,6 +103,9 @@ void insieme_cleanup_context(irt_context* context) {
 // work item function definitions
 
 void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
+
+	irt_inst_select_region_instrumentation_metrics("cpu_time");
+
 	ir_inst_region_start(0);
 	sleep(1);
 	ir_inst_region_end(0);
@@ -113,6 +116,8 @@ void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_nested(irt_work_item* wi) {
+
+	irt_inst_select_region_instrumentation_metrics("cpu_time");
 
 	ir_inst_region_start(0);
 	ir_inst_region_start(1);
@@ -127,6 +132,9 @@ void insieme_wi_startup_implementation_nested(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_repeated_execution(irt_work_item* wi) {
+
+	irt_inst_select_region_instrumentation_metrics("cpu_time");
+
 	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 
 	EXPECT_EQ(reg0->num_executions, 0);
@@ -146,6 +154,8 @@ void insieme_wi_startup_implementation_repeated_execution(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
+
+	irt_inst_select_region_instrumentation_metrics("cpu_time,cpu_energy,cores_energy,memory_controller_energy");
 
 	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
 	uint32 workerid = 0;
