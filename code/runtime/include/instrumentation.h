@@ -117,9 +117,16 @@ uint32 irt_g_inst_metric_count = 0;
 uint32 irt_g_inst_group_count = 0;
 
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-uint32_t irt_g_metric_##_name__##_id;
+uint32 irt_g_metric_##_name__##_id;
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
-uint32_t irt_g_metric_group_##_name__##_id;
+uint32 irt_g_metric_group_##_name__##_id;
+#include "irt_metrics.def"
+
+// create metric flags and group counts for selectively enabling/disabling instrumentation
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+bool irt_g_inst_measure_##_name__ = false;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+uint32 irt_g_inst_group_##_name__##membership_count = 0;
 #include "irt_metrics.def"
 
 typedef enum {
