@@ -609,7 +609,7 @@ void irt_inst_region_init(irt_context* context) {
 	}
 }
 
-void irt_inst_region_output() {
+void irt_inst_region_debug_output() {
 	uint32 num_regions = irt_context_get_current()->num_regions;
 	printf("%u region(s):\n", num_regions);
 	for(uint32 i = 0; i < num_regions; ++i) {
@@ -618,6 +618,44 @@ void irt_inst_region_output() {
 		printf("  " #_name__ ":\t" _format_string__ "\n",  irt_context_get_current()->inst_region_data[i].aggregated_##_name__);
 #include "irt_metrics.def"
 	}
+}
+
+void irt_inst_region_output() {
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
+	char defaultoutput[] = ".";
+	char* outputprefix = defaultoutput;
+	if(getenv(IRT_INST_REGION_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_REGION_OUTPUT_PATH_ENV);
+
+	struct stat st;
+	int stat_retval = stat(outputprefix,&st);
+	if(stat_retval != 0)
+		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Error creating directory for region data: %s", strerror(errno));
+
+	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
+
+	FILE* outputfile = fopen(outputfilename, "w");
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open region data file for writing: %s", strerror(errno));
+
+	uint32 num_regions = irt_context_get_current()->num_regions;
+
+	// write header
+	fprintf(outputfile, "#subject,id");
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+		fprintf(outputfile, "," #_name__);
+#include "irt_metrics.def"
+	fprintf(outputfile, "\n");
+
+	// write data
+	for(uint32 i = 0; i < num_regions; ++i) {
+		fprintf(outputfile, "RG,%u", i);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+		fprintf(outputfile, "," _format_string__, irt_context_get_current()->inst_region_data[i].aggregated_##_name__);
+#include "irt_metrics.def"
+		fprintf(outputfile, "\n");
+	}
+	fclose(outputfile);
 }
 
 void irt_inst_region_finalize(irt_context* context) {
