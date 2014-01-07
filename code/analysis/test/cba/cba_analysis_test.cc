@@ -43,6 +43,8 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/annotations/naming.h"
 
+#include "cba_test.inc.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -373,6 +375,7 @@ namespace cba {
 				"	type<real<4>> real4Ty;"
 				"	let cB = lit(\"createBuffer\":(int<4>)->ref<ref<array<real<4>,1>>>);"
 				"	let rB = lit(\"releaseBuffer\":(ref<ref<array<real<4>,1>>>)->unit);"
+				"	"
 				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( real4Ty, 100u ) ));"
 				"	ref<ref<array<real<4>,1>>> b = cB(1);"
 				"	ref<ref<array<real<4>,1>>> c = cB(1);"
@@ -401,18 +404,25 @@ namespace cba {
 
 		EXPECT_EQ(varVec.size(), 4u);
 
-		EXPECT_FALSE(mayAlias(varVec[0], varVec[1]));
-		EXPECT_FALSE(mayAlias(varVec[0], varVec[2]));
-		EXPECT_FALSE(mayAlias(varVec[0], varVec[3]));
+		auto a = varVec[0];
+		auto b = varVec[1];
+		auto c = varVec[2];
+		auto d = varVec[3];
 
-/*		EXPECT_FALSE(isAlias(varVec[1], varVec[2]));
-		EXPECT_TRUE(mayAlias(varVec[1], varVec[2]));
-		EXPECT_FALSE(isAlias(varVec[1], varVec[3]));
-		EXPECT_TRUE(mayAlias(varVec[1], varVec[3]));
+		EXPECT_TRUE(mayAlias(a, a));
+		EXPECT_TRUE(isAlias(a, a));
 
-		EXPECT_FALSE(isAlias(varVec[2], varVec[3]));
-		EXPECT_TRUE(mayAlias(varVec[2], varVec[3]));
-*/
+		EXPECT_FALSE(mayAlias(a, b));
+		EXPECT_FALSE(mayAlias(a, c));
+		EXPECT_FALSE(mayAlias(a, c));
+
+		EXPECT_FALSE(isAlias(b, c));
+		EXPECT_TRUE(mayAlias(b, c));
+		EXPECT_FALSE(isAlias(b, d));
+		EXPECT_TRUE(mayAlias(b, d));
+
+		EXPECT_FALSE(isAlias(c, d));
+		EXPECT_TRUE(mayAlias(c, d));
 	}
 
 	TEST(CBA_Analysis, AliasesWithLambdas) {

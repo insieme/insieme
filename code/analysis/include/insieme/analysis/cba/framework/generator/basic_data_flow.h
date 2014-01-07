@@ -327,6 +327,10 @@ namespace cba {
 			return valueMgr;
 		}
 
+		const value_type& getUnknownValue() const {
+			return unknown;
+		}
+
 		template<typename V>
 		value_type atomic(const V& value) {
 			return getValueManager().atomic(value);

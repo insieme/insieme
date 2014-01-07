@@ -81,8 +81,7 @@ namespace cba {
 	public:
 
 		ReferenceConstraintGenerator(CBA& cba)
-//			: super(cba, R, r, getUnknownExternalReference(cba)),
-		    : super(cba, R, r),
+			: super(cba, R, r, getUnknownExternalReference(cba)),
 			  cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
 
 		using super::elem;
@@ -112,15 +111,18 @@ namespace cba {
 			// and default handling
 			super::visitCallExpr(call, ctxt, constraints);
 
+			// we only need to handle references
+			if (!call->getType().isa<RefTypePtr>()) return;
+
 			// introduce memory location in some cases
 			if (isMemoryConstructor(call)) {
 
 				// add constraint location \in R(call)
 				auto value = getLocation(call, ctxt);
-				auto l_lit = cba.getLabel(call);
+				auto l_call = cba.getLabel(call);
 
-				auto R_lit = cba.getSet(R, l_lit, ctxt);
-				constraints.add(elem(value, R_lit));
+				auto R_call = cba.getSet(R, l_call, ctxt);
+				constraints.add(elem(value, R_call));
 
 				// done
 				return;
@@ -142,22 +144,31 @@ namespace cba {
 						}
 				));
 
+			} else if (base.isBuiltIn(fun)) {
+				// do nothing - should be properly supported
+
+			} else if (fun.isa<LiteralPtr>()) {		// it is an external function call -> no more details
+
+				auto l_call = cba.getLabel(call);
+				auto R_call = cba.getSet(R, l_call, ctxt);
+				constraints.add(subset(this->getUnknownValue(), R_call));
+
 			}
 		}
 
 	private:
 
-//		static typename super::value_type getUnknownExternalReference(CBA& cba) {
-//
-//			auto& mgr = cba.getRoot()->getNodeManager();
-//			IRBuilder builder(mgr);
-//			auto type = mgr.getLangBasic().getAnyRef();
-//
-//			set<Reference<Context>> res;
-//			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_A", type)))));
-//			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_B", type)))));
-//			return cba.getDataManager<typename lattice<reference_analysis_data, analysis_config<Context>>::type>().atomic(res);
-//		}
+		static typename super::value_type getUnknownExternalReference(CBA& cba) {
+
+			auto& mgr = cba.getRoot()->getNodeManager();
+			IRBuilder builder(mgr);
+			auto type = mgr.getLangBasic().getAnyRef();
+
+			set<Reference<Context>> res;
+			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_A", type)))));
+			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_B", type)))));
+			return cba.getDataManager<typename lattice<reference_analysis_data, analysis_config<Context>>::type>().atomic(res);
+		}
 
 	};
 
