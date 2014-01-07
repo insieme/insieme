@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/cba/framework/call_site_manager.h"
+#include <algorithm>
 
 namespace insieme {
 namespace analysis {
@@ -340,8 +341,18 @@ namespace cba {
 		EXPECT_EQ(toString(toVector(calleeG)), toString(mgr.getCallee(callerG1)));
 		EXPECT_EQ(toString(toVector(calleeG)), toString(mgr.getCallee(callerG2)));
 
-		EXPECT_EQ(toString(toVector(callerA,callerF2,callerF1)), toString(mgr.getCaller(calleeF))) << calleeF;
-		EXPECT_EQ(toString(toVector(callerG1,callerG2)), toString(mgr.getCaller(calleeG))) << calleeF;
+		auto left = toVector(callerA,callerF2,callerF1);
+		sort(left.begin(), left.end());
+		auto right = mgr.getCaller(calleeF);
+		sort(right.begin(), right.end());
+		EXPECT_EQ(toString(left), toString(right)) << calleeF;
+
+		left = toVector(callerG1,callerG2);
+		sort(left.begin(), left.end());
+		right = mgr.getCaller(calleeG);
+		sort(right.begin(), right.end());
+		
+		EXPECT_EQ(toString(left), toString(right)) << calleeF;
 
 	}
 

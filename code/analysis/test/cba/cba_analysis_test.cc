@@ -39,6 +39,11 @@
 #include "insieme/analysis/cba/analysis.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/annotations/naming.h"
+
+#include "cba_test.inc.h"
 
 namespace insieme {
 namespace analysis {
@@ -359,6 +364,109 @@ namespace cba {
 		EXPECT_FALSE(isAlias(d,e));
 
 		EXPECT_TRUE (isAlias(e,e));
+	}
+
+	TEST(CBA_Analysis, AliasesArrays) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		StatementPtr code = builder.parseStmt(
+				"{"
+				"	type<real<4>> real4Ty;"
+				"	let cB = lit(\"createBuffer\":(int<4>)->ref<ref<array<real<4>,1>>>);"
+				"	let rB = lit(\"releaseBuffer\":(ref<ref<array<real<4>,1>>>)->unit);"
+				"	"
+				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( real4Ty, 100u ) ));"
+				"	ref<ref<array<real<4>,1>>> b = cB(1);"
+				"	ref<ref<array<real<4>,1>>> c = cB(1);"
+				"	ref<ref<array<real<4>,1>>> d = cB(2);"
+				"	"
+				"	delete(a);"
+				"	rB(b);"
+				"	rB(c);"
+				"	rB(d);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		TypePtr refRefArrayReal4 = builder.parseType(
+				"ref<ref<array<real<4>,1>>>"
+		).as<TypePtr>();
+
+		StatementAddress sa(code);
+		std::vector<VariableAddress> varVec;
+
+		visitDepthFirst(sa, [&](const DeclarationStmtAddress& decl) {
+			VariableAddress var = decl->getVariable();
+			if(types::isSubTypeOf(refRefArrayReal4, var->getType())) {
+				varVec.push_back(var);
+			}
+		});
+
+		EXPECT_EQ(varVec.size(), 4u);
+
+		auto a = varVec[0];
+		auto b = varVec[1];
+		auto c = varVec[2];
+		auto d = varVec[3];
+
+		EXPECT_TRUE(mayAlias(a, a));
+		EXPECT_TRUE(isAlias(a, a));
+
+		EXPECT_FALSE(mayAlias(a, b));
+		EXPECT_FALSE(mayAlias(a, c));
+		EXPECT_FALSE(mayAlias(a, c));
+
+		EXPECT_FALSE(isAlias(b, c));
+		EXPECT_TRUE(mayAlias(b, c));
+		EXPECT_FALSE(isAlias(b, d));
+		EXPECT_TRUE(mayAlias(b, d));
+
+		EXPECT_FALSE(isAlias(c, d));
+		EXPECT_TRUE(mayAlias(c, d));
+	}
+
+	TEST(CBA_Analysis, AliasesWithLambdas) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		StatementPtr code = builder.parseStmt(
+				"{"
+				"	let lambda = (ref<int<4>> a, int<4> b)->ref<int<4>> { return a; }; "
+				"	ref<int<4>> var1 = var(0);"
+				"	ref<int<4>> var2 = var(0);"
+				"	ref<int<4>> var3 = lambda(var1, ref.deref(var2));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		StatementAddress sa(code);
+
+		VariableAddress var1_1, var1_2, var2,  var3, a, b;
+
+		visitDepthFirst(sa, [&](const NodeAddress& node) {
+			if(annotations::hasNameAttached(node)) {
+				if(!var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
+					var1_1 = node.as<VariableAddress>();
+				if(var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
+					var1_2 = node.as<VariableAddress>();
+				if(annotations::getAttachedName(node).compare("var2") == 0)
+					var2 = node.as<VariableAddress>();
+				if(annotations::getAttachedName(node).compare("var3") == 0)
+					var3 = node.as<VariableAddress>();
+				if(annotations::getAttachedName(node).compare("a") == 0)
+					a = node.as<VariableAddress>();
+				if(annotations::getAttachedName(node).compare("b") == 0)
+					b = node.as<VariableAddress>();
+			}
+		});
+
+		EXPECT_TRUE(isAlias(var1_1, var1_2));
+/*		EXPECT_TRUE(isAlias(var1_1, a));
+		EXPECT_TRUE(isAlias(a, var3));
+		EXPECT_TRUE(isAlias(var1_1, var3));
+
+		EXPECT_FALSE(isAlias(var1, var2));
+		EXPECT_TRUE(isAlias(var2, b)); // is this an alias? In a sequential program the value of var2 and b will always be the same, even though b is not ref
+*/
 	}
 
 } // end namespace cba

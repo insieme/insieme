@@ -221,7 +221,7 @@ namespace cba {
 
 
 	StatementPtr getRootStmt(const NodeAddress& node) {
-		auto stmt = node.as<StatementPtr>();
+		auto stmt = node.isa<StatementPtr>();
 		if (node.isRoot()) return stmt;
 		auto res = getRootStmt(node.getParentAddress());
 		return (res) ? res : stmt;

@@ -1445,6 +1445,7 @@ namespace parser {
 					TypePtr type = cur.getTerms().back().as<TypePtr>();
 					auto paramName = cur.getSubRange(0);
 					VariablePtr param = cur.variable(type);
+					annotations::attachName(param, paramName.front());
 					cur.getVarScopeManager().add(paramName, param);
 					cur.swap(param);	// exchange type with variable
 					cur.popRange();		// drop name from stack

@@ -216,12 +216,49 @@ NodeManager manager;
 	NodeAddress CDE( Path(typeC).extendForChild(2).extendForChild(0) );
 	EXPECT_EQ("D<E>", toString(*CDE));
 
-	EXPECT_FALSE(BD < CDE);
-	EXPECT_TRUE(CDE < BD);
+	if (*typeB < *typeC) {
+		EXPECT_FALSE(CDE < BD);
+		EXPECT_TRUE(BD < CDE);
+	} else {
+		EXPECT_FALSE(BD < CDE);
+		EXPECT_TRUE(CDE < BD);
+	}
 
 	EXPECT_FALSE(BD < BD);
 	EXPECT_FALSE(BD < BD);
 
+}
+
+TEST(NodeAddressTest, LessTest2) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+
+	// test root-node equality
+	TypeAddress addrA(typeA);
+	TypeAddress addrB(typeB);
+	TypeAddress addrC(typeB);
+
+	EXPECT_EQ(addrA, addrA);
+	EXPECT_NE(addrA, addrB);
+	EXPECT_EQ(addrB, addrC);
+
+	EXPECT_NE(addrA, addrC);
+
+	if (*typeA < *typeB) {
+		EXPECT_LT(addrA, addrB);
+		EXPECT_LT(addrA, addrC);
+	} else {
+		EXPECT_LT(addrB, addrA);
+		EXPECT_LT(addrC, addrA);
+	}
+
+	EXPECT_TRUE(addrA < addrB || addrB < addrA);
+	EXPECT_TRUE(addrA < addrC || addrC < addrA);
+	EXPECT_FALSE(addrB < addrC || addrC < addrB);
 }
 
 TEST(NodeAddressTest, MergePaths) {

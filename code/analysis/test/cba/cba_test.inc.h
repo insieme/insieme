@@ -62,6 +62,19 @@ namespace cba {
 			system("dot -Tsvg solution.dot -o solution.svg");
 		}
 
+		void createDotDump(const NodeAddress& node) {
+			typedef std::shared_ptr<CBA> CBA_Ptr;
+
+			// obtain CBA context from root node
+			core::StatementPtr root = getRootStmt(node);
+			if (!root->hasAttachedValue<CBA_Ptr>()) {
+				root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
+			}
+
+			// extract context and dump it
+			createDotDump(*root->getAttachedValue<CBA_Ptr>());
+		}
+
 	}
 	
 } // end namespace cba
