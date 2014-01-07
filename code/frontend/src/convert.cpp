@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -43,8 +43,6 @@
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/utils/source_locations.h"
-
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
@@ -54,6 +52,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
@@ -89,8 +88,8 @@
 #include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/annotations/source_location.h"
 
-#include "insieme/annotations/c/location.h"
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -107,17 +106,6 @@ using namespace insieme;
 //   ANONYMOUS NAMESPACE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 namespace {
-
-/// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
-annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
-	FileID&& fileId = sm.getMainFileID();
-	assert(!fileId.isInvalid() && "File is not valid!");
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	assert(fileEntry);
-	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
-};
-
-
 
 bool isCppConstructor (const core::ExpressionPtr& expr){
 	// constructor
@@ -909,10 +897,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 		loc.first = fit->second->getStartLocation();
 	}
 
-	node->addAnnotation(
-			std::make_shared < annotations::c::CLocAnnotation
-					> (convertClangSrcLoc(getSourceManager(), loc.first), convertClangSrcLoc(
-							getSourceManager(), loc.second)));
+	utils::attachLocationFromClang(node, getSourceManager(), loc.first, loc.second);
 
 	return node;
 }
@@ -1057,6 +1042,8 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			getIRTranslationUnit().addType(symbol, res);
 		}
 	}
+
+	pragma::attachPragma(res,decl,*this);
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);

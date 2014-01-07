@@ -36,9 +36,12 @@
 
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/utils/logging.h"
+#include "insieme/analysis/cba/analysis.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/subtyping.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -48,8 +51,79 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
+	// get rid of casts
+	NodePtr uncasted = arg;
+	while (uncasted->getNodeType() == core::NT_CastExpr) {
+		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
+	}
+
+	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
+		// check if there is a multiplication
+		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
+			IRBuilder builder(arg->getNodeManager());
+			// recursively look into arguments of multiplication
+			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
+				else
+					size = call->getArgument(1);
+				return true;
+			}
+			if(extractSizeFromSizeof(call->getArgument(1), size, type, true)){
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
+				else
+					size = call->getArgument(0);
+				return true;
+			}
+		}
+		// check if we reached a sizeof call
+		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
+			// extract the type to be allocated
+			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
+			assert(type && "Type could not be extracted!");
+
+			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
+				IRBuilder builder(arg->getNodeManager());
+				size = builder.literal(arg->getNodeManager().getLangBasic().getUInt8(), "1");
+				return true;
+			}
+
+			return true;
+		}
+	}
+	return false;
+}
+
+
 template<typename Enum>
-std::set<Enum> getFlags(const ExpressionPtr& flagExpr) {
+void recursiveFlagCheck(const NodePtr& flagExpr, std::set<Enum>& flags) {
+	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(flagExpr)) {
+		const lang::BasicGenerator& gen = flagExpr->getNodeManagerPtr()->getLangBasic();
+		// check if there is an lshift -> flag reached
+		if (call->getFunctionExpr() == gen.getGenLShift() ||
+					call->getFunctionExpr() == gen.getSignedIntLShift() || call->getFunctionExpr() == gen.getUnsignedIntLShift()) {
+			if (const LiteralPtr flagLit = dynamic_pointer_cast<const Literal>(call->getArgument(1))) {
+				int flag = flagLit->getValueAs<int>();
+				if (flag < Enum::size) // last field of enum to be used must be size
+					flags.insert(Enum(flag));
+				else
+					LOG(ERROR) << "Flag " << flag << " is out of range. Max value is " << CreateBufferFlags::size - 1;
+			}
+		} else if (call->getFunctionExpr() == gen.getGenOr() ||
+				call->getFunctionExpr() == gen.getSignedIntOr() || call->getFunctionExpr() == gen.getUnsignedIntOr()) {
+			// two flags are ored, search flags in the arguments
+			recursiveFlagCheck(call->getArgument(0), flags);
+			recursiveFlagCheck(call->getArgument(1), flags);
+		} else
+			LOG(ERROR) << "Unexpected operation in flag argument: " << call->getFunctionExpr() << "\nUnable to deduce flags, using default settings";
+
+	}
+}
+
+template<typename Enum>
+std::set<Enum> getFlags(const NodePtr& flagExpr) {
 
 	const lang::BasicGenerator& gen = flagExpr->getNodeManagerPtr()->getLangBasic();
 	std::set<Enum> flags;
@@ -61,8 +135,28 @@ std::set<Enum> getFlags(const ExpressionPtr& flagExpr) {
 		recursiveFlagCheck(cast->getSubExpression(), flags);
 	} else
 		LOG(ERROR) << "No flags found in " << flagExpr << "\nUsing default settings";
-
 	return flags;
+}
+
+ExpressionAddress extractVariable(ExpressionAddress expr) {
+	const lang::BasicGenerator& gen = expr->getNodeManagerPtr()->getLangBasic();
+
+	if(expr->getNodeType() == NT_Variable) // return variable
+		return expr;
+
+	if(expr->getNodeType() == NT_Literal) // return literal, e.g. global varialbe
+		return expr;
+
+	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(expr)) {
+		if(gen.isSubscriptOperator(call->getFunctionExpr()))
+			return expr;
+
+		if(gen.isCompositeRefElem(call->getFunctionExpr())) {
+			return expr;
+		}
+	}
+
+	return expr;
 }
 }
 
@@ -71,29 +165,128 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 }
 
 BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
-	NodePtr root = prog->getChild(0);
+	collectInformation();
+	generateReplacements();
+}
+
+void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
-	IRBuilder builder(mgr);
+	ProgramAddress pA(prog->getChild(0));
 
 	TreePatternPtr clCreateBuffer = irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
 			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << pattern::any);
-	TreePatternPtr bufferDecl = irp::declarationStmt(var("buffer", pattern::any), clCreateBuffer);
-	TreePatternPtr bufferAssign = irp::callExpr(irp::atom(mgr.getLangBasic().getUnit()), irp::atom(mgr.getLangBasic().getRefAssign()),
+	TreePatternPtr bufferDecl = irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
+			pattern::single(clCreateBuffer)));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
 			var("buffer", pattern::any) << clCreateBuffer);
-	TreePatternPtr buffer = bufferDecl | bufferAssign;
-	visitDepthFirst(prog, [&](const NodePtr& node) {
-		MatchOpt createBuffer = buffer->matchPointer(node);
+	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
+	visitDepthFirst(pA, [&](const NodeAddress& node) {
+		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
 
-		if(createBuffer)
-			std::cout << "\nyipieaiey: " << createBuffer->getVarBinding("host_ptr").getValue() << std::endl << std::endl;
-/*		if(const LiteralPtr literal = dynamic_pointer_cast<const Literal>(fun)) {
-			if(literal->getStringValue().compare("clCreateBuffer") == 0) {
+		if(createBuffer) {
+			NodePtr flagArg = createBuffer->getVarBinding("flags").getValue();
+			std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);
+			// check if CL_MEM_USE_HOST_PTR is set
+//			bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
+			// check if CL_MEM_COPY_HOST_PTR is set
+//			bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
-			}
-		}*/
+			// extract type form size argument
+			ExpressionPtr size;
+			TypePtr type;
+#ifdef	NDEBUG
+			extractSizeFromSizeof(createBuffer->getVarBinding("size").getValue().as<ExpressionPtr>(), size, type, false);
+#else
+			assert(extractSizeFromSizeof(createBuffer->getVarBinding("size").getValue().as<ExpressionPtr>(), size, type, false)
+					&& "cannot extract size and type from size paramater fo clCreateBuffer");
+#endif
+			ExpressionPtr hostPtr = createBuffer->getVarBinding("host_ptr").getValue().as<ExpressionPtr>();
+
+			// get the buffer expression
+			ExpressionAddress lhs = createBuffer->getVarBinding("buffer").getValue().as<ExpressionAddress>();
+//			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
+
+			// add gathered information to clMemMetaMap
+			this->clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, hostPtr);
+		}
 		return;
 	});
 
+}
+
+void BufferReplacer::generateReplacements() {
+	NodeManager& mgr = prog.getNodeManager();
+	IRBuilder builder(mgr);
+
+	TypePtr clMemTy;
+
+	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
+		ExpressionAddress bufferExpr = extractVariable(meta.first);
+		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
+	//			std::cout << node << std::endl;
+		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
+			if(GenericTypePtr gt = dynamic_pointer_cast<const GenericType>(node)) {
+				if(gt.toString().compare("_cl_mem") == 0)
+					clMemTy = gt;
+			}
+		}, true, true);
+
+std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
+
+		TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
+		bool alreadyThereAndCorrect = false;
+
+		// check if there is already a replacement for the current expression (or an alias of it) with a different type
+		for_each(clMemReplacements, [&](std::pair<ExpressionAddress, ExpressionPtr> replacement) {
+			if(replacement.first == bufferExpr/* || analysis::cba::isAlias(replacement.first, bufferExpr)*/) {
+				std::cout << "repty " << replacement.second << std::endl;
+				std::cout << "newTy " << newType << std::endl;
+				if(replacement.second->getType() != newType) {
+					if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the new type is subtype of the current one, replace the type
+						//newType = replacement.second->getType();
+						bufferExpr = replacement.first; // do not add aliases to the replacement map
+					} else if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the current type is subtype of the new type, do nothing
+						alreadyThereAndCorrect = true;
+						return;
+					} else // if the types are not related, fail
+						assert(false && "Buffer used twice with different types. Not supported by Insieme.");
+				} else
+					alreadyThereAndCorrect = true;
+			}
+		});
+
+		if(alreadyThereAndCorrect) return;
+
+		// local variable case
+		if(VariableAddress var = dynamic_address_cast<const Variable>(bufferExpr)) {
+			clMemReplacements[var] = builder.variable(newType);
+		}
+		// global variable case
+		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
+			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
+		}
+
+		// try to extract the variable
+		if(mgr.getLangBasic().isSubscriptOperator(bufferExpr)){
+			std::cout << "tolles subscript\n";
+
+			assert(false && "fuck you");
+		}
+
+		TreePatternPtr subscriptPattern = irp::callExpr(pattern::any, pattern::any, pattern::any << pattern::any);
+
+		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
+
+		if(subscript) {
+			std::cout << "MATCH: " << subscript << std::endl;
+		}
+//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.vector.to.ref.array(v36), 1u))
+//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.deref(v36), 0u))
+	});
+
+	for_each(clMemReplacements, [&](std::pair<ExpressionPtr, ExpressionPtr> replacement) {
+		std::cout << replacement.first->getType() << " -> " << replacement.second->getType() << std::endl;
+	});
 }
 
 } //namespace ocl
