@@ -236,6 +236,12 @@ namespace detail {
 			// now the length is equally long
 			assert(depth == other.depth);
 
+			// handle root case
+			if (depth==1) {
+				assert(!parent && !other.parent);
+				return index < other.index || (index == other.index && *ptr < *other.ptr);
+			}
+
 			// implement lexicographical order
 			return *parent < *other.parent || (*parent == *other.parent && index < other.index);
 
