@@ -231,7 +231,7 @@ void BufferReplacer::generateReplacements() {
 			}
 		}, true, true);
 
-//std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
+std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
 
 		TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
 		bool alreadyThereAndCorrect = false;
@@ -249,7 +249,7 @@ void BufferReplacer::generateReplacements() {
 						alreadyThereAndCorrect = true;
 						return;
 					} else // if the types are not related, fail
-						assert(false && "Buffer used twice with different types. Not supported in Insieme.");
+						assert(false && "Buffer used twice with different types. Not supported by Insieme.");
 				} else
 					alreadyThereAndCorrect = true;
 			}
@@ -265,6 +265,23 @@ void BufferReplacer::generateReplacements() {
 		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
 			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
 		}
+
+		// try to extract the variable
+		if(mgr.getLangBasic().isSubscriptOperator(bufferExpr)){
+			std::cout << "tolles subscript\n";
+
+			assert(false && "fuck you");
+		}
+
+		TreePatternPtr subscriptPattern = irp::callExpr(pattern::any, pattern::any, pattern::any << pattern::any);
+
+		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
+
+		if(subscript) {
+			std::cout << "MATCH: " << subscript << std::endl;
+		}
+//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.vector.to.ref.array(v36), 1u))
+//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.deref(v36), 0u))
 	});
 
 	for_each(clMemReplacements, [&](std::pair<ExpressionPtr, ExpressionPtr> replacement) {
