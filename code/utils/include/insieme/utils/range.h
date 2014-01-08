@@ -246,8 +246,8 @@ namespace utils {
 		/**
 		 * An implicit converter realizing this range within a vector.
 		 */
-		operator vector<value_type>() const {
-			return vector<value_type>(a, b);
+		operator std::vector<value_type>() const {
+			return std::vector<value_type>(a, b);
 		}
 
 		/**
