@@ -158,7 +158,7 @@ namespace constraint {
 		virtual bool check(const Assignment& ass) const =0;
 
 		virtual std::ostream& writeDotEdge(std::ostream& out) const =0;
-		virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const =0;
+		virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
 		const std::vector<ValueID>& getInputs() const { return inputs; };
 		const std::vector<ValueID>& getOutputs() const { return outputs; };

@@ -40,6 +40,7 @@
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/arithmetic.h"
+#include "insieme/analysis/cba/analysis/uninterpreted_symbols.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -171,6 +172,68 @@ namespace cba {
 		}
 		return true;
 	}
+
+
+	// *************************************************************************************
+	//								 Uninterpreted Symbols
+	// *************************************************************************************
+
+	bool notUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		return !mayUninterpretedEqual(a, b);
+	}
+
+	bool mayUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		assert_eq(a.getRootNode(), b.getRootNode());
+
+		// shortcut for the simple stuff
+		if (a == b) return true;
+
+		typedef Reference<DefaultContext> Reference;
+
+		// compute references set
+		std::set<ExpressionPtr> valA = getValues(a, U);
+		std::set<ExpressionPtr> valB = getValues(b, U);
+
+		// check for undefined values
+		if (contains(valA, ExpressionPtr())) return true;
+		if (contains(valB, ExpressionPtr())) return true;
+
+		// check for any collision
+		for(const auto& a : valA) {
+			for(const auto& b : valB) {
+				if (*a == *b) return true;
+			}
+		}
+
+		// no collisions => they are not equal
+		return false;
+	}
+
+	bool isUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		assert_eq(a.getRootNode(), b.getRootNode());
+
+		// shortcut for the simple stuff
+		if (a == b) return true;
+
+		typedef Reference<DefaultContext> Reference;
+
+		// compute references set
+		std::set<ExpressionPtr> valA = getValues(a, U);
+		std::set<ExpressionPtr> valB = getValues(b, U);
+
+		// check whether both values are unique
+		if (valA.size() > 1u || valB.size() > 1u) return false;
+
+		ExpressionPtr vA = *valA.begin();
+		ExpressionPtr vB = *valB.begin();
+
+		// check for undefined values
+		if (!vA || !vB) return false;
+
+		// check whether values are identical
+		return *vA == *vB;
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

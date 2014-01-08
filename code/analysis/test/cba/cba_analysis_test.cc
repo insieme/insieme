@@ -425,48 +425,117 @@ namespace cba {
 		EXPECT_TRUE(mayAlias(c, d));
 	}
 
-	TEST(CBA_Analysis, AliasesWithLambdas) {
+
+	TEST(CBA_Analysis, UninterpretedSymbols) {
+
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		StatementPtr code = builder.parseStmt(
+		map<string,NodePtr> symbols;
+		symbols["cond"] = builder.variable(mgr.getLangBasic().getBool());
+
+		auto code = builder.parseStmt(
 				"{"
-				"	let lambda = (ref<int<4>> a, int<4> b)->ref<int<4>> { return a; }; "
-				"	ref<int<4>> var1 = var(0);"
-				"	ref<int<4>> var2 = var(0);"
-				"	ref<int<4>> var3 = lambda(var1, ref.deref(var2));"
-				"}"
+				"	"					// PART I
+				"	let f = (ref<X> a, X b)->X { return *a; };"
+				"	let g = lit(\"g\":(X)->X);"
+				"	"
+				"	ref<X> a = var(lit(\"0\":X));"
+				"	ref<X> b = var(lit(\"1\":X));"
+				"	ref<X> c = var(f(a, *b));"
+				"	"
+				"	ref<X> d = var(*a);"
+				"	if (cond) d = *b;"
+				"	"
+				"	*a;"
+				"	*b;"
+				"	*c;"
+				"	*d;"
+				"	"
+				"	"
+				"	b = *a;"				// PART II
+				"	"
+				"	*a;"
+				"	*b;"
+				"	g(*a);"
+				"	g(*a);"
+				"	"
+				"	"						// PART III
+				"	for(int<4> i = 0 .. 10 : 1) {"
+				"		a = g(*a);"
+				"	}"
+				"	"
+				"	*a;"
+				"	*b;"
+				"}",
+				symbols
 		).as<CompoundStmtPtr>();
 
-		StatementAddress sa(code);
+		CompoundStmtAddress root(code);
 
-		VariableAddress var1_1, var1_2, var2,  var3, a, b;
+		auto notIsUninterpretedEqual = [](const ExpressionAddress& a, const ExpressionAddress& b)->bool {
+			return !isUninterpretedEqual(a,b);
+		};
 
-		visitDepthFirst(sa, [&](const NodeAddress& node) {
-			if(annotations::hasNameAttached(node)) {
-				if(!var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
-					var1_1 = node.as<VariableAddress>();
-				if(var1_1 && annotations::getAttachedName(node).compare("var1") == 0)
-					var1_2 = node.as<VariableAddress>();
-				if(annotations::getAttachedName(node).compare("var2") == 0)
-					var2 = node.as<VariableAddress>();
-				if(annotations::getAttachedName(node).compare("var3") == 0)
-					var3 = node.as<VariableAddress>();
-				if(annotations::getAttachedName(node).compare("a") == 0)
-					a = node.as<VariableAddress>();
-				if(annotations::getAttachedName(node).compare("b") == 0)
-					b = node.as<VariableAddress>();
-			}
-		});
+		{
+			// PART I
+			auto a = root[5].as<ExpressionAddress>();
+			auto b = root[6].as<ExpressionAddress>();
+			auto c = root[7].as<ExpressionAddress>();
+			auto d = root[8].as<ExpressionAddress>();
 
-		EXPECT_TRUE(isAlias(var1_1, var1_2));
-/*		EXPECT_TRUE(isAlias(var1_1, a));
-		EXPECT_TRUE(isAlias(a, var3));
-		EXPECT_TRUE(isAlias(var1_1, var3));
+			// simple cases
+			EXPECT_PRED2(isUninterpretedEqual, a, a);
+			EXPECT_PRED2(isUninterpretedEqual, b, b);
+			EXPECT_PRED2(isUninterpretedEqual, c, c);
+			EXPECT_PRED2(isUninterpretedEqual, d, d);
 
-		EXPECT_FALSE(isAlias(var1, var2));
-		EXPECT_TRUE(isAlias(var2, b)); // is this an alias? In a sequential program the value of var2 and b will always be the same, even though b is not ref
-*/
+			EXPECT_PRED2(mayUninterpretedEqual, a, a);
+			EXPECT_PRED2(mayUninterpretedEqual, b, b);
+			EXPECT_PRED2(mayUninterpretedEqual, c, c);
+			EXPECT_PRED2(mayUninterpretedEqual, d, d);
+
+			// more tricky stuff
+			EXPECT_PRED2(isUninterpretedEqual, a, c);
+
+			EXPECT_PRED2(notUninterpretedEqual, a, b);
+			EXPECT_PRED2(notUninterpretedEqual, b, c);
+
+			EXPECT_PRED2(mayUninterpretedEqual, a, d);
+			EXPECT_PRED2(mayUninterpretedEqual, b, d);
+			EXPECT_PRED2(mayUninterpretedEqual, c, d);
+		}
+
+		{
+			// PART II
+			auto a = root[10].as<ExpressionAddress>();
+			auto b = root[11].as<ExpressionAddress>();
+			auto ga1 = root[12].as<ExpressionAddress>();
+			auto ga2 = root[13].as<ExpressionAddress>();
+
+			EXPECT_PRED2(isUninterpretedEqual, a, a);
+			EXPECT_PRED2(isUninterpretedEqual, b, b);
+			EXPECT_PRED2(isUninterpretedEqual, ga1, ga1);
+			EXPECT_PRED2(isUninterpretedEqual, ga2, ga2);
+
+			EXPECT_PRED2(isUninterpretedEqual, a, b);
+			EXPECT_PRED2(isUninterpretedEqual, ga1, ga2);
+
+			EXPECT_PRED2(notUninterpretedEqual, a, ga1);
+			EXPECT_PRED2(notUninterpretedEqual, b, ga2);
+		}
+
+		{
+			// PART III
+			auto a = root[15].as<ExpressionAddress>();
+			auto b = root[16].as<ExpressionAddress>();
+
+			EXPECT_PRED2(isUninterpretedEqual, a, a);
+			EXPECT_PRED2(isUninterpretedEqual, b, b);
+
+			EXPECT_PRED2(mayUninterpretedEqual, a, b);
+			EXPECT_PRED2(notIsUninterpretedEqual, a, b);
+		}
 	}
 
 } // end namespace cba

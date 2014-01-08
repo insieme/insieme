@@ -34,61 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/forward_decls.h"
+#include "insieme/analysis/cba/analysis/uninterpreted_symbols.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-
-	// *************************************************************************************
-	//										Constants
-	// *************************************************************************************
-
-	// -- Boolean --
-
-	bool isTrue(const core::ExpressionAddress& a);
-
-	bool mayBeTrue(const core::ExpressionAddress& a);
-
-	bool isFalse(const core::ExpressionAddress& a);
-
-	bool mayBeFalse(const core::ExpressionAddress& a);
-
-
-	// -- Arithmetic --
-
-	core::LiteralPtr isIntegerConstant(const core::ExpressionAddress& a);
-
-
-	// -- Functions --
-
-
-	// -- Other --
-
-
-	// *************************************************************************************
-	//										 Aliases
-	// *************************************************************************************
-
-	bool notAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	bool isAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	// *************************************************************************************
-	//								 Uninterpreted Symbols
-	// *************************************************************************************
-
-	bool notUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	bool mayUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	bool isUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
+	const uninterpreted_symbols_analysis_data U = registerAnalysis<uninterpreted_symbols_analysis_data>("U");
+	const uninterpreted_symbols_analysis_var u  = registerAnalysis<uninterpreted_symbols_analysis_var>("u");
 
 } // end namespace cba
 } // end namespace analysis
