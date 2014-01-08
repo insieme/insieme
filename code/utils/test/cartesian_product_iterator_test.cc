@@ -137,5 +137,41 @@ namespace utils {
 
 	}
 
+	TEST(CartesianProductIterator, EmptyList) {
+
+		// create some input data
+		vector<vector<int>> data = {
+				{1,2},
+				{},
+				{5,6,7}
+		};
+
+		set<vector<int>> product;
+		for(auto cur : cartesian_product_range(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(0u, product.size());
+
+	}
+
+	TEST(CartesianProductIterator, EmptyList2) {
+
+		// create some input data
+		vector<vector<int>> data = {
+				{1,2},
+				{5,6,7},
+				{}
+		};
+
+		set<vector<int>> product;
+		for(auto cur : cartesian_product_range(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(0u, product.size());
+
+	}
+
 } // end namespace utils
 } // end namespace insieme

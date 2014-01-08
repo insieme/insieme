@@ -94,14 +94,24 @@ namespace utils {
 			Lazy<std::vector<ElementType>> value;
 
 			/**
+			 * Marks this iterator to point to the end position.
+			 */
+			bool points_to_end;
+
+			/**
+			 * A private constructor creating an iterator referencing the end.
+			 */
+			CartesianProductIterator() : digits(), points_to_end(true) {}
+
+			/**
 			 * A private constructor for initializing a an iterator.
 			 */
-			CartesianProductIterator(const std::vector<Digit>& digits) : digits(digits) {}
+			CartesianProductIterator(const std::vector<Digit>& digits) : digits(digits), points_to_end(false) {}
 
 		public:
 
 			bool operator==(const CartesianProductIterator& other) const {
-				return digits == other.digits;
+				return (points_to_end && other.points_to_end) || (!points_to_end && !other.points_to_end && digits == other.digits);
 			}
 
 			std::vector<ElementType>& operator*() {
@@ -125,6 +135,9 @@ namespace utils {
 
 			CartesianProductIterator& operator++() {
 
+				// skip operation if already at the end
+				if (points_to_end) return *this;
+
 				// clear value
 				value.reset();
 
@@ -147,9 +160,7 @@ namespace utils {
 				}
 
 				// if we reach this position we have reached the end
-				for(Digit& cur : digits) {
-					cur.cur = cur.end;		// set all digits to the end state (to be equivalent to end)
-				}
+				points_to_end = true;
 
 				// done
 				return *this;
@@ -169,6 +180,7 @@ namespace utils {
 			static CartesianProductIterator begin(const NestedDataContainer& data) {
 				std::vector<Digit> pos;
 				for(const auto& cur : data) {
+					if (cur.begin() == cur.end()) return end(data);
 					pos.push_back((Digit){cur.begin(), cur.end(), cur.begin()});
 				}
 				return CartesianProductIterator(pos);
@@ -180,11 +192,7 @@ namespace utils {
 			 */
 			template<typename NestedDataContainer>
 			static CartesianProductIterator end(const NestedDataContainer& data) {
-				std::vector<Digit> pos;
-				for(const auto& cur : data) {
-					pos.push_back((Digit){cur.begin(), cur.end(), cur.end()});
-				}
-				return CartesianProductIterator(pos);
+				return CartesianProductIterator();
 			}
 
 		};
