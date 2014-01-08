@@ -67,8 +67,8 @@ int main ( int argc, char *argv[] )
   printf ( "  seeking those inputs that make the function TRUE.\n" );
 
   printf ( "\n" );
-  printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
-  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
+ // printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
+//  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
 /*
   Compute the number of binary vectors to check.
 */
@@ -110,9 +110,9 @@ int main ( int argc, char *argv[] )
            + (              id + 1 ) * ihi )
            / ( thread_num          );
 
-    printf ( "\n" );
+ //   printf ( "\n" );
   //  printf ( "  Processor %8d iterates from %8d <= I < %8d.\n", id, ilo2, ihi2 );
-    printf ( "\n" );
+   // printf ( "\n" );
 /*
   Check every possible input vector.
 */

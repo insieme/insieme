@@ -250,7 +250,7 @@ main()
 #pragma omp master
 	{
 	    k = omp_get_num_threads();
-	    printf ("Number of Threads requested = %i\n",k);
+//	    printf ("Number of Threads requested = %i\n",k);
         }
     }
 #endif
@@ -260,7 +260,7 @@ main()
 #pragma omp parallel
 #pragma omp atomic 
 		k++;
-    printf ("Number of Threads counted = %i\n",k);
+  //  printf ("Number of Threads counted = %i\n",k);
 #endif
 
     /* Get initial value for system clock. */
@@ -288,9 +288,9 @@ main()
 		a[j] = 2.0E0 * a[j];
     t = 1.0E6 * (mysecond() - t);
 
-    printf("Each test below will take on the order"
-	" of %d microseconds.\n", (int) t  );
-    printf("   (= %d clock ticks)\n", (int) (t/quantum) );
+   // printf("Each test below will take on the order"
+//	" of %d microseconds.\n", (int) t  );
+ //   printf("   (= %d clock ticks)\n", (int) (t/quantum) );
     printf("Increase the size of the arrays if this shows that\n");
     printf("you are not getting at least 20 clock ticks per test.\n");
 
@@ -363,11 +363,11 @@ main()
     for (j=0; j<4; j++) {
 		avgtime[j] = avgtime[j]/(double)(NTIMES-1);
 
-		printf("%s%12.1f  %11.6f  %11.6f  %11.6f\n", label[j],
-	       1.0E-06 * bytes[j]/mintime[j],
-	       avgtime[j],
-	       mintime[j],
-	       maxtime[j]);
+//		printf("%s%12.1f  %11.6f  %11.6f  %11.6f\n", label[j],
+//	       1.0E-06 * bytes[j]/mintime[j],
+//	       avgtime[j],
+//	       mintime[j],
+//	       maxtime[j]);
     }
     printf(HLINE);
 
@@ -510,8 +510,8 @@ void checkSTREAMresults ()
 				ierr++;
 #ifdef VERBOSE
 				if (ierr < 10) {
-					printf("         array b: index: %ld, expected: %e, observed: %e, relative error: %e\n",
-						j,bj,b[j],abs((bj-b[j])/bAvgErr));
+		//			printf("         array b: index: %ld, expected: %e, observed: %e, relative error: %e\n",
+		//				j,bj,b[j],abs((bj-b[j])/bAvgErr));
 				}
 #endif
 			}
