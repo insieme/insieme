@@ -64,8 +64,8 @@ int main ( void )
   printf ( "  C + OpenMP version\n" );
 
   printf ( "\n" );
-  printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
-  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
+//  printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
+//  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
 
   printf ( "\n" );
   printf ( " Algorithm        Mode          N    Error       Time\n" );

@@ -583,6 +583,17 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
 		subTy : builder.refType(builder.arrayType( subTy ));
 
+    // Function pointers are IR function but 
+    // pointers of function pointers should be IR array of functions
+    // hence we must stop recursion
+    auto innerPtr = pointerTy->getPointeeType(); 
+    if(innerPtr->isPointerType()) {
+            if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
+                subTy = convert(innerPtr->getPointeeType().getTypePtr());
+	            retTy = builder.refType(builder.arrayType( subTy ));
+            }
+    }
+
 	LOG_TYPE_CONVERSION( pointerTy, retTy );
 	return retTy;
 }

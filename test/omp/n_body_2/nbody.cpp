@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
    * Initialize bodies and allocate internal data structures
    *************************************************************************/
 
-  printf("Initializing with %d threads, %d bodies, %d time steps\n",
-		  max_threads, num_bodies, num_steps);
+//  printf("Initializing with %d threads, %d bodies, %d time steps\n",
+//		  max_threads, num_bodies, num_steps);
 
   bodies = init_bodies(num_bodies, INIT_SPIRAL);
   check_simulation(bodies, num_bodies);
