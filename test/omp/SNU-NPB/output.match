@@ -1,0 +1,1 @@
+awk '/^\sVERIFICATION\s+=\s+\w+$/{ print $3 }'

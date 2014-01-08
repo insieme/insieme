@@ -126,8 +126,8 @@ int main ( int argc, char *argv[] )
   printf ( "\n" );
   printf ( "  Spatial grid of %d by %d points.\n", M, N );
   printf ( "  The iteration will be repeated until the change is <= %e\n", epsilon ); 
-  printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
-  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
+  //printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
+//  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
 /*
   Set the boundary values, which don't change. 
 */
@@ -202,7 +202,7 @@ int main ( int argc, char *argv[] )
   printf ( "\n" );
   printf ( " Iteration  Change\n" );
   printf ( "\n" );
-  wtime = omp_get_wtime ( );
+//  wtime = omp_get_wtime ( );
 
   diff = epsilon;
 
@@ -272,7 +272,7 @@ int main ( int argc, char *argv[] )
       iterations_print = 2 * iterations_print;
     }
   } 
-  wtime = omp_get_wtime ( ) - wtime;
+//  wtime = omp_get_wtime ( ) - wtime;
 
   printf ( "\n" );
   printf ( "  %8d  %f\n", iterations, diff );

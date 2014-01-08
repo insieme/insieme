@@ -4,12 +4,12 @@
 
 // the problem size - the number of particles
 #ifndef N
-  #define N 1000
+  #define N 100 //1000
 #endif
 
 // the second problem size = number of iterations
 #ifndef M
-	#define M 100
+	#define M 100 //100
 #endif
 
 #ifndef L
@@ -46,8 +46,6 @@ force F[N];
 // the thread-private copy to enable parallel computations
 force pF[N];
 #pragma omp threadprivate (pF)
-
-
 
 // ----- utility functions ------
 double rand_val(double min, double max) {
@@ -99,8 +97,6 @@ int main() {
 //		B[i].pos = (position) { 0, -10 + 20*(i/2), -10 + 20*(i%2) };		// for debugging!
 		B[i].v   = triple_zero();
 	}
-
-
 	// run simulation for M steps
 	#pragma omp parallel
 	for(int i=0; i<M; i++) {
