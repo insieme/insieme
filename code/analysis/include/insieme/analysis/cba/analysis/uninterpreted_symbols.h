@@ -182,7 +182,7 @@ namespace cba {
 
 				// compute Cartesian product of functions and arguments
 				core::IRBuilder builder(nodeMgr);
-				for(auto& cur : utils::cartesian_product_range(elements)) {
+				for(auto& cur : utils::cartesian_product(elements)) {
 
 					auto f = cur[0];
 					auto a = std::vector<ExpressionPtr>(cur.begin() + 1, cur.end());

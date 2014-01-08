@@ -238,7 +238,7 @@ namespace utils {
 			typename NestedDataContainer::value_type::const_iterator
 		>
 	>
-	range<product_iter> cartesian_product_range(const NestedDataContainer& data) {
+	range<product_iter> cartesian_product(const NestedDataContainer& data) {
 		return make_range(cartesian_product_begin(data), cartesian_product_end(data));
 	}
 

@@ -93,7 +93,7 @@ namespace utils {
 		};
 
 		set<vector<int>> product;
-		for(auto cur : cartesian_product_range(data)) {
+		for(auto cur : cartesian_product(data)) {
 			product.insert(cur);
 		}
 
@@ -111,7 +111,7 @@ namespace utils {
 		};
 
 		set<vector<int>> product;
-		for(auto cur : cartesian_product_range(data)) {
+		for(auto cur : cartesian_product(data)) {
 			product.insert(cur);
 		}
 
@@ -129,7 +129,7 @@ namespace utils {
 		};
 
 		set<vector<int>> product;
-		for(auto cur : cartesian_product_range(data)) {
+		for(auto cur : cartesian_product(data)) {
 			product.insert(cur);
 		}
 
@@ -147,7 +147,7 @@ namespace utils {
 		};
 
 		set<vector<int>> product;
-		for(auto cur : cartesian_product_range(data)) {
+		for(auto cur : cartesian_product(data)) {
 			product.insert(cur);
 		}
 
@@ -165,7 +165,7 @@ namespace utils {
 		};
 
 		set<vector<int>> product;
-		for(auto cur : cartesian_product_range(data)) {
+		for(auto cur : cartesian_product(data)) {
 			product.insert(cur);
 		}
 
