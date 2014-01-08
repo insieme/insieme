@@ -464,6 +464,11 @@ namespace backend {
 			// variable is already representing a value
 			return converter.getStmtConverter().convertExpression(context, fun);
 		}
+        case core::NT_CastExpr:
+        {
+                // function pointer casted to a different type of function pointer
+		    	return converter.getStmtConverter().convertExpression(context, fun.as<core::CastExprPtr>());
+        }
 		default:
 			LOG(FATAL) << "Encountered unsupported node: " << *fun;
 			assert(false && "Unexpected Node Type!");

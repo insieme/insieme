@@ -1195,6 +1195,9 @@ namespace {
 			return true;
 		}
 
+		// also allow function pointers to be casted to different type function pointers 
+		if (src->getNodeType() == NT_FunctionType && trg->getNodeType() == NT_FunctionType) return true;
+
 		// everything else is invalid
 		return false;
 	}

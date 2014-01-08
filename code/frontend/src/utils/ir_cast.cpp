@@ -586,6 +586,14 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		return builder.callExpr(trgTy, gen.getGenNe(), expr, builder.getZero(argTy));
 	}
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 									FunctionType -> FunctionType
+	///////////////////////////////////////////////////////////////////////////////////////
+	// cast a function pointer to a different type function ptr 
+	if ( argTy.isa<core::FunctionTypePtr>() && trgTy.isa<core::FunctionTypePtr>() ) {
+		return builder.castExpr(trgTy, expr);
+	}
+
 	return builder.castExpr(trgTy, expr);
 	//assert(false && "Cast conversion not supported!");
 }
