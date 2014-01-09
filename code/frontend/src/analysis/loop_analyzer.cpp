@@ -187,7 +187,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			// update this variable so the inner loop side effects have access to it
 			postStmts.push_back(assign);
 			if ( initValue != originalInductionExpr) {
-				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], inductionVar);
+				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], (invertComparisonOp) ? convFact.getIRBuilder().invertSign(newInductionExpr) : inductionVar);
 				firstStmts.push_back(assign);
 			}
 		}
