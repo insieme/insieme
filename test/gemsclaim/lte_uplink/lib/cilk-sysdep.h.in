@@ -1,0 +1,568 @@
+/* -*- C -*-
+ */
+/*
+ * Copyright (c) 2000 Massachusetts Institute of Technology
+ * Copyright (c) 2000 Matteo Frigo
+ *
+ *  This library is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU Lesser General Public License as published by
+ *  the Free Software Foundation; either version 2.1 of the License, or (at
+ *  your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but
+ *  WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+ *  USA.
+ *
+ */
+
+/* Don't just include config.h, since that is not installed. */
+/* Instead, we must actually #define the useful things here. */
+/* #include "../config.h" */
+/* Compiler-specific dependencies here, followed by the runtime system dependencies.
+ * The compiler-specific dependencies were originally written by Eitan Ben Amos.
+ * Modified by Bradley.
+ *
+ * Added __tile__ architecture target.
+ * Magnus Sjalander, 2011-10-11
+ */
+#ifndef CILK_SYSDEP_H
+#define CILK_SYSDEP_H
+
+/*
+ * GCC compiler definitions.
+ */
+#if defined(__GNUC__)
+
+#define FILE_IDENTITY(name, identity) static const char *name __attribute__((__unused__)) = identity
+
+#define CHECK_FORMAT_STRING(archetype,string_index, first_to_check) \
+__attribute__((format(archetype,string_index, first_to_check)))
+
+#define NoReturn(fdecl) void fdecl __attribute__((noreturn))
+
+#if defined(__STRICT_ANSI__)
+
+/* when compiling ANSI, do not use GCC extensions 
+ *
+ * TBD: still have problem with UNUSED functions for which the use of
+ * 'USE_UNUSED' doesn't solve the problem.
+ */
+#define UNUSED(decl) decl  __attribute__((__unused__)) 
+/* a hack to prevent compilers from complaining about "unused variable" */
+#define USE_UNUSED(var)  (void)(var)
+
+/* makes "pid_t" available in addition to "__pid_t" 
+ * TODO: we probably need this to be checked by autoconf.
+ */
+#define _XOPEN_SOURCE  500
+
+#else /* __STRICT_ANSI__ */
+
+/* when compiling non-ANSI, use GCC extensions */
+#define UNUSED(decl) decl  __attribute__((__unused__))
+/* a hack used to prevent compilers from complaining about "unused variable" */
+#define USE_UNUSED(var)  /* Nothing */
+
+#endif /* __STRICT_ANSI__ */
+#endif /* __GNUC__ */
+
+/*
+ * SGI MipsPro compiler definitions.
+ */
+#if !defined(__GNUC__) && defined(mips)
+/* I guess it must be the mips compiler */
+
+#define FILE_IDENTITY(name, identity) static const char *name /*__attribute__((__unused__))*/ = identity; USE_UNUSED_STATIC(name)
+
+/* 
+ * the samantics of the following is correct but for some reason the compiler 
+ * complains.
+ */
+#if 0
+/* According to the online manuals, "#pragma ident" is only availble in -o32 mode. -Bradley Mon Jun  7 2004. */
+#define FILE_IDENTITY(name,identity) _Pragma("ident identity")
+#endif
+
+/* cilk2c generates code with GCC attributes */
+#define __attribute__(attr)   /* Ignore Attribute */
+
+#define CHECK_FORMAT_STRING(archetype,string_index, first_to_check)
+
+#define NoReturn(fdecl) void fdecl /* #pragma unknown_control_flow */
+
+#define UNUSED(decl) decl
+/* a hack to prevent compilers from complaining about "unused variable" */
+#define USE_UNUSED(var)  (void)(var)
+struct __use_unused_static {void*a;void*b;};
+#define USE_UNUSED_STATIC(name) static struct __use_unused_static __cilk_use_unused_static_ ## name = { &__cilk_use_unused_static_ ## name, & name }
+
+/*
+ * the __eprintf function is used by assert of GCC & does not exist on SGI.
+ */
+/*
+#define __eprintf Cilk_eprintf
+
+static inline void Cilk_eprintf (const char* format, ...)
+{
+}
+*/
+
+#if 0
+/* declare a region of code in which the "Unknown pragma" warning will be turned off */
+#define PRAGMA_UNKNOWN_OFF_BEGIN     _Pragma("set woff 1155")
+#define PRAGMA_UNKNOWN_OFF_END       _Pragma("reset woff 1155")
+#endif
+
+/* 
+define cache-line alignment of structure using the following macro
+#define CILK_CACHE_LINE_ALIGNED(decl) \
+decl \
+_Pragma align_symbol(decl,CILK_CACHE_LINE)
+
+
+*/
+#endif /* __sgi */
+
+
+/*
+ * Microsoft Visual C compiler definitions.
+ */
+#if defined(__MSVC__)
+
+/* tells the compiler that the function does not return */
+#define NoReturn(fdecl) __declspec(noreturn) void fdecl
+
+#endif /* __MSVC__ */
+
+
+/******************************************************/
+/* Now the cilk runtime system dependences */
+/******************************************************/
+
+FILE_IDENTITY(ident_cilk_sysdep_h,
+	      "$HeadURL: https://bradley.csail.mit.edu/svn/repos/cilk/5.4.3/runtime/cilk-sysdep.h.in $ $LastChangedBy: bradley $ $Rev: 2311 $ $Date: 2005-07-13 17:38:21 -0400 (Wed, 13 Jul 2005) $");
+
+/* The C compiler to use when compiling code for pthreads */
+#undef CILKC_PTHREAD_CC
+
+/* To be passed to the C compiler when compiling code for pthreads */
+#undef CILKC_PTHREAD_CFLAGS
+
+/* The pthread libraries */
+#undef CILKC_PTHREAD_LIBS
+
+/* Using perfctrp */
+#undef CILK_USE_PERFCTR
+
+/* Define if you have the gethrtime function.  */
+#undef HAVE_GETHRTIME
+
+/* Define if you have the gethrvtime function.  */
+#undef HAVE_GETHRVTIME
+
+/* Define if you have the gettimeofday function.  */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if you have the <sys/time.h> header file.  */
+#undef HAVE_SYS_TIME_H
+
+/* Define if you have the <unistd.h> header file.  */
+#undef HAVE_UNISTD_H
+
+/* Define if you have the memalign function.  */
+#undef HAVE_MEMALIGN
+
+/***********************************************************\
+ * OS-specific macros
+\***********************************************************/
+
+#if defined(__osf__) && defined(__alpha__)
+/* c_asm.h declares a variable called `asm' which crashes gcc */
+#  ifndef __C_ASM_H
+#    define __C_ASM_H
+#  endif
+#endif
+
+/***********************************************************\
+ * Various types of memory barriers and atomic operations
+\***********************************************************/
+
+/*------------------------
+       POWERPC 
+ ------------------------*/
+#if defined(__powerpc__) || defined(__ppc__)
+/* This version contributed by Matteo Frigo Wed Jul 13 2005.   He wrote:
+ *   lwsync is faster than eieio and has the desired store-barrier
+ *   behavior.  The isync in the lock is necessary because the processor is
+ *   allowed to speculate on loads following the branch, which makes the
+ *   program without isync incorrect (in theory at least---I have never
+ *   observed such a speculation).
+ */
+#  define CILK_CACHE_LINE 64
+#  define CILK_MB()  __asm__ __volatile__ ("sync" : : : "memory")
+#  define CILK_RMB()  __asm__ __volatile__ ("sync" : : : "memory")
+#  define CILK_WMB()  __asm__ __volatile__ ("lwsync" : : : "memory")
+
+   /* atomic swap operation */
+   static __inline__ int Cilk_xchg(volatile int *ptr, int x)
+   {
+	int result;
+	__asm__ __volatile__ (
+	     "0: lwarx %0,0,%1\n stwcx. %2,0,%1\n bne- 0b\n isync\n" :
+	     "=&r"(result) : 
+             "r"(ptr), "r"(x) :
+	     "cr0");
+
+	return result;
+   }
+#endif
+
+/*------------------------
+       IA64
+ ------------------------*/
+#ifdef __ia64__
+#  define CILK_CACHE_LINE 128 /* just a guess */
+#  define CILK_MB()  __asm__ __volatile__ ("mf" : : : "memory")
+#  define CILK_RMB()  CILK_MB()
+#  define CILK_WMB()  CILK_MB()
+
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *ptr, int x)
+   {
+	int result;
+	__asm__ __volatile ("xchg4 %0=%1,%2" : "=r" (result)
+			    : "m" (*(int *) ptr), "r" (x) : "memory");
+	return result;
+   }
+#endif
+
+/*------------------------
+         I386 
+ ------------------------*/
+#ifdef __i386__ 
+#  define CILK_CACHE_LINE 32
+
+   static inline void CILK_MB(void)
+   {
+	/*
+	 * We use an xchg instruction to serialize memory accesses, as can
+	 * be done according to the Intel Architecture Software Developer's
+	 * Manual, Volume 3: System Programming Guide
+	 * (http://www.intel.com/design/pro/manuals/243192.htm), page 7-6,
+	 * "For the P6 family processors, locked operations serialize all
+	 * outstanding load and store operations (that is, wait for them to
+	 * complete)."  The xchg instruction is a locked operation by
+	 * default.  Note that the recommended memory barrier is the cpuid
+	 * instruction, which is really slow (~70 cycles).  In contrast,
+	 * xchg is only about 23 cycles (plus a few per write buffer
+	 * entry?).  Still slow, but the best I can find.  -KHR 
+	 *
+	 * Bradley also timed "mfence", and on a Pentium IV xchgl is still quite a bit faster
+	 *   mfence appears to take about 125 ns on a 2.5GHZ P4
+	 *   xchgl  apears  to take about  90 ns on a 2.5GHZ P4
+	 * However on an opteron, the performance of mfence and xchgl are both *MUCH MUCH BETTER*.
+	 *   mfence takes 8ns on a 1.5GHZ AMD64 (maybe this is an 801)
+	 *   sfence takes 5ns
+	 *   lfence takes 3ns
+	 *   xchgl  takes 14ns
+	 * see mfence-benchmark.c
+	 */
+	int x=0, y;
+	__asm__ volatile ("xchgl %0,%1" :"=r" (x) :"m" (y), "0" (x) :"memory");
+   }
+
+#  define CILK_RMB() CILK_MB()
+#  define CILK_WMB() __asm__ __volatile__ ("": : :"memory")
+
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *ptr, int x)
+   {
+	__asm__("xchgl %0,%1" :"=r" (x) :"m" (*(ptr)), "0" (x) :"memory");
+	return x;
+   }
+#endif /* __i386__ */
+
+/*------------------------
+         amd_64
+ ------------------------*/
+#ifdef __x86_64
+#  define CILK_CACHE_LINE 64
+
+   static inline void CILK_MB(void) {
+     __asm__ volatile ("mfence":::"memory");
+   }
+#  define CILK_RMB() CILK_MB()
+#  define CILK_WMB() __asm__ __volatile__ ("": : :"memory")
+
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *ptr, int x)
+   {
+	__asm__("xchgl %0,%1" :"=r" (x) :"m" (*(ptr)), "0" (x) :"memory");
+	return x;
+   }
+#endif /* __x86_64 */
+
+/*------------------------
+         SPARC 
+ ------------------------*/
+#ifdef __sparc__ 
+
+#define CILK_CACHE_LINE 64
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *ptr, register int xchg)
+   {
+	__asm__ volatile ("swap [%1],%0"
+		      :"=r" (xchg)	/* registers written */
+		      :"r"(ptr), "0"(xchg)		/* registers read */
+		      : "memory"
+	);
+	return xchg;
+   }
+
+
+#  ifdef __sparc_v9__
+#    define CILK_MB()  \
+       __asm__ __volatile__("membar #StoreLoad | #StoreStore | #LoadLoad | #LoadStore" ::: "memory")
+#    define CILK_RMB() __asm__ __volatile__ ("membar #StoreLoad" ::: "memory")
+#    define CILK_WMB() __asm__ __volatile__ ("": : :"memory")
+#  else
+#    define CILK_MB()  __asm__ __volatile__("stbar" ::: "memory")
+     static inline void CILK_RMB(void) { int dummy; Cilk_xchg(&dummy, 0); }
+#    define CILK_WMB() __asm__ __volatile__ ("": : :"memory")
+#endif
+
+#endif /* __sparc__ */
+
+/*------------------------
+         MIPS
+ ------------------------*/
+#if defined(__mips__) /* gcc */ || defined(__mips) /* MipsPro */
+#  define CILK_CACHE_LINE 128
+#  if defined(__GNUC__)
+#    define CILK_MB() __asm__ __volatile__ ("sync":::"memory")
+#  else  /* must be SGI_MIPSPRO */
+#    define CILK_MB()  __synchronize()
+#  endif /* __GNUC__ && !SGI_MIPSPRO */
+#  define CILK_RMB() CILK_MB()
+#  define CILK_WMB() CILK_MB()
+
+#  if defined(__GNUC__)
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *m, int val)
+   {
+	unsigned long dummy;
+	__asm__ __volatile__(
+	     ".set noreorder\n"
+	     ".set noat\n"
+	     "ll %0,(%1)\n"
+	     "1: move $1,%2\n"
+	     "sc $1,(%1)\n"
+	     "beqzl $1,1b\n"
+	     "ll %0,(%1)\n"
+	     ".set at\n"
+	     ".set reorder"
+	     : "=r" (val), "=r" (m), "=r" (dummy)
+	     : "1" (m), "2" (val)
+	     : "memory");
+	return val;
+   }
+#  else /* must be SGI_MIPSPRO */
+   static inline int Cilk_xchg(volatile int *m, int val)
+   {
+     /* MipsPro compiler intrinsic function */
+     /* Eitan wrote this code, which makes no sense to me. -Bradley
+          while (__compare_and_swap(m, *m, val) == 0);
+          return 1;
+        So I changed it to this:
+     */
+     return __lock_test_and_set(m, val);
+   }
+#  endif
+#endif /* __mips__ */
+
+/*------------------------
+         ALPHA
+ ------------------------*/
+#ifdef __alpha__
+#  define CILK_CACHE_LINE 128
+#  define CILK_MB() __asm__ __volatile__ ("mb":::"memory")
+#  define CILK_RMB() __asm__ __volatile__ ("mb":::"memory")
+#  define CILK_WMB() __asm__ __volatile__ ("wmb":::"memory")
+
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *m, int val)
+   {
+	register int dummy;
+	
+	__asm__ __volatile__(
+	     "1:    ldl_l %0,%2\n"
+	     "      bis $31,%3,%1\n"
+	     "	    stl_c %1,%2\n"
+	     "	    beq %1,1b\n"
+	     "	    mb\n"
+	     : "=&r" (val), "=&r" (dummy), "=m" (*m)
+	     : "rI" (val), "m" (*m));
+	
+	return val;
+   }
+#endif /* __alpha__ */
+
+/*------------------------
+         TILE
+ ------------------------*/
+#ifdef __tile__
+#define CILK_CACHE_LINE 64
+#define CILK_MB()  __asm__ __volatile__ ("mf" : : : "memory")
+#define CILK_RMB()  CILK_MB()
+#define CILK_CACHE_LINE_PAD  char __dummy[CILK_CACHE_LINE]
+#define CILK_WMB()  CILK_MB()
+#include <atomic.h>
+
+   /* atomic swap operation */
+   static inline int Cilk_xchg(volatile int *m, int val)
+   {
+     return atomic_exchange_and_add(m, val);
+   }
+#endif /* __tile__ */
+
+#ifndef CILK_CACHE_LINE
+#  error "Unsupported CPU"
+#endif
+
+/*
+ * padding, to be used in structures to avoid false sharing 
+ */
+#define CILK_CACHE_LINE_PAD  char __dummy[CILK_CACHE_LINE]
+#define CILK_CACHE_LINE_ALIGNED(decl) \
+    decl  __attribute__((aligned(CILK_CACHE_LINE)))
+
+#if defined(CILK_USE_PERFCTR)
+#include <libperfctr.h>
+
+typedef long long Cilk_time;
+
+#define __cilk_rdtscl(low)	\
+	__asm__ __volatile__("rdtsc" : "=a"(low) : : "edx")
+
+#define Cilk_get_time() __Cilk_get_time(ws->perfctr_kstate)
+static inline Cilk_time __Cilk_get_time (volatile const struct vperfctr_state *kstate) {
+    unsigned long long sum;
+    unsigned int tsc0,tsc1,now;
+    extern NoReturn(abort(void));
+    tsc0 = kstate->cpu_state.tsc_start;
+    __cilk_rdtscl(now);
+    sum = kstate->cpu_state.tsc_sum;
+    tsc1 = kstate->cpu_state.tsc_start;
+    if( tsc1 == tsc0 )
+      return sum + (now - tsc0);
+    while (1) {
+      tsc0 = tsc1;
+      __cilk_rdtscl(now);
+      sum = kstate->cpu_state.tsc_sum;
+      tsc1 = kstate->cpu_state.tsc_start;
+      if( tsc1 == tsc0 )
+	return sum + (now - tsc0);
+    }
+    return 0;/*UNREACHABLE;*/ /* cilk2c complains without this return */
+}
+
+#undef __cilk_rdtscl
+
+extern double __cilk_perfctr_to_second_factor; /* 1e-3/perfctr_info.cpu_khz */
+
+static inline double Cilk_time_to_sec (Cilk_time t) {
+    return t*__cilk_perfctr_to_second_factor;
+}
+
+static inline Cilk_time Cilk_get_wall_time(void)
+{
+    //long long val;
+    //__asm__ __volatile__("rdtsc" : "=A" (val));
+    //return val;
+    unsigned int a, d;
+    asm volatile("rdtsc" : "=a" (a), "=d" (d));
+    return ((unsigned long long)a) | (((unsigned long long)d) << 32);
+}
+
+static inline double Cilk_wall_time_to_sec(Cilk_time t)
+{
+     return Cilk_time_to_sec(t);
+}
+
+#elif defined(HAVE_GETHRTIME)
+
+/* we use the nanosecond virtual timer */
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
+typedef hrtime_t Cilk_time;
+
+#ifdef HAVE_GETHRVTIME
+static inline Cilk_time Cilk_get_time(void)
+{
+     return gethrvtime();
+}
+#else
+static inline Cilk_time Cilk_get_time(void)
+{
+     return gethrtime();
+}
+#endif
+
+static inline double Cilk_time_to_sec(Cilk_time t)
+{
+     return (double) t / 1.0e9;
+}
+
+static inline Cilk_time Cilk_get_wall_time(void)
+{
+     return gethrtime();
+}
+
+static inline double Cilk_wall_time_to_sec(Cilk_time t)
+{
+     return (double) t / 1.0e9;
+}
+
+#elif defined(HAVE_GETTIMEOFDAY)
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+typedef long long Cilk_time;
+
+static inline Cilk_time Cilk_get_time(void)
+{
+     struct timeval tv;
+     gettimeofday(&tv, 0);
+     
+     return ((Cilk_time)tv.tv_sec * 1000000LL + (Cilk_time)tv.tv_usec);
+}
+
+static inline double Cilk_time_to_sec(Cilk_time t)
+{
+     return (double) t * 1.0E-6;
+}
+
+static inline Cilk_time Cilk_get_wall_time(void)
+{
+     return Cilk_get_time();
+}
+
+static inline double Cilk_wall_time_to_sec(Cilk_time t)
+{
+     return Cilk_time_to_sec(t);
+}
+#endif
+
+#endif /*CILK_SYSDEP_H*/

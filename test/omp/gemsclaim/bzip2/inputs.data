@@ -1,0 +1,12 @@
+src/bzip2smp.c 
+src/note.c 
+src/detectht.c 
+src/bzlib.c 
+src/compress.c 
+src/dummy_decompress.c 
+src/crctable.c 
+src/blocksort.c 
+src/huffman.c 
+src/randtable.c
+
+-Isrc

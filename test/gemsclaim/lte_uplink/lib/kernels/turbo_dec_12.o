@@ -1,0 +1,446 @@
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.c"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark//"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.c"
+
+
+
+
+
+
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.h" 1
+# 10 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.h"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/complex_def.h" 1
+# 10 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/complex_def.h"
+typedef struct {
+  short int re;
+  short int im;
+} complex;
+
+
+
+
+
+complex cmul(complex a, complex b);
+complex cmulc(complex a, complex b);
+int cabs2(complex a);
+complex cadd(complex a, complex b);
+complex csub(complex a, complex b);
+complex cscale(int a, int exp, complex b);
+complex cmake(short int re, short int im);
+complex cconj(complex a);
+# 11 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.h" 2
+
+
+void turbo_dec(int n);
+# 8 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.c" 2
+# 1 "/usr/include/time.h" 1 3 4
+# 28 "/usr/include/time.h" 3 4
+# 1 "/usr/include/features.h" 1 3 4
+# 323 "/usr/include/features.h" 3 4
+# 1 "/usr/include/bits/predefs.h" 1 3 4
+# 324 "/usr/include/features.h" 2 3 4
+# 356 "/usr/include/features.h" 3 4
+# 1 "/usr/include/sys/cdefs.h" 1 3 4
+# 353 "/usr/include/sys/cdefs.h" 3 4
+# 1 "/usr/include/bits/wordsize.h" 1 3 4
+# 354 "/usr/include/sys/cdefs.h" 2 3 4
+# 357 "/usr/include/features.h" 2 3 4
+# 388 "/usr/include/features.h" 3 4
+# 1 "/usr/include/gnu/stubs.h" 1 3 4
+
+
+
+# 1 "/usr/include/bits/wordsize.h" 1 3 4
+# 5 "/usr/include/gnu/stubs.h" 2 3 4
+
+
+
+
+# 1 "/usr/include/gnu/stubs-64.h" 1 3 4
+# 10 "/usr/include/gnu/stubs.h" 2 3 4
+# 389 "/usr/include/features.h" 2 3 4
+# 29 "/usr/include/time.h" 2 3 4
+
+
+
+
+
+
+
+
+
+# 1 "/insieme-libs/gcc-4.6.3/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.6.3/include/stddef.h" 1 3 4
+# 212 "/insieme-libs/gcc-4.6.3/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.6.3/include/stddef.h" 3 4
+typedef long unsigned int size_t;
+# 39 "/usr/include/time.h" 2 3 4
+
+
+
+# 1 "/usr/include/bits/time.h" 1 3 4
+# 43 "/usr/include/time.h" 2 3 4
+# 56 "/usr/include/time.h" 3 4
+# 1 "/usr/include/bits/types.h" 1 3 4
+# 28 "/usr/include/bits/types.h" 3 4
+# 1 "/usr/include/bits/wordsize.h" 1 3 4
+# 29 "/usr/include/bits/types.h" 2 3 4
+
+
+typedef unsigned char __u_char;
+typedef unsigned short int __u_short;
+typedef unsigned int __u_int;
+typedef unsigned long int __u_long;
+
+
+typedef signed char __int8_t;
+typedef unsigned char __uint8_t;
+typedef signed short int __int16_t;
+typedef unsigned short int __uint16_t;
+typedef signed int __int32_t;
+typedef unsigned int __uint32_t;
+
+typedef signed long int __int64_t;
+typedef unsigned long int __uint64_t;
+
+
+
+
+
+
+
+typedef long int __quad_t;
+typedef unsigned long int __u_quad_t;
+# 131 "/usr/include/bits/types.h" 3 4
+# 1 "/usr/include/bits/typesizes.h" 1 3 4
+# 132 "/usr/include/bits/types.h" 2 3 4
+
+
+typedef unsigned long int __dev_t;
+typedef unsigned int __uid_t;
+typedef unsigned int __gid_t;
+typedef unsigned long int __ino_t;
+typedef unsigned long int __ino64_t;
+typedef unsigned int __mode_t;
+typedef unsigned long int __nlink_t;
+typedef long int __off_t;
+typedef long int __off64_t;
+typedef int __pid_t;
+typedef struct { int __val[2]; } __fsid_t;
+typedef long int __clock_t;
+typedef unsigned long int __rlim_t;
+typedef unsigned long int __rlim64_t;
+typedef unsigned int __id_t;
+typedef long int __time_t;
+typedef unsigned int __useconds_t;
+typedef long int __suseconds_t;
+
+typedef int __daddr_t;
+typedef long int __swblk_t;
+typedef int __key_t;
+
+
+typedef int __clockid_t;
+
+
+typedef void * __timer_t;
+
+
+typedef long int __blksize_t;
+
+
+
+
+typedef long int __blkcnt_t;
+typedef long int __blkcnt64_t;
+
+
+typedef unsigned long int __fsblkcnt_t;
+typedef unsigned long int __fsblkcnt64_t;
+
+
+typedef unsigned long int __fsfilcnt_t;
+typedef unsigned long int __fsfilcnt64_t;
+
+typedef long int __ssize_t;
+
+
+
+typedef __off64_t __loff_t;
+typedef __quad_t *__qaddr_t;
+typedef char *__caddr_t;
+
+
+typedef long int __intptr_t;
+
+
+typedef unsigned int __socklen_t;
+# 57 "/usr/include/time.h" 2 3 4
+
+
+
+typedef __clock_t clock_t;
+
+
+
+# 74 "/usr/include/time.h" 3 4
+
+
+typedef __time_t time_t;
+
+
+
+# 92 "/usr/include/time.h" 3 4
+typedef __clockid_t clockid_t;
+# 104 "/usr/include/time.h" 3 4
+typedef __timer_t timer_t;
+# 120 "/usr/include/time.h" 3 4
+struct timespec
+  {
+    __time_t tv_sec;
+    long int tv_nsec;
+  };
+
+
+
+
+
+
+
+
+struct tm
+{
+  int tm_sec;
+  int tm_min;
+  int tm_hour;
+  int tm_mday;
+  int tm_mon;
+  int tm_year;
+  int tm_wday;
+  int tm_yday;
+  int tm_isdst;
+
+
+  long int tm_gmtoff;
+  __const char *tm_zone;
+
+
+
+
+};
+
+
+
+
+
+
+
+
+struct itimerspec
+  {
+    struct timespec it_interval;
+    struct timespec it_value;
+  };
+
+
+struct sigevent;
+
+
+
+
+
+typedef __pid_t pid_t;
+
+
+
+
+
+
+
+
+extern clock_t clock (void) __attribute__ ((__nothrow__));
+
+
+extern time_t time (time_t *__timer) __attribute__ ((__nothrow__));
+
+
+extern double difftime (time_t __time1, time_t __time0)
+     __attribute__ ((__nothrow__)) __attribute__ ((__const__));
+
+
+extern time_t mktime (struct tm *__tp) __attribute__ ((__nothrow__));
+
+
+
+
+
+extern size_t strftime (char *__restrict __s, size_t __maxsize,
+   __const char *__restrict __format,
+   __const struct tm *__restrict __tp) __attribute__ ((__nothrow__));
+
+# 215 "/usr/include/time.h" 3 4
+# 1 "/usr/include/xlocale.h" 1 3 4
+# 28 "/usr/include/xlocale.h" 3 4
+typedef struct __locale_struct
+{
+
+  struct __locale_data *__locales[13];
+
+
+  const unsigned short int *__ctype_b;
+  const int *__ctype_tolower;
+  const int *__ctype_toupper;
+
+
+  const char *__names[13];
+} *__locale_t;
+
+
+typedef __locale_t locale_t;
+# 216 "/usr/include/time.h" 2 3 4
+
+extern size_t strftime_l (char *__restrict __s, size_t __maxsize,
+     __const char *__restrict __format,
+     __const struct tm *__restrict __tp,
+     __locale_t __loc) __attribute__ ((__nothrow__));
+# 230 "/usr/include/time.h" 3 4
+
+
+
+extern struct tm *gmtime (__const time_t *__timer) __attribute__ ((__nothrow__));
+
+
+
+extern struct tm *localtime (__const time_t *__timer) __attribute__ ((__nothrow__));
+
+
+
+
+
+extern struct tm *gmtime_r (__const time_t *__restrict __timer,
+       struct tm *__restrict __tp) __attribute__ ((__nothrow__));
+
+
+
+extern struct tm *localtime_r (__const time_t *__restrict __timer,
+          struct tm *__restrict __tp) __attribute__ ((__nothrow__));
+
+
+
+
+
+extern char *asctime (__const struct tm *__tp) __attribute__ ((__nothrow__));
+
+
+extern char *ctime (__const time_t *__timer) __attribute__ ((__nothrow__));
+
+
+
+
+
+
+
+extern char *asctime_r (__const struct tm *__restrict __tp,
+   char *__restrict __buf) __attribute__ ((__nothrow__));
+
+
+extern char *ctime_r (__const time_t *__restrict __timer,
+        char *__restrict __buf) __attribute__ ((__nothrow__));
+
+
+
+
+extern char *__tzname[2];
+extern int __daylight;
+extern long int __timezone;
+
+
+
+
+extern char *tzname[2];
+
+
+
+extern void tzset (void) __attribute__ ((__nothrow__));
+
+
+
+extern int daylight;
+extern long int timezone;
+
+
+
+
+
+extern int stime (__const time_t *__when) __attribute__ ((__nothrow__));
+# 313 "/usr/include/time.h" 3 4
+extern time_t timegm (struct tm *__tp) __attribute__ ((__nothrow__));
+
+
+extern time_t timelocal (struct tm *__tp) __attribute__ ((__nothrow__));
+
+
+extern int dysize (int __year) __attribute__ ((__nothrow__)) __attribute__ ((__const__));
+# 328 "/usr/include/time.h" 3 4
+extern int nanosleep (__const struct timespec *__requested_time,
+        struct timespec *__remaining);
+
+
+
+extern int clock_getres (clockid_t __clock_id, struct timespec *__res) __attribute__ ((__nothrow__));
+
+
+extern int clock_gettime (clockid_t __clock_id, struct timespec *__tp) __attribute__ ((__nothrow__));
+
+
+extern int clock_settime (clockid_t __clock_id, __const struct timespec *__tp)
+     __attribute__ ((__nothrow__));
+
+
+
+
+
+
+extern int clock_nanosleep (clockid_t __clock_id, int __flags,
+       __const struct timespec *__req,
+       struct timespec *__rem);
+
+
+extern int clock_getcpuclockid (pid_t __pid, clockid_t *__clock_id) __attribute__ ((__nothrow__));
+
+
+
+
+extern int timer_create (clockid_t __clock_id,
+    struct sigevent *__restrict __evp,
+    timer_t *__restrict __timerid) __attribute__ ((__nothrow__));
+
+
+extern int timer_delete (timer_t __timerid) __attribute__ ((__nothrow__));
+
+
+extern int timer_settime (timer_t __timerid, int __flags,
+     __const struct itimerspec *__restrict __value,
+     struct itimerspec *__restrict __ovalue) __attribute__ ((__nothrow__));
+
+
+extern int timer_gettime (timer_t __timerid, struct itimerspec *__value)
+     __attribute__ ((__nothrow__));
+
+
+extern int timer_getoverrun (timer_t __timerid) __attribute__ ((__nothrow__));
+# 417 "/usr/include/time.h" 3 4
+
+# 9 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/turbo_dec_12.c" 2
+
+
+
+void turbo_dec(int n) {
+
+
+
+
+
+
+
+}
