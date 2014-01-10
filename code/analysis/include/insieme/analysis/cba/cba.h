@@ -74,9 +74,9 @@ namespace cba {
 		typedef std::shared_ptr<CBA> CBA_Ptr;
 
 		// obtain CBA context from root node
-		core::StatementPtr root = getRootStmt(expr);
+		core::StatementAddress root = getAnalysisRoot(expr);
 		if (!root->hasAttachedValue<CBA_Ptr>()) {
-			root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
+			root->attachValue<CBA_Ptr>(std::make_shared<CBA>(root));
 		}
 
 		// run analysis

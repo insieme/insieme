@@ -62,6 +62,12 @@ namespace cba {
 
 	core::LiteralPtr isIntegerConstant(const core::ExpressionAddress& a);
 
+	bool notArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+	bool mayArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+	bool isArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
 
 	// -- Functions --
 

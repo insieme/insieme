@@ -56,7 +56,7 @@ namespace cba {
 
 	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
-	core::StatementPtr getRootStmt(const core::NodeAddress& node);
+	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
 
 	bool isRecursiveCall(const core::CallExprAddress& call);
 

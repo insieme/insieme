@@ -220,10 +220,14 @@ namespace cba {
 	}
 
 
-	StatementPtr getRootStmt(const NodeAddress& node) {
-		auto stmt = node.isa<StatementPtr>();
+	StatementAddress getAnalysisRoot(const NodeAddress& node) {
+		// the root node is the outermost statement (or expression, since expressions are statements)
+		auto stmt = node.isa<StatementAddress>();
 		if (node.isRoot()) return stmt;
-		auto res = getRootStmt(node.getParentAddress());
+		auto res = getAnalysisRoot(node.getParentAddress());
+		// special case - use body of lambdas
+		if (auto lambda = res.isa<LambdaExprAddress>()) return lambda->getBody();
+		// otherwise take outermost
 		return (res) ? res : stmt;
 	}
 

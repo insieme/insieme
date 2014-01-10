@@ -34,49 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "cba.h"
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+int main() {
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+	int a = 10;
+	int b = 12;
+	int* c = &a;
+	int** d = &c;
 
-	using namespace core;
+	cba_expect_is_alias(&a,c);
+	cba_expect_not_alias(&b,c);
+	cba_expect_is_alias(*d,c);
 
-	namespace {
+	c = &b;
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	cba_expect_not_alias(&a,c);
+	cba_expect_is_alias(&b,c);
+	cba_expect_not_alias(*d,c);
+	cba_expect_is_alias(*d,c);
 
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDump(const NodeAddress& node) {
-			typedef std::shared_ptr<CBA> CBA_Ptr;
-
-			// obtain CBA context from root node
-			core::StatementAddress root = getAnalysisRoot(node);
-			if (!root->hasAttachedValue<CBA_Ptr>()) {
-				root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
-			}
-
-			// extract context and dump it
-			createDotDump(*root->getAttachedValue<CBA_Ptr>());
-		}
-
-	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+}

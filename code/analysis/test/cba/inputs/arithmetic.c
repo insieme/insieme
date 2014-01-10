@@ -34,49 +34,46 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+int min(int a, int b) {
+	if (a < b) return a;
+	return b;
+}
 
-	using namespace core;
+int max(int a, int b) {
+	return (a == min(a,b)) ? b : a;
+}
 
-	namespace {
+int main(int argc, char** argv) {
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	// let's start with something simple
+	cba_expect_eq_int(1,1);
 
-				// write file
-				analysis.plot(out);
-			}
+	// a little more challenging
+	int a = 10;
+	int b = 12;
+	cba_expect_ne_int(a,b);
+	cba_expect_eq_int(a+2, b);
 
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
+	// with some unknown value
+	cba_expect_ne_int(a+argc,b+argc);
+	cba_expect_eq_int(a+2+argc, b+argc);
 
-		void createDotDump(const NodeAddress& node) {
-			typedef std::shared_ptr<CBA> CBA_Ptr;
 
-			// obtain CBA context from root node
-			core::StatementAddress root = getAnalysisRoot(node);
-			if (!root->hasAttachedValue<CBA_Ptr>()) {
-				root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
-			}
+	// including function calls
+	cba_expect_eq_int(a,min(a,b));
+	cba_expect_eq_int(b,max(a,b));
 
-			// extract context and dump it
-			createDotDump(*root->getAttachedValue<CBA_Ptr>());
-		}
+	// even more tricky
+	cba_expect_eq_int(a+argc,min(a+argc,b+argc));
 
-	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+	// and after an update
+	a = 14;
+	cba_expect_eq_int(b+argc,min(a+argc,b+argc));
+
+}

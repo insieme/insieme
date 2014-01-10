@@ -17,7 +17,6 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
-include_directories( ${insieme_transform_include_dir} )
 
 # Build the core library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
@@ -28,6 +27,10 @@ target_link_libraries( insieme_analysis
 					   ${barvinok_LIB} 
 					   ${gmp_LIB}
 					 ) 
+
+# add extra dependencies for test cases
+include_directories( ${insieme_transform_include_dir} )
+include_directories( ${insieme_frontend_include_dir} )
 
 set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -41,6 +44,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_transform)
+	target_link_libraries(${case_name} insieme_frontend)
 
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${gmp_LIB})
