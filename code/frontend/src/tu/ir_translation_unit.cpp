@@ -691,19 +691,20 @@ namespace tu {
 			// us ref.vector.to.ref.array
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
+
+				const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
+				const TypePtr& globalTy= global->getType();
+
+				if (!globalTy.isa<RefTypePtr>() || !globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>()) continue;
+
 				auto findLit = [&](const NodePtr& node) {
 					const LiteralPtr& usedLit = resolver.apply(node).as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
-					const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
-					const TypePtr& globalTy= global->getType();
-
 					if (!usedLitTy.isa<RefTypePtr>()) return false;
-					if (!globalTy.isa<RefTypePtr>()) return false;
 
 					return usedLit->getStringValue() == global->getStringValue() &&
 						usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>() &&
-						globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>() &&
 						types::isSubTypeOf(globalTy, usedLitTy);
 				};
 
