@@ -624,6 +624,10 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.getZero(targetTy);
 			}
 
+            if(targetTy->getNodeType() == core::NT_FunctionType) {
+                    return builder.castExpr(targetTy, expr);
+            }
+
 			// cast from void*
 			if (gen.isAnyRef(exprTy)) {
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);

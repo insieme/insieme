@@ -1232,6 +1232,7 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("*", E),
 					[](Context& cur)->NodePtr {
+						if (!cur.getTerm(0).as<ExpressionPtr>().getType().isa<RefTypePtr>()) return fail(cur, "Unable to de-ref non ref value.");
 						return cur.deref(cur.getTerm(0).as<ExpressionPtr>());
 					},
 					-14

@@ -79,6 +79,17 @@ namespace cba {
 
 	bool isAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
+	// *************************************************************************************
+	//								 Uninterpreted Symbols
+	// *************************************************************************************
+
+	bool notUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+	bool mayUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+	bool isUninterpretedEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

@@ -120,9 +120,9 @@ main()
 	a[j] = 2.0E0 * a[j];
     t = 1.0E6 * (mysecond() - t);
 
-    printf("Each test below will take on the order"
-	" of %d microseconds.\n", (int) t  );
-    printf("   (= %d clock ticks)\n", (int) (t/quantum) );
+//    printf("Each test below will take on the order"
+//	" of %d microseconds.\n", (int) t  );
+  //  printf("   (= %d clock ticks)\n", (int) (t/quantum) );
     printf("Increase the size of the arrays if this shows that\n");
     printf("you are not getting at least 20 clock ticks per test.\n");
 
@@ -175,11 +175,11 @@ main()
     for (j=0; j<4; j++) {
 	rmstime[j] = sqrt(rmstime[j]/(double)NTIMES);
 
-	printf("%s%11.4f  %11.4f  %11.4f  %11.4f\n", label[j],
+	/*printf("%s%11.4f  %11.4f  %11.4f  %11.4f\n", label[j],
 	       1.0E-06 * bytes[j]/mintime[j],
 	       rmstime[j],
 	       mintime[j],
-	       maxtime[j]);
+	       maxtime[j]);*/
     }
     return 0;
 }

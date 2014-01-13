@@ -136,6 +136,26 @@ int main(int argc, char* argv[]) {
 
 	printf("16: a=%d\n", a);
 
+    {
+        int end = 20;
+        int count;
+
+        for(a=0; a < end; a++) {
+                if(a > 10)
+                        break;
+        }
+
+        count = a;
+
+        printf("17: count = %d\n", count);
+
+        for(a=end; a > 0 ; a--) {
+                if(a < 10)
+                        break;
+        }
+        printf("18: a = %d\n", a);
+    }
+
 	func(a);
 	func2();
 	func3();

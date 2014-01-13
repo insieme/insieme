@@ -46,7 +46,7 @@ int main ( int argc, char *argv[] )
 
   printf ( "\n" );
   printf ( "  Number of processors available = %d\n", omp_get_num_procs ( ) );
-  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
+//  printf ( "  Number of threads =              %d\n", omp_get_max_threads ( ) );
 
   n_lo = 1;
   n_hi = 131072;
@@ -55,7 +55,7 @@ int main ( int argc, char *argv[] )
   prime_number_sweep ( n_lo, n_hi, n_factor );
 
   n_lo = 5;
-  n_hi = 500000;
+  n_hi = 5000;
   n_factor = 10;
 
   prime_number_sweep ( n_lo, n_hi, n_factor );

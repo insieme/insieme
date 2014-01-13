@@ -1,0 +1,14 @@
+/*******************************************************************************
+ *                      LTE UPLINK RECEIVER PHY BENCHMARK                      *
+ *                                                                             *
+ * This file is distributed under the license terms given by LICENSE.TXT       *
+ *******************************************************************************
+ * Author: Magnus Sjalander                                                    *
+ ******************************************************************************/
+
+#ifndef _UPLINK_CILK_H
+#define _UPLINK_CILK_H
+
+cilk void uplink_user_cilk(userS *user);
+
+#endif

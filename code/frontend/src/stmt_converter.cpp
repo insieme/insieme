@@ -245,6 +245,21 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		// convert the body
 		core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
 
+        // for loops with break statements are while loops
+		bool breakStmtFound = false;
+        core::visitDepthFirstPrunable (body, [&] (const core::NodePtr& cur) -> bool{
+                    if(cur.isa<core::BreakStmtPtr>())
+                        breakStmtFound = true;
+
+					if (cur.isa<core::LambdaExprPtr>() || cur.isa<core::ForStmtPtr>() || cur.isa<core::WhileStmtPtr>() || cur.isa<core::SwitchStmtPtr>())
+						return true;
+					else 
+                        return false;
+                        });
+        if(breakStmtFound)
+            throw analysis::LoopNormalizationError("break statement not allowed in for loop");
+
+
 		// we have to replace all ocurrences of the induction expression/var in the annotations of the body
 		// by the new induction var
 		core::visitDepthFirstPrunable (body, [&] (const core::StatementPtr& stmt) -> bool{

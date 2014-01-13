@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+
+
 int main(int argc, char** argv) {
 
 //	int j, cnt = 0;
@@ -71,4 +73,15 @@ int main(int argc, char** argv) {
 //
 //
 //	return 0;
+//
+    int i, a = 1;
+    int j = 0;
+
+    for(i=0; i<10; i += a+i) {
+            printf("%d\n", i);
+            
+            if(j++ > 10) break;
+    }
+ 
+    return 0;
 }
