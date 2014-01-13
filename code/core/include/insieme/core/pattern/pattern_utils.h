@@ -33,3 +33,33 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
+#pragma once
+
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
+
+namespace insieme {
+namespace core {
+namespace pattern {
+namespace irp {
+	// two utilities to collect all matches of a given pattern within a tree
+	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes = false);
+	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes = false);
+
+	// try to match the given pattern on all instances of the given tree, 
+	// calling the passed function for each match
+	void matchAll(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<void(NodeMatch match)> lambda, bool matchTypes = false);
+	void matchAll(const TreePatternPtr& pattern, const core::NodeAddress& root, std::function<void(AddressMatch match)> lambda, bool matchTypes = false);
+	
+	// try to match the given pattern on all instances of the given tree, 
+	// calling the passed function for each match to generate a replacement
+	// returns a new root with all matches replaced
+	// Note: handles nested matches gracefully, but not horizontally overlapping matches
+	NodePtr replaceAll(const TreePatternPtr& pattern, const core::NodePtr& root, 
+		std::function<core::NodePtr(AddressMatch match)> lambda, bool matchTypes = false);
+
+} // end namespace irp
+} // end namespace pattern
+} // end namespace core
+} // end namespace insieme
