@@ -525,9 +525,9 @@ TEST(Access, ArrayAccess) {
 	}
 
 	std::map<string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	symbols["b"] = builder.variable(builder.getLangBasic().getUInt4());
-	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"), 1);
+	symbols["b"] = builder.variable(builder.getLangBasic().getUInt4(), 2);
+	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4(), 3);
 
 	{
 		auto code = builder.parseAddresses(
@@ -642,7 +642,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(3u, address.size());
 
 		auto rootNode = core::analysis::normalize(address[0]);
-		auto accessNode = address[1].switchRoot(rootNode).as<ExpressionAddress>();
+		auto accessNode = core::analysis::normalize(address[1]).switchRoot(rootNode).as<ExpressionAddress>();
 
 		// perform the polyhedral analysis 
 		polyhedral::scop::mark(rootNode.getAddressedNode());
@@ -657,12 +657,12 @@ TEST(Access, ArrayAccess) {
 		auto subscript = cast<Subscript>(access);
 		EXPECT_TRUE(subscript->getContext());
 
-		EXPECT_EQ("(((-v26 + 19 >= 0) ^ (v25 + -1 >= 0)) ^ (v4294967295 + -v25 + -v26 == 0))",
+		EXPECT_EQ("(((-v3 + 19 >= 0) ^ (v2 + -1 >= 0)) ^ (v4294967295 + -v2 + -v3 == 0))",
 				  toString(*subscript->getRange()));
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(subscript->getRange()));
-		EXPECT_EQ("[v25, v26] -> { [v25 + v26] : v26 <= 19 and v25 >= 1 }", toString(*set));
+		EXPECT_EQ("[v2, v3] -> { [v2 + v3] : v3 <= 19 and v2 >= 1 }", toString(*set));
 	}
 }
 
@@ -1181,7 +1181,7 @@ TEST(Access, StridedSubset) {
 	IRBuilder builder(mgr);
 
 	std::map<string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"),1);
 
 	auto address = builder.parseAddresses(
 		"${ "
@@ -1196,13 +1196,13 @@ TEST(Access, StridedSubset) {
 
 	EXPECT_EQ(3u, address.size());
 
-	auto rootNode = address[0];
+	auto rootNode = core::analysis::normalize(address[0]);
 
 	// perform the polyhedral analysis 
 	polyhedral::scop::mark(rootNode.getAddressedNode());
 
-	auto accessNode1 = address[1].as<ExpressionAddress>();
-	auto accessNode2 = address[2].as<ExpressionAddress>();
+	auto accessNode1 = address[1].switchRoot(rootNode).as<ExpressionAddress>();
+	auto accessNode2 = address[2].switchRoot(rootNode).as<ExpressionAddress>();
 
 	auto access1 = getImmediateAccess( mgr, accessNode1 );
 	auto access2 = getImmediateAccess( mgr, accessNode2 );
@@ -1213,13 +1213,13 @@ TEST(Access, StridedSubset) {
 	auto rAccess1 = cast<Subscript>(access1);
 	EXPECT_TRUE(rAccess1->getContext());
 	EXPECT_EQ(rAccess1->getContext(), rootNode);
-	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v36 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))",
+	EXPECT_EQ("((((-v0 + 4 >= 0) ^ (v0 + -2*v10000 + -1 == 0)) ^ (v0 + -1 >= 0)) ^ (-v0 + v4294967295 == 0))",
 			toString(*rAccess1->getRange()));
 
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("((((-v6 + 8 >= 0) ^ (v6 + -2*v42 + -1 == 0)) ^ (v6 + -1 >= 0)) ^ (-v6 + v4294967295 + -1 == 0))",
+	EXPECT_EQ("((((-2*v10000 + v2 + -1 == 0) ^ (-v2 + 8 >= 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 + -1 == 0))",
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();

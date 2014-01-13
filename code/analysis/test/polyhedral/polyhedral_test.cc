@@ -43,6 +43,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/normalize.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 
 using namespace insieme::core;
@@ -709,9 +710,9 @@ TEST(IterationDomain, FromVariableStrided) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	symbols["a"] = builder.variable(builder.parseType("int<4>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"),1);
+	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
     auto addresses = builder.parseAddresses(
 		"$if ( a > 20 ) { "
@@ -722,6 +723,12 @@ TEST(IterationDomain, FromVariableStrided) {
 		"}$ ", symbols);
 
 	EXPECT_EQ(3u, addresses.size());
+	auto root = insieme::core::analysis::normalize(addresses[0].getRootNode());
+
+	addresses[0] = addresses[0].switchRoot(root);
+	addresses[1] = addresses[1].switchRoot(root);
+	addresses[2] = addresses[2].switchRoot(root);
+
 	scop::mark(addresses[0].getAddressedNode());
 
 	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
@@ -730,7 +737,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// get the iterator i used in the if condition 
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v42 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v0 + v2 + -1 >= 0) ^ (v0 + -2*v10000 + -v3 == 0)) ^ (v0 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
@@ -739,7 +746,7 @@ TEST(IterationDomain, FromVariableStrided) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v42 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v0 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v0 + -2*v10000 + -v3 == 0)) ^ (v0 + -v3 + -1 >= 0)) ^ (v0 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -752,9 +759,9 @@ TEST(IterationDomain, FromVariable5) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	symbols["a"] = builder.variable(builder.parseType("int<4>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"),1);
+	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
     auto addresses = builder.parseAddresses(
 		"$if ( 1==1 ) { "
@@ -763,6 +770,10 @@ TEST(IterationDomain, FromVariable5) {
 		"			v[$i+b$]; "
 		"	} "
 		"}$ ", symbols);
+
+    auto newRoot = insieme::core::analysis::normalize(addresses[0].getRootNode());
+    addresses[0] = addresses[0].switchRoot(newRoot);
+    addresses[1] = addresses[1].switchRoot(newRoot);
 
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
@@ -773,7 +784,7 @@ TEST(IterationDomain, FromVariable5) {
 	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 	EXPECT_TRUE(dom.second);
 
-	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v41 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+	EXPECT_EQ("((((-v0 + v2 + 9 >= 0) ^ (v0 + -2*v10000 + -v2 == 0)) ^ (v0 + -v2 + -2 == 0)) ^ (v0 + -v2 >= 0))", toString(*dom.second));
 	//auto pw = cardinality(mgr,*dom);
 	//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 }
@@ -784,9 +795,9 @@ TEST(IterationDomain, FromVariable6) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	symbols["a"] = builder.variable(builder.parseType("int<4>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"),1);
+	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
     auto addresses = builder.parseAddresses(
 		"$if ( a>4 ) { "
@@ -795,6 +806,10 @@ TEST(IterationDomain, FromVariable6) {
 		"			v[$i+b$]; "
 		"	} "
 		"}$ ", symbols);
+
+    auto newRoot = insieme::core::analysis::normalize(addresses[0].getRootNode());
+    addresses[0] = addresses[0].switchRoot(newRoot);
+    addresses[1] = addresses[1].switchRoot(newRoot);
 
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
@@ -805,7 +820,7 @@ TEST(IterationDomain, FromVariable6) {
 		// Get the iterator i inside the if stmt
 		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v41 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v0 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v0 + -2*v10000 + -v2 == 0)) ^ (v0 + -v2 + -1 == 0)) ^ (v0 + -v2 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}

@@ -225,12 +225,12 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
-			VariablePtr var = builder.variable( basic.getInt4() );
+			VariablePtr var = iterVec.getFreshVariable(mgr);
 
 			iterVec.add( Iterator(var, true) ); // make this iterator an existential iterator 
 
 			// An existential variable is required in order to set the system of equalities 
-			VariablePtr&& exist = builder.variable( basic.getInt4() );
+			VariablePtr&& exist = iterVec.getFreshVariable(mgr);
 
 			iterVec.add( Iterator(exist, true) ); // make this iterator an existential iterator 
 
@@ -293,7 +293,7 @@ AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
 
 	// We add a new dimension to the iteration vector (an unbounded parameter) and
 	// set a new constraint in the form : exist(a: step*a = i) 
-	VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+	VariablePtr existenceVar = ret.getFreshVariable(mgr);
 	ret.add( Iterator( existenceVar, true ) );
 
 	// Gets the list of lower bounds as a disjunction of eleemnts 
@@ -334,7 +334,7 @@ AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
 	//
 	// This is obtained by introducing a new variable e, which is the actual lower bound 
 	// e >= A && e >= B and use e for defining the strided domain:  (i -e -Ts == 0)
-	VariablePtr boundVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+	VariablePtr boundVar = ret.getFreshVariable(mgr);
 	ret.add( Iterator(boundVar, true) );
 
 	AffineConstraintPtr newBound, boundEq;
@@ -533,7 +533,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 								return;
 							}
 
-							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+							VariablePtr fakeIter = iv.getFreshVariable(mgr);
 							iv.add( Iterator(fakeIter) );
 			
 							// Compute the actual LB and UB

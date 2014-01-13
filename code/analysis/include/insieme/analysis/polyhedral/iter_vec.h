@@ -190,6 +190,8 @@ private:
 	ParamVec params;				// ordered list of parameters
 	Constant constant;				// constant part set to 1 (implicit) 
 
+	mutable int freshVarCounter;	// a counter for fresh variable IDs
+
 	template <class T>							
 	inline int getIdxFrom(const T& elem, const std::vector<T>& vec) const {
 		auto fit = std::find(vec.begin(), vec.end(), elem);
@@ -248,6 +250,7 @@ public:
 
 	IterationVector( const std::vector<core::VariablePtr>& iter = std::vector<core::VariablePtr>(), 
 					 const std::vector<core::ExpressionPtr>& param = std::vector<core::ExpressionPtr>() ) 
+		: freshVarCounter(10000)
 	{
 		for_each(iter, [&](const core::VariablePtr& cur) { add( Iterator(cur) ); });
 
@@ -334,6 +337,9 @@ public:
 
 	// Tests whether the given expression is part of this iteration vector
 	bool contains(const core::ExpressionPtr& expr) const;
+
+	// obtains a variable not present yet within this iterator vector
+	core::VariablePtr getFreshVariable(core::NodeManager& mgr) const;
 };
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains both the
