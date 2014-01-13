@@ -649,9 +649,9 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 	if(irt_g_inst_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		early_entry = irt_atomic_bool_compare_and_swap(&(irt_inst_region_get_current(wi)->first_entrance_flag), 0, 1); \
 		if(early_entry) { /* only do EE code upon first entry */\
-			printf("WI %lu is the early entry WI\n", wi->id.full);\
+			/*printf("WI %lu is the early entry WI\n", wi->id.full);*/ \
 			if(wi->num_groups > 0) { \
-				printf("### WI: %lu, setting member count to %lu\n", wi->id.full, irt_wi_get_wg_size(wi, 0)); \
+				/*printf("### WI: %lu, setting member count to %lu\n", wi->id.full, irt_wi_get_wg_size(wi, 0)); */ \
 				irt_inst_region_get_current(wi)->remaining_exits = irt_wi_get_wg_size(wi, 0); \
 			} else {\
 				irt_inst_region_get_current(wi)->remaining_exits = 1;\
@@ -663,7 +663,7 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 #include "irt_metrics.def"
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	if(wi->inst_data->last_##_name__ != 0) {	\
-		printf("THIS MUST NOT HAPPEN");\
+		printf("Instrumentation: Encountered region start but last_" #_name__ " was not zero\n");\
 		exit(1); \
 	} \
 	IRT_ASSERT(wi->inst_data->last_##_name__ == 0, IRT_ERR_INSTRUMENTATION, "Started measurement, but previous measurement still in progress (last_%s was not 0)", #_name__) \
@@ -675,7 +675,7 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 	}
 #include "irt_metrics.def"
 //	printf("start measurement: current wi: %lu, current region: %p, region length: %lu\t\tregion last wall_time %lu wi last wall time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
-	printf("start:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
+//	printf("start:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
 }
 
 void irt_inst_region_end_measurements(irt_work_item* wi) {
@@ -686,7 +686,7 @@ void irt_inst_region_end_measurements(irt_work_item* wi) {
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	if(irt_g_inst_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		late_exit = (irt_atomic_sub_and_fetch(&(irt_inst_region_get_current(wi)->remaining_exits), 1) <= 0); \
-		printf("### WI: %lu, late exit %s\n", wi->id.full, late_exit?"true":"false"); \
+		/*printf("### WI: %lu, late exit %s\n", wi->id.full, late_exit?"true":"false");*/ \
 		if(late_exit) { \
 			_region_late_end_code__; \
 			irt_inst_region_get_current(wi)->first_entrance_flag = false; \
@@ -705,7 +705,7 @@ void irt_inst_region_end_measurements(irt_work_item* wi) {
 	}
 #include "irt_metrics.def"
 //	printf("end measurement: current wi: %lu, current region: %p, region length: %lu\t\tregion aggregated wall_time %lu wi aggregated wall time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), wi->inst_region_list->length, irt_inst_region_get_current(wi)->aggregated_wall_time, wi->inst_data->aggregated_wall_time);
-	printf("end:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
+//	printf("end:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
 }
 
 void irt_inst_region_init(irt_context* context) {
@@ -790,7 +790,7 @@ void irt_inst_region_finalize(irt_context* context) {
 // start a region
 void irt_inst_region_start(region_id id) {
 	irt_work_item* wi = irt_wi_get_current();
-	printf("region start %u on wi %lu\n", id, wi->id.full);
+//	printf("region start %u on wi %lu\n", id, wi->id.full);
 	irt_context* context = irt_context_get_current();
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Start of region id %u requested, but only %u region(s) present", id, context->num_regions)
 	irt_inst_region_struct* region = &(context->inst_region_data[id]);
@@ -809,7 +809,7 @@ void irt_inst_region_start(region_id id) {
 // stop a region and remove it from the region stack of the WI
 void irt_inst_region_end(region_id id) {
 	irt_work_item* wi = irt_wi_get_current();
-	printf("region end %u on wi %lu\n", id, wi->id.full);
+//	printf("region end %u on wi %lu\n", id, wi->id.full);
 
 //	printf("region end length: %u %lu %p\n", wi->inst_region_list->length, wi->id, wi);
 
