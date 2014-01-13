@@ -157,6 +157,7 @@ static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_imp
 	// instrumentation
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* wi = _irt_wi_create(self, &range, impl_id, params);
+	irt_inst_region_list_copy(wi, self->cur_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, wi->id);
 	return wi;
 }
@@ -168,6 +169,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
+	irt_inst_region_list_copy(retval, self->cur_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi

@@ -44,47 +44,66 @@
 #include "irt_instrumentation_includes.h"
 
 #ifndef METRIC
-#define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, START_CODE, END_CODE ) 
+#define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE ) 
 #endif
 
 #ifndef GROUP
-#define GROUP( NAME, VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, START_CODE, END_CODE )
+#define GROUP( NAME, VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
 #endif
 
 // Single Metrics
 
-GROUP(cpu_time_group, , {}, {}, {}, {})
+GROUP(cpu_time_group, , {}, {}, {}, {}, {}, {})
 
-METRIC(cpu_time,			0,	ns,		uint64_t,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
-	{ wi->inst_data->last_cpu_time = irt_time_ticks(); } , \
-	{ wi->inst_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_data->last_cpu_time; } \
+METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
+	{ wi->inst_data->last_cpu_time = irt_time_ticks(); }, \
+	{ wi->inst_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_data->last_cpu_time; }, \
+	{}, \
+	{} \
+)
+
+METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
+	{  }, \
+	{  }, \
+	{ irt_inst_region_get_current(wi)->last_wall_time = irt_time_ticks(); printf("WI %lu %lu %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id);}, \
+	{ irt_inst_region_get_current(wi)->aggregated_wall_time += irt_time_ticks() - irt_inst_region_get_current(wi)->last_wall_time; printf("WI: %lu ############################# inside irt_metrics.def: last wall time: %lu, aggregated wall time: %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id); } \
 )
 
 GROUP(energy_group, rapl_energy_data rapl_data, {}, {}, \
 	{ irt_get_energy_consumption(&(irt_context_get_current()->inst_group_support_data.rapl_data)); }, \
-	{ irt_get_energy_consumption(&(irt_context_get_current()->inst_group_support_data.rapl_data)); } \
+	{ irt_get_energy_consumption(&(irt_context_get_current()->inst_group_support_data.rapl_data)); }, \
+	{}, \
+	{} \
 )
 
 METRIC(cpu_energy,					100,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{ wi->inst_data->last_cpu_energy = irt_context_get_current()->inst_group_support_data.rapl_data.package; }, \
-	{ wi->inst_data->aggregated_cpu_energy = irt_context_get_current()->inst_group_support_data.rapl_data.package - wi->inst_data->last_cpu_energy; } \
+	{ wi->inst_data->aggregated_cpu_energy = irt_context_get_current()->inst_group_support_data.rapl_data.package - wi->inst_data->last_cpu_energy; }, \
+	{}, \
+	{} \
 )
 
 METRIC(cores_energy,				101,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{ wi->inst_data->last_cores_energy = irt_context_get_current()->inst_group_support_data.rapl_data.cores; }, \
-	{ wi->inst_data->aggregated_cores_energy = irt_context_get_current()->inst_group_support_data.rapl_data.cores - wi->inst_data->last_cores_energy; } \
+	{ wi->inst_data->aggregated_cores_energy = irt_context_get_current()->inst_group_support_data.rapl_data.cores - wi->inst_data->last_cores_energy; }, \
+	{}, \
+	{} \
 )
 
 METRIC(memory_controller_energy,	102,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{ wi->inst_data->last_memory_controller_energy = irt_context_get_current()->inst_group_support_data.rapl_data.mc; }, \
-	{ wi->inst_data->aggregated_memory_controller_energy = irt_context_get_current()->inst_group_support_data.rapl_data.mc - wi->inst_data->last_memory_controller_energy; } \
+	{ wi->inst_data->aggregated_memory_controller_energy = irt_context_get_current()->inst_group_support_data.rapl_data.mc - wi->inst_data->last_memory_controller_energy; }, \
+	{}, \
+	{} \
 )
 
-GROUP(socket_occupancy_group, , {}, {}, {}, {})
+GROUP(socket_occupancy_group, , {}, {}, {}, {}, {}, {})
 
-METRIC(socket_occupancy,			200,	N,		double,		"%lf",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
+METRIC(socket_occupancy,			200,	N,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
 	{ wi->inst_data->last_socket_occupancy = 42; }, \
-	{ wi->inst_data->aggregated_socket_occupancy = 42; } \
+	{ wi->inst_data->aggregated_socket_occupancy = 42; }, \
+	{}, \
+	{} \
 )
 
 #undef METRIC

@@ -50,7 +50,7 @@
 #endif
 
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-//#define IRT_ENABLE_REGION_INSTRUMENTATION
+#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
 #define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
@@ -116,17 +116,22 @@ typedef uint32 region_id;
 uint32 irt_g_inst_metric_count = 0;
 uint32 irt_g_inst_group_count = 0;
 
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_metric_##_name__##_id;
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_metric_group_##_name__##_id;
 #include "irt_metrics.def"
 
 // create metric flags and group counts for selectively enabling/disabling instrumentation
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 bool irt_g_inst_measure_##_name__ = false;
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_inst_group_##_name__##membership_count = 0;
+#include "irt_metrics.def"
+
+// create counts for early entry / late exit (EE/LE) instrumentation
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+uint32 irt_g_inst_eele_count_##_name__ = 0;
 #include "irt_metrics.def"
 
 typedef enum {
@@ -137,28 +142,33 @@ typedef enum {
 } IRT_HW_SCOPES;
 
 typedef enum {
+	IRT_METRIC_AGGREGATOR_NONE,
 	IRT_METRIC_AGGREGATOR_SUM,
 	IRT_METRIC_AGGREGATOR_AVG,
 	IRT_METRIC_NUM_AGGREGATORS,
 } IRT_METRIC_AGGREGATORS;
 
 typedef struct {
+	uint64 id;
 	uint64 num_executions;
+	bool first_entrance_flag;
+	uint64 remaining_exits;
 	irt_spinlock lock;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_data_type__ last_##_name__; \
 	_data_type__ aggregated_##_name__;
 #include "irt_metrics.def"
 } irt_inst_region_struct;
 
 typedef struct {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_data_type__ last_##_name__; \
 	_data_type__ aggregated_##_name__;
 #include "irt_metrics.def"
 } irt_inst_wi_struct;
 
 typedef struct {
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_var_decls__;
 #include "irt_metrics.def"
 } irt_inst_context_struct;
@@ -187,6 +197,7 @@ void irt_inst_region_start(region_id id);
 void irt_inst_region_end(region_id id);
 void irt_inst_region_wi_init(irt_work_item* wi);
 void irt_region_instrumentation_setup();
+void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source);
 
 // -----------------------------------------------------------------------------------------------------------------
 //													File Format

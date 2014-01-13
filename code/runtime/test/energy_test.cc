@@ -37,6 +37,7 @@
 #define IRT_USE_PAPI
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 #define IRT_RUNTIME_TUNING
+#define IRT_ENABLE_REGION_INSTRUMENTATION
 
 #include <gtest/gtest.h>
 #include "standalone.h"
