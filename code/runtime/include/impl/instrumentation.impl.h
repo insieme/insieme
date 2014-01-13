@@ -485,22 +485,22 @@ void irt_inst_metrics_init() {
 	// initialize IDs
 	int metric_id = 0;
 	int group_id = 0;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	irt_g_metric_##_name__##_id = metric_id++;
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	irt_g_metric_group_##_name__##_id = group_id++;
 #include "irt_metrics.def"
 	irt_g_inst_metric_count = metric_id;
 	irt_g_inst_group_count = group_id;
 	// initialize groups
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_init_code__;
 #include "irt_metrics.def"
 }
 
 void irt_inst_metrics_finalize() {
 	// finalize groups
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 _finalize_code__;
 #include "irt_metrics.def"
 }
@@ -511,7 +511,7 @@ void irt_inst_select_region_instrumentation_metrics(const char* selection) {
 	uint16 enabled_types_counter = 0;
 
 	if(!selection || strcmp(selection, "") == 0) {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 		irt_g_inst_measure_##_name__ = true; \
 		irt_g_inst_group_##_group__##membership_count++; \
 		enabled_types_counter += sprintf(&(enabled_types[enabled_types_counter]), "%s,", #_name__);
@@ -526,7 +526,7 @@ void irt_inst_select_region_instrumentation_metrics(const char* selection) {
 		uint32 log_output_counter = 0;
 
 		do {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 			if(strcmp(tok, #_name__) == 0) { \
 				irt_g_inst_measure_##_name__ = true; \
 				irt_g_inst_group_##_group__##membership_count++; \
@@ -548,7 +548,7 @@ void irt_inst_set_region_instrumentation_from_env() {
 		char* metrics = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);
 		irt_inst_select_region_instrumentation_metrics(metrics);
 	} else {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 		irt_g_inst_measure_##_name__ = false; \
 		irt_g_inst_group_##_group__##membership_count = 0;
 #include "irt_metrics.def"
@@ -556,19 +556,20 @@ void irt_inst_set_region_instrumentation_from_env() {
 	}
 }
 
-irt_inst_region_struct* irt_inst_region_get_current(irt_work_item* wi) {
+inline irt_inst_region_struct* irt_inst_region_get_current(irt_work_item* wi) {
 	return wi->inst_region_list->items[wi->inst_region_list->length-1];
 }
 
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) {
 	irt_inst_region_list* list = wi->inst_region_list;
 	// if there is a parent region, add cur values to it (i.e. inclusive measurements, not exclusive)
+//	printf("propagate region to parent: current wi: %lu, current region: %p, region length: %lu\t\tcpu_time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), list->length, irt_inst_region_get_current(wi)->aggregated_cpu_time);
 	if(list->length > 1) {
 //		printf("more than one region\n");
 		irt_inst_region_struct* cur = list->items[list->length-1];
 		irt_inst_region_struct* parent = list->items[list->length-2];
 		irt_spin_lock(&(parent->lock));
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 		parent->aggregated_##_name__ += cur->aggregated_##_name__; \
 //		cur->aggregated_##_name__ = 0;
 #include "irt_metrics.def"
@@ -579,6 +580,8 @@ void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi) {
 void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) {
 
 //	printf("propagating wi to cur region\n");
+//	printf("propagate wi to region: current wi: %lu, current region: %p, region length: %lu\t\tcpu time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), wi->inst_region_list->length, irt_inst_region_get_current(wi)->aggregated_cpu_time);
+
 
 	IRT_ASSERT(wi->inst_region_list->length > 0, IRT_ERR_INSTRUMENTATION, "Tried to get region data from a WI that has no region data")
 
@@ -590,9 +593,13 @@ void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi) {
 	IRT_ASSERT(cur_region != NULL, IRT_ERR_INSTRUMENTATION, "Region pointer of a WI is NULL");
 
 	irt_spin_lock(&(cur_region->lock));
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	switch(_aggregation__) { \
+	case IRT_METRIC_AGGREGATOR_NONE: \
+		/* special case e.g. for region-only instrumentation that do not require WI measurements or aggregation */ \
+		break; \
 	case IRT_METRIC_AGGREGATOR_AVG: \
+		/*printf("%s: cur region aggregated: %lu, cur region num exec: %lu, wi aggregated: %lu\n", #_name__, cur_region->aggregated_##_name__, cur_region->num_executions,  wi->inst_data->aggregated_##_name__);*/\
 		cur_region->aggregated_##_name__ = (cur_region->aggregated_##_name__ * cur_region->num_executions + wi->inst_data->aggregated_##_name__) / (cur_region->num_executions + 1); \
 		break; \
 	case IRT_METRIC_AGGREGATOR_SUM: \
@@ -633,38 +640,84 @@ void _irt_inst_region_stack_pop(irt_work_item* wi) {
 }
 
 void irt_inst_region_start_measurements(irt_work_item* wi) {
+	if(wi->inst_region_list->length <= 0)
+		return;
+
+	bool early_entry = false;
 //	printf("starting measurements\n");
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
-	if(irt_g_inst_group_##_name__##membership_count > 0)\
-		_start_code__;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	if(irt_g_inst_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
+		early_entry = irt_atomic_bool_compare_and_swap(&(irt_inst_region_get_current(wi)->first_entrance_flag), 0, 1); \
+		if(early_entry) { /* only do EE code upon first entry */\
+			printf("WI %lu is the early entry WI\n", wi->id.full);\
+			if(wi->num_groups > 0) { \
+				printf("### WI: %lu, setting member count to %lu\n", wi->id.full, irt_wi_get_wg_size(wi, 0)); \
+				irt_inst_region_get_current(wi)->remaining_exits = irt_wi_get_wg_size(wi, 0); \
+			} else {\
+				irt_inst_region_get_current(wi)->remaining_exits = 1;\
+			} \
+			_region_early_start_code__; \
+		} \
+		_wi_start_code__; \
+	}
 #include "irt_metrics.def"
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-	if(irt_g_inst_measure_##_name__)\
-		_start_code__;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	if(wi->inst_data->last_##_name__ != 0) {	\
+		printf("THIS MUST NOT HAPPEN");\
+		exit(1); \
+	} \
+	IRT_ASSERT(wi->inst_data->last_##_name__ == 0, IRT_ERR_INSTRUMENTATION, "Started measurement, but previous measurement still in progress (last_%s was not 0)", #_name__) \
+	if(irt_g_inst_measure_##_name__) { \
+		if(early_entry) { /* only do EE code upon first entry */ \
+			_region_early_start_code__; \
+		} \
+		_wi_start_code__; \
+	}
 #include "irt_metrics.def"
+//	printf("start measurement: current wi: %lu, current region: %p, region length: %lu\t\tregion last wall_time %lu wi last wall time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
+	printf("start:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
 }
 
 void irt_inst_region_end_measurements(irt_work_item* wi) {
-//	printf("stopping measurements\n");
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _start_code__, _end_code__) \
-	if(irt_g_inst_group_##_name__##membership_count > 0)\
-		_end_code__;
+	if(wi->inst_region_list->length <= 0)
+		return;
+
+	bool late_exit = false;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	if(irt_g_inst_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
+		late_exit = (irt_atomic_sub_and_fetch(&(irt_inst_region_get_current(wi)->remaining_exits), 1) <= 0); \
+		printf("### WI: %lu, late exit %s\n", wi->id.full, late_exit?"true":"false"); \
+		if(late_exit) { \
+			_region_late_end_code__; \
+			irt_inst_region_get_current(wi)->first_entrance_flag = false; \
+		} \
+		wi_end_code__; \
+	}
 #include "irt_metrics.def"
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	if(irt_g_inst_measure_##_name__) { \
-		_end_code__; \
+		if(late_exit) { /* only do LE code upon last exit */ \
+			_region_late_end_code__; \
+			irt_inst_region_get_current(wi)->last_##_name__ = 0; \
+		} \
+		wi_end_code__; \
 		wi->inst_data->last_##_name__ = 0; \
 	}
 #include "irt_metrics.def"
-//	printf("stopped measurements, cpu time so far: %lu\n", wi->inst_data->aggregated_cpu_time);
+//	printf("end measurement: current wi: %lu, current region: %p, region length: %lu\t\tregion aggregated wall_time %lu wi aggregated wall time: %lu\n", wi->id.full, irt_inst_region_get_current(wi), wi->inst_region_list->length, irt_inst_region_get_current(wi)->aggregated_wall_time, wi->inst_data->aggregated_wall_time);
+	printf("end:\tWI: %3lu, RG: %3lu, RG_LEN: %3lu, rg last walltime: %lu, wi last walltime: %lu\n", wi->id.full, irt_inst_region_get_current(wi)->id, wi->inst_region_list->length, irt_inst_region_get_current(wi)->last_wall_time, wi->inst_data->last_wall_time);
 }
 
 void irt_inst_region_init(irt_context* context) {
 	context->inst_region_data = (irt_inst_region_struct*)malloc(context->num_regions * sizeof(irt_inst_region_struct));
 	for(uint32 i = 0; i < context->num_regions; ++i) {
+		context->inst_region_data[i].id	 = i;
 		context->inst_region_data[i].num_executions = 0;
+		context->inst_region_data[i].remaining_exits = 0;
+		context->inst_region_data[i].first_entrance_flag = false;
 		irt_spin_init(&context->inst_region_data[i].lock);
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+		context->inst_region_data[i].last_##_name__ = 0; \
 		context->inst_region_data[i].aggregated_##_name__ = 0;
 #include "irt_metrics.def"
 	}
@@ -675,8 +728,10 @@ void irt_inst_region_debug_output() {
 	printf("%u region(s):\n", num_regions);
 	for(uint32 i = 0; i < num_regions; ++i) {
 		printf("region %u:\n", i);
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-		printf("  " #_name__ ":\t" _format_string__ "\n",  irt_context_get_current()->inst_region_data[i].aggregated_##_name__);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+		if(irt_g_inst_measure_##_name__) { \
+			printf("  " #_name__ ":\t" _format_string__ "\n",  irt_context_get_current()->inst_region_data[i].aggregated_##_name__); \
+		}
 #include "irt_metrics.def"
 	}
 }
@@ -703,16 +758,20 @@ void irt_inst_region_output() {
 
 	// write header
 	fprintf(outputfile, "#subject,id");
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-		fprintf(outputfile, "," #_name__ "(%s)", #_unit__);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+		if(irt_g_inst_measure_##_name__) { \
+			fprintf(outputfile, "," #_name__ "(%s)", #_unit__); \
+		}
 #include "irt_metrics.def"
 	fprintf(outputfile, "\n");
 
 	// write data
 	for(uint32 i = 0; i < num_regions; ++i) {
 		fprintf(outputfile, "RG,%u", i);
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
-		fprintf(outputfile, "," _format_string__, irt_context_get_current()->inst_region_data[i].aggregated_##_name__);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+		if(irt_g_inst_measure_##_name__) { \
+			fprintf(outputfile, "," _format_string__, irt_context_get_current()->inst_region_data[i].aggregated_##_name__); \
+		}
 #include "irt_metrics.def"
 		fprintf(outputfile, "\n");
 	}
@@ -721,6 +780,7 @@ void irt_inst_region_output() {
 
 void irt_inst_region_finalize(irt_context* context) {
 	irt_inst_region_output();
+	irt_inst_region_debug_output();
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		irt_spin_destroy(&context->inst_region_data[i].lock);
 	}
@@ -729,9 +789,10 @@ void irt_inst_region_finalize(irt_context* context) {
 
 // start a region
 void irt_inst_region_start(region_id id) {
+	irt_work_item* wi = irt_wi_get_current();
+	printf("region start %u on wi %lu\n", id, wi->id.full);
 	irt_context* context = irt_context_get_current();
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Start of region id %u requested, but only %u region(s) present", id, context->num_regions)
-	irt_work_item* wi = irt_wi_get_current();
 	irt_inst_region_struct* region = &(context->inst_region_data[id]);
 //	irt_inst_region_start(irt_wi_get_current(), &(context->inst_region_data[id]));
 	// if a region is already present (=being measured), stop current measurements
@@ -747,10 +808,11 @@ void irt_inst_region_start(region_id id) {
 
 // stop a region and remove it from the region stack of the WI
 void irt_inst_region_end(region_id id) {
+	irt_work_item* wi = irt_wi_get_current();
+	printf("region end %u on wi %lu\n", id, wi->id.full);
 
 //	printf("region end length: %u %lu %p\n", wi->inst_region_list->length, wi->id, wi);
 
-	irt_work_item* wi = irt_wi_get_current();
 
 	IRT_ASSERT(wi->inst_region_list->length > 0, IRT_ERR_INSTRUMENTATION, "Region end occurred while no region was started")
 
@@ -759,6 +821,11 @@ void irt_inst_region_end(region_id id) {
 	IRT_ASSERT(cur == &(irt_context_get_current()->inst_region_data[id]), IRT_ERR_INSTRUMENTATION, "Region end id %u did not match current open region", id)
 
 	irt_inst_region_end_measurements(wi);
+
+//if(wi->num_groups == 0 || (wi->num_groups > 0 && wi->wg_memberships[0].num == 0)) {
+//printf("\n\n before propagating:\n");
+//irt_inst_region_debug_output();
+//}
 
 	irt_inst_propagate_data_from_wi_to_cur_region(wi);
 	// only increase count if wi is not member in any work group or has wg id == 0
@@ -769,15 +836,20 @@ void irt_inst_region_end(region_id id) {
 	// if there is a region left open, continue old measurements
 	if(wi->inst_region_list->length > 0)
 		irt_inst_region_start_measurements(wi);
+
+//if(wi->num_groups == 0 || (wi->num_groups > 0 && wi->wg_memberships[0].num == 0)) {
+//printf("\n\n after propagating:\n");
+//irt_inst_region_debug_output();
+//}
 }
 
 void irt_inst_region_wi_init(irt_work_item* wi) {
 	wi->inst_region_list = (irt_inst_region_list*)malloc(sizeof(irt_inst_region_list));
-	wi->inst_region_list->size = 1;
+	wi->inst_region_list->size = 8;
 	wi->inst_region_list->length = 0;
-	wi->inst_region_list->items = (irt_inst_region_struct**)malloc(sizeof(irt_inst_region_struct*));
+	wi->inst_region_list->items = (irt_inst_region_struct**)malloc(sizeof(irt_inst_region_struct*)*wi->inst_region_list->size);
 	wi->inst_data = (irt_inst_wi_struct*)malloc(sizeof(irt_inst_wi_struct));
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _start_code__, _end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	wi->inst_data->last_##_name__ = 0; \
 	wi->inst_data->aggregated_##_name__ = 0;
 #include "irt_metrics.def"
@@ -786,6 +858,21 @@ void irt_inst_region_wi_init(irt_work_item* wi) {
 void irt_region_instrumentation_setup() {
 	irt_energy_select_instrumentation_method();
 	irt_inst_set_region_instrumentation_from_env();
+}
+
+void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source) {
+	irt_inst_region_list* src = source->inst_region_list;
+	if(src->length > 0) {
+		irt_inst_region_list* dst = destination->inst_region_list;
+
+		if(dst->size < src->size) {
+			dst->size = src->size;
+			dst->items = (irt_inst_region_struct**)realloc(dst->items, sizeof(irt_inst_region_struct*)*dst->size);
+		}
+
+		dst->length = src->length;
+		memcpy(dst->items, src->items, sizeof(irt_inst_region_struct*)*dst->length);
+	}
 }
 
 // stop a region, do not remove it from the region stack of the WI
@@ -822,5 +909,6 @@ void irt_inst_region_start(region_id id) { }
 void irt_inst_region_end(region_id id) { }
 void irt_inst_region_wi_init(irt_work_item* wi) { }
 void irt_region_instrumentation_setup() { }
+void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source);
 
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
