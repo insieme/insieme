@@ -318,7 +318,7 @@ LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b
 LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (WCharToInt,	"wchar.to.int",   "(wchar<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
-LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
+DERIVED (BoolToInt,		"bool.to.int",    "(bool b,intTypeParam<#b> t) -> int<#b> { return (b)?(int.precision(1,param(#b))):(int.precision(0,param(#b))); }")
 LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
 
       // TO UINT
@@ -356,7 +356,7 @@ LITERAL (BoolToChar,		"bool.to.char",	"(bool) -> char")
 
       // TO Bool
 GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
-LITERAL (SignedToBool,		"int.to.bool" ,	"(int<#a>) -> bool")
+DERIVED (SignedToBool,		"int.to.bool" ,	"(int<#a> a) -> bool { return a != int.precision(0,param(#a)); }")
 LITERAL (UnsignedToBool,	"uint.to.bool",	"(uint<#a>) -> bool")
 LITERAL (RealToBool,		"real.to.bool",	"(real<#a>) -> bool")
 LITERAL (CharToBool,		"char.to.bool",	"(char) -> bool")
