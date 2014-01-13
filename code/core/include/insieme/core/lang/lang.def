@@ -357,9 +357,9 @@ LITERAL (BoolToChar,		"bool.to.char",	"(bool) -> char")
       // TO Bool
 GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
 DERIVED (SignedToBool,		"int.to.bool" ,	"(int<#a> a) -> bool { return a != int.precision(0,param(#a)); }")
-LITERAL (UnsignedToBool,	"uint.to.bool",	"(uint<#a>) -> bool")
-LITERAL (RealToBool,		"real.to.bool",	"(real<#a>) -> bool")
-LITERAL (CharToBool,		"char.to.bool",	"(char) -> bool")
+DERIVED (UnsignedToBool,	"uint.to.bool",	"(uint<#a> a) -> bool { return a != uint.precision(0u,param(#a)); }")
+DERIVED (RealToBool,		"real.to.bool",	"(real<#a> a) -> bool { return a != real.precision(0.0f, param(#a)); }")
+DERIVED (CharToBool,		"char.to.bool",	R"((char a) -> bool { return a != '\0'; })")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
