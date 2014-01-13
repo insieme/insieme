@@ -65,8 +65,8 @@ METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGRE
 METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
 	{  }, \
 	{  }, \
-	{ irt_inst_region_get_current(wi)->last_wall_time = irt_time_ticks(); printf("WI %lu %lu %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id);}, \
-	{ irt_inst_region_get_current(wi)->aggregated_wall_time += irt_time_ticks() - irt_inst_region_get_current(wi)->last_wall_time; printf("WI: %lu ############################# inside irt_metrics.def: last wall time: %lu, aggregated wall time: %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id); } \
+	{ irt_inst_region_get_current(wi)->last_wall_time = irt_time_ticks(); /*printf("WI %lu %lu %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id);*/}, \
+	{ irt_inst_region_get_current(wi)->aggregated_wall_time += irt_time_ticks() - irt_inst_region_get_current(wi)->last_wall_time; /*printf("WI: %lu ############################# inside irt_metrics.def: last wall time: %lu, aggregated wall time: %lu at region id %lu\n", wi->id.full, irt_inst_region_get_current(wi)->last_wall_time, irt_inst_region_get_current(wi)->aggregated_wall_time, irt_inst_region_get_current(wi)->id);*/ } \
 )
 
 GROUP(energy_group, rapl_energy_data rapl_data, {}, {}, \
