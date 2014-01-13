@@ -82,7 +82,7 @@ namespace transform {
 				if(manager.getLangBasic().isBuiltIn(func)) return ptr;
 				if (core::lang::isDerived(func))  return ptr;
 				// try in-lining of call expression
-				return tryInlineToExpr(manager, ptr.as<CallExprPtr>());
+				return tryInlineToExpr(manager, ptr.as<CallExprPtr>(), true);
 			}
 
 			NodePtr simplifyIf(const NodePtr& ptr) {
