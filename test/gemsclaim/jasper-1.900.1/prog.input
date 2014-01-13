@@ -1,1 +1,1 @@
-{PATH}/{EXEC} --version
+{PATH}/{EXEC} -f {PATH}/../wow_320.pnm -T jp2 -F {PATH}/{EXEC}.out

@@ -1,0 +1,140 @@
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/src/alpha_n_prs.c"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark//"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/src/alpha_n_prs.c"
+
+
+
+
+
+
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar.h" 1
+# 10 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar.h"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/missingFunc.h" 1
+# 10 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/missingFunc.h"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/inc/typedefs.h" 1
+# 37 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/inc/typedefs.h"
+typedef unsigned short U16;
+typedef unsigned int U32;
+typedef short S16;
+typedef int S32;
+typedef short BOOL;
+typedef U16 PID;
+typedef U16 LBID;
+typedef U16 THREADID;
+typedef U16 SEMID;
+typedef struct { U32 msw, lsw; } U64;
+typedef unsigned short CHAR;
+typedef U32 SIGSELECT;
+typedef unsigned short U8;
+# 11 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/missingFunc.h" 2
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar_intel_types.h" 1
+# 14 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar_intel_types.h"
+typedef int RealNum;
+typedef struct {
+  short int re;
+  short int im;
+} complex;
+# 12 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/missingFunc.h" 2
+
+
+
+
+
+
+void intToU32(signed int in, U32 *out);
+void u32ToInt(unsigned long int in, signed int *out);
+void intToReal(signed int in, RealNum *out);
+void cos_feldspar(RealNum a, RealNum *b);
+void sin_feldspar(RealNum a, RealNum *b);
+# 11 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar.h" 2
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar_intel_functions.h" 1
+# 14 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar_intel_functions.h"
+void mkComplexReal(RealNum re, RealNum im , complex *c);
+void mul_RealNum(RealNum a, RealNum b , RealNum *c);
+void div_RealNum(RealNum a, RealNum b , RealNum *c);
+void sub_RealNum(RealNum a, RealNum b , RealNum *c);
+void mul_ComplexReal(complex a, complex b, complex *c);
+void quot(signed int numerator, signed int denominator, signed int *out);
+# 12 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/common/inc/feldspar.h" 2
+
+signed int mod_fun_signed_int( signed int, signed int );
+int mod_fun_unsigned_int( unsigned int, unsigned int );
+long mod_fun_signed_long( long, long );
+long mod_fun_unsigned_long( unsigned long, unsigned long );
+
+int pow_fun_signed_int( int, int );
+int pow_fun_unsigned_int( unsigned int, unsigned int );
+
+int bit_fun_signed_int( int );
+int setBit_fun_signed_int( int, int );
+int clearBit_fun_signed_int( int, int );
+int complementBit_fun_signed_int( int, int );
+int testBit_fun_signed_int( int, int );
+int rotateL_fun_signed_int( int, int );
+int rotateR_fun_signed_int( int, int );
+int bitSize_fun_signed_int( int );
+int isSigned_fun_signed_int( int );
+
+int abs_fun_signed_int( int );
+int abs_fun_unsigned_int( unsigned int );
+long abs_fun_signed_long( long );
+long abs_fun_unsigned_long( unsigned long );
+
+int signum_fun_signed_int( int );
+int signum_fun_unsigned_int( unsigned int );
+long signum_fun_signed_long( long );
+long signum_fun_unsigned_long( unsigned long );
+
+void copy_arrayOf_signed_int( int*, int, int* );
+void copy_arrayOf_unsigned_int( unsigned int*, int, unsigned int* );
+void copy_arrayOf_signed_long( long*, int, long* );
+void copy_arrayOf_unsigned_long( unsigned long*, int, unsigned long* );
+# 8 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/ulRsGen/src/alpha_n_prs.c" 2
+
+void alpha__n__prs(signed int var0_0_0, signed int var0_0_1, signed int var0_1_0, signed int var0_1_1, signed int * out_0, RealNum * out_1) {
+  signed int var3[1][8] = {{0,2,3,4,6,8,9,10}};
+  signed int var8[2][8] = {{0,2,3,4,6,8,9,10},{5,7,8,9,11,1,2,3}};
+  signed int var13[4][8] = {{0,2,3,4,6,8,9,10},{3,4,5,6,9,11,0,1},{6,7,8,9,0,2,3,4},{9,10,11,0,3,5,6,7}};
+  int var17;
+  int var19;
+  int var21;
+  signed int var25[8] = {0,6,3,4,2,8,10,9};
+  int var29;
+  signed int var30;
+
+  var17 = (var0_0_1 == 4);
+  var19 = (var0_0_1 == 2);
+  var21 = (var0_0_1 == 1);
+  var29 = ((var0_1_1 > 7) || (var0_1_1 < 0));
+  if(var29) {
+    var30 = -1;
+  } else {
+    var30 = var25[var0_1_1];
+  }
+  {
+    signed int var1;
+    for(var1 = 0; var1 < var0_0_1; var1 += 1) {
+      signed int var18;
+      signed int var20;
+      signed int var22;
+
+      if(var17) {
+ var18 = var13[var1][var0_1_0];
+      } else {
+ var18 = -1;
+      }
+      if(var19) {
+ var20 = var8[var1][var0_1_0];
+      } else {
+ var20 = var18;
+      }
+      if(var21) {
+ var22 = var3[var1][var0_1_0];
+      } else {
+ var22 = var20;
+      }
+    }
+  }
+}

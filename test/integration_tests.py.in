@@ -387,6 +387,9 @@ def runner( job ):
 		# Add time/and memory measurements
 		real_cmd = "/usr/bin/time -f \"\nTIME(%e):MEM(%M)\" {0}".format(cmd.cmd)
 
+		if cmd.out_file:
+			file = open(cmd.out_file, "w")
+
 		try:
 			(retcode, output) = exec_shell_cmd(real_cmd, cmd.env)
 		except Exception as e:
@@ -408,7 +411,6 @@ def runner( job ):
 		output = "\n".join(output.split('\n')[:-2])
 
 		if cmd.out_file:
-			file = open(cmd.out_file, "w")
 			file.write(output)
 			file.close()
 

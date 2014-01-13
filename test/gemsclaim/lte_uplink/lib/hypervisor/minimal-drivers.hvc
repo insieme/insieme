@@ -1,0 +1,20 @@
+options default_shared=2,7
+
+#device memprof memprof
+#  dedicated 3,7
+#device srom/0 srom
+
+device pcie/0 pcie
+  dedicated 0,7
+
+#device pcie/1 pcie
+#  dedicated 1,7
+#device xgbe/0 xgbe_ipp1_epp
+#  dedicated 4,7 5,7
+#  args 
+#device xgbe/1 xgbe_ipp1_epp
+#  dedicated 6,7 7,7
+#  args 
+
+client vmlinux
+  args  

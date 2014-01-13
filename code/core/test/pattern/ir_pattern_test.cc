@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/logging.h"

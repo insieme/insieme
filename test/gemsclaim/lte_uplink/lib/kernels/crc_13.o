@@ -1,0 +1,62 @@
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/crc_13.c"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark//"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/crc_13.c"
+# 11 "/home/alessi/Documents/InsiemeCodes/LTE/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/crc_13.c"
+unsigned char crcTable[256];
+
+void crcInit(void) {
+  unsigned char remainder;
+  int dividend;
+  unsigned char bit;
+
+
+
+
+  for (dividend = 0; dividend < 256; ++dividend) {
+
+
+
+    remainder = dividend << ((8 * sizeof(char)) - 8);
+
+
+
+
+    for (bit = 8; bit > 0; --bit) {
+
+
+
+      if (remainder & (1 << ((8 * sizeof(char)) - 1))) {
+ remainder = (remainder << 1) ^ 0xD8;
+      } else {
+ remainder = (remainder << 1);
+      }
+    }
+
+
+
+
+    crcTable[dividend] = remainder;
+  }
+}
+
+unsigned char crcFast(unsigned char const message[], int nBytes) {
+  unsigned char data;
+  unsigned char remainder = 0;
+  int byte;
+
+
+
+
+  for (byte = 0; byte < nBytes; ++byte) {
+    data = message[byte] ^ (remainder >> ((8 * sizeof(char)) - 8));
+    remainder = crcTable[data] ^ (remainder << 8);
+  }
+
+
+
+
+  return (remainder);
+
+}
