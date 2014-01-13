@@ -73,6 +73,7 @@ namespace cba {
 
 			// extract context and dump it
 			createDotDump(*root->getAttachedValue<CBA_Ptr>());
+
 		}
 
 	}

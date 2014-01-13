@@ -40,21 +40,24 @@
 
 #include "cba.h"
 
+int sum(int a, int b) { return a + b; }
+int diff(int a, int b) { return a - b; }
+
 int main(int argc, char** argv) {
 
-	// very simple stuff
-	cba_expect_true(true);
-	cba_expect_may_be_true(true);
-	cba_expect_false(false);
-	cba_expect_may_be_false(false);
+	// two values
+	int a = 12;
+	int b = 14;
 
+	cba_expect_eq_int(26, sum(a,b));
 
-	// something more challenging
-	cba_expect_true(12 < 14);
-	cba_expect_true(12+argc < 14+argc);
+	// test a function pointer
+	int (*f)(int,int);
+	f = &sum;
 
-	// dealing with unknown values
-	cba_expect_may_be_true(12 < argc);
-	cba_expect_may_be_false(12 < argc);
+	cba_expect_eq_int(3, f(1,2));
+
+	f = &diff;
+	cba_expect_eq_int(1, f(3,2));
 
 }

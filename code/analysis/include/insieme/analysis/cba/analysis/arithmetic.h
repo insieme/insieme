@@ -238,15 +238,21 @@ namespace cba {
 			// conduct std-procedure
 			super::visitCallExpr(call, ctxt, constraints);
 
-			// only care for integer expressions calling literals
-			if (!base.isInt(call->getType())) return;
-
 			// check whether it is a literal => otherwise basic data flow is handling it
 			auto fun = call->getFunctionExpr();
 			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
 			auto A_res = cba.getSet(A, cba.getLabel(call), ctxt);
+
+			// special handling for precision fixes (result is also not covered by the Int group)
+			if (base.isIntPrecisionFix(fun) || base.isUintPrecisionFix(fun)) {
+				constraints.add(subset(cba.getSet(A, call[0], ctxt), A_res));
+				return;
+			}
+
+			// only care for integer expressions calling literals
+			if (!base.isInt(call->getType())) return;
 
 			// handle unary literals
 			if (call.size() == 1u) {

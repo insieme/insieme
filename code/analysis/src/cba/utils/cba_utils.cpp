@@ -64,6 +64,11 @@ namespace cba {
 
 		// if lambda is not directly called it is a free function
 		auto user = (type == NT_Lambda) ? fun.getParentAddress(4) : fun.getParentAddress();
+
+		// if user is a program, it is not a free function
+		if (auto prog = user.isa<ProgramPtr>()) return none;
+
+		// if lambda is used as an argument to a call => it is a free function
 		auto call = user.isa<CallExprAddress>();
 		if (!call || call->getFunctionExpr() != fun) return fun;
 

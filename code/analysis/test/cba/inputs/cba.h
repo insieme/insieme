@@ -39,14 +39,8 @@
  */
 
 #define bool int
-#define true (1>0)
-#define false (0>0)
-
-// boolean tests
-void cba_expect_true(bool b);
-void cba_expect_false(bool b);
-void cba_expect_may_be_true(bool b);
-void cba_expect_may_be_false(bool b);
+#define true (1)
+#define false (0)
 
 // alias tests
 void cba_expect_is_alias(void* a, void* b);
@@ -56,3 +50,11 @@ void cba_expect_may_alias(void* a, void* b);
 // integer tests
 void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
+void cba_expect_may_eq_int(int a, int b);
+
+
+// boolean tests (mapped to integer tests, since in C everything is an int)
+#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
+#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
+#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
+#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)

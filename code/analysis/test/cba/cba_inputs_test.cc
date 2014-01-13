@@ -66,6 +66,8 @@ namespace cba {
 
 	vector<string> getInputFiles();
 
+	ExpressionAddress getBoolValue(const ExpressionAddress& addr);
+
 	// the type definition (specifying the parameter type)
 	class CBAInputTest : public ::testing::TestWithParam<string> { };
 
@@ -104,20 +106,8 @@ namespace cba {
 
 			// check the predicate
 			testCount++;
-			void cba_expect_true(bool b);
-			void cba_expect_false(bool b);
-			void cba_expect_maybe(bool b);
-			void cba_expect_maybe_not(bool b);
 
-			if (name == "cba_expect_true") {
-				EXPECT_PRED1(isTrue, call[0]) << *core::annotations::getLocation(call);
-			} else if (name == "cba_expect_false") {
-				EXPECT_PRED1(isFalse, call[0]) << *core::annotations::getLocation(call);
-			} else if (name == "cba_expect_may_be_true") {
-				EXPECT_PRED1(mayBeTrue, call[0]) << *core::annotations::getLocation(call);
-			} else if (name == "cba_expect_may_be_false") {
-				EXPECT_PRED1(mayBeFalse, call[0]) << *core::annotations::getLocation(call);
-			} else if (name == "cba_expect_is_alias") {
+			if (name == "cba_expect_is_alias") {
 				EXPECT_PRED2(isAlias, call[0], call[1]) << *core::annotations::getLocation(call);
 			} else if (name == "cba_expect_may_alias") {
 				EXPECT_PRED2(mayAlias, call[0], call[1]) << *core::annotations::getLocation(call);
@@ -135,7 +125,7 @@ namespace cba {
 		});
 
 		// for debugging
-		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 
 		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
 	}
