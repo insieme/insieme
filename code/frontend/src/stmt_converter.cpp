@@ -237,9 +237,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 
 	stmtutils::StmtWrapper retStmt;
     LOG_STMT_CONVERSION( forStmt, retStmt );
-
-	bool addDeclStmt = false;
-
+	
 	try {
 		// Analyze loop for induction variable
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
@@ -395,11 +393,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 			);
 		}
 	}
-
-	if (addDeclStmt) {
-		retStmt = stmtutils::tryAggregateStmts(builder, retStmt);
-	}
-
+	
 	return retStmt;
 }
 

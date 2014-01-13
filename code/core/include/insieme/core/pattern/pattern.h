@@ -81,10 +81,13 @@ namespace pattern {
 		inline bool isTypeOrValueOrParam(const TreePtr&) { return false; }
 
 	}
-
-	typedef boost::optional<Match<ptr_target>> MatchOpt;
-	typedef boost::optional<Match<address_target>> AddressMatchOpt;
-	typedef boost::optional<Match<tree_target>> TreeMatchOpt;
+	
+	typedef Match<ptr_target> NodeMatch;
+	typedef boost::optional<NodeMatch> MatchOpt;
+	typedef Match<address_target> AddressMatch;
+	typedef boost::optional<AddressMatch> AddressMatchOpt;
+	typedef Match<tree_target> TreeMatch;
+	typedef boost::optional<TreeMatch> TreeMatchOpt;
 
 
 	struct Pattern : public utils::Printable {

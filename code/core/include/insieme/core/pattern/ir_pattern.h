@@ -204,11 +204,13 @@ namespace irp {
 
 	inline TreePatternPtr forStmt(){ return node(core::NT_ForStmt, anyList); }
 
-	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body){
+	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body) {
 		return node(core::NT_WhileStmt, single(condition) << wrapBody(body));
 	}
 
-	inline TreePatternPtr switchStmt(const TreePatternPtr& expression, const ListPatternPtr& cases, const TreePatternPtr& defaultCase){
+	inline TreePatternPtr whileStmt(){ return node(core::NT_WhileStmt, anyList); }
+
+	inline TreePatternPtr switchStmt(const TreePatternPtr& expression, const ListPatternPtr& cases, const TreePatternPtr& defaultCase) {
 		return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
 	}
 
@@ -216,7 +218,7 @@ namespace irp {
 		return node(core::NT_ReturnStmt, single(returnExpression));
 	}
 
-	inline TreePatternPtr markerStmt(const TreePatternPtr& subExpr, const TreePatternPtr& id){
+	inline TreePatternPtr markerStmt(const TreePatternPtr& subExpr, const TreePatternPtr& id) {
 		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
 	}
 
@@ -255,11 +257,6 @@ namespace irp {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
 		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
-
-	// two utilities allowing to collect all matches of a given pattern within a tree
-	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes = false);
-	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes = false);
-
 
 } // end namespace irp
 } // end namespace pattern
