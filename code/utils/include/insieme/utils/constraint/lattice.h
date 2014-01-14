@@ -215,7 +215,7 @@ namespace constraint {
 			// this is strange code, but it is the simplest stack overflow could come up with
 			// http://stackoverflow.com/questions/2874441/deleting-elements-from-stl-set-while-iterating
 			for(auto it = trg.begin(); it != trg.end(); ) {
-				if (!contains(src, *it)) {
+				if (src.find(*it) == src.end()) {
 					trg.erase(it++);
 					changed = true;
 				} else {

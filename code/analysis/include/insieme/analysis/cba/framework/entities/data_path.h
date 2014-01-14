@@ -174,6 +174,9 @@ namespace cba {
 			virtual bool lessIndex(const DataPathElement& ohter) const =0;
 			virtual ptr_type createCopyWith(const ptr_type& head) const =0;
 			virtual bool isOverlapping(const DataPathElement& other) const =0;
+
+			virtual std::ostream& printTo(std::ostream& out) const =0;
+			virtual std::ostream& printToReverse(std::ostream& out) const =0;
 		};
 
 
@@ -201,6 +204,17 @@ namespace cba {
 					out << "#.";
 				}
 				return out << index;
+			}
+
+			std::ostream& printToReverse(std::ostream& out) const {
+				out << index;
+				if (head) {
+					out << ".";
+					head->printToReverse(out);
+				} else {
+					out << ".#";
+				}
+				return out;
 			}
 
 			const Index& getIndex() const {
@@ -260,17 +274,20 @@ namespace cba {
 		typedef const detail::DataPathElement* ptr_type;
 		ptr_type path;
 
+		// a flag indicating whether this data path is up or down (upwards the data structure or downwards)
+		bool down;
+
 	public:
 
-		DataPath(ptr_type ptr = nullptr) : path(ptr) {
+		DataPath(ptr_type ptr = nullptr) : path(ptr), down(true) {
 			if (path) path->incRefCount();
 		}
 
-		DataPath(DataPath&& other) : path(other.path) {
+		DataPath(DataPath&& other) : path(other.path), down(other.down) {
 			other.path = nullptr;
 		}
 
-		DataPath(const DataPath& other) : path(other.path) {
+		DataPath(const DataPath& other) : path(other.path), down(other.down) {
 			if (path) path->incRefCount();
 		}
 
@@ -279,6 +296,9 @@ namespace cba {
 		}
 
 		DataPath& operator=(const DataPath& other) {
+			// update down flag (cheap)
+			down = other.down;
+			// update the data path
 			if (path == other.path) return *this;
 			if (path) path->decRefCount();
 			path = other.path;
@@ -289,6 +309,12 @@ namespace cba {
 		bool operator==(const DataPath& other) const {
 			// check identity
 			if (this == &other) return true;
+
+			// if both are root paths it is equivalent
+			if (!path && !other.path) return true;
+
+			// check for equal direction
+			if (down != other.down) return false;
 
 			// check for equal path element
 			if (path == other.path) return true;
@@ -304,13 +330,34 @@ namespace cba {
 		}
 
 		bool operator<(const DataPath& other) const {
-			// compare paths
-			return detail::less_than(path, other.path);
+			// compare direction
+			if (down && !other.down) return true;
+			if (!down && other.down) return false;
+			assert_eq(down, other.down);
+
+			// compare paths (depending on direction
+			return  ( down && detail::less_than(path, other.path)) ||
+					(!down && detail::less_than(other.path, path));
 		}
+
+		// ----------------------------------------------------------------
+		//								Narrow
+		// ----------------------------------------------------------------
 
 		// path concatenation
 		template<typename Index>
 		DataPath& operator<<=(const Index& index) {
+
+			// check whether data path points into wrong direction
+			if (!down && !isRoot()) {
+				// remove top-most element from path (needs to be equivalent to element)
+				popHead(index);
+				return *this;
+			}
+
+			// fix direction
+			down = true;
+
 			// the memory allocated here is managed by its own reference counting
 			auto element = new detail::ConcreteDataPathElement<Index>(path, index);
 			assert_ne(path, element);
@@ -321,6 +368,9 @@ namespace cba {
 		}
 
 		DataPath& operator<<=(const DataPath& extension) {
+
+			assert_true(!down || isRoot()); // for now
+			down = true;
 
 			// deal with empty extension
 			if (!extension.path) return *this;
@@ -349,6 +399,67 @@ namespace cba {
 
 		DataPath operator<<(const DataPath& path) const {
 			return DataPath(*this) <<= path;
+		}
+
+		// ----------------------------------------------------------------
+		//								Expand
+		// ----------------------------------------------------------------
+
+		// path concatenation
+		template<typename Index>
+		DataPath& operator>>=(const Index& index) {
+
+			// check whether data path points into wrong direction
+			if (down && !isRoot()) {
+				// remove top-most element from path (needs to be equivalent to element)
+				popHead(index);
+				return *this;
+			}
+
+			// fix direction
+			down = false;
+
+			// the memory allocated here is managed by its own reference counting
+			auto element = new detail::ConcreteDataPathElement<Index>(path, index);
+			assert_ne(path, element);
+			element->incRefCount();
+			if(path) path->decRefCount();
+			path = element;
+			return *this;
+		}
+
+		DataPath& operator>>=(const DataPath& extension) {
+
+			assert_true(!down || isRoot()); // for now
+			down = false;
+
+			// deal with empty extension
+			if (!extension.path) return *this;
+
+			// deal with empty local state
+			if (!path) {
+				path = extension.path;
+				path->incRefCount();
+				return *this;
+			}
+
+			// compute new path
+			auto newPath = (*path) << extension.path;
+			assert_ne(path, newPath);
+			newPath->incRefCount();
+			path->decRefCount();
+			path = newPath;
+			return *this;
+		}
+
+		// path concatenation
+		template<typename Element>
+		DataPath operator>>(const Element& element) const {
+			return DataPath(*this) >>= element;
+		}
+
+		DataPath operator>>(const DataPath& path) const {
+			return DataPath(*this) >>= path;
 		}
 
 		// eliminating tailing elements from this path
@@ -380,6 +491,7 @@ namespace cba {
 		}
 
 		bool isOverlapping(const DataPath& other) const {
+			assert_true(down && other.down) << "Only tested for downward data paths!";
 
 			auto stepsA = getSteps();
 			auto stepsB = other.getSteps();
@@ -396,11 +508,39 @@ namespace cba {
 
 		std::ostream& printTo(std::ostream& out) const {
 			if (!path) return out << "#";
-			return out << *path;
+			return (down) ? path->printTo(out) : path->printToReverse(out);
 		}
 
 		std::size_t hash() const {
-			return (path) ? path->hash() : 0;
+			auto res = (path) ? path->hash() : 0;
+			return (down) ? res : ~res;
+		}
+
+	private:
+
+		template<typename Index>
+		void popHead(const Index& index) {
+			assert_true(path) << "Unable to delete head of empty list!";
+
+			// make sure the head index is the given value
+			assert_eq(index, static_cast<const detail::ConcreteDataPathElement<Index>*>(path)->getIndex());
+
+			// remove the head
+			popHead();
+		}
+
+		void popHead() {
+
+			// get involved nodes
+			auto oldPath = path;
+			auto newPath = path->getParent();
+
+			// update path
+			path = newPath;
+
+			// update reference counting
+			if (path) path->incRefCount();
+			oldPath->decRefCount();
 		}
 
 	};

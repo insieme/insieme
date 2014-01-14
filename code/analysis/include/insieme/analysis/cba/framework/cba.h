@@ -138,7 +138,7 @@ namespace cba {
 						for(const auto& ctxt : this->getContexts(cba)) {
 							// TODO: move location creation utility to location constructor
 							auto loc = getLocation<Context>(cur, ctxt);
-							if (!contains(*locations, loc)) {
+							if (!::contains(*locations, loc)) {
 								locations->push_back(loc);
 							}
 						}

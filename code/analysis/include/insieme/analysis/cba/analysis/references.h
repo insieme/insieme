@@ -144,6 +144,20 @@ namespace cba {
 						}
 				));
 
+			} else if (base.isRefExpand(fun)) {
+
+				// obtain involved sets
+				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
+				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
+				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
+
+				// add constraint linking in and out values
+				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,
+						[](const Reference<Context>& ref, const DataPath& path)->Reference<Context> {
+							return Reference<Context>(ref.getLocation(), ref.getDataPath() >> path);
+						}
+				));
+
 			} else if (base.isBuiltIn(fun)) {
 				// do nothing - should be properly supported
 

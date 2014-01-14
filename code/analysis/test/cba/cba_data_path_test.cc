@@ -71,6 +71,15 @@ namespace cba {
 		EXPECT_EQ("#.a", toString(dp.pop()));
 		EXPECT_EQ("#", toString(dp.pop(2)));
 
+		// check negative steps
+		dp = DataPath();
+		EXPECT_EQ("#", toString(dp));
+
+		dp >>= NominalIndex("a");
+		EXPECT_EQ("a.#", toString(dp));
+
+		dp >>= SingleIndex(4);
+		EXPECT_EQ("4.a.#", toString(dp));
 
 		// check equals and hash functions
 		DataPath root;
@@ -161,6 +170,46 @@ namespace cba {
 			out << cur << " ";
 		});
 		EXPECT_EQ("#.a #.a.b #.a.b.c ", out.str());
+
+	}
+
+	TEST(CBA, UpAndDown) {
+
+		typedef NominalIndex<string> NominalIndex;
+
+		// just some simple data path handling
+		DataPath dp;
+		EXPECT_EQ("#", toString(dp));
+
+		dp <<= NominalIndex("a");
+		EXPECT_EQ("#.a", toString(dp));
+
+		dp <<= SingleIndex(4);
+		EXPECT_EQ("#.a.4", toString(dp));
+
+		dp >>= SingleIndex(4);
+		EXPECT_EQ("#.a", toString(dp));
+
+		dp >>= NominalIndex("a");
+		EXPECT_EQ("#", toString(dp));
+
+		dp >>= SingleIndex(4);
+		EXPECT_EQ("4.#", toString(dp));
+
+		dp >>= NominalIndex("a");
+		EXPECT_EQ("a.4.#", toString(dp));
+
+		dp <<= NominalIndex("a");
+		EXPECT_EQ("4.#", toString(dp));
+
+		dp <<= SingleIndex(4);
+		EXPECT_EQ("#", toString(dp));
+
+		dp <<= NominalIndex("a");
+		EXPECT_EQ("#.a", toString(dp));
+
+		dp <<= SingleIndex(4);
+		EXPECT_EQ("#.a.4", toString(dp));
 
 	}
 
