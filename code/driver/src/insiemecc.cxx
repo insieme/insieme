@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -94,8 +94,10 @@ int main(int argc, char** argv) {
 	//indicates that a shared object files should be created
 	bool createSharedObject = options.outFile.find(".so")!=std::string::npos;
 
-	// disable cilk support for insiemecc
+	// disable cilk, omp, ocl support for insiemecc
 	options.job.setOption(fe::ConversionJob::Cilk, false);
+	options.job.setOption(fe::ConversionJob::OpenMP, false);
+	options.job.setOption(fe::ConversionJob::OpenCL, false);
 
 	if (!options.valid) return (options.help)?0:1;
 

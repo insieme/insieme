@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -85,7 +85,8 @@ namespace frontend {
 			TAG_MPI			= 1<<6,
 
 			ProgressBar		= 1<<7,
-			NoWarnings		= 1<<8
+			NoWarnings		= 1<<8,
+			StrictSemanticChecks = 1<<9
 		};
 
 		/**
@@ -401,6 +402,11 @@ namespace frontend {
 		 * @throws an exception if the conversion fails.
 		 */
 		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
+
+		/**
+		 *  Used for debugging purposes. Prints the conversion setup
+		 **/
+		 void printConversionJob() const;
 
 	};
 
