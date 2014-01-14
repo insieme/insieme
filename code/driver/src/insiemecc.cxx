@@ -56,6 +56,7 @@
 #include "insieme/driver/cmd/options.h"
 #include "insieme/driver/object_file_utils.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 
 using namespace std;
@@ -86,9 +87,17 @@ int main(int argc, char** argv) {
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
 	bool compileOnly;
+	bool runIRChecks;
+	string tuCodeFile;		// a file to dump the TU code
+	string irCodeFile;		// a file to dump IR code to
+	string trgCodeFile;		// a file to dump the generated target code
 	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter to limit the compiler to creating an .o file
-		("compile", 'c', compileOnly, "compilation only")
+		("compile", 	'c', 	compileOnly, 	"compilation only")
+		("check-ir", 	'S', 	runIRChecks,  	"run IR checks")
+		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
+		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
+		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
 	;
 
 	//indicates that a shared object files should be created
@@ -144,24 +153,26 @@ int main(int argc, char** argv) {
 		return dr::isInsiemeLib(options.outFile) ? 0 : 1;
 	}
 
+	// dump the translation unit file (if needed for de-bugging)
+	if (tuCodeFile != "") {
+		auto tu = options.job.toIRTranslationUnit(mgr);
+		std::ofstream out(tuCodeFile);
+		out << tu;
+	}
+
 	// convert src file to target code
     auto program = options.job.execute(mgr);
 
-    {
-    	std::cout << "Dumping program ...\n";
-    	// save program as library - for faster debugging
-		fe::tu::IRTranslationUnit unit(mgr);
-		co::IRBuilder builder(mgr);
-		co::LambdaExprPtr main = program[0].as<co::LambdaExprPtr>();
-		unit.addFunction(builder.literal("main", main->getType()), main);
+	// dump IR code
+	if (irCodeFile != "") {
+		std::ofstream out(irCodeFile);
+		out << co::printer::PrettyPrinter(program);
+	}
 
-		dr::saveLib(unit, "_full_main.o");
-    }
-
-//    {
-//    	std::cout << "Running semantic checks ...\n";
-//    	std::cout << "Errors:\n" << co::checks::check(program);
-//    }
+	if (runIRChecks) {
+		std::cout << "Running semantic checks ...\n";
+		std::cout << "Errors:\n" << co::checks::check(program);
+	}
 
 	// Step 3: produce output code
 	//		This part converts the processed code into C-99 target code using the
@@ -170,6 +181,12 @@ int main(int argc, char** argv) {
 	//		backend modul as well.
 	cout << "Creating target code ...\n";
 	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
+
+	// dump source file if requested
+	if (trgCodeFile != "") {
+		std::ofstream out(trgCodeFile);
+		out << *targetCode;
+	}
 
 
 	// Step 4: build output code
