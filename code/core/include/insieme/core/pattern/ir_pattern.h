@@ -104,7 +104,7 @@ namespace irp {
 		return node(core::NT_TupleType, pattern);
 	}
 
-	inline TreePatternPtr variable(const TreePatternPtr& type, const TreePatternPtr& id) {
+	inline TreePatternPtr variable(const TreePatternPtr& type = pattern::any, const TreePatternPtr& id = pattern::any) {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
