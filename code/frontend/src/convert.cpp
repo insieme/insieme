@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1121,9 +1121,13 @@ namespace {
 				}
 				else{
 					// magic tryDeref if not a pointer.... because!
-					if (!utils::isRefArray(expr->getType()))
+					// dont deref if we have a refref as init and an anyref as expr
+					// otherwise void* elements in init list will fail...
+					if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(init.getType()) &&
+                                                                 builder.getLangBasic().isAnyRef(expr->getType())))
 						expr = builder.tryDeref(expr);
 				}
+
 				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
@@ -1362,7 +1366,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
         if(core::ExpressionPtr res = result.isa<core::ExpressionPtr>()) {
             //if plugin does not return a symbol, create the symbol
             //and check if the plugin returned a lambda expr.
-            //add this lambda expr to the ir tu and fill the lambda cache
+            //add this lambda expr to the ir tu and fill the lambda cacheF
             if(core::LiteralPtr symb = res.isa<core::LiteralPtr>()) {
                 addToLambdaCache(funcDecl, symb);
             } else {
