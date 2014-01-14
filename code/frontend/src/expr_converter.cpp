@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -92,7 +92,7 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 } // end std namespace
 
 namespace exprutils {
-	
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start) {
@@ -465,15 +465,27 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 	core::TypePtr type;
 	int width = intLit->getValue().getBitWidth()/8;
 	switch(width){
-		case 1:
-			type = builder.getLangBasic().getInt1();
+		case 1: {
+		    if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
+                type = builder.getLangBasic().getUInt1();
+            else
+                type = builder.getLangBasic().getInt1();
 			break;
-		case 2:
-			type = builder.getLangBasic().getInt2();
+		}
+		case 2: {
+			if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
+                type = builder.getLangBasic().getUInt2();
+            else
+                type = builder.getLangBasic().getInt2();
 			break;
-		case 4:
-			type = builder.getLangBasic().getInt4();
+		}
+		case 4: {
+		    if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
+                type = builder.getLangBasic().getUInt4();
+            else
+                type = builder.getLangBasic().getInt4();
 			break;
+		}
 		case 8:
 	//		type = builder.getLangBasic().getInt8();
 			type = convFact.convertType(intLit->getType().getTypePtr());
@@ -963,7 +975,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			}
 			// rightside will become the current operation
 			//  a += 1   =>    a = a + 1
-	
+
             auto compOp = llvm::cast<clang::CompoundAssignOperator>(binOp);
 
             if(compOp->getComputationLHSType() != binOp->getType()) {
@@ -983,7 +995,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
             if(compOp->getComputationResultType() != binOp->getType()) {
                 rhs = frontend::utils::castScalar(convFact.convertType( GET_TYPE_PTR(binOp) ), rhs);
-            } 
+            }
 		}
 
 	}
