@@ -274,6 +274,24 @@ namespace irp {
 		inline TreePatternPtr assignment(const TreePatternPtr& lhs = any, const TreePatternPtr& rhs = any) {
 			return callExpr(basic.getRefAssign(), lhs << rhs);
 		}
+
+		TreePatternPtr arrayRefElem1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getArrayRefElem1D(), var << idx);
+		}
+		TreePatternPtr arraySubscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getArraySubscript1D(), var << idx);
+		}
+
+		TreePatternPtr vectorRefElem(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getVectorRefElem(), var << idx);
+		}
+		TreePatternPtr vectorSubscript(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getVectorSubscript(), var << idx);
+		}
+
+		TreePatternPtr subscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return arrayRefElem1D(var, idx) | arraySubscript1D(var, idx) | vectorRefElem(var, idx) | vectorSubscript(var, idx);
+		}
 	};
 
 } // end namespace irp
