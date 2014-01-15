@@ -252,17 +252,32 @@ namespace pattern {
 			return tree;
 		}
 
-
 		// only supported for depth = 1
 		list_type getList() const {
 			// static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
 
 			assert(depth == 1 && "Only works on level 1!");
 			list_type res;
-			std::for_each( children.begin(), children.end(), [&] (const MatchValue& value) { 
+			std::for_each(children.begin(), children.end(), [&] (const MatchValue& value) { 
 					auto&& match = value.getValue();
 					if (match) { res.push_back(match); } 
 				} );
+			return res;
+		}
+
+		// return a flattened list of all (potentially multi-dimensional) results
+		list_type getFlattened() const {
+			list_type res;
+			if(depth == 0) {
+				res.push_back(getValue());
+			} else if(depth == 1) {
+				res = getList();
+			} else {
+				for(const MatchValue& c : children) {
+					auto&& subList = c.getFlattened();
+					res.insert(res.end(), subList.begin(), subList.end());
+				}
+			}
 			return res;
 		}
 
@@ -273,7 +288,6 @@ namespace pattern {
 		operator list_type() {
 			return getList();
 		}
-
 
 		bool hasValue(const MatchPath& path) const {
 			return path.getDepth() >= depth && hasValue(path.begin(), path.end());
@@ -554,6 +568,10 @@ namespace pattern {
 
 		bool operator==(const Match<T>& other) const {
 			return equalTarget(root, other.root) && map == other.map;
+		}
+
+		const MatchValue<T>& operator[](const std::string& var) const {
+			return getVarBinding(var);
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
