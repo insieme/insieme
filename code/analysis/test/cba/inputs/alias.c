@@ -34,32 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "cba.h"
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+int main() {
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+	int a = 10;
+	int b = 12;
+	int* c = &a;
+	int** d = &c;
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+	cba_expect_is_alias(&a,c);
+	cba_expect_not_alias(&b,c);
+	cba_expect_is_alias(*d,c);
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+	c = &b;
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+	cba_expect_not_alias(&a,c);
+	cba_expect_is_alias(&b,c);
+	cba_expect_not_alias(*d,c);
+	cba_expect_is_alias(*d,c);
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
-
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
-
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+}

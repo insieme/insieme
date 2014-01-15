@@ -55,7 +55,7 @@ namespace cba {
 
 		bool isBooleanValue(const core::ExpressionPtr& e) {
 			auto& basic = e->getNodeManager().getLangBasic();
-			return basic.isBool(e->getType());
+			return basic.isBool(e->getType()) || basic.isInt(e->getType());
 		}
 
 	}
@@ -111,6 +111,53 @@ namespace cba {
 		// convert result into literal
 		return core::arithmetic::toIR(a->getNodeManager(), (*value.formula)).as<core::LiteralPtr>();
 	}
+
+	bool notArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		return !mayArithmeticEqual(a,b);
+	}
+
+	bool mayArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		assert_eq(a.getRootNode(), b.getRootNode());
+
+		// shortcut for the simple stuff
+		if (a == b) return true;
+
+		// compute references set
+		std::set<Formula> valA = getValues(a, A);
+		std::set<Formula> valB = getValues(b, A);
+
+		// check whether values of any side may be unknown
+		if (contains(valA, Formula())) return true;
+		if (contains(valB, Formula())) return true;
+
+		// check whether there are overlapping references
+		for (const auto& a : valA) {
+			for (const auto& b : valB) {
+				if (a == b) return true;
+			}
+		}
+		return false;
+	}
+
+	bool isArithmeticEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		assert_eq(a.getRootNode(), b.getRootNode());
+
+		// shortcut for the simple stuff
+		if (a == b) return true;
+
+		// compute references set
+		std::set<Formula> valA = getValues(a, A);
+		if (valA.size() != 1u) return false;
+		std::set<Formula> valB = getValues(b, A);
+		if (valB.size() != 1u) return false;
+
+		// the values need to be equivalent
+		const Formula& fA = *valA.begin();
+		const Formula& fB = *valB.begin();
+
+		return fA && fB && fA == fB;
+	}
+
 
 
 	// -- Functions --

@@ -34,32 +34,30 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+int sum(int a, int b) { return a + b; }
+int diff(int a, int b) { return a - b; }
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+int main(int argc, char** argv) {
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+	// two values
+	int a = 12;
+	int b = 14;
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+	cba_expect_eq_int(26, sum(a,b));
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+	// test a function pointer
+	int (*f)(int,int);
+	f = &sum;
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+	cba_expect_eq_int(3, f(1,2));
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+	f = &diff;
+	cba_expect_eq_int(1, f(3,2));
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+}

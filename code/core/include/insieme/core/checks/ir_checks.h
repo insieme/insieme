@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -410,3 +410,21 @@ namespace checks {
  * Allows message lists to be printed to an output stream.
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::checks::MessageList& messageList);
+
+/**
+ * Allows to use Messages in STL map containers
+ */
+namespace std {
+  template <> struct hash<insieme::core::checks::Message>
+  {
+    size_t operator()(const insieme::core::checks::Message &m) const
+    {
+        std::hash<string> hasher;
+        auto addr = m.getAddress();
+        auto message = m.getMessage();
+        std::stringstream s;
+        s << addr << message;
+        return hasher.operator ()(s.str());
+    }
+  };
+}

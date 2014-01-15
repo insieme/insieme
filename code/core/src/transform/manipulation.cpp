@@ -358,11 +358,16 @@ namespace {
 		return res;
 	}
 
-	ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call) {
+	ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
 
 		// Step 1 - get capture init and lambda expression
 		ExpressionPtr target = call->getFunctionExpr();
 		LambdaExprPtr lambda;
+
+		// check for built-ins
+		if (!inlineDerivedBuiltIns && core::lang::isDerived(target)) {
+			return call;
+		}
 
 		// check for bind expression ...
 		if (target->getNodeType() == NT_BindExpr) {
@@ -432,22 +437,22 @@ namespace {
 }
 
 
-ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
 
 	bool successful = true;
 	ExpressionPtr res = call;
 	while(successful && res->getNodeType() == NT_CallExpr) {
-		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>());
+		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>(), inlineDerivedBuiltIns);
 		successful = (*tmp != *res);
 		res = tmp;
 	}
 	return res;
 }
 
-StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr) {
+StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr, bool inlineDerivedBuiltIns) {
 
 	// first use expression inlining
-	ExpressionPtr res = tryInlineToExpr(manager, callExpr);
+	ExpressionPtr res = tryInlineToExpr(manager, callExpr, inlineDerivedBuiltIns);
 	if (res->getNodeType() != NT_CallExpr) {
 		return res;		// no more processing necessary
 	}
@@ -461,6 +466,11 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr) 
 	LambdaExprPtr fun = static_pointer_cast<LambdaExprPtr>(call->getFunctionExpr());
 	if (fun->isRecursive() || !isOutlineAble(fun->getBody())) {
 		return call;	// recursive functions and free return / break / continue can not be supported
+	}
+
+	// do not touch derived built-ins if not explicitly requested
+	if (!inlineDerivedBuiltIns && core::lang::isDerived(fun)) {
+		return call;
 	}
 
 	// --- ok, some inline has to be done --

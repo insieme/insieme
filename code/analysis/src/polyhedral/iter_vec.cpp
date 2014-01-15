@@ -168,6 +168,16 @@ bool IterationVector::contains(const core::ExpressionPtr& expr) const {
 	return getIdx(expr)!=-1; 
 }
 
+core::VariablePtr IterationVector::getFreshVariable(core::NodeManager& mgr) const {
+	core::IRBuilder builder(mgr);
+	auto type = mgr.getLangBasic().getInt4();
+	auto res = builder.variable(type, freshVarCounter++);
+	while(contains(res)) {
+		res = builder.variable(type, freshVarCounter++);
+	}
+	return res;
+}
+
 bool IterationVector::operator<(const IterationVector& other) const {
 	if (size() > other.size()) return false;
 	if (size() < other.size()) return true;

@@ -239,9 +239,10 @@ Pointer<T> fixVariable(NodeManager& manager, const Pointer<T>& node, const Varia
  *
  * @param manager the manager to be used to create and maintain nodes which might have to be created
  * @param call the call expression to be inlined
+ * @param inlineDerivedBuiltIns to decide whether derived literals should also be inlined
  * @return the inlined expression
  */
-ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false);
 
 /**
  * Inlines the given call expression into a statement if possible. The target of the call has to
@@ -251,9 +252,10 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
  *
  * @param manager the manager to be used to create and maintain nodes which might have to be created
  * @param call the call expression to be inlined
+ * @param inlineDerivedBuiltIns to decide whether derived literals should also be inlined
  * @return the inlined expression
  */
-StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& call);
+StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false);
 
 
 /**

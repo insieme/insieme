@@ -34,32 +34,46 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+int min(int a, int b) {
+	if (a < b) return a;
+	return b;
+}
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+int max(int a, int b) {
+	return (a == min(a,b)) ? b : a;
+}
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+int main(int argc, char** argv) {
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+	// let's start with something simple
+	cba_expect_eq_int(1,1);
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+	// a little more challenging
+	int a = 10;
+	int b = 12;
+	cba_expect_ne_int(a,b);
+	cba_expect_eq_int(a+2, b);
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+	// with some unknown value
+	cba_expect_ne_int(a+argc,b+argc);
+	cba_expect_eq_int(a+2+argc, b+argc);
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
+	// including function calls
+	cba_expect_eq_int(a,min(a,b));
+	cba_expect_eq_int(b,max(a,b));
 
-	bool isRecursiveCall(const core::CallExprAddress& call);
+	// even more tricky
+	cba_expect_eq_int(a+argc,min(a+argc,b+argc));
 
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+	// and after an update
+	a = 14;
+	cba_expect_eq_int(b+argc,min(a+argc,b+argc));
+
+}

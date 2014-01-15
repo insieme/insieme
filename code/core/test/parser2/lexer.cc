@@ -108,10 +108,14 @@ namespace detail {
 		EXPECT_EQ("[(CharLit:'a')]", toString(lex("'a'")));
 		EXPECT_EQ("[(CharLit:'a'),(CharLit:'b')]", toString(lex("'a' 'b'")));
 
+		// escaped literals
+		EXPECT_EQ("[(CharLit:'\\n')]", toString(lex(R"('\n')")));
+		EXPECT_EQ("[(CharLit:'\\0')]", toString(lex(R"('\0')")));
+
 		// something complex ...
 		EXPECT_EQ(
-			"[(CharLit:'a'),(CharLit:'\n'),(Ident:sadfd),(Symbol:'),(Ident:df),(Symbol:'),(CharLit:'d'),(Ident:dad),(Symbol:'),(Ident:d)]",
-			toString(lex("'a' '\n' sadfd 'df'  'd' dad'd"))
+			R"([(CharLit:'a'),(CharLit:'\n'),(CharLit:'\0'),(Ident:sadfd),(Symbol:'),(Ident:df),(Symbol:'),(CharLit:'d'),(Ident:dad),(Symbol:'),(Ident:d)])",
+			toString(lex(R"('a' '\n' '\0' sadfd 'df'  'd' dad'd)"))
 		);
 
 		// something that isn't anything

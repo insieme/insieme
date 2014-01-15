@@ -66,13 +66,14 @@ namespace cba {
 			typedef std::shared_ptr<CBA> CBA_Ptr;
 
 			// obtain CBA context from root node
-			core::StatementPtr root = getRootStmt(node);
+			core::StatementAddress root = getAnalysisRoot(node);
 			if (!root->hasAttachedValue<CBA_Ptr>()) {
 				root->attachValue<CBA_Ptr>(std::make_shared<CBA>(core::StatementAddress(root)));
 			}
 
 			// extract context and dump it
 			createDotDump(*root->getAttachedValue<CBA_Ptr>());
+
 		}
 
 	}

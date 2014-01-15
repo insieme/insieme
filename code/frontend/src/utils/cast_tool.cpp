@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -405,11 +405,11 @@ core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr e
 
 		case 57: resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsBool(), expr, 0); break;
 
-		case 61: resIr = doCast(gen.getSignedToWChar(), expr, 0); break;
-		case 62: resIr = doCast(gen.getUnsignedToWChar(), expr, 0); break;
-		case 63: resIr = doCast(gen.getRealToWChar(), expr, 0); break;
-		case 64: resIr = doCast(gen.getCharToWChar(), expr, 0); break;
-		case 65: resIr = doCast(gen.getBoolToWChar(), expr, 0); break;
+		case 61: resIr = doCast(gen.getSignedToWChar(), expr, bytes); break;
+		case 62: resIr = doCast(gen.getUnsignedToWChar(), expr, bytes); break;
+		case 63: resIr = doCast(gen.getRealToWChar(), expr, bytes); break;
+		case 64: resIr = doCast(gen.getCharToWChar(), expr, bytes); break;
+		case 65: resIr = doCast(gen.getBoolToWChar(), expr, bytes); break;
 
 		case 71: resIr = builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
                                      builder.refVar(expr), builder.getTypeLiteral(targetTy))); break;

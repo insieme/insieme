@@ -57,8 +57,8 @@ TEST(ScopRegion, CompoundStmt) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 
     auto compStmt = builder.parseStmt(
 		"{ "
@@ -78,11 +78,11 @@ TEST(ScopRegion, IfStmt) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["a"] = builder.variable(builder.parseType("int<4>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
-	symbols["c"] = builder.variable(builder.parseType("int<4>"));
-	symbols["d"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
+	symbols["c"] = builder.variable(builder.parseType("int<4>"),4);
+	symbols["d"] = builder.variable(builder.parseType("int<4>"),5);
 
     auto ifStmt = analysis::normalize(builder.parseStmt(
 		"if( c <= d ){ "
@@ -137,8 +137,8 @@ TEST(ScopRegion, SimpleForStmt) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for(int<4> i = 10 .. 50 : 1) { "
@@ -169,10 +169,10 @@ TEST(ScopRegion, ForStmt) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
-	symbols["n"] = builder.variable(builder.parseType("int<4>"));
-	symbols["h"] = builder.variable(builder.parseType("ref<int<4>>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["n"] = builder.variable(builder.parseType("int<4>"),3);
+	symbols["h"] = builder.variable(builder.parseType("ref<int<4>>"),4);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for(int<4> i = 10 .. 50 : 1) { "
@@ -209,10 +209,10 @@ TEST(ScopRegion, ForStmt2) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
-	symbols["lb"] = builder.variable(builder.parseType("int<4>"));
-	symbols["ub"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["lb"] = builder.variable(builder.parseType("int<4>"),3);
+	symbols["ub"] = builder.variable(builder.parseType("int<4>"),4);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for(int<4> i = lb .. ub : 1) { "
@@ -242,10 +242,10 @@ TEST(ScopRegion, ForStmt3) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
-	symbols["lb"] = builder.variable(builder.parseType("int<4>"));
-	symbols["ub"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["lb"] = builder.variable(builder.parseType("int<4>"),3);
+	symbols["ub"] = builder.variable(builder.parseType("int<4>"),4);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for(int<4> i = lb .. ub : 5) { "
@@ -268,8 +268,8 @@ TEST(ScopRegion, ForStmt3) {
 	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
-	EXPECT_EQ("(v0,v52|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v52 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v10000|v2,v3,v4|1)", toString(iterVec));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v10000 + -v3 == 0))", toString(ann.getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -279,8 +279,8 @@ TEST(ScopRegion, ForStmt4) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for( int<4> i = cloog.floor(5, 2) .. 20 : 5) { "
@@ -308,8 +308,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v50,v51,v52|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v50 + -v51 + 5 == 0) ^ (v51 + -2 < 0)) ^ (v51 >= 0)) ^ (v0 + -v50 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v50 + -5*v52 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v10000,v10001,v10002|v2|1)",toString(iterVec));
+	EXPECT_EQ("((((((-2*v10000 + -v10001 + 5 == 0) ^ (v10001 + -2 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -325,10 +325,10 @@ TEST(ScopRegion, ForStmt5) {
 	IRBuilder builder(mgr);
 
 	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
-	symbols["b"] = builder.variable(builder.parseType("int<4>"));
-	symbols["ub"] = builder.variable(builder.parseType("int<4>"));
-	symbols["lb"] = builder.variable(builder.parseType("int<4>"));
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"),1);
+	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
+	symbols["ub"] = builder.variable(builder.parseType("int<4>"),3);
+	symbols["lb"] = builder.variable(builder.parseType("int<4>"),4);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for(int<4> i = cloog.ceil(lb, 3) .. ub : 5) { "
@@ -356,8 +356,8 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v52,v53,v54|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v52 + v53 + v4 == 0) ^ (v53 + -3 < 0)) ^ (v53 >= 0)) ^ (v0 + -v52 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v52 + -5*v54 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v10000,v10001,v10002|v2,v4,v3|1)", toString(iterVec));
+	EXPECT_EQ("((((((-3*v10000 + v10001 + v4 == 0) ^ (v10001 + -3 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(ann.getDomainConstraints()));
 }
 
 /*

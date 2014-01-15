@@ -34,32 +34,27 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A header file forming the interface for the CBA test cases.
+ */
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#define bool int
+#define true (1)
+#define false (0)
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+// alias tests
+void cba_expect_is_alias(void* a, void* b);
+void cba_expect_not_alias(void* a, void* b);
+void cba_expect_may_alias(void* a, void* b);
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+// integer tests
+void cba_expect_eq_int(int a, int b);
+void cba_expect_ne_int(int a, int b);
+void cba_expect_may_eq_int(int a, int b);
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
-
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
-
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
-
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+// boolean tests (mapped to integer tests, since in C everything is an int)
+#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
+#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
+#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
+#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)

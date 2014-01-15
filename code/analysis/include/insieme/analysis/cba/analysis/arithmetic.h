@@ -186,26 +186,49 @@ namespace cba {
 
 		void visitVariable(const VariableAddress& var, const Context& ctxt, Constraints& constraints) {
 
-			// special handling: if variable is a loop iterator, use symbolic value
 			auto def = getDefinitionPoint(var);
-			if (def != var || var.getDepth() < 2 || !var.getParentNode(2).isa<ForStmtPtr>()) {
-				// => not a iterator, let parent handle the case
+
+			// special case handling only necessary at definition points (linking is done by base class)
+			if (def != var) {
+				// => let definition point handle the case
 				super::visitVariable(var, ctxt, constraints);
 				return;
 			}
 
-			// it is a iterator!
-			//	=> use symbolic value
-			auto value = core::arithmetic::toFormula(var);
+			// a utility function utilized for adding constraints fixing the symbolic value of a variable
+			auto addSymbolicValue = [&]() {
+				// it is a iterator!
+				//	=> use symbolic value
+				auto value = core::arithmetic::toFormula(var);
 
-			auto v_var = cba.getVariable(var);
-			auto l_var = cba.getLabel(var);
+				auto v_var = cba.getVariable(var);
+				auto l_var = cba.getLabel(var);
 
-			auto a_var = cba.getSet(cba::a, v_var, ctxt);
-			auto A_var = cba.getSet(cba::A, l_var, ctxt);
+				auto a_var = cba.getSet(cba::a, v_var, ctxt);
+				auto A_var = cba.getSet(cba::A, l_var, ctxt);
 
-			constraints.add(elem(value, a_var));
-			constraints.add(subset(a_var, A_var));
+				constraints.add(this->elem(value, a_var));
+				constraints.add(subset(a_var, A_var));
+			};
+
+			// special handling: if variable is a loop iterator, use symbolic value
+			if (var.getDepth() >= 2 && var.getParentNode(2).isa<ForStmtPtr>()) {
+				addSymbolicValue();
+				return;
+			}
+
+			// special case: it is the parameter of an entry-point function
+			if (var.getDepth() > 5) {
+				auto lambda = var.getParentAddress(5).isa<LambdaExprAddress>();
+				if (lambda->getBody() == cba.getRoot()) {
+					// it is a input parameter of the function => use symbolic value as well
+					addSymbolicValue();
+					return;
+				}
+			}
+
+			// otherwise => default handling
+			super::visitVariable(var, ctxt, constraints);
 
 		}
 
@@ -215,15 +238,21 @@ namespace cba {
 			// conduct std-procedure
 			super::visitCallExpr(call, ctxt, constraints);
 
-			// only care for integer expressions calling literals
-			if (!base.isInt(call->getType())) return;
-
 			// check whether it is a literal => otherwise basic data flow is handling it
 			auto fun = call->getFunctionExpr();
 			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
 			auto A_res = cba.getSet(A, cba.getLabel(call), ctxt);
+
+			// special handling for precision fixes (result is also not covered by the Int group)
+			if (base.isIntPrecisionFix(fun) || base.isUintPrecisionFix(fun)) {
+				constraints.add(subset(cba.getSet(A, call[0], ctxt), A_res));
+				return;
+			}
+
+			// only care for integer expressions calling literals
+			if (!base.isInt(call->getType())) return;
 
 			// handle unary literals
 			if (call.size() == 1u) {

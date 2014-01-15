@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,6 +60,7 @@
 #include "insieme/frontend/extensions/cpp_refs.h"
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
+#include "insieme/frontend/extensions/semantic_check_extension.h"
 
 
 namespace insieme {
@@ -90,6 +91,9 @@ namespace frontend {
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<FrontendCleanup>();
+        if (hasOption(ConversionSetup::StrictSemanticChecks)) {
+            registerFrontendPlugin<extensions::SemanticCheckPlugin>();
+        }
         if(flags & OpenCL)
         	registerFrontendPlugin<extensions::OclHostPlugin>();
     }
@@ -144,14 +148,14 @@ namespace frontend {
 		auto singleTu = tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
 
 		// forward the C++ flag
-		singleTu.setCXX(this->isCxx());  
+		singleTu.setCXX(this->isCxx());
 		return singleTu;
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
-			
-		
+
+
 		// plugin initialization
             setup.frontendPluginInit();
 
@@ -196,6 +200,26 @@ namespace frontend {
 		bool cppLibs = any(libs, [&](const tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); } );
 
 		return cppFile || cppLibs;
+	}
+
+	void ConversionJob::printConversionJob() const {
+        std::cout << "~~~~~~CONVERSION SETUP~~~~~~\n";
+        std::cout << "input files: \n" << this->files << std::endl;
+        std::cout << "flags: \n" <<
+			"PrintDiag " << hasOption(ConversionSetup::PrintDiag) << "\n" <<
+			"OpenMP " << hasOption(ConversionSetup::OpenMP) << "\n" <<
+			"OpenCL " << hasOption(ConversionSetup::OpenCL) << "\n" <<
+			"Cilk " << hasOption(ConversionSetup::Cilk) << "\n" <<
+			"WinCrossCompile " << hasOption(ConversionSetup::WinCrossCompile) << "\n" <<
+			"TAG_MPI " << hasOption(ConversionSetup::TAG_MPI) << "\n" <<
+			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
+			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
+			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
+        std::cout << "interceptions: \n" << this->getInterceptions() << std::endl;
+        std::cout << "include dirs: \n" << this->getIncludeDirectories() << std::endl;
+        std::cout << "libraries: \n" << this->libs << std::endl;
+        std::cout << "standard: \n" << this->getStandard() << std::endl;
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 	}
 
 } // end namespace frontend
