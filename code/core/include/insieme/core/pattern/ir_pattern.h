@@ -257,6 +257,24 @@ namespace irp {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
 		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
+	
+	// IR pattern builder
+	// to generate patterns which require a NodeManager/Builder to build
+	class IRPBuilder {
+
+		NodeManager& man;
+		IRBuilder build;
+		const lang::BasicGenerator& basic;
+	
+	public:
+
+		IRPBuilder(NodeManager& nodeMan) : man(nodeMan), build(man), basic(man.getLangBasic()) {
+		}
+
+		inline TreePatternPtr assignment(const TreePatternPtr& lhs = any, const TreePatternPtr& rhs = any) {
+			return callExpr(basic.getRefAssign(), lhs << rhs);
+		}
+	};
 
 } // end namespace irp
 } // end namespace pattern
