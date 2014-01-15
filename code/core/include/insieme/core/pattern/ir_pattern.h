@@ -104,7 +104,7 @@ namespace irp {
 		return node(core::NT_TupleType, pattern);
 	}
 
-	inline TreePatternPtr variable(const TreePatternPtr& type, const TreePatternPtr& id) {
+	inline TreePatternPtr variable(const TreePatternPtr& type = pattern::any, const TreePatternPtr& id = pattern::any) {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
@@ -257,6 +257,42 @@ namespace irp {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
 		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
+	
+	// IR pattern builder
+	// to generate patterns which require a NodeManager/Builder to build
+	class IRPBuilder {
+
+		NodeManager& man;
+		IRBuilder build;
+		const lang::BasicGenerator& basic;
+	
+	public:
+
+		IRPBuilder(NodeManager& nodeMan) : man(nodeMan), build(man), basic(man.getLangBasic()) {
+		}
+
+		inline TreePatternPtr assignment(const TreePatternPtr& lhs = any, const TreePatternPtr& rhs = any) {
+			return callExpr(basic.getRefAssign(), lhs << rhs);
+		}
+
+		TreePatternPtr arrayRefElem1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getArrayRefElem1D(), var << idx);
+		}
+		TreePatternPtr arraySubscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getArraySubscript1D(), var << idx);
+		}
+
+		TreePatternPtr vectorRefElem(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getVectorRefElem(), var << idx);
+		}
+		TreePatternPtr vectorSubscript(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return callExpr(basic.getVectorSubscript(), var << idx);
+		}
+
+		TreePatternPtr subscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
+			return arrayRefElem1D(var, idx) | arraySubscript1D(var, idx) | vectorRefElem(var, idx) | vectorSubscript(var, idx);
+		}
+	};
 
 } // end namespace irp
 } // end namespace pattern
