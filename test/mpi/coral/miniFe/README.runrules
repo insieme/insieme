@@ -1,0 +1,69 @@
+Description:
+FE is a Finite Element mini-application which implements a couple of 
+kernels representative of implicit finite-element applications.  
+It assembles a sparse linear-system from the steady-state conduction 
+equation on a brick-shaped problem domain of linear 8-node hex elements.
+It then solves the linear-system using a simple un-preconditioned 
+conjugate-gradient algorithm.
+
+Thus the kernels that it contains are:
+- computation of element-operators (diffusion matrix, source vector)
+- assembly (scattering element-operators into sparse matrix and vector)
+- sparse matrix-vector product (during CG solve)
+- vector operations (level-1 blas: axpy, dot, norm)
+
+This version of miniFE has support for OpenMP. However, it is not deemed 
+to be complete and/or optimal. Offerors will need to tune it to their 
+paritcular architecture.
+
+Compiling:
+$ tar xzf miniFE_openmp-2.0-rc3.tar
+$ cd miniFE_openmp-2.0-rc3
+$ cd src
+Edit makefile for your environment
+For Sequoia class problems you might need 
+MINIFE_TYPES =  \
+        -DMINIFE_SCALAR=double   \
+        -DMINIFE_LOCAL_ORDINAL=int      \
+        -DMINIFE_GLOBAL_ORDINAL="long long int"
+
+$ make miniFE.x
+
+Running:
+miniFE requires three input parameters which dictate the dimensionality 
+of the problem. The primary purpose of specifying dimensionality is to 
+set the memory footprint. Note that running miniFE with a fixed set of 
+dimensions using a varying number of MPI ranks is a strong scaling method. 
+i.e. the problem size is fixed with the dimension parameters. 
+
+miniFE memory footprint calculation guidance:
+
+A 264 x 256 x 256 problem fits on a BG/Q node with 16 GB of  memory. 
+Four racks can handle a problem that is 4096 times bigger. 
+Distributed over three dimensions that implies each dimension is 16 times bigger.
+i.e. a 4-rack baseline solution (1/24th the full size of the 96-rack sequoia system) 
+can execute a problem of size 4224 x 4096 x 4096 that fits within 64TB of memory.
+
+Four example command-line parameters or inputs for miniFE are shown below using SLURM notation. 
+
+The parameter "n" indicates the number of MPI tasks and the parameter "N" indicates the number of nodes. Arguments nx, ny and nz are chosen to vary the size of the problem.
+
+cd ./miniFE_openmp-2.0-rc3/run
+
+1.	Small problem: single node 
+srun  -N 1 -n 16   miniFE.x -nx 264  -ny 256  -nz 256 # 16MPI tasks on 1 node
+
+2.	Medium problem:(<1K node)
+srun  -N 512  -n 8192  miniFE.x -nx 2112 -ny 2048 -nz 2048 
+
+3.	Large CORAL reference (for FOM baseline measurement on 4-rack IBM BG/Q) problem:
+srun  -N 4096  -n 65536  miniFE.x -nx 4224 -ny 4096 -nz 4096
+
+4.	CORAL class problem (2X the size of CORAL reference problem):
+srun  -N 8192  -n 131072  miniFE.x -nx 4224 -ny 8192 -nz 4096 
+
+
+Reporting:
+Results are written to a YAML file. From the YAML files, report
+the "Total CG Mflops" as the Figure of Merit for miniFE.
+

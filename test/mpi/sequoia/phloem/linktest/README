@@ -1,0 +1,199 @@
+		  CMP LinkTest for MPI communication
+		  Part of the Sequoia MPI benchmarks
+		Lawrence Livermore National Laboratory
+
+This benchmark aims at determining the maximal utilization of all
+links in and out of a single CMP node. It measures the aggregated
+bandwidth between a set of tasks co-located on one node and a set of
+tasks spread out across neighboring nodes. In the configuration
+requested in the Sequoia RfP only one partner tasks is supposed to be
+located on each neighboring node in order to minimize contention.
+
+
+Quickstart
+==========
+
+To compile the benchmark in its default version (for a platform that
+provides unique hostnames for each node), the benchmark can be
+compiled by simply running "make". This assume that the system
+provides an mpicc as the compiler and linker. The compiled program is
+stored in "linux/linktest".
+
+To run in the default configuration (using all tasks on the root node,
+communicating with six neighbors, and with only one task for each
+communication node) the benchmark requires 6*(number of tasks per
+node)+1 nodes. No further arguments are required. By setting "-v"
+in the command line, the benchmarks provides detailed progress
+information.
+
+
+High-level Description:
+=======================
+
+Step 1:
+
+The benchmark (possible guided by the user) picks a root node within
+the given MPI partition. By default, this root node will be in the
+"middle" of the partition based on MPI rank IDs. The user can override
+this using a command line option, a configuration file, or by
+providing a new implementation of "nodelib" (see below).
+
+
+Step 2:
+
+The benchmark (possible guided by the user) picks a set of neighboring
+nodes. By default, the code picks the first N nodes of the partition
+(with N being the number of tasks on the root node times the number of
+neighboring nodes). The user can override this using a configuration
+file or by providing a new implementation of "nodelib" (see below).
+
+
+Step 3:
+
+For each configuration requested by the user in the command line
+options and for two different associations between root tasks and
+neighboring nodes, the benchmark performs a set of tests measuring the
+aggregated bandwidth between all (or a subset) of all root node tasks
+and the selected tasks on the neighboring nodes.
+
+
+Step 4:
+
+The benchmark records the maximal bandwidth achieved across all
+selected message sizes and stores the result in an internal database.
+
+
+Step 5:
+
+At termination, the benchmark reports the highest bandwidth achieved
+and the corresponding configuration that lead to this bandwidth
+
+
+
+Command line options:
+=====================
+
+The benchmark provides a wide range of parameters to influence
+the behavior and the type of tests run. When run without any
+parameters (and using one the default "nodelib" libraries) the
+benchmarks works as specified in the Sequoia RfP.
+
+Complete list of options:
+
+-f : specify a configuration file to hand pick the root
+     node as well as the order of the neighbor nodes
+     (default: use settings from "nodelib")
+-t : minimal number of tasks to try on the root node
+     (default: 1)
+-T : maximal number of tasks to try on the root node
+     (default: number of tasks on root node)
+-o : minimal overload (tasks per neighbor node)
+     (default: 1)
+-O : maximal overload (tasks per neighbor node)
+     (default: 1)
+-r : specify a task ID to pick the root node
+     (default: set by "nodelib")
+-R : specify root node
+     (-r and -R are not compatible)
+     (default: set by "nodelib")
+-n : minimal number of neighbors to try 
+     (default: 6)
+-N : maximal number of neighbors to try 
+     (default: 6)
+-m : minimum message size 
+     (default: 1)
+-M : maximum message size 
+     (default: 512KB)
+-i : message size multiplier 
+     (default: 2)
+-I : number of iterations to test each configuration 
+     (default: 1000)
+-b : comma separated list of bandwidth tests to use
+     (default: use all tests)
+-h : help message (and list of bandwidth tests)
+-v : verbose output on benchmark progress (and configuration)
+
+A configuration file can have multiple entries in following
+format (each token can be separated by an arbitrary white
+space - \n, \t, or ' '):
+<entry-type> <node-type> <node-id>
+
+entry-type can be root (only once) or neighbor
+node-type can be 
+	- host: then node-id has to be a node name
+	- rank: then node-id has to be a valid rank
+	- node: then node-id has to be a valid node number
+In addition, any characters between a '#' and the end
+of a line are considered comments and ignored.
+
+By default (without a configuration file), the benchmark
+will place the root node in the middle of the partition and
+use all other nodes in the order of the smallest task ID
+assigned to that node.
+
+
+Installation:
+=============
+
+Standard installation for Linux clusters (assuming mpicc
+in the standard search path):
+
+- untar the tarball
+- run "make""
+
+
+Standard installation for BG/L systems (assuming mpicc
+in the standard search path):
+
+- untar the tarball
+- change ARCH to bgl in the Makefile
+- run "make"
+
+
+On other platforms create the appropriate "nodelib" (see below),
+place the library into the same directory (with the name
+"nodelib-<arch>.c"), set ARCH to <arch> in the Makefile,
+and then run "make".
+
+
+Running the benchmark:
+======================
+
+To run the benchmark, one needs 
+
+(max size of neighbors) x (SMP width of root node/min. overload) + 1
+
+nodes. Hence, on a machines with eight cores/tasks per node the
+default configuration needs 49 nodes or 392 tasks. Using the overload
+options, multiple neighboring tasks can be located to on one node
+reducing the required number of nodes for testing.
+
+To run the code, it just needs to be started on a large enough
+partitions with the desired maximal number of tasks per node.
+The benchmark determines the task distribution among all nodes
+and adjusts the task selection accordingly.
+
+Note that not all platforms may support all benchmark tests. E.g.,
+BG/L only provides limited flow control support and hence does
+not support asymmetric tests that flood a single node. In this
+case, it is recommended to only run bidirectional tests. In the
+default configuration this can be specified with "-b 6,7".
+
+
+Adjusting to different platforms:
+=================================
+
+The code uses two external libraries to customize the
+benchmark:
+- bmtime.c/h/o: timing, by default based on gettimeofday
+- nodelib-$(ARCH).c/h/o: contains routines to identify a node 
+  and the default configuration (can be used to port and adjust
+  the benchmark)
+
+Included are nodelibs for Linux (nodelib-linux.c, identify
+nodes based on hostname) and BG/L (nodelib-bgl.c, identify
+nodes based on node personality). Other platforms can be
+supported by adjusting one of these two sample libraries.
+
+Note that these libraries are shared with the TorusTest, which
+is also part of the same suite. 

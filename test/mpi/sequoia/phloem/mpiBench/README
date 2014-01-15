@@ -1,0 +1,143 @@
+mpiBench -- MPI Collective Benchmark
+Times MPI collectives over a series of message sizes.
+Adam Moody <moody20@llnl.gov>
+
+What is mpiBench? ----------------------------------
+
+This program measures MPI collective performance for a range of message sizes.
+The user may specify:
+  the collective to perform,
+  the message size limits,
+  the number of iterations to perform,
+  the maximum memory a process may allocate for MPI buffers,
+  the maximum time permitted for a given test,
+  and the number of Cartesian dimensions to divide processes into.
+The default behavior of mpiBench will run from 0-1024 byte messages for
+all supported collectives with a 1G buffer limit.  The average of 1000
+iterations is returned for each message size and each operation being measured.
+
+
+Example output for Alltoall is shown below ---------
+
+  Alltoall        Bytes:     0    Iters:     1000 Avg:      0.9265        Min:      0.9260        Max:      0.9270
+  Alltoall        Bytes:     1    Iters:     1000 Avg:      7.7885        Min:      7.7880        Max:      7.7890
+  Alltoall        Bytes:     2    Iters:     1000 Avg:      7.7925        Min:      7.7920        Max:      7.7930
+  Alltoall        Bytes:     4    Iters:     1000 Avg:      7.8160        Min:      7.8150        Max:      7.8170
+  Alltoall        Bytes:     8    Iters:     1000 Avg:      7.8485        Min:      7.8480        Max:      7.8490
+  Alltoall        Bytes:    16    Iters:     1000 Avg:      7.8315        Min:      7.8310        Max:      7.8320
+  Alltoall        Bytes:    32    Iters:     1000 Avg:      7.9130        Min:      7.9120        Max:      7.9140
+  Alltoall        Bytes:    64    Iters:     1000 Avg:      8.1515        Min:      8.1510        Max:      8.1520
+  Alltoall        Bytes:   128    Iters:     1000 Avg:      8.4180        Min:      8.4170        Max:      8.4190
+  Alltoall        Bytes:   256    Iters:     1000 Avg:      8.7040        Min:      8.7040        Max:      8.7040
+  Alltoall        Bytes:   512    Iters:     1000 Avg:      9.2490        Min:      9.2480        Max:      9.2500
+  Alltoall        Bytes:  1024    Iters:     1000 Avg:      9.7710        Min:      9.7700        Max:      9.7720
+
+
+What is measured -----------------------------------
+
+mpiBench measures the total time required to iterate through a loop of back-to-back
+consecutive invocations of the same collective, and divides by the number of iterations.
+In other words the timing kernel looks like the following:
+
+  time_start = timer();
+  for (i = 0 ; i < iterations; i++) {
+    collective(MPI_COMM_WORLD, msg_size);
+    barrier(MPI_COMM_WORLD);
+  }
+  time_end = timer();
+  time = (time_end - time_start) / iterations;
+ 
+Each participating MPI process performs this measurement and all report their times.
+It is the average, minimum, and maximum across this set of times which is reported.
+
+Before the timing kernel is started, the collective is invoked once to prime it,
+since the initial call may be subject to overhead later calls are not.  Then, the
+collective is timed across a small set of iterations (~5) to get a rough estimate
+for the time required for a single invocation.  If the user specifies a time limit
+using the -t option, this esitmate is used to reduce the number of iterations made
+in the timing kernel loop, as necessary, so it may executed within the time limit.
+
+
+Build Instructions ---------------------------------
+
+There are several make targets available:
+  make       -- simple build
+  make nobar -- build without barriers between consecutive collective invocations
+                (defines NO_BARRIER compile flag)
+  make debug -- build with "-g -O0" for debugging purposes
+  make clean -- clean the build
+  make tar   -- build a tarball of mpiBench
+  make tgz   -- same as above
+
+If you'd like to build manually without the makefiles, there are some compile-time
+options available:
+  -D NO_BARRIER        -- drop barrier between consecutive collective invocations
+  -D USE_GETTIMEOFDAY  -- use gettimeofday() instead of MPI_Wtime() for timing info
+
+Usage Syntax (mpiBench -h) -------------------------
+
+  Usage:  mpiBench [options] [operations]
+
+  Options:
+    -b <byte>  Beginning message size in bytes (default 0)
+    -e <byte>  Ending message size in bytes (default 1K)
+    -m <byte>  Process memory buffer limit (send+recv) in bytes (default 1G)
+    -i <itrs>  Maximum number of iterations for a single test (default 1000)
+    -t <usec>  Time limit for any single test in microseconds (default 0 = infinity)
+    -d <ndim>  Number of Cartesian dimensions to split processes in (default 0 = MPI_COMM_WORLD only)
+    -p <size>  Minimum partition size (number of ranks) to divide MPI_COMM_WORLD by
+    -c         Check receive buffer for expected data (default disabled)
+    -h         Print this help screen and exit
+    where <byte> = [0-9]+[KMG], e.g., 32K or 64M
+
+  Operations:
+    Barrier
+    Bcast
+    Alltoall, Alltoallv
+    Allgather, Allgatherv
+    Gather, Gatherv
+    Scatter
+    Allreduce
+    Reduce
+
+Examples -------------------------------------------
+
+  Run the default set of tests:
+    srun -n2 -ppdebug mpiBench
+
+  Run the default message size range and iteration count for Alltoall, Allreduce, and Barrier:
+    srun -n2 -ppdebug mpiBench Alltoall Allreduce Barrier
+
+  Run from 32-256 bytes and time across 100 iterations of Alltoall:
+    srun -n2 -ppdebug mpiBench -b 32 -e 256 -o 100 Alltoall
+
+  Run from 0-2K bytes and default iteration count for Gather, but reduce the iteration count,
+  as necessary, so each message size test finishes within 100,000 usecs:
+    srun -n2 -ppdebug mpiBench -e 2K -t 100000 Gather
+
+
+Additional Notes -----------------------------------
+
+Rank 0 always acts as the root process for collectives which involve a root.
+
+If the minimum and maximum are quite different, then some processes are escaping
+ahead (most likely all but the root, rank 0) to start later iterations before the last
+one has completely finished.  In this case, one may use the maximum time reported or
+insert a barrier between consecutive invocations (build with "make bar") to syncronize the processes.
+
+For Reduce and Allreduce, vectors of doubles are added, so message sizes of 1, 2, and 4-bytes
+are skipped.
+
+Two available make commands build mpiBench with test kernels like the following:
+
+       "make"              "make nobar"
+    start=timer()        start=timer()
+    for(i=o;i<N;i++)     for(i=o;i<N;i++)
+    {                    {
+      MPI_Gather()         MPI_Gather()
+      MPI_Barrier()
+    }                    }
+    end=timer()          end=timer()
+    time=(end-start)/N   time=(end-start)/N
+
+"make nobar" may allow processes to escape ahead, but does not include cost of barrier.

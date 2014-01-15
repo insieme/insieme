@@ -1,1 +1,1 @@
-c_run ^ocl
+insiemecc c_run ^ocl
