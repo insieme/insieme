@@ -56,6 +56,12 @@ SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
  */
 SIMPLE_CHECK(Undefined, CallExpr, false);
 
+
+/**
+ * This check verifies that there are no free break statements inside for loops. 
+ */
+SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+
 #undef SIMPLE_CHECK
 
 } // end namespace check

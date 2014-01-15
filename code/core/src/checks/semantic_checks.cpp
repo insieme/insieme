@@ -156,6 +156,27 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 //	return res;
 //}
 
+OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddress& curfor) {
+	OptionalMessageList res;
+	auto& mgr = curfor->getNodeManager();
+	IRBuilder builder(mgr);
+
+    core::visitDepthFirstPrunable (curfor->getBody(), [&] (const core::NodeAddress& cur) -> bool{
+                if(cur.isa<core::BreakStmtAddress>())
+	                add(res, Message(cur,
+	    	            EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
+	    	            format("Free break statements are not allowed inside for loops. Consider while loop instead."),
+		                Message::ERROR));
+
+				if (cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>() || cur.isa<core::WhileStmtAddress>() || cur.isa<core::SwitchStmtAddress>())
+					return true;
+				else 
+                    return false;
+                    });
+
+    return res;
+}
+
 #undef CAST
 
 } // end namespace check
