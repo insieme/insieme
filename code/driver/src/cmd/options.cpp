@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -70,6 +70,7 @@ namespace cmd {
 					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
 					("progress", "shows a progress bar as the frontend translates the input")
 					("no-warning,w", " Inhibit all warning messages")
+                    ("strict-semantic,S", "semantic checks")
 			;
 
 		}
@@ -219,6 +220,9 @@ namespace cmd {
 
 			// inhibit warnings
 			res.job.setOption(fe::ConversionJob::NoWarnings, map.count("no-warning"));
+
+            // strict semantic checks
+            res.job.setOption(fe::ConversionJob::StrictSemanticChecks, map.count("strict-semantic"));
 
             // interceptions
             if (map.count("intercept")) {

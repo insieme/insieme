@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 class C {
 	int mA;
 	int mB;
+	void * mC;
+	int * mD;
 public:
 
 	// ctor + init
@@ -23,6 +26,18 @@ public:
 	C(int a, int b= 5) : mA(a), mB(b) {
 		printf("C(int a)");
 		printf("mA 0 == %d, mB 5 == %d\n", mA, mB);
+	}
+
+	//ctor + void pointer init
+	C(void * __arg) : mC(__arg) {
+		printf("C(void * __arg)");
+		printf("mC != NULL -> %d\n", mC!=NULL);
+	}
+
+	//ctor + pointer init
+	C(int * __arg) : mD(__arg) {
+		printf("C(int * __arg)");
+		printf("mD 0 == %d\n", *mD);
 	}
 };
 
@@ -65,6 +80,18 @@ int main() {
 		C cA[5];
 	}
 	
+	//ctor + pointer init
+	{
+		printf("ctor void pointer init\n");
+		void * x = malloc(sizeof(char));
+		C cp1(x);
+		free(x);
+		int * y = (int *) malloc(sizeof(int));
+		*y=10;
+		C cp2(y);
+		free(y);
+	}
+
 	{
 		// copy ctor
 		C ci1;

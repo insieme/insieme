@@ -1,0 +1,114 @@
+		 CMP TorusTest for MPI communication
+		  Part of the Sequoia MPI benchmarks
+		Lawrence Livermore National Laboratory
+
+This benchmark aims at determining the maximal utilization of all
+links in and out of all CMP nodes in a partition for stencil
+communication patterns.
+
+
+Quickstart:
+===========
+
+To compile the benchmark in its default version, the benchmark can be
+compiled by simply running "make". This assume that the system
+provides an mpicc as the compiler and linker. The compiled program is
+stored in "linux/torustest".
+
+To run the benchmark, the user has to provide a configuration file
+specifying a task layout (see below). Default layouts can be
+generated using the included utility "generate". E.g., a simple
+3D torus layout with a torus size of 4x4x4 for a eight core
+machine can be generated with:
+
+generate 8 4 4 4 > run-64
+
+The resulting configuration has to be run on 4x4x4=64 numbers of
+nodes with 8 CPUs each (using default parameters) with the 
+following commandline argument:
+
+-f run-64
+
+No further arguments are required. By setting "-v" in the command line, 
+the benchmarks provides detailed progress information.
+
+
+
+Command line options:
+=====================
+
+The benchmark provides a wide range of parameters to influence
+the behavior and the type of tests run. 
+
+Complete list of options:
+
+-f : specify a configuration file to determine task layout
+     (mandatory)
+-m : minimum message size 
+     (default: 1)
+-M : maximum message size 
+     (default: 512KB)
+-i : message size multiplier 
+     (default: 2)
+-I : number of iterations to test each configuration 
+     (default: 1000)
+-b : comma separated list of bandwidth tests to use
+     (default: use all tests - only one provided)
+-h : help message (and list of bandwidth tests)
+-v : verbose output on benchmark progress (and configuration)
+
+
+The mandatory configuration file has the following format:
+
+<number of task>
+<number of cores per node>
+<stencilsize>    (Note: has to be 26 to match Sequoia requirements)
+
+followed by a line per task in the following format:
+<task ID> <parter1 ID> <partner2 ID> ... <partnerN ID>
+
+The list specifies all partners the task denoted with "task ID" communicates
+with. All tasks are identified using their MPI rank and N has to be equal
+to the stencilsize.
+
+Sample configuration files based on a regular 3D torus can be created using
+the included utility "generate":
+
+Command line parameters:
+
+./generate <number of cores> <x dim.> <y dim.> <z dim.>
+
+The configuration file will be printed to stdout.
+
+
+Installation:
+=============
+
+Standard installation (assuming mpicc in the standard search path):
+
+- untar the tarball
+- run "make""
+
+On other platforms set ARCH to <arch> in the Makefile, adjust the
+parameters in the makefile, and then run "make".
+
+
+Running the benchmark:
+======================
+
+To run the benchmark, one needs the exact number of nodes specified in
+the configuration file (at least eight nodes).
+
+To run the code, torustest must be started with at least the command
+line argument "-f" followed by the location of the configuration file.
+
+
+
+Adjusting to different platforms:
+=================================
+
+The code uses one external library to customize the benchmark:
+- bmtime.c/h/o: timing, by default based on gettimeofday
+
+Note that this library is shared with the LinkTest, which
+is also part of the same suite. 

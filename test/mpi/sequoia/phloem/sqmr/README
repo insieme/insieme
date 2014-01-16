@@ -1,0 +1,35 @@
+
+                     SQMR : Sequoia Message Rate Benchmark
+                                  Version 1.0
+
+                               by Andrew Friedley
+
+The purpose of this benchmark is to measure the maximal message rate of a
+single compute node.  The first num_cores ranks are expected to reside on
+the 'core' compute node for which message rate is being tested.  After that,
+the next num_nbors ranks are neighbors for the first core rank, the next set
+of num_nbors ranks are neighbors for the second core rank, and so on.  For
+example, testing an 8-core node (num_cores = 8) with 4 neighbors
+(num_nbors = 4) requires 8 + 8 * 4 = 40 ranks.  The first 8 of those 40
+ranks are expected to be on the 'core' node being benchmarked, while the
+rest of the ranks are on separate nodes.
+
+Parameters are all specified on the command line, some are required
+(num_cores, num_nbors), while others are optional and have defaults set.
+
+Parameter key:
+ num_cores      Number of MPI ranks on the 'core' node, correlates to
+                number of cores on one compute node.
+ num_nbors      Number of distinct neighbors to each rank on the core node.
+ num_iters      Number of benchmark iterations to perform for each message
+                size.
+ win_size       How many concurrent sends/recv pairs to post for each
+                neighbor in a single iteration.
+ min_msgsize    Smallest message size to benchmark.
+ max_msgsize    Largest message size to benchmark.  Benchmarking starts with
+                min_msgsize, and then doubles the size repeatedly until
+                max_msgsize is reached.
+
+Please address comments or questions to Chris Chambreau (chcham@llnl.gov) or
+Matt Leininger (leininger4@llnl.gov).
+

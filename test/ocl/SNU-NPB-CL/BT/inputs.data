@@ -1,0 +1,3 @@
+-I. -I.. -I../../common ../bt.c ../initialize.c ../exact_solution.c ../exact_rhs.c ../set_constants.c ../adi.c  ../rhs.c ../x_solve.c ../y_solve.c ../solve_subs.c ../z_solve.c ../add.c ../error.c ../verify.c ../../common/print_results.c ../../common/c_timers.c ../../common/wtime.c
+
+

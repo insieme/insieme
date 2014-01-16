@@ -1,0 +1,41 @@
+
+                              Presta MPI Benchmark
+                       Chris Chambreau (chcham@llnl.gov)
+
+This version of the Presta benchmark includes the com executable which 
+measures both point-to-point aggregate bandwidth and latency.  Tests can be
+specified on the command line with the -w option.  The currently provided 
+tests are:
+
+  Unidirectional
+  UnidirAsync
+  Bidirectional
+  BidirAsync
+  Latency
+
+
+The benchmark behavior can be modified with the following options:
+
+    -a print individual test results               default=32
+    -b [message start size]                        default=32
+    -c [samples]                                   default=1
+    -d [task target list source file]
+    -e [message stop  size]                        default=8388608
+    -f [process count source file]
+    -h print use information
+    -i print process pairs for each measurement    default=false
+    -k print individual rank times                 default=false
+    -l print hostname information
+    -m [message size source file]
+    -n use barrier within measurement              default=no barrier
+    -o [number of operations between measurements]
+    -p [allocate processes: c(yclic) or b(lock)]   default=b
+    -q print test names
+    -r partner processes with nearby rank          default=false
+    -s [directory of task target source files]
+    -t [processes per SMP]
+    -v verify message data                         default=false
+    -w '[list of full test names]'
+    -x calculate BW by volume/longest task time    default=false
+
+
