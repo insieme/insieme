@@ -59,6 +59,10 @@ namespace irp {
 		return atom(core::IRBuilder(manager).parse(code));
 	}
 
+	inline TreePatternPtr lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {
+		return pattern::lazyAtom(factory);
+	}
+
 	inline TreePatternPtr wrapBody(const TreePatternPtr& body) {
 		return node(core::NT_CompoundStmt, single(body)) | body;
 	}
@@ -70,7 +74,7 @@ namespace irp {
 		return genericType(family, empty, subtypes, typeParams);
 	}
 	inline TreePatternPtr genericType(const core::StringValuePtr& family, const ListPatternPtr& typeParams = empty, const ListPatternPtr& intParams = empty) {
-		return genericType(atom(family), typeParams, intParams);
+		return genericType(atom(family.as<core::NodePtr>()), typeParams, intParams);
 	}
 	inline TreePatternPtr genericType(const string& name, const ListPatternPtr& typeParams = empty, const ListPatternPtr& intParams = empty) {
 		return genericType(value(name), typeParams, intParams);
@@ -85,7 +89,7 @@ namespace irp {
 	}
 
 	inline TreePatternPtr literal(const TreePatternPtr& type, const core::StringValuePtr& value) {
-		return literal(type, atom(value));
+		return literal(type, atom(value.as<core::NodePtr>()));
 	}
 
 	inline TreePatternPtr literal(const TreePatternPtr& type, const string& str) {
@@ -122,6 +126,18 @@ namespace irp {
 
 	inline TreePatternPtr callExpr(const TreePatternPtr& function, const ListPatternPtr& parameters = anyList) {
 		return callExpr(any, function, parameters);
+	}
+
+	inline TreePatternPtr callExpr(const TreePatternPtr& fun, const TreePatternPtr& arg0) {
+		return callExpr(any, fun, single(arg0));
+	}
+
+	inline TreePatternPtr callExpr(const TreePatternPtr& fun, const TreePatternPtr& arg0, const TreePatternPtr& arg1) {
+		return callExpr(any, fun, single(arg0) << single(arg1));
+	}
+
+	inline TreePatternPtr callExpr(const TreePatternPtr& fun, const TreePatternPtr& arg0, const TreePatternPtr& arg1, const TreePatternPtr& arg2) {
+		return callExpr(any, fun, single(arg0) << single(arg1) << single(arg2));
 	}
 
 	inline TreePatternPtr castExpr(const TreePatternPtr& type, const TreePatternPtr& expression) {
@@ -258,41 +274,32 @@ namespace irp {
 		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
 	
-	// IR pattern builder
-	// to generate patterns which require a NodeManager/Builder to build
-	class IRPBuilder {
 
-		NodeManager& man;
-		IRBuilder build;
-		const lang::BasicGenerator& basic;
-	
-	public:
+	//  ---- composed operations ------
 
-		IRPBuilder(NodeManager& nodeMan) : man(nodeMan), build(man), basic(man.getLangBasic()) {
-		}
+	inline TreePatternPtr assignment(const TreePatternPtr& lhs = any, const TreePatternPtr& rhs = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefAssign(); }), lhs, rhs);
+	}
 
-		inline TreePatternPtr assignment(const TreePatternPtr& lhs = any, const TreePatternPtr& rhs = any) {
-			return callExpr(basic.getRefAssign(), lhs << rhs);
-		}
+	inline TreePatternPtr arrayRefElem1D(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayRefElem1D(); }), data, idx);
+	}
 
-		TreePatternPtr arrayRefElem1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
-			return callExpr(basic.getArrayRefElem1D(), var << idx);
-		}
-		TreePatternPtr arraySubscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
-			return callExpr(basic.getArraySubscript1D(), var << idx);
-		}
+	inline TreePatternPtr arraySubscript1D(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); }), data, idx);
+	}
 
-		TreePatternPtr vectorRefElem(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
-			return callExpr(basic.getVectorRefElem(), var << idx);
-		}
-		TreePatternPtr vectorSubscript(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
-			return callExpr(basic.getVectorSubscript(), var << idx);
-		}
+	inline TreePatternPtr vectorRefElem(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorRefElem(); }), data, idx);
+	}
 
-		TreePatternPtr subscript1D(const TreePatternPtr& var = any, const TreePatternPtr& idx = any) {
-			return arrayRefElem1D(var, idx) | arraySubscript1D(var, idx) | vectorRefElem(var, idx) | vectorSubscript(var, idx);
-		}
-	};
+	inline TreePatternPtr vectorSubscript(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorSubscript(); }), data, idx);
+	}
+
+	inline TreePatternPtr subscript1D(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return arrayRefElem1D(data, idx) | arraySubscript1D(data, idx) | vectorRefElem(data, idx) | vectorSubscript(data, idx);
+	}
 
 } // end namespace irp
 } // end namespace pattern

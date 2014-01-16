@@ -462,6 +462,11 @@ namespace pattern {
 				return *pattern.nodeAtom == *tree && delayedCheck(context);
 			}
 
+			MATCH(LazyConstant) {
+				auto value = pattern.factory(tree->getNodeManager());
+				return *value == *tree && delayedCheck(context);
+			}
+
 			MATCH(Wildcard) {
 				return delayedCheck(context);	// just finish delayed checks
 			}
@@ -665,6 +670,13 @@ namespace pattern {
 			}
 
 			// a specialization for tree pointers
+			inline bool matchLazyConstant(const pattern::tree::LazyConstant& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
+				assert(false && "Not applicable to test-tree structure!");
+				return false;
+			}
+
+
+			// a specialization for tree pointers
 			inline bool matchNode(const pattern::tree::Node& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
 				if (pattern.id != -1 && pattern.id != tree->getId()) return false;
 				auto& children = tree->getSubTrees();
@@ -853,6 +865,7 @@ namespace pattern {
 					#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree, delayedCheck)
 						CASE(Value);
 						CASE(Constant);
+						CASE(LazyConstant);
 						CASE(Variable);
 						CASE(Wildcard);
 						CASE(Node);
