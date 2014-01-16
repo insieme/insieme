@@ -295,7 +295,13 @@ protected:
 	// implements OpenMP built-in functions by replacing the call expression
 	NodePtr handleFunctions(const NodePtr& newNode) {
 		if(CallExprPtr callExp = dynamic_pointer_cast<const CallExpr>(newNode)) {
-			if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
+			auto fun = callExp->getFunctionExpr();
+
+			if (basic.isScalarToArray(fun)) {
+				ExpressionPtr arg = callExp->getArgument(0);
+				if(analysis::isRefOf(arg, basic.getLock())) return arg;
+				return newNode;
+			} else if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(fun)) {
 				const string& funName = litFunExp->getStringValue();
 				if(funName == "omp_get_thread_num") {
 					return build.getThreadId();
@@ -321,10 +327,6 @@ protected:
 					ExpressionPtr arg = callExp->getArgument(0);
 					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
 					return build.releaseLock(arg);
-				} else if(funName == "scalar.to.array") {
-					ExpressionPtr arg = callExp->getArgument(0);
-					if(analysis::isRefOf(arg, basic.getLock())) return arg;
-					return newNode;
 				}
 				// Unhandled OMP functions
 				else if(funName.substr(0, 4) == "omp_") {
