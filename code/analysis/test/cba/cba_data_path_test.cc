@@ -213,6 +213,133 @@ namespace cba {
 
 	}
 
+	TEST(CBA, UpAndDownLong) {
+
+		typedef NominalIndex<string> NominalIndex;
+
+		NominalIndex a("a");
+		NominalIndex b("b");
+
+		DataPath d;
+		DataPath d_aba = DataPath() << a << b << a;
+
+		EXPECT_EQ("#", 				toString(d));
+		EXPECT_EQ("#.a.b.a", 		toString(d_aba));
+		EXPECT_EQ("#.a.b.a.a.b.a", 	toString(d_aba << d_aba));
+		EXPECT_EQ("#", 				toString(d_aba >> d_aba));
+		EXPECT_EQ("a.b.a.#", 		toString(d_aba >> d_aba >> d_aba));
+		EXPECT_EQ("#", 				toString(d_aba >> d_aba >> d_aba << d_aba));
+
+		DataPath aba_d = DataPath() >> a >> b >> a;
+		EXPECT_EQ("#", 				toString(d));
+		EXPECT_EQ("a.b.a.#", 		toString(aba_d));
+
+		EXPECT_EQ("#", 				toString(d_aba << aba_d));
+		EXPECT_EQ("#", 				toString(aba_d << d_aba));
+
+		EXPECT_EQ("#.a.b.a.a.b.a", 	toString(d_aba >> aba_d));
+		EXPECT_EQ("a.b.a.a.b.a.#", 	toString(aba_d >> d_aba));
+
+		NominalIndex c("c");
+		DataPath d_abc = DataPath() << a << b << c;
+		DataPath abc_d = DataPath() >> c >> b >> a;
+
+		EXPECT_EQ("#.a.b.c", 		toString(d_abc));
+		EXPECT_EQ("a.b.c.#", 		toString(abc_d));
+
+		EXPECT_EQ("#", 				toString(d_abc << abc_d));
+		EXPECT_EQ("#", 				toString(abc_d << d_abc));
+
+		EXPECT_EQ("#.a.b.c.c.b.a", 	toString(d_abc >> abc_d));
+		EXPECT_EQ("c.b.a.a.b.c.#", 	toString(abc_d >> d_abc));
+
+
+	}
+
+	TEST(CBA, Overlapping) {
+
+		typedef NominalIndex<string> NominalIndex;
+
+		NominalIndex a("a");
+		NominalIndex b("b");
+
+		auto overlaps = [](const DataPath& a, const DataPath& b) {
+			return a.isOverlapping(b);
+		};
+
+		auto not_overlaps = [](const DataPath& a, const DataPath& b) {
+			return !a.isOverlapping(b);
+		};
+
+		DataPath d;
+		DataPath d_a = DataPath() << a;
+		DataPath d_aa = DataPath() << a << a;
+		DataPath d_ab = DataPath() << a << b;
+
+		DataPath a_d = DataPath() >> a;
+		DataPath aa_d = DataPath() >> a >> a;
+		DataPath ba_d = DataPath() >> a >> b;
+		DataPath b_d = DataPath() >> b;
+
+		EXPECT_EQ("#", 		toString(d));
+		EXPECT_EQ("#.a", 	toString(d_a));
+		EXPECT_EQ("#.a.a", 	toString(d_aa));
+		EXPECT_EQ("#.a.b", 	toString(d_ab));
+
+		EXPECT_EQ("#", 		toString(d));
+		EXPECT_EQ("a.#", 	toString(a_d));
+		EXPECT_EQ("a.a.#", 	toString(aa_d));
+		EXPECT_EQ("b.a.#", 	toString(ba_d));
+		EXPECT_EQ("b.#", 	toString(b_d));
+
+		// downward exclusive
+		EXPECT_PRED2(overlaps, d, d);
+		EXPECT_PRED2(overlaps, d, d_a);
+		EXPECT_PRED2(overlaps, d, d_aa);
+		EXPECT_PRED2(overlaps, d, d_ab);
+
+		EXPECT_PRED2(overlaps, d_a, d);
+		EXPECT_PRED2(overlaps, d_aa, d);
+		EXPECT_PRED2(overlaps, d_ab, d);
+
+		EXPECT_PRED2(overlaps, d_a, d_aa);
+		EXPECT_PRED2(overlaps, d_a, d_ab);
+
+		EXPECT_PRED2(not_overlaps, d_aa, d_ab);
+
+		// upward exclusive
+		EXPECT_PRED2(overlaps, d, a_d);
+		EXPECT_PRED2(overlaps, d, aa_d);
+		EXPECT_PRED2(overlaps, d, ba_d);
+		EXPECT_PRED2(overlaps, d, b_d);
+
+		EXPECT_PRED2(overlaps, a_d, aa_d);
+		EXPECT_PRED2(overlaps, a_d, ba_d);
+
+		EXPECT_PRED2(not_overlaps, ba_d, aa_d);
+		EXPECT_PRED2(not_overlaps, b_d, a_d);
+		EXPECT_PRED2(not_overlaps, b_d, aa_d);
+		EXPECT_PRED2(not_overlaps, b_d, ba_d);
+
+		// mixed mode
+		EXPECT_PRED2(overlaps, a_d, d_a);
+		EXPECT_PRED2(overlaps, a_d, d_aa);
+		EXPECT_PRED2(overlaps, a_d, d_ab);
+
+		EXPECT_PRED2(overlaps, aa_d, d_a);
+		EXPECT_PRED2(overlaps, aa_d, d_aa);
+		EXPECT_PRED2(overlaps, aa_d, d_ab);
+
+		EXPECT_PRED2(overlaps, ba_d, d_a);
+		EXPECT_PRED2(overlaps, ba_d, d_aa);
+		EXPECT_PRED2(overlaps, ba_d, d_ab);
+
+		EXPECT_PRED2(overlaps, b_d, d_a);
+		EXPECT_PRED2(overlaps, b_d, d_aa);
+		EXPECT_PRED2(overlaps, b_d, d_ab);
+
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

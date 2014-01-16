@@ -94,7 +94,7 @@ namespace cba {
 		EXPECT_TRUE(res.empty()) << res;
 
 		// print the program
-		dumpPretty(prog);
+//		dumpPretty(prog);
 
 		// run CBA analysis
 		int testCount = 0;
@@ -151,7 +151,7 @@ namespace cba {
 		});
 
 		// for debugging
-		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 
 		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
 	}

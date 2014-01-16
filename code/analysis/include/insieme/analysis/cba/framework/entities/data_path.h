@@ -159,10 +159,20 @@ namespace cba {
 				return other->createCopyWith(res);
 			}
 
+			ptr_type appendHead(const DataPathElement& element) const {
+				return element.createCopyWith(this);
+			}
+
 			template<typename Op>
 			void visit(const Op& op) const {
 				if (head) head->visit(op);
 				op(*this);
+			}
+
+			template<typename Op>
+			void visitReverse(const Op& op) const {
+				op(*this);
+				if (head) head->visit(op);
 			}
 
 			template<typename Manager>
@@ -344,50 +354,61 @@ namespace cba {
 		//								Narrow
 		// ----------------------------------------------------------------
 
+	private:
+
 		// path concatenation
-		template<typename Index>
-		DataPath& operator<<=(const Index& index) {
+		DataPath& moveDown(const detail::DataPathElement& element) {
 
 			// check whether data path points into wrong direction
 			if (!down && !isRoot()) {
 				// remove top-most element from path (needs to be equivalent to element)
-				popHead(index);
+				popHead(element);
 				return *this;
 			}
 
 			// fix direction
 			down = true;
 
-			// the memory allocated here is managed by its own reference counting
-			auto element = new detail::ConcreteDataPathElement<Index>(path, index);
-			assert_ne(path, element);
-			element->incRefCount();
+			// extend path by given element
+			auto newPath = path->appendHead(element);
+			newPath->incRefCount();
 			if(path) path->decRefCount();
-			path = element;
+			path = newPath;
 			return *this;
 		}
 
+	public:
+
+		template<typename Index>
+		DataPath& operator<<=(const Index& index) {
+			// turn index into a path element and add it
+			moveDown(detail::ConcreteDataPathElement<Index>(path, index));
+			return *this;
+		}
+
+
 		DataPath& operator<<=(const DataPath& extension) {
 
-			assert_true(!down || isRoot()); // for now
-			down = true;
-
 			// deal with empty extension
-			if (!extension.path) return *this;
+			if (extension.isRoot()) return *this;
 
 			// deal with empty local state
-			if (!path) {
+			if (isRoot()) {
 				path = extension.path;
 				path->incRefCount();
+				down = extension.down;
 				return *this;
 			}
 
-			// compute new path
-			auto newPath = (*path) << extension.path;
-			assert_ne(path, newPath);
-			newPath->incRefCount();
-			path->decRefCount();
-			path = newPath;
+			// in all other case append paths step by step
+			if (extension.isNarrow()) {
+				extension.visit([&](const detail::DataPathElement& cur){ moveDown(cur); });
+			} else {
+				assert(extension.isExpand());
+				extension.visit([&](const detail::DataPathElement& cur) { moveUp(cur); });
+			}
+
+			// done
 			return *this;
 		}
 
@@ -405,50 +426,62 @@ namespace cba {
 		//								Expand
 		// ----------------------------------------------------------------
 
+	private:
+
 		// path concatenation
-		template<typename Index>
-		DataPath& operator>>=(const Index& index) {
+		DataPath& moveUp(const detail::DataPathElement& element) {
 
 			// check whether data path points into wrong direction
 			if (down && !isRoot()) {
 				// remove top-most element from path (needs to be equivalent to element)
-				popHead(index);
+				popHead(element);
 				return *this;
 			}
 
 			// fix direction
 			down = false;
 
-			// the memory allocated here is managed by its own reference counting
-			auto element = new detail::ConcreteDataPathElement<Index>(path, index);
-			assert_ne(path, element);
-			element->incRefCount();
+
+			// extend path by given element
+			auto newPath = path->appendHead(element);
+			newPath->incRefCount();
 			if(path) path->decRefCount();
-			path = element;
+			path = newPath;
 			return *this;
 		}
 
+	public:
+
+		template<typename Index>
+		DataPath& operator>>=(const Index& index) {
+			// turn index into a path element and add it
+			moveUp(detail::ConcreteDataPathElement<Index>(path, index));
+			return *this;
+		}
+
+
 		DataPath& operator>>=(const DataPath& extension) {
 
-			assert_true(!down || isRoot()); // for now
-			down = false;
-
 			// deal with empty extension
-			if (!extension.path) return *this;
+			if (extension.isRoot()) return *this;
 
 			// deal with empty local state
-			if (!path) {
+			if (isRoot()) {
 				path = extension.path;
 				path->incRefCount();
+				down = !extension.down;
 				return *this;
 			}
 
-			// compute new path
-			auto newPath = (*path) << extension.path;
-			assert_ne(path, newPath);
-			newPath->incRefCount();
-			path->decRefCount();
-			path = newPath;
+			// in all other case append paths step by step
+			if (extension.isNarrow()) {
+				extension.visit([&](const detail::DataPathElement& cur){ moveUp(cur); });
+			} else {
+				assert(extension.isExpand());
+				extension.visit([&](const detail::DataPathElement& cur) { moveDown(cur); });
+			}
+
+			// done
 			return *this;
 		}
 
@@ -473,10 +506,24 @@ namespace cba {
 			return !path;
 		}
 
+		bool isExpand() const {
+			return !down || isRoot();
+		}
+
+		bool isNarrow() const {
+			return down || isRoot();
+		}
+
 		template<typename Op>
 		void visit(const Op& op) const {
 			if (!path) return;
 			path->visit(op);
+		}
+
+		template<typename Op>
+		void visitReverse(const Op& op) const {
+			if (!path) return;
+			path->visitReverse(op);
 		}
 
 		template<typename Manager>
@@ -491,7 +538,14 @@ namespace cba {
 		}
 
 		bool isOverlapping(const DataPath& other) const {
-			assert_true(down && other.down) << "Only tested for downward data paths!";
+
+			// if they are equivalent it is for sure overlapping
+			if (*this == other) return true;
+
+			// if they work in different directions => they are overlapping
+			if (isExpand() && other.isNarrow()) return true;
+			if (isNarrow() && other.isExpand()) return true;
+
 
 			auto stepsA = getSteps();
 			auto stepsB = other.getSteps();
@@ -518,12 +572,13 @@ namespace cba {
 
 	private:
 
-		template<typename Index>
-		void popHead(const Index& index) {
+		void popHead(const detail::DataPathElement& element) {
 			assert_true(path) << "Unable to delete head of empty list!";
 
 			// make sure the head index is the given value
-			assert_eq(index, static_cast<const detail::ConcreteDataPathElement<Index>*>(path)->getIndex());
+			assert_true(path->equalIndex(element))
+				<< "Path:    " << *path << "\n"
+				<< "Element: " << element << "\n";
 
 			// remove the head
 			popHead();

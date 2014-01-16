@@ -51,7 +51,7 @@ int main() {
 
 	cba_expect_not_alias(&a,c);
 	cba_expect_is_alias(&b,c);
-	cba_expect_not_alias(*d,c);
+	cba_expect_is_alias(*d,c);
 	cba_expect_is_alias(*d,c);
 
 }
