@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -207,6 +207,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 	core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(declRef, retIr);
+
 	// if is a prameter and is a cpp ref, avoid going further to avoid wrapping issues
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		retIr = convFact.lookUpVariable( parmDecl );
@@ -411,6 +412,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		if(	ctorDecl->isDefaultConstructor() ) {
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
 			//classes
+			//if it is a POD we do not call ctor, we just
+			//instantiate enough memory to hold the structure
 			if(ctorDecl->getParent()->isPOD()) {
 				if (numElements)
 					return (retIr = builder.callExpr(
@@ -423,21 +426,14 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 					return retIr;
 				}
 			} else {
-				//use eiter createDefaultCtor or the ctorDecl
-				//if not userprovided we don't need to add a constructor just create the object to work
-				//with -- for the rest the BE-compiler takes care of
-
-                //if we cannot create the struct type we skip this block
-				core::ExpressionPtr ctor;
-				if (core::StructTypePtr structType = irClassType.isa<core::StructTypePtr>()) {
-					ctor = core::analysis::createDefaultConstructor(structType);
-					return (retIr = builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy)));
-				} else if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()) {
-					// this is a 'named' type
-                    ctor = core::analysis::createDefaultConstructor(structType);
-                    ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
-                    return (retIr = builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy)));
-				}
+			    //if not POD we are forced to call the constructor, it might be that
+			    //we are dealing with an alias to the type. Therefore we need to
+			    //struct it from the TU
+                core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>();
+                core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(structType);
+                ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+                refToClassTy = builder.refType(structType);
+                return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
