@@ -158,6 +158,16 @@ namespace cba {
 						}
 				));
 
+			} else if (base.isRefReinterpret(fun)) {
+
+				// re-interpret casts are ignored ... does not alter the reference
+				// obtain involved sets
+				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
+				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
+
+				// add constraint linking in and out values
+				constraints.add(subset(R_in, R_out));
+
 			} else if (base.isBuiltIn(fun)) {
 				// do nothing - should be properly supported
 
