@@ -35,31 +35,42 @@
  */
 
 /**
- * A header file forming the interface for the CBA test cases.
+ * A simple test case covering some arithmetic.
  */
 
-#define bool int
-#define true (1)
-#define false (0)
+#include "cba.h"
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+typedef struct {
+	int x;
+	int y;
+} point;
 
-// integer tests
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
 
-// debugging
-void cba_print_code();
-void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
+int main(int argc, char** argv) {
 
-// boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+	// test an array of scalars
+	int a[5];
+
+	// cba_print_code();
+
+	a[0] = 10;
+	a[1] = 12;
+	a[2] = 14;
+	a[3] = argc;
+
+	cba_expect_eq_int(a[0]+2, a[1]);
+	cba_expect_eq_int(a[0]+argc, 10+a[3]);
+
+
+	// test an array of points
+	point p[3];
+	p[0] = (point) { 0, 1 };
+	p[1] = (point) { 1, argc };
+	p[2] = (point) { argc, 2 };
+
+	cba_expect_eq_int(p[0].y, p[1].x);
+	cba_expect_eq_int(p[1].y, p[2].x);
+
+	cba_expect_is_alias(&(p[0]), &(p[0]));
+
+}
