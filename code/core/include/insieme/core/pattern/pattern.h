@@ -108,7 +108,7 @@ namespace pattern {
 
 		// a list of all types of tree pattern constructs
 		enum Type {
-			Value, Constant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
+			Value, Constant, LazyConstant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
 		};
 
 		/**
@@ -185,6 +185,29 @@ namespace pattern {
 					return out << *nodeAtom;
 				}
 				return out << *treeAtom;
+			}
+		};
+
+		// A constant value - that is lazyly evaluated
+		struct LazyConstant : public TreePattern {
+
+			typedef std::function<core::NodePtr(core::NodeManager&)> factory_type;
+
+			factory_type factory;
+
+			LazyConstant(const factory_type& factory)
+				: TreePattern(TreePattern::LazyConstant, true, isType(factory)), factory(factory) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				core::NodeManager mgr;
+				return out << *factory(mgr);
+			}
+
+		private:
+
+			static bool isType(const factory_type& factory) {
+				core::NodeManager mgr;
+				return details::isTypeOrValueOrParam(factory(mgr));
 			}
 		};
 
@@ -450,6 +473,10 @@ namespace pattern {
 	}
 	inline TreePatternPtr atom(const core::NodePtr& tree) {
 		return std::make_shared<tree::Constant>(tree);
+	}
+
+	inline TreePatternPtr lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {
+		return std::make_shared<tree::LazyConstant>(factory);
 	}
 
 	inline ListPatternPtr single(const TreePatternPtr& pattern) {

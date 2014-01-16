@@ -158,8 +158,8 @@ namespace cmd {
 			 * @param description the description of the parameter to be shown in the help message
 			 */
 			template<typename T>
-			OptionParser& operator()(const char* name, T* target, const char* description) {
-				desc.add_options()(name, boost::program_options::value<T>(target), description);
+			OptionParser& operator()(const char* name, T& target, const char* description) {
+				desc.add_options()(name, boost::program_options::value<T>(&target), description);
 				return *this;
 			}
 
@@ -172,8 +172,8 @@ namespace cmd {
 			 * @param description the description of the parameter to be shown in the help message
 			 */
 			template<typename T>
-			OptionParser& operator()(const char* name, T* target, const T& def, const char* description) {
-				desc.add_options()(name, boost::program_options::value<T>(target)->default_value(def), description);
+			OptionParser& operator()(const char* name, T& target, const T& def, const char* description) {
+				desc.add_options()(name, boost::program_options::value<T>(&target)->default_value(def), description);
 				return *this;
 			}
 

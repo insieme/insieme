@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 	unsigned unrollingFactor = 1;
 	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter - unrolling factor, default should be 5
-		("unrolling,u", &unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
+		("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
 	;
 	if (!options.valid) return (options.help)?0:1;
 

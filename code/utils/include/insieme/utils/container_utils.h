@@ -280,7 +280,7 @@ inline bool containsPtrToTarget(const Container& container, const typename Conta
  */
 template<class Container>
 inline bool contains(const Container& container, const typename Container::value_type& value) {
-	return contains(container, value, std::equal_to<const typename Container::value_type&>());
+	return ::contains(container, value, std::equal_to<const typename Container::value_type&>());
 }
 
 /**

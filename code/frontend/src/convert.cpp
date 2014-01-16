@@ -1387,7 +1387,10 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
     core::ExpressionPtr expr = getCallableExpression(funcDecl);
 
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->PostVisit(funcDecl, expr, *this);
+        auto ret = plugin->PostVisit(funcDecl, expr, *this);
+        if(ret) {
+            expr=ret.as<core::ExpressionPtr>();
+        }
     }
 
     // the function has already been converted

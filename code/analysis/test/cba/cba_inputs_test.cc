@@ -49,6 +49,10 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/analysis/cba/analysis.h"
+#include "insieme/analysis/cba/cba.h"
+
+#include "insieme/analysis/cba/analysis/references.h"
+#include "insieme/analysis/cba/analysis/arithmetic.h"
 
 #include "cba_test.inc.h"
 
@@ -65,8 +69,6 @@ namespace cba {
 	namespace fe = insieme::frontend;
 
 	vector<string> getInputFiles();
-
-	ExpressionAddress getBoolValue(const ExpressionAddress& addr);
 
 	// the type definition (specifying the parameter type)
 	class CBAInputTest : public ::testing::TestWithParam<string> { };
@@ -102,30 +104,64 @@ namespace cba {
 			const string& name = fun.as<LiteralPtr>()->getStringValue();
 
 			// check prefix of literal
-			if (!boost::starts_with(name, "cba_expect")) return;
+			if (!boost::starts_with(name, "cba_")) return;
 
 			// check the predicate
 			testCount++;
 
+			// alias analysis
 			if (name == "cba_expect_is_alias") {
-				EXPECT_PRED2(isAlias, call[0], call[1]) << *core::annotations::getLocation(call);
+				EXPECT_PRED2(isAlias, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
 			} else if (name == "cba_expect_may_alias") {
-				EXPECT_PRED2(mayAlias, call[0], call[1]) << *core::annotations::getLocation(call);
+				EXPECT_PRED2(mayAlias, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
 			} else if (name == "cba_expect_not_alias") {
-				EXPECT_PRED2(notAlias, call[0], call[1]) << *core::annotations::getLocation(call);;
+				EXPECT_PRED2(notAlias, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
+
+			// arithmetic analysis
 			} else if (name == "cba_expect_eq_int") {
-				EXPECT_PRED2(isArithmeticEqual, call[0], call[1]) << *core::annotations::getLocation(call);
+				EXPECT_PRED2(isArithmeticEqual, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
 			} else if (name == "cba_expect_ne_int") {
-				EXPECT_PRED2(notArithmeticEqual, call[0], call[1]) << *core::annotations::getLocation(call);
+				EXPECT_PRED2(notArithmeticEqual, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
 			} else if (name == "cba_expect_may_eq_int") {
-				EXPECT_PRED2(mayArithmeticEqual, call[0], call[1]) << *core::annotations::getLocation(call);
+				EXPECT_PRED2(mayArithmeticEqual, call[0], call[1])
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+
+			// debugging
+			} else if (name == "cba_print_code") {
+				// just dump the code
+				dumpPretty(prog);
+			} else if (name == "cba_dump_equations") {
+				// dump the dot plot
+				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+			} else if (name == "cba_print_ref") {
+				// print the result of the reference analysis
+				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
+			} else if (name == "cba_print_int") {
+				// print the result of the reference analysis
+				std::cout << "Values:     " << cba::getValues(call[0], A) << " @ " << *core::annotations::getLocation(call) << "\n";
+
+			// the rest
 			} else {
 				FAIL() << "Unsupported CBA expectation predicate: " << name << " - " << *core::annotations::getLocation(call);
 			}
 		});
-
-		// for debugging
-//		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 
 		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
 	}

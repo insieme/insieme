@@ -34,24 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include "cba.h"
+#include <gtest/gtest.h>
 
-int main() {
 
-	int a = 10;
-	int b = 12;
-	int* c = &a;
-	int** d = &c;
+#include "insieme/analysis/cba/framework/cba.h"
+#include "insieme/analysis/cba/analysis/references.h"
 
-	cba_expect_is_alias(&a,c);
-	cba_expect_not_alias(&b,c);
-	cba_expect_is_alias(*d,c);
+#include "insieme/core/ir_builder.h"
 
-	c = &b;
+#include "cba_test.inc.h"
 
-	cba_expect_not_alias(&a,c);
-	cba_expect_is_alias(&b,c);
-	cba_expect_is_alias(*d,c);
-	cba_expect_is_alias(*d,c);
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-}
+	using namespace core;
+
+	TEST(CBA, ScalarToArray) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(12);"			// create a reference
+				"	"
+				"	x;"
+				"	scalar.to.array(x);"
+				"	scalar.to.array(x)[0];"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#)}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],0.#)}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), R)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],#)}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), R)));
+
+	}
+
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

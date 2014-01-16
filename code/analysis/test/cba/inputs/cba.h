@@ -52,6 +52,11 @@ void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
 void cba_expect_may_eq_int(int a, int b);
 
+// debugging
+void cba_print_code();
+void cba_dump_equations();
+void cba_print_ref(void*);
+void cba_print_int(int a);
 
 // boolean tests (mapped to integer tests, since in C everything is an int)
 #define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)

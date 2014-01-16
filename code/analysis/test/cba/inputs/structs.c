@@ -34,24 +34,45 @@
  * regarding third party software licenses.
  */
 
+/**
+ * A simple test case covering some arithmetic.
+ */
+
 #include "cba.h"
 
-int main() {
+typedef struct {
+	int x;
+	int y;
+} point;
 
-	int a = 10;
-	int b = 12;
-	int* c = &a;
-	int** d = &c;
 
-	cba_expect_is_alias(&a,c);
-	cba_expect_not_alias(&b,c);
-	cba_expect_is_alias(*d,c);
+int main(int argc, char** argv) {
 
-	c = &b;
+	// simple stuff
+	point a = { 10, 12 };
+	point* b = &a;
 
-	cba_expect_not_alias(&a,c);
-	cba_expect_is_alias(&b,c);
-	cba_expect_is_alias(*d,c);
-	cba_expect_is_alias(*d,c);
+	cba_expect_eq_int(a.x, 10);
+	cba_expect_eq_int(a.y, 12);
+	cba_expect_eq_int(b->x, 10);
+	cba_expect_eq_int(b->y, 12);
+
+
+	a.x = a.x + a.y * 2;
+
+	cba_expect_eq_int(a.x, 34);
+	cba_expect_eq_int(a.y, 12);
+
+	cba_expect_eq_int(b->x, 34);
+	cba_expect_eq_int(b->y, 12);
+
+
+	b->y = argc;
+
+	cba_expect_eq_int(a.x, 34);
+	cba_expect_eq_int(a.y, argc);
+
+	cba_expect_eq_int(b->x, 34);
+	cba_expect_eq_int(b->y, argc);
 
 }

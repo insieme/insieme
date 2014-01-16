@@ -955,6 +955,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			return convFact.convertExpr(castExpr->getSubExpr ());
 		}
 
+        case clang::CK_BuiltinFnToFnPtr 	:
+        {
+            return expr;
+        }
+
+
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  NOT IMPLEMENTED
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1027,7 +1033,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_AtomicToNonAtomic 	:
 		case clang::CK_NonAtomicToAtomic 	:
 		case clang::CK_CopyAndAutoreleaseBlockObject 	:
-		case clang::CK_BuiltinFnToFnPtr 	:
 			std::cout << " \nCAST: " << castExpr->getCastKindName () << " not supported!!"<< std::endl;
 			std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart (), convFact.getSourceManager()) <<std::endl;
 			castExpr->dump();
