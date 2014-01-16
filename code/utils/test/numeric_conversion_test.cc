@@ -60,6 +60,10 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ(0u, numeric_cast<unsigned>("0u"));
 	EXPECT_EQ(0, numeric_cast<int>("0u"));
 	EXPECT_EQ(0, numeric_cast<int64_t>("0u"));
+	EXPECT_EQ(0, numeric_cast<int64_t>("0l"));
+	EXPECT_EQ(0, numeric_cast<int64_t>("-0"));
+	EXPECT_EQ(0, numeric_cast<int64_t>("-0u"));
+	EXPECT_EQ(0, numeric_cast<int64_t>("-0l"));
 
 	// memory address
 //	int a = 0, *ptr = &a;

@@ -87,6 +87,8 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 	static RetTy convert(const std::string& in) {
 		// special handling for 0u and 0ul
 		if (in == "0u" || in == "0ul" || in == "0l") return static_cast<RetTy>(0);
+		// special handling for -0u and -0ul and -0l
+		if (in == "-0u" || in == "-0ul" || in == "-0l") return static_cast<RetTy>(0);
 
 		// convert hexadecimal numbers
 		if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
