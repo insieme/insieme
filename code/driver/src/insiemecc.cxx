@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
 	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter to limit the compiler to creating an .o file
 		("compile", 	'c', 	compileOnly, 	"compilation only")
-		("check-ir", 	'S', 	runIRChecks,  	"run IR checks")
+        ("strict-semantic", 'S', runIRChecks,   "semantic checks")
 		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
 		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
 		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
@@ -102,6 +102,9 @@ int main(int argc, char** argv) {
 
 	//indicates that a shared object files should be created
 	bool createSharedObject = options.outFile.find(".so")!=std::string::npos;
+
+    //enable semantic check plugin if needed
+    options.job.setOption(fe::ConversionSetup::StrictSemanticChecks, runIRChecks);
 
 	// disable cilk, omp, ocl support for insiemecc
 	options.job.setOption(fe::ConversionJob::Cilk, false);
