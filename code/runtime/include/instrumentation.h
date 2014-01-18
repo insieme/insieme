@@ -151,8 +151,9 @@ typedef enum {
 typedef struct {
 	uint64 id;
 	uint64 num_executions;
-	bool first_entrance_flag;
-	uint64 remaining_exits;
+	bool is_active;
+	uint64 number_of_entries;
+	uint64 number_of_exits;
 	irt_spinlock lock;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_data_type__ last_##_name__; \
@@ -186,7 +187,7 @@ void irt_inst_set_region_instrumentation_from_env();
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi);
 void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi);
 void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_struct* region);
-void _irt_inst_region_stack_pop(irt_work_item* wi);
+irt_inst_region_struct* _irt_inst_region_stack_pop(irt_work_item* wi);
 void irt_inst_region_start_measurements(irt_work_item* wi);
 void irt_inst_region_end_measurements(irt_work_item* wi);
 void irt_inst_region_init(irt_context* context);
