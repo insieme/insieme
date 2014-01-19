@@ -151,7 +151,7 @@ typedef enum {
 typedef struct {
 	uint64 id;
 	uint64 num_executions;
-	bool is_active;
+	uint64 active_participants;
 	uint64 number_of_entries;
 	uint64 number_of_exits;
 	irt_spinlock lock;
