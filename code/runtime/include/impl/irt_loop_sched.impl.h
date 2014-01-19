@@ -344,10 +344,6 @@ inline static void irt_schedule_loop(
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 	
-	#if (defined IRT_RUNTIME_TUNING || defined IRT_ENABLE_REGION_INSTRUMENTATION)
-	bool isLast = false;
-	#endif 
-
 	// gather performance data if required & cleanup
 	#ifdef IRT_RUNTIME_TUNING
 	#ifdef IRT_RUNTIME_TUNING_EXTENDED
@@ -363,7 +359,6 @@ inline static void irt_schedule_loop(
 	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
 
 	if(part_inc == sched_data->policy.participants) {
-		isLast = true;
 		// sched_data no longer volatile, loop completed
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
 		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
