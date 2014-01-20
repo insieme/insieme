@@ -56,7 +56,6 @@ namespace cba {
 		if (type != NT_Lambda && type != NT_BindExpr) {
 			return getSurroundingFreeFunction(cur.getParentAddress());
 		}
-
 		auto fun = cur;
 
 		// check whether function is a free function
@@ -70,7 +69,10 @@ namespace cba {
 
 		// if lambda is used as an argument to a call => it is a free function
 		auto call = user.isa<CallExprAddress>();
-		if (!call || call->getFunctionExpr() != fun) return fun;
+		if (!call) return fun;
+		if (auto callTrg = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+			if (callTrg->getLambda() != fun) return fun;
+		}
 
 		// otherwise continue search
 		return getSurroundingFreeFunction(user);
