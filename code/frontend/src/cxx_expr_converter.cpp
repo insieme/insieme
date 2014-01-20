@@ -429,11 +429,12 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 			    //if not POD we are forced to call the constructor, it might be that
 			    //we are dealing with an alias to the type. Therefore we need to
 			    //struct it from the TU
-                core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>();
-                core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(structType);
-                ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
-                refToClassTy = builder.refType(structType);
-                return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
+                if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()){
+					core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(structType);
+					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+					refToClassTy = builder.refType(structType);
+					return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
+				}
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
