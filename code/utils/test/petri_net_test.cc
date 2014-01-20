@@ -1,0 +1,243 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#include <gtest/gtest.h>
+
+#include <string>
+
+#include "insieme/utils/petri_net/petri_net.h"
+#include "insieme/utils/petri_net/petri_net_io.h"
+
+#include "insieme/utils/set_utils.h"
+
+namespace insieme {
+namespace utils {
+namespace petri_net {
+
+	using std::string;
+
+	TEST(PetriNet, BuildAndDump) {
+
+		typedef PetriNet<string,string> PetriNet;
+
+		PetriNet net;
+
+		net.addPlace("Start");
+		net.addPlace("Inner");
+		net.addPlace("End");
+
+		net.addPrePlace("Start", "Step1");
+		net.addPostPlace("Step1","Inner");
+		net.addPrePlace("Inner", "Step2");
+		net.addPostPlace("Step2", "End");
+
+		plot(net);
+
+	}
+
+	TEST(PetriNet, Marking) {
+
+		typedef PetriNet<string,string> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("Start");
+		net.addPlace("Inner");
+		net.addPlace("End");
+
+		net.addPrePlace("Start", "Step1");
+		net.addPostPlace("Step1","Inner");
+		net.addPrePlace("Inner", "Step2");
+		net.addPostPlace("Step2", "End");
+
+
+		Marking marking(net);
+		EXPECT_EQ("[0,0,0]", toString(marking));
+		EXPECT_EQ("{}", toString(marking.getSuccessors()));
+
+		marking.setMarking("Start");
+		EXPECT_EQ("[1,0,0]", toString(marking));
+		EXPECT_EQ("{[0,1,0]}", toString(marking.getSuccessors()));
+
+		marking.setMarking("Start",0);
+		marking.setMarking("Inner",1);
+		EXPECT_EQ("[0,1,0]", toString(marking));
+		EXPECT_EQ("{[0,0,1]}", toString(marking.getSuccessors()));
+
+		marking.setMarking("Inner",0);
+		marking.setMarking("End",1);
+		EXPECT_EQ("[0,0,1]", toString(marking));
+		EXPECT_EQ("{}", toString(marking.getSuccessors()));
+
+	}
+
+	TEST(PetriNet, StateGraphSimple) {
+
+		typedef PetriNet<string,string> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("Start");
+		net.addPlace("Inner");
+		net.addPlace("End");
+
+		net.addPrePlace("Start", "Step1");
+		net.addPostPlace("Step1","Inner");
+		net.addPrePlace("Inner", "Step2");
+		net.addPostPlace("Step2", "End");
+
+		// create full state graph
+		auto stateGraph = extractStateGraph(Marking(net, {1,0,0}));
+		EXPECT_EQ(3, stateGraph.getNumStates());
+		plot(stateGraph, "stateGraph.svg");
+	}
+
+	TEST(PetriNet, StateGraphComplex) {
+
+		typedef PetriNet<string,string> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("Start");
+		net.addPlace("Inner");
+		net.addPlace("Side");
+		net.addPlace("End");
+
+		net.addPrePlace("Start", "Step1");
+		net.addPostPlace("Step1","Inner");
+		net.addPrePlace("Inner", "Step2");
+		net.addPostPlace("Step2", "End");
+
+		net.addPrePlace("Inner", "Step3");
+		net.addPostPlace("Step3", "Inner");
+
+		net.addPrePlace("Inner", "Step4");
+		net.addPostPlace("Step4", "Side");
+		net.addPrePlace("Side", "Step5");
+		net.addPostPlace("Step5", "Inner");
+
+		// create full state graph
+		plot(net);
+		auto stateGraph = extractStateGraph(Marking(net, {1,0,0,0}));
+
+		EXPECT_EQ(4, stateGraph.getNumStates());
+
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {1,0,0,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,1,0,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,1,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,0,1})));
+
+		plot(stateGraph, "stateGraph.svg");
+	}
+
+	TEST(PetriNet, StateGraphComplex2) {
+
+		typedef PetriNet<string,int> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("A");
+		net.addPlace("B");
+		net.addPlace("C");
+		net.addPlace("D");
+		net.addPlace("E");
+
+		net.addPrePlace("A",1);
+		net.addPostPlace(1,"B");
+
+		net.addPrePlace("A",2);
+		net.addPostPlace(2,"C");
+		net.addPostPlace(2,"E");
+
+		net.addPrePlace("B",3);
+		net.addPostPlace(3,"D");
+
+		net.addPrePlace("C",4);
+		net.addPostPlace(4,"D");
+
+		// create full state graph
+		plot(net);
+		auto stateGraph = extractStateGraph(Marking(net, {1,0,0,0,0}));
+
+		EXPECT_EQ(5, stateGraph.getNumStates());
+
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {1,0,0,0,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,1,0,0,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,0,1,0})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,1,0,1})));
+		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,0,1,1})));
+
+		EXPECT_FALSE(stateGraph.containsMarking(Marking(net, {0,0,0,0,1})));
+
+		plot(stateGraph, "stateGraph.svg");
+	}
+
+	TEST(PetriNet, StateGraphComplex3) {
+
+		typedef PetriNet<string,int> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("A");
+		net.addPlace("B", 3);
+		net.addPlace("C");
+
+		net.addPostPlace(1,"A");
+		net.addPostPlace(2,"B");
+
+		net.addPrePlace("B",3);
+		net.addPostPlace(3,"C");
+
+		net.addPrePlace("A",4);
+
+		// create full state graph
+		plot(net);
+		auto stateGraph = extractStateGraph(Marking(net, {0,0,0}));
+
+		EXPECT_EQ(16, stateGraph.getNumStates());
+
+		plot(stateGraph, "stateGraph.svg");
+	}
+
+} // end namespace petri_net
+} // end namespace core
+} // end namespace insieme
+
