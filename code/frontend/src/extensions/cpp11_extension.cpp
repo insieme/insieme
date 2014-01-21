@@ -52,6 +52,9 @@
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
 
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
+
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -200,6 +203,40 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 	return nullptr;
 }
 
+
+stmtutils::StmtWrapper Cpp11Plugin::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) { 
+	auto builder = convFact.getIRBuilder();
+	
+	const clang::DeclStmt* rangeStmt 		= frStmt->getRangeStmt ();
+	const clang::DeclStmt* beginStmt 		= frStmt->getBeginEndStmt ();
+	const clang::Expr* cond				= frStmt->getCond ();
+	const clang::Expr* inc 				= frStmt->getInc ();
+	const clang::DeclStmt* loopVarStmt	= frStmt->getLoopVarStmt ();
+	const clang::Stmt* body 				= frStmt->getBody ();
+	
+	core::StatementPtr range = convFact.convertStmt(rangeStmt);  
+	core::StatementPtr begin = convFact.convertStmt(beginStmt);    
+	core::ExpressionPtr condIr = convFact.convertExpr(cond);    
+	core::ExpressionPtr incIr = convFact.convertExpr(inc);   
+	core::StatementPtr loopVarStmtIr = convFact.convertStmt(loopVarStmt);   
+	core::StatementPtr  bodyIr = convFact.convertStmt(body);
+
+	StatementList stmts;
+	stmts.push_back(loopVarStmtIr);
+	stmts.push_back(bodyIr);
+	stmts.push_back(incIr);
+	core::CompoundStmtPtr fullBody = builder.compoundStmt(stmts);   
+	core::StatementPtr whileStmt = builder.whileStmt(condIr, fullBody.as<core::StatementPtr>());  
+
+
+	stmtutils::StmtWrapper res;
+	assert(begin.isa<core::CompoundStmtPtr>());
+	res.push_back(range);
+	res.push_back(begin.as<core::CompoundStmtPtr>()[0]);
+	res.push_back(begin.as<core::CompoundStmtPtr>()[1]);
+	res.push_back(whileStmt);
+	return res;
+}
 
 } //namespace plugin
 } //namespace frontnt

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 namespace insieme {
 namespace frontend {
@@ -48,6 +49,11 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	 * we can fix the capture list.
 	 */
 	std::map <const clang::Decl*, const clang::LambdaExpr*> lambdaMap;
+
+//////////////////////////////////////////////////////////////////////////////////////
+//               C++11 stmts
+
+	stmtutils::StmtWrapper VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) ;
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
@@ -90,6 +96,13 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               Plugin Hooks
+
+	virtual stmtutils::StmtWrapper Visit (const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+		if (const clang::CXXForRangeStmt* fr =  llvm::dyn_cast<clang::CXXForRangeStmt>(stmt))
+			return VisitCXXForRangeStmt (fr, convFact);
+		return stmtutils::StmtWrapper();
+	}
+
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 		if (const clang::LambdaExpr* lambda =  llvm::dyn_cast<clang::LambdaExpr>(expr))
 			return VisitLambdaExpr(lambda, convFact);
