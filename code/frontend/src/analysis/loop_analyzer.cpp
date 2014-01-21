@@ -157,7 +157,19 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			if(mgr.getLangBasic().isUnsignedInt(currentType)) {
 				TypePtr newType = builder.genericType("int", TypeList(), toVector(currentType.as<insieme::core::GenericTypePtr>().getIntTypeParameter()->getElement(0)));
 				TypePtr commonType = types::getSmallestCommonSuperType(newType, currentType);
+
+				/*
 				inductionVar = convFact.getIRBuilder().variable(commonType, inductionVar->getId());
+				*/
+				if(mgr.getLangBasic().isIntInf(commonType) ) {
+					//HACK: problem if we want to get a bigger type than int<8>
+					//FIXME find better way than to drop to int<8>
+					inductionVar = convFact.getIRBuilder().variable(newType, inductionVar->getId());
+					//throw LoopNormalizationError("trying to move from unsigned long to long!"); 
+				} else { 
+					inductionVar = convFact.getIRBuilder().variable(commonType, inductionVar->getId());
+				}
+
 				// if we change the type of the var, we also need to change the type of the literal to make the semantic checker happy
 				if(initValue.isa<LiteralPtr>()) {
 					LiteralPtr literal = initValue.as<LiteralPtr>();

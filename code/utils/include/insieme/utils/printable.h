@@ -76,7 +76,7 @@ namespace utils {
 		 * @param out the stream this instance should be printed to
 		 * @return the stream passed as an argument
 		 */
-		// std::ostream& printToInternal(std::ostream& out) const { .. }
+		// std::ostream& printTo(std::ostream& out) const { .. }
 
 	};
 

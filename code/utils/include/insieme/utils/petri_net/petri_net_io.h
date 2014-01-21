@@ -34,50 +34,34 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include <iostream>
+#include <fstream>
 
-#include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/petri_net/petri_net.h"
 
-using namespace std;
-using namespace insieme::utils;
-
-
-TEST(NumericConversion, FromString) {
-
-	EXPECT_EQ(static_cast<int>(16), numeric_cast<int>(16));
-	EXPECT_EQ("16", numeric_cast<std::string>(16));
-
-	EXPECT_EQ(static_cast<unsigned int>(16), numeric_cast<unsigned int>("16"));
-	// hexadecimal number
-	EXPECT_EQ(static_cast<unsigned short>(16), numeric_cast<unsigned short>("0x10"));
-
-	EXPECT_EQ(-8, numeric_cast<int>("-8"));
-	// octal number
-	EXPECT_EQ(-8, numeric_cast<short>("-010"));
-
-	EXPECT_EQ(0u, numeric_cast<unsigned>("0u"));
-	EXPECT_EQ(0, numeric_cast<int>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0l"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0l"));
-
-	// memory address
-//	int a = 0, *ptr = &a;
-//	EXPECT_EQ("cc", numeric_cast<std::string>((size_t)ptr));
-
-	EXPECT_EQ("8", numeric_cast<std::string>('8'));
-
-	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
-	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
-
-	EXPECT_EQ(321000l, numeric_cast<long>("321000l"));
-
-	EXPECT_EQ(2000LL, numeric_cast<long long>("2000LL"));
-	EXPECT_EQ(2000ll, numeric_cast<long long>("2000LL"));
+namespace insieme {
+namespace utils {
+namespace petri_net {
 
 
-}
+	template<typename Plotable>
+	void plot(const Plotable& plotable, const std::string& file = "petri_net.svg") {
+
+		// write stuff to a dot file
+		{
+			// open file
+			std::ofstream out("petri_net.dot", std::ios::out );
+
+			// write file
+			plotable.dumpTo(out);
+		}
+
+		// create svg
+		std::string command = std::string("dot -Tsvg petri_net.dot -o ") + file;
+		system(command.c_str());
+	}
+
+} // end namespace petri_net
+} // end namespace utils
+} // end namespace insieme

@@ -93,9 +93,6 @@ namespace cba {
 		auto res = core::checks::check(prog);
 		EXPECT_TRUE(res.empty()) << res;
 
-		// print the program
-//		dumpPretty(prog);
-
 		// run CBA analysis
 		int testCount = 0;
 		visitDepthFirst(NodeAddress(prog), [&](const CallExprAddress& call) {
@@ -107,7 +104,7 @@ namespace cba {
 			const string& name = fun.as<LiteralPtr>()->getStringValue();
 
 			// check prefix of literal
-			if (!boost::starts_with(name, "cba_expect")) return;
+			if (!boost::starts_with(name, "cba_")) return;
 
 			// check the predicate
 			testCount++;
@@ -145,13 +142,26 @@ namespace cba {
 							<< *core::annotations::getLocation(call) << "\n"
 							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
 							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+
+			// debugging
+			} else if (name == "cba_print_code") {
+				// just dump the code
+				dumpPretty(prog);
+			} else if (name == "cba_dump_equations") {
+				// dump the dot plot
+				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+			} else if (name == "cba_print_ref") {
+				// print the result of the reference analysis
+				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
+			} else if (name == "cba_print_int") {
+				// print the result of the reference analysis
+				std::cout << "Values:     " << cba::getValues(call[0], A) << " @ " << *core::annotations::getLocation(call) << "\n";
+
+			// the rest
 			} else {
 				FAIL() << "Unsupported CBA expectation predicate: " << name << " - " << *core::annotations::getLocation(call);
 			}
 		});
-
-		// for debugging
-//		createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 
 		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
 	}

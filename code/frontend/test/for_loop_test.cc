@@ -39,6 +39,8 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/frontend/tu/ir_translation_unit_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -166,6 +168,24 @@ namespace frontend {
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(containsSubString, code, "decl ref<int<4>>");
 
+	}
+	
+	TEST(StmtConversion, IntInfBug) {
+
+		Source src(
+				R"(
+					int main() {
+						for(unsigned long i=10; i>0; i--);
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		core::ProgramPtr res = ConversionJob(src).execute(mgr);
+		//dump(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 	}
 
 

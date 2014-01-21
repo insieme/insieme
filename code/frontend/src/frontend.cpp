@@ -61,7 +61,7 @@
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/extensions/semantic_check_extension.h"
-
+#include "insieme/frontend/extensions/builtin_function_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -91,6 +91,7 @@ namespace frontend {
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<FrontendCleanup>();
+        registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
             registerFrontendPlugin<extensions::SemanticCheckPlugin>();
         }

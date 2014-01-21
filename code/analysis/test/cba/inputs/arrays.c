@@ -34,50 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <iostream>
+#include "cba.h"
 
-#include "insieme/utils/numeric_cast.h"
+typedef struct {
+	int x;
+	int y;
+} point;
 
-using namespace std;
-using namespace insieme::utils;
+
+int main(int argc, char** argv) {
+
+	// test an array of scalars
+	int a[5];
+
+	// cba_print_code();
+
+	a[0] = 10;
+	a[1] = 12;
+	a[2] = 14;
+	a[3] = argc;
+
+	cba_expect_eq_int(a[0]+2, a[1]);
+	cba_expect_eq_int(a[0]+argc, 10+a[3]);
 
 
-TEST(NumericConversion, FromString) {
+	// test an array of points
+	point p[3];
+	p[0] = (point) { 0, 1 };
+	p[1] = (point) { 1, argc };
+	p[2] = (point) { argc, 2 };
 
-	EXPECT_EQ(static_cast<int>(16), numeric_cast<int>(16));
-	EXPECT_EQ("16", numeric_cast<std::string>(16));
+	cba_expect_eq_int(p[0].y, p[1].x);
+	cba_expect_eq_int(p[1].y, p[2].x);
 
-	EXPECT_EQ(static_cast<unsigned int>(16), numeric_cast<unsigned int>("16"));
-	// hexadecimal number
-	EXPECT_EQ(static_cast<unsigned short>(16), numeric_cast<unsigned short>("0x10"));
-
-	EXPECT_EQ(-8, numeric_cast<int>("-8"));
-	// octal number
-	EXPECT_EQ(-8, numeric_cast<short>("-010"));
-
-	EXPECT_EQ(0u, numeric_cast<unsigned>("0u"));
-	EXPECT_EQ(0, numeric_cast<int>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0l"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0l"));
-
-	// memory address
-//	int a = 0, *ptr = &a;
-//	EXPECT_EQ("cc", numeric_cast<std::string>((size_t)ptr));
-
-	EXPECT_EQ("8", numeric_cast<std::string>('8'));
-
-	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
-	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
-
-	EXPECT_EQ(321000l, numeric_cast<long>("321000l"));
-
-	EXPECT_EQ(2000LL, numeric_cast<long long>("2000LL"));
-	EXPECT_EQ(2000ll, numeric_cast<long long>("2000LL"));
-
+	cba_expect_is_alias(&(p[0]), &(p[0]));
 
 }

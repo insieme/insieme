@@ -184,18 +184,19 @@ public:
 
             auto msg = core::checks::check(cur.second);
             n+=msg.getErrors().size();
-            dumpPretty(cur.second);
+            //dumpPretty(cur.second);
             for(auto m : msg.getErrors()) {
-                std::stringstream f;
-                f << m.getMessage() << m.getAddress() << m.getErrorCode();
-                if(handledErrors.find(f.str())==handledErrors.end()) {
-                    std::cout << "#####\n" << m << std::endl;
-                    handledErrors.insert(f.str());
-                }
-                //std::cerr << "#####\n" << m << std::endl;
-                //std::cerr << m.getOrigin();
-                //std::cerr << "\n\n";
-                errorCount[m.getErrorCode()]++;
+                    std::stringstream f;
+                    f << m.getMessage() << m.getAddress() << m.getErrorCode();
+                    if(handledErrors.find(f.str())==handledErrors.end()) {
+                        std::cout << "#####\n" << m << std::endl;
+                        std::cout << toString(*m.getOrigin());
+                        handledErrors.insert(f.str());
+                    }
+                    //std::cerr << "#####\n" << m << std::endl;
+                    //std::cerr << m.getOrigin();
+                    //std::cerr << "\n\n";
+                    errorCount[m.getErrorCode()]++;
                 //std::cout << *insieme::core::annotations::getLocation(m.getOrigin()) << std::endl;
             }
 

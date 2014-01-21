@@ -34,50 +34,16 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/analysis/cba/analysis/reaching_sync_points.h"
 
-#include <iostream>
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-#include "insieme/utils/numeric_cast.h"
+	const reaching_sync_points_in_analysis RSPin = registerAnalysis<reaching_sync_points_in_analysis>("RSPin");
+	const reaching_sync_points_tmp_analysis RSPtmp = registerAnalysis<reaching_sync_points_tmp_analysis>("RSPtmp");
+	const reaching_sync_points_out_analysis RSPout = registerAnalysis<reaching_sync_points_out_analysis>("RSPout");
 
-using namespace std;
-using namespace insieme::utils;
-
-
-TEST(NumericConversion, FromString) {
-
-	EXPECT_EQ(static_cast<int>(16), numeric_cast<int>(16));
-	EXPECT_EQ("16", numeric_cast<std::string>(16));
-
-	EXPECT_EQ(static_cast<unsigned int>(16), numeric_cast<unsigned int>("16"));
-	// hexadecimal number
-	EXPECT_EQ(static_cast<unsigned short>(16), numeric_cast<unsigned short>("0x10"));
-
-	EXPECT_EQ(-8, numeric_cast<int>("-8"));
-	// octal number
-	EXPECT_EQ(-8, numeric_cast<short>("-010"));
-
-	EXPECT_EQ(0u, numeric_cast<unsigned>("0u"));
-	EXPECT_EQ(0, numeric_cast<int>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("0l"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0u"));
-	EXPECT_EQ(0, numeric_cast<int64_t>("-0l"));
-
-	// memory address
-//	int a = 0, *ptr = &a;
-//	EXPECT_EQ("cc", numeric_cast<std::string>((size_t)ptr));
-
-	EXPECT_EQ("8", numeric_cast<std::string>('8'));
-
-	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
-	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
-
-	EXPECT_EQ(321000l, numeric_cast<long>("321000l"));
-
-	EXPECT_EQ(2000LL, numeric_cast<long long>("2000LL"));
-	EXPECT_EQ(2000ll, numeric_cast<long long>("2000LL"));
-
-
-}
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme
