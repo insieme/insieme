@@ -242,6 +242,12 @@ namespace cba {
 			return solver.solve(id)[id];
 		}
 
+		template<typename A, typename Context = DefaultContext>
+		const typename lattice<A,analysis_config<Context>>::type::value_type&
+		getValuesOf(const A& a) {
+			auto id = getValueID<A,analysis_config<Context>>();
+			return solver.solve(id)[id];
+		}
 
 		// -- set management --
 
