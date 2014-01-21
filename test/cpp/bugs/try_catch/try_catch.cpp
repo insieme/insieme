@@ -4,6 +4,7 @@ struct POD { int a; };
 
 struct Obj {
 	Obj() : a(10) {}
+	Obj(std::string str) : a(10) { std::cout << str << std::endl; }
 //	~Obj() { std::cout << "~Obj() " << this->a << std::endl; }
 	int a;
 };
@@ -45,6 +46,8 @@ int main() {
 	POD();
 	POD p;
 	try { throw (POD){0}; } catch(POD e) { std::cout << "exception caught " << e.a << std::endl; }
+
+	try { throw Obj("asdf"); } catch(Obj e) { std::cout << "exception caught " << e.a << std::endl; }
 
 	return 0;
 }
