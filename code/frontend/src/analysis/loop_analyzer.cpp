@@ -141,10 +141,13 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 	// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
 	const core::IRBuilder& builder = convFact.getIRBuilder();
+	insieme::core::NodeManager& mgr = convFact.getNodeManager();
 	if (frontend::utils::isRefArray(inductionVar->getType())
 			|| frontend::utils::isRefArray(endValue->getType())
 			|| frontend::utils::isRefArray(initValue->getType())) {
 		throw LoopNormalizationError(" pointer for loop not supported yet!"); 
+	} else if (!mgr.getLangBasic().isInt(inductionVar->getType())) {
+		throw LoopNormalizationError(" iterator for for-loop has to be of integraltype!"); 
 	}
 	else{
 		auto one =  builder.literal("1", inductionVar->getType());
@@ -152,7 +155,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 		// if we need to invert the loop and the variable type was an unsigned, change to signed
 		if(invertComparisonOp) {
 			using namespace insieme::core;
-			NodeManager& mgr = convFact.getNodeManager();
 			TypePtr currentType = inductionVar->getType();
 			if(mgr.getLangBasic().isUnsignedInt(currentType)) {
 				TypePtr newType = builder.genericType("int", TypeList(), toVector(currentType.as<insieme::core::GenericTypePtr>().getIntTypeParameter()->getElement(0)));
