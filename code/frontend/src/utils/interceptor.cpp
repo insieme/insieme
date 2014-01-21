@@ -66,6 +66,89 @@ std::string fixQualifiedName(std::string name) {
 	return name;
 }
 
+insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* arg,  insieme::frontend::conversion::Converter& convFact){
+	auto builder = convFact.getIRBuilder();
+
+	core::TypeList resList;
+	switch(arg->getKind()) {
+		case clang::TemplateArgument::ArgKind::Null:{
+				VLOG(2) << "ArgKind::Null not supported"; 
+				resList.insert(resList.end(),  builder.genericType("null"));
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Type:
+			{
+				const clang::Type* argType = arg->getAsType().getTypePtr();
+				resList.insert(resList.end(), convFact.convertType(argType));
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Declaration: {
+				VLOG(2) << "ArgKind::Declaration not supported"; 
+				const clang::ValueDecl* decl = arg->getAsDecl ();
+				
+				if (llvm::isa<clang::TypeDecl>(decl)){
+					std::cout << "Type!" << std::endl;
+					assert(false && "not implemented");
+				}
+
+				if (const clang::FunctionDecl* f = llvm::dyn_cast<clang::FunctionDecl>(decl)){
+					resList.insert(resList.end(), builder.genericType(buildNameForFunction(f)));
+				}
+
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::NullPtr:{
+				VLOG(2) << "ArgKind::NullPtr not supported"; 
+				resList.insert(resList.end(),  builder.genericType("nullptr"));
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Integral: 	
+			{
+				// the idea is to generate a generic type with a intParamList where we store
+				// the value of the init expression
+				//
+				auto Ilist = insieme::core::IntParamList();
+				Ilist.push_back( builder.concreteIntTypeParam(arg->getAsIntegral().getLimitedValue()));
+				resList.insert(resList.end(),  builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Template: {
+				 VLOG(2) << "ArgKind::Template "; 
+				resList.insert(resList.end(), builder.genericType(arg->getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString()));
+				break;
+			 }
+				
+		case clang::TemplateArgument::ArgKind::TemplateExpansion: { 
+				 VLOG(2) << "ArgKind::TemplateExpansion "; 
+				 arg->getAsTemplateOrTemplatePattern();
+				assert(false && "not implemented"); 
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Expression: { 	
+				VLOG(2) << "ArgKind::Expression not supported"; 
+
+
+				assert ( arg->getAsExpr());
+
+				assert(false && "not implemented"); 
+				break;
+			}
+		case clang::TemplateArgument::ArgKind::Pack:
+			{
+				VLOG(2) << "template pack ";
+				unsigned i(0);
+				for(clang::TemplateArgument::pack_iterator it = arg->pack_begin(), end = arg->pack_end();it!=end;it++) {
+					VLOG(2) << " pack elem: " << i++;
+					auto tmp = evaluateTemplatedType(it, convFact);
+					resList.insert(resList.end(), tmp.begin(), tmp.end());
+				}
+			}
+			break;
+	}
+	return resList;
+}
+
+
 } //end anonymous namespace
 
 insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const{
@@ -77,48 +160,18 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 
 		insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
 		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
+			VLOG(2) << " == intercepting template spetialization == ";
+			if (VLOG_IS_ON(2) ) type->dump();
 			const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
-			for(size_t i = 0; i<args.size();i++) {
-				switch(args[i].getKind()) {
-					case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
-					case clang::TemplateArgument::ArgKind::Type:
-						{
-							const clang::Type* argType = args[i].getAsType().getTypePtr();
-							auto ty =  convFact.convertType(argType);
-							typeList.insert( typeList.end(), ty );
-							//typeList.insert( typeList.end(), convFact.convertType(argType) );
-						}
-						break;
-					case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
-					case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
-					case clang::TemplateArgument::ArgKind::Integral: 	
-						{
-							// the idea is to generate a generic type with a intParamList where we store
-							// the value of the init expression
-							//
-							auto Ilist = insieme::core::IntParamList();
-							Ilist.push_back( builder.concreteIntTypeParam(args[i].getAsIntegral().getLimitedValue()));
-							typeList.insert(typeList.end(),builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
-						}
-						break;
-					case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
-					case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
-					case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
-					case clang::TemplateArgument::ArgKind::Pack:
-						{
-							VLOG(2) << "template pack ";
-							for(clang::TemplateArgument::pack_iterator it = args[i].pack_begin(), end = args[i].pack_end();it!=end;it++) {
-								const clang::Type* argType = (*it).getAsType().getTypePtr();
-								auto ty =  convFact.convertType(argType);
-								VLOG(2) << ty;
-								typeList.insert( typeList.end(), ty );
-							}
-							//VLOG(2) << "ArgKind::Pack not supported";
-						}
-						break;
-				}
+			for(size_t i = 0; i<args.size(); i++) {
+				VLOG(2) << " template elem elem: " << i << " of " ;
+				if (VLOG_IS_ON(2) ) type->dump();
+
+				auto tmp = evaluateTemplatedType(&args[i], convFact);
+				typeList.insert(typeList.end(), tmp.begin(), tmp.end());
 			}
 		}
+		VLOG(2) << " ==  == ";
 		
 		// obtain type name
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
@@ -134,6 +187,7 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 			//return irType;
 		}
 		else{
+			// generate a type with the inner elements, and no integer literal
 			irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
 
