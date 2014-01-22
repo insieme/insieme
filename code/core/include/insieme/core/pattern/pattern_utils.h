@@ -47,10 +47,17 @@ namespace irp {
 	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes = false);
 	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes = false);
 
+	// same as collectAll, but also collect the associated match objects
+	vector<pair<core::NodePtr, NodeMatch>> collectAllPairs(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes);
+	vector<pair<core::NodeAddress, AddressMatch>> collectAllPairs(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes);
+
 	// try to match the given pattern on all instances of the given tree, 
 	// calling the passed function for each match
 	void matchAll(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<void(NodeMatch match)> lambda, bool matchTypes = false);
 	void matchAll(const TreePatternPtr& pattern, const core::NodeAddress& root, std::function<void(AddressMatch match)> lambda, bool matchTypes = false);
+	// call the lambda for each pair of node/address and match object in the given tree
+	void matchAllPairs(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<void(core::NodePtr node, NodeMatch match)> lambda, bool matchTypes = false);
+	void matchAllPairs(const TreePatternPtr& pattern, const core::NodeAddress& root, std::function<void(core::NodeAddress addr, AddressMatch match)> lambda, bool matchTypes = false);
 	
 	// try to match the given pattern on all instances of the given tree, 
 	// calling the passed function for each match to generate a replacement

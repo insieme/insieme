@@ -589,7 +589,7 @@ namespace cba {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
 
 				// print dynamic dependencies
-				updateDynamicDependencies(ass);
+				updateDynamicDependenciesInternal(ass);
 				for(const auto& cur : dependencies) {
 					out << cur << " -> " << out_state << "[label=\"depends\"]\n";
 				}
@@ -614,7 +614,7 @@ namespace cba {
 				res.push_back(in_state);
 
 				// update thread out state list and thereby all dynamic dependencies
-				updateDynamicDependencies(ass);
+				updateDynamicDependenciesInternal(ass);
 				for(auto cur : dependencies) {
 					res.push_back(cur);
 				}
@@ -625,7 +625,7 @@ namespace cba {
 
 		private:
 
-			bool updateDynamicDependencies(const Assignment& ass) const {
+			bool updateDynamicDependenciesInternal(const Assignment& ass) const {
 
 				// TODO: this is a prototype implementation
 				//	  Required:

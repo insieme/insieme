@@ -122,11 +122,12 @@ TEST(PatternUtils, basic) {
 
 	// match all
 	pattern = irp::forStmt();
-	std::vector<core::NodeAddress> results;
+	std::vector<core::NodePtr> results;
 	irp::matchAll(pattern, root, [&](AddressMatch m) {
-		results.push_back(m.getRoot());
+		results.push_back(m.getRoot().getAddressedNode());
 	});
-	EXPECT_EQ(toVector(for1, for2, for3, for4, for5), results);
+	EXPECT_EQ(toVector(for1.getAddressedNode(), for2.getAddressedNode(), for3.getAddressedNode(), for4.getAddressedNode(), for5.getAddressedNode()), results);
+
 	pattern = irp::whileStmt();
 	results.clear();
 	irp::matchAll(pattern, root, [&](AddressMatch m) {
@@ -143,6 +144,31 @@ TEST(PatternUtils, basic) {
 	pattern = irp::declarationStmt();
 	// check if we now have one more declarationStmt per for stmt
 	EXPECT_EQ(irp::collectAll(pattern, root).size() + allFors.size(), irp::collectAll(pattern, result).size());
+}
+
+
+TEST(PatternUtils, performance) {
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	core::StatementPtr node = builder.parseStmt(
+		"for(uint<4> k = 2u .. 100u) { "
+		"	ref<uint<4>> a = var(3u); "
+		"}; ");
+
+	EXPECT_TRUE(node);
+
+	StatementList l(100, node);
+	auto compound = builder.compoundStmt(l);
+
+	auto pattern = aT(!irp::forStmt() & irp::declarationStmt());
+	
+	unsigned matches = 0;
+	auto result = irp::replaceAll(pattern, compound, [&](AddressMatch m) {
+		matches++;
+		return m.getRoot();
+	}, true);
+	EXPECT_EQ(1101, matches);
 }
 
 }

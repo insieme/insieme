@@ -91,6 +91,20 @@ namespace cba {
 			: state(state), stmt(stmt), ctxt(ctxt) {}
 
 		/**
+		 * Obtain the statement addressed by this program point.
+		 */
+		const core::StatementAddress& getStatement() const {
+			return stmt;
+		}
+
+		/**
+		 * Obtains the context referenced by this program point.
+		 */
+		const Context& getContext() const {
+			return ctxt;
+		}
+
+		/**
 		 * Support for the == operator. Instances can be compared with other instances.
 		 */
 		bool operator==(const ProgramPoint& other) const {

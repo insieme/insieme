@@ -166,7 +166,7 @@ namespace constraint {
 		bool hasAssignmentDependentDependencies() const { return assignmentDependentDependencies; };
 		bool hasDynamicDependencies() const { return dynamicDependencies; }
 
-		virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+		virtual bool updateDynamicDependencies(const Assignment& ass) const {
 			return dynamicDependencies;		// return whether something might have changed
 		}
 
