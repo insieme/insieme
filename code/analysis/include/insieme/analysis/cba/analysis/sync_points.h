@@ -237,7 +237,7 @@ namespace cba {
 			virtual UpdateResult update(Assignment& ass) const {
 
 				// get the set to be modified
-				set<ProgramPoint<Context>>& set = ass[SPs];
+				//set<ProgramPoint<Context>>& set = ass[SPs];
 
 				// TODO:
 				// for all spawn points
