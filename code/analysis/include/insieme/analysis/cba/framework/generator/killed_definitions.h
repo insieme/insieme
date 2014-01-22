@@ -84,9 +84,6 @@ namespace cba {
 		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
 		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state);
 
-		template<typename TGValue, typename KDValue, typename Context>
-		ConstraintPtr killedDefsMerge(CBA& cba, const Location<Context>& loc, const TypedValueID<TGValue>& threadGroup, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state);
-
 	}
 
 

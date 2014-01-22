@@ -465,7 +465,7 @@ namespace cba {
 				return out << "merging definitions of " << reachingDefs << " into " << out_value;
 			}
 
-			virtual bool updatedDynamicDependencies(const Assignment& ass) const {
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
 				vector<TypedValueID<ValueLattice>> newDefs;
 
 				const set<Definition<Context>>& defs = ass[reachingDefs];

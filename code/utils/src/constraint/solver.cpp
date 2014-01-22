@@ -114,7 +114,7 @@ namespace constraint {
 				const Constraint& cc = *cur;
 
 				// update dynamic dependencies if necessary
-				if (cc.hasDynamicDependencies() && cc.updatedDynamicDependencies(res)) {
+				if (cc.hasDynamicDependencies() && cc.updateDynamicDependencies(res)) {
 					for(const auto& cur : cc.getUsedInputs(res)) {
 						edges[cur].insert(&cc);
 					}
@@ -170,6 +170,7 @@ namespace constraint {
 
 		// 2. solve constraints
 		while(!worklist.empty()) {
+
 			// retrieve first element
 			ValueID head = worklist.back();
 			worklist.pop_back();
@@ -179,7 +180,7 @@ namespace constraint {
 				const Constraint& cc = *cur;
 
 				// update dynamic dependencies if necessary
-				if (cc.hasDynamicDependencies() && cc.updatedDynamicDependencies(ass)) {
+				if (cc.hasDynamicDependencies() && cc.updateDynamicDependencies(ass)) {
 					for(const auto& cur : cc.getUsedInputs(ass)) {
 						edges[cur].insert(&cc);
 					}
@@ -290,7 +291,7 @@ namespace constraint {
 			if (cur->hasAssignmentDependentDependencies()) {
 				// update dynamic dependencies if required
 				if (cur->hasDynamicDependencies()) {
-					cur->updatedDynamicDependencies(ass);
+					cur->updateDynamicDependencies(ass);
 				}
 
 				// we need to obtain the used inputs

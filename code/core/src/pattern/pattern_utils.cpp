@@ -40,6 +40,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_cached_visitor.h"
 
 namespace insieme {
 namespace core {
@@ -49,11 +50,39 @@ namespace irp {
 	namespace {
 		template<typename T>
 		vector<T> collectAll(const TreePatternPtr& pattern, const T& root, bool matchTypes) {
-			// just iterate through the tree and search for matches
+			// iterate through the tree and search for matches
 			vector<T> res;
+			// cache results of pattern evaluation
+			auto clv = makeCachedLambdaVisitor([&](core::NodePtr node) { return pattern->match(node); }, matchTypes);
 			core::visitDepthFirst(root, [&](const T& cur) {
-				if (pattern->match(cur)) {
+				if(clv.visit(cur.template as<core::NodePtr>())) {
 					res.push_back(cur);
+				}
+			}, true, matchTypes);
+
+			return res;
+		}
+
+		// helpers for collectAllPairs
+		template<typename T> T convert(NodeAddress a) { return a.as<T>(); }
+		template<typename T> T convert(NodePtr n) { return T(n); }
+		MatchOpt tmatch(const TreePatternPtr& pattern, const NodePtr& node) {
+			return pattern->matchPointer(node);
+		}
+		AddressMatchOpt tmatch(const TreePatternPtr& pattern, const NodeAddress& node) {
+			return pattern->matchAddress(node);
+		}
+
+		template<typename T, typename MT>
+		vector<pair<T, MT>> collectAllPairs(const TreePatternPtr& pattern, const T& root, bool matchTypes) {
+			// iterate through the tree and search for matches
+			vector<pair<T, MT>> res;
+			// cache results of pattern evaluation
+			auto clv = makeCachedLambdaVisitor([&](core::NodePtr node) { return tmatch(pattern, convert<T>(node)); }, matchTypes);
+			core::visitDepthFirst(root, [&](const T& cur) {
+				auto m = clv.visit(cur.template as<core::NodePtr>());
+				if(m) {
+					res.push_back(std::make_pair(cur, m.get()));
 				}
 			}, true, matchTypes);
 
@@ -68,33 +97,51 @@ namespace irp {
 		return collectAll<core::NodeAddress>(pattern, root, matchTypes);
 	}
 
+	vector<pair<core::NodePtr, NodeMatch>> collectAllPairs(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes) {
+		return collectAllPairs<core::NodePtr, NodeMatch>(pattern, root, matchTypes);
+	}
+	vector<pair<core::NodeAddress, AddressMatch>> collectAllPairs(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes) {
+		return collectAllPairs<core::NodeAddress, AddressMatch>(pattern, root, matchTypes);
+	}
+
 	
 	void matchAll(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<void(NodeMatch match)> lambda, bool matchTypes) {
-		core::visitDepthFirst(root, [&](const NodePtr& cur) {
-			MatchOpt mo = pattern->matchPointer(cur);
-			if(mo) lambda(mo.get());
-		}, true, matchTypes);
+		auto&& matches = collectAllPairs(pattern, root, matchTypes);
+		for(auto match : matches) lambda(match.second);
 	}
 	void matchAll(const TreePatternPtr& pattern, const core::NodeAddress& root, std::function<void(AddressMatch match)> lambda, bool matchTypes) {
-		core::visitDepthFirst(root, [&](const NodeAddress& cur) {
-			AddressMatchOpt mo = pattern->matchAddress(cur);
-			if(mo) lambda(mo.get());
-		}, true, matchTypes);
+		auto&& matches = collectAllPairs(pattern, root, matchTypes);
+		for(auto match : matches) lambda(match.second);
+	}
+	void matchAllPairs(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<void(core::NodePtr node, NodeMatch match)> lambda, bool matchTypes) {
+		auto&& matches = collectAllPairs(pattern, root, matchTypes);
+		for(auto match : matches) lambda(match.first, match.second);
+	}
+	void matchAllPairs(const TreePatternPtr& pattern, const core::NodeAddress& root, std::function<void(core::NodeAddress addr, AddressMatch match)> lambda, bool matchTypes) {
+		auto&& matches = collectAllPairs(pattern, root, matchTypes);
+		for(auto match : matches) lambda(match.first, match.second);
 	}
 	
 	NodePtr replaceAll(const TreePatternPtr& pattern, const core::NodePtr& root, std::function<core::NodePtr(AddressMatch match)> lambda, bool matchTypes) {
 		// visit in preorder and collect matches, then go through them in reverse (postorder)
 		// postorder implies that we can easily handle non-overlapping results
-		std::vector<NodeAddress> res = collectAll(pattern, NodeAddress(root), matchTypes);
+		auto&& res = collectAllPairs(pattern, NodeAddress(root), matchTypes);
 
 		auto ret = root;
 		while(!res.empty()) {
-			auto next = res.back();
+			auto next = res.back().first;
+			auto nextMatch = res.back().second;
 			res.pop_back();
 			auto newAddr = next.switchRoot(ret);
-			AddressMatchOpt mo = pattern->matchAddress(NodeAddress(newAddr.getAddressedNode()));
-			if(mo) {
-				ret = core::transform::replaceAddress(root->getNodeManager(), newAddr, lambda(mo.get())).getRootNode();
+			// first try unchanged
+			if(nextMatch.getRoot().getAddressedNode() == newAddr.getAddressedNode()) {
+				ret = core::transform::replaceAddress(root->getNodeManager(), newAddr, lambda(nextMatch)).getRootNode();
+			} else {
+				// try rematching
+				AddressMatchOpt mo = pattern->matchAddress(NodeAddress(newAddr.getAddressedNode()));
+				if (mo) {
+					ret = core::transform::replaceAddress(root->getNodeManager(), newAddr, lambda(mo.get())).getRootNode();
+				}
 			}
 		}
 		return ret;
