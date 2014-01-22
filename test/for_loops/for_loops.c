@@ -115,5 +115,9 @@ int main (){
 		printf("%c\n",*p);
 	}
 
+	//example of a loop using double as iterator -- drop to while
+	for (double d = 0; d<10; d++) {
+		printf("%f\n",d);
+	}
 	return 0;
 }
