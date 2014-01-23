@@ -42,6 +42,9 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/annotations/c/decl_only.h"
 
 #include "insieme/utils/assert.h"
 
@@ -142,6 +145,33 @@
 						return node;
 					});
 			prog = castRemover.map(prog);
+		}
+
+		// Declaration Only structs
+		// ========================
+		//
+		// If we encounter a sturct declaration without a definition we generate a GenericType with
+		// its name and mark it as DeclOnly, if in a different TU we encounter and definition for
+		// that type we drop the genericType. all genericTypes with an DeclOnlyAnnotation are turned
+		// into empty structs
+		{
+			core::NodeMap replacements;
+			core::IRBuilder builder(prog->getNodeManager());
+
+			visitDepthFirstOnce(prog, [&](const core::GenericTypePtr& cur) {
+					if(insieme::annotations::c::isDeclOnly(cur)) { 
+						insieme::annotations::c::markDeclOnly(cur,false);
+						core::NamedCompositeType::Entries structElements;
+						auto replacement = builder.structType( builder.stringValue(cur.toString()),structElements );
+
+						insieme::core::transform::utils::migrateAnnotations(cur.as<core::NodePtr>(), replacement.as<core::NodePtr>());
+						replacements[cur] = replacement;
+					}
+				}, true, true);
+
+			//std::cerr << "replacements: " << replacements << std::endl;
+			prog = core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
+
 		}
 
 		return prog;

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -94,6 +94,12 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 			return classType;
 
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
+
+		if(!classDecl->getDefinition()) {
+			// check if the classDeclaration has a definition, if not we just use the the type
+			// returned by the TypeConverter
+			return classType;
+		}
 
 		//~~~~~ base classes if any ~~~~~
 		if (classDecl->getNumBases() > 0){

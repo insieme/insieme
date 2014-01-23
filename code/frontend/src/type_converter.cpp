@@ -52,6 +52,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/decl_only.h"
 
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/simd_vector.h"
@@ -436,10 +437,14 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+
 		if (!tagType->getDecl()->getNameAsString().empty()) {
 			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
+			//we mark the declaration only tagTypes to reconstruct them in the IRProgram post visit
+			//into empty structs
+			annotations::c::markDeclOnly(retTy.as<core::GenericTypePtr>(),true);
 		}
-        return retTy;
+		return retTy;
 	}
 
 	// handle enums => always just integers
