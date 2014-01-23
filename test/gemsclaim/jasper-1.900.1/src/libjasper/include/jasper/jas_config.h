@@ -17,7 +17,16 @@
 #if !defined(JAS_WIN_MSVC_BUILD)
 /* A configure-based build is being used. */
 
+#ifndef SYNOPSYS
+    /* Have variable length arrays */
+    #define HAVE_VLA 1
 
+    /* Define to 1 if you have the `getrusage' function. */
+    #define HAVE_GETRUSAGE 1
+
+    /* Define to 1 if you have the `gettimeofday' function. */
+    #define HAVE_GETTIMEOFDAY 1
+#endif
 
 /* Extra debugging support */
 /* #undef DEBUG */
@@ -36,12 +45,6 @@
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
-
-/* Define to 1 if you have the `getrusage' function. */
-#define HAVE_GETRUSAGE 1
-
-/* Define to 1 if you have the `gettimeofday' function. */
-#define HAVE_GETTIMEOFDAY 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -87,9 +90,6 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
-
-/* Have variable length arrays */
-#define HAVE_VLA 1
 
 /* Define to 1 if you have the `vprintf' function. */
 #define HAVE_VPRINTF 1
