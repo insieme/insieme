@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -90,13 +90,17 @@ namespace frontend {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
-        registerFrontendPlugin<FrontendCleanup>();
         registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
+
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
             registerFrontendPlugin<extensions::SemanticCheckPlugin>();
         }
-        if(flags & OpenCL)
+
+        if(flags & OpenCL) {
         	registerFrontendPlugin<extensions::OclHostPlugin>();
+		}
+       
+       	registerFrontendPlugin<FrontendCleanup>();
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
