@@ -78,6 +78,10 @@
 
 #include <jasper/jasper.h>
 
+#ifdef SYNOPSYS
+    #include "input_file.h"
+#endif
+
 /******************************************************************************\
 *
 \******************************************************************************/
@@ -185,6 +189,7 @@ int main(int argc, char **argv)
 		cmdinfo();
 	}
 
+#ifndef SYNOPSYS
 	/* Open the input image file. */
 	if (cmdopts->infile) {
 		/* The input image is to be read from a file. */
@@ -200,6 +205,12 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 	}
+#else
+	if (!(in = jas_stream_memopen(input_file, INPUT_FILE_LEN))) {
+		fprintf(stderr, "error: cannot read hardcoded image buffer\n");
+		exit(EXIT_FAILURE);
+    }
+#endif
 
 	/* Open the output image file. */
 	if (cmdopts->outfile) {

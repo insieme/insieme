@@ -245,7 +245,7 @@ namespace cba {
 			virtual UpdateResult update(Assignment& ass) const {
 
 				// get the set to be modified
-				set<ProgramPoint<Context>>& set = ass[SPs];
+				//set<ProgramPoint<Context>>& set = ass[SPs];
 
 				// for all thread bodies in the program => add the end-point of the thread to the list of sync points
 				bool newElement = false;

@@ -42,6 +42,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -71,32 +72,6 @@ namespace {
 	};
 }
 
-namespace stmtutils {
-
-using namespace insieme::core;
-
-// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
-	return (stmtVect.size() == 1) ? tryAggregateStmt(builder, stmtVect.front()) : builder.compoundStmt(stmtVect);
-}
-
-StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
-	return stmt->getNodeType() == NT_CompoundStmt ?
-		tryAggregateStmts(builder, stmt.as<CompoundStmtPtr>()->getStatements())	: stmt;
-}
-
-ExpressionPtr makeOperation(const IRBuilder& builder,
-			  			 	const ExpressionPtr& lhs,
-			  				const ExpressionPtr& rhs,
-					  		const lang::BasicGenerator::Operator& op)
-{
-	return builder.callExpr(lhs->getType(), // return type
-			builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
-			lhs, rhs	 // LHS and RHS of the operation
-		);
-}
-
-} // end stmtutils namespace
 
 namespace insieme {
 namespace frontend {

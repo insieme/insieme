@@ -908,7 +908,32 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
-	// is a left side value, no need to materialize. has being handled by a temporary expression
+
+	std::cout << " =============== Materialize! =================" << std::endl;
+	materTempExpr->dump();
+	std::cout << "inner: " << std::endl;
+	dumpPretty(retIr);
+	std::cout << "type: " << std::endl;
+	dumpPretty(retIr->getType());
+	std::cout << "expected: " << std::endl;
+	core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
+	dumpPretty(t);
+
+	//if (! t.isa<core::RefTypePtr>())
+	//	return retIr;
+
+	// if inner expression is a bind temporary, we do not need to materialize, is IR-correct
+	if (llvm::isa<clang::CXXBindTemporaryExpr>(materTempExpr->GetTemporaryExpr()))
+		return retIr;
+	if (llvm::isa<clang::CXXNewExpr>(materTempExpr->GetTemporaryExpr()))
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
+
+	// inner type is a pointer? materialize
+	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) 
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
+
+	
+
 	if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
 	else

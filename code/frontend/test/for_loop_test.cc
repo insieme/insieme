@@ -188,6 +188,23 @@ namespace frontend {
 		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 	}
 
+	TEST(StmtConversion, NotIntegralTypeIterator) {
+
+		Source src(
+				R"(
+					int main() {
+						for(double d=0;d<0; d++) {}
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		core::ProgramPtr res = ConversionJob(src).execute(mgr);
+		//dump(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+	}
 
 	TEST(StmtConversion, ForLoopIteratorMaterializationThreadPrivate) {
 
