@@ -105,10 +105,11 @@ namespace cba {
 	private:
 
 		bool isThreadStart(const StatementAddress& stmt, const Context& ctxt) {
+			typedef typename Context::call_context call_context_type;
 
 			// check context
-			static const Context empty;
-			if (ctxt != empty) return false;
+			static const call_context_type empty;
+			if (ctxt.callContext != empty) return false;
 
 			// the root is a thread starter
 			if (stmt.isRoot()) return true;
@@ -146,11 +147,10 @@ namespace cba {
 			: super(cba, RSPin, RSPtmp, RSPout), cba(cba) { }
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			const auto& base = call->getNodeManager().getLangBasic();
 
 			// check whether it is a sync-operation call
 			auto fun = call->getFunctionExpr();
-			if (base.isParallel(fun) || base.isMerge(fun) || base.isMergeAll(fun) || base.isChannelSend(fun) || base.isChannelRecv(fun) || base.isRedistribute(fun)) {
+			if (isSyncronizingFunction(fun)) {
 				auto l = cba.getLabel(call);
 				auto R = cba.getSet(RSPout, l, ctxt);
 				constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::Tmp, call, ctxt), R));
@@ -163,13 +163,13 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachingSyncPointsTmpConstraintGenerator : public BasicTmpConstraintGenerator<reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, Context> {
+	class ReachingSyncPointsTmpConstraintGenerator : public BasicTmpConstraintGenerator<reaching_sync_points_in_analysis, reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, Context> {
 
-		typedef BasicTmpConstraintGenerator<reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, Context> super;
+		typedef BasicTmpConstraintGenerator<reaching_sync_points_in_analysis, reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, Context> super;
 
 	public:
 
-		ReachingSyncPointsTmpConstraintGenerator(CBA& cba) : super(cba, RSPtmp, RSPout) {}
+		ReachingSyncPointsTmpConstraintGenerator(CBA& cba) : super(cba, RSPin, RSPtmp, RSPout) {}
 
 	};
 

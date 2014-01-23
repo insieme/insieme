@@ -58,7 +58,7 @@ namespace cba {
 
 	template<typename A, typename B, typename C, typename D, typename E, typename ... F> class BasicInConstraintGenerator;
 	template<typename A, typename B, typename C, typename D, typename E, typename ... F> class BasicOutConstraintGenerator;
-	template<typename A, typename B, typename C, typename ... D> class BasicTmpConstraintGenerator;
+	template<typename A, typename B, typename C, typename D, typename ... E> class BasicTmpConstraintGenerator;
 
 	template<typename Context, typename AnalysisType> class ImperativeInStateConstraintGenerator;
 	template<typename Context, typename AnalysisType> class ImperativeOutStateConstraintGenerator;

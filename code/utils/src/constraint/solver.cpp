@@ -291,7 +291,11 @@ namespace constraint {
 			if (cur->hasAssignmentDependentDependencies()) {
 				// update dynamic dependencies if required
 				if (cur->hasDynamicDependencies()) {
-					cur->updateDynamicDependencies(ass);
+					if (cur->updateDynamicDependencies(ass)) {
+						for(const auto& dep : cur->getUsedInputs(ass)) {
+							edges[dep].insert(&*cur);
+						}
+					}
 				}
 
 				// we need to obtain the used inputs

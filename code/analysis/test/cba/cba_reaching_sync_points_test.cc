@@ -79,7 +79,7 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-	TEST(CBA, SimpleSpawn) {
+	TEST(CBA, SpawnSingle) {
 
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
@@ -103,6 +103,94 @@ namespace cba {
 		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPout)));
 		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPin)));
 		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPout)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, SpawnMultiple) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				" 	spawn a = 3;"
+				"	a = 4;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPin)));
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPout)));
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPin)));
+		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPout)));
+
+		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPin)));
+		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPout)));
+
+		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[3], RSPin)));
+		EXPECT_EQ("{T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[3], RSPout)));
+
+		EXPECT_EQ("{T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[4], RSPin)));
+		EXPECT_EQ("{T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[4], RSPout)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, SpawnAndChannels) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				"	auto c = channel.create(lit(int<4>),param(2));"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				" 	channel.send(c,1);"
+				"	a = 3;"
+				"	channel.recv(c);"
+				"	a = 4;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPin)));
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPout)));
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPin)));
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPout)));
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPin)));
+		EXPECT_EQ("{T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[2], RSPout)));
+
+		EXPECT_EQ("{T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[3], RSPin)));
+		EXPECT_EQ("{T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[3], RSPout)));
+
+		EXPECT_EQ("{T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[4], RSPin)));
+		EXPECT_EQ("{T0-4@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[4], RSPout)));
+
+		EXPECT_EQ("{T0-4@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[5], RSPin)));
+		EXPECT_EQ("{T0-4@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[5], RSPout)));
+
+		EXPECT_EQ("{T0-4@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[6], RSPin)));
+		EXPECT_EQ("{T0-6@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[6], RSPout)));
+
+		EXPECT_EQ("{T0-6@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[7], RSPin)));
+		EXPECT_EQ("{T0-6@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[7], RSPout)));
 
 //		createDotDump(analysis);
 	}

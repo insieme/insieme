@@ -265,6 +265,26 @@ namespace cba {
 //
 //	}
 
+	bool isCapturedValue(const core::ExpressionAddress& value) {
+
+		// check whether there are at least 2 parents (call and bind expression)
+		if (value.getDepth() < 2) return false;
+
+		// it has to be the argument of a call expression within a bind expression
+		auto bind = value.getParentAddress(2).isa<BindExprAddress>();
+		return bind && bind->isBoundExpression(value);
+	}
+
+	bool isSyncronizingFunction(const core::ExpressionPtr& fun) {
+		const auto& base = fun->getNodeManager().getLangBasic();
+		return  base.isParallel(fun) ||
+				base.isMerge(fun) ||
+				base.isMergeAll(fun) ||
+				base.isChannelSend(fun) ||
+				base.isChannelRecv(fun) ||
+				base.isRedistribute(fun);
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
