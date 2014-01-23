@@ -79,7 +79,7 @@ namespace addons {
 			if(core::annotations::hasNameAttached(type))
 				ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
 			else
-				ctr = manager.create<c_ast::EnumType>(name, "");
+			    return type_info_utils::createUnsupportedInfo(manager, toString(*type));
 
 			// add constructor (C-style)
 			TypeInfo* info = new TypeInfo();

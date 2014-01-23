@@ -82,6 +82,7 @@ namespace frontend {
 			Cilk			= 1<<3,
 
 			WinCrossCompile	= 1<<4,
+			GemCrossCompile	= 1<<5,
 			TAG_MPI			= 1<<6,
 
 			ProgressBar		= 1<<7,

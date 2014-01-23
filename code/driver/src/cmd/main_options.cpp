@@ -169,6 +169,7 @@ namespace cmd {
 		job.setOption(frontend::ConversionJob::OpenCL, OpenCL);
 		job.setOption(frontend::ConversionJob::Cilk, Cilk);
 		job.setOption(frontend::ConversionJob::WinCrossCompile, WinCrossCompile);
+		job.setOption(frontend::ConversionJob::GemCrossCompile, GemCrossCompile);
 		job.setOption(frontend::ConversionJob::TAG_MPI, MPITag);
 		// done
 		return job;
