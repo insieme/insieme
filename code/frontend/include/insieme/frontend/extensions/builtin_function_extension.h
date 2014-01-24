@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/annotations/c/include.h"
+
 
 namespace insieme {
 namespace frontend {
@@ -59,7 +61,7 @@ class BuiltinFunctionExtension : public insieme::frontend::extensions::FrontendP
                     auto type = builder.functionType(tyList, builder.getLangBasic().getInt4());
                     auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl));
                     //tell the compiler that this builtin is included somewhere else, even if it is not true
-                    convFact.getHeaderTagger().addHeaderForDecl(ret,funcDecl,true);
+                    annotations::c::attachInclude(ret, "stdint.h");
                     return ret.as<core::ExpressionPtr>();
                 }
             }

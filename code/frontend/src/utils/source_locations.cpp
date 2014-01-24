@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -100,7 +100,7 @@ std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager 
 std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
 	if (l.isValid()){
 		if (l.isFileID()) {
-			//if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE"; 
+			//if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE";
 			if (sm.isLoadedSourceLocation(l) ) { return "PRELOADED MODULE"; }
 
 			return l.printToString(sm);
@@ -110,7 +110,7 @@ std::string location(clang::SourceLocation const& l, clang::SourceManager const&
 			//FIXME: what do we do here? somehow clang fails
 			/*
 			std::cout << "SLoc isMacroID\n";
-		
+
 			auto sl = sm.getSpellingLoc(l);
 			if (sm.isLoadedSourceLocation(sl) ) { return "PRELOADED MODULE"; }
 			if(sl.isValid()) {
@@ -136,16 +136,24 @@ clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::Sou
 
 core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
 	// check file validity
-	FileID&& fileId = sm.getMainFileID();
+	FileID&& fileId = sm.getFileID(start);
 	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	assert(fileEntry);
+	//if we cannot get the file entry, lets try to get the source filename directly
+	std::string filename;
+	if(!fileEntry) {
+        StringRef s = sm.getFilename(start);
+        filename = s.str();
+	} else {
+        assert(fileEntry);
+        filename = fileEntry->getName();
+	}
 	// update macro locations, if required
 	start = getExpansionLoc(sm, start);
 	end = getExpansionLoc(sm, end);
 	// generate location object
 	core::IRBuilder builder(man);
-	return core::annotations::Location(builder.stringValue(fileEntry->getName()),
+	return core::annotations::Location(builder.stringValue(filename.c_str()),
 		core::annotations::TextPosition(sm.getSpellingLineNumber(start), sm.getSpellingColumnNumber(start)),
 		core::annotations::TextPosition(sm.getSpellingLineNumber(end), sm.getSpellingColumnNumber(end)));
 }
