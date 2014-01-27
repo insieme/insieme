@@ -85,16 +85,10 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 		case clang::TemplateArgument::ArgKind::Declaration: {
 				VLOG(2) << "ArgKind::Declaration not supported"; 
 				const clang::ValueDecl* decl = arg->getAsDecl ();
-				
-				if (llvm::isa<clang::TypeDecl>(decl)){
-					std::cout << "Type!" << std::endl;
+				if (llvm::isa<clang::TypeDecl>(decl))
 					assert(false && "not implemented");
-				}
-
-				if (const clang::FunctionDecl* f = llvm::dyn_cast<clang::FunctionDecl>(decl)){
+				if (const clang::FunctionDecl* f = llvm::dyn_cast<clang::FunctionDecl>(decl))
 					resList.insert(resList.end(), builder.genericType(buildNameForFunction(f)));
-				}
-
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::NullPtr:{
@@ -106,30 +100,26 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 			{
 				// the idea is to generate a generic type with a intParamList where we store
 				// the value of the init expression
-				//
 				auto Ilist = insieme::core::IntParamList();
 				Ilist.push_back( builder.concreteIntTypeParam(arg->getAsIntegral().getLimitedValue()));
 				resList.insert(resList.end(),  builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist ));
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Template: {
-				 VLOG(2) << "ArgKind::Template "; 
+				VLOG(2) << "ArgKind::Template "; 
 				resList.insert(resList.end(), builder.genericType(arg->getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString()));
 				break;
 			 }
 				
 		case clang::TemplateArgument::ArgKind::TemplateExpansion: { 
-				 VLOG(2) << "ArgKind::TemplateExpansion "; 
-				 arg->getAsTemplateOrTemplatePattern();
+				VLOG(2) << "ArgKind::TemplateExpansion "; 
+				arg->getAsTemplateOrTemplatePattern();
 				assert(false && "not implemented"); 
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Expression: { 	
 				VLOG(2) << "ArgKind::Expression not supported"; 
-
-
 				assert ( arg->getAsExpr());
-
 				assert(false && "not implemented"); 
 				break;
 			}
