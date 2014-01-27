@@ -64,7 +64,7 @@ namespace compiler {
 
 	Compiler Compiler::getDefaultC99CompilerO3() {
 		Compiler res = getDefaultC99Compiler();
-		res.addFlag("-O3");
+		//res.addFlag("-O3");
 		return res;
 	}
 
@@ -83,7 +83,7 @@ namespace compiler {
 
 	Compiler Compiler::getDefaultCppCompilerO3() {
 		Compiler res = getDefaultCppCompiler();
-		res.addFlag("-O3");
+		//res.addFlag("-O3");
 		return res;
 	}
 
