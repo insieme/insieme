@@ -55,7 +55,7 @@
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/TargetInfo.h>
 
-#include <llvm/LLVMContext.h>
+//#include <llvm/LLVMContext.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 
 #include <llvm/Support/Host.h>
@@ -217,10 +217,10 @@ void ExtASTUnit::load(const std::string& filename) {
 
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
-	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
+	TargetOptions TO;
 	bool m_isCXX;
     ExtASTUnit ast_unit;
-	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
+	ClangCompilerImpl() : clang(), TO(), m_isCXX(false) {}
 };
 
 ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
@@ -252,7 +252,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	// THE USER KIDNAPPED HEADER FILES WON'T BE RECOGNIZED
 	for(auto plugin : config.getPlugins()) {
         for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
-            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::Angled, true, false, false);
+            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::Angled, false, false);   // FIXME 3.4 check this flags
         }
 	}
 
@@ -270,14 +270,14 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	if(config.hasOption(ConversionJob::WinCrossCompile)) {
 		// fix the target architecture to be a 64 bit machine
 		// triplestrings have to be lower case
-		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
+		pimpl->TO.Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
 	} else {
 		// TO.Triple = llvm::sys::getHostTriple();
 		// triplestrings have to be lower case
-		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
+		pimpl->TO.Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 	}
 
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), &pimpl->TO) );  //FIXME 3.4 pointer?
 
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
@@ -285,7 +285,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	// add user provided headers
 	for (const path& cur : config.getIncludeDirectories()){
 		//instead "Angled" was "System"
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, true, false, false);
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, false, false); // FIXME 3.4 check this flags
 	}
 
     // ******************** FRONTEND PLUGIN ********************
@@ -324,12 +324,12 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	//		functiondefinition
 	//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
 	//		intrinsic to use depending on the used compiler the correct casts
-	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, true, false, false);
+	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, false, false);
 	/*** VECTOR EXTENSION STUFF END ***/
 
 	// Set OMP define if compiling with OpenMP
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/",
-		clang::frontend::System, true, false, false);
+		clang::frontend::System,  false, false);
 	if(config.hasOption(ConversionJob::OpenMP)) {
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
 	}
@@ -373,7 +373,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
 		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
 		for(const path& cur : config.getSystemHeadersDirectories()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, true, false, false);
+			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, false, false);
 		}
 
 		LO.Exceptions = 1;
@@ -388,7 +388,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
 		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
 		for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
+			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
 		}
 	}
 
