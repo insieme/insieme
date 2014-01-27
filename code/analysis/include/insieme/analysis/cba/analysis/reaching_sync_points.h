@@ -90,7 +90,7 @@ namespace cba {
 
 			// the entry point of every thread is a sync point
 			if (auto stmt = node.isa<StatementAddress>()) {
-				if (isThreadStart(stmt, ctxt)) {
+				if (isThreadBody(stmt, ctxt)) {
 					auto l = cba.getLabel(stmt);
 					auto R = cba.getSet(RSPin, l, ctxt);
 					constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::In, node.as<StatementAddress>(), ctxt), R));
@@ -100,36 +100,6 @@ namespace cba {
 
 			// otherwise treat it as usual
 			super::visit(node, ctxt, constraints);
-		}
-
-	private:
-
-		bool isThreadStart(const StatementAddress& stmt, const Context& ctxt) {
-			typedef typename Context::call_context call_context_type;
-
-			// check context
-			static const call_context_type empty;
-			if (ctxt.callContext != empty) return false;
-
-			// the root is a thread starter
-			if (stmt.isRoot()) return true;
-
-			// if it is the body of a free lambda it is also a thread starter
-			auto freeFun = getSurroundingFreeFunction(stmt);
-			if (!freeFun) return false;
-
-			// in case the surrounding callable is a bind => handle it
-			if (auto bind = freeFun.isa<BindExprAddress>()) {
-				return stmt == bind->getCall();
-			}
-
-			// in case it it is a function, handle it as well
-			if (auto lambda = freeFun.isa<LambdaAddress>()) {
-				return stmt == lambda->getBody();
-			}
-
-			// it is not a thread starter otherwise
-			return false;
 		}
 
 	};

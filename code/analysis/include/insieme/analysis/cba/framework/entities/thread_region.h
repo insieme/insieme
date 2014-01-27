@@ -39,60 +39,67 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
+
+#include "insieme/analysis/cba/framework/entities/program_point.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
-
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
-
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
-
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
-
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
-
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
 	/**
-	 * Checks whether the given address is referencing a value captured by a bind expression.
-	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
-
-	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
-	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
-
-
-
-	namespace detail {
-		/**
-		 * Checks whether the given statement is a potential entry point for a thread.
-		 */
-		bool isThreadBody(const core::StatementAddress& stmt);
-	}
-
-	/**
-	 * Checks whether the given stmt / context combination is a potential body of a thread.
+	 * A thread region is a path between two sync points within a thread. It is the basic
+	 * unit for composing the petri net modeling the parallel execution of a application
+	 * within the CBA framework.
 	 */
 	template<typename Context>
-	bool isThreadBody(const core::StatementAddress& stmt, const Context& ctxt) {
-		typedef typename Context::call_context call_context_type;
+	class ThreadRegion : public utils::Printable {
 
-		// check context
-		static const call_context_type empty;
-		if (ctxt.callContext != empty) return false;
+		/**
+		 * The beginning of the region.
+		 */
+		ProgramPoint<Context> begin;
 
-		// check statement
-		return detail::isThreadBody(stmt);
-	}
+		/**
+		 * The end of the region.
+		 */
+		ProgramPoint<Context> end;
+
+	public:
+
+		ThreadRegion(const ProgramPoint<Context>& begin, const ProgramPoint<Context>& end)
+			: begin(begin), end(end) {
+			// make sure the start and end point is within the same thread
+			assert_eq(begin.getContext().threadContext, end.getContext().threadContext);
+		}
+
+
+		const ProgramPoint<Context>& getBegin() const {
+			return begin;
+		}
+
+		const ProgramPoint<Context>& getEnd() const {
+			return end;
+		}
+
+		bool operator==(const ThreadRegion<Context>& other) const {
+			if (this == &other) return true;
+			return begin == other.begin && end == other.end;
+		}
+
+		bool operator<(const ThreadRegion<Context>& other) const {
+			return begin < other.begin || (begin == other.begin && end < other.end);
+		}
+
+		/**
+		 * Allows this object to be printed to any output stream (in a somewhat readable manner).
+		 */
+		std::ostream& printTo(std::ostream& out) const {
+			return out << begin << " - " << end;
+		}
+	};
+
 
 } // end namespace cba
 } // end namespace analysis

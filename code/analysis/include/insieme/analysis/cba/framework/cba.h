@@ -318,6 +318,16 @@ namespace cba {
 			return pos->second;
 		}
 
+		template<typename Context = DefaultContext, typename A>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type) {
+			return getValueID<A,analysis_config<Context>>();
+		}
+
+		template<typename A, typename Context = DefaultContext>
+		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Context& context) {
+			return getValueID<A,analysis_config<Context>,Context>(context);
+		}
+
 		template<typename A, typename Context = DefaultContext>
 		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(int id, const Context& context = Context()) {
 			return getValueID<A,analysis_config<Context>,int,Context>(id, context);

@@ -105,6 +105,13 @@ namespace cba {
 		}
 
 		/**
+		 * Obtains the processing phase of the referenced statement.
+		 */
+		State getState() const {
+			return state;
+		}
+
+		/**
 		 * Support for the == operator. Instances can be compared with other instances.
 		 */
 		bool operator==(const ProgramPoint& other) const {

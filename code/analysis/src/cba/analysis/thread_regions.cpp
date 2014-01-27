@@ -34,30 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/analysis/cba/framework/context.h"
-
-#include "insieme/core/forward_decls.h"
-
-#include "insieme/utils/petri_net/petri_net.h"
-#include "insieme/utils/printable.h"
+#include "insieme/analysis/cba/analysis/thread_regions.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	/**
-	 * An execution network is a Petri net where:
-	 * 		- places are thread phases and channel states
-	 * 		- transitions are introduced by
-	 * 				- non-deterministic choice
-	 * 				- spawn / merge operations
-	 * 				- channel operations
-	 * 				- redistribute operations
-	 */
-
-
+	const thread_regions_analysis ThreadRegions = registerAnalysis<thread_regions_analysis>("ThreadRegions");
 
 } // end namespace cba
 } // end namespace analysis

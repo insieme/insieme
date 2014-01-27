@@ -285,6 +285,32 @@ namespace cba {
 				base.isRedistribute(fun);
 	}
 
+	namespace detail {
+
+		bool isThreadBody(const StatementAddress& stmt) {
+			// the root is a thread starter
+			if (getAnalysisRoot(stmt) == stmt) return true;
+
+			// if it is the body of a free lambda it is also a thread starter
+			auto freeFun = getSurroundingFreeFunction(stmt);
+			if (!freeFun) return false;
+
+			// in case the surrounding callable is a bind => handle it
+			if (auto bind = freeFun.isa<BindExprAddress>()) {
+				return stmt == bind->getCall();
+			}
+
+			// in case it it is a function, handle it as well
+			if (auto lambda = freeFun.isa<LambdaAddress>()) {
+				return stmt == lambda->getBody();
+			}
+
+			// it is not a thread starter otherwise
+			return false;
+		}
+
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
