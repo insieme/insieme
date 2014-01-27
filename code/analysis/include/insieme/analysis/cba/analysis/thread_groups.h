@@ -69,7 +69,7 @@ namespace cba {
 
 	public:
 
-		ThreadGroupConstraintGenerator(CBA& cba) : super(cba, ThreadGroups, threadGroups), cba(cba), base(cba.getRoot().getNodeManager().getLangBasic()) { };
+		ThreadGroupConstraintGenerator(CBA& cba) : super(cba, ThreadGroups, threadGroups), cba(cba), base(cba.getRoot()->getNodeManager().getLangBasic()) { };
 
 		using super::elem;
 

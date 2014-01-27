@@ -43,6 +43,10 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	class CBA;
+
+	CBA& getCBA(const core::NodeAddress& node);
+
 	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
 
 	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);

@@ -39,11 +39,26 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/analysis/cba/framework/cba.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using namespace core;
+
+	CBA& getCBA(const NodeAddress& node) {
+		typedef std::shared_ptr<CBA> CBA_Ptr;
+
+		// obtain CBA context from root node
+		core::StatementAddress root = getAnalysisRoot(node);
+		if (!root->hasAttachedValue<CBA_Ptr>()) {
+			root->attachValue<CBA_Ptr>(std::make_shared<CBA>(root));
+		}
+
+		// run analysis
+		return *root->getAttachedValue<CBA_Ptr>();
+	}
 
 	NodeAddress getSurroundingFreeFunction(const NodeAddress& cur) {
 		static const ExpressionAddress none;

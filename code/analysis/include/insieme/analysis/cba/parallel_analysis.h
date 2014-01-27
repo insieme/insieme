@@ -37,42 +37,32 @@
 #pragma once
 
 #include <set>
-#include "insieme/core/ir.h"
 
-#include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/utils/cba_utils.h"
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/analysis/cba/framework/context.h"
+#include "insieme/analysis/cba/framework/entities/program_point.h"
+#include "insieme/analysis/cba/framework/entities/thread_region.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	/**
-	 * The main facade function for utilizing the constraint-based analysis framework (CBA).
-	 *
-	 * Analysis are capable of deducing values of expressions within a given code fragment. The fragment
-	 * is determined by the root node of the given expr-address, while the expression itself is addressing
-	 * the targeted expression. The kind of information to be obtained can be determined by the type
-	 * parameter and potential parameters is determined by the type parameter. A catalog of those is
-	 * provided by the header files located within the cba/analysis directory. Additional analysis
-	 * may be defined for specific tasks.
-	 *
-	 * For Example usages see the
-	 *
-	 * 						ut_analysis_cba_facade.cc
-	 *
-	 * test case.
-	 *
-	 *
-	 * @param expr the expressions which's values should be determined by the analysis
-	 * @param type the the type analysis result to be obtained
-	 * @param ctxt the optional context the given input expression should be considered in
-	 * @return a reference to a set of values representing the result of the analysis
-	 */
-	template<typename A, typename Context = DefaultContext>
-	const typename lattice<A>::type::value_type& getValues(const core::ExpressionAddress& expr, const A& type, const Context& ctxt = Context()) {
-		// just forward call to cached CBA instance
-		return getCBA(expr).getValuesOf(expr, type, ctxt);
-	}
+
+	// *************************************************************************************
+	//									Synchronization Points
+	// *************************************************************************************
+
+	typedef ProgramPoint<DefaultContext> SyncPoint;
+
+	std::set<SyncPoint> getSyncPoints(const core::StatementAddress& root);
+
+
+	// *************************************************************************************
+	//										Thread Regions
+	// *************************************************************************************
+
+	std::set<ThreadRegion<DefaultContext>> getThreadRegions(const core::StatementAddress& root);
 
 } // end namespace cba
 } // end namespace analysis
