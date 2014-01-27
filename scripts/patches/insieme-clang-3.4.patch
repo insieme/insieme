@@ -1,7 +1,6 @@
-Only in llvm-3.4-mod/tools/clang: clang-3.4
 diff -crB llvm-3.4/tools/clang/include/clang/Basic/IdentifierTable.h llvm-3.4-mod/tools/clang/include/clang/Basic/IdentifierTable.h
 *** llvm-3.4/tools/clang/include/clang/Basic/IdentifierTable.h	2013-10-10 20:23:13.000000000 +0200
---- llvm-3.4-mod/tools/clang/include/clang/Basic/IdentifierTable.h	2014-01-27 11:38:48.162798237 +0100
+--- llvm-3.4-mod/tools/clang/include/clang/Basic/IdentifierTable.h	2014-01-27 15:47:29.828453770 +0100
 ***************
 *** 163,169 ****
     /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
@@ -15,43 +14,42 @@ diff -crB llvm-3.4/tools/clang/include/clang/Basic/IdentifierTable.h llvm-3.4-mo
     /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
     /// using this method so we can inform serialization about it.
     void RevertTokenIDToIdentifier() {
-!     //assert(TokenID != tok::identifier && "Already at tok::identifier");
+!   //  assert(TokenID != tok::identifier && "Already at tok::identifier");
       TokenID = tok::identifier;
       RevertedTokenID = true;
     }
 diff -crB llvm-3.4/tools/clang/include/clang/Parse/Parser.h llvm-3.4-mod/tools/clang/include/clang/Parse/Parser.h
 *** llvm-3.4/tools/clang/include/clang/Parse/Parser.h	2013-12-16 03:32:55.000000000 +0100
---- llvm-3.4-mod/tools/clang/include/clang/Parse/Parser.h	2014-01-27 11:24:56.010112890 +0100
+--- llvm-3.4-mod/tools/clang/include/clang/Parse/Parser.h	2014-01-27 15:41:55.275348380 +0100
 ***************
-*** 28,33 ****
---- 28,39 ----
-  #include "llvm/Support/SaveAndRestore.h"
-  #include <stack>
+*** 14,19 ****
+--- 14,23 ----
+  #ifndef LLVM_CLANG_PARSE_PARSER_H
+  #define LLVM_CLANG_PARSE_PARSER_H
   
++ // ----- Insieme compiler ------
++ class ParserProxy;
++ // -----------------------------
 + 
-+ // ---  Insieme Compilert ---
-+   class ParserProxy;
-+ //
-+   
-+ 
-  namespace clang {
-    class PragmaHandler;
-    class Scope;
+  #include "clang/Basic/OpenMPKinds.h"
+  #include "clang/Basic/OperatorPrecedence.h"
+  #include "clang/Basic/Specifiers.h"
 ***************
-*** 59,64 ****
---- 65,73 ----
-    friend class ObjCDeclContextSwitch;
+*** 60,65 ****
+--- 64,73 ----
     friend class ParenBraceBracketBalancer;
     friend class BalancedDelimiterTracker;
-+   // ---  Insieme Compilert ---
-+   friend class ::ParserProxy;
-+   // ------------------------
   
++   // ----- Insieme compiler ------
++   friend class ::ParserProxy;
++   // -----------------------------
++ 
     Preprocessor &PP;
   
+    /// Tok - The current token we are peeking ahead.  All parsing methods assume
 diff -crB llvm-3.4/tools/clang/include/clang/Sema/Sema.h llvm-3.4-mod/tools/clang/include/clang/Sema/Sema.h
 *** llvm-3.4/tools/clang/include/clang/Sema/Sema.h	2013-12-05 06:25:04.000000000 +0100
---- llvm-3.4-mod/tools/clang/include/clang/Sema/Sema.h	2014-01-27 11:45:30.261512088 +0100
+--- llvm-3.4-mod/tools/clang/include/clang/Sema/Sema.h	2014-01-27 15:47:09.277262238 +0100
 ***************
 *** 860,866 ****
     Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
@@ -224,4 +222,55 @@ diff -crB llvm-3.4/tools/clang/include/clang/Sema/Sema.h llvm-3.4-mod/tools/clan
                             SourceLocation LParenLoc,
                             Stmt *First, FullExprArg Second,
                             Decl *SecondVar,
-Only in llvm-3.4-mod/tools: clang-3.4
+diff -crB llvm-3.4/tools/clang/lib/Parse/Parser.cpp llvm-3.4-mod/tools/clang/lib/Parse/Parser.cpp
+*** llvm-3.4/tools/clang/lib/Parse/Parser.cpp	2013-12-16 03:32:55.000000000 +0100
+--- llvm-3.4-mod/tools/clang/lib/Parse/Parser.cpp	2014-01-27 16:03:46.173633114 +0100
+***************
+*** 96,106 ****
+  
+      PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   if (getLangOpts().OpenMP)
+!     OpenMPHandler.reset(new PragmaOpenMPHandler());
+!   else
+!     OpenMPHandler.reset(new PragmaNoOpenMPHandler());
+!   PP.AddPragmaHandler(OpenMPHandler.get());
+  
+    if (getLangOpts().MicrosoftExt) {
+      MSCommentHandler.reset(new PragmaCommentHandler(actions));
+--- 96,109 ----
+  
+      PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
+    }
+! 
+!   // ----- Insieme Compiler -------
+! //if (getLangOpts().OpenMP)
+! //  OpenMPHandler.reset(new PragmaOpenMPHandler());
+! //else
+! //  OpenMPHandler.reset(new PragmaNoOpenMPHandler());
+! //PP.AddPragmaHandler(OpenMPHandler.get());
+! // --------------------------------
+  
+    if (getLangOpts().MicrosoftExt) {
+      MSCommentHandler.reset(new PragmaCommentHandler(actions));
+***************
+*** 458,465 ****
+      OpenCLExtensionHandler.reset();
+      PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   PP.RemovePragmaHandler(OpenMPHandler.get());
+!   OpenMPHandler.reset();
+  
+    if (getLangOpts().MicrosoftExt) {
+      PP.RemovePragmaHandler(MSCommentHandler.get());
+--- 461,470 ----
+      OpenCLExtensionHandler.reset();
+      PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   // --- Insieme Compiler ---- 
+!   //PP.RemovePragmaHandler(OpenMPHandler.get());
+!   //OpenMPHandler.reset();
+!   // -------------------------
+  
+    if (getLangOpts().MicrosoftExt) {
+      PP.RemovePragmaHandler(MSCommentHandler.get());
