@@ -34,42 +34,47 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef _GEM_UNISTD_H_
+#define _GEM_UNISTD_H_
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+long read(int fd, void *buf, size_t count) {
+    if(fd == 0)
+        return (long)fread(buf, (size_t)1, count, stdin);
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+    fprintf(stderr, "UNHANDLED call to function %s\n", __func__);
+    return (long)-1;
+}
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+int unlink(const char *pathname) {
+    fprintf(stderr, "UNHANDLED call to function %s\n", __func__);
+    return -1;
+}
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+long write(int fd, const void *buf, size_t  count) {
+    if(fd == 1) 
+        return (long)fwrite(buf, (size_t)1, count, stdout);
+    else if(fd == 2)
+        return (long)fwrite(buf, (size_t)1, count, stderr);
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+    fprintf(stderr, "UNHANDLED call to function %s\n", __func__);
+    return (long)-1;
+}
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+unsigned long lseek(int fd, unsigned long offset, int whence) {
+    fprintf(stderr, "UNHANDLED call to function %s\n", __func__);
+    return -1;
+}
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+int close(int fd) {
+    if(fd == 0)
+        return (!fclose(stdin)) ? 0 : -1;
+    else if(fd == 1)
+        return (!fclose(stdout)) ? 0 : -1;
+    else if(fd == 2)
+        return (!fclose(stderr)) ? 0 : -1;
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+    fprintf(stderr, "UNHANDLED call to function %s\n", __func__);
+    return -1;
+}
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-	/**
-	 * Checks whether the given address is referencing a value captured by a bind expression.
-	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
-
-	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
-	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
-
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+#endif // _GEM_UNISTD_H_

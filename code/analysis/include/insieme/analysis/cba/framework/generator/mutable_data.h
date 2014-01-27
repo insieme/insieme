@@ -153,6 +153,7 @@ namespace cba {
 	template<typename Context, typename BaseAnalysis>
 	class ImperativeTmpStateConstraintGenerator :
 			public BasicTmpConstraintGenerator<
+				location_data_in_analysis<BaseAnalysis>,
 				location_data_tmp_analysis<BaseAnalysis>,
 				location_data_out_analysis<BaseAnalysis>,
 				Context,
@@ -160,6 +161,7 @@ namespace cba {
 			> {
 
 		typedef BasicTmpConstraintGenerator<
+			location_data_in_analysis<BaseAnalysis>,
 			location_data_tmp_analysis<BaseAnalysis>,
 			location_data_out_analysis<BaseAnalysis>,
 			Context,
@@ -168,7 +170,7 @@ namespace cba {
 
 	public:
 
-		ImperativeTmpStateConstraintGenerator(CBA& cba) : super(cba, Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()) {}
+		ImperativeTmpStateConstraintGenerator(CBA& cba) : super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()) {}
 
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
 

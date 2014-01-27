@@ -34,41 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/cba/analysis/thread_bodies.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
-
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
-
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
-
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
-
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
-
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-	/**
-	 * Checks whether the given address is referencing a value captured by a bind expression.
-	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
-
-	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
-	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
+	const thread_body_analysis ThreadBodies = registerAnalysis<thread_body_analysis>("ThreadBodies");
 
 } // end namespace cba
 } // end namespace analysis

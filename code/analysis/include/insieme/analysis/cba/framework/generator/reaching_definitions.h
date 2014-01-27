@@ -239,13 +239,13 @@ namespace cba {
 	};
 
 	template<typename Context>
-	class ReachingDefsTmpConstraintGenerator : public BasicTmpConstraintGenerator<reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> {
+	class ReachingDefsTmpConstraintGenerator : public BasicTmpConstraintGenerator<reaching_defs_in_analysis, reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> {
 
-		typedef BasicTmpConstraintGenerator<reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> super;
+		typedef BasicTmpConstraintGenerator<reaching_defs_in_analysis, reaching_defs_tmp_analysis, reaching_defs_out_analysis, Context, Location<Context>> super;
 
 	public:
 
-		ReachingDefsTmpConstraintGenerator(CBA& cba) : super(cba, RDtmp, RDout) {}
+		ReachingDefsTmpConstraintGenerator(CBA& cba) : super(cba, RDin, RDtmp, RDout) {}
 
 	};
 

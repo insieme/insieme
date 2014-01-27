@@ -41,6 +41,7 @@
 #include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/analysis/cba/analysis/reaching_sync_points.h"
+#include "insieme/analysis/cba/analysis/thread_bodies.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/utils/constraint_utils.h"
@@ -166,12 +167,14 @@ namespace cba {
 
 					// extract the current set
 					SyncPointSetType cur_set;
-					if (stmt.template isa<CompoundStmtAddress>()) {
-						// for compounds it is the out state
-						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
+					auto call = stmt.template isa<CallExprAddress>();
+					if (call && isSyncronizingFunction(call->getFunctionExpr())) {
+						// for call expressions it is the set of sync points reaching the tmp-state
+						// (after arguments, before processing the function itself)
+						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
 					} else {
-						// for the rest it is the tmp state
-						cur_set = cba.getSet(RSPtmp, cur.getStatement(), cur.getContext());
+						// for rest it is the out state
+						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
 					}
 
 					if (!contains(sync_points,cur_set)) {
@@ -219,39 +222,43 @@ namespace cba {
 		template<typename Context, typename SyncPointSetType>
 		class AddInnerThreadConstraint : public utils::constraint::Constraint {
 
+			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> thread_body_set_id_type;
+
 			CBA& cba;
 
 			SyncPointSetType SPs;
 
-			mutable std::vector<SyncPointSetType> sync_points;
+			// the sets containing sets of spanned thread bodies
+			mutable std::vector<thread_body_set_id_type> thread_bodies;
 
 			mutable std::vector<ValueID> inputs;
+
+			const core::lang::BasicGenerator& basic;
 
 		public:
 
 			AddInnerThreadConstraint(CBA& cba, const SyncPointSetType& set) :
-				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set) {
+				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set), basic(cba.getRoot()->getNodeManager().getLangBasic()) {
 				inputs.push_back(SPs);
 			}
 
 			virtual UpdateResult update(Assignment& ass) const {
 
 				// get the set to be modified
-				//set<ProgramPoint<Context>>& set = ass[SPs];
+				set<ProgramPoint<Context>>& set = ass[SPs];
 
-				// TODO:
-				// for all spawn points
-				// for all jobs at those points
-				// for all potential bodies
-				// add the end of the bodies to the list of sync points
-
-				// just collect all values from the input sets
+				// for all thread bodies in the program => add the end-point of the thread to the list of sync points
 				bool newElement = false;
-//				for(const auto& cur : spawn_points) {
-//					for(const auto& point : ass[cur]) {
-//						newElement = set.insert(point).second || newElement;
-//					}
-//				}
+				for(const auto& cur : thread_bodies) {
+					for(const auto& body : ass[cur]) {
+
+						// build a program point marking the end of the thread body
+						auto end = ProgramPoint<Context>(ProgramPoint<Context>::Out, body.getBody(), body.getContext());
+
+						// add end of thread to program point
+						newElement = set.insert(end).second || newElement;
+					}
+				}
 
 				// done
 				return (newElement) ? Incremented : Unchanged;
@@ -262,30 +269,26 @@ namespace cba {
 				// get current set of sync points
 				const set<ProgramPoint<Context>>& all_sync_points = ass[SPs];
 
-				// collect all preceding sync-point sets
+				// for all sync points ...
 				bool changed = false;
 				for(const auto& cur : all_sync_points) {
+					// ... that are spawn points ...
+					auto call = cur.getStatement().template isa<CallExprAddress>();
+					if (call && basic.isParallelOp(call->getFunctionExpr())) {
 
-					// get set of preceding sync points
-					auto stmt = cur.getStatement();
+						// ... add the list of potential spanned bodies to the inputs
+						auto cur_bodies = cba.getSet(ThreadBodies, call, cur.getContext());
 
-					// extract the current set
-					SyncPointSetType cur_set;
-					if (stmt.template isa<CompoundStmtAddress>()) {
-						// for compounds it is the out state
-						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
-					} else {
-						// for the rest it is the tmp state
-						cur_set = cba.getSet(RSPtmp, cur.getStatement(), cur.getContext());
-					}
-
-					if (!contains(sync_points,cur_set)) {
-						sync_points.push_back(cur_set);
-						inputs.push_back(cur_set);
-						changed = true;
+						// add it if not already present
+						if (!contains(thread_bodies, cur_bodies)) {
+							thread_bodies.push_back(cur_bodies);
+							inputs.push_back(cur_bodies);
+							changed = true;
+						}
 					}
 				}
 
+				// cone
 				return changed;
 			}
 
@@ -301,12 +304,12 @@ namespace cba {
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
 
 				// print merged in thread dependencies
-				for(const auto& cur : sync_points) {
-					out << cur << " -> " << SPs << "[label=\"subset\"]\n";
+				for(const auto& cur : thread_bodies) {
+					out << cur << " -> " << SPs << "[label=\"reaches thread\"]\n";
 				}
 
-				// and the default dependencies
-				return out << SPs << " -> " << SPs << "[label=\"reaching sync closure\"]\n";
+				out << SPs << " -> " << SPs << "[label=\"for all spawn points\"]\n";
+				return out;
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {

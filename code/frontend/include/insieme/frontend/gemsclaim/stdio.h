@@ -34,42 +34,35 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef __GEM_STDIO_H
+#define __GEM_STDIO_H
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+typedef struct FILE {
+} FILE;
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+typedef unsigned long size_t;
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+FILE *stderr, *stdout, *stdin;
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+#define NULL ((void *)0)
+#define EOF -1
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+#define SEEK_SET    0   /* Seek from beginning of file.  */
+#define SEEK_CUR    1   /* Seek from current position.  */
+#define SEEK_END    2   /* Seek from end of file.  */
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+const int L_tmpnam = 12;
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+int printf(const char *, ...);
+int fprintf(FILE *, const char *, ...);
+int sprintf(char *, const char *, ...);
+int snprintf(char *, unsigned long, const char *, ...);
+int vsprintf();
+int vfprintf();
+int fscanf(FILE *stream, const char *format, ...);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+char *tmpnam(char *s);
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
-
-	bool isRecursiveCall(const core::CallExprAddress& call);
-
-	/**
-	 * Checks whether the given address is referencing a value captured by a bind expression.
-	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
-
-	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
-	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
-
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+#endif // __GEM_STDIO_H

@@ -62,6 +62,7 @@
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
+#include "insieme/frontend/extensions/gemsclaim_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -92,6 +93,10 @@ namespace frontend {
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 
+        if(hasOption(ConversionJob::GemCrossCompile)) {
+            registerFrontendPlugin<GemsclaimPlugin>();
+        }
+
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
             registerFrontendPlugin<extensions::SemanticCheckPlugin>();
         }
@@ -101,6 +106,13 @@ namespace frontend {
 		}
        
        	registerFrontendPlugin<FrontendCleanup>();
+
+	    for(auto plugin : getPlugins()) {
+            for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
+                addSystemHeadersDirectory(kidnappedHeader);
+            }
+        }
+
     }
 
     void ConversionSetup::setStandard(const Standard& standard) {
@@ -216,6 +228,7 @@ namespace frontend {
 			"OpenCL " << hasOption(ConversionSetup::OpenCL) << "\n" <<
 			"Cilk " << hasOption(ConversionSetup::Cilk) << "\n" <<
 			"WinCrossCompile " << hasOption(ConversionSetup::WinCrossCompile) << "\n" <<
+			"GemCrossCompile " << hasOption(ConversionSetup::GemCrossCompile) << "\n" <<
 			"TAG_MPI " << hasOption(ConversionSetup::TAG_MPI) << "\n" <<
 			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<

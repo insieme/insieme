@@ -39,36 +39,65 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+	// the type to represent jobs
+	template<typename Context>
+	class ThreadBody
+		: public utils::Printable,
+		  public utils::HashableImmutableData<ThreadBody<Context>>,
+		  public boost::equality_comparable<ThreadBody<Context>>,
+		  public boost::partially_ordered<ThreadBody<Context>> {
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+		/**
+		 * The statement (compound or call of a bind expression) forming the body
+		 * of a thread.
+		 */
+		core::StatementAddress body;
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+		/**
+		 * The root context of the processed thread.
+		 */
+		Context threadRootContext;
 
-	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+	public:
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+		ThreadBody()
+			: utils::HashableImmutableData<ThreadBody<Context>>(combineHashes(core::StatementAddress(), Context())) {}
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+		ThreadBody(const core::StatementAddress& body, const Context& ctxt)
+			: utils::HashableImmutableData<ThreadBody<Context>>(combineHashes(body, ctxt)),
+			  body(body),
+			  threadRootContext(ctxt) {}
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
+		const core::StatementAddress& getBody() const {
+			return body;
+		}
 
-	bool isRecursiveCall(const core::CallExprAddress& call);
+		const Context& getContext() const {
+			return threadRootContext;
+		}
 
-	/**
-	 * Checks whether the given address is referencing a value captured by a bind expression.
-	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
+		bool operator==(const ThreadBody<Context>& other) const {
+			if (this == &other) return true;
+			if (this->hash() != other.hash()) return false;
+			return body == other.body && threadRootContext == other.threadRootContext;
+		}
 
-	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
-	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
+		bool operator<(const ThreadBody<Context>& other) const {
+			return body < other.body ||
+					(body == other.body && threadRootContext < other.threadRootContext);
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "body@" << body << "::" << threadRootContext;
+		}
+	};
 
 } // end namespace cba
 } // end namespace analysis

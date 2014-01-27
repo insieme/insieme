@@ -962,6 +962,7 @@ namespace cba {
 
 
 	template<
+		typename InValueType,
 		typename TmpValueType,
 		typename OutValueType,
 		typename Context,
@@ -969,29 +970,41 @@ namespace cba {
 	>
 	class BasicTmpConstraintGenerator : public ConstraintGenerator {
 
+		const InValueType& Ain;
 		const TmpValueType& Atmp;
 		const OutValueType& Aout;
 
 	public:
 
-		BasicTmpConstraintGenerator(CBA& cba, const TmpValueType& Atmp, const OutValueType& Aout)
-			: Atmp(Atmp), Aout(Aout) {}
+		BasicTmpConstraintGenerator(CBA& cba, const InValueType& Ain, const TmpValueType& Atmp, const OutValueType& Aout)
+			: Ain(Ain), Atmp(Atmp), Aout(Aout) {}
 
 		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
 			// nothing to do here
 
 			const auto& data = cba.getValueParameters<Label,Context,ExtraParams...>(value);
 			Label label = std::get<1>(data);
-			const auto& call = cba.getStmt(label).as<CallExprAddress>();
+			const auto& stmt = cba.getStmt(label);
+			const auto& call = stmt.isa<CallExprAddress>();
+
 
 			// obtain properly typed value ID instance
 			auto A_tmp = getValueID(cba, Atmp, utils::int_type<2>(), data, call);
 			assert_eq(value, A_tmp) << "Queried a value set of invalid type!";
 
+			// if it is not a call Atmp should be the same as Ain
+			if (!call) {
+				auto A_in = getValueID(cba, Ain, utils::int_type<2>(), data, call);
+				constraints.add(subset(A_in, A_tmp));
+				return;
+			}
+
 			// create constraints
 			for(const auto& cur : call) {
-				auto A_out = getValueID(cba, Aout, utils::int_type<2>(), data, cur);
-				constraints.add(subset(A_out, A_tmp));
+				if (!isCapturedValue(cur)) {
+					auto A_out = getValueID(cba, Aout, utils::int_type<2>(), data, cur);
+					constraints.add(subset(A_out, A_tmp));
+				}
 			}
 
 			// and the function

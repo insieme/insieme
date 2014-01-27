@@ -76,30 +76,133 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-//	TEST(CBA, SimpleSpawn) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	auto a = var(0);"
-//				" 	spawn a = 1;"
-//				"	a = 2;"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-//		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
-//		std::cout << syncPoints << "\n";
-//		EXPECT_EQ(5, syncPoints.size());
-//
+	TEST(CBA, SimpleSpawn) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+		ASSERT_EQ(5, syncPoints.size());
+
+		auto resStr = toString(syncPoints);
+
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
+		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
+		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the thread spawn operation
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
+
 //		createDotDump(analysis);
-//	}
+	}
+
+	TEST(CBA, MultiSpawn) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				" 	spawn a = 3;"
+				"	a = 4;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(1,analysis.getLabel(code[1]));
+		EXPECT_EQ(2,analysis.getLabel(code[3]));
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+		EXPECT_EQ(8, syncPoints.size());
+
+		auto resStr = toString(syncPoints);
+
+
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the program start
+		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the program end
+
+		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 1. thread spawn operation
+		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 2. thread spawn operation
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 1. thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the 1. thread
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 2. thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the end of the 2. thread
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, Channels) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				"	auto c = channel.create(lit(int<4>),param(1));"
+				" 	spawn {"
+				"		a = 1;"
+				"		channel.send(c,1);"
+				"	};"
+				" 	spawn {"
+				"		channel.recv(c);"
+				"		a = 2;"
+				"	};"
+				"	a = 3;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(1,analysis.getLabel(code[2]));
+		EXPECT_EQ(2,analysis.getLabel(code[3]));
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+
+		EXPECT_EQ(10, syncPoints.size());
+		auto resStr = toString(syncPoints);
+
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
+		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
+		EXPECT_PRED2(containsSubString, resStr, "T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the first thread
+		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the second thread
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the first thread
+		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the first thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");					// the end of the first thread
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the begin of the second thread
+		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the second thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the end of the second thread
+
+//		createDotDump(analysis);
+	}
 
 } // end namespace cba
 } // end namespace analysis
