@@ -129,11 +129,6 @@ bool irt_g_inst_measure_##_name__ = false;
 uint32 irt_g_inst_group_##_name__##membership_count = 0;
 #include "irt_metrics.def"
 
-// create counts for early entry / late exit (EE/LE) instrumentation
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-uint32 irt_g_inst_eele_count_##_name__ = 0;
-#include "irt_metrics.def"
-
 typedef enum {
 	IRT_HW_SCOPE_CORE,
 	IRT_HW_SCOPE_SOCKET,
@@ -151,9 +146,8 @@ typedef enum {
 typedef struct {
 	uint64 id;
 	uint64 num_executions;
-	uint64 active_participants;
-	uint64 number_of_entries;
-	uint64 number_of_exits;
+	uint64 num_entries;
+	uint64 num_exits;
 	irt_spinlock lock;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_data_type__ last_##_name__; \
@@ -186,8 +180,6 @@ void irt_inst_select_region_instrumentation_metrics(const char* selection);
 void irt_inst_set_region_instrumentation_from_env();
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi);
 void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi);
-void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_struct* region);
-irt_inst_region_struct* _irt_inst_region_stack_pop(irt_work_item* wi);
 void irt_inst_region_start_measurements(irt_work_item* wi);
 void irt_inst_region_end_measurements(irt_work_item* wi);
 void irt_inst_region_init(irt_context* context);
