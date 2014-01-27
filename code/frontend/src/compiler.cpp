@@ -217,10 +217,10 @@ void ExtASTUnit::load(const std::string& filename) {
 
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
-	TargetOptions TO;
+	TargetOptions* TO;
 	bool m_isCXX;
     ExtASTUnit ast_unit;
-	ClangCompilerImpl() : clang(), TO(), m_isCXX(false) {}
+	ClangCompilerImpl() : clang(), TO(new TargetOptions()), m_isCXX(false) {}
 };
 
 ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
@@ -270,14 +270,14 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	if(config.hasOption(ConversionJob::WinCrossCompile)) {
 		// fix the target architecture to be a 64 bit machine
 		// triplestrings have to be lower case
-		pimpl->TO.Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
 	} else {
 		// TO.Triple = llvm::sys::getHostTriple();
 		// triplestrings have to be lower case
-		pimpl->TO.Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 	}
 
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), &pimpl->TO) );  //FIXME 3.4 pointer?
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), pimpl->TO) );  //FIXME 3.4 pointer?
 
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
