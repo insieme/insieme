@@ -178,6 +178,7 @@ void irt_inst_metrics_init();
 void irt_inst_metrics_finalize();
 void irt_inst_select_region_instrumentation_metrics(const char* selection);
 void irt_inst_set_region_instrumentation_from_env();
+irt_inst_region_struct* irt_inst_region_get_current();
 void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi);
 void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi);
 void irt_inst_region_start_measurements(irt_work_item* wi);
