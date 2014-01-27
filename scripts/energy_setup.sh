@@ -14,7 +14,7 @@ fi
 echo "done!"
 
 echo -n "Changing permission of msr files..."
-chmod 666 /dev/cpu/*/msr
+chmod 644 /dev/cpu/*/msr
 if [ $? -ne 0 ]; then
 	echo "failed!"
 	exit
