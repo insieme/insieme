@@ -52,45 +52,6 @@
 // non-derived metrics (directly obtained from the runtime)
 
 // metrics offered by the runtime
-METRIC(TIMESTAMP_START,		"timestamp_start_(ns)",		ns,			none);
-METRIC(TIMESTAMP_END,		"timestamp_end_(ns)",		ns,			none);
-
-METRIC(VIRT_MEM_START,		"virt_memory_start_(kb)",	kb,			none);
-METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
-
-METRIC(RES_MEM_START,		"res_memory_start_(kb)",	kb,			none);
-METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
-
-METRIC(ENERGY_PACKAGE_1_START,          "energy_package_1_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_1_END,                    "energy_package_1_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_1_START,            "energy_cores_1_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_1_END,                      "energy_cores_1_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_1_START,               "energy_mc_1_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_1_END,                 "energy_mc_1_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_2_START,          "energy_package_2_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_2_END,                    "energy_package_2_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_2_START,            "energy_cores_2_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_2_END,                      "energy_cores_2_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_2_START,               "energy_mc_2_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_2_END,                 "energy_mc_2_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_3_START,          "energy_package_3_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_3_END,                    "energy_package_3_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_3_START,            "energy_cores_3_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_3_END,                      "energy_cores_3_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_3_START,               "energy_mc_3_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_3_END,                 "energy_mc_3_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_4_START,          "energy_package_4_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_4_END,                    "energy_package_4_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_4_START,            "energy_cores_4_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_4_END,                      "energy_cores_4_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_4_START,               "energy_mc_4_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_4_END,                 "energy_mc_4_end_(j)",                  j,                      none);
-
-METRIC(TEMPERATURE_CORE_START,	"temperature_core_start_(c)",	c,			none);
-METRIC(TEMPERATURE_CORE_END,		"temperature_core_end_(c)",		c,			none);
-METRIC(TEMPERATURE_PACKAGE_START,	"temperature_pkg_start_(c)",	c,			none);
-METRIC(TEMPERATURE_PACKAGE_END,		"temperature_pkg_end_(c)",		c,			none);	
-
 METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
 METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
 METRIC(NUM_EXEC,			"num_executions",			unit,		none);
@@ -208,45 +169,24 @@ METRIC(PAPI_VEC_SP,			"PAPI_VEC_SP",				unit,		none);
 METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
-METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
+// TODO: placeholder, needs to be fixed with RAPL on kernels newer than 3.5
+METRIC(TOTAL_ENERGY,					"total_energy",				j, 			none);
+METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			unit,			none);
+//METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
+//METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
+//METRIC(NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));	
 
-METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
-METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
-METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));	
+METRIC(AVG_WALL_TIME,				"avg_wall_time",			ns,			div(Metric::WALL_TIME, Metric::NUM_EXEC));
+METRIC(AVG_CPU_TIME,				"avg_cpu_time",				ns,			div(Metric::CPU_TIME, Metric::NUM_EXEC));
 
-METRIC(AVG_WALL_TIME,				"avg_wall_time",			ns,			div(Metric::TOTAL_WALL_TIME, Metric::TOTAL_NUM_EXEC));
-METRIC(AVG_CPU_TIME,				"avg_cpu_time",				ns,			div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_NUM_EXEC));
-
-METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
+METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::CPU_TIME, Metric::WALL_TIME));
 //METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
-METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
-METRIC(LOAD_VARIANCE,				"load_variance",			unit,		var(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
-
-METRIC(TOTAL_ENERGY_PACKAGE_1,                          "total_energy_package_1",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_1_END, Metric::ENERGY_PACKAGE_1_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_2,                          "total_energy_package_2",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_2_END, Metric::ENERGY_PACKAGE_2_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_3,                          "total_energy_package_3",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_3_END, Metric::ENERGY_PACKAGE_3_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_4,                          "total_energy_package_4",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_4_END, Metric::ENERGY_PACKAGE_4_START)));
-METRIC(TOTAL_ENERGY_CORES_1,                            "total_energy_cores_1",                         j,                      first(l_sub(Metric::ENERGY_CORES_1_END, Metric::ENERGY_CORES_1_START)));
-METRIC(TOTAL_ENERGY_CORES_2,                            "total_energy_cores_2",                         j,                      first(l_sub(Metric::ENERGY_CORES_2_END, Metric::ENERGY_CORES_2_START)));
-METRIC(TOTAL_ENERGY_CORES_3,                            "total_energy_cores_3",                         j,                      first(l_sub(Metric::ENERGY_CORES_3_END, Metric::ENERGY_CORES_3_START)));
-METRIC(TOTAL_ENERGY_CORES_4,                            "total_energy_cores_4",                         j,                      first(l_sub(Metric::ENERGY_CORES_4_END, Metric::ENERGY_CORES_4_START)));
-METRIC(TOTAL_ENERGY_MC_1,                               "total_energy_mc_1",                            j,                      first(l_sub(Metric::ENERGY_MC_1_END, Metric::ENERGY_MC_1_START)));
-METRIC(TOTAL_ENERGY_MC_2,                               "total_energy_mc_2",                            j,                      first(l_sub(Metric::ENERGY_MC_2_END, Metric::ENERGY_MC_2_START)));
-METRIC(TOTAL_ENERGY_MC_3,                               "total_energy_mc_3",                            j,                      first(l_sub(Metric::ENERGY_MC_3_END, Metric::ENERGY_MC_3_START)));
-METRIC(TOTAL_ENERGY_MC_4,                               "total_energy_mc_4",                            j,                      first(l_sub(Metric::ENERGY_MC_4_END, Metric::ENERGY_MC_4_START)));
-METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, add(Metric::TOTAL_ENERGY_PACKAGE_2, add(Metric::TOTAL_ENERGY_PACKAGE_3, Metric::TOTAL_ENERGY_PACKAGE_4))));
-
-METRIC(AVG_TEMPERATURE_CORE_START,							"avg_temperature_core_start",						c,				avg(Metric::TEMPERATURE_CORE_START));
-METRIC(AVG_TEMPERATURE_CORE_END,								"avg_temperature_core_end",							c,				avg(Metric::TEMPERATURE_CORE_END));
-METRIC(AVG_TEMPERATURE_PACKAGE_START,							"avg_temperature_pkg_start",						c,				avg(Metric::TEMPERATURE_PACKAGE_START));
-METRIC(AVG_TEMPERATURE_PACKAGE_END,								"avg_temperature_pkg_end",							c,				avg(Metric::TEMPERATURE_PACKAGE_END));
-
-//METRIC(TOTAL_TEMPERATURE,								"total_temperature",							c,				avg(Metric::TEMPERATURE_START, Metric::TEMPERATURE_END));
+//METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
+//METRIC(LOAD_VARIANCE,				"load_variance",			unit,		var(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
 
 // TODO: re-enable when number of workers is fixed for regions 
 //METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
-METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
+//METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
 
 // METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
 
@@ -365,7 +305,7 @@ METRIC(TOTAL_DP_OPS,			"total_PAPI_DP_OPS",				unit,		sum(list(Metric::PAPI_DP_O
 METRIC(TOTAL_VEC_SP,			"total_PAPI_VEC_SP",				unit,		sum(list(Metric::PAPI_VEC_SP)));
 METRIC(TOTAL_VEC_DP,			"total_PAPI_VEC_DP",				unit,		sum(list(Metric::PAPI_VEC_DP)));
 
-METRIC(TOTAL_INS_PER_SEC,		"total_ins_per_sec",				unit,		div(Metric::TOTAL_TOT_INS, Metric::TOTAL_CPU_TIME));
+//METRIC(TOTAL_INS_PER_SEC,		"total_ins_per_sec",				unit,		div(Metric::TOTAL_TOT_INS, Metric::TOTAL_CPU_TIME));
 
 
 #undef METRIC

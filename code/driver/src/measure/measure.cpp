@@ -105,9 +105,10 @@ namespace measure {
 				// aggregation, i.e. when a metric occurs exactly once - for metrics occurring more often,
 				// we'd lose information and hence bail out with an invalid quantity as a result
 				vector<Quantity> res = data.getAll(region, metric);
-				if(res.size() == 1)
+				if(res.size() == 1) {
+					std::cout << res[0] << "\n";
 					return res[0];
-				else
+				} else
 					return Quantity::invalid(metric->getUnit());
 			}
 			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
@@ -782,19 +783,19 @@ namespace measure {
 			auto regionID = build.uintLit(id);
 
 			// check whether instrumented target is a pfor call
-			if (stmt->getNodeCategory() == core::NC_Expression) {
-				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
-				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
-					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
-
-					// build attribute to be added
-					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
-
-					// create attributed version of pfor call
-					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
-							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
-				}
-			}
+//			if (stmt->getNodeCategory() == core::NC_Expression) {
+//				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
+//				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
+//					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
+//
+//					// build attribute to be added
+//					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
+//
+//					// create attributed version of pfor call
+//					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
+//							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
+//				}
+//			}
 
 			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
@@ -1012,13 +1013,28 @@ namespace measure {
 				}
 				assert(bfs::exists(workdir) && "Working-Directory already present!");
 
-				// assemble PAPI-counter environment variable
+				// setup runtime system metric selection
 				std::map<string,string> mod_env = env;
+				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "true";
+
+				// join metric names while dropping the unit suffix (TODO: change metric names to not contain the unit by default)
+				string metric_selection;
+				for(auto metric : metrics) {
+					string metric_name = metric->getName();
+					int index = metric_name.find_first_of("(");
+					if(index > 0)
+						metric_name.erase(index);
+					metric_selection += metric_name + ",";
+				}
+				metric_selection.erase(metric_selection.size()-1);
+
+				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
+
+				// assemble PAPI-counter environment variable
 				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
 					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
 				}
 
-				mod_env["IRT_ENABLE_REGION_INSTRUMENTATION"] = "true";
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
