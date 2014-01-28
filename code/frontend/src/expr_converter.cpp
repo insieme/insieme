@@ -1663,7 +1663,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 
 	// get compound stmt and convert to ir
 	const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
-	inner->dump();
 	core::StatementPtr subStmtIr = convFact.convertStmt(inner);
 
 	//FIXME: tryAggregateStmts in stmt_wrapper _removes_ compoundStmt if compoundStmt contains only one stmt
