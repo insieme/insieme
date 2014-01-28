@@ -58,6 +58,38 @@ namespace cba {
 	 */
 
 
+	template<typename Context>
+	class Place {
+
+		/**
+		 * A place can either be:
+		 * 		- a thread region
+		 * 		- a channel buffer
+		 * 		- a auxiliary construct for non-deterministic choices
+		 */
+
+	};
+
+	template<typename Context>
+	class Transition {
+
+		/**
+		 * A transition can be:
+		 * 		- a spawn
+		 * 		- a merge
+		 * 		- a redistribute
+		 * 		- a channel send / recv operation
+		 */
+	};
+
+	template<typename Context>
+	class ExecutionNet :
+			public utils::petri_net::PetriNet<Place<Context>, Transition<Context>>,
+			public utils::Printable
+	{
+
+	};
+
 
 } // end namespace cba
 } // end namespace analysis
