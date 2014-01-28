@@ -13,6 +13,10 @@ int main(int argc, char** argv) {
 
     out << "#ifndef _INPUT_FILE_H_\n";
     out << "#define _INPUT_FILE_H_\n\n";
+    
+    // The following is needed by our version of stdio.h
+    out << "#include <assert.h>\n\n";
+    out << "long input_file_pos = 0;\n\n";
 
     out << "const char input_file[] = {\n\t";
 

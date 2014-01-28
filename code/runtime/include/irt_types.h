@@ -41,7 +41,7 @@
 /* ------------------------------ data structures ----- */
 
 typedef enum _irt_type_kind {
-	IRT_T_BOOL,
+	IRT_T_VOID, IRT_T_BOOL,
 	IRT_T_INT8, IRT_T_INT16, IRT_T_INT32, IRT_T_INT64,
 	IRT_T_UINT8, IRT_T_UINT16, IRT_T_UINT32, IRT_T_UINT64,
 	IRT_T_REAL16, IRT_T_REAL32, IRT_T_REAL64,

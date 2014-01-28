@@ -36,43 +36,70 @@
 
 #pragma once
 
-#include <set>
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
 
-#include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/utils/cba_utils.h"
+#include "insieme/utils/printable.h"
+#include "insieme/utils/hash_utils.h"
+
+#include "insieme/analysis/cba/framework/entities/program_point.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	/**
-	 * The main facade function for utilizing the constraint-based analysis framework (CBA).
-	 *
-	 * Analysis are capable of deducing values of expressions within a given code fragment. The fragment
-	 * is determined by the root node of the given expr-address, while the expression itself is addressing
-	 * the targeted expression. The kind of information to be obtained can be determined by the type
-	 * parameter and potential parameters is determined by the type parameter. A catalog of those is
-	 * provided by the header files located within the cba/analysis directory. Additional analysis
-	 * may be defined for specific tasks.
-	 *
-	 * For Example usages see the
-	 *
-	 * 						ut_analysis_cba_facade.cc
-	 *
-	 * test case.
-	 *
-	 *
-	 * @param expr the expressions which's values should be determined by the analysis
-	 * @param type the the type analysis result to be obtained
-	 * @param ctxt the optional context the given input expression should be considered in
-	 * @return a reference to a set of values representing the result of the analysis
+	 * A thread region is a path between two sync points within a thread. It is the basic
+	 * unit for composing the petri net modeling the parallel execution of a application
+	 * within the CBA framework.
 	 */
-	template<typename A, typename Context = DefaultContext>
-	const typename lattice<A>::type::value_type& getValues(const core::ExpressionAddress& expr, const A& type, const Context& ctxt = Context()) {
-		// just forward call to cached CBA instance
-		return getCBA(expr).getValuesOf(expr, type, ctxt);
-	}
+	template<typename Context>
+	class ThreadRegion : public utils::Printable {
+
+		/**
+		 * The beginning of the region.
+		 */
+		ProgramPoint<Context> begin;
+
+		/**
+		 * The end of the region.
+		 */
+		ProgramPoint<Context> end;
+
+	public:
+
+		ThreadRegion(const ProgramPoint<Context>& begin, const ProgramPoint<Context>& end)
+			: begin(begin), end(end) {
+			// make sure the start and end point is within the same thread
+			assert_eq(begin.getContext().threadContext, end.getContext().threadContext);
+		}
+
+
+		const ProgramPoint<Context>& getBegin() const {
+			return begin;
+		}
+
+		const ProgramPoint<Context>& getEnd() const {
+			return end;
+		}
+
+		bool operator==(const ThreadRegion<Context>& other) const {
+			if (this == &other) return true;
+			return begin == other.begin && end == other.end;
+		}
+
+		bool operator<(const ThreadRegion<Context>& other) const {
+			return begin < other.begin || (begin == other.begin && end < other.end);
+		}
+
+		/**
+		 * Allows this object to be printed to any output stream (in a somewhat readable manner).
+		 */
+		std::ostream& printTo(std::ostream& out) const {
+			return out << begin << " - " << end;
+		}
+	};
+
 
 } // end namespace cba
 } // end namespace analysis

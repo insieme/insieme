@@ -428,7 +428,8 @@ namespace backend {
 
 			// try find a match
 			if (basic.isUnit(ptr) || basic.isAny(ptr)) {
-				return type_info_utils::createInfo(manager, "void");
+				c_ast::TypePtr voidType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void);
+				return type_info_utils::createInfo(voidType);
 			}
 
 			// ------------ integers -------------

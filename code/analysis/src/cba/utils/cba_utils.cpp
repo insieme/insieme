@@ -39,11 +39,26 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/analysis/cba/framework/cba.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
 
 	using namespace core;
+
+	CBA& getCBA(const NodeAddress& node) {
+		typedef std::shared_ptr<CBA> CBA_Ptr;
+
+		// obtain CBA context from root node
+		core::StatementAddress root = getAnalysisRoot(node);
+		if (!root->hasAttachedValue<CBA_Ptr>()) {
+			root->attachValue<CBA_Ptr>(std::make_shared<CBA>(root));
+		}
+
+		// run analysis
+		return *root->getAttachedValue<CBA_Ptr>();
+	}
 
 	NodeAddress getSurroundingFreeFunction(const NodeAddress& cur) {
 		static const ExpressionAddress none;
@@ -283,6 +298,32 @@ namespace cba {
 				base.isChannelSend(fun) ||
 				base.isChannelRecv(fun) ||
 				base.isRedistribute(fun);
+	}
+
+	namespace detail {
+
+		bool isThreadBody(const StatementAddress& stmt) {
+			// the root is a thread starter
+			if (getAnalysisRoot(stmt) == stmt) return true;
+
+			// if it is the body of a free lambda it is also a thread starter
+			auto freeFun = getSurroundingFreeFunction(stmt);
+			if (!freeFun) return false;
+
+			// in case the surrounding callable is a bind => handle it
+			if (auto bind = freeFun.isa<BindExprAddress>()) {
+				return stmt == bind->getCall();
+			}
+
+			// in case it it is a function, handle it as well
+			if (auto lambda = freeFun.isa<LambdaAddress>()) {
+				return stmt == lambda->getBody();
+			}
+
+			// it is not a thread starter otherwise
+			return false;
+		}
+
 	}
 
 } // end namespace cba

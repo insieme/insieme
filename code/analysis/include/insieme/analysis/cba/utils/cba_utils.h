@@ -43,6 +43,10 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	class CBA;
+
+	CBA& getCBA(const core::NodeAddress& node);
+
 	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
 
 	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
@@ -69,6 +73,30 @@ namespace cba {
 	 * Checks whether the given function has a syncronizing effect on threads.
 	 */
 	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
+
+
+
+	namespace detail {
+		/**
+		 * Checks whether the given statement is a potential entry point for a thread.
+		 */
+		bool isThreadBody(const core::StatementAddress& stmt);
+	}
+
+	/**
+	 * Checks whether the given stmt / context combination is a potential body of a thread.
+	 */
+	template<typename Context>
+	bool isThreadBody(const core::StatementAddress& stmt, const Context& ctxt) {
+		typedef typename Context::call_context call_context_type;
+
+		// check context
+		static const call_context_type empty;
+		if (ctxt.callContext != empty) return false;
+
+		// check statement
+		return detail::isThreadBody(stmt);
+	}
 
 } // end namespace cba
 } // end namespace analysis

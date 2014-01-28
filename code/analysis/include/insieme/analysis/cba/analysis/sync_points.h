@@ -100,7 +100,7 @@ namespace cba {
 			value_id_type SPs(value);
 
 			//  - the exit-point of the application is a sync point
-			ProgramPoint<Context> end(ProgramPoint<Context>::Out, cba.getRoot(), Context());
+			ProgramPoint<Context> end(ProgramPoint<Context>::Out, getAnalysisRoot(cba.getRoot()), Context());
 			constraints.add(elem(end, SPs));
 
 			//  - all reaching sync points of sync points are sync points

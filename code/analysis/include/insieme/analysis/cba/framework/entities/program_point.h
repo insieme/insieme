@@ -38,6 +38,7 @@
 
 #include <boost/operators.hpp>
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 
 #include "insieme/utils/printable.h"
@@ -102,6 +103,13 @@ namespace cba {
 		 */
 		const Context& getContext() const {
 			return ctxt;
+		}
+
+		/**
+		 * Obtains the processing phase of the referenced statement.
+		 */
+		State getState() const {
+			return state;
 		}
 
 		/**

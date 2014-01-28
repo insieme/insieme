@@ -39,7 +39,7 @@
 
 #include "insieme/analysis/cba/cba.h"
 #include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/analysis/sync_points.h"
+#include "insieme/analysis/cba/analysis/thread_regions.h"
 #include "insieme/core/ir_builder.h"
 
 #include "cba_test.inc.h"
@@ -69,9 +69,9 @@ namespace cba {
 
 		CBA analysis(code);
 
-		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
-		EXPECT_EQ(2, syncPoints.size());
-		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]],O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(syncPoints));
+		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
+		EXPECT_EQ(1, regions.size());
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(regions));
 
 //		createDotDump(analysis);
 	}
@@ -94,16 +94,14 @@ namespace cba {
 
 		CBA analysis(code);
 
-		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
-		ASSERT_EQ(5, syncPoints.size());
+		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
+		EXPECT_EQ(3, regions.size());
 
-		auto resStr = toString(syncPoints);
+		auto resStr = toString(regions);
 
-		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
-		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
-		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the thread spawn operation
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from creation - spawn
+		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from spawn - end
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");				// spawned thread
 
 //		createDotDump(analysis);
 	}
@@ -132,23 +130,17 @@ namespace cba {
 		EXPECT_EQ(1,analysis.getLabel(code[1]));
 		EXPECT_EQ(2,analysis.getLabel(code[3]));
 
-		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
-		EXPECT_EQ(8, syncPoints.size());
+		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
+		EXPECT_EQ(5, regions.size());
 
-		auto resStr = toString(syncPoints);
+		auto resStr = toString(regions);
 
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
 
-		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the program start
-		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the program end
-
-		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 1. thread spawn operation
-		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 2. thread spawn operation
-
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 1. thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the 1. thread
-
-		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 2. thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the end of the 2. thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}
@@ -183,23 +175,28 @@ namespace cba {
 		EXPECT_EQ(1,analysis.getLabel(code[2]));
 		EXPECT_EQ(2,analysis.getLabel(code[3]));
 
-		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
+		EXPECT_EQ(7, regions.size());
 
-		EXPECT_EQ(10, syncPoints.size());
-		auto resStr = toString(syncPoints);
+		auto resStr = toString(regions);
 
-		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
-		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
-		EXPECT_PRED2(containsSubString, resStr, "T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the first thread
-		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the second thread
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the first thread
-		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the first thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");					// the end of the first thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - O0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the begin of the second thread
-		EXPECT_PRED2(containsSubString, resStr, "T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the second thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the end of the second thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");
+
+//		I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]
+//		T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]
+//		I0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]
+//		T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - O0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]
+//		T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]
+//		I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]
+//		T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]
 
 //		createDotDump(analysis);
 	}
