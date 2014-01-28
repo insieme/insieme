@@ -165,7 +165,7 @@ IF (DO_GOOGLE_PROFILING)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${GPERFTOOLS_HOME}/lib -lprofiler")
 ENDIF ()
 
-# -------------------------------------------------------------- LLVM / CLANG 2.8 libraries
+# -------------------------------------------------------------- LLVM / CLANG  3.4 libraries
 
 #Fix LLVM path
 if(NOT DEFINED LLVM_HOME)
@@ -218,8 +218,7 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-	#set(llvm_LList  LLVM-3.0 )
-	set(llvm_LList  LLVM-3.2 )
+	set(llvm_LList  LLVM-3.4 )
     set(clang_LList clang ${clang_LList})
 endif(MSVC)
 

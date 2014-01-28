@@ -284,7 +284,10 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	core::TypeList argTypes;
 	std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 		[ &argTypes, this ] (const QualType& currArgType) {
+
+
 			core::TypePtr&& argTy = this->convert( currArgType.getTypePtr() );
+
 
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
@@ -603,6 +606,33 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 	return retTy;
 }
 
+
+core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decTy) {
+	
+	core::TypePtr&& subTy = convert( decTy->getPointeeType().getTypePtr() );
+	// ~~~~~ Handling of special cases ~~~~~~~
+	// void* -> array<'a>
+	if( gen.isUnit(subTy) ) {
+		return gen.getAnyRef();
+	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
+		subTy : builder.refType(builder.arrayType( subTy ));
+
+    // Function pointers are IR function but 
+    // pointers of function pointers should be IR array of functions
+    // hence we must stop recursion
+    auto innerPtr = decTy->getPointeeType(); 
+    if(innerPtr->isPointerType()) {
+            if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
+                subTy = convert(innerPtr->getPointeeType().getTypePtr());
+	            retTy = builder.refType(builder.arrayType( subTy ));
+            }
+    }
+
+	LOG_TYPE_CONVERSION( decTy, retTy );
+	return retTy;
+}
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {

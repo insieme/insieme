@@ -951,7 +951,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 	//auto retTy = builder.refType(convFact.convertType(typeidExpr->getType().getTypePtr()));
 	core::ExpressionPtr expr;
 	if(typeidExpr->isTypeOperand()) {
-		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand().getTypePtr()));
+		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand(convFact.getCompiler().getASTContext()).getTypePtr()));
 	} else {
 		expr = Visit(typeidExpr->getExprOperand());
 	}

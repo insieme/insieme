@@ -83,6 +83,7 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	DECLARE_TYPE_VISIT(TypeConverter, ParenType)
 	DECLARE_TYPE_VISIT(TypeConverter, PointerType)
+	DECLARE_TYPE_VISIT(TypeConverter, DecayedType)
 
 	// main entry point
 	core::TypePtr convert(const clang::Type* type);
@@ -130,6 +131,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
 
 protected:
 
@@ -170,6 +172,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfExprType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  C++ specific types

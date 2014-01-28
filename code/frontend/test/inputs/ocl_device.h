@@ -105,6 +105,8 @@
 #define ivec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v; typedef __attribute__((ext_vector_type(v))) unsigned T u##T##v;
 #define fvec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v;
 
+typedef int bool;
+
 typedef __attribute__((ext_vector_type(2))) bool bool2;
 typedef __attribute__((ext_vector_type(3))) bool bool3;
 typedef __attribute__((ext_vector_type(4))) bool bool4;
