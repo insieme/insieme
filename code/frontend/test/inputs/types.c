@@ -181,12 +181,9 @@ struct D1 {
 	int val;
 };
 
-
-void* malloc(int);
-
 void mem_alloc() {
 
-	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(malloc(4), type<array<int<4>,1>>))"
+	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(malloc(4ul), type<array<int<4>,1>>))"
 	int* a = malloc(4);
 	free(a); // make the static checks happy
 }
