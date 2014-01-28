@@ -909,15 +909,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
 
-	std::cout << " =============== Materialize! =================" << std::endl;
-	materTempExpr->dump();
-	std::cout << "inner: " << std::endl;
-	dumpPretty(retIr);
-	std::cout << "type: " << std::endl;
-	dumpPretty(retIr->getType());
-	std::cout << "expected: " << std::endl;
-	core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
-	dumpPretty(t);
+	if(VLOG_IS_ON(2)){
+		std::cout << " =============== Materialize! =================" << std::endl;
+		materTempExpr->dump();
+		std::cout << "inner: " << std::endl;
+		dumpPretty(retIr);
+		std::cout << "type: " << std::endl;
+		dumpPretty(retIr->getType());
+		std::cout << "expected: " << std::endl;
+		core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
+		dumpPretty(t);
+	}
 
 	//if (! t.isa<core::RefTypePtr>())
 	//	return retIr;
