@@ -210,6 +210,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ParenExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -280,6 +281,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ParenExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
 
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXConstructExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXNewExpr)
