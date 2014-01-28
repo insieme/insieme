@@ -44,6 +44,7 @@
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
+#include "insieme/backend/name_manager.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -64,26 +65,56 @@ namespace addons {
 				return NOT_HANDLED;	// not handled by this handler
 			}
 
-			// build up TypeInfo for C++ reference
 			TypeManager& typeManager = converter.getTypeManager();
+			auto manager = converter.getCNodeManager();
+
+			// build up TypeInfo for C++ reference
 
 			// determine const flag
 			bool isConst = core::analysis::isConstCppRef(type);
 
 			// get information regarding base type
-			const TypeInfo& baseInfo = typeManager.getTypeInfo(core::analysis::getCppRefElementType(type));
+			core::TypePtr innType = core::analysis::getCppRefElementType(type);
+			const TypeInfo& baseInfo = typeManager.getTypeInfo(innType);
 
-			// copy base information
-			TypeInfo* refInfo = new TypeInfo(baseInfo);
+			// if the inner type is somehow complex, we extract it in a typedef
+			if((innType.isa<core::RefTypePtr>()) && (innType.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) {
+				c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
 
-			// alter r / l / external C type
-			refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
+				// construct a typedef for the inner type, this saves us from pains
+				TypeInfo* res = new TypeInfo(baseInfo);
+				c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(baseInfo.rValueType, typeName);
+				
+				// construct decl and def
+				res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
+				res->definition = res->declaration;
 
-			refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
+				// dependencies
+				res->declaration->addDependency (baseInfo.declaration);
 
-			refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
+				// R / L value names
+				res->rValueType = c_ast::ref(manager->create<c_ast::NamedType>(typeName), isConst);
+				res->lValueType = 	res->rValueType;
 
-			return refInfo;
+				// external type handling
+				res->externalType = res->rValueType;
+				res->externalize = &type_info_utils::NoOp;
+				res->internalize = &type_info_utils::NoOp;
+				return res;
+
+			// otherwise we proceed as ususal
+			}
+			else{
+				// copy base information
+				TypeInfo* refInfo = new TypeInfo(baseInfo);
+				
+				// alter r / l / external C type
+				refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
+				refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
+				refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
+
+				return refInfo;
+			}
 		}
 
 

@@ -58,32 +58,6 @@ namespace cba {
 	 */
 
 
-	template<typename Context>
-	class ThreadRegion : public utils::Printable {
-
-		/**
-		 * The beginning of the region.
-		 */
-		ProgramPoint<Context> begin;
-
-		/**
-		 * The end of the region.
-		 */
-		ProgramPoint<Context> end;
-
-	public:
-
-		ThreadRegion(const ProgramPoint<Context>& begin, const ProgramPoint<Context>& end)
-			: begin(begin), end(end) {}
-
-		/**
-		 * Allows this object to be printed to any output stream (in a somewhat readable manner).
-		 */
-		std::ostream& printTo(std::ostream& out) const {
-			return out << begin << " - " << end;
-		}
-	};
-
 
 } // end namespace cba
 } // end namespace analysis

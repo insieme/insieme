@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -194,8 +194,7 @@ namespace runtime {
 
 			char const * kind = "";
 			switch(type->type) {
-			case c_ast::PrimitiveType::Void:
-				assert(false && "Void should not be part of the type table!"); break;
+			case c_ast::PrimitiveType::Void:   kind = "IRT_T_VOID"; break;
 			case c_ast::PrimitiveType::Bool:   kind = "IRT_T_BOOL"; break;
 			case c_ast::PrimitiveType::Char:   kind = "IRT_T_CHAR"; break;
 			case c_ast::PrimitiveType::Int8:   kind = "IRT_T_INT8"; break;
@@ -316,6 +315,8 @@ namespace runtime {
 			out << "    {" << toC(cur.kind) << ", ";
 			if(cur.type.isa<c_ast::VectorTypePtr>()) {
 				out << "0";
+			} else if (cur.type.isa<c_ast::PrimitiveTypePtr>() && cur.type.as<c_ast::PrimitiveTypePtr>()->type == c_ast::PrimitiveType::Void) {
+				out << "1";
 			} else {
 				out << "sizeof(" << toC(cur.type) << ")";
 			}
