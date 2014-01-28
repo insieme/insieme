@@ -40,6 +40,8 @@
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/name_manager.h"
 
+#include "insieme/backend/backend_config.h"
+
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
@@ -124,7 +126,7 @@ namespace backend {
 
 			// fix name of main entry
 			if (node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
-				context.getConverter().getNameManager().setName(entryPoint, "main");
+				context.getConverter().getNameManager().setName(entryPoint, converter.getConverterConfig()->mainFunctionName);
 			}
 
 			// create a new context

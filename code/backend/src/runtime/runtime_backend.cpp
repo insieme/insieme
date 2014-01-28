@@ -68,6 +68,7 @@
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
 
+#include "insieme/backend/backend_config.h"
 
 namespace insieme {
 namespace backend {
@@ -82,8 +83,14 @@ namespace runtime {
 	}
 
 
-	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation) {
-		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation);
+	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
+        BackendConfigPtr config = std::make_shared<BackendConfig>();
+
+        if(isGemsclaim) {
+            config->mainFunctionName = "insieme_main";
+        }
+
+		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
 		res->addAddOn<addons::CppReferences>();
 		res->addAddOn<addons::CppMembAddon>();
         res->addAddOn<addons::ComplexType>();
@@ -97,7 +104,7 @@ namespace runtime {
 	Converter RuntimeBackend::buildConverter(core::NodeManager& manager) const {
 
 		// create and set up the converter
-		Converter converter(manager, "RuntimeBackend");
+		Converter converter(manager, "RuntimeBackend", config);
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
