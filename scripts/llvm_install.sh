@@ -10,7 +10,7 @@
 #             create an alias to libLLVM-3.2svn.so in $PREFIX/llvm-3.2/libs
 ###########################################################################
 
-VERSION=3.2
+VERSION=3.4
 
 
 CURRENT=`pwd`
@@ -33,7 +33,6 @@ echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 
-cd llvm-$VERSION.src/tools
 wget -nc http://llvm.org/releases/$VERSION/clang-$VERSION.src.tar.gz 
 
 RET=$?
@@ -41,9 +40,11 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-tar -xf clang-$VERSION.src.tar.gz
-mv clang-$VERSION.src clang
-rm -f clang-$VERSION.src.tar.gz
+cd llvm-$VERSION/tools
+
+tar -xf ../../clang-$VERSION.src.tar.gz
+
+mv clang-$VERSION clang
 cd $CURRENT
 
 #echo "******************************************"
@@ -66,7 +67,7 @@ cd $CURRENT
 echo "***********************************"
 echo "* Applying insieme patch to CLANG *"
 echo "***********************************"
-cd llvm-$VERSION.src
+cd llvm-$VERSION
 patch -p1  < $CURRENT/patches/insieme-clang-$VERSION.patch
 
 RET=$?
@@ -82,7 +83,7 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 
 CFLAGS="-mtune=native -O3 -fgraphite-identity -std=c++0x"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" \
-	$CURRENT/llvm-$VERSION.src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
+	$CURRENT/llvm-$VERSION/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
   	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes
 # --enable-doxygen=yes
 
@@ -105,8 +106,9 @@ cd ../
 echo "****************************************"
 echo "* Removing LLVM installation directory *"
 echo "****************************************"
-rm -R llvm-$VERSION.src
+rm -R llvm-$VERSION
 rm -f llvm-$VERSION.src.tar.gz
+rm -f clang-$VERSION.tar.gz
 
 
 #echo "****************************************************************"
@@ -116,6 +118,5 @@ rm -f llvm-$VERSION.src.tar.gz
 
 rm -f $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
-ln -s $PREFIX/llvm-$VERSION/lib/libLLVM-3.2svn.so $PREFIX/llvm-$VERSION/lib/libLLVM-3.2.so
 
 exit 0
