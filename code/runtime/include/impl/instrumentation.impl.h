@@ -491,7 +491,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {}
 
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
 
-typedef struct _irt_inst_region_data {} irt_inst_region_data;
+//typedef struct _irt_inst_region_data {} irt_inst_region_data;   // Typedef is redefined
 
 void irt_inst_region_start(irt_context* context, irt_worker* wi, region_id id) { }
 void irt_inst_region_end(irt_context* context, irt_worker* wi, region_id id) { }
