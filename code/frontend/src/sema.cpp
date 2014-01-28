@@ -159,7 +159,7 @@ const char* strbchr(const char* pos, const char* begin, char c) {
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
-												 clang::MultiStmtArg Elts, bool isStmtExpr) {
+												 llvm::ArrayRef<clang::Stmt*> 	Elts, bool isStmtExpr){
 
 	// we parse the original code segment, within the original locations
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
