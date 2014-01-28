@@ -1658,16 +1658,27 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 
 	// get compound stmt and convert to ir
 	const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
-	core::CompoundStmtPtr innerIr = convFact.convertStmt(inner).as<core::CompoundStmtPtr>();
+	inner->dump();
+	core::StatementPtr subStmtIr = convFact.convertStmt(inner);
+
+	//FIXME: tryAggregateStmts in stmt_wrapper _removes_ compoundStmt if compoundStmt contains only one stmt
+	core::CompoundStmtPtr innerIr = (subStmtIr.isa<core::CompoundStmtPtr>()) ? subStmtIr.as<core::CompoundStmtPtr>() : builder.compoundStmt(subStmtIr);
 
 	// create new body with <returnStmt <expr>> instead of <expr> as last stmt
 	core::StatementList newBody;
 	for(auto it=innerIr->getStatements().begin(); it!=innerIr->getStatements().end()-1; ++it) {
         newBody.push_back(*it);
 	}
-	core::StatementPtr retExpr = convFact.builder.returnStmt((innerIr->getStatements().end()-1)->as<core::ExpressionPtr>());
-    newBody.push_back(retExpr);
+	
 	core::TypePtr lambdaRetType = convFact.convertType(stmtExpr->getType().getTypePtr());
+	core::ExpressionPtr exprToReturn = (innerIr->getStatements().end()-1)->as<core::ExpressionPtr>();
+
+	// fix type
+	if(exprToReturn->getType() != lambdaRetType) {	
+		exprToReturn = utils::cast(exprToReturn, lambdaRetType);
+	}
+	core::StatementPtr retExpr = convFact.builder.returnStmt(exprToReturn);
+    newBody.push_back(retExpr);
 
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(newBody);

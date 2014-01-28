@@ -78,7 +78,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 									  const core::TypePtr& 			trgTy) 
 {
 	// list the all possible conversions 
-	VLOG(2)<< "\t~ Starting converting into Type "<< trgTy->getNodeType();
+	VLOG(2)<< "\t~ Starting converting into Type " << trgTy << "(" << trgTy->getNodeType() << ")";
 	const core::TypePtr& argTy = expr->getType();
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	
