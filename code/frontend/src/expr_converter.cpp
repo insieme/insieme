@@ -1459,22 +1459,27 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	// in C++, string literals with same size may produce an error, do not cast to avoid
 	// weird behaviour
 	if (!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())){
-		trueExpr  = utils::cast(trueExpr, retTy);
-		falseExpr = utils::cast(falseExpr, retTy);
+		if(trueExpr->getType() != falseExpr->getType()) {
+			trueExpr  = utils::cast(trueExpr, retTy);
+			falseExpr = utils::cast(falseExpr, retTy);
+		}
+		else{
+			retTy = trueExpr->getType();
+		}
 	}
 	else{
 		retTy = trueExpr->getType();
 	}
-
+	
 	//be carefull! createCallExpr turns given statements into lazy -- keep it that way
 	return (retIr =
 			builder.callExpr(retTy, gen.getIfThenElse(),
 					condExpr, // Condition
 					builder.createCallExprFromBody(
-							builder.returnStmt(trueExpr), retTy, true
+							builder.returnStmt(trueExpr), trueExpr->getType(), true
 					),// True
 					builder.createCallExprFromBody(
-							builder.returnStmt(falseExpr), retTy, true
+							builder.returnStmt(falseExpr), falseExpr->getType(), true
 					)// False
 			)
 	);
