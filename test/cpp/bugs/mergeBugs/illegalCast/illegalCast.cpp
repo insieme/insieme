@@ -1,19 +1,79 @@
 #include <vector>
+#include <iostream>
 
 class Triangle {
+	int memberInt;
 public:
 	std::vector<int> base;
+
+	//----
 	const int& test(int i) const {
 		return (i==0) ? base[0] : base[1];
 	}
+	
+	/*
+	const int& test(int i) {
+		return (i==0) ? base[0] : base[1];
+	}
+	*/
 
+	//----
+	const int& test1(int i) const {
+		return base[0];
+	}
+	
+	int testX(int i) const {
+		return base[0];
+	}
+	
+	int test2(int i) {
+		return (i==0) ? test1(i):base[0];
+	}
+	
+	const int& test3(int i) {
+		return (i==0) ? test1(i):base[0];
+	}
+	
+	int test4(int i) {
+		return (i==0) ? testX(i):base[0];
+	}
+	
+	const int& test5(int i) {
+		return (i==0) ? testX(i):base[0];
+	}
 };
 
 int main() {
 	Triangle t;
 	t.base.push_back(0); //don't worry about this one, doesn't produce any errors
 	t.base.push_back(1); //don't worry about this one, doesn't produce any errors
-	t.test(1);
+	{
+		std::cout << t.test(1) << std::endl;
+		std::cout << t.test1(1) << std::endl;
+		std::cout << t.testX(1) << std::endl;
+		std::cout << t.test2(1) << std::endl;
+		std::cout << t.test3(1) << std::endl;
+		std::cout << t.test4(1) << std::endl;
+		std::cout << t.test5(1) << std::endl;
+	}
+	{
+		int i;
+		i= t.test(1);
+		std::cout << i << std::endl;
+		i= t.test1(1);
+		std::cout << i << std::endl;
+		i= t.testX(1);
+		std::cout << i << std::endl;
+		i= t.test2(1);
+		std::cout << i << std::endl;
+		i= t.test3(1);
+		std::cout << i << std::endl;
+		i= t.test4(1);
+		std::cout << i << std::endl;
+		i= t.test5(1);
+		std::cout << i << std::endl;
+	}
+
 	return 0;
 }
 
