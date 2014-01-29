@@ -124,6 +124,11 @@ void insieme_init_context_nested(irt_context* context) {
 	context->num_regions = 2;
 }
 
+void insieme_init_context_nested_multiple(irt_context* context) {
+	insieme_init_context_common(context);
+	context->num_regions = 5;
+}
+
 void insieme_cleanup_context(irt_context* context) {
 	// nothing
 }
@@ -153,7 +158,7 @@ void insieme_wi_startup_implementation_multiple_metrics(irt_work_item* wi) {
 	ir_inst_region_end(0);
 
 	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
-	EXPECT_GT(reg0->aggregated_cpu_time, 0);
+	EXPECT_GT(reg0->aggregated_cpu_time, 8e8);
 	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
 	EXPECT_GT(reg0->aggregated_wall_time, 8e8);
 	EXPECT_LT(reg0->aggregated_wall_time, 1e10);
@@ -162,25 +167,66 @@ void insieme_wi_startup_implementation_multiple_metrics(irt_work_item* wi) {
 
 void insieme_wi_startup_implementation_nested(irt_work_item* wi) {
 
-	irt_inst_select_region_instrumentation_metrics("cpu_time");
+	irt_inst_select_region_instrumentation_metrics("cpu_time,wall_time");
 
 	ir_inst_region_start(0);
-	ir_inst_region_start(1);
-	ir_inst_region_end(1);
+		sleep(1);
+		ir_inst_region_start(1);
+			sleep(1);
+			ir_inst_region_start(2);
+				sleep(1);
+			ir_inst_region_end(2);
+			ir_inst_region_start(3);
+				ir_inst_region_start(4);
+					sleep(1);
+				ir_inst_region_end(4);
+				sleep(1);
+			ir_inst_region_end(3);
+		ir_inst_region_end(1);
 	ir_inst_region_end(0);
 
 	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 	irt_inst_region_struct* reg1 = &(irt_context_get_current()->inst_region_data[1]);
-	EXPECT_GT(reg0->aggregated_cpu_time, 0);
-	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
-	EXPECT_GT(reg1->aggregated_cpu_time, 0);
-	EXPECT_LT(reg1->aggregated_cpu_time, 1e10);
+	irt_inst_region_struct* reg2 = &(irt_context_get_current()->inst_region_data[2]);
+	irt_inst_region_struct* reg3 = &(irt_context_get_current()->inst_region_data[3]);
+	irt_inst_region_struct* reg4 = &(irt_context_get_current()->inst_region_data[4]);
+	
+	// note: all time values in the runtime are clock ticks and only converted to ns during output
+	EXPECT_GT(reg0->aggregated_cpu_time, 1e9);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e11);
+	EXPECT_GT(reg0->aggregated_wall_time, 1e9);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e11);
+
+	EXPECT_GT(reg1->aggregated_cpu_time, 1e9);
+	EXPECT_LT(reg1->aggregated_cpu_time, 1e11);
+	EXPECT_GT(reg1->aggregated_wall_time, 1e9);
+	EXPECT_LT(reg1->aggregated_wall_time, 1e11);
+
+	EXPECT_GT(reg2->aggregated_cpu_time, 1e9);
+	EXPECT_LT(reg2->aggregated_cpu_time, 1e11);
+	EXPECT_GT(reg2->aggregated_wall_time, 1e9);
+	EXPECT_LT(reg2->aggregated_wall_time, 1e11);
+
+	EXPECT_GT(reg3->aggregated_cpu_time, 1e9);
+	EXPECT_LT(reg3->aggregated_cpu_time, 1e11);
+	EXPECT_GT(reg3->aggregated_wall_time, 1e9);
+	EXPECT_LT(reg3->aggregated_wall_time, 1e11);
+
+	EXPECT_GT(reg4->aggregated_cpu_time, 1e9);
+	EXPECT_LT(reg4->aggregated_cpu_time, 1e11);
+	EXPECT_GT(reg4->aggregated_wall_time, 1e9);
+	EXPECT_LT(reg4->aggregated_wall_time, 1e11);
+	
 	EXPECT_GT(reg0->aggregated_cpu_time, reg1->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg2->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg3->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg4->aggregated_cpu_time);
+	EXPECT_GT(reg3->aggregated_cpu_time, reg4->aggregated_cpu_time);
 }
 
 void insieme_wi_startup_implementation_repeated_execution(irt_work_item* wi) {
 
-	irt_inst_select_region_instrumentation_metrics("cpu_time");
+	irt_inst_select_region_instrumentation_metrics("cpu_time,wall_time");
 
 	irt_inst_region_struct* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 
@@ -289,7 +335,7 @@ TEST(region_instrumentation, multiple_metrics) {
 
 TEST(region_instrumentation, nested) {
 	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_nested, &insieme_cleanup_context, 2, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context_nested_multiple, &insieme_cleanup_context, 2, NULL);
 }
 
 TEST(region_instrumentation, repeated_execution) {

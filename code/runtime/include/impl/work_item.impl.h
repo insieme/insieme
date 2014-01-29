@@ -297,7 +297,7 @@ void irt_wi_end(irt_work_item* wi) {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	if(wi->inst_region_list->length > 0) {
 		irt_inst_region_end_measurements(wi);
-		irt_inst_propagate_data_from_wi_to_cur_region(wi);
+		irt_inst_propagate_data_from_wi_to_regions(wi);
 	}
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);

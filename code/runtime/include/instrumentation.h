@@ -116,14 +116,14 @@ typedef uint32 region_id;
 uint32 irt_g_inst_metric_count = 0;
 uint32 irt_g_inst_group_count = 0;
 
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 uint32 irt_g_metric_##_name__##_id;
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_metric_group_##_name__##_id;
 #include "irt_metrics.def"
 
 // create metric flags and group counts for selectively enabling/disabling instrumentation
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 bool irt_g_inst_measure_##_name__ = false;
 #define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_inst_group_##_name__##membership_count = 0;
@@ -149,14 +149,14 @@ typedef struct {
 	uint64 num_entries;
 	uint64 num_exits;
 	irt_spinlock lock;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ last_##_name__; \
 	_data_type__ aggregated_##_name__;
 #include "irt_metrics.def"
 } irt_inst_region_struct;
 
 typedef struct {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ last_##_name__; \
 	_data_type__ aggregated_##_name__;
 #include "irt_metrics.def"
@@ -179,8 +179,7 @@ void irt_inst_metrics_finalize();
 void irt_inst_select_region_instrumentation_metrics(const char* selection);
 void irt_inst_set_region_instrumentation_from_env();
 irt_inst_region_struct* irt_inst_region_get_current();
-void irt_inst_propagate_data_from_cur_region_to_parent(irt_work_item* wi);
-void irt_inst_propagate_data_from_wi_to_cur_region(irt_work_item* wi);
+void irt_inst_propagate_data_from_wi_to_regions(irt_work_item* wi);
 void irt_inst_region_start_measurements(irt_work_item* wi);
 void irt_inst_region_end_measurements(irt_work_item* wi);
 void irt_inst_region_init(irt_context* context);
