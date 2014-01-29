@@ -35,16 +35,4 @@
  */
 
 #pragma once
-
-#include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/gemsclaim_config.h"
-
-using namespace insieme;
-
-class GemsclaimPlugin : public insieme::frontend::extensions::FrontendPlugin {
-
-public:
-        GemsclaimPlugin() {
-                kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
-        }
-};
+#define GEM_SYSTEM_HEADER_REPLACEMENTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/gemsclaim/"
