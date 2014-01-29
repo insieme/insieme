@@ -402,8 +402,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 		// a constructor returns a reference of the class type, but we might need to fix types
 		// do a ref reinterpret to the target type
-		if (retIr->getType() != refToClassTy)
-			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+		if (gen.isRef(retIr->getType()) ) {
+			if( retIr->getType() != refToClassTy) {
+				retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+			}
+		} else {
+			//carefull we have to handle const variable
+			if( retIr->getType() != irClassType) {
+				//carefull we have to handle const variable
+				retIr = utils::cast(retIr, irClassType);
+			}
+		}
 
 		return retIr;
 	}
