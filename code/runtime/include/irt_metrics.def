@@ -35,8 +35,27 @@
  */
 
 /**
- * This macro file defines the metrics supported by the performance instrumentation
- * system.
+ * This macro file defines the metrics supported by the performance 
+ * instrumentation system.
+ * 
+ * There are METRICs and GROUPs, and each METRIC must be a member of a group
+ * (groups can hold multiple METRICs).
+ * 
+ * Important non-selfexplanatory parameters:
+ * 
+ * SCOPE: denotes the topological scope (see instrumentation.h)
+ * AGGREGATION_METHOD: sum, average, ... (see instrumentation.h)
+ * WI_START_CODE/WI_END_CODE: measurement code to start/end a measurement every 
+ *   time a WI is started / suspended / resumed / ended. Measured per 
+ *   individual WI. For each measurement, first the start/end code of the GROUPS
+ *   is called, followed by the start/end code of the individual METRICS.
+ * REGION_EARLY_START_CODE/REGION_LATE_END_CODE: measurement code to start/end a
+ *   measurement at the first entry and last exit of a region. This is done once
+ *   per invidivual region. For each measurement, first the start/end code of
+ *   the GROUPS is called, followed by the start/end code of the individual
+ *   METRICS.
+ * OUTPUT_CONVERSION_CODE: conversion factor applied during output (e.g. time is
+ *   measured in clock cycles but printed in nanoseconds).
  * 
  */
  
