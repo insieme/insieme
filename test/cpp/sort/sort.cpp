@@ -146,7 +146,8 @@ void testAlgorithms (vector<T>& buffer){
 		double t = time.stop();
 	
 		bool ok = checkResult(data);
-		cout << "BubbleSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
+		//cout << "BubbleSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
+		cout << "BubbleSort " << (ok?"OK":"WRONG") << "\n";
 	}
 
 	{
@@ -158,7 +159,8 @@ void testAlgorithms (vector<T>& buffer){
 		double t = time.stop();
 	
 		bool ok = checkResult(data);
-		cout << "BucketSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
+		//cout << "BucketSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
+		cout << "BucketSort " << (ok?"OK":"WRONG") << "\n";
 	}
 
 //	runTest(bubleSort<T>, "BubbleSort", buffer);
@@ -169,7 +171,6 @@ void testAlgorithms (vector<T>& buffer){
 
 ////////////////////////////////////////////////////////////////////////////
 //
-#define BUFFSIZE 1024*512
 int main (int argc, char **argv){
 
 	vector<size_t> sizes;
@@ -191,8 +192,8 @@ int main (int argc, char **argv){
 		srand(1234);
 		vector<int> vData(sizes[i]);
 		for (size_t j=0; j < sizes[i]; j++) {
-			vData[j] = rand()%1000;
-			//vData.insert(vData.end(), rand()%1000);
+		//	vData[j] = rand()%1000;
+		vData.insert(vData.end(), rand()%1000);
 		}
 
 		testAlgorithms(vData);
