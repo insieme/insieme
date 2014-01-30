@@ -36,6 +36,8 @@
 
 #include "insieme/utils/constraint/solver.h"
 
+#include "insieme/utils/assert.h"
+
 #include <utility>
 #include <unordered_set>
 #include <vector>
@@ -98,6 +100,13 @@ namespace constraint {
 			// add edges
 			for (auto set : cur->getInputs()) {
 				edges[set].insert(&*cur);
+			}
+
+			// and dynamic dependencies
+			if (cur->hasDynamicDependencies() && cur->updateDynamicDependencies(res)) {
+				for(const auto& in : cur->getUsedInputs(res)) {
+					edges[in].insert(&*cur);
+				}
 			}
 		}
 
@@ -219,6 +228,12 @@ namespace constraint {
 			}
 		}
 
+		// check all constraints (only for debugging, not valid if resets are involved)
+//		assert_true(all(constraints, [&](const ConstraintPtr& cur)->bool {
+//			auto res = cur->check(ass);
+//			if (!res) std::cout << "Constraint " << *cur << " violated!\n";
+//			return res;
+//		}));
 
 		// return assignment - TODO: find way to project to requested values
 		return ass;
@@ -294,6 +309,10 @@ namespace constraint {
 					if (cur->updateDynamicDependencies(ass)) {
 						for(const auto& dep : cur->getUsedInputs(ass)) {
 							edges[dep].insert(&*cur);
+						}
+						// and add outputs to working list (since dependencies have changed)
+						for(auto o : cur->getOutputs()) {
+							worklist.push_back(o);
 						}
 					}
 				}

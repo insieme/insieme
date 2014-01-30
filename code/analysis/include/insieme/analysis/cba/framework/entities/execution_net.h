@@ -36,7 +36,10 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/analysis/cba/framework/context.h"
+#include "insieme/analysis/cba/framework/entities/thread_region.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -89,6 +92,15 @@ namespace cba {
 	{
 
 	};
+
+
+	template<typename Context>
+	ExecutionNet<Context> buildExecutionNet(const std::set<ThreadRegion<Context>>& regions) {
+
+		ExecutionNet<Context> res;
+
+		return res;
+	}
 
 
 } // end namespace cba

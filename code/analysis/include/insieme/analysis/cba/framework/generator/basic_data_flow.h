@@ -201,6 +201,9 @@ namespace cba {
 			// the set to be updated
 			TypedValueID<ValueLattice> res;
 
+			// the input values reference by this constraint
+			mutable std::vector<ValueID> inputs;
+
 		public:
 
 			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
@@ -233,11 +236,11 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::vector<ValueID> res;
-				res.push_back(ref);
-				if (isReferenced(ass)) res.push_back(loc_value);
-				return res;
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				inputs.clear();
+				inputs.push_back(ref);
+				if (isReferenced(ass)) inputs.push_back(loc_value);
+				return inputs;
 			}
 
 		private:

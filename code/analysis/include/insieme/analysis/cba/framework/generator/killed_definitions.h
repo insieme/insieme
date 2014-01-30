@@ -255,6 +255,8 @@ namespace cba {
 			const TypedValueID<ReachingDefValue> reaching_in;
 			const TypedValueID<RefValue> ref;
 
+			mutable vector<ValueID> inputs;
+
 		public:
 
 			KilledDefsAssignConstraint(
@@ -307,21 +309,21 @@ namespace cba {
 				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 
 				// create result set
-				std::vector<ValueID> res;
+				inputs.clear();
 
 				// ref and in are always required
-				res.push_back(ref);
-				res.push_back(in);
+				inputs.push_back(ref);
+				inputs.push_back(in);
 
 				// reaching_in is required if reference is matched
 				if (isKill(ass)) {
-					res.push_back(reaching_in);
+					inputs.push_back(reaching_in);
 				}
 
-				return res;
+				return inputs;
 			}
 
 		private:

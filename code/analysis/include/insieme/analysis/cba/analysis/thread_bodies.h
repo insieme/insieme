@@ -86,7 +86,7 @@ namespace cba {
 		public:
 
 			ThreadBodyConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const Context& rootCtxt) :
-				Constraint(toVector<ValueID>(job), toVector<ValueID>(out), true, true), cba(cba), in(job), out(set), rootCtxt(rootCtxt) {
+				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), rootCtxt(rootCtxt) {
 				inputs.push_back(job);
 			}
 
@@ -134,13 +134,33 @@ namespace cba {
 				return changed;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 			virtual bool check(const Assignment& ass) const {
-				assert_not_implemented();
-				return false;
+
+				// check whether dependencies are fixed
+				if (updateDynamicDependencies(ass)) return false;
+
+				// get the set to be modified
+				const set<ThreadBody<Context>>& set = ass[out];
+
+				// just collect all bodies from the bodies set
+				for(const auto& cur : bodies) {
+					const std::set<Callable<Context>>& callables = ass[cur];
+					for(const auto& callable : callables) {
+
+						// take the body of the callable the the root ctxt
+						auto body = ThreadBody<Context>(callable.getBody(), rootCtxt);
+
+						// see whether the body is really there
+						if (set.find(body) == set.end()) return false;
+					}
+				}
+
+				// done
+				return true;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
@@ -155,7 +175,7 @@ namespace cba {
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "ThreadBodies(" << in << ") in out";
+				return out << "ThreadBodies(" << in << ") in " << this->out;
 			}
 		};
 

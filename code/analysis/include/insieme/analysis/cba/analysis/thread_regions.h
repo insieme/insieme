@@ -96,7 +96,7 @@ namespace cba {
 		}
 
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
-			out << "ThreadRegions";
+			out << "ThreadRegions = " << value;
 		}
 
 	};
@@ -117,12 +117,10 @@ namespace cba {
 
 			mutable std::vector<ValueID> inputs;
 
-			const core::lang::BasicGenerator& basic;
-
 		public:
 
 			ThreadRegionGeneratorConstraint(CBA& cba, const ThreadRegionSetType& set) :
-				Constraint(toVector<ValueID>(cba.getSet<Context>(SyncPoints)), toVector<ValueID>(set), true, true), cba(cba), TRs(set), basic(cba.getRoot()->getNodeManager().getLangBasic()) {
+				Constraint(toVector<ValueID>(cba.getSet<Context>(SyncPoints)), toVector<ValueID>(set), true, true), cba(cba), TRs(set) {
 				inputs.push_back(cba.getSet<Context>(SyncPoints));
 			}
 
@@ -196,13 +194,36 @@ namespace cba {
 				return changed;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 			virtual bool check(const Assignment& ass) const {
-				assert_not_implemented();
-				return false;
+				// get the set to be modified
+				const set<ThreadRegion<Context>>& set = ass[TRs];
+
+				// for all the sync points ...
+				for(const auto& cur : sync_point_pairs) {
+
+					// get the end of the region
+					const auto& end = cur.first;
+
+					// for all starts of the regions
+					for(const auto& begin : ass[cur.second]) {
+
+						// skip empty regions
+						if (begin == end) continue;
+
+						// build the thread region
+						ThreadRegion<Context> region(begin, end);
+
+						// if the region is not present => fail
+						if (set.find(region) == set.end()) return false;
+					}
+				}
+
+				// done
+				return true;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {

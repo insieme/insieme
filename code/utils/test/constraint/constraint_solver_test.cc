@@ -393,7 +393,7 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
 			virtual bool hasAssignmentDependentDependencies() const { return false; }
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const { return toVector<ValueID>(in); }
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const { return getInputs(); }
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
 
@@ -468,6 +468,8 @@ namespace constraint {
 			TypedSetID<TypedSetID<int>> set;			// the set containing elements to be aggregated
 			TypedSetID<int> out;						// the result set
 
+			mutable std::vector<ValueID> inputs;
+
 			DynamicConstraint(const TypedSetID<TypedSetID<int>>& set, const TypedSetID<int>& out)
 				: Constraint(toVector<ValueID>(set), toVector<ValueID>(out), true, true), set(set), out(out) {}
 
@@ -496,12 +498,12 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out) const { assert_not_implemented(); return out; }
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::vector<ValueID> res;
-				res.push_back(set);
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				inputs.clear();
+				inputs.push_back(set);
 				const std::set<TypedSetID<int>>& sets = ass[set];
-				res.insert(res.end(), sets.begin(), sets.end());
-				return res;
+				inputs.insert(inputs.end(), sets.begin(), sets.end());
+				return inputs;
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << "union(all s in " << set << ") sub " << this->out; }

@@ -534,6 +534,9 @@ namespace cba {
 			mutable vector<TypedValueID<Lattice>> thread_out_states;
 			mutable vector<ValueID> dependencies;
 
+			// the full list of dependencies
+			mutable vector<ValueID> allInputs;
+
 		public:
 
 			ParallelMergeConstraint(
@@ -544,7 +547,10 @@ namespace cba {
 					const TypedValueID<Lattice>& out_state,
 					const ExtraParams& ... params)
 				: Constraint(toVector<ValueID>(thread_group, in_state), toVector<ValueID>(out_state), true, true),
-				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(std::make_tuple(params...)) {}
+				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(std::make_tuple(params...)) {
+				allInputs.push_back(thread_group);
+				allInputs.push_back(in_state);
+			}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				const static less_op less;
@@ -604,23 +610,18 @@ namespace cba {
 				return out << "if " << thread_group << " is unique merging killed set of group and " << in_state << " into " << out_state;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
-
-				// create result set
-				std::vector<ValueID> res;
-
-				// thread groups and in-state values are always required
-				res.push_back(thread_group);
-				res.push_back(in_state);
-
-				// update thread out state list and thereby all dynamic dependencies
-				updateDynamicDependenciesInternal(ass);
-				for(auto cur : dependencies) {
-					res.push_back(cur);
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				// update thread out state list and all dynamic dependencies
+				if (updateDynamicDependenciesInternal(ass)) {
+					// ... and if those have changed, update the inputs list
+					allInputs.clear();
+					allInputs.push_back(thread_group);
+					allInputs.push_back(in_state);
+					for(const auto& cur : dependencies) allInputs.push_back(cur);
 				}
 
-				// done
-				return res;
+				// return current list of dependencies
+				return allInputs;
 			}
 
 		private:
@@ -702,8 +703,9 @@ namespace cba {
 				thread_out_states.push_back(out_set);
 				newDependencies.push_back(out_set);
 
+				// check whether something has changed
 				auto res = (newDependencies != dependencies);
-				dependencies = newDependencies;
+				if (res) dependencies = newDependencies;
 				return res;
 			}
 
