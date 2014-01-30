@@ -85,7 +85,7 @@ public:
 
 	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation 	L,
 										clang::SourceLocation 	R,
-										clang::MultiStmtArg 	Elts,
+										llvm::ArrayRef<clang::Stmt*> 	Elts,
 										bool			 		isStmtExpr );
 
 	clang::StmtResult ActOnIfStmt(  clang::SourceLocation 		IfLoc,

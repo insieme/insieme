@@ -1,0 +1,2 @@
+-I$OPENCV_ROOT/include -L$OPENCV_ROOT/lib -lopencv_core -lopencv_highgui -Isrc  --opencl
+

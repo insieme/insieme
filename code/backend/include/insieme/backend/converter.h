@@ -44,6 +44,8 @@
 
 #include "insieme/backend/variable_manager.h"
 
+#include "insieme/backend/backend_config.h"
+
 namespace insieme {
 namespace backend {
 
@@ -90,6 +92,8 @@ namespace backend {
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
 		std::string converterName;
+
+        BackendConfigPtr config;
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
@@ -156,7 +160,7 @@ namespace backend {
 		 * Creates a new uninitialized converter. Before using the resulting
 		 * converter, the required managers need to be initialized.
 		 */
-		Converter(core::NodeManager& manager, std::string name = "Backend");
+		Converter(core::NodeManager& manager, std::string name = "Backend", const BackendConfigPtr& config = std::make_shared<BackendConfig>());
 
 		/**
 		 * A call to this member function triggers the actual conversion process.
@@ -240,6 +244,8 @@ namespace backend {
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
 		const std::string& getConverterName() const { return converterName; }
+
+		const BackendConfigPtr& getConverterConfig() const { return config; }
 
 		void setConverterName(const string& name) { converterName = name; }
 

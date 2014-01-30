@@ -159,7 +159,7 @@ const char* strbchr(const char* pos, const char* begin, char c) {
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
-												 clang::MultiStmtArg Elts, bool isStmtExpr) {
+												 llvm::ArrayRef<clang::Stmt*> 	Elts, bool isStmtExpr){
 
 	// we parse the original code segment, within the original locations
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
@@ -315,8 +315,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			// we need to create a fake NullStmt ( ; ) to attach this
 			Stmt** stmts = new Stmt*[CS->size() + 1];
 
+			ArrayRef<clang::Stmt*> stmtList(stmts, CS->size()+1);
+
 			CompoundStmt* newCS =
-					new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
+					new (Context) CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(),
 							CS->getSourceRange().getEnd()
 						);
 

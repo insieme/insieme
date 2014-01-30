@@ -444,7 +444,7 @@ namespace {
 
 			case 'r':
 			default:
-				return { "Runtime.Backend", be::runtime::RuntimeBackend::getDefault(options.EstimateEffort) };
+				return { "Runtime.Backend", be::runtime::RuntimeBackend::getDefault(options.EstimateEffort, options.GemCrossCompile) };
 		}
 	}
 

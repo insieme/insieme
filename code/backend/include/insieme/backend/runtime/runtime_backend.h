@@ -64,8 +64,8 @@ namespace runtime {
 		/**
 		 * A constructor of this kind of backend accepting an operator table extender.
 		 */
-		RuntimeBackend(bool includeEffortEstimation)
-			: includeEffortEstimation(includeEffortEstimation) {}
+		RuntimeBackend(bool includeEffortEstimation, const BackendConfigPtr& config = std::make_shared<BackendConfig>())
+			: Backend(std::vector<AddOnPtr>(), config), includeEffortEstimation(includeEffortEstimation) {}
 
 
 		/**
@@ -74,7 +74,7 @@ namespace runtime {
 		 *
 		 * @return a smart pointer to a fresh instance of the runtime backend
 		 */
-		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false);
+		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false, bool isGemsclaim = false);
 
 
 	protected:

@@ -56,10 +56,11 @@
 namespace insieme {
 namespace backend {
 
-	Converter::Converter(core::NodeManager& nodeManager, std::string name)
+	Converter::Converter(core::NodeManager& nodeManager, std::string name, const BackendConfigPtr& config)
 		: nodeManager(nodeManager),
 		  fragmentManager(c_ast::CodeFragmentManager::createShared()),
 		  converterName(name),
+          config(config),
 		  preProcessor(makePreProcessor<NoPreProcessing>()),
 		  postProcessor(makePostProcessor<NoPostProcessing>()),
 		  nameManager(std::make_shared<SimpleNameManager>()),

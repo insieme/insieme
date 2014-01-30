@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/gemsclaim_config.h"
 
 using namespace insieme;
 
@@ -44,6 +45,6 @@ class GemsclaimPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 public:
         GemsclaimPlugin() {
-                kidnappedHeaders.push_back("/home/alessi/Insieme/insieme_master_unchanged/code/frontend/include/insieme/frontend/gemsclaim");
+                kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
         }
 };

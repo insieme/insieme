@@ -402,8 +402,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 		// a constructor returns a reference of the class type, but we might need to fix types
 		// do a ref reinterpret to the target type
-		if (retIr->getType() != refToClassTy)
-			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+		if (gen.isRef(retIr->getType()) ) {
+			if( retIr->getType() != refToClassTy) {
+				retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+			}
+		} else {
+			//carefull we have to handle const variable
+			if( retIr->getType() != irClassType) {
+				//carefull we have to handle const variable
+				retIr = utils::cast(retIr, irClassType);
+			}
+		}
 
 		return retIr;
 	}
@@ -909,15 +918,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
 
-	std::cout << " =============== Materialize! =================" << std::endl;
-	materTempExpr->dump();
-	std::cout << "inner: " << std::endl;
-	dumpPretty(retIr);
-	std::cout << "type: " << std::endl;
-	dumpPretty(retIr->getType());
-	std::cout << "expected: " << std::endl;
-	core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
-	dumpPretty(t);
+	if(VLOG_IS_ON(2)){
+		std::cout << " =============== Materialize! =================" << std::endl;
+		materTempExpr->dump();
+		std::cout << "inner: " << std::endl;
+		dumpPretty(retIr);
+		std::cout << "type: " << std::endl;
+		dumpPretty(retIr->getType());
+		std::cout << "expected: " << std::endl;
+		core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
+		dumpPretty(t);
+	}
 
 	//if (! t.isa<core::RefTypePtr>())
 	//	return retIr;
@@ -949,7 +960,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 	//auto retTy = builder.refType(convFact.convertType(typeidExpr->getType().getTypePtr()));
 	core::ExpressionPtr expr;
 	if(typeidExpr->isTypeOperand()) {
-		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand().getTypePtr()));
+		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand(convFact.getCompiler().getASTContext()).getTypePtr()));
 	} else {
 		expr = Visit(typeidExpr->getExprOperand());
 	}
