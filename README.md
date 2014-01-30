@@ -20,7 +20,7 @@ Name 		| Version | What's for |
 [CMake](http://www.cmake.org/)                                      | >= 2.8.x | Build System |
 [Google Test](https://code.google.com/p/googletest/)                | >= 1.6  | Unit testing |
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)  	  | = 1.50 | Utilities, regex, filesystem, program options|
-[LLVM/Clang](http://llvm.org/) 	                                    | = 3.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.2.patch)) | C/C++ frontend | 
+[LLVM/Clang](http://llvm.org/) 	                                    | = 3.4 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.4.patch)) | C/C++ frontend | 
 [Xerces-C++](http://xerces.apache.org/xerces-c/)                    | >= 3.1.1 | XML dump of the INSPIRE |
 [ISL](http://garage.kotnet.org/~skimo/isl/)			                    | = 0.10 | Polyhedral model representation & analysis |
 [CLooG](http://www.cloog.org/)		                                  | = 0.17 | Polyhedral model code generation |
