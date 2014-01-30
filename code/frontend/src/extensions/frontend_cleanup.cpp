@@ -34,9 +34,12 @@
  * regarding third party software licenses.
  */
 
+
+
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -48,12 +51,48 @@
 
 #include "insieme/utils/assert.h"
 
+#include <functional>
+
  namespace insieme {
  namespace frontend {
 
-	// TODO: use pattern matcher to rewritte all of this
-	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
+	namespace {
 
+		core::NodePtr applyCleanup(const core::NodePtr& node, std::function<core::NodePtr(const core::NodePtr&)>  pass){
+
+			core::NodePtr res = pass(node); 
+
+			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
+					if (core::hasMetaInfo(type)){
+						auto meta = core::getMetaInfo(type);
+	
+						vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+						for (auto& ctor : ctors){
+							ctor = pass(ctor).as<core::LambdaExprPtr>();
+						}
+						if (!ctors.empty()) meta.setConstructors(ctors);
+
+						if (meta.hasDestructor()){
+							auto dtor = meta.getDestructor();
+							dtor = pass(dtor).as<core::LambdaExprPtr>();
+							meta.setDestructor(dtor);
+						}
+
+						vector<core::MemberFunction> members = meta.getMemberFunctions();
+						for (core::MemberFunction& member : members){
+							member = core::MemberFunction(member.getName(), pass(member.getImplementation()).as<core::ExpressionPtr>(),
+														  member.isVirtual(), member.isConst());
+						}
+						if(!members.empty()) meta.setMemberFunctions(members);
+						core::setMetaInfo(type, meta);
+
+					}
+			} );
+			return res;
+		}
+
+
+		//////////////////////////////////////////////////////////////////////
 		//  Long long cleanup
 		//  =================
 		//
@@ -66,7 +105,10 @@
 		//
 		//  The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit 
 		//  overloads in 3rd party libraries (they do not make much sense anyway, do they? )
-		{
+		insieme::core::NodePtr longLongCleanup (const insieme::core::NodePtr& prog){
+
+			core::NodePtr res; 
+
 			// remove all superfluous casts
 			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
 						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
@@ -93,7 +135,7 @@
 						}
 						return node;
 					});
-			prog = castRemover.map(prog);
+			res = castRemover.map(prog);
 
 			// finaly, substitute any usage of the long long types
 			core::IRBuilder builder (prog->getNodeManager());
@@ -102,15 +144,19 @@
 			core::NodeMap replacements;
 			replacements [ longlongTy ] = builder.getLangBasic().getInt8();
 			replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
-			prog = core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
+			res = core::transform::replaceAllGen (prog->getNodeManager(), res, replacements, false);
+
+			return res;
 		}
 
+		//////////////////////////////////////////////////////////////////////
 		// CleanUp "deref refVar" situation
 		// ================================
 		//
 		//	sometimes, specially during initializations, a value is materialized in memory to be deref then and accessing the value again.
 		//	this is actually equivalent to not doing it
-		{
+		insieme::core::NodePtr refDerefCleanup (const insieme::core::NodePtr& prog){
+
 			auto derefVarRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
 						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
 							const auto& gen = node->getNodeManager().getLangBasic();
@@ -124,16 +170,17 @@
 						}
 						return node;
 					});
-			prog = derefVarRemover.map(prog);
+			return derefVarRemover.map(prog);
 		}
 
+		//////////////////////////////////////////////////////////////////////
 		// Unnecesary casts
 		// ==============
 		//
 		// During translation it might be easier to cast values to a different type to enforce type matching, but after resolving all the aliases
 		// in the translation unit unification it might turn out that those types were actually the same one. Clean up those casts since they might drive
 		// output code into error (specially with c++)
-		{
+		insieme::core::NodePtr castCleanup (const insieme::core::NodePtr& prog){
 			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
 						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
 							const auto& gen = node->getNodeManager().getLangBasic();
@@ -144,9 +191,10 @@
 						}
 						return node;
 					});
-			prog = castRemover.map(prog);
+			return castRemover.map(prog);
 		}
 
+		//////////////////////////////////////////////////////////////////////
 		// Declaration Only structs
 		// ========================
 		//
@@ -154,7 +202,7 @@
 		// its name and mark it as DeclOnly, if in a different TU we encounter and definition for
 		// that type we drop the genericType. all genericTypes with an DeclOnlyAnnotation are turned
 		// into empty structs
-		{
+		insieme::core::NodePtr declarationCleanup (const insieme::core::NodePtr& prog){
 			core::NodeMap replacements;
 			core::IRBuilder builder(prog->getNodeManager());
 
@@ -169,10 +217,24 @@
 					}
 				}, true, true);
 
-			//std::cerr << "replacements: " << replacements << std::endl;
-			prog = core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
+			return  core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
 
 		}
+
+
+	} // anonymous namespace
+
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
+
+		prog = applyCleanup(prog, longLongCleanup).as<core::ProgramPtr>();
+		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
+		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
+		prog = applyCleanup(prog, declarationCleanup).as<core::ProgramPtr>();
 
 		return prog;
 	}

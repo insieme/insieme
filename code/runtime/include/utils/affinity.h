@@ -46,9 +46,6 @@
 #include <limits.h>
 
 
-/* needed for CPU_* macros */
-//#define _GNU_SOURCE 1
-
 typedef enum {
 	IRT_AFFINITY_NONE = 0,
 	IRT_AFFINITY_FIXED = 1,

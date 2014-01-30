@@ -11,15 +11,9 @@ OPT_FLAGS="-mtune=native -O3"
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-#wget -nc ftp://ftp.linux.student.kuleuven.be/pub/people/skimo/isl/isl-$VERSION.tar.bz2
-wget -nc http://isl.gforge.inria.fr/isl-$VERSION.tar.bz2
-RET=$?
-if [ $RET -ne 0 ]; then
-	exit $RET
-fi
-
-tar -xf isl-$VERSION.tar.bz2
+git clone --branch isl-$VERSION git://repo.or.cz/isl.git isl-$VERSION
 cd isl-$VERSION
+./autogen.sh
 
 echo "#### Building isl library ####"
 
