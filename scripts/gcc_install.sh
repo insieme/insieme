@@ -25,6 +25,11 @@ if [ ! -d "$PACKAGE" ]; then
 	tar -xf $FILE
 fi
 
+# patch gcc in order to compile it with newer versions of texinfo packages (e.g. on Fedora 20)
+cd $PACKAGE
+patch -p2 < ../patches/gcc_texinfo5.0_fix.patch
+cd ..
+
 echo "#### Building GCC ####"
 mkdir gcc-build
 cd gcc-build
