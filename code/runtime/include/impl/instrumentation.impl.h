@@ -912,6 +912,6 @@ void irt_inst_region_start(region_id id) { }
 void irt_inst_region_end(region_id id) { }
 void irt_inst_region_wi_init(irt_work_item* wi) { }
 void irt_region_instrumentation_setup() { }
-void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source);
+void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source) { }
 
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
