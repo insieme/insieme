@@ -42,7 +42,7 @@
 
 #include <boost/optional.hpp>
 
-#include "insieme/utils/test/test_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 

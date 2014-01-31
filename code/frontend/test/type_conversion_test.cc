@@ -47,7 +47,7 @@
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -76,7 +76,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/stmt.c");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/stmt.c");		// just using some dummy file ..
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -346,7 +346,7 @@ TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/types.c");
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/types.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 

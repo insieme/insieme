@@ -43,7 +43,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -69,7 +69,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/pragmas.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragmas.c");
 
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -252,7 +252,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/pragma2.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragma2.c");
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 
@@ -328,7 +328,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_parallel.c" );
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c" );
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 
@@ -464,7 +464,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_for.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c");
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 
@@ -609,7 +609,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 TEST(PragmaMatcherTest, RecursiveFunctions) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/rec.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/rec.c");
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 

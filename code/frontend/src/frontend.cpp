@@ -39,7 +39,7 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
@@ -130,9 +130,9 @@ namespace frontend {
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
-			setup.addIncludeDirectory(SRC_DIR);
-			setup.addIncludeDirectory(SRC_DIR "inputs");
-			setup.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
+			setup.addIncludeDirectory(CLANG_SRC_DIR);
+			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
 			setup.setDefinition("INSIEME");
 		}

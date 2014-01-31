@@ -42,7 +42,7 @@
 #include <clang/AST/ASTContext.h>
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/logging.h"

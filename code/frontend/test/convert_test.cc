@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/tu/ir_translation_unit_check.h"
 
 #include "insieme/core/checks/full_check.h"
@@ -56,7 +56,7 @@ namespace frontend {
 //
 //		ConversionSetup setup;
 //		setup.setStandard(ConversionSetup::Cxx03);
-//		auto tu = convert(mgr, SRC_DIR "/inputs/conversion_test.cpp", setup);
+//		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/conversion_test.cpp", setup);
 //
 //	//	std::cout << tu << "\n";
 //		EXPECT_FALSE(tu.getFunctions().empty());
@@ -72,7 +72,7 @@ namespace frontend {
 
 		ConversionSetup setup;
 		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/conversion_test.cpp", setup);
+		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/conversion_test.cpp", setup);
 
 //		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
@@ -104,7 +104,7 @@ namespace frontend {
 	TEST(Converter, Globals) {
 		core::NodeManager mgr;
 
-		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
+		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/globals.c");
 
 //		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());

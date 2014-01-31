@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/gemsclaim_config.h"
+#include "insieme/utils/config.h"
 
 using namespace insieme;
 

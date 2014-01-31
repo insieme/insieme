@@ -47,7 +47,7 @@
 #include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/utils/test/test_config.h"
+#include "insieme/utils/config.h"
 
 namespace insieme {
 namespace core {

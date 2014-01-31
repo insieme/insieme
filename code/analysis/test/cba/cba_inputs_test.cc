@@ -42,7 +42,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "insieme/utils/test/test_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/annotations/source_location.h"

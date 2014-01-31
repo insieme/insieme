@@ -39,7 +39,7 @@
 #include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -70,7 +70,7 @@ namespace fe = insieme::frontend;
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/casts.c");
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
 	
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 

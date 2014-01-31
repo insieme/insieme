@@ -35,4 +35,5 @@
  */
 
 #pragma once
-#define OCL_KERNEL_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/ocl_kernel/"
+#define SRC_ROOT_DIR "/home/alessi/Insieme/insieme_master/code/utils/../"
+#define TEST_ROOT_DIR "/home/alessi/Insieme/insieme_master/code/../test"

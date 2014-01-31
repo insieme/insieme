@@ -43,7 +43,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -1079,7 +1079,7 @@ namespace measure {
 		utils::compiler::Compiler compiler = compilerSetup;
 
 		// add flags required by the runtime
-		compiler.addFlag("-I " SRC_DIR "../../runtime/include");
+		compiler.addFlag("-I " DRIVER_SRC_DIR "../../runtime/include");
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");

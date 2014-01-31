@@ -40,7 +40,7 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/frontend.h"
 
 namespace fe = insieme::frontend;
@@ -52,7 +52,7 @@ namespace driver {
 	TEST(ObjectFile, HelloWorldTest) {
 		core::NodeManager mgr;
 
-		fe::ConversionJob job(SRC_DIR "/hello_world.c");
+		fe::ConversionJob job(DRIVER_SRC_DIR "/hello_world.c");
 		auto unit = job.toIRTranslationUnit(mgr);
 
 		// save tu to temporary file
@@ -66,7 +66,7 @@ namespace driver {
 		EXPECT_TRUE(isInsiemeLib(file));
 
 		// this one should fail ..
-		EXPECT_FALSE(isInsiemeLib(SRC_DIR "/hello_world.c"));
+		EXPECT_FALSE(isInsiemeLib(DRIVER_SRC_DIR "/hello_world.c"));
 
 		// reload translation unit
 		core::NodeManager mgr2;
