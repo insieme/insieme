@@ -918,6 +918,6 @@ void irt_inst_region_select_metrics(const char* selection) { }
 void irt_inst_region_select_metrics_from_env() { }
 void irt_inst_region_debug_output() { }
 void irt_inst_region_output() { }
-irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi) { }
+irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi) { return NULL; }
 
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
