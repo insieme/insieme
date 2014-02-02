@@ -293,9 +293,6 @@ inline static void irt_schedule_loop(
 		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 
-		#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		sched_data->cputime = 0;
-		#endif
 		sched_data->policy = group->cur_sched;
 
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);

@@ -45,11 +45,8 @@
 #include "abstraction/impl/threads.impl.h"
 
 #include "client_app.h"
-#include "instrumentation.h"
 #include "irt_all_impls.h"
-#ifdef IRT_USE_PAPI
-#include "papi_helper.h"
-#endif
+#include "instrumentation.h"
 
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
@@ -275,17 +272,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	_irt_setup_hardware_info();
 
-	#ifdef IRT_ENABLE_INSTRUMENTATION
-		irt_inst_set_all_instrumentation_from_env();
-	#endif
-
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_region_instrumentation_setup();
-#endif
-
-#ifdef IRT_USE_PAPI
-		irt_initialize_papi();
-		_irt_setup_hardware_info();
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_inst_set_all_instrumentation_from_env();
 #endif
 
 //	#ifndef _WIN32

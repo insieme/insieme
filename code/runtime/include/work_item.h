@@ -94,7 +94,7 @@ struct _irt_work_item {
 #endif
 	irt_wi_scheduling_data sched_data;
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_wi_struct* inst_data;
+	irt_inst_region_wi_data* inst_region_data;
 	irt_inst_region_list* inst_region_list;
 #endif
 	union {

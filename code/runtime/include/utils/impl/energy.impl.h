@@ -52,6 +52,7 @@ void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
 }
 
 void irt_energy_select_instrumentation_method() {
+	// for RAPL we need to know about the number of cores per socket, hence we need PAPI
 #ifdef IRT_USE_PAPI
 	bool papi_available = true;
 #else

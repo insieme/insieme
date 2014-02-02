@@ -336,13 +336,13 @@ namespace measure {
 
 
 		// measure cache misses of this fragment
-		auto misses = measure(addr, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS));
+		auto misses = measure(addr, toVector(Metric::PAPI_L1_DCM, Metric::PAPI_L2_TCM));
 
-		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
+		EXPECT_TRUE(misses[Metric::PAPI_L1_DCM].isValid());
+		EXPECT_TRUE(misses[Metric::PAPI_L1_DCM].getValue() > 0);
 
-		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
+		EXPECT_TRUE(misses[Metric::PAPI_L2_TCM].isValid());
+		EXPECT_TRUE(misses[Metric::PAPI_L2_TCM].getValue() > 0);
 
 	}
 
@@ -567,17 +567,17 @@ namespace measure {
 		// measure execution time of this fragment
 		auto metrics = toVector(
 				Metric::CPU_TIME,
-				Metric::TOTAL_L1_DCM,
-				Metric::TOTAL_L1_ICM,
-				Metric::TOTAL_L2_DCM,
-				Metric::TOTAL_L2_ICM,
-				Metric::TOTAL_L1_TCM,
-				Metric::TOTAL_L2_TCM,
-				Metric::TOTAL_TLB_DM,
-				Metric::TOTAL_TLB_IM,
-				Metric::TOTAL_L1_LDM,
-				Metric::TOTAL_L1_STM,
-				Metric::TOTAL_L2_STM
+				Metric::PAPI_L1_DCM,
+				Metric::PAPI_L1_ICM,
+				Metric::PAPI_L2_DCM,
+				Metric::PAPI_L2_ICM,
+				Metric::PAPI_L1_TCM,
+				Metric::PAPI_L2_TCM,
+				Metric::PAPI_TLB_DM,
+				Metric::PAPI_TLB_IM,
+				Metric::PAPI_L1_LDM,
+				Metric::PAPI_L1_STM,
+				Metric::PAPI_L2_STM
 		);
 
 		auto res = measure(addr, metrics);

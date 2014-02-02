@@ -201,10 +201,8 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 //		irt_inst_region_continue(wi);
 		irt_inst_region_start_measurements(wi);
-#endif
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
 #ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);

@@ -41,7 +41,7 @@
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
-#include "instrumentation.h"
+#include "performance_table.h"
 #include "utils/affinity.h"
 
 #ifdef USE_OPENCL

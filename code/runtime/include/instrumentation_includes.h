@@ -38,3 +38,4 @@
 
 #include "utils/energy.h"
 #include "utils/timing.h"
+#include "papi_helper.h"

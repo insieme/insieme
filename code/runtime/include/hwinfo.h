@@ -39,7 +39,7 @@
 #include <unistd.h>
 
 #ifdef IRT_USE_PAPI
-#include "papi.h"
+#include "papi_helper.h"
 #endif
 #include "error_handling.h"
 
@@ -79,6 +79,8 @@ void _irt_set_num_cpus(uint32 num) {
 
 int32 _irt_setup_hardware_info() {
 #ifdef IRT_USE_PAPI
+	irt_papi_init();
+
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
 	if(hwinfo == NULL) {
@@ -89,11 +91,11 @@ int32 _irt_setup_hardware_info() {
 	if(hwinfo->threads > 0)
 		__irt_g_cached_threads_per_core_count = hwinfo->threads;
 	if(hwinfo->cores > 0)
-			__irt_g_cached_cores_per_socket_count = hwinfo->cores;
+		__irt_g_cached_cores_per_socket_count = hwinfo->cores;
 	if(hwinfo->sockets > 0)
-			__irt_g_cached_sockets_count = hwinfo->sockets;
+		__irt_g_cached_sockets_count = hwinfo->sockets;
 	if(hwinfo->nnodes > 0)
-				__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
+		__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
 #else
 	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
 #endif

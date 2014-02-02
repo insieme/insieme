@@ -404,14 +404,14 @@ namespace measure {
 		// ---------------------------------------------
 
 		/**
-		 * This method will try to obtain a pointer to the metric with the given name.
+		 * This method will try to obtain a pointer to the metric with the given name and the unit.
 		 * If no such metric can be found, a NULL pointer will be returned.
 		 * The search will only cover predefined metrics.
 		 *
-		 * @param name the name of the metric to be obtained
+		 * @param name the name and the unit of the metric to be obtained
 		 * @return a pointer to the requested metric or NULL in case there is no such metric
 		 */
-		static const MetricPtr getForName(const string& name);
+		static const MetricPtr getForNameAndUnit(const string& name);
 
 		/**
 		 * This method is obtaining a reference to a vector of metrics containing all

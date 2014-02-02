@@ -72,6 +72,7 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table_size = 2;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
+	context->num_regions = 0;
 }
 
 void insieme_cleanup_context(irt_context* context) {
@@ -175,7 +176,7 @@ TEST(energy, dvfs) {
 
 TEST(energy, rapl) {
 	// since we need PAPI working for the next line, explicitly call the init function here
-	irt_initialize_papi();
+	irt_papi_init();
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_get_num_cores_per_socket();
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 1, NULL);

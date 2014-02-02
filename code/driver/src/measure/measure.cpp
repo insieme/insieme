@@ -69,7 +69,9 @@ namespace measure {
 		std::vector<MetricPtr> metric_list;
 
 		MetricPtr registerMetric(const Metric& metric) {
-			metric_register[metric.getName()] = &metric;
+			std::stringstream stream;
+			stream << metric << "(" << *(metric.getUnit()) << ")";
+			metric_register[stream.str()] = &metric;
 			metric_list.push_back(&metric);
 			return &metric;
 		}
@@ -106,7 +108,6 @@ namespace measure {
 				// we'd lose information and hence bail out with an invalid quantity as a result
 				vector<Quantity> res = data.getAll(region, metric);
 				if(res.size() == 1) {
-					std::cout << res[0] << "\n";
 					return res[0];
 				} else
 					return Quantity::invalid(metric->getUnit());
@@ -552,7 +553,7 @@ namespace measure {
 	#undef METRIC
 
 
-	const MetricPtr Metric::getForName(const string& name) {
+	const MetricPtr Metric::getForNameAndUnit(const string& name) {
 		auto pos = metric_register.find(name);
 		if (pos == metric_register.end()) {
 			return MetricPtr();
@@ -896,7 +897,7 @@ namespace measure {
 			});
 
 			std::stringstream res;
-			res << join(":", dep, [](std::ostream& out, const MetricPtr& cur) {
+			res << join(",", dep, [](std::ostream& out, const MetricPtr& cur) {
 				out << cur->getName();
 			});
 			return res.str();
@@ -928,7 +929,7 @@ namespace measure {
 		});
 
 		if(usePapi)
-			modifiedCompiler.addFlag("-DIRT_ENABLE_PAPI");
+			modifiedCompiler.addFlag("-DIRT_USE_PAPI");
 
 		// build target code
 		auto binFile = buildBinary(regions, modifiedCompiler);
@@ -1017,24 +1018,18 @@ namespace measure {
 				std::map<string,string> mod_env = env;
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "true";
 
-				// join metric names while dropping the unit suffix (TODO: change metric names to not contain the unit by default)
 				string metric_selection;
 				for(auto metric : metrics) {
-					string metric_name = metric->getName();
-					int index = metric_name.find_first_of("(");
-					if(index > 0)
-						metric_name.erase(index);
-					metric_selection += metric_name + ",";
+					// only add non-papi metrics
+					if(metric->getName().find("PAPI") != 0)
+						metric_selection += metric->getName() + ",";
 				}
-				metric_selection.erase(metric_selection.size()-1);
+				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
+					metric_selection += getPapiCounterSelector(paramList);
+				} else
+					metric_selection.erase(metric_selection.size()-1);
 
 				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
-
-				// assemble PAPI-counter environment variable
-				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
-					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
-				}
-
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
@@ -1232,7 +1227,7 @@ namespace measure {
 			// try identifying metrics
 			vector<MetricPtr> metrics;
 			for(std::size_t i=2; i<line.size(); i++) {
-				auto metric = Metric::getForName(line[i]);
+				auto metric = Metric::getForNameAndUnit(line[i]);
 				if (!metric) {
 					LOG(WARNING) << "Unsupported metric encountered - will be ignored: " << line[i];
 				}
@@ -1263,7 +1258,7 @@ namespace measure {
 						continue;
 					}
 
-					// convert into value and safe within result
+					// convert into value and save within result
 					Quantity value(utils::numeric_cast<double>(line[i]), metric->getUnit());
 					add(region, metric, value);
 				}
@@ -1280,31 +1275,6 @@ namespace measure {
 	Measurements loadResults(const boost::filesystem::path& directory) {
 
 		Measurements res;
-
-		// iterate through all performance log files
-		int i = 0;
-		while(true) {
-
-			// assemble file name
-			std::stringstream stream;
-			stream << "worker_performance_log." << std::setw(4) << std::setfill('0') << i;
-			auto file = directory / stream.str();
-
-			// check whether file exists
-			if (!boost::filesystem::exists(file)) {
-				// we are done
-				break;
-			}
-
-			// load data from file
-			loadFile(file, [&](region_id region, MetricPtr metric, const Quantity& value) {
-				res.add(i, region, metric, value);
-			});
-
-			// increment counter
-			++i;
-		}
-
 
 		// load the efficiency log
 		loadFile(directory / "worker_efficiency_log",

@@ -134,9 +134,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 #ifdef IRT_ASTEROIDEA_STACKS
 	wi->stack_available = false;
 #endif //IRT_ASTEROIDEA_STACKS
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_region_wi_init(wi);
-#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -294,12 +292,8 @@ void irt_wi_end(irt_work_item* wi) {
 
 	// instrumentation update
 //	irt_inst_region_suspend(wi);
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	if(wi->inst_region_list->length > 0) {
-		irt_inst_region_end_measurements(wi);
-		irt_inst_propagate_data_from_wi_to_regions(wi);
-	}
-#endif // IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_inst_region_end_measurements(wi);
+	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
 	// check for fragment, handle
@@ -326,6 +320,7 @@ void irt_wi_end(irt_work_item* wi) {
 	// cleanup
 	_irt_del_wi_event_register(wi->id);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
+	irt_inst_region_wi_finalize(wi);
 	worker->finalize_wi = wi;
 	
 	IRT_DEBUG(" ! %p end\n", wi);
