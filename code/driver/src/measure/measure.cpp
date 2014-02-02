@@ -69,7 +69,9 @@ namespace measure {
 		std::vector<MetricPtr> metric_list;
 
 		MetricPtr registerMetric(const Metric& metric) {
-			metric_register[metric.getName()] = &metric;
+			std::stringstream stream;
+			stream << metric << "(" << *(metric.getUnit()) << ")";
+			metric_register[stream.str()] = &metric;
 			metric_list.push_back(&metric);
 			return &metric;
 		}
@@ -101,7 +103,14 @@ namespace measure {
 		 */
 		struct none {
 			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
-				return Quantity::invalid(metric->getUnit());
+				// slightly hacky: the none() extractor can be used for metrics that do not require any
+				// aggregation, i.e. when a metric occurs exactly once - for metrics occurring more often,
+				// we'd lose information and hence bail out with an invalid quantity as a result
+				vector<Quantity> res = data.getAll(region, metric);
+				if(res.size() == 1) {
+					return res[0];
+				} else
+					return Quantity::invalid(metric->getUnit());
 			}
 			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
 		};
@@ -544,7 +553,7 @@ namespace measure {
 	#undef METRIC
 
 
-	const MetricPtr Metric::getForName(const string& name) {
+	const MetricPtr Metric::getForNameAndUnit(const string& name) {
 		auto pos = metric_register.find(name);
 		if (pos == metric_register.end()) {
 			return MetricPtr();
@@ -775,19 +784,19 @@ namespace measure {
 			auto regionID = build.uintLit(id);
 
 			// check whether instrumented target is a pfor call
-			if (stmt->getNodeCategory() == core::NC_Expression) {
-				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
-				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
-					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
-
-					// build attribute to be added
-					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
-
-					// create attributed version of pfor call
-					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
-							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
-				}
-			}
+//			if (stmt->getNodeCategory() == core::NC_Expression) {
+//				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
+//				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
+//					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
+//
+//					// build attribute to be added
+//					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
+//
+//					// create attributed version of pfor call
+//					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
+//							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
+//				}
+//			}
 
 			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
@@ -888,7 +897,7 @@ namespace measure {
 			});
 
 			std::stringstream res;
-			res << join(":", dep, [](std::ostream& out, const MetricPtr& cur) {
+			res << join(",", dep, [](std::ostream& out, const MetricPtr& cur) {
 				out << cur->getName();
 			});
 			return res.str();
@@ -911,6 +920,16 @@ namespace measure {
 		// fix static scheduling
 		auto modifiedCompiler = compiler;
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+
+		// enable papi only if at least one metric requires it
+		bool usePapi = any(getDependencyClosureLeafs(metrics), [&](const MetricPtr& cur) {
+			if(cur->getName().find("PAPI") != std::string::npos)
+				return true;
+			return false;
+		});
+
+		if(usePapi)
+			modifiedCompiler.addFlag("-DIRT_USE_PAPI");
 
 		// build target code
 		auto binFile = buildBinary(regions, modifiedCompiler);
@@ -943,11 +962,6 @@ namespace measure {
 
 		// extract name of executable
 		std::string executable = bfs::path(binary).filename().string();
-
-		// see whether aggregated log can be utilized
-		bool aggregatedOnly = all(getDependencyClosureLeafs(metrics), [](const MetricPtr& cur) {
-			return cur == Metric::WALL_TIME || cur == Metric::CPU_TIME || cur == Metric::NUM_EXEC;
-		});
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
@@ -1000,15 +1014,22 @@ namespace measure {
 				}
 				assert(bfs::exists(workdir) && "Working-Directory already present!");
 
-				// assemble PAPI-counter environment variable
+				// setup runtime system metric selection
 				std::map<string,string> mod_env = env;
-				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
-					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
-					mod_env["IRT_INST_REGION_MODE"] = "detail";
-				} else {
-					// fix region instrumentation mode
-					mod_env["IRT_INST_REGION_MODE"] = aggregatedOnly?"aggregated":"detail";
+				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "true";
+
+				string metric_selection;
+				for(auto metric : metrics) {
+					// only add non-papi metrics
+					if(metric->getName().find("PAPI") != 0)
+						metric_selection += metric->getName() + ",";
 				}
+				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
+					metric_selection += getPapiCounterSelector(paramList);
+				} else
+					metric_selection.erase(metric_selection.size()-1);
+
+				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
@@ -1083,7 +1104,7 @@ namespace measure {
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
@@ -1206,7 +1227,7 @@ namespace measure {
 			// try identifying metrics
 			vector<MetricPtr> metrics;
 			for(std::size_t i=2; i<line.size(); i++) {
-				auto metric = Metric::getForName(line[i]);
+				auto metric = Metric::getForNameAndUnit(line[i]);
 				if (!metric) {
 					LOG(WARNING) << "Unsupported metric encountered - will be ignored: " << line[i];
 				}
@@ -1237,7 +1258,7 @@ namespace measure {
 						continue;
 					}
 
-					// convert into value and safe within result
+					// convert into value and save within result
 					Quantity value(utils::numeric_cast<double>(line[i]), metric->getUnit());
 					add(region, metric, value);
 				}
@@ -1254,31 +1275,6 @@ namespace measure {
 	Measurements loadResults(const boost::filesystem::path& directory) {
 
 		Measurements res;
-
-		// iterate through all performance log files
-		int i = 0;
-		while(true) {
-
-			// assemble file name
-			std::stringstream stream;
-			stream << "worker_performance_log." << std::setw(4) << std::setfill('0') << i;
-			auto file = directory / stream.str();
-
-			// check whether file exists
-			if (!boost::filesystem::exists(file)) {
-				// we are done
-				break;
-			}
-
-			// load data from file
-			loadFile(file, [&](region_id region, MetricPtr metric, const Quantity& value) {
-				res.add(i, region, metric, value);
-			});
-
-			// increment counter
-			++i;
-		}
-
 
 		// load the efficiency log
 		loadFile(directory / "worker_efficiency_log",

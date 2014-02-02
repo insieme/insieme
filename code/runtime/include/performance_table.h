@@ -38,42 +38,6 @@
 
 #include "declarations.h"
 
-typedef enum {
-        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1 = 0, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_MC_1, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_MC_2, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_MC_3, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_MC_4, // energy consumed
-        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4, // energy consumed
-
-        PERFORMANCE_DATA_ENTRY_MEMORY_VIRT, // virtual memory size
-        PERFORMANCE_DATA_ENTRY_MEMORY_RES, // resident set size
-        PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE,
-        PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_5,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_6,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_7,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_8,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_9,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_10,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_11,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_12,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_13,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_14,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_15,
-        PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_16,
-} irt_instrumentation_extended_performance_data_type;
-
 #define IRT_INST_EVENT(event, group_label, event_label) event,
 typedef enum _irt_instrumentation_event {
 #include "performance_table.def"
@@ -98,17 +62,6 @@ uint32 irt_g_inst_num_event_types = 0
 ;
 #undef IRT_INST_EVENT
 
-
-typedef struct _irt_region {
-	uint64 cputime;
-	uint64 start_time;
-	struct _irt_region* next;
-} irt_region;
-
-typedef struct _irt_region_list {
-	irt_region* head;
-} irt_region_list;
-
 typedef struct _irt_instrumentation_event_data {
 	uint64 timestamp;
 	union {
@@ -126,24 +79,6 @@ typedef struct _irt_instrumentation_event_data_table {
 	uint32 number_of_elements;
 	irt_instrumentation_event_data* data;
 } irt_instrumentation_event_data_table;
-
-typedef union _irt_instrumentation_region_data_values {
-	double value_double;
-	uint64 value_uint64;
-} _irt_instrumentation_region_data_values;
-
-typedef struct _irt_instrumentation_region_data {
-	uint64 timestamp;
-	int32 event;
-	uint64 subject_id;
-	_irt_instrumentation_region_data_values data[IRT_INST_NUMBER_OF_REGION_DATA_ENTRIES];
-} irt_instrumentation_region_data;
-
-typedef struct _irt_instrumentation_region_data_table {
-	uint32 size;
-	uint32 number_of_elements;
-	irt_instrumentation_region_data* data;
-} irt_instrumentation_region_data_table;
 
 #ifdef USE_OPENCL
 

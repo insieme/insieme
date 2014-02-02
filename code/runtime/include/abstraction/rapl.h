@@ -117,10 +117,9 @@
  */
 
 typedef struct _rapl_energy_data {
-	uint32 number_of_cpus;
-	double *package;
-	double *mc;
-	double *cores;
+	double package;
+	double mc;
+	double cores;
 } rapl_energy_data;
 
 /*

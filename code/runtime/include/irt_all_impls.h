@@ -48,11 +48,13 @@
 #include "impl/ir_interface.impl.h"
 #include "impl/irt_loop_sched.impl.h"
 #include "impl/irt_logging.impl.h"
+#include "impl/papi_helper.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
 #include "utils/frequency.h"
+#include "utils/impl/energy.impl.h"
 
 #ifndef IRT_MIN_MODE
 	#include "impl/irt_mqueue.impl.h"	

@@ -41,7 +41,7 @@
 //code/driver/include/insieme/driver/driver_config.h:
 #define DRIVER_SRC_DIR "${insieme_code_dir}/driver/test/"
 //code/driver/include/insieme/driver/driver_config.h:
-#define PAPI_HOME "/insieme-libs/papi-latest"
+#define PAPI_HOME "${third_part_libs_home}/papi-latest"
 //code/utils/include/insieme/utils/test/test_config.h:
 #define SRC_ROOT_DIR "${insieme_code_dir}/utils/../"
 //code/utils/include/insieme/utils/test/test_config.h:
