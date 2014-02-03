@@ -9,6 +9,11 @@ OPT_FLAGS="-mtune=native -O3"
 ##							BARVINOK	
 ########################################################################
 
+if [ -d $PREFIX/barvinok-$VERSION ]; then
+  echo "BARVINOK version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
 git clone --branch barvinok-$VERSION git://repo.or.cz/barvinok.git barvinok-$VERSION

@@ -9,6 +9,12 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##								CCache
 ########################################################################
+
+if [ -d $PREFIX/ccache-$VERSION ]; then
+  echo "CCache version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/ccache-$VERSION
 echo "#### Downloading CCache ####"
 wget -nc http://samba.org/ftp/ccache/ccache-$VERSION.tar.bz2

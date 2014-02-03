@@ -9,6 +9,11 @@ VERSION=0.12.1
 PACKAGE=ppl-$VERSION
 FILE=$PACKAGE.tar.bz2
 
+if [ -d $PREFIX/ppl-$VERSION ]; then
+  echo "PPL version $VERSION already installed"
+  exit 0
+fi
+
 CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 

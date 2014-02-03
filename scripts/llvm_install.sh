@@ -14,6 +14,10 @@
 
 VERSION=3.4
 
+if [ -d $PREFIX/llvm-$VERSION ]; then
+  echo "LLVM version $VERSION already installed"
+  exit 0
+fi
 
 CURRENT=`pwd`
 
@@ -110,7 +114,7 @@ echo "* Removing LLVM installation directory *"
 echo "****************************************"
 rm -R llvm-$VERSION
 rm -f llvm-$VERSION.src.tar.gz
-rm -f clang-$VERSION.tar.gz
+rm -f clang-$VERSION.src.tar.gz
 
 
 #echo "****************************************************************"

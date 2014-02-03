@@ -9,6 +9,11 @@ OPT_FLAGS="-mtune=native -O3"
 ##							ISL
 ########################################################################
 
+if [ -d $PREFIX/isl-$VERSION ]; then
+  echo "ISL version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
 git clone --branch isl-$VERSION git://repo.or.cz/isl.git isl-$VERSION

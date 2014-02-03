@@ -6,6 +6,12 @@ VERSION=2.3.4
 ########################################################################
 ##                                                      SHARK 
 ########################################################################
+
+if [ -d $PREFIX/shark-$VERSION ]; then
+  echo "SHARK version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/shark-$VERSION
 echo "#### Downloading SHARK library ####"
 wget http://sourceforge.net/projects/shark-project/files/Shark%20Core/Shark%20$VERSION/shark-$VERSION.zip/download -O shark-$VERSION.zip

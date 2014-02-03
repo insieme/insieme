@@ -6,6 +6,12 @@ VERSION=2.4.2
 ########################################################################
 ##								CUDD 
 ########################################################################
+
+if [ -d $PREFIX/cudd-$VERSION ]; then
+  echo "CUDD version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/cudd-$VERSION
 echo "#### Downloading CUDD library ####"
 wget -nc ftp://vlsi.colorado.edu/pub/cudd-$VERSION.tar.gz

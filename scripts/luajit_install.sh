@@ -9,6 +9,12 @@ LDFLAGS="-O3 -mtune=native -fPIC"
 ########################################################################
 ##								LuaJIT
 ########################################################################
+
+if [ -d $PREFIX/luajit-$VERSION ]; then
+  echo "LuaJIT version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/luajit-$VERSION
 echo "#### Downloading LuaJIT library ####"
 wget http://luajit.org/download/LuaJIT-$VERSION.tar.gz
