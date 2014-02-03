@@ -40,6 +40,7 @@
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/annotations/c/include.h"
 
@@ -73,8 +74,18 @@ core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr,
 	const clang::CallExpr* callexpr = (llvm::isa<clang::CallExpr>(expr)) ? llvm::cast<clang::CallExpr>(expr) : nullptr;
 
 	if(callexpr && callexpr->getDirectCallee()) {
+		core::ExpressionPtr funExpr;
+		core::CallExprPtr callExpr;
+		//if the call expression is wrapped by a marker expression
+		if(irExpr.isa<core::MarkerExprPtr>()) {
+			//extract the call expression
+			callExpr = irExpr.as<core::MarkerExprPtr>()->getSubExpression().as<core::CallExprPtr>();
+		} else {
+			callExpr = irExpr.as<core::CallExprPtr>();
+		}
+		funExpr = callExpr->getFunctionExpr();
+
 		core::IRBuilder builder = convFact.getIRBuilder();
-		auto funExpr = irExpr.as<core::CallExprPtr>()->getFunctionExpr();
 
 		if(callexpr->getDirectCallee()->isVariadic()) {
 			// dividing common arguments from variadic ones
@@ -82,7 +93,7 @@ core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr,
 			auto type = funExpr->getType().as<core::FunctionTypePtr>();
 			auto parameterTypes = type->getParameterTypeList();
 
-			auto args = irExpr.as<core::CallExprPtr>()->getArguments();
+			auto args = callExpr->getArguments();
 			core::ExpressionList varArgs(args.begin() + parameterTypes.size() -1, args.end());
 
 			// building new arguments list with packed variadic arguments
@@ -90,7 +101,18 @@ core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr,
 			core::ExpressionList newArgs(args.begin(), args.begin() + parameterTypes.size() -1);
 			newArgs.push_back(builder.callExpr(builder.getLangBasic().getVarList(), builder.getLangBasic().getVarlistPack(), builder.tupleExpr(varArgs)));
 
-			return  builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
+			auto retCall = builder.callExpr(funExpr->getType().as<core::FunctionTypePtr>()->getReturnType(), funExpr, newArgs);
+
+			//if the original expression was wrapped inside a marker expression
+			if(irExpr.isa<core::MarkerExprPtr>()) {
+				//again pack it into a marker expression
+				auto marker = irExpr.as<core::MarkerExprPtr>();
+				auto ret = builder.markerExpr(marker->getID(), retCall);
+				//and also migrate all the annotations
+				core::transform::utils::migrateAnnotations(marker, ret);
+				return ret;
+			}
+			return retCall;
 		}
 	}
 

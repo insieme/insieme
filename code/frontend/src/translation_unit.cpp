@@ -104,7 +104,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 
 	Parser::DeclGroupPtrTy ADecl;
 	while(!P.ParseTopLevelDecl(ADecl)) {
-		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
+		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getPtrAs<DeclGroupRef>());
 	}
 	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();  // FIXME

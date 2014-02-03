@@ -90,6 +90,8 @@ namespace cba {
 			const TypedValueID<ReachingDefValue> out;
 			const TypedValueID<RefValue> ref;
 
+			mutable std::vector<ValueID> inputs;
+
 		public:
 
 			ReachingDefsConstraint(
@@ -148,22 +150,22 @@ namespace cba {
 				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 
-				// create result set
-				std::vector<ValueID> res;
+				// reset the list of used inputs
+				inputs.clear();
 
 				// we always have to read the ref set
-				res.push_back(ref);
+				inputs.push_back(ref);
 
 				// check whether reference is unique
 				const set<Reference<Context>>& refs = ass[ref];
-				if (refs.empty()) return res;
-				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) return res;
+				if (refs.empty()) return inputs;
+				if (refs.size() == 1u && *refs.begin() == Reference<Context>(loc)) return inputs;
 
 				// if not, we also need the in set
-				res.push_back(in);
-				return res;
+				inputs.push_back(in);
+				return inputs;
 			}
 
 		private:

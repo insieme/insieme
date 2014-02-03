@@ -43,6 +43,7 @@
 #include "insieme/analysis/cba/framework/context.h"
 #include "insieme/analysis/cba/framework/entities/program_point.h"
 #include "insieme/analysis/cba/framework/entities/thread_region.h"
+#include "insieme/analysis/cba/framework/entities/execution_net.h"
 
 namespace insieme {
 namespace analysis {
@@ -63,6 +64,13 @@ namespace cba {
 	// *************************************************************************************
 
 	std::set<ThreadRegion<DefaultContext>> getThreadRegions(const core::StatementAddress& root);
+
+
+	// *************************************************************************************
+	//										Execution Net
+	// *************************************************************************************
+
+	const ExecutionNet<DefaultContext>& getExecutionNet(const core::StatementAddress& root);
 
 } // end namespace cba
 } // end namespace analysis

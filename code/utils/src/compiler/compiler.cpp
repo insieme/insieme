@@ -43,7 +43,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/test/test_config.h"
+#include "insieme/utils/config.h"
 
 namespace insieme {
 namespace utils {

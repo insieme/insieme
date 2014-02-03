@@ -1,0 +1,276 @@
+diff -crB llvm-3.4/tools/clang/include/clang/Basic/IdentifierTable.h llvm-3.4-mod/tools/clang/include/clang/Basic/IdentifierTable.h
+*** llvm-3.4/tools/clang/include/clang/Basic/IdentifierTable.h	2013-10-10 20:23:13.000000000 +0200
+--- llvm-3.4-mod/tools/clang/include/clang/Basic/IdentifierTable.h	2014-01-27 15:47:29.828453770 +0100
+***************
+*** 163,169 ****
+    /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
+    /// using this method so we can inform serialization about it.
+    void RevertTokenIDToIdentifier() {
+!     assert(TokenID != tok::identifier && "Already at tok::identifier");
+      TokenID = tok::identifier;
+      RevertedTokenID = true;
+    }
+--- 163,169 ----
+    /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
+    /// using this method so we can inform serialization about it.
+    void RevertTokenIDToIdentifier() {
+!   //  assert(TokenID != tok::identifier && "Already at tok::identifier");
+      TokenID = tok::identifier;
+      RevertedTokenID = true;
+    }
+diff -crB llvm-3.4/tools/clang/include/clang/Parse/Parser.h llvm-3.4-mod/tools/clang/include/clang/Parse/Parser.h
+*** llvm-3.4/tools/clang/include/clang/Parse/Parser.h	2013-12-16 03:32:55.000000000 +0100
+--- llvm-3.4-mod/tools/clang/include/clang/Parse/Parser.h	2014-01-27 15:41:55.275348380 +0100
+***************
+*** 14,19 ****
+--- 14,23 ----
+  #ifndef LLVM_CLANG_PARSE_PARSER_H
+  #define LLVM_CLANG_PARSE_PARSER_H
+  
++ // ----- Insieme compiler ------
++ class ParserProxy;
++ // -----------------------------
++ 
+  #include "clang/Basic/OpenMPKinds.h"
+  #include "clang/Basic/OperatorPrecedence.h"
+  #include "clang/Basic/Specifiers.h"
+***************
+*** 60,65 ****
+--- 64,73 ----
+    friend class ParenBraceBracketBalancer;
+    friend class BalancedDelimiterTracker;
+  
++   // ----- Insieme compiler ------
++   friend class ::ParserProxy;
++   // -----------------------------
++ 
+    Preprocessor &PP;
+  
+    /// Tok - The current token we are peeking ahead.  All parsing methods assume
+diff -crB llvm-3.4/tools/clang/include/clang/Sema/Sema.h llvm-3.4-mod/tools/clang/include/clang/Sema/Sema.h
+*** llvm-3.4/tools/clang/include/clang/Sema/Sema.h	2013-12-05 06:25:04.000000000 +0100
+--- llvm-3.4-mod/tools/clang/include/clang/Sema/Sema.h	2014-01-27 15:47:09.277262238 +0100
+***************
+*** 860,866 ****
+    Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
+         TranslationUnitKind TUKind = TU_Complete,
+         CodeCompleteConsumer *CompletionConsumer = 0);
+!   ~Sema();
+  
+    /// \brief Perform initialization that occurs after the parser has been
+    /// initialized but before it parses anything.
+--- 860,866 ----
+    Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
+         TranslationUnitKind TUKind = TU_Complete,
+         CodeCompleteConsumer *CompletionConsumer = 0);
+!   virtual ~Sema();
+  
+    /// \brief Perform initialization that occurs after the parser has been
+    /// initialized but before it parses anything.
+***************
+*** 1452,1458 ****
+                                    bool IsAddressOfOperand,
+                                    CorrectionCandidateCallback *CCC = 0);
+  
+!   Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  
+    NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
+                                MultiTemplateParamsArg TemplateParameterLists);
+--- 1452,1458 ----
+                                    bool IsAddressOfOperand,
+                                    CorrectionCandidateCallback *CCC = 0);
+  
+!   virtual Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  
+    NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
+                                MultiTemplateParamsArg TemplateParameterLists);
+***************
+*** 1548,1555 ****
+    void CheckForFunctionRedefinition(FunctionDecl *FD,
+                                      const FunctionDecl *EffectiveDefinition =
+                                          0);
+!   Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D);
+!   Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D);
+    void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
+    bool isObjCMethodDecl(Decl *D) {
+      return D && isa<ObjCMethodDecl>(D);
+--- 1548,1555 ----
+    void CheckForFunctionRedefinition(FunctionDecl *FD,
+                                      const FunctionDecl *EffectiveDefinition =
+                                          0);
+!   virtual Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D);
+!   virtual Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D);
+    void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
+    bool isObjCMethodDecl(Decl *D) {
+      return D && isa<ObjCMethodDecl>(D);
+***************
+*** 1565,1571 ****
+    bool canSkipFunctionBody(Decl *D);
+  
+    void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
+!   Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
+    Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+    Decl *ActOnSkippedFunctionBody(Decl *Decl);
+  
+--- 1565,1571 ----
+    bool canSkipFunctionBody(Decl *D);
+  
+    void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
+!   virtual Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
+    Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+    Decl *ActOnSkippedFunctionBody(Decl *Decl);
+  
+***************
+*** 1685,1691 ****
+    void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                   IdentifierInfo *ClassName,
+                   SmallVectorImpl<Decl *> &Decls);
+!   Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                     Declarator &D, Expr *BitfieldWidth);
+  
+    FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+--- 1685,1691 ----
+    void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                   IdentifierInfo *ClassName,
+                   SmallVectorImpl<Decl *> &Decls);
+!   virtual Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                     Declarator &D, Expr *BitfieldWidth);
+  
+    FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+***************
+*** 1742,1748 ****
+  
+    /// ActOnTagFinishDefinition - Invoked once we have finished parsing
+    /// the definition of a tag (enumeration, class, struct, or union).
+!   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
+                                  SourceLocation RBraceLoc);
+  
+    void ActOnObjCContainerFinishDefinition();
+--- 1742,1748 ----
+  
+    /// ActOnTagFinishDefinition - Invoked once we have finished parsing
+    /// the definition of a tag (enumeration, class, struct, or union).
+!   virtual void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
+                                  SourceLocation RBraceLoc);
+  
+    void ActOnObjCContainerFinishDefinition();
+***************
+*** 2853,2859 ****
+  
+    void ActOnStartOfCompoundStmt();
+    void ActOnFinishOfCompoundStmt();
+!   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
+                                 ArrayRef<Stmt *> Elts, bool isStmtExpr);
+  
+    /// \brief A RAII object to enter scope of a compound statement.
+--- 2853,2859 ----
+  
+    void ActOnStartOfCompoundStmt();
+    void ActOnFinishOfCompoundStmt();
+!   virtual StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
+                                 ArrayRef<Stmt *> Elts, bool isStmtExpr);
+  
+    /// \brief A RAII object to enter scope of a compound statement.
+***************
+*** 2871,2877 ****
+      Sema &S;
+    };
+  
+!   StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc);
+    void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+--- 2871,2877 ----
+      Sema &S;
+    };
+  
+!   virtual StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc);
+    void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+***************
+*** 2891,2897 ****
+                                   ArrayRef<const Attr*> Attrs,
+                                   Stmt *SubStmt);
+  
+!   StmtResult ActOnIfStmt(SourceLocation IfLoc,
+                           FullExprArg CondVal, Decl *CondVar,
+                           Stmt *ThenVal,
+                           SourceLocation ElseLoc, Stmt *ElseVal);
+--- 2891,2897 ----
+                                   ArrayRef<const Attr*> Attrs,
+                                   Stmt *SubStmt);
+  
+!   virtual StmtResult ActOnIfStmt(SourceLocation IfLoc,
+                           FullExprArg CondVal, Decl *CondVar,
+                           Stmt *ThenVal,
+                           SourceLocation ElseLoc, Stmt *ElseVal);
+***************
+*** 2908,2914 ****
+                                   SourceLocation CondLParen, Expr *Cond,
+                                   SourceLocation CondRParen);
+  
+!   StmtResult ActOnForStmt(SourceLocation ForLoc,
+                            SourceLocation LParenLoc,
+                            Stmt *First, FullExprArg Second,
+                            Decl *SecondVar,
+--- 2908,2914 ----
+                                   SourceLocation CondLParen, Expr *Cond,
+                                   SourceLocation CondRParen);
+  
+!   virtual StmtResult ActOnForStmt(SourceLocation ForLoc,
+                            SourceLocation LParenLoc,
+                            Stmt *First, FullExprArg Second,
+                            Decl *SecondVar,
+diff -crB llvm-3.4/tools/clang/lib/Parse/Parser.cpp llvm-3.4-mod/tools/clang/lib/Parse/Parser.cpp
+*** llvm-3.4/tools/clang/lib/Parse/Parser.cpp	2013-12-16 03:32:55.000000000 +0100
+--- llvm-3.4-mod/tools/clang/lib/Parse/Parser.cpp	2014-01-27 16:03:46.173633114 +0100
+***************
+*** 96,106 ****
+  
+      PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   if (getLangOpts().OpenMP)
+!     OpenMPHandler.reset(new PragmaOpenMPHandler());
+!   else
+!     OpenMPHandler.reset(new PragmaNoOpenMPHandler());
+!   PP.AddPragmaHandler(OpenMPHandler.get());
+  
+    if (getLangOpts().MicrosoftExt) {
+      MSCommentHandler.reset(new PragmaCommentHandler(actions));
+--- 96,109 ----
+  
+      PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
+    }
+! 
+!   // ----- Insieme Compiler -------
+! //if (getLangOpts().OpenMP)
+! //  OpenMPHandler.reset(new PragmaOpenMPHandler());
+! //else
+! //  OpenMPHandler.reset(new PragmaNoOpenMPHandler());
+! //PP.AddPragmaHandler(OpenMPHandler.get());
+! // --------------------------------
+  
+    if (getLangOpts().MicrosoftExt) {
+      MSCommentHandler.reset(new PragmaCommentHandler(actions));
+***************
+*** 458,465 ****
+      OpenCLExtensionHandler.reset();
+      PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   PP.RemovePragmaHandler(OpenMPHandler.get());
+!   OpenMPHandler.reset();
+  
+    if (getLangOpts().MicrosoftExt) {
+      PP.RemovePragmaHandler(MSCommentHandler.get());
+--- 461,470 ----
+      OpenCLExtensionHandler.reset();
+      PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
+    }
+!   // --- Insieme Compiler ---- 
+!   //PP.RemovePragmaHandler(OpenMPHandler.get());
+!   //OpenMPHandler.reset();
+!   // -------------------------
+  
+    if (getLangOpts().MicrosoftExt) {
+      PP.RemovePragmaHandler(MSCommentHandler.get());

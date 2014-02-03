@@ -9,20 +9,18 @@ OPT_FLAGS="-mtune=native -O3"
 ##							BARVINOK	
 ########################################################################
 
-rm -Rf $PREFIX/barvinok-$VERSION
-echo "#### Downloading Barvinok library ####"
-#wget -nc ftp://ftp.linux.student.kuleuven.be/pub/people/skimo/barvinok/barvinok-$VERSION.tar.bz2
-#wget -nc http://repo.or.cz/w/barvinok.git/snapshot/c8c898a86498fffe11947de849af0bfa1fb42a51.tar.gz
-#mv c8c898a86498fffe11947de849af0bfa1fb42a51.tar.gz barvinok-$VERSION.tar.gz
-wget -nc http://www.cs.ucla.edu/~pouchet/software/pocc/download/modules/barvinok-0.35.tar.gz
-
-RET=$?
-if [ $RET -ne 0 ]; then
-	exit $RET
+if [ -d $PREFIX/barvinok-$VERSION ]; then
+  echo "BARVINOK version $VERSION already installed"
+  exit 0
 fi
 
-tar -xf barvinok-$VERSION.tar.gz
+rm -Rf $PREFIX/barvinok-$VERSION
+echo "#### Downloading Barvinok library ####"
+git clone --branch barvinok-$VERSION git://repo.or.cz/barvinok.git barvinok-$VERSION
 cd barvinok-$VERSION
+git submodule init
+git submodule update
+./autogen.sh
 
 #export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 export LD_LIBRARY_PATH=$PREFIX/ntl-latest/lib:$LD_LIBRARY_PATH 

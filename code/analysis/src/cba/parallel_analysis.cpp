@@ -41,6 +41,7 @@
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/analysis/thread_regions.h"
 #include "insieme/analysis/cba/analysis/sync_points.h"
+#include "insieme/analysis/cba/analysis/execution_nets.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
@@ -57,6 +58,10 @@ namespace cba {
 
 	std::set<ThreadRegion<DefaultContext>> getThreadRegions(const core::StatementAddress& root) {
 		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ThreadRegions);
+	}
+
+	const ExecutionNet<DefaultContext>& getExecutionNet(const core::StatementAddress& root) {
+		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ExecutionNetAnalysis);
 	}
 
 } // end namespace cba

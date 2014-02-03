@@ -43,6 +43,8 @@
 
 #include "insieme/backend/addon.h"
 
+#include "insieme/backend/backend_config.h"
+
 /**
  * This header file is defining the general interface to be implemented
  * by any backend implementation.
@@ -132,8 +134,8 @@ namespace backend {
 		 * Creates a new backend instance based on an optional list of add-ons to
 		 * be installed within this backend.
 		 */
-		Backend(const vector<AddOnPtr>& addons = std::vector<AddOnPtr>())
-			: addons(addons) { }
+		Backend(const vector<AddOnPtr>& addons = std::vector<AddOnPtr>(), const BackendConfigPtr& config = std::make_shared<BackendConfig>())
+			: addons(addons), config(config) { }
 
 		/**
 		 * A virtual default constructor allowing subclasses to be properly destroyed.
@@ -176,6 +178,8 @@ namespace backend {
 		}
 
 	protected:
+
+        BackendConfigPtr config;
 
 		// ---------------- to be implemented by sub-classes -----------------
 

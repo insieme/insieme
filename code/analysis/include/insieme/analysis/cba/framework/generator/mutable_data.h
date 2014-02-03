@@ -261,6 +261,9 @@ namespace cba {
 			// the new state of the memory location after the assignment
 			TypedValueID<ValueLattice> new_state;
 
+			// the set of inputs referenced by this constraint (internally maintained)
+			mutable std::vector<ValueID> inputs;
+
 		public:
 
 			WriteConstraint(
@@ -300,21 +303,21 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::vector<ValueID> res;
-				res.push_back(ref);
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				inputs.clear();
+				inputs.push_back(ref);
 
 				// the old state is needed if reference is not unique
 				if (!isUniquelyReferenced(ass)) {
-					res.push_back(old_state);
+					inputs.push_back(old_state);
 				}
 
 				// the in value is required in case the covered location is referenced
 				if (isReferenced(ass)) {
-					res.push_back(in_value);
+					inputs.push_back(in_value);
 				}
 
-				return res;
+				return inputs;
 			}
 
 		private:
@@ -411,6 +414,9 @@ namespace cba {
 			// the internal set of values to be merged
 			mutable vector<TypedValueID<ValueLattice>> definedValues;		// this is the set of values defined at the point of reaching definitions
 
+			// the internally maintained list of actually used inputs
+			mutable vector<ValueID> inputs;
+
 		public:
 
 			ParallelStateMergeConstraint(
@@ -468,6 +474,7 @@ namespace cba {
 			}
 
 			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+				// TODO: this could be implemented more efficiently!
 				vector<TypedValueID<ValueLattice>> newDefs;
 
 				const set<Definition<Context>>& defs = ass[reachingDefs];
@@ -487,21 +494,22 @@ namespace cba {
 				return changed;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				// TODO: this could be implemented more efficiently!
 
-				// start result set
-				std::vector<ValueID> res;
+				// clear set of inputs
+				inputs.clear();
 
 				// reaching definition value is always included
-				res.push_back(reachingDefs);
+				inputs.push_back(reachingDefs);
 
 				// as are all referenced values
 				for(auto cur : definedValues) {
-					res.push_back(cur);
+					inputs.push_back(cur);
 				}
 
 				// done
-				return res;
+				return inputs;
 			}
 
 		private:

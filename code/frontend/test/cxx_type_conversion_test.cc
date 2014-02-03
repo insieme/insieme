@@ -39,7 +39,7 @@
 #include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 

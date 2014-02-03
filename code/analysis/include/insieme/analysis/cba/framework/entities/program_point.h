@@ -40,6 +40,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/printable.h"
 
@@ -111,6 +112,39 @@ namespace cba {
 		State getState() const {
 			return state;
 		}
+
+		bool isThreadStart() const {
+			return state == In && isThreadBody(stmt, ctxt);
+		}
+
+		bool isThreadEnd() const {
+			return state == Out && isThreadBody(stmt, ctxt);
+		}
+
+		bool isSpawn() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getParallel());
+		}
+
+		bool isMerge() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getMerge());
+		}
+
+		bool isMergeAll() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getMergeAll());
+		}
+
+		bool isSend() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getChannelSend());
+		}
+
+		bool isRecv() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getChannelRecv());
+		}
+
+		bool isRedistribute() const {
+			return state == Tmp && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRedistribute());
+		}
+
 
 		/**
 		 * Support for the == operator. Instances can be compared with other instances.

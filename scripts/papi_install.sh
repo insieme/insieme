@@ -7,6 +7,12 @@ SUBVERSION=
 ##########################################################################
 ## 								Papi
 ##########################################################################
+
+if [ -d $PREFIX/papi-$VERSION ]; then
+  echo "Papi version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/papi-$VERSION
 echo "#### Downloading Papi Library ####" 
 wget -nc http://icl.cs.utk.edu/projects/papi/downloads/papi-$VERSION$SUBVERSION.tar.gz

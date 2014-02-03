@@ -56,7 +56,7 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
@@ -131,7 +131,7 @@ TEST(Interception, SimpleInterception) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-    job.addIncludeDirectory(SRC_DIR "inputs/interceptor/");
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.setInterception( "ns::.*" );
 	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptions());
 	auto tu = job.toIRTranslationUnit(mgr);

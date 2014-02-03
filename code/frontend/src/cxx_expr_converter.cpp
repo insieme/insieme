@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -402,8 +402,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 		// a constructor returns a reference of the class type, but we might need to fix types
 		// do a ref reinterpret to the target type
-		if (retIr->getType() != refToClassTy)
-			retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+		if (gen.isRef(retIr->getType()) ) {
+			if( retIr->getType() != refToClassTy) {
+				retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
+			}
+		} else {
+			//carefull we have to handle const variable
+			if( retIr->getType() != irClassType) {
+				//carefull we have to handle const variable
+				retIr = utils::cast(retIr, irClassType);
+			}
+		}
 
 		return retIr;
 	}
@@ -795,11 +804,16 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	}
 
 	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+
 	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
 		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
-		else
-			innerIr = convFact.tryDeref(innerIr);
+		else {
+            if(core::analysis::isAnyCppRef(innerIr->getType()))
+                innerIr = core::analysis::unwrapCppRef(innerIr);
+
+            innerIr = convFact.tryDeref(innerIr);
+		}
 	}
 
 	if (stmtList.empty()){
@@ -931,10 +945,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
 	// inner type is a pointer? materialize
-	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) 
+	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType))
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
-	
+
 
 	if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
@@ -951,7 +965,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 	//auto retTy = builder.refType(convFact.convertType(typeidExpr->getType().getTypePtr()));
 	core::ExpressionPtr expr;
 	if(typeidExpr->isTypeOperand()) {
-		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand().getTypePtr()));
+		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand(convFact.getCompiler().getASTContext()).getTypePtr()));
 	} else {
 		expr = Visit(typeidExpr->getExprOperand());
 	}

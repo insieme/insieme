@@ -32,6 +32,10 @@ int main(int argc, char* argv[]) {
 
 	f((int[]){2,3,4}, 3);
 
+	int (*x) (int, int) = &f;
+	if(f)
+		printf("function pointer if\n");
+
 	if(!2) { }
 	
 	int(* list[4])(int,int) = {min, max, sum, avg};

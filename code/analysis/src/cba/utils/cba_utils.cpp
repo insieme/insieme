@@ -290,7 +290,7 @@ namespace cba {
 		return bind && bind->isBoundExpression(value);
 	}
 
-	bool isSyncronizingFunction(const core::ExpressionPtr& fun) {
+	bool isSynchronizingFunction(const core::ExpressionPtr& fun) {
 		const auto& base = fun->getNodeManager().getLangBasic();
 		return  base.isParallel(fun) ||
 				base.isMerge(fun) ||

@@ -111,7 +111,7 @@ namespace cba {
 		}
 
 		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
-			out << "SyncPoints";
+			out << "SyncPoints = " << value;
 		}
 
 	};
@@ -168,7 +168,7 @@ namespace cba {
 					// extract the current set
 					SyncPointSetType cur_set;
 					auto call = stmt.template isa<CallExprAddress>();
-					if (call && isSyncronizingFunction(call->getFunctionExpr())) {
+					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)
 						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
@@ -187,13 +187,28 @@ namespace cba {
 				return changed;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 			virtual bool check(const Assignment& ass) const {
-				assert_not_implemented();
-				return false;
+
+				// check whether dependencies are fixed
+				if (updateDynamicDependencies(ass)) return false;
+
+				// get the resulting set
+				const set<ProgramPoint<Context>>& set = ass[SPs];
+
+				// check whether all expected values are present
+				for(const auto& cur : sync_points) {
+					for(const auto& point : ass[cur]) {
+						// if not present => fail
+						if (set.find(point) == set.end()) return false;
+					}
+				}
+
+				// everything is fine
+				return true;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
@@ -292,13 +307,32 @@ namespace cba {
 				return changed;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 			virtual bool check(const Assignment& ass) const {
-				assert_not_implemented();
-				return false;
+
+				// check whether dependencies are fixed
+				if (updateDynamicDependencies(ass)) return false;
+
+				// get the set to be modified
+				const set<ProgramPoint<Context>>& set = ass[SPs];
+
+				// for all thread bodies in the program => add the end-point of the thread to the list of sync points
+				for(const auto& cur : thread_bodies) {
+					for(const auto& body : ass[cur]) {
+
+						// build a program point marking the end of the thread body
+						auto end = ProgramPoint<Context>(ProgramPoint<Context>::Out, body.getBody(), body.getContext());
+
+						// check whether this sync point is present
+						if (set.find(end) == set.end()) return false;
+					}
+				}
+
+				// everything is fine
+				return true;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {

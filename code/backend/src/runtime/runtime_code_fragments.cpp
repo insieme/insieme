@@ -317,6 +317,8 @@ namespace runtime {
 				out << "0";
 			} else if (cur.type.isa<c_ast::PrimitiveTypePtr>() && cur.type.as<c_ast::PrimitiveTypePtr>()->type == c_ast::PrimitiveType::Void) {
 				out << "1";
+            } else if (cur.type.isa<c_ast::FunctionTypePtr>() || (cur.type.isa<c_ast::NamedTypePtr>() && cur.type.as<c_ast::NamedTypePtr>()->isFunctionType)) {
+                out << "1"; 
 			} else {
 				out << "sizeof(" << toC(cur.type) << ")";
 			}

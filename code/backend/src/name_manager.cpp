@@ -76,6 +76,10 @@ namespace backend {
 				globalScope.usedNames.insert(literal->getStringValue());
 			}
 		});
+				
+        // if the main function is renamed, we need this to avoid 
+        // the original main function to be named main
+        globalScope.usedNames.insert("main");
 
 	}
 

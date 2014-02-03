@@ -70,10 +70,9 @@ namespace cba {
 	bool isCapturedValue(const core::ExpressionAddress& value);
 
 	/**
-	 * Checks whether the given function has a syncronizing effect on threads.
+	 * Checks whether the given function has a synchronizing effect on threads.
 	 */
-	bool isSyncronizingFunction(const core::ExpressionPtr& expr);
-
+	bool isSynchronizingFunction(const core::ExpressionPtr& expr);
 
 
 	namespace detail {

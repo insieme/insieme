@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/utils/map_utils.h"
 #include "insieme/frontend/frontend.h"
 
 namespace insieme {
@@ -58,6 +59,7 @@ enum CreateBufferFlags {
 		size
 };
 
+
 struct ClMemMetaInfo {
 	ClMemMetaInfo() : size(), type(), flags(), hostPtr() {}
 	ClMemMetaInfo(core::ExpressionPtr& size, core::TypePtr& type, std::set<enum CreateBufferFlags> flags, core::ExpressionPtr& hostPtr)
@@ -71,7 +73,7 @@ struct ClMemMetaInfo {
 
 // definitions
 typedef insieme::utils::map::PointerMap<core::ExpressionAddress, ClMemMetaInfo > ClMemMetaMap;
-typedef insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> ExpressionAddressMap;
+typedef std::map<core::NodeAddress, core::NodePtr> NodeAddressMap;
 /*
  * Replaces cl_mem/icl_buffer variables with INSPIRE arrays
  */
@@ -89,9 +91,11 @@ public:
 private:
 //	BufferMapper bufferMapper;
 	ClMemMetaMap clMemMeta;
-	ExpressionAddressMap clMemReplacements;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> clMemReplacements;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> generalReplacements;
 	core::ProgramPtr& prog;
 
+	bool alreadyThereAndCorrect(core::ExpressionPtr& bufferExpr, const core::TypePtr& newType);
 	void collectInformation();
 	void generateReplacements();
 };

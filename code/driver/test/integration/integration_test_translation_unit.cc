@@ -54,7 +54,7 @@
 #include "insieme/utils/timer.h"
 
 #include "insieme/driver/object_file_utils.h"
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/driver/integration/tests.h"
 
 namespace insieme {

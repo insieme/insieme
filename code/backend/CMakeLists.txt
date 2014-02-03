@@ -9,8 +9,6 @@ include(../environment.cmake)
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
 file(GLOB_RECURSE insieme_backend_incs 	include/*.h include/*.def include/*.inc)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/kernel_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/backend/ocl_kernel/kernel_config.h)
-
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )

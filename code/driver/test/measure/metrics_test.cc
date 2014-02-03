@@ -62,14 +62,16 @@ namespace measure {
 		Logger::setLevel(WARNING);
 
 		// play a little using units
-		auto time = Metric::TOTAL_EXEC_TIME;
+		auto time = Metric::CPU_TIME;
 
-		EXPECT_EQ(time, Metric::TOTAL_EXEC_TIME);
-		EXPECT_NE(time, Metric::TIMESTAMP_END);
+		EXPECT_EQ(time, Metric::CPU_TIME);
 
-		EXPECT_EQ("total_exec_time", toString(time));
+		EXPECT_EQ("cpu_time", toString(time));
 
-		EXPECT_EQ(Metric::TOTAL_EXEC_TIME, Metric::getForName(Metric::TOTAL_EXEC_TIME->getName()));
+		stringstream stream;
+		stream << Metric::CPU_TIME->getName() << "(" << *(Metric::CPU_TIME->getUnit()) << ")";
+
+		EXPECT_EQ(Metric::CPU_TIME, Metric::getForNameAndUnit(stream.str()));
 	}
 
 	TEST(Measuring, MetricsDependencies) {
@@ -77,18 +79,11 @@ namespace measure {
 
 		// test some parameter without dependency
 		EXPECT_TRUE(Metric::PAPI_L1_DCM->getDependencies().empty());
-		EXPECT_TRUE(Metric::TIMESTAMP_START->getDependencies().empty());
-
-		// read the dependencies of a metric
-		std::set<MetricPtr> dep;
-		dep.insert(Metric::TIMESTAMP_START);
-		dep.insert(Metric::TIMESTAMP_END);
-		EXPECT_EQ(dep, Metric::TOTAL_EXEC_TIME->getDependencies());
 
 		// check something with a single dependency
-		dep.clear();
-		dep.insert(Metric::PAPI_L3_TCM);
-		EXPECT_EQ(dep, Metric::TOTAL_L3_CACHE_MISS->getDependencies());
+		//std::set<MetricPtr> dep;
+		//dep.insert(Metric::PAPI_L3_TCM);
+		//EXPECT_EQ(dep, Metric::TOTAL_L3_CACHE_MISS->getDependencies());
 
 	}
 
@@ -107,18 +102,12 @@ namespace measure {
 		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::PAPI_L3_TCM)));
 
 		// check a derived metric
-		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_L3_CACHE_MISS)));
-
-		// check something with multiple dependencies
-		dep.clear();
-		dep.insert(Metric::TIMESTAMP_START);
-		dep.insert(Metric::TIMESTAMP_END);
-		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME)));
-
+		//EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_L3_CACHE_MISS)));
 
 		// check multiple metrics
 		dep.insert(Metric::PAPI_L3_TCM);
-		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME, Metric::TOTAL_L3_CACHE_MISS)));
+		dep.insert(Metric::CPU_TIME);
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::CPU_TIME, Metric::PAPI_L3_TCM)));
 
 	}
 

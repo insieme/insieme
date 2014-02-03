@@ -147,6 +147,12 @@ namespace constraint {
 		virtual ~Constraint() {};
 
 		virtual void init(Assignment& ass, vector<ValueID>& workList) const {
+
+			// update dynamic dependencies if necessary
+			if (dynamicDependencies) {
+				updateDynamicDependencies(ass);
+			}
+
 			if (update(ass) != Unchanged) {
 				for(auto cur : getOutputs()) {
 					workList.push_back(cur);
@@ -170,7 +176,7 @@ namespace constraint {
 			return dynamicDependencies;		// return whether something might have changed
 		}
 
-		virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
+		virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
 			assert_false(assignmentDependentDependencies) << "Needs to be implemented by constraints exhibiting assignment based dependencies.";
 			return inputs;
 		}
@@ -198,6 +204,8 @@ namespace constraint {
 
 			Filter filter;
 			Executor executor;
+
+			mutable std::vector<ValueID> usedInputs;
 
 		public:
 
@@ -237,11 +245,11 @@ namespace constraint {
 				return out;
 			}
 
-			virtual std::vector<ValueID> getUsedInputs(const Assignment& ass) const {
-				std::vector<ValueID> used;
-				filter.addUsedInputs(ass, used);
-				if (filter(ass)) executor.addUsedInputs(ass, used);
-				return used;
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				usedInputs.clear();
+				filter.addUsedInputs(ass, usedInputs);
+				if (filter(ass)) executor.addUsedInputs(ass, usedInputs);
+				return usedInputs;
 			}
 		};
 

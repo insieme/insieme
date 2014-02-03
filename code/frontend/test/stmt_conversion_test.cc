@@ -58,7 +58,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -103,7 +103,7 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/stmt.c");
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/stmt.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 

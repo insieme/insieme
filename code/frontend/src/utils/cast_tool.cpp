@@ -687,7 +687,13 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_PointerToBoolean 	:
 		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC,
 		// and block pointers.
-			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
+		{
+
+		    if(expr->getType().isa<core::FunctionTypePtr>()) {
+                return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getFuncIsNull(), expr ));
+		    }
+            return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
+		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_FloatingRealToComplex 	:
@@ -792,7 +798,13 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_MemberPointerToBoolean 	:
 		/*case clang::CK_MemberPointerToBoolean - Member pointer to boolean. A check against the null member pointer.
 		* */
+		{
+		    if(expr->getType().isa<core::FunctionTypePtr>()) {
+                return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getFuncIsNull(), expr ));
+		    }
 		    return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
+
+		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED

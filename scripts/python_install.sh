@@ -9,6 +9,12 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##								Python	
 ########################################################################
+
+if [ -d $PREFIX/python-$VERSION ]; then
+  echo "Python version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/python-$VERSION
 echo "#### Downloading Python ####"
 wget http://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz

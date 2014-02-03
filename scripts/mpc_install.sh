@@ -9,6 +9,11 @@ VERSION=0.9
 PACKAGE=mpc-$VERSION
 FILE=$PACKAGE.tar.gz
 
+if [ -d $PREFIX/mpc-$VERSION ]; then
+  echo "MPC version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading MPC library ####"
 wget -nc http://www.multiprecision.org/mpc/download/$FILE
 

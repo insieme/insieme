@@ -74,7 +74,7 @@
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/driver/printer/dot_printer.h"
 #include "insieme/driver/pragma/pragma_transformer.h"
 #include "insieme/driver/cmd/main_options.h"
@@ -444,7 +444,7 @@ namespace {
 
 			case 'r':
 			default:
-				return { "Runtime.Backend", be::runtime::RuntimeBackend::getDefault(options.EstimateEffort) };
+				return { "Runtime.Backend", be::runtime::RuntimeBackend::getDefault(options.EstimateEffort, options.GemCrossCompile) };
 		}
 	}
 

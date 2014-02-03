@@ -36,9 +36,15 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/analysis/cba/framework/context.h"
+#include "insieme/analysis/cba/framework/entities/thread_region.h"
+#include "insieme/analysis/cba/framework/entities/channel.h"
+
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/petri_net/petri_net.h"
 #include "insieme/utils/printable.h"
@@ -57,29 +63,105 @@ namespace cba {
 	 * 				- redistribute operations
 	 */
 
-
-	template<typename Context>
-	class Place {
-
-		/**
-		 * A place can either be:
-		 * 		- a thread region
-		 * 		- a channel buffer
-		 * 		- a auxiliary construct for non-deterministic choices
-		 */
-
+	/**
+	 * A place can either be:
+	 * 		- a thread region
+	 * 		- a channel buffer
+	 * 		- a auxiliary construct for non-deterministic choices
+	 */
+	enum PlaceKind {
+		Reg, Chl, Aux
 	};
 
 	template<typename Context>
-	class Transition {
+	struct Place : public utils::Printable {
 
-		/**
-		 * A transition can be:
-		 * 		- a spawn
-		 * 		- a merge
-		 * 		- a redistribute
-		 * 		- a channel send / recv operation
-		 */
+		PlaceKind kind;
+
+		int id;
+
+		Place() : kind(Aux), id(0) {}
+
+		Place(PlaceKind kind, int id)
+			: kind(kind), id(id) {}
+
+		bool operator==(const Place<Context>& other) const {
+			return kind == other.kind && id == other.id;
+		}
+
+		bool operator<(const Place<Context>& other) const {
+			// compare kinds
+			if (kind != other.kind) return kind < other.kind;
+
+			// otherwise compare ids
+			return id < other.id;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			switch(kind) {
+			case Reg: 		return out << "R(" << id << ")";
+			case Chl:		return out << "C(" << id << ")";
+			case Aux: 		return out << "A(" << id << ")";
+			}
+			assert_fail() << "Invalid object state!";
+			return out << "-unknown-";
+		}
+	};
+
+
+	/**
+	 * A transition can be:
+	 * 		- a spawn
+	 * 		- a merge
+	 * 		- a redistribute
+	 * 		- a channel send / recv operation
+	 */
+	enum TransitionKind {
+		Spawn,
+		Merge,
+		Send,
+		Recv,
+		Redistribute,
+		Choice
+	};
+
+	template<typename Context>
+	struct Transition : public utils::Printable {
+
+		TransitionKind kind;
+
+		int id;
+
+		Transition() : kind(Spawn), id(0) {}
+
+		Transition(TransitionKind kind, int id)
+			: kind(kind), id(id) {}
+
+		bool operator==(const Transition<Context>& other) const {
+			return kind == other.kind && id == other.id;
+		}
+
+		bool operator<(const Transition<Context>& other) const {
+			// compare kinds
+			if (kind != other.kind) return kind < other.kind;
+
+			// otherwise compare ids
+			return id < other.id;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			switch(kind) {
+			case Spawn: 		return out << "Sp(" << id << ")";
+			case Merge: 		return out << "M(" << id << ")";
+			case Send: 			return out << "S(" << id << ")";
+			case Recv: 			return out << "R(" << id << ")";
+			case Redistribute: 	return out << "Rd(" << id << ")";
+			case Choice: 		return out << "C(" << id << ")";
+			}
+			assert_fail() << "Invalid object state!";
+			return out << "-unknown-";
+		}
+
 	};
 
 	template<typename Context>
@@ -87,6 +169,59 @@ namespace cba {
 			public utils::petri_net::PetriNet<Place<Context>, Transition<Context>>,
 			public utils::Printable
 	{
+
+		int id;
+
+	public:
+
+		ExecutionNet() : id(0) {}
+
+		Place<Context> createRegion(const ThreadRegion<Context>& region) {
+			Place<Context> place(Reg, ++id);
+			addPlace(place);
+			return place;
+		}
+
+		Place<Context> createChannel(const Channel<Context>& channel) {
+			Place<Context> place(Chl, ++id);
+			addPlace(place);		// TODO: add channel size
+			return place;
+		}
+
+		Place<Context> createAuxiliary() {
+			Place<Context> place(Aux, ++id);
+			addPlace(place);
+			return place;
+		}
+
+		Transition<Context> createTransition(const ProgramPoint<Context>& point) {
+			TransitionKind kind;
+			if (point.isSpawn()) {
+				kind = Spawn;
+			} else if (point.isMerge()) {
+				kind = Merge;
+			} else if (point.isSend()) {
+				kind = Send;
+			} else if (point.isRecv()) {
+				kind = Recv;
+			} else if (point.isRedistribute()) {
+				kind = Redistribute;
+			} else {
+				assert_fail() << "Unsupported sync-point encountered: " << point;
+			}
+			Transition<Context> trans(kind, ++id);
+			return trans;
+		}
+
+		void link(const Place<Context>& a, const Place<Context>& b) {
+			Transition<Context> trans(Choice, ++id);
+			addPrePlace(a, trans);
+			addPostPlace(trans, b);
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "ExecutionNet(" << this->getNumPlaces() << " Places / " << this->getNumTransitions() << " Transitions)";
+		}
 
 	};
 
