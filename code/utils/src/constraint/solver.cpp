@@ -306,29 +306,22 @@ namespace constraint {
 			if (cur->hasAssignmentDependentDependencies()) {
 				// update dynamic dependencies if required
 				if (cur->hasDynamicDependencies()) {
-					if (cur->updateDynamicDependencies(ass)) {
-						for(const auto& dep : cur->getUsedInputs(ass)) {
-							edges[dep].insert(&*cur);
-						}
-						// and add outputs to working list (since dependencies have changed)
-						for(auto o : cur->getOutputs()) {
-							worklist.push_back(o);
-						}
-					}
+					cur->updateDynamicDependencies(ass);
 				}
+			}
 
-				// we need to obtain the used inputs
-				for (auto set : cur->getUsedInputs(ass)) {
-					if (!contains(resolved, set)) {
-						nextGeneration.insert(set);
-					}
-				}
-			} else {
-				// this is a faster way of obtaining inputs
-				for (auto set : cur->getInputs()) {
-					if (!contains(resolved, set)) {
-						nextGeneration.insert(set);
-					}
+			// register dependencies
+			for(const auto& dep : cur->getUsedInputs(ass)) {
+				edges[dep].insert(&*cur);
+			}
+			// and add outputs to working list (since dependencies have changed)
+			for(auto o : cur->getOutputs()) {
+				worklist.push_back(o);
+			}
+			// collect yet unresolved inputs for resolution
+			for (auto set : cur->getUsedInputs(ass)) {
+				if (!contains(resolved, set)) {
+					nextGeneration.insert(set);
 				}
 			}
 		}
