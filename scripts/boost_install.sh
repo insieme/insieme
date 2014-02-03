@@ -8,6 +8,12 @@ BOOST_LIBS=filesystem,program_options,random,system,regex,thread,serialization
 ########################################################################
 ##		                Boost
 ########################################################################
+
+if [ -d $PREFIX/boost-$VERSION ]; then
+  echo "Boost version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/boost-$VERSION
 echo "#### Downloading Boost library ####"
 wget -nc http://downloads.sourceforge.net/project/boost/boost/$VERSION/boost_$VERSION_FILENAME.tar.bz2

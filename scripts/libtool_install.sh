@@ -4,8 +4,14 @@
 VERSION=2.2.6b
 
 ########################################################################
-##								MPC
+##								Libtool
 ########################################################################
+
+if [ -d $PREFIX/libtool-$VERSION ]; then
+  echo "Libtool version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/libtool-$VERSION
 echo "#### Downloading libtool library ####"
 wget -nc http://ftpmirror.gnu.org/libtool/libtool-$VERSION.tar.gz 

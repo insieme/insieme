@@ -1,7 +1,7 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=3.2.2
+VERSION=2.7.6
 CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
@@ -9,12 +9,6 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##								Python	
 ########################################################################
-
-if [ -d $PREFIX/python-$VERSION ]; then
-  echo "Python version $VERSION already installed"
-  exit 0
-fi
-
 rm -Rf $PREFIX/python-$VERSION
 echo "#### Downloading Python ####"
 wget http://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
@@ -42,8 +36,8 @@ fi
 echo "#### Installing Python ####"
 make install 
 
-rm $PREFIX/python-latest
-ln -s $PREFIX/python-$VERSION $PREFIX/python-latest
+rm $PREFIX/python2-latest
+ln -s $PREFIX/python-$VERSION $PREFIX/python2-latest
 
 echo "#### Cleaning up environment ####"
 cd ..

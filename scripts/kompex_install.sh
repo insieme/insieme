@@ -6,6 +6,12 @@ VERSION=1.7.9
 ########################################################################
 ##                                                      KOMPEX 
 ########################################################################
+
+if [ -d $PREFIX/kompex-$VERSION ]; then
+  echo "KOMPEX version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading KOMPEX library ####"
 wget -nc http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
 

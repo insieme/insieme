@@ -10,6 +10,12 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##                             Google Test
 ########################################################################
+
+if [ -d $PREFIX/gtest-$VERSION ]; then
+  echo "Google Test version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading Google Test library ####"
 wget -nc http://googletest.googlecode.com/files/gtest-$VERSION.zip
 

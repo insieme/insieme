@@ -9,6 +9,11 @@ VERSION=4.6.3
 PACKAGE=gcc-$VERSION
 FILE=gcc-$VERSION.tar.bz2
 
+if [ -d $PREFIX/gcc-$VERSION ]; then
+  echo "GCC version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading GCC ####"
 wget -nc http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/$FILE
 

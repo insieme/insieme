@@ -7,6 +7,12 @@ VERSION=2.8.10.1
 ########################################################################
 ##							CMake	
 ########################################################################
+
+if [ -d $PREFIX/cmake-$VERSION ]; then
+  echo "CMake version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/cmake-$VERSION
 
 CFLAGS="-mtune=native -O3 -fgraphite-identity"

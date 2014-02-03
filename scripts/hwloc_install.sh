@@ -9,6 +9,12 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##								HWLOC
 ########################################################################
+
+if [ -d $PREFIX/hwloc-$VERSION ]; then
+  echo "HWLOC version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/ccache-$VERSION
 echo "#### Downloading HWLOC ####"
 wget -nc http://www.open-mpi.org/software/hwloc/v$VERSION/downloads/hwloc-$VERSION.tar.gz

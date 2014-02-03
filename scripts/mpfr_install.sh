@@ -9,6 +9,11 @@ VERSION=3.1.1
 PACKAGE=mpfr-$VERSION
 FILE=mpfr-$VERSION.tar.bz2
 
+if [ -d $PREFIX/mpfr-$VERSION ]; then
+  echo "MPFR version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading MPFR library ####"
 #wget -nc http://www.mpfr.org/mpfr-current/$FILE
 wget -nc http://www.mpfr.org/mpfr-3.1.1/mpfr-3.1.1.tar.bz2

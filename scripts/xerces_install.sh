@@ -6,6 +6,12 @@ VERSION=3.1.1
 ########################################################################
 ##		xerces
 ########################################################################
+
+if [ -d $PREFIX/xerces-$VERSION ]; then
+  echo "xerces version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/xerces-$VERSION
 echo "#### Downloading Xerces library ####"
 wget http://tweedo.com/mirror/apache//xerces/c/3/sources/xerces-c-$VERSION.tar.gz

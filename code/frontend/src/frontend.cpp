@@ -95,6 +95,7 @@ namespace frontend {
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
             registerFrontendPlugin<GemsclaimPlugin>();
+			setDefinition("_GEM");
         }
 
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
