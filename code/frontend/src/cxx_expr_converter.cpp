@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -804,11 +804,16 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	}
 
 	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+
 	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
 		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
-		else
-			innerIr = convFact.tryDeref(innerIr);
+		else {
+            if(core::analysis::isAnyCppRef(innerIr->getType()))
+                innerIr = core::analysis::unwrapCppRef(innerIr);
+
+            innerIr = convFact.tryDeref(innerIr);
+		}
 	}
 
 	if (stmtList.empty()){
@@ -940,10 +945,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
 	// inner type is a pointer? materialize
-	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) 
+	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType))
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
-	
+
 
 	if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
