@@ -1178,7 +1178,7 @@ namespace backend {
 			res->definition = res->declaration;
 
 			// R / L value names
-			c_ast::TypePtr funcType = manager->create<c_ast::NamedType> (funcTypeName);
+			c_ast::TypePtr funcType = manager->create<c_ast::NamedType> (funcTypeName, true);
 			res->rValueType = c_ast::ptr(funcType);
 			res->lValueType = res->rValueType;
 
