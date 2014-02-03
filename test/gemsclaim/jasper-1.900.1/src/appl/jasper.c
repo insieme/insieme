@@ -78,7 +78,7 @@
 
 #include <jasper/jasper.h>
 
-#ifdef SYNOPSYS
+#ifdef _GEM
     #include "input_file.h"
 #endif
 
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 		cmdinfo();
 	}
 
-#ifndef SYNOPSYS
+#ifndef _GEM
 	/* Open the input image file. */
 	if (cmdopts->infile) {
 		/* The input image is to be read from a file. */

@@ -17,7 +17,7 @@
 #if !defined(JAS_WIN_MSVC_BUILD)
 /* A configure-based build is being used. */
 
-#ifndef SYNOPSYS
+#ifndef _GEM
     /* Have variable length arrays */
     #define HAVE_VLA 1
 
