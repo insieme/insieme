@@ -54,100 +54,98 @@ namespace cba {
 
 	using namespace core;
 
-//	TEST(CBA, SimpleSequential) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	auto a = var(0);"
-//				" 	a = 1;"
-//				"	a = 2;"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-//		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
-//		EXPECT_EQ(1, regions.size());
-//		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(regions));
-//
-////		createDotDump(analysis);
-//	}
-//
-//	TEST(CBA, SimpleSpawn) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	auto a = var(0);"
-//				" 	spawn a = 1;"
-//				"	a = 2;"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-//		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
-//		EXPECT_EQ(3, regions.size());
-//
-//		auto resStr = toString(regions);
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from creation - spawn
-//		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from spawn - end
-//		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");				// spawned thread
-//
-////		createDotDump(analysis);
-//	}
-//
-//	TEST(CBA, MultiSpawn) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	auto a = var(0);"
-//				" 	spawn a = 1;"
-//				"	a = 2;"
-//				" 	spawn a = 3;"
-//				"	a = 4;"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-//		// just fix some labels (for the thread spawning calls)
-//		EXPECT_EQ(1,analysis.getLabel(code[1]));
-//		EXPECT_EQ(2,analysis.getLabel(code[3]));
-//
-//		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
-//		EXPECT_EQ(5, regions.size());
-//
-//		auto resStr = toString(regions);
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
-//		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
-//		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
-//		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]] - O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");
-//
-////		createDotDump(analysis);
-//	}
+	TEST(CBA, SimpleSequential) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	a = 1;"
+				"	a = 2;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(1, net.getNumPlaces());
+		EXPECT_EQ(0, net.getNumTransitions());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, SimpleSpawn) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(3, net.getNumPlaces());
+		EXPECT_EQ(1, net.getNumTransitions());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, MultiSpawn) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	spawn a = 1;"
+				"	a = 2;"
+				" 	spawn a = 3;"
+				"	a = 4;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(5, net.getNumPlaces());
+		EXPECT_EQ(2, net.getNumTransitions());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+//		createDotDump(analysis);
+	}
 
 	TEST(CBA, Channels) {
 
@@ -184,10 +182,48 @@ namespace cba {
 		EXPECT_EQ(6, net.getNumTransitions());
 
 //		std::cout << "Plotting network ...\n";
-		utils::petri_net::plot(net);
+//		utils::petri_net::plot(net);
 
 //		createDotDump(code);
 	}
+
+	TEST(CBA, Uncertain) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.variable(mgr.getLangBasic().getBool(), 100);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> x = var(12);"
+				"	"
+				"	auto j1 = job { x = 1; };"
+				"	auto j2 = job { x = 2; };"
+				"	"
+				"	auto t = parallel((c)?j1:j2);"
+				"	sync t;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(7, net.getNumPlaces());
+		EXPECT_EQ(6, net.getNumTransitions());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+//		createDotDump(code);
+	}
+
 
 } // end namespace cba
 } // end namespace analysis
