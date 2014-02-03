@@ -74,7 +74,8 @@ namespace petri_net {
 		typename Place = int,
 		typename Transition = int
 	>
-	class PetriNet {
+	class PetriNet :
+		public boost::equality_comparable<PetriNet<Place, Transition>> {
 
 	public:
 
@@ -100,6 +101,14 @@ namespace petri_net {
 			place_idx idx = p_index.size();
 			p_index[place] = idx;
 			this->capacity[idx] = capacity;
+		}
+
+		void removePlace(const Place& place) {
+			assert_true(getNumPreTransitions(place) == 0 && getNumPostTransitions(place) == 0);
+			auto pos = p_index.find(place);
+			if (pos == p_index.end()) return;
+			capacity.erase(capacity.find(pos->second));
+			p_index.erase(pos);
 		}
 
 		bool containsPlace(const Place& place) const {
@@ -129,6 +138,33 @@ namespace petri_net {
 			return capacity.find(idx)->second;
 		}
 
+		unsigned getNumPreTransitions(const Place& p) const {
+			auto pos = p_index.find(p);
+			if (pos == p_index.end()) return 0;
+
+			auto index = pos->second;
+			unsigned count = 0;
+			for(const auto& cur : post_places) {
+				if (contains(cur.second, index)) {
+					count++;
+				}
+			}
+			return count;
+		}
+
+		unsigned getNumPostTransitions(const Place& p) const {
+			auto pos = p_index.find(p);
+			if (pos == p_index.end()) return 0;
+
+			auto index = pos->second;
+			unsigned count = 0;
+			for(const auto& cur : pre_places) {
+				if (contains(cur.second, index)) {
+					count++;
+				}
+			}
+			return count;
+		}
 
 		// -- Transition Handling --
 
@@ -179,6 +215,15 @@ namespace petri_net {
 			static const vector<place_idx> empty;
 			auto pos = post_places.find(transition);
 			return (pos != post_places.end()) ? pos->second : empty;
+		}
+
+		bool operator==(const PetriNet<Place, Transition>& other) const {
+			// check for identity
+			if (this == &other) return false;
+
+			// TODO: this could be done much more efficiently - and independent
+			return p_index == other.p_index && capacity == other.capacity &&
+					t_index == other.t_index && pre_places == other.pre_places && post_places == other.post_places;
 		}
 
 		/**
