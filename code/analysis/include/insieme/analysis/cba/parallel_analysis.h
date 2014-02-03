@@ -72,6 +72,15 @@ namespace cba {
 
 	const ExecutionNet<DefaultContext>& getExecutionNet(const core::StatementAddress& root);
 
+
+	// *************************************************************************************
+	//									Execution State Graph
+	// *************************************************************************************
+
+	typedef utils::petri_net::StateGraph<Place<DefaultContext>,Transition<DefaultContext>> StateGraph;
+
+	const StateGraph& getExecutionStateGraph(const core::StatementAddress& root);
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

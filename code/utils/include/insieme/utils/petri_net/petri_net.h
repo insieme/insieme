@@ -401,7 +401,10 @@ namespace petri_net {
 		typename Place,
 		typename Transition
 	>
-	struct StateGraph {
+	struct StateGraph :
+			public boost::equality_comparable<StateGraph<Place,Transition>>,
+			public utils::Printable
+		{
 
 		typedef Marking<Place,Transition> marking_type;
 		typedef std::size_t marking_idx;
@@ -429,6 +432,15 @@ namespace petri_net {
 			auto idxA = getIndex(a);
 			auto idxB = getIndex(b);
 			edges.insert(std::make_pair(idxA, idxB));
+		}
+
+		bool operator==(const StateGraph<Place,Transition>& other) const {
+			if (this == &other) return true;
+			return nodes == other.nodes && edges == other.edges;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "StateGraph(" << nodes.size() << " States, " << edges.size() << " Transitions)";
 		}
 
 		void dumpTo(std::ostream& out) const {

@@ -34,40 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/parallel_analysis.h"
-
-#include "insieme/analysis/cba/cba.h"
-#include "insieme/analysis/cba/framework/cba.h"
-#include "insieme/analysis/cba/utils/cba_utils.h"
-#include "insieme/analysis/cba/analysis/thread_regions.h"
-#include "insieme/analysis/cba/analysis/sync_points.h"
-#include "insieme/analysis/cba/analysis/execution_nets.h"
 #include "insieme/analysis/cba/analysis/execution_states.h"
-
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
-
-#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	std::set<SyncPoint> getSyncPoints(const core::StatementAddress& root) {
-		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(SyncPoints);
-	}
-
-	std::set<ThreadRegion<DefaultContext>> getThreadRegions(const core::StatementAddress& root) {
-		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ThreadRegions);
-	}
-
-	const ExecutionNet<DefaultContext>& getExecutionNet(const core::StatementAddress& root) {
-		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ExecutionNetAnalysis);
-	}
-
-	const StateGraph& getExecutionStateGraph(const core::StatementAddress& root) {
-		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ExecutionStateAnalysis);
-	}
+	const execution_state_analysis ExecutionStateAnalysis = registerAnalysis<execution_state_analysis>("ExecutionStateAnalysis");
 
 } // end namespace cba
 } // end namespace analysis
