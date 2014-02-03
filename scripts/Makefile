@@ -15,7 +15,7 @@ NTL 	:= ${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
 ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
 PPL 	:= ${PREFIX}/ppl-$(shell ${AWK_CMD} ppl_install.sh | cut -d= -f2 )
 CLOOG 	:= ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_install.sh | cut -d= -f2 )
-CLOOG_GCC := ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
+CLOOG_GCC := ${PREFIX}/cloog-gcc-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
 BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= -f2 )
 
 # INSIEME STUFF

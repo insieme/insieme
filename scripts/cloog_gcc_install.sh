@@ -6,6 +6,11 @@ VERSION=0.16.1
 ##							CLOOG	
 ########################################################################
 
+if [ -d $PREFIX/cloog-gcc-$VERSION ]; then
+  echo "CLOOG-GCC version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading Cloog library ####"
 wget -nc http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
 
@@ -20,11 +25,11 @@ cd cloog-$VERSION
 
 export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$LD_LIBRARY_PATH 
 
-rm -Rf $PREFIX/cloog-$VERSION
+rm -Rf $PREFIX/cloog-gcc-$VERSION
 
 echo "#### Building Cloog library ####"
 CFLAGS="-mtune=native -O3" ./configure \
-		--prefix=$PREFIX/cloog-$VERSION \
+		--prefix=$PREFIX/cloog-gcc-$VERSION \
 		--with-gmp=system \
 		--with-gmp-prefix=$PREFIX/gmp-latest 
 
@@ -40,7 +45,7 @@ echo "#### Installing Cloog library ####"
 make install
 
 rm $PREFIX/cloog-gcc-latest
-ln -s $PREFIX/cloog-$VERSION $PREFIX/cloog-gcc-latest
+ln -s $PREFIX/cloog-gcc-$VERSION $PREFIX/cloog-gcc-latest
 
 echo "#### Cleaning up environment ####"
 cd ..

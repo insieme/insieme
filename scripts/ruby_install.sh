@@ -9,6 +9,12 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 ##								Ruby	
 ########################################################################
+
+if [ -d $PREFIX/ruby-$VERSION ]; then
+  echo "Ruby version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/ruby-$VERSION
 echo "#### Downloading Ruby ####"
 wget ftp://ftp.ruby-lang.org/pub/ruby/1.9/ruby-$VERSION.tar.gz

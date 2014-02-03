@@ -6,6 +6,11 @@ VERSION=5.5.2
 ##							NTL	
 ########################################################################
 
+if [ -d $PREFIX/ntl-$VERSION ]; then
+  echo "NTL version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/ntl-$VERSION
 echo "#### Downloading ntl library ####"
 wget -nc http://shoup.net/ntl/ntl-$VERSION.tar.gz

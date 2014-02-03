@@ -9,6 +9,11 @@ VERSION=5.0.5
 PACKAGE=gmp-$VERSION
 FILE=$PACKAGE.tar.bz2
 
+if [ -d $PREFIX/gmp-$VERSION ]; then
+  echo "GMP version $VERSION already installed"
+  exit 0
+fi
+
 echo "#### Downloading GMP library ####"
 wget -nc ftp://ftp.gmplib.org/pub/gmp-$VERSION/$FILE
 

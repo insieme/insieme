@@ -9,6 +9,11 @@ OPT_FLAGS="-mtune=native -O3"
 ##							CLOOG	
 ########################################################################
 
+if [ -d $PREFIX/cloog-$VERSION ]; then
+  echo "CLOOG version $VERSION already installed"
+  exit 0
+fi
+
 rm -Rf $PREFIX/cloog-$VERSION
 echo "#### Downloading Cloog library ####"
 wget -nc http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
