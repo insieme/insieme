@@ -168,7 +168,7 @@ namespace cba {
 					// extract the current set
 					SyncPointSetType cur_set;
 					auto call = stmt.template isa<CallExprAddress>();
-					if (call && isSyncronizingFunction(call->getFunctionExpr())) {
+					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)
 						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());

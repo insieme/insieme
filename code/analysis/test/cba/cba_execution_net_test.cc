@@ -44,6 +44,8 @@
 //#include "insieme/analysis/cba/analysis/thread_regions.h"
 //#include "insieme/core/ir_builder.h"
 
+#include "insieme/utils/petri_net/petri_net_io.h"
+
 #include "cba_test.inc.h"
 
 namespace insieme {
@@ -175,18 +177,14 @@ namespace cba {
 
 		CBA analysis(code);
 
-		// get list of sync points
-		auto syncPoints = getSyncPoints(code);
-		auto regions = getThreadRegions(code);
+		// get execution net
+		auto net = getExecutionNet(code);
 
-		std::cout << "SyncPoints: " << syncPoints << "\n";
-		std::cout << "Regions:    " << regions << "\n";
+		EXPECT_EQ(10, net.getNumPlaces());
+		EXPECT_EQ(6, net.getNumTransitions());
 
-		std::cout << "#SyncPoints: " << syncPoints.size() << "\n";
-		std::cout << "#Regions:    " << regions.size() << "\n";
-
-
-		auto net = buildExecutionNet(regions);
+//		std::cout << "Plotting network ...\n";
+		utils::petri_net::plot(net);
 
 //		createDotDump(code);
 	}

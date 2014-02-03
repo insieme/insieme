@@ -120,7 +120,7 @@ namespace cba {
 
 			// check whether it is a sync-operation call
 			auto fun = call->getFunctionExpr();
-			if (isSyncronizingFunction(fun)) {
+			if (isSynchronizingFunction(fun)) {
 				auto l = cba.getLabel(call);
 				auto R = cba.getSet(RSPout, l, ctxt);
 				constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::Tmp, call, ctxt), R));

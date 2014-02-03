@@ -96,7 +96,8 @@ namespace cba {
 				"	auto j1 = job { x = 1; };"
 				"	auto j2 = job { x = 2; };"
 				"	"
-				"	parallel((c)?j1:j2);"
+				"	auto t = parallel((c)?j1:j2);"
+				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
 
@@ -107,13 +108,21 @@ namespace cba {
 
 		const auto& T = ThreadBodies;
 
-		auto res = analysis.getValuesOf(code[3], T);
-		ASSERT_EQ(2u, res.size());
+		auto res = analysis.getValuesOf(code[3].as<DeclarationStmtAddress>()->getInitialization(), T);
+		EXPECT_EQ(2u, res.size());
 		auto resStr = toString(res);
 
 		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-4-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-4-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
+
+		auto res2 = analysis.getValuesOf(code[4], T);
+		auto res2Str = toString(res2);
+
+		EXPECT_EQ(2u, res2.size());
+		EXPECT_EQ(resStr, res2Str);
+
+//		createDotDump(analysis);
 	}
 
 } // end namespace cba

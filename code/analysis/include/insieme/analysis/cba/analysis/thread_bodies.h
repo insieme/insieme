@@ -42,6 +42,7 @@
 
 #include "insieme/analysis/cba/analysis/jobs.h"
 #include "insieme/analysis/cba/analysis/callables.h"
+#include "insieme/analysis/cba/analysis/thread_groups.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -60,12 +61,79 @@ namespace cba {
 
 	namespace {
 
+		template<typename Context, typename JobSetType, typename ThreadBodySetType>
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const Context& rootCtxt);
+
+		template<typename Context, typename ThreadGroupSetType, typename ThreadBodySetType>
+		ConstraintPtr createThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res);
+
+	}
+
+
+	template<typename Context>
+	class ThreadBodyConstraintGenerator : public DataValueConstraintGenerator<Context> {
+
+		typedef DataValueConstraintGenerator<Context> super;
+
+		CBA& cba;
+
+		const core::lang::BasicGenerator& basic;
+
+	public:
+
+		ThreadBodyConstraintGenerator(CBA& cba)
+			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
+
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			typedef typename Context::thread_id thread_id;
+
+			// check whether this is a call to parallel
+			auto fun = call->getFunctionExpr();
+			if (basic.isParallelOp(fun)) {
+
+				// get job set
+				auto jobs = cba.getSet(Jobs, call[0], ctxt);
+
+				// get result set
+				auto res = cba.getSet(ThreadBodies, call, ctxt);
+
+				// build root context of spawned threads
+				// TODO: support thread-groups larger than 1
+				auto threadContext = ctxt.threadContext;
+				threadContext >>= thread_id(cba.getLabel(call), ctxt.callContext);
+				auto rootCtxt = Context(typename Context::call_context(), threadContext);
+
+				// add constraint
+				constraints.add(createThreadBodySpawnConstraint(cba, jobs, res, rootCtxt));
+			}
+
+			// another case: if it is the merge part
+			if (basic.isMerge(fun)) {
+
+				// get list of potential thread groups merged here => get bodies at spawn points
+				auto groups = cba.getSet(ThreadGroups, call[0], ctxt);
+
+				// get the result set
+				auto res = cba.getSet(ThreadBodies, call, ctxt);
+
+				// add the constraint
+				constraints.add(createThreadBodyMergeConstraint<Context>(cba, groups, res));
+			}
+
+			// nothing else is interesting (no default processing)
+		}
+
+	};
+
+
+	namespace {
+
 		template<
 			typename Context,
 			typename JobSetType,
 			typename ThreadBodySetType
 		>
-		class ThreadBodyConstraint : public utils::constraint::Constraint {
+		class ThreadBodySpawnConstraint : public utils::constraint::Constraint {
 
 			typedef typename lattice<control_flow_analysis_data, analysis_config<Context>>::type callable_lattice_type;
 
@@ -85,7 +153,7 @@ namespace cba {
 
 		public:
 
-			ThreadBodyConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const Context& rootCtxt) :
+			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const Context& rootCtxt) :
 				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), rootCtxt(rootCtxt) {
 				inputs.push_back(job);
 			}
@@ -181,65 +249,125 @@ namespace cba {
 
 
 		template<typename Context, typename JobSetType, typename ThreadBodySetType>
-		ConstraintPtr createThreadBodyConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const Context& rootCtxt) {
-			return std::make_shared<ThreadBodyConstraint<Context, JobSetType, ThreadBodySetType>>(cba, jobs, res, rootCtxt);
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const Context& rootCtxt) {
+			return std::make_shared<ThreadBodySpawnConstraint<Context, JobSetType, ThreadBodySetType>>(cba, jobs, res, rootCtxt);
+		}
+
+
+
+		template<
+			typename Context,
+			typename ThreadGroupSetType,
+			typename ThreadBodySetType
+		>
+		class ThreadBodyMergeConstraint : public utils::constraint::Constraint {
+
+			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> ThreadBodyValueID;
+
+			CBA& cba;
+
+			ThreadGroupSetType groups;
+
+			ThreadBodySetType res;
+
+			// the bodies to be collected
+			mutable std::vector<ThreadBodyValueID> bodies;
+
+			// the inputs this constraint is depending on
+			mutable std::vector<ValueID> inputs;
+
+		public:
+
+			ThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res) :
+				Constraint(toVector<ValueID>(groups), toVector<ValueID>(res), true, true), cba(cba), groups(groups), res(res) {
+				inputs.push_back(groups);
+			}
+
+			virtual UpdateResult update(Assignment& ass) const {
+
+				// get set to be extended
+				set<ThreadBody<Context>>& set = ass[res];
+
+				// just collect all bodies from the bodies set
+				bool newElement = false;
+				for(const auto& spawn : bodies) {
+					for(const auto& body : ass[spawn]) {
+						// see whether the body is already known => otherwise add it
+						newElement = set.insert(body).second || newElement;
+					}
+				}
+
+				// done
+				return (newElement) ? Incremented : Unchanged;
+			}
+
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get current set of merged thread groups
+				const set<ThreadGroup<Context>>& gs = ass[groups];
+
+				// for each job
+				bool changed = false;
+				for(const auto& group : gs) {
+
+					// add dependency to spawn point of current group
+					auto curBodySet = cba.getSet(ThreadBodies, group.getAddress(), group.getContext());
+					if (!contains(bodies, curBodySet)) {
+						bodies.push_back(curBodySet);
+						inputs.push_back(curBodySet);
+						changed = true;
+					}
+				}
+
+				return changed;
+			}
+
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				return inputs;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are fixed
+				if (updateDynamicDependencies(ass)) return false;
+
+				// get set to be checked
+				const set<ThreadBody<Context>>& set = ass[res];
+
+				// just collect all bodies from the bodies set
+				for(const auto& spawn : bodies) {
+					for(const auto& body : ass[spawn]) {
+						if (set.find(body) == set.end()) return false;
+					}
+				}
+
+				// all fine
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+
+				// print merged in thread dependencies
+				for(const auto& cur : bodies) {
+					out << cur << " -> " << res << "[label=\"subset\"]\n";
+				}
+
+				// and the default dependencies
+				return out << groups << " -> " << res << "[label=\"merged groups\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "ThreadBodies(" << groups << ") in " << res;
+			}
+		};
+
+
+		template<typename Context, typename ThreadGroupSetType, typename ThreadBodySetType>
+		ConstraintPtr createThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res) {
+			return std::make_shared<ThreadBodyMergeConstraint<Context, ThreadGroupSetType, ThreadBodySetType>>(cba, groups, res);
 		}
 
 	}
-
-
-	template<typename Context>
-	class ThreadBodyConstraintGenerator : public DataValueConstraintGenerator<Context> {
-
-		typedef DataValueConstraintGenerator<Context> super;
-
-		CBA& cba;
-
-		const core::lang::BasicGenerator& basic;
-
-	public:
-
-		ThreadBodyConstraintGenerator(CBA& cba)
-			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
-
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			typedef typename Context::thread_id thread_id;
-
-			// check whether this is a call to parallel
-			auto fun = call->getFunctionExpr();
-			if (basic.isParallelOp(fun)) {
-
-				// get job set
-				auto jobs = cba.getSet(Jobs, call[0], ctxt);
-
-				// get result set
-				auto res = cba.getSet(ThreadBodies, call, ctxt);
-
-				// build root context of spawned threads
-				// TODO: support thread-groups larger than 1
-				auto threadContext = ctxt.threadContext;
-				threadContext >>= thread_id(cba.getLabel(call), ctxt.callContext);
-				auto rootCtxt = Context(typename Context::call_context(), threadContext);
-
-				// add constraint
-				constraints.add(createThreadBodyConstraint(cba, jobs, res, rootCtxt));
-			}
-
-			// nothing else is interesting (no default processing)
-		}
-
-//		void visitJobExpr(const JobExprAddress& job, const Context& ctxt, Constraints& constraints) {
-//
-//			// this expression is creating a job
-//			auto value = getJobFromConstructor(job, ctxt);
-//			auto J_res = cba.getSet(Jobs, job, ctxt);
-//
-//			// add constraint fixing this job
-//			constraints.add(elem(value, J_res));
-//
-//		}
-
-	};
 
 } // end namespace cba
 } // end namespace analysis
