@@ -410,7 +410,7 @@ LITERAL(IntToRef,		"int.to.ref",			"(uint<8>, type<'a>) -> ref<'a>")
 DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
 DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap); r = v; return r; }")
 DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
-DERIVED(FuncIsNull,   		"func.is.null",			"('a f) -> bool { return ref.eq(f, func.null); }")
+DERIVED(FuncIsNull,   		"func.is.null",			"('a f) -> bool { return f == func.null(lit('a)); }")
 
 
 LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
@@ -426,7 +426,6 @@ OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'b>) -> bool")
 OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'b>) -> bool")
 
 GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
-
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
