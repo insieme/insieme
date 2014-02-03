@@ -40,7 +40,7 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 //#include <glog/logging.h>
@@ -62,8 +62,8 @@ TEST(DriverTest, HelloWorldTest) {
 
 	core::NodeManager manager;
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	fe::ConversionJob job(SRC_DIR "/hello_world.c");
+	LOG(INFO) << "Converting input program '" << std::string(DRIVER_SRC_DIR) << "/hello_world.c" << "' to IR...";
+	fe::ConversionJob job(DRIVER_SRC_DIR "/hello_world.c");
 	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
 
@@ -73,11 +73,11 @@ TEST(DriverTest, HelloWorldTest) {
 	auto converted = SequentialBackend::getDefault()->convert(program);
 	LOG(INFO) << "Printing converted code: " << *converted;
 
-	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );
+	std::ofstream out( std::string(DRIVER_SRC_DIR) + "/hello_world.insieme.c" );
 	out << *converted;
 	out.close();
 
-	LOG(INFO) << "Wrote source to " << SRC_DIR << "/hello_world.insieme.c" << std::endl;
+	LOG(INFO) << "Wrote source to " << DRIVER_SRC_DIR << "/hello_world.insieme.c" << std::endl;
 }
 
 //TEST(DriverTest, MultiTUTest) {
@@ -88,8 +88,8 @@ TEST(DriverTest, HelloWorldTest) {
 //	core::ProgramPtr program = core::Program::create(*sharedManager);
 //
 //	fe::Program prog(sharedManager);
-//	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/b.c");
-//	prog.addTranslationUnit(std::string(SRC_DIR) + "/multi_tu/a.c");
+//	prog.addTranslationUnit(std::string(DRIVER_SRC_DIR) + "/multi_tu/b.c");
+//	prog.addTranslationUnit(std::string(DRIVER_SRC_DIR) + "/multi_tu/a.c");
 //	LOG(INFO) << "Start conversion...";
 //	program = prog.convert();
 //	LOG(INFO) << "Done.";
@@ -107,9 +107,9 @@ TEST(DriverTest, HelloWorldTest) {
 //
 //	LOG(INFO) << "Printing converted code: " << ss.str();
 //
-//	std::ofstream out( std::string(SRC_DIR) + "/multi_tu.insieme.c" );
+//	std::ofstream out( std::string(DRIVER_SRC_DIR) + "/multi_tu.insieme.c" );
 //	out << ss.str();
 //	out.close();
 //
-//	LOG(INFO) << "Wrote source to " << SRC_DIR << "/multi_tu.insieme.c" << std::endl;
+//	LOG(INFO) << "Wrote source to " << DRIVER_SRC_DIR << "/multi_tu.insieme.c" << std::endl;
 //}

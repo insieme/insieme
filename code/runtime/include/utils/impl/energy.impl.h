@@ -46,15 +46,19 @@
 #endif
 
 void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
-        for(uint32 core = 0; core < data->number_of_cpus; ++core) {
-                data->package[core] = -1.0;
-                data->mc[core] = -1.0;
-                data->cores[core] = -1.0;
-        }	
+	data->package = -1.0;
+	data->mc = -1.0;
+	data->cores = -1.0;
 }
 
 void irt_energy_select_instrumentation_method() {
-	if(irt_rapl_is_supported()) {
+	// for RAPL we need to know about the number of cores per socket, hence we need PAPI
+#ifdef IRT_USE_PAPI
+	bool papi_available = true;
+#else
+	bool papi_available = false;
+#endif
+	if(irt_rapl_is_supported() && papi_available) {
 		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
 		irt_log_setting_s("irt energy measurement method", "rapl");
 	} else {

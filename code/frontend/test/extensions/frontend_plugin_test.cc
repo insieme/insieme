@@ -48,7 +48,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -76,7 +76,7 @@ public:
         }
         if(N==1) {
             macros.insert(std::make_pair<std::string,std::string>("A",""));
-            kidnappedHeaders.push_back(SRC_DIR "/inputs/kidnapped");
+            kidnappedHeaders.push_back(CLANG_SRC_DIR "/inputs/kidnapped");
         }
         if(N==2) {
             using namespace insieme::frontend::pragma;
@@ -182,7 +182,7 @@ public:
 TEST(ClangStage, Initialization) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
 
 	// register the frontend plugin
@@ -196,7 +196,7 @@ TEST(ClangStage, Initialization) {
 TEST(ClangStage, Conversion) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
 
 	EXPECT_FALSE(typeVisited);
@@ -221,7 +221,7 @@ TEST(ClangStage, Conversion) {
 TEST(PreClangStage, Macros) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
     //execute job
     auto program = job.execute(mgr);
@@ -239,7 +239,7 @@ TEST(PreClangStage, Macros) {
 TEST(PreClangStage, HeaderInjection) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
     //execute job
     auto program = job.execute(mgr);
@@ -259,7 +259,7 @@ TEST(PreClangStage, HeaderInjection) {
 TEST(PreClangStage, HeaderKidnapping) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>(1);
     //execute job
     auto program = job.execute(mgr);
@@ -278,7 +278,7 @@ TEST(PreClangStage, HeaderKidnapping) {
 TEST(PostClangStage, IRVisit) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>();
     //execute job
     progVisited = false;
@@ -299,7 +299,7 @@ TEST(PostClangStage, IRVisit) {
 TEST(PragmaHandlerTest, PragmaTest) {
     //initialization
     insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/simple.c");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
     job.registerFrontendPlugin<ClangTestPlugin>(2);
     //execute job
     //checks also if handling for stmts that are
@@ -370,7 +370,7 @@ struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
 TEST(DeclsStage, MatchVisits) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    insieme::frontend::ConversionJob job(SRC_DIR "/inputs/decls.cpp");
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/decls.cpp");
 
 	varsPre  = varsPost = 0;
 	funcsPre = funsPost = 0;

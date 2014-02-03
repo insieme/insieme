@@ -38,8 +38,8 @@
 
 #include <unistd.h>
 
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-#include "papi.h"
+#ifdef IRT_USE_PAPI
+#include "papi_helper.h"
 #endif
 #include "error_handling.h"
 
@@ -78,7 +78,9 @@ void _irt_set_num_cpus(uint32 num) {
 }
 
 int32 _irt_setup_hardware_info() {
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#ifdef IRT_USE_PAPI
+	irt_papi_init();
+
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
 	if(hwinfo == NULL) {
@@ -89,11 +91,11 @@ int32 _irt_setup_hardware_info() {
 	if(hwinfo->threads > 0)
 		__irt_g_cached_threads_per_core_count = hwinfo->threads;
 	if(hwinfo->cores > 0)
-			__irt_g_cached_cores_per_socket_count = hwinfo->cores;
+		__irt_g_cached_cores_per_socket_count = hwinfo->cores;
 	if(hwinfo->sockets > 0)
-			__irt_g_cached_sockets_count = hwinfo->sockets;
+		__irt_g_cached_sockets_count = hwinfo->sockets;
 	if(hwinfo->nnodes > 0)
-				__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
+		__irt_g_cached_numa_nodes_count = hwinfo->nnodes;
 #else
 	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
 #endif
@@ -105,12 +107,16 @@ uint32 irt_get_num_threads_per_core() {
 	if(__irt_g_cached_threads_per_core_count == 0)
 		_irt_setup_hardware_info();
 
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
+
 	return __irt_g_cached_threads_per_core_count;
 }
 
 uint32 irt_get_num_cores_per_socket() {
 	if(__irt_g_cached_cores_per_socket_count == 0)
 		_irt_setup_hardware_info();
+
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
 
 	return __irt_g_cached_cores_per_socket_count;
 }
@@ -119,12 +125,16 @@ uint32 irt_get_num_sockets() {
 	if(__irt_g_cached_sockets_count == 0)
 		_irt_setup_hardware_info();
 
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
+
 	return __irt_g_cached_sockets_count;
 }
 
 uint32 irt_get_num_numa_nodes() {
 	if(__irt_g_cached_numa_nodes_count == 0)
 		_irt_setup_hardware_info();
+
+	IRT_ASSERT(__irt_g_cached_threads_per_core_count != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
 
 	return __irt_g_cached_numa_nodes_count;
 }

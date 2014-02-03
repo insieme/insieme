@@ -52,47 +52,8 @@
 // non-derived metrics (directly obtained from the runtime)
 
 // metrics offered by the runtime
-METRIC(TIMESTAMP_START,		"timestamp_start_(ns)",		ns,			none);
-METRIC(TIMESTAMP_END,		"timestamp_end_(ns)",		ns,			none);
-
-METRIC(VIRT_MEM_START,		"virt_memory_start_(kb)",	kb,			none);
-METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
-
-METRIC(RES_MEM_START,		"res_memory_start_(kb)",	kb,			none);
-METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
-
-METRIC(ENERGY_PACKAGE_1_START,          "energy_package_1_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_1_END,                    "energy_package_1_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_1_START,            "energy_cores_1_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_1_END,                      "energy_cores_1_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_1_START,               "energy_mc_1_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_1_END,                 "energy_mc_1_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_2_START,          "energy_package_2_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_2_END,                    "energy_package_2_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_2_START,            "energy_cores_2_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_2_END,                      "energy_cores_2_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_2_START,               "energy_mc_2_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_2_END,                 "energy_mc_2_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_3_START,          "energy_package_3_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_3_END,                    "energy_package_3_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_3_START,            "energy_cores_3_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_3_END,                      "energy_cores_3_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_3_START,               "energy_mc_3_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_3_END,                 "energy_mc_3_end_(j)",                  j,                      none);
-METRIC(ENERGY_PACKAGE_4_START,          "energy_package_4_start_(j)",                   j,                      none);
-METRIC(ENERGY_PACKAGE_4_END,                    "energy_package_4_end_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_4_START,            "energy_cores_4_start_(j)",                     j,                      none);
-METRIC(ENERGY_CORES_4_END,                      "energy_cores_4_end_(j)",                       j,                      none);
-METRIC(ENERGY_MC_4_START,               "energy_mc_4_start_(j)",                        j,                      none);
-METRIC(ENERGY_MC_4_END,                 "energy_mc_4_end_(j)",                  j,                      none);
-
-METRIC(TEMPERATURE_CORE_START,	"temperature_core_start_(c)",	c,			none);
-METRIC(TEMPERATURE_CORE_END,		"temperature_core_end_(c)",		c,			none);
-METRIC(TEMPERATURE_PACKAGE_START,	"temperature_pkg_start_(c)",	c,			none);
-METRIC(TEMPERATURE_PACKAGE_END,		"temperature_pkg_end_(c)",		c,			none);	
-
-METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
-METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
+METRIC(WALL_TIME,			"wall_time",			ns,			none);
+METRIC(CPU_TIME,			"cpu_time",				ns,			none);
 METRIC(NUM_EXEC,			"num_executions",			unit,		none);
 
 // TODO: re-enable when available again
@@ -208,164 +169,26 @@ METRIC(PAPI_VEC_SP,			"PAPI_VEC_SP",				unit,		none);
 METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
-METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
+// TODO: placeholder, needs to be fixed with RAPL on kernels newer than 3.5
+METRIC(TOTAL_ENERGY,					"total_energy",				j, 			none);
+METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			unit,			none);
+//METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
+//METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
+//METRIC(NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));	
 
-METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
-METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
-METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));	
+METRIC(AVG_WALL_TIME,				"avg_wall_time",			ns,			div(Metric::WALL_TIME, Metric::NUM_EXEC));
+METRIC(AVG_CPU_TIME,				"avg_cpu_time",				ns,			div(Metric::CPU_TIME, Metric::NUM_EXEC));
 
-METRIC(AVG_WALL_TIME,				"avg_wall_time",			ns,			div(Metric::TOTAL_WALL_TIME, Metric::TOTAL_NUM_EXEC));
-METRIC(AVG_CPU_TIME,				"avg_cpu_time",				ns,			div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_NUM_EXEC));
-
-METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
+METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::CPU_TIME, Metric::WALL_TIME));
 //METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
-METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
-METRIC(LOAD_VARIANCE,				"load_variance",			unit,		var(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
-
-METRIC(TOTAL_ENERGY_PACKAGE_1,                          "total_energy_package_1",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_1_END, Metric::ENERGY_PACKAGE_1_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_2,                          "total_energy_package_2",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_2_END, Metric::ENERGY_PACKAGE_2_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_3,                          "total_energy_package_3",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_3_END, Metric::ENERGY_PACKAGE_3_START)));
-METRIC(TOTAL_ENERGY_PACKAGE_4,                          "total_energy_package_4",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_4_END, Metric::ENERGY_PACKAGE_4_START)));
-METRIC(TOTAL_ENERGY_CORES_1,                            "total_energy_cores_1",                         j,                      first(l_sub(Metric::ENERGY_CORES_1_END, Metric::ENERGY_CORES_1_START)));
-METRIC(TOTAL_ENERGY_CORES_2,                            "total_energy_cores_2",                         j,                      first(l_sub(Metric::ENERGY_CORES_2_END, Metric::ENERGY_CORES_2_START)));
-METRIC(TOTAL_ENERGY_CORES_3,                            "total_energy_cores_3",                         j,                      first(l_sub(Metric::ENERGY_CORES_3_END, Metric::ENERGY_CORES_3_START)));
-METRIC(TOTAL_ENERGY_CORES_4,                            "total_energy_cores_4",                         j,                      first(l_sub(Metric::ENERGY_CORES_4_END, Metric::ENERGY_CORES_4_START)));
-METRIC(TOTAL_ENERGY_MC_1,                               "total_energy_mc_1",                            j,                      first(l_sub(Metric::ENERGY_MC_1_END, Metric::ENERGY_MC_1_START)));
-METRIC(TOTAL_ENERGY_MC_2,                               "total_energy_mc_2",                            j,                      first(l_sub(Metric::ENERGY_MC_2_END, Metric::ENERGY_MC_2_START)));
-METRIC(TOTAL_ENERGY_MC_3,                               "total_energy_mc_3",                            j,                      first(l_sub(Metric::ENERGY_MC_3_END, Metric::ENERGY_MC_3_START)));
-METRIC(TOTAL_ENERGY_MC_4,                               "total_energy_mc_4",                            j,                      first(l_sub(Metric::ENERGY_MC_4_END, Metric::ENERGY_MC_4_START)));
-METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, add(Metric::TOTAL_ENERGY_PACKAGE_2, add(Metric::TOTAL_ENERGY_PACKAGE_3, Metric::TOTAL_ENERGY_PACKAGE_4))));
-
-METRIC(AVG_TEMPERATURE_CORE_START,							"avg_temperature_core_start",						c,				avg(Metric::TEMPERATURE_CORE_START));
-METRIC(AVG_TEMPERATURE_CORE_END,								"avg_temperature_core_end",							c,				avg(Metric::TEMPERATURE_CORE_END));
-METRIC(AVG_TEMPERATURE_PACKAGE_START,							"avg_temperature_pkg_start",						c,				avg(Metric::TEMPERATURE_PACKAGE_START));
-METRIC(AVG_TEMPERATURE_PACKAGE_END,								"avg_temperature_pkg_end",							c,				avg(Metric::TEMPERATURE_PACKAGE_END));
-
-//METRIC(TOTAL_TEMPERATURE,								"total_temperature",							c,				avg(Metric::TEMPERATURE_START, Metric::TEMPERATURE_END));
+//METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
+//METRIC(LOAD_VARIANCE,				"load_variance",			unit,		var(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
 
 // TODO: re-enable when number of workers is fixed for regions 
 //METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
-METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
+//METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
 
 // METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
-
-
-METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(Metric::PAPI_L1_DCM));
-METRIC(TOTAL_L2_CACHE_MISS, 		"total_L2_cache_miss", 			unit,		sum(Metric::PAPI_L2_TCM));
-METRIC(TOTAL_L3_CACHE_MISS, 		"total_L3_cache_miss", 			unit,		sum(Metric::PAPI_L3_TCM));
-
-
-// TODO: given those metrics some meaningfull name
-METRIC(TOTAL_L1_DCM,			"total_PAPI_L1_DCM",				unit,		sum(list(Metric::PAPI_L1_DCM)));
-METRIC(TOTAL_L1_ICM,			"total_PAPI_L1_ICM",				unit,		sum(list(Metric::PAPI_L1_ICM)));
-METRIC(TOTAL_L2_DCM,			"total_PAPI_L2_DCM",				unit,		sum(list(Metric::PAPI_L2_DCM)));
-METRIC(TOTAL_L2_ICM,			"total_PAPI_L2_ICM",				unit,		sum(list(Metric::PAPI_L2_ICM)));
-//METRIC(TOTAL_L3_DCM,			"total_PAPI_L3_DCM",				unit,		sum(list(Metric::PAPI_L3_DCM)));
-//METRIC(TOTAL_L3_ICM,			"total_PAPI_L3_ICM",				unit,		sum(list(Metric::PAPI_L3_ICM)));
-METRIC(TOTAL_L1_TCM,			"total_PAPI_L1_TCM",				unit,		sum(list(Metric::PAPI_L1_TCM)));
-METRIC(TOTAL_L2_TCM,			"total_PAPI_L2_TCM",				unit,		sum(list(Metric::PAPI_L2_TCM)));
-METRIC(TOTAL_L3_TCM,			"total_PAPI_L3_TCM",				unit,		sum(list(Metric::PAPI_L3_TCM)));
-//METRIC(TOTAL_CA_SNP,			"total_PAPI_CA_SNP",				unit,		sum(list(Metric::PAPI_CA_SNP)));
-//METRIC(TOTAL_CA_SHR,			"total_PAPI_CA_SHR",				unit,		sum(list(Metric::PAPI_CA_SHR)));
-//METRIC(TOTAL_CA_CLN,			"total_PAPI_CA_CLN",				unit,		sum(list(Metric::PAPI_CA_CLN)));
-//METRIC(TOTAL_CA_INV,			"total_PAPI_CA_INV",				unit,		sum(list(Metric::PAPI_CA_INV)));
-//METRIC(TOTAL_CA_ITV,			"total_PAPI_CA_ITV",				unit,		sum(list(Metric::PAPI_CA_ITV)));
-METRIC(TOTAL_L3_LDM,			"total_PAPI_L3_LDM",				unit,		sum(list(Metric::PAPI_L3_LDM)));
-//METRIC(TOTAL_L3_STM,			"total_PAPI_L3_STM",				unit,		sum(list(Metric::PAPI_L3_STM)));
-//METRIC(TOTAL_BRU_IDL,			"total_PAPI_BRU_IDL",				unit,		sum(list(Metric::PAPI_BRU_IDL)));
-//METRIC(TOTAL_FXU_IDL,			"total_PAPI_FXU_IDL",				unit,		sum(list(Metric::PAPI_FXU_IDL)));
-//METRIC(TOTAL_FPU_IDL,			"total_PAPI_FPU_IDL",				unit,		sum(list(Metric::PAPI_FPU_IDL)));
-//METRIC(TOTAL_LSU_IDL,			"total_PAPI_LSU_IDL",				unit,		sum(list(Metric::PAPI_LSU_IDL)));
-METRIC(TOTAL_TLB_DM,			"total_PAPI_TLB_DM",				unit,		sum(list(Metric::PAPI_TLB_DM)));
-METRIC(TOTAL_TLB_IM,			"total_PAPI_TLB_IM",				unit,		sum(list(Metric::PAPI_TLB_IM)));
-METRIC(TOTAL_TLB_TL,			"total_PAPI_TLB_TL",				unit,		sum(list(Metric::PAPI_TLB_TL)));
-METRIC(TOTAL_L1_LDM,			"total_PAPI_L1_LDM",				unit,		sum(list(Metric::PAPI_L1_LDM)));
-METRIC(TOTAL_L1_STM,			"total_PAPI_L1_STM",				unit,		sum(list(Metric::PAPI_L1_STM)));
-METRIC(TOTAL_L2_LDM,			"total_PAPI_L2_LDM",				unit,		sum(list(Metric::PAPI_L2_LDM)));
-METRIC(TOTAL_L2_STM,			"total_PAPI_L2_STM",				unit,		sum(list(Metric::PAPI_L2_STM)));
-//METRIC(TOTAL_BTAC_M,			"total_PAPI_BTAC_M",				unit,		sum(list(Metric::PAPI_BTAC_M)));
-//METRIC(TOTAL_PRF_DM,			"total_PAPI_PRF_DM",				unit,		sum(list(Metric::PAPI_PRF_DM)));
-//METRIC(TOTAL_L3_DCH,			"total_PAPI_L3_DCH",				unit,		sum(list(Metric::PAPI_L3_DCH)));
-//METRIC(TOTAL_TLB_SD,			"total_PAPI_TLB_SD",				unit,		sum(list(Metric::PAPI_TLB_SD)));
-//METRIC(TOTAL_CSR_FAL,			"total_PAPI_CSR_FAL",				unit,		sum(list(Metric::PAPI_CSR_FAL)));
-//METRIC(TOTAL_CSR_SUC,			"total_PAPI_CSR_SUC",				unit,		sum(list(Metric::PAPI_CSR_SUC)));
-//METRIC(TOTAL_CSR_TOT,			"total_PAPI_CSR_TOT",				unit,		sum(list(Metric::PAPI_CSR_TOT)));
-//METRIC(TOTAL_MEM_SCY,			"total_PAPI_MEM_SCY",				unit,		sum(list(Metric::PAPI_MEM_SCY)));
-//METRIC(TOTAL_MEM_RCY,			"total_PAPI_MEM_RCY",				unit,		sum(list(Metric::PAPI_MEM_RCY)));
-//METRIC(TOTAL_MEM_WCY,			"total_PAPI_MEM_WCY",				unit,		sum(list(Metric::PAPI_MEM_WCY)));
-METRIC(TOTAL_STL_ICY,			"total_PAPI_STL_ICY",				unit,		sum(list(Metric::PAPI_STL_ICY)));
-//METRIC(TOTAL_FUL_ICY,			"total_PAPI_FUL_ICY",				unit,		sum(list(Metric::PAPI_FUL_ICY)));
-//METRIC(TOTAL_STL_CCY,			"total_PAPI_STL_CCY",				unit,		sum(list(Metric::PAPI_STL_CCY)));
-//METRIC(TOTAL_FUL_CCY,			"total_PAPI_FUL_CCY",				unit,		sum(list(Metric::PAPI_FUL_CCY)));
-//METRIC(TOTAL_HW_INT,			"total_PAPI_HW_INT",				unit,		sum(list(Metric::PAPI_HW_INT)));
-METRIC(TOTAL_BR_UCN,			"total_PAPI_BR_UCN",				unit,		sum(list(Metric::PAPI_BR_UCN)));
-METRIC(TOTAL_BR_CN,				"total_PAPI_BR_CN",				unit,		sum(list(Metric::PAPI_BR_CN)));
-METRIC(TOTAL_BR_TKN,			"total_PAPI_BR_TKN",				unit,		sum(list(Metric::PAPI_BR_TKN)));
-METRIC(TOTAL_BR_NTK,			"total_PAPI_BR_NTK",				unit,		sum(list(Metric::PAPI_BR_NTK)));
-METRIC(TOTAL_BR_MSP,			"total_PAPI_BR_MSP",				unit,		sum(list(Metric::PAPI_BR_MSP)));
-METRIC(TOTAL_BR_PRC,			"total_PAPI_BR_PRC",				unit,		sum(list(Metric::PAPI_BR_PRC)));
-//METRIC(TOTAL_FMA_INS,			"total_PAPI_FMA_INS",				unit,		sum(list(Metric::PAPI_FMA_INS)));
-METRIC(TOTAL_TOT_IIS,			"total_PAPI_TOT_IIS",				unit,		sum(list(Metric::PAPI_TOT_IIS)));
-METRIC(TOTAL_TOT_INS,			"total_PAPI_TOT_INS",				unit,		sum(list(Metric::PAPI_TOT_INS)));
-//METRIC(TOTAL_INT_INS,			"total_PAPI_INT_INS",				unit,		sum(list(Metric::PAPI_INT_INS)));
-METRIC(TOTAL_FP_INS,			"total_PAPI_FP_INS",				unit,		sum(list(Metric::PAPI_FP_INS)));
-METRIC(TOTAL_LD_INS,			"total_PAPI_LD_INS",				unit,		sum(list(Metric::PAPI_LD_INS)));
-METRIC(TOTAL_SR_INS,			"total_PAPI_SR_INS",				unit,		sum(list(Metric::PAPI_SR_INS)));
-METRIC(TOTAL_BR_INS,			"total_PAPI_BR_INS",				unit,		sum(list(Metric::PAPI_BR_INS)));
-//METRIC(TOTAL_VEC_INS,			"total_PAPI_VEC_INS",				unit,		sum(list(Metric::PAPI_VEC_INS)));
-METRIC(TOTAL_RES_STL,			"total_PAPI_RES_STL",				unit,		sum(list(Metric::PAPI_RES_STL)));
-//METRIC(TOTAL_FP_STAL,			"total_PAPI_FP_STAL",				unit,		sum(list(Metric::PAPI_FP_STAL)));
-METRIC(TOTAL_TOT_CYC,			"total_PAPI_TOT_CYC",				unit,		sum(list(Metric::PAPI_TOT_CYC)));
-METRIC(TOTAL_LST_INS,			"total_PAPI_LST_INS",				unit,		sum(list(Metric::PAPI_LST_INS)));
-//METRIC(TOTAL_SYC_INS,			"total_PAPI_SYC_INS",				unit,		sum(list(Metric::PAPI_SYC_INS)));
-METRIC(TOTAL_L1_DCH,			"total_PAPI_L1_DCH",				unit,		sum(list(Metric::PAPI_L1_DCH)));
-METRIC(TOTAL_L2_DCH,			"total_PAPI_L2_DCH",				unit,		sum(list(Metric::PAPI_L2_DCH)));
-METRIC(TOTAL_L1_DCA,			"total_PAPI_L1_DCA",				unit,		sum(list(Metric::PAPI_L1_DCA)));
-METRIC(TOTAL_L2_DCA,			"total_PAPI_L2_DCA",				unit,		sum(list(Metric::PAPI_L2_DCA)));
-METRIC(TOTAL_L3_DCA,			"total_PAPI_L3_DCA",				unit,		sum(list(Metric::PAPI_L3_DCA)));
-METRIC(TOTAL_L1_DCR,			"total_PAPI_L1_DCR",				unit,		sum(list(Metric::PAPI_L1_DCR)));
-METRIC(TOTAL_L2_DCR,			"total_PAPI_L2_DCR",				unit,		sum(list(Metric::PAPI_L2_DCR)));
-METRIC(TOTAL_L3_DCR,			"total_PAPI_L3_DCR",				unit,		sum(list(Metric::PAPI_L3_DCR)));
-METRIC(TOTAL_L1_DCW,			"total_PAPI_L1_DCW",				unit,		sum(list(Metric::PAPI_L1_DCW)));
-METRIC(TOTAL_L2_DCW,			"total_PAPI_L2_DCW",				unit,		sum(list(Metric::PAPI_L2_DCW)));
-METRIC(TOTAL_L3_DCW,			"total_PAPI_L3_DCW",				unit,		sum(list(Metric::PAPI_L3_DCW)));
-METRIC(TOTAL_L1_ICH,			"total_PAPI_L1_ICH",				unit,		sum(list(Metric::PAPI_L1_ICH)));
-METRIC(TOTAL_L2_ICH,			"total_PAPI_L2_ICH",				unit,		sum(list(Metric::PAPI_L2_ICH)));
-//METRIC(TOTAL_L3_ICH,			"total_PAPI_L3_ICH",				unit,		sum(list(Metric::PAPI_L3_ICH)));
-METRIC(TOTAL_L1_ICA,			"total_PAPI_L1_ICA",				unit,		sum(list(Metric::PAPI_L1_ICA)));
-METRIC(TOTAL_L2_ICA,			"total_PAPI_L2_ICA",				unit,		sum(list(Metric::PAPI_L2_ICA)));
-METRIC(TOTAL_L3_ICA,			"total_PAPI_L3_ICA",				unit,		sum(list(Metric::PAPI_L3_ICA)));
-METRIC(TOTAL_L1_ICR,			"total_PAPI_L1_ICR",				unit,		sum(list(Metric::PAPI_L1_ICR)));
-METRIC(TOTAL_L2_ICR,			"total_PAPI_L2_ICR",				unit,		sum(list(Metric::PAPI_L2_ICR)));
-METRIC(TOTAL_L3_ICR,			"total_PAPI_L3_ICR",				unit,		sum(list(Metric::PAPI_L3_ICR)));
-//METRIC(TOTAL_L1_ICW,			"total_PAPI_L1_ICW",				unit,		sum(list(Metric::PAPI_L1_ICW)));
-//METRIC(TOTAL_L2_ICW,			"total_PAPI_L2_ICW",				unit,		sum(list(Metric::PAPI_L2_ICW)));
-//METRIC(TOTAL_L3_ICW,			"total_PAPI_L3_ICW",				unit,		sum(list(Metric::PAPI_L3_ICW)));
-//METRIC(TOTAL_L1_TCH,			"total_PAPI_L1_TCH",				unit,		sum(list(Metric::PAPI_L1_TCH)));
-METRIC(TOTAL_L2_TCH,			"total_PAPI_L2_TCH",				unit,		sum(list(Metric::PAPI_L2_TCH)));
-//METRIC(TOTAL_L3_TCH,			"total_PAPI_L3_TCH",				unit,		sum(list(Metric::PAPI_L3_TCH)));
-METRIC(TOTAL_L1_TCA,			"total_PAPI_L1_TCA",				unit,		sum(list(Metric::PAPI_L1_TCA)));
-METRIC(TOTAL_L2_TCA,			"total_PAPI_L2_TCA",				unit,		sum(list(Metric::PAPI_L2_TCA)));
-METRIC(TOTAL_L3_TCA,			"total_PAPI_L3_TCA",				unit,		sum(list(Metric::PAPI_L3_TCA)));
-METRIC(TOTAL_L1_TCR,			"total_PAPI_L1_TCR",				unit,		sum(list(Metric::PAPI_L1_TCR)));
-METRIC(TOTAL_L2_TCR,			"total_PAPI_L2_TCR",				unit,		sum(list(Metric::PAPI_L2_TCR)));
-METRIC(TOTAL_L3_TCR,			"total_PAPI_L3_TCR",				unit,		sum(list(Metric::PAPI_L3_TCR)));
-//METRIC(TOTAL_L1_TCW,			"total_PAPI_L1_TCW",				unit,		sum(list(Metric::PAPI_L1_TCW)));
-METRIC(TOTAL_L2_TCW,			"total_PAPI_L2_TCW",				unit,		sum(list(Metric::PAPI_L2_TCW)));
-METRIC(TOTAL_L3_TCW,			"total_PAPI_L3_TCW",				unit,		sum(list(Metric::PAPI_L3_TCW)));
-//METRIC(TOTAL_FML_INS,			"total_PAPI_FML_INS",				unit,		sum(list(Metric::PAPI_FML_INS)));
-//METRIC(TOTAL_FAD_INS,			"total_PAPI_FAD_INS",				unit,		sum(list(Metric::PAPI_FAD_INS)));
-METRIC(TOTAL_FDV_INS,			"total_PAPI_FDV_INS",				unit,		sum(list(Metric::PAPI_FDV_INS)));
-//METRIC(TOTAL_FSQ_INS,			"total_PAPI_FSQ_INS",				unit,		sum(list(Metric::PAPI_FSQ_INS)));
-//METRIC(TOTAL_FNV_INS,			"total_PAPI_FNV_INS",				unit,		sum(list(Metric::PAPI_FNV_INS)));
-METRIC(TOTAL_FP_OPS,			"total_PAPI_FP_OPS",				unit,		sum(list(Metric::PAPI_FP_OPS)));
-METRIC(TOTAL_SP_OPS,			"total_PAPI_SP_OPS",				unit,		sum(list(Metric::PAPI_SP_OPS)));
-METRIC(TOTAL_DP_OPS,			"total_PAPI_DP_OPS",				unit,		sum(list(Metric::PAPI_DP_OPS)));
-METRIC(TOTAL_VEC_SP,			"total_PAPI_VEC_SP",				unit,		sum(list(Metric::PAPI_VEC_SP)));
-METRIC(TOTAL_VEC_DP,			"total_PAPI_VEC_DP",				unit,		sum(list(Metric::PAPI_VEC_DP)));
-
-METRIC(TOTAL_INS_PER_SEC,		"total_ins_per_sec",				unit,		div(Metric::TOTAL_TOT_INS, Metric::TOTAL_CPU_TIME));
 
 
 #undef METRIC

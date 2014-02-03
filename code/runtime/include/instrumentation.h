@@ -45,18 +45,13 @@
 #define IRT_ENABLE_INSTRUMENTATION
 #endif
 
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-#define IRT_ENABLE_REGION_INSTRUMENTATION
-#endif
-
 #ifndef IRT_ENABLE_INSTRUMENTATION
 //#define IRT_ENABLE_INSTRUMENTATION
 #endif
+
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
 //#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
-
-//#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
 
 #define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
 	struct _irt_##__type__##_table { \
@@ -67,18 +62,11 @@
 }; \
 typedef struct _irt_##__type__##_table irt_##__table__##_table; \
 
-
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-#include "papi.h"
-#endif
-
 // functions for creating and destroying performance tables
 
 irt_instrumentation_event_data_table* irt_inst_create_event_data_table();
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table();
 
 void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table);
-void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table);
 
 // initialization functions
 
@@ -97,7 +85,7 @@ void _irt_inst_insert_db_event(irt_worker* worker, irt_instrumentation_event eve
 void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE* outputfile, bool readable);
 void irt_inst_event_data_output_all(bool binary_format);
 void irt_inst_event_data_output(irt_worker* worker, bool binary_format);
-void irt_inst_region_data_output(irt_worker* worker);
+void irt_inst_region_context_data_output(irt_worker* worker);
 void irt_inst_aggregated_data_output();
 
 // instrumentation function pointer toggle functions
@@ -123,34 +111,98 @@ void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event 
 //													Regions
 // -----------------------------------------------------------------------------------------------------------------
 
-typedef uint32 region_id;
+typedef uint32 irt_inst_region_id;
 
-// -------------------- region markers ---------------------
+uint32 irt_g_inst_region_metric_count = 0;
+uint32 irt_g_inst_region_metric_group_count = 0;
 
-void irt_inst_region_start(irt_context* context, irt_worker* worker, region_id id);
-void irt_inst_region_end(irt_context* context, irt_worker* worker, region_id id);
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+uint32 irt_g_region_metric_##_name__##_id;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+uint32 irt_g_region_metric_group_##_name__##_id;
+#include "irt_metrics.def"
 
-// a special variation of region start / end for pfor-regions (accounting for the parallel execution)
-// TODO: unify the two variants
-void irt_inst_region_start_pfor(irt_context* context, region_id id);
-void irt_inst_region_end_pfor(irt_context* context, region_id id, uint64 walltime, uint64 cputime);
+// create metric flags and group counts for selectively enabling/disabling instrumentation
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+bool irt_g_inst_region_metric_measure_##_name__ = false;
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+uint32 irt_g_inst_region_metric_group_##_name__##membership_count = 0;
+#include "irt_metrics.def"
 
-void irt_inst_region_suspend(irt_work_item* wi);
-void irt_inst_region_continue(irt_work_item* wi);
+typedef enum {
+	IRT_HW_SCOPE_CORE,
+	IRT_HW_SCOPE_SOCKET,
+	IRT_HW_SCOPE_SYSTEM,
+	IRT_HW_SCOPE_NUM_SCOPES
+} IRT_HW_SCOPES;
 
-// ------------------ management operations ----------------
+typedef enum {
+	IRT_METRIC_AGGREGATOR_NONE,
+	IRT_METRIC_AGGREGATOR_SUM,
+	IRT_METRIC_AGGREGATOR_AVG,
+	IRT_METRIC_NUM_AGGREGATORS,
+} IRT_METRIC_AGGREGATORS;
+
+typedef struct {
+	uint64 id;
+	uint64 num_executions;
+	uint64 num_entries;
+	uint64 num_exits;
+	irt_spinlock lock;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+	_data_type__ last_##_name__; \
+	_data_type__ aggregated_##_name__;
+#include "irt_metrics.def"
+} irt_inst_region_context_data;
+
+typedef struct {
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+	_data_type__ last_##_name__; \
+	_data_type__ aggregated_##_name__;
+#include "irt_metrics.def"
+} irt_inst_region_wi_data;
+
+typedef struct {
+#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_var_decls__;
+#include "irt_metrics.def"
+} irt_inst_region_context_declarations;
+
+typedef struct {
+	irt_inst_region_context_data** items;
+	uint64 length;
+	uint64 size;
+} irt_inst_region_list;
+
+void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source);
+
+void irt_inst_region_wi_init(irt_work_item* wi);
+
+void irt_inst_region_wi_finalize(irt_work_item* wi);
 
 void irt_inst_region_init(irt_context* context);
+
 void irt_inst_region_finalize(irt_context* context);
 
-typedef enum _irt_inst_region_mode {
-	IRT_INST_REGION_NONE,
-	IRT_INST_REGION_AGGREGATED,
-	IRT_INST_REGION_DETAIL
-} irt_inst_region_mode;
+void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi);
 
-void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode);
-void irt_inst_region_set_mode_for_region(irt_context* context, region_id id, irt_inst_region_mode mode);
+void irt_inst_region_start_measurements(irt_work_item* wi);
+
+void irt_inst_region_end_measurements(irt_work_item* wi);
+
+void irt_inst_region_start(irt_inst_region_id id);
+
+void irt_inst_region_end(irt_inst_region_id id);
+
+void irt_inst_region_select_metrics(const char* selection);
+
+void irt_inst_region_select_metrics_from_env();
+
+void irt_inst_region_debug_output();
+
+void irt_inst_region_output();
+
+irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi);
 
 
 // -----------------------------------------------------------------------------------------------------------------

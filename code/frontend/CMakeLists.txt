@@ -12,9 +12,6 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/clang_config.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/gemsclaim_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/gemsclaim_config.h)
-
 # add include directory
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include

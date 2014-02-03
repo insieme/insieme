@@ -43,7 +43,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -64,7 +64,7 @@ TEST(Cilk, Pragmas) {
 
 	ConversionSetup setup;
 	setup.setOption(ConversionSetup::Cilk);
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/hello.cilk", setup);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", setup);
 
 	const auto& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -151,7 +151,7 @@ TEST(Cilk, Sema) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job(SRC_DIR "/inputs/hello.cilk");
+	ConversionJob job(CLANG_SRC_DIR "/inputs/hello.cilk");
 	job.setOption(ConversionJob::Cilk);
 
 

@@ -76,7 +76,7 @@
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/sema.h"
 
 #include "insieme/utils/logging.h"
@@ -324,11 +324,11 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	//		functiondefinition
 	//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
 	//		intrinsic to use depending on the used compiler the correct casts
-	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, false, false);
+	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, false, false);
 	/*** VECTOR EXTENSION STUFF END ***/
 
 	// Set OMP define if compiling with OpenMP
-	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/",
+	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/omp/input/",
 		clang::frontend::System,  false, false);
 	if(config.hasOption(ConversionJob::OpenMP)) {
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");

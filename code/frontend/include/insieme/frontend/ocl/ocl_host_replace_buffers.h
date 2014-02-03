@@ -92,6 +92,7 @@ private:
 	ExpressionAddressMap clMemReplacements;
 	core::ProgramPtr& prog;
 
+	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
 	void collectInformation();
 	void generateReplacements();
 };

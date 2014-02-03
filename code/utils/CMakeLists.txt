@@ -9,7 +9,7 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.8)
 
 # configure config files
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/test/test_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/config.h)
 
 # collect source files 
 file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )

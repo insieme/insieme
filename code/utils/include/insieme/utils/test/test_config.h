@@ -35,4 +35,5 @@
  */
 
 #pragma once
-#define GEM_SYSTEM_HEADER_REPLACEMENTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/gemsclaim/"
+#define SRC_ROOT_DIR "/home/alessi/Insieme/insieme_master/code/utils/../"
+#define TEST_ROOT_DIR "/home/alessi/Insieme/insieme_master/code/../test"
