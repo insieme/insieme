@@ -50,12 +50,12 @@
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
-#include "insieme/backend/ocl_kernel/kernel_config.h"
+#include "insieme/utils/config.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

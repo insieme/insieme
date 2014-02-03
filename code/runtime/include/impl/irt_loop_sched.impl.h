@@ -276,17 +276,6 @@ inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_context* context = NULL;
-		int32 implicit_region_id = -1;
-
-		context = irt_context_get_current();
-		implicit_region_id = context->impl_table[impl_id].variants[0].features.implicit_region_id;
-		if(implicit_region_id >= 0) {
-			irt_inst_region_start_pfor(context, implicit_region_id);
-		}
-	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
 
@@ -304,9 +293,6 @@ inline static void irt_schedule_loop(
 		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 
-		#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		sched_data->cputime = 0;
-		#endif
 		sched_data->policy = group->cur_sched;
 
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
@@ -355,10 +341,6 @@ inline static void irt_schedule_loop(
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 	
-	#if (defined IRT_RUNTIME_TUNING || defined IRT_ENABLE_REGION_INSTRUMENTATION)
-	bool isLast = false;
-	#endif 
-
 	// gather performance data if required & cleanup
 	#ifdef IRT_RUNTIME_TUNING
 	#ifdef IRT_RUNTIME_TUNING_EXTENDED
@@ -373,14 +355,7 @@ inline static void irt_schedule_loop(
 		part_inc = sched_data->participants_complete+1;
 	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
 
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	if(self->region) {
-		irt_atomic_fetch_and_add(&(sched_data->cputime), irt_time_ticks() - self->last_timestamp + self->region->cputime);
-	}
-	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-
 	if(part_inc == sched_data->policy.participants) {
-		isLast = true;
 		// sched_data no longer volatile, loop completed
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
 		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
@@ -392,15 +367,6 @@ inline static void irt_schedule_loop(
 	}
 	#endif // ifdef IRT_RUNTIME_TUNING
 
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		if(implicit_region_id >= 0) {
-			// end pfor-region
-			irt_inst_region_end_pfor(context, implicit_region_id,
-					(isLast) ? (irt_time_ticks() - sched_data->start_time) : 0,				// only the last is computing the wall time
-					(isLast) ? sched_data->cputime : 0										// only the last is adding cpu time
-			);
-		}
-	#endif  // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 }
 
 void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy) {

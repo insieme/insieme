@@ -29,10 +29,13 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
-#define OCL_KERNEL_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/ocl_kernel/"
+
+#include "utils/energy.h"
+#include "utils/timing.h"
+#include "papi_helper.h"

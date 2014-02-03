@@ -112,7 +112,7 @@ namespace irp {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
-	inline TreePatternPtr callExpr(const TreePatternPtr& type, const TreePatternPtr& function, const ListPatternPtr& parameters = anyList) {
+	inline TreePatternPtr callExpr(const TreePatternPtr& type, const TreePatternPtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, type << single(function) << parameters);
 	}
 
@@ -300,6 +300,14 @@ namespace irp {
 	inline TreePatternPtr subscript1D(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
 		return arrayRefElem1D(data, idx) | arraySubscript1D(data, idx) | vectorRefElem(data, idx) | vectorSubscript(data, idx);
 	}
+
+	inline TreePatternPtr subscript1D(std::string operation, const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
+		return callExpr(var(operation, lazyAtom([&](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayRefElem1D(); })) |
+				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); })) |
+				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorRefElem(); })) |
+				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorSubscript(); })), data, idx);
+	}
+
 
 } // end namespace irp
 } // end namespace pattern

@@ -214,6 +214,32 @@ void BufferReplacer::collectInformation() {
 
 }
 
+bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const TypePtr& newType) {
+	bool alreadyThereAndCorrect = false;
+
+	// check if there is already a replacement for the current expression (or an alias of it) with a different type
+//				std::cout << "\nnewTy " << *bufferExpr << std::endl;
+	for_each(clMemReplacements, [&](std::pair<ExpressionAddress, ExpressionPtr> replacement) {
+//				std::cout << "repty " << *replacement.first << std::endl;
+		if(*replacement.first == *bufferExpr){// || analysis::cba::isAlias(replacement.first, bufferExpr)) {
+			if(*replacement.second->getType() != *newType) {
+				if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the new type is subtype of the current one, replace the type
+					//newType = replacement.second->getType();
+					bufferExpr = replacement.first; // do not add aliases to the replacement map
+				} else if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the current type is subtype of the new type, do nothing
+					alreadyThereAndCorrect = true;
+					return;
+				} else // if the types are not related, fail
+					assert(false && "Buffer used twice with different types. Not supported by Insieme.");
+			} else
+				alreadyThereAndCorrect = true;
+		}
+	});
+
+	return false;
+}
+
+
 void BufferReplacer::generateReplacements() {
 	NodeManager& mgr = prog.getNodeManager();
 	IRBuilder builder(mgr);
@@ -231,62 +257,46 @@ void BufferReplacer::generateReplacements() {
 			}
 		}, true, true);
 
-std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
+//std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
 
-		TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
-		bool alreadyThereAndCorrect = false;
+		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
-		// check if there is already a replacement for the current expression (or an alias of it) with a different type
-		for_each(clMemReplacements, [&](std::pair<ExpressionAddress, ExpressionPtr> replacement) {
-			if(replacement.first == bufferExpr/* || analysis::cba::isAlias(replacement.first, bufferExpr)*/) {
-				std::cout << "repty " << replacement.second << std::endl;
-				std::cout << "newTy " << newType << std::endl;
-				if(replacement.second->getType() != newType) {
-					if(types::isSubTypeOf(replacement.second->getType(), newType)) { // if the new type is subtype of the current one, replace the type
-						//newType = replacement.second->getType();
-						bufferExpr = replacement.first; // do not add aliases to the replacement map
-					} else if(types::isSubTypeOf(newType, replacement.second->getType())) { // if the current type is subtype of the new type, do nothing
-						alreadyThereAndCorrect = true;
-						return;
-					} else // if the types are not related, fail
-						assert(false && "Buffer used twice with different types. Not supported by Insieme.");
-				} else
-					alreadyThereAndCorrect = true;
-			}
-		});
-
-		if(alreadyThereAndCorrect) return;
+		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
 
 		// local variable case
-		if(VariableAddress var = dynamic_address_cast<const Variable>(bufferExpr)) {
-			clMemReplacements[var] = builder.variable(newType);
+		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
+			clMemReplacements[variable] = builder.variable(newType);
+			return;
 		}
 		// global variable case
 		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
 			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
+			return;
 		}
 
 		// try to extract the variable
-		if(mgr.getLangBasic().isSubscriptOperator(bufferExpr)){
-			std::cout << "tolles subscript\n";
-
-			assert(false && "fuck you");
-		}
-
-		TreePatternPtr subscriptPattern = irp::callExpr(pattern::any, pattern::any, pattern::any << pattern::any);
+//		TreePatternPtr subscriptPattern = irp::subscript1D("operation", aT(var("variable", irp::variable())), aT(var("idx", pattern::any)));
+		TreePatternPtr subscriptPattern = irp::subscript1D("operation",
+				var("variable", irp::variable()) | irp::callExpr(pattern::any, var("variable", irp::variable())));
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 
 		if(subscript) {
-			std::cout << "MATCH: " << subscript << std::endl;
-		}
-//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.vector.to.ref.array(v36), 1u))
-//AP(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(ref.deref(v36), 0u))
-	});
+//			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
+			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
+			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
+			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
+//std::cout << "\nall: " << *expr << "\n" << newArrType << std::endl;
+			clMemReplacements[expr] = builder.variable(newArrType);
+			return;
+		}
+	});
+/*
 	for_each(clMemReplacements, [&](std::pair<ExpressionPtr, ExpressionPtr> replacement) {
 		std::cout << replacement.first->getType() << " -> " << replacement.second->getType() << std::endl;
 	});
+	*/
 }
 
 } //namespace ocl

@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 
@@ -49,7 +49,7 @@ namespace frontend {
 
 	std::vector<std::string> listSources(){
 		namespace fs = boost::filesystem;
-		fs::path someDir(SRC_DIR "/inputs/sniplets");
+		fs::path someDir(CLANG_SRC_DIR "/inputs/sniplets");
 		fs::directory_iterator end_iter;
 
 		std::vector<std::string> result;

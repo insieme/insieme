@@ -45,7 +45,7 @@
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 
@@ -66,7 +66,7 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, SRC_DIR "/inputs/insieme_datarange.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_datarange.c");
 
 	EXPECT_NE(tu.pragmas_begin(), tu.pragmas_end());
 /*
@@ -75,9 +75,9 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 		std::cout << "P: " << (*I)->toStr(comp.getSourceManager()) << std::endl;
 */
 
-	LOG(INFO) << "Converting input program '" SRC_DIR "/inputs/insieme_datarange.c' to IR...";
+	LOG(INFO) << "Converting input program '" CLANG_SRC_DIR "/inputs/insieme_datarange.c' to IR...";
 
-	ProgramPtr program = ConversionJob(SRC_DIR "/inputs/insieme_datarange.c").execute(manager);
+	ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_datarange.c").execute(manager);
 	size_t cnt = 0, cntLoopAnnot = 0;
 
 

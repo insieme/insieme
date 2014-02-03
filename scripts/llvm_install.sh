@@ -8,6 +8,8 @@
 #   make sure which llvm llvm-latest is pointing to
 #   libLLVM-3.2.so may not exist after compilation    
 #             create an alias to libLLVM-3.2svn.so in $PREFIX/llvm-3.2/libs
+#   In order to compile clang 3.4, python 2 is needed. If not installed on
+#   your machine, please use the python2 install script.
 ###########################################################################
 
 VERSION=3.4

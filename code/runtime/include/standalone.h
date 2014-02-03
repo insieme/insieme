@@ -45,8 +45,8 @@
 #include "abstraction/impl/threads.impl.h"
 
 #include "client_app.h"
-#include "instrumentation.h"
 #include "irt_all_impls.h"
+#include "instrumentation.h"
 
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
@@ -111,10 +111,6 @@ void irt_init_globals() {
 #endif
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-	irt_energy_select_instrumentation_method();
-	irt_temperature_select_instrumentation_method();
-#endif
 }
 
 // cleanup global variables and delete global data structures
@@ -187,17 +183,6 @@ void irt_exit_handler() {
 		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
 #endif
 
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i) {
-		irt_inst_region_detail_data_output(irt_g_workers[i]);
-		irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
-	}
-	PAPI_shutdown();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i)
-		irt_inst_destroy_region_list(irt_g_workers[i]->region_reuse_list);
-#endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
 	irt_mutex_unlock(&irt_g_exit_handler_mutex);
@@ -285,23 +270,15 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_init_globals();
 	irt_g_exit_handling_done = false;
 
-	#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-		// initialize PAPI and check version
-		irt_initialize_papi();
-		_irt_setup_hardware_info();
-	#endif
+	_irt_setup_hardware_info();
 
-	#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-		irt_instrumentation_init_energy_instrumentation();
-	#endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_inst_set_all_instrumentation_from_env();
+#endif
 
-	#ifdef IRT_ENABLE_INSTRUMENTATION
-		irt_inst_set_all_instrumentation_from_env();
-	#endif
-
-	#ifndef _WIN32
-		irt_cpu_freq_set_frequency_socket_env();
-	#endif
+//	#ifndef _WIN32
+//		irt_cpu_freq_set_frequency_socket_env();
+//	#endif
 
 	irt_log_comment("starting worker threads");
 	irt_log_setting_u("irt_g_worker_count", worker_count);
@@ -346,32 +323,10 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 	return false;
 }
 
-void _irt_runtime_init_region_instrumentation(irt_context* context) {
-
-	// obtain mode from environment
-	irt_inst_region_mode mode = IRT_INST_REGION_DETAIL;
-	const char* selection = getenv(IRT_INST_REGION_MODE_ENV);
-	if(selection) {
-		if (selection[0] == 'n' || selection[0] == 'N') {
-			mode = IRT_INST_REGION_NONE;
-		} else if (selection[0] == 'a' || selection[0] == 'A') {
-			mode = IRT_INST_REGION_AGGREGATED;
-		} else if (selection[0] == 'd' || selection[0] == 'D') {
-			mode = IRT_INST_REGION_DETAIL;
-		} else {
-			IRT_ASSERT(false, IRT_ERR_INVALIDARGUMENT, "Invalid selection of region-instrumentation mode!");
-		}
-	}
-
-	// set mode
-	irt_inst_region_set_mode(context, mode);
-}
-
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
-	_irt_runtime_init_region_instrumentation(context);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;

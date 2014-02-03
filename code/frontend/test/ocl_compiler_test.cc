@@ -45,7 +45,7 @@
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -154,11 +154,11 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 	core::NodeManager manager;
 
-    fe::ConversionJob job(SRC_DIR "inputs/hello.cl");
-    job.addIncludeDirectory(SRC_DIR "inputs");
+    fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
     job.registerFrontendPlugin<fe::extensions::OclKernelPlugin>();
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
+    LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     core::ProgramPtr program = job.execute(manager, false);
     LOG(INFO) << "Done.";
 

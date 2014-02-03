@@ -41,7 +41,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
@@ -62,11 +62,11 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	Logger::get(std::cerr, ERROR, 0);
 	core::NodeManager manager;
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
 
-	std::cout << SRC_DIR << std::endl;
-	insieme::frontend::ConversionJob job(SRC_DIR "inputs/hello.cl");
-    job.addIncludeDirectory(SRC_DIR "inputs");
+	std::cout << CLANG_SRC_DIR << std::endl;
+	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.registerFrontendPlugin<frontend::extensions::OclKernelPlugin>();
 	core::ProgramPtr program = job.execute(manager, false);
 	LOG(INFO) << "Done.";

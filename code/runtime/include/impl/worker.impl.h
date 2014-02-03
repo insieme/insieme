@@ -146,12 +146,6 @@ void* _irt_worker_func(void *argvp) {
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
-#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
-	self->instrumentation_region_data = irt_inst_create_region_data_table();
-	// initialize papi's threading support and add events to be measured
-	//self->irt_papi_number_of_events = 0;
-	irt_initialize_papi_thread(&(self->irt_papi_event_set));
-#endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif
@@ -171,12 +165,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		self->region_reuse_list = irt_inst_create_region_list();
-#endif
-
 	self->state = IRT_WORKER_STATE_READY;
-	// TODO instrumentation?
 
 	// store self, free arg
 	irt_g_workers[arg->index] = self;
@@ -212,9 +201,8 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_region_continue(wi);
-#endif
+//		irt_inst_region_continue(wi);
+		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
 #ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
@@ -241,7 +229,9 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_region_continue(wi);
+		// philgs TODO: do we need to start measurements here? if yes, previous measurements must be ended before, but where?
+//		irt_inst_region_continue(wi);
+//		irt_inst_region_start_measurements(wi);
 #endif
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, wi->id);
 		lwt_continue(&wi->stack_ptr, &self->basestack);

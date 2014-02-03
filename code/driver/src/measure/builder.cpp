@@ -40,7 +40,7 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "insieme/driver/driver_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/container_utils.h"
@@ -106,7 +106,7 @@ namespace measure {
 		res = res && nfs::create_directories(buildDir);
 
 		// copy local source to target machine (runtime is header only)
-		res = res && nfs::copy(nfs::NetworkPath(SRC_DIR "../../runtime/include"), buildDir / "include" );
+		res = res && nfs::copy(nfs::NetworkPath(DRIVER_SRC_DIR "../../runtime/include"), buildDir / "include" );
 
 		// copy source file
 		vector<string> inputFiles;

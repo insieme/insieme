@@ -228,18 +228,20 @@ int32 irt_cpu_freq_get_min_frequency_worker(const irt_worker* worker) {
  */
 
 bool irt_cpu_freq_reset_frequencies() {
-	bool retval = 0;
+	bool retval = true;
 	uint32 frequency = 0;
-	uint32 total_cores = irt_get_num_threads_per_core() * irt_get_num_cores_per_socket() * irt_get_num_sockets();
+	uint32 total_cores = irt_get_num_cpus();
 
 	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
 		if(irt_affinity_mask_is_set(irt_g_frequency_setting_modified_mask, coreid)) {
 			frequency = _irt_cpu_freq_get(coreid, "cpuinfo_max_freq");
-			retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_max_freq");
+			retval &= _irt_cpu_freq_set(coreid, frequency, "scaling_max_freq");
 			frequency = _irt_cpu_freq_get(coreid, "cpuinfo_min_freq");
-			retval |= _irt_cpu_freq_set(coreid, frequency, "scaling_min_freq");
+			retval &= _irt_cpu_freq_set(coreid, frequency, "scaling_min_freq");
 		}
 	}
+	if(retval)
+		irt_affinity_mask_clear(&irt_g_frequency_setting_modified_mask);
 	return retval;
 }
 

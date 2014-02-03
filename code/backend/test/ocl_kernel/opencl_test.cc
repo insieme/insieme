@@ -49,11 +49,11 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/backend/ocl_host/host_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_config.h"
+#include "insieme/utils/config.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

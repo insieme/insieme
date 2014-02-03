@@ -43,7 +43,7 @@
 #include "insieme/annotations/data_annotations.h"
 
 
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_visitor.h"
 
@@ -63,13 +63,13 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 
 	// create and customize conversion job
-	fe::ConversionJob job(SRC_DIR "inputs/hello_host.c");
-	job.addIncludeDirectory(SRC_DIR "inputs");
-	job.addIncludeDirectory(SRC_DIR);
-	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");
+	fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello_host.c");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+	job.addIncludeDirectory(CLANG_SRC_DIR);
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
 	job.setOption(fe::ConversionJob::OpenCL);
 
-	std::string srcDir = SRC_DIR "inputs/hello_host.c";
+	std::string srcDir = CLANG_SRC_DIR "inputs/hello_host.c";
 
 	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
 	core::ProgramPtr program = job.execute(manager);
@@ -128,14 +128,14 @@ TEST(OclHostCompilerTest, VecAddTest) {
 //	core::NodeManager manager;
 //
 //	// create and customize conversion job
-//	fe::ConversionJob job(SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
-//	job.addIncludeDirectory(SRC_DIR "inputs");
-//	job.addIncludeDirectory(SRC_DIR "../../backend/test/ocl_kernel");
-//	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");
+//	fe::ConversionJob job(CLANG_SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
+//	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+//	job.addIncludeDirectory(CLANG_SRC_DIR "../../backend/test/ocl_kernel");
+//	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
 //
 //	job.setOption(fe::ConversionJob::OpenCL);
 //
-//	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
+//	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
 //	core::ProgramPtr program = job.execute(manager);
 //	LOG(INFO) << "Done.";
 //

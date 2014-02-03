@@ -39,7 +39,7 @@
 #include <fstream>
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/test_config.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/backend/sequential/sequential_backend.h"
 
