@@ -43,13 +43,15 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "insieme/utils/config.h"
+#include "insieme/utils/petri_net/petri_net_io.h"
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/analysis/cba/analysis.h"
 #include "insieme/analysis/cba/cba.h"
+#include "insieme/analysis/cba/analysis.h"
+#include "insieme/analysis/cba/parallel_analysis.h"
 
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/arithmetic.h"
@@ -87,6 +89,8 @@ namespace cba {
 		// load file using the frontend
 		NodeManager mgr;
 		fe::ConversionJob job(file);
+		job.setOption(fe::ConversionJob::Cilk);
+		job.setOption(fe::ConversionJob::OpenMP);
 		auto prog = job.execute(mgr);
 
 		// running semantic checks
@@ -150,6 +154,12 @@ namespace cba {
 			} else if (name == "cba_dump_equations") {
 				// dump the dot plot
 				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+			} else if (name == "cba_dump_execution_net") {
+				// dump the dot plot of the execution net
+				utils::petri_net::plot(getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()), "execution_net.svg");
+			} else if (name == "cba_dump_state_graph") {
+				// dump the dot plot of the execution net
+				utils::petri_net::plot(getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()), "state_graph.svg");
 			} else if (name == "cba_print_ref") {
 				// print the result of the reference analysis
 				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
