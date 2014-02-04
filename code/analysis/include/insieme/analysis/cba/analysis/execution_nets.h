@@ -190,7 +190,7 @@ namespace cba {
 						changed = true;
 
 					} else {
-						assert_not_implemented() << " No support implemented for: " << point;
+						assert_not_implemented() << " No support implemented for: " << point << " = " << *point.getStatement();
 					}
 
 				}
