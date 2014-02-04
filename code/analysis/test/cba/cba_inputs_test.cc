@@ -160,6 +160,9 @@ namespace cba {
 			} else if (name == "cba_dump_state_graph") {
 				// dump the dot plot of the execution net
 				utils::petri_net::plot(getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()), "state_graph.svg");
+			} else if (name == "cba_dump_thread_regions") {
+				// dump the list of thread regions
+				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()));
 			} else if (name == "cba_print_ref") {
 				// print the result of the reference analysis
 				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";

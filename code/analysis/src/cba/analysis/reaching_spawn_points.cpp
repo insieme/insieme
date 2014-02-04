@@ -34,37 +34,16 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include "insieme/analysis/cba/analysis/reaching_spawn_points.h"
 
-#include "cba.h"
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-void doSomething() {
-	// nothing to do
-}
+	const reaching_spawn_points_in_analysis ReachingSpawnPointsIn = registerAnalysis<reaching_spawn_points_in_analysis>("ReachingSpawnPointsIn");
+	const reaching_spawn_points_tmp_analysis ReachingSpawnPointsTmp = registerAnalysis<reaching_spawn_points_tmp_analysis>("ReachingSpawnPointsTmp");
+	const reaching_spawn_points_out_analysis ReachingSpawnPointsOut = registerAnalysis<reaching_spawn_points_out_analysis>("ReachingSpawnPointsOut");
 
-int main(int argc, char** argv) {
-
-	cba_print_code();
-
-	// for now this is simply testing the primitives
-	cba_dump_thread_regions();
-	cba_dump_execution_net();
-	cba_dump_state_graph();
-
-//	cba_expect_true(true);
-
-	#pragma omp parallel
-	{
-		#pragma omp single
-		{
-			int x = 1;
-		}
-	}
-
-	// also test some cilk stuff ..
-	spawn doSomething();
-	spawn doSomething();
-	sync;
-}
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

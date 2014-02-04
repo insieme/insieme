@@ -60,6 +60,7 @@ void cba_print_int(int a);
 
 void cba_dump_execution_net();
 void cba_dump_state_graph();
+void cba_dump_thread_regions();
 
 // boolean tests (mapped to integer tests, since in C everything is an int)
 #define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
