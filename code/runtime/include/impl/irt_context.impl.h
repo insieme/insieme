@@ -81,5 +81,6 @@ void irt_context_destroy(irt_context* context) {
 	if (context->client_app && context->client_app->cleanup_context) {
 		context->client_app->cleanup_context(context);
 	}
+	irt_context_table_remove(context->id);
 	free(context);
 }
