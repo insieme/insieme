@@ -36,12 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/frontend.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/frontend/clang_config.h"
+#include "insieme/utils/config.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/ir_builder.h"
@@ -82,11 +83,11 @@ TEST(OMPx, SimpleRegion) {
 
 	// C source code compilation
 
-	fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(SRC_DIR "inputs");
+	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.setOption(fe::ConversionJob::OpenMP);
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = job.execute(manager, false);
 	ASSERT_TRUE(prog);
@@ -138,11 +139,11 @@ TEST(OMPx, FirstLocal) {
 
 	// C source code compilation
 
-	fe::ConversionJob job(SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(SRC_DIR "inputs");
+	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.setOption(fe::ConversionJob::OpenMP);
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = job.execute(manager, false);
 	ASSERT_TRUE(prog);

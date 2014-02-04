@@ -51,6 +51,7 @@
 	};
 
 	typedef struct _irt_thread irt_thread;
+	typedef long irt_spinlock;
 
 	// Vista and up will use slim reader writer mutex instead of critical section, condition variables are supported too
 	#if (WINVER >= 0x0600)
@@ -65,6 +66,7 @@
 #else
 	#include <pthread.h>
 	typedef pthread_t irt_thread;
+	typedef pthread_spinlock_t irt_spinlock;
 	typedef pthread_cond_t irt_cond_var;
 	typedef pthread_mutex_t irt_mutex_obj;
 	typedef pthread_key_t irt_tls_key;

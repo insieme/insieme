@@ -135,14 +135,14 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
 	insieme_wi_test_params *params = (insieme_wi_test_params*)wi->parameters;
-	irt_atomic_add_and_fetch(&(params->val1), irt_wi_range_get_size(&wi->range));
+	irt_atomic_add_and_fetch(&(params->val1), irt_wi_range_get_size(&wi->range), uint64);
 
 	ERR("A1");
 	irt_wg_barrier(params->wg1);
 	ERR("A2");
 	if(params->val1 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
 	ERR("A3");
-	irt_atomic_add_and_fetch(&(params->val2), irt_wi_range_get_size(&wi->range));
+	irt_atomic_add_and_fetch(&(params->val2), irt_wi_range_get_size(&wi->range), uint64);
 	ERR("A4");
 	irt_wg_barrier(params->wg1);
 	ERR("A5");

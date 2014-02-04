@@ -45,6 +45,8 @@
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/memory.h"
+#include "abstraction/impl/memory.impl.h"
 
 #include "client_app.h"
 #include "irt_all_impls.h"

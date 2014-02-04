@@ -51,6 +51,12 @@ namespace backend {
 	class Converter;
 	class ConversionContext;
 
+    namespace operators {
+
+	    c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name, bool addHeader);
+
+    } // end namespace operators
+
 	typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
 
 	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;

@@ -38,7 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H
 #define __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H
 
-#if defined(GEMSCLAIM)
+#if defined(_GEMS)
 	#include "memory.gems.impl.h"
 #else
 	#include "memory.std.impl.h"

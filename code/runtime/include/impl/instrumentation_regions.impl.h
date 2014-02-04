@@ -300,7 +300,7 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Start of region id %lu requested, but only %u region(s) present", id, context->num_regions)
 	irt_inst_region_context_data* inner_region = &(context->inst_region_data[id]);
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1);
+	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64);
 	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
 
 	if(outer_region) {
@@ -337,11 +337,11 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 
 	uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
 
-	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1) == 0) {
+	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64) == 0) {
 		_irt_inst_region_end_late_exit_measurements(wi);
 		inner_last_exit = true;
-		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count);
-		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count);
+		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64);
+		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64);
 	}
 
 	// only increase count if wi is not member in any work group or has wg id == 0

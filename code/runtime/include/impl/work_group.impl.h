@@ -157,7 +157,7 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 		// trigger barrier completion
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
 		// suspend

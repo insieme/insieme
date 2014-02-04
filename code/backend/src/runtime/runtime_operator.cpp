@@ -253,7 +253,8 @@ namespace runtime {
 		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME) \
 		table[basic.get##__IRNAME()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR(#__IRTNAME); \
-			return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 		
 		BIN_ATOMIC_CONVERTER(AtomicFetchAndAdd, irt_atomic_fetch_and_add)
@@ -270,12 +271,14 @@ namespace runtime {
 
 		table[basic.getAtomicValCompareAndSwap()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR("irt_atomic_val_compare_and_swap"); \
-			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 
 		table[basic.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR("irt_atomic_bool_compare_and_swap"); \
-			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 
 		// special
@@ -313,26 +316,7 @@ namespace runtime {
 		});
 		
 		table[basic.getRefDelete()] = OP_CONVERTER({
-			// do not free non-heap variables
-			if (ARG(0)->getNodeType() == core::NT_Variable) {
-				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
-				if (GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
-					// return NULL pointer => no op
-					return c_ast::ExpressionPtr();
-				}
-			}
-
-			// ensure correct type
-			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
-
-			// handle destructor call
-			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
-				if (dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
-					return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0]));
-				}
-			}
-
-			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_free"), CONVERT_ARG(0));
+            return operators::refDelete(context, call, "irt_free", false);
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
