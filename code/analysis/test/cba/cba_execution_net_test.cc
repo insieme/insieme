@@ -40,9 +40,6 @@
 #include "insieme/analysis/cba/cba.h"
 #include "insieme/analysis/cba/parallel_analysis.h"
 #include "insieme/analysis/cba/framework/entities/execution_net.h"
-//#include "insieme/analysis/cba/framework/cba.h"
-//#include "insieme/analysis/cba/analysis/thread_regions.h"
-//#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/petri_net/petri_net_io.h"
 
@@ -78,9 +75,17 @@ namespace cba {
 
 		EXPECT_EQ(1, net.getNumPlaces());
 		EXPECT_EQ(0, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(1, states.getNumStates());
+		EXPECT_EQ(0, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
 
 //		createDotDump(analysis);
 	}
@@ -108,9 +113,17 @@ namespace cba {
 
 		EXPECT_EQ(3, net.getNumPlaces());
 		EXPECT_EQ(1, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(2, states.getNumStates());
+		EXPECT_EQ(1, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
 
 //		createDotDump(analysis);
 	}
@@ -140,9 +153,17 @@ namespace cba {
 
 		EXPECT_EQ(5, net.getNumPlaces());
 		EXPECT_EQ(2, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(3, states.getNumStates());
+		EXPECT_EQ(2, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
 
 //		createDotDump(analysis);
 	}
@@ -180,9 +201,17 @@ namespace cba {
 
 		EXPECT_EQ(10, net.getNumPlaces());
 		EXPECT_EQ(6, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(9, states.getNumStates());
+		EXPECT_EQ(10, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
 
 //		createDotDump(code);
 	}
@@ -217,9 +246,17 @@ namespace cba {
 
 		EXPECT_EQ(7, net.getNumPlaces());
 		EXPECT_EQ(6, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(6, states.getNumStates());
+		EXPECT_EQ(6, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
 
 //		createDotDump(code);
 	}

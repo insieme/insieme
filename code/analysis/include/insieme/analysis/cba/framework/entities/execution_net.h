@@ -172,6 +172,8 @@ namespace cba {
 
 		int id;
 
+		std::set<Place<Context>> initialPlaces;
+
 	public:
 
 		ExecutionNet() : id(0) {}
@@ -192,6 +194,19 @@ namespace cba {
 			Place<Context> place(Aux, ++id);
 			addPlace(place);
 			return place;
+		}
+
+		void markInitial(const Place<Context>& place) {
+			assert_true(containsPlace(place)) << "Unknown place " << place;
+			initialPlaces.insert(place);
+		}
+
+		unsigned getNumInitialPlaces() const {
+			return initialPlaces.size();
+		}
+
+		const std::set<Place<Context>>& getInitialPlaces() const {
+			return initialPlaces;
 		}
 
 		Transition<Context> createTransition(const ProgramPoint<Context>& point) {
@@ -220,7 +235,7 @@ namespace cba {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << "ExecutionNet(" << this->getNumPlaces() << " Places / " << this->getNumTransitions() << " Transitions)";
+			return out << "ExecutionNet(" << this->getNumPlaces() << " Places / " << this->getNumTransitions() << " Transitions / " << initialPlaces.size() << " Initial Places)";
 		}
 
 	};

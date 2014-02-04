@@ -85,6 +85,8 @@ namespace petri_net {
 
 	private:
 
+		place_idx p_counter;
+
 		std::map<Place, place_idx> p_index;				// an index of the set of places
 		std::map<place_idx, unsigned> capacity;			// stores the set of places and their capacity
 
@@ -94,11 +96,13 @@ namespace petri_net {
 
 	public:
 
+		PetriNet() : p_counter(0) {}
+
 		// -- Place Handling --
 
 		void addPlace(const Place& place, unsigned capacity = 1) {
 			assert_false(containsPlace(place)) << "Duplicated place: " << place << "\n";
-			place_idx idx = p_index.size();
+			place_idx idx = p_counter++;
 			p_index[place] = idx;
 			this->capacity[idx] = capacity;
 		}
@@ -121,6 +125,10 @@ namespace petri_net {
 
 		std::size_t getNumPlaces() const {
 			return p_index.size();
+		}
+
+		std::size_t getMaxPlaceID() const {
+			return p_counter-1;
 		}
 
 		place_idx getPlaceIndex(const Place& place) const {
@@ -297,8 +305,8 @@ namespace petri_net {
 	public:
 
 		Marking() : net(nullptr), marking() {}
-		Marking(const net_type& net) : net(&net), marking(net.getNumPlaces()) {}
-		Marking(const net_type& net, const std::vector<mark_type>& marking) : net(&net), marking(marking) { assert_eq(marking.size(), net.getNumPlaces()); }
+		Marking(const net_type& net) : net(&net), marking(net.getMaxPlaceID()+1) {}
+		Marking(const net_type& net, const std::vector<mark_type>& marking) : net(&net), marking(marking) { assert_eq(marking.size(), net.getMaxPlaceID()+1); }
 		Marking(const Marking& other) : net(other.net), marking(other.marking) {}
 		Marking(Marking&& other) = default;
 
@@ -428,10 +436,18 @@ namespace petri_net {
 			return nodes.size();
 		}
 
+		void addMarking(const marking_type& a) {
+			getIndex(a);
+		}
+
 		void addEdge(const marking_type& a, const marking_type& b) {
 			auto idxA = getIndex(a);
 			auto idxB = getIndex(b);
 			edges.insert(std::make_pair(idxA, idxB));
+		}
+
+		std::size_t getNumEdges() const {
+			return edges.size();
 		}
 
 		bool operator==(const StateGraph<Place,Transition>& other) const {
@@ -480,6 +496,9 @@ namespace petri_net {
 		// the working queue
 		std::vector<marking> queue;
 		queue.push_back(initial);
+
+		// initial is always included
+		res.addMarking(initial);
 
 		while(!queue.empty()) {
 

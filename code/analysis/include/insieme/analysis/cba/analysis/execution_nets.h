@@ -269,6 +269,12 @@ namespace cba {
 				std::map<ThreadRegion<Context>, Place<Context>> r2p;
 				for(const auto& cur : regions) {
 					r2p[cur] = res.createRegion(cur);
+
+					// mark as initial if it is a initial place
+					auto start = cur.getBegin();
+					if (start.isThreadStart() && start.getContext() == Context()) {
+						res.markInitial(r2p[cur]);
+					}
 				}
 
 				// create body-start places

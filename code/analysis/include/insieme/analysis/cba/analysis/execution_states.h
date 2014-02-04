@@ -54,7 +54,7 @@ namespace cba {
 
 	struct execution_state_analysis {
 		template<typename C> struct lattice   { typedef utils::constraint::Lattice<utils::petri_net::StateGraph<Place<typename C::context_type>,Transition<typename C::context_type>>> type; };
-		template<typename C> struct generator { typedef ExecutionNetConstraintGenerator<typename C::context_type> type; };
+		template<typename C> struct generator { typedef ExecutionStateConstraintGenerator<typename C::context_type> type; };
 		template<typename C> struct params    { typedef std::tuple<AnalysisType> type; };
 	};
 
@@ -113,8 +113,7 @@ namespace cba {
 				),
 				cba(cba),
 				in(cba.getSet<Context>(ExecutionNetAnalysis)),
-				out(cba.getSet<Context>(ExecutionStateAnalysis)) {
-			}
+				out(cba.getSet<Context>(ExecutionStateAnalysis)) { }
 
 			virtual UpdateResult update(Assignment& ass) const {
 
@@ -140,7 +139,7 @@ namespace cba {
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
 				// print merged in thread dependencies
-				return out << in << " -> " << out << "[label=\"generates\"]\n";
+				return out << in << " -> " << this->out << "[label=\"generates\"]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -157,6 +156,10 @@ namespace cba {
 				// create marking
 				Marking marking(net);
 
+				// create initial marking
+				for(const auto& cur : net.getInitialPlaces()) {
+					marking.setMarking(cur);
+				}
 
 				// compute state graph
 				return utils::petri_net::extractStateGraph(marking);
