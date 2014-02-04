@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -649,8 +649,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::C
 	frontend_assert(irType.isa<core::GenericTypePtr>() ) << "for convention, all this operators deal with generic types\n";
 	irType = builder.refType(irType);
 
-	// build a literal as a placeholder (has to be substituted later by function call expression)
-	core::ExpressionPtr ret =  builder.literal("this", irType);
+	// build a variable as a placeholder (has to be substituted later by function call expression)
+	// convFact.thisVariable returns alwasy a variable with id 0 as placeholder!
+	core::ExpressionPtr ret = convFact.thisVariable(irType);
 
 	// this is a pointer, make it pointer
 	ret =  builder.callExpr(builder.getLangBasic().getScalarToArray(), ret);
@@ -865,23 +866,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			params.push_back(var);
 	}
 
-
-	// if the This literal is used in the expression, we extract it and incorporate an extra paramenter
-	// with the class type
-	core::ExpressionPtr thisExpr;
-	core::visitDepthFirstOnce (lambdaBody, [&] (const core::LiteralPtr& lit){
-		core::StringValuePtr name =  lit->getValue();
-		std::string str =  name->getValue();
-		if (str == "this")
-			thisExpr = lit.as<core::ExpressionPtr>();
-	});
-
-	if (thisExpr){
-		core::VariablePtr thisReplacement = builder.variable(thisExpr->getType());
-		params.push_back(thisReplacement);
-		lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, thisExpr, thisReplacement, true);
-	}
-
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
 
 	//build the lambda call and its arguments
@@ -894,10 +878,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		else
 			packedArgs.push_back(builder.deref(varPtr));
 	}
-
-	// to end with, we just add the this to the argument list if needed
-	if (thisExpr)
-		packedArgs.push_back(thisExpr);
 
 	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 }

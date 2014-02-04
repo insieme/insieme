@@ -1083,10 +1083,9 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt, numThreads));
 }
 
-core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy, std::set<string> literalToCapture) const {
+core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
 	std::vector<VariablePtr>&& args = getRechingVariables(body);
-	std::vector<core::LiteralPtr> usedLiterals = getLiteralUsage(body, literalToCapture);
 
     core::TypeList argsType;
     VariableList params;
@@ -1126,26 +1125,6 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 //    	body = core::static_pointer_cast<const core::Statement>(
 //    			core::transform::replaceVars(manager, body, replVariableMap)
 //    		);
-    }
-
-    utils::map::PointerMap<NodePtr, NodePtr> replLiteralMap;
-	for(auto lit : usedLiterals) {
-		const core::LiteralPtr& bodyLit = lit;
-		const core::TypePtr& varType = bodyLit->getType();
-
-		// we create a new variable to replace the captured variable
-		core::VariablePtr&& parmVar = this->variable( varType );
-		argsType.push_back( varType );
-		callArgs.push_back(lit);
-		params.push_back( parmVar );
-		replLiteralMap.insert( std::make_pair(bodyLit, parmVar) );
-	}
-
-    // Replace the literals in the body with the input parameters which have been created
-    if ( !replLiteralMap.empty() ) {
-    	body = core::static_pointer_cast<const core::Statement>(
-    			core::transform::replaceAll(manager, body, replLiteralMap)
-    		);
     }
 
     core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );

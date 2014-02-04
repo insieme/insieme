@@ -508,7 +508,14 @@ public:
 		return thread_private;
 	}
 
-
+	/**
+	 * Returns a variable representing the "this" ( always v0)
+	 * @param thisType an IR type of the "this"
+	 * @return a VariablePtr representing the "thisVar"
+	 */
+	core::VariablePtr thisVariable(const core::TypePtr& thisType) {
+		return builder.variable(thisType, 0);
+	}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
