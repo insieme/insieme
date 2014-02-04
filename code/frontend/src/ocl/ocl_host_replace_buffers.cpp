@@ -249,7 +249,7 @@ void BufferReplacer::collectInformation() {
 
 		std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);
 		// check if CL_MEM_USE_HOST_PTR is set
-		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
+//		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
