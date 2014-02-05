@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -1068,7 +1068,10 @@ namespace {
 		assert( ( ctorDecl->getParent()->getName().empty() ||
 				(!ctorDecl->getParent()->getName().empty() && classType.isa<core::GenericTypePtr>())) && "for convenion, this literal must keep the generic type");
 
+		core::TypePtr thisType = builder.refType(classType);
+		core::VariablePtr thisVar = converter.thisVariable(thisType);
 		core::StatementList initList;
+
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
 
 			core::StringValuePtr ident;
@@ -1080,7 +1083,7 @@ namespace {
 			if((*it)->isBaseInitializer ()){
 
 				expr = converter.convertExpr((*it)->getInit());
-				init = builder.literal("this", builder.refType(classType));
+				init = thisVar;
 
 				if(!insieme::core::analysis::isConstructorCall(expr)) {
 					// base init is a non-userdefined-default-ctor call, drop it
@@ -1097,7 +1100,8 @@ namespace {
 
 				// construct the member access based on the type and the init expression
 				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
-				core::LiteralPtr genThis = builder.literal("this", builder.refType (classType));
+				core::VariablePtr genThis = thisVar; 
+
 				expr = converter.convertExpr((*it)->getInit());
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
 				init =  builder.callExpr (builder.refType(membTy),
@@ -1134,7 +1138,7 @@ namespace {
 
 				// this supports indirect init of anonymous member structs/union
 				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
-						init = builder.literal("this", builder.refType (classType));
+				init = thisVar;
 
 				// build a chain of nested access
 					clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
@@ -1301,7 +1305,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			params.insert(params.begin(), thisVar);
 
 			// handle this references in body,
-			body = core::transform::replaceAllGen (mgr, body, builder.literal("this", thisType), thisVar);
+			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
 		}
 
 		// build the resulting lambda

@@ -381,9 +381,8 @@ namespace core {
 
 		/*
 		 * creates a function call from a list of expressions
-		 * NOTE: the literalToCapture-set has by default the "this" literal used by the CPP frontend
 		 */
-		ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false, std::set<string> literalToCapture=std::set<string>({"this"}) ) const;
+		ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false ) const;
 
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
