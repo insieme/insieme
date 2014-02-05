@@ -219,22 +219,29 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
 	collectInformation();
 	generateReplacements();
-
-	NodePtr newProg = transform::replaceAll(prog->getNodeManager(), prog->getElement(0), clMemReplacements);
+/*
+	for_each(clMemReplacements, [prog](std::pair<core::NodePtr, core::NodePtr> replacement){
+		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+//		transform::replaceAll(prog->getNodeManager(), prog->getElement(0), replacement.first, replacement.second, false);
+	});
+*/
+	NodePtr newProg = transform::replaceAll(prog->getNodeManager(), prog->getElement(0), clMemReplacements, false);
+	newProg = transform::replaceAll(prog->getNodeManager(), newProg, generalReplacements, false);
 
 //	printer::PrettyPrinter pp(newProg);
-//	std::cout << pp << std::endl;
+//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
 }
 
 void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog->getChild(0));
+	IRBuilder builder(mgr);
 
-	TreePatternPtr clCreateBuffer = irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) );
-	TreePatternPtr bufferDecl = irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
-			pattern::single(clCreateBuffer)));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+	TreePatternPtr clCreateBuffer = var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) ));
+	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
+			pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
 			var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
 
@@ -249,9 +256,18 @@ void BufferReplacer::collectInformation() {
 
 		std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);
 		// check if CL_MEM_USE_HOST_PTR is set
-//		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
+		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
+
+		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
+		if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
+			assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+			if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+			}
+		}
+
 
 		// extract type form size argument
 		ExpressionPtr size;
@@ -262,16 +278,16 @@ void BufferReplacer::collectInformation() {
 		assert(extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false)
 				&& "cannot extract size and type from size paramater fo clCreateBuffer");
 #endif
-		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
+
+// 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
+
+
+		ExpressionPtr deviceMemAlloc = usePtr ? hostPtr :
+				getCreateBuffer(type, size, copyPtr, hostPtr, createBuffer["err"].getValue().as<ExpressionPtr>());
+		generalReplacements[createBuffer["clCreateBuffer"].getValue()] = deviceMemAlloc;
 
 		// get the buffer expression
 		ExpressionAddress lhs = createBuffer["buffer"].getValue().as<ExpressionAddress>();
-// 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
-
-		ExpressionPtr deviceMemAlloc = copyPtr ? hostPtr :
-				getCreateBuffer(type, size, copyPtr, hostPtr, createBuffer["err"].getValue().as<ExpressionPtr>());
-		generalReplacements[createBuffer.getRoot().getAddressedNode()] = deviceMemAlloc;
-
 
 		// add gathered information to clMemMetaMap
 		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, hostPtr);
@@ -359,8 +375,8 @@ void BufferReplacer::generateReplacements() {
 		}
 	});
 /*
-	for_each(generalReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
-		std::cout << replacement.first << " -> " << replacement.second << std::endl;
+	for_each(clMemReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
+		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
 */
 }
