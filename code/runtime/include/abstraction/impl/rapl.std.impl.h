@@ -35,13 +35,22 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
-#define __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
+#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_STD_H
+#define __GUARD_ABSTRACTION_IMPL_RAPL_STD_H
 
-#if defined(_GEMS) 
-	#include "rapl.gems.impl.h"
+#include <math.h>
+#include "irt_inttypes.h"
+#include "abstraction/msr.h"
+#include "hwinfo.h"
+#include "utils/affinity.h"
+#include "worker.h"
+#include "abstraction/rapl.h"
+#include "abstraction/impl/msr.impl.h"
+
+#ifdef _MSC_VER
+	#include <io.h>
 #else
-	#include "rapl.std.impl.h"
+	#include <unistd.h>
 #endif
 
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
@@ -62,7 +71,7 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		uint32 coreid = irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity);
-		if(coreid != (uint32)-1)
+		if(coreid != -1)
 			socket_mask[coreid / irt_get_num_cores_per_socket()] = true;
 	}
 
@@ -119,4 +128,4 @@ bool irt_rapl_is_supported() {
 }
 
 
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_STD_H

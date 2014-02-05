@@ -35,18 +35,25 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
-#define __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
+#define __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
 
-#if defined(_MSC_VER)
-	#warning "MSR reading under Windows not implemented!"
-#elif defined(__MINGW32__)
-	#warning "MSR reading under MINGW32 not implemented!"
-#elif defined(_GEMS)
-	#include "abstraction/impl/msr.gems.impl.h"
-#else
-	#include "abstraction/impl/msr.unix.impl.h"
-#endif
+#include <math.h>
+#include "irt_inttypes.h"
+#include "abstraction/msr.h"
+#include "hwinfo.h"
+#include "utils/affinity.h"
+#include "worker.h"
+#include "abstraction/rapl.h"
+#include "abstraction/impl/msr.impl.h"
 
 
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
+}
+
+bool irt_rapl_is_supported() {
+	return false;
+}
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H

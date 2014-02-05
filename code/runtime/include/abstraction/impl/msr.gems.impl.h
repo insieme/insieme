@@ -35,18 +35,20 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
-#define __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+#ifndef __GUARD_ABSTRACTION_IMPL_MSR_GEMS_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MSR_GEMS_IMPL_H
 
-#if defined(_MSC_VER)
-	#warning "MSR reading under Windows not implemented!"
-#elif defined(__MINGW32__)
-	#warning "MSR reading under MINGW32 not implemented!"
-#elif defined(_GEMS)
-	#include "abstraction/impl/msr.gems.impl.h"
-#else
-	#include "abstraction/impl/msr.unix.impl.h"
-#endif
+int32 _irt_open_msr(uint32 core) {
+    return 0;
+}
+
+int64 _irt_read_msr(int32 file, int32 subject) {
+    return 0;
+}
+
+int32 _irt_close_msr(int32 file) {
+	return 0;
+}
 
 
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_GEMS_IMPL_H
