@@ -137,10 +137,37 @@ namespace cba {
 
 		typedef BasicTmpConstraintGenerator<reaching_sync_points_in_analysis, reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, Context> super;
 
+		CBA& cba;
+
 	public:
 
-		ReachingSyncPointsTmpConstraintGenerator(CBA& cba) : super(cba, RSPin, RSPtmp, RSPout) {}
+		ReachingSyncPointsTmpConstraintGenerator(CBA& cba) : super(cba, RSPin, RSPtmp, RSPout), cba(cba) {}
 
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+
+			// check whether it is a sync-operation call
+			auto fun = call->getFunctionExpr();
+std::cout << "Fun: " << *fun << " - sync-fun: " << isSynchronizingFunction(fun) << "\n";
+			if (isSynchronizingFunction(fun)) {
+
+				// the result value to be constraint
+				auto res = cba.getSet(RSPtmp, call, ctxt);
+
+				// skip evaluation of the function (since this is a path leaking the in-state to the tmp state)
+				for(const auto& arg : call) {
+std::cout << "  Argument: " << *arg << "\n";
+					auto l = cba.getLabel(arg);
+					auto R = cba.getSet(RSPout, l, ctxt);
+					constraints.add(subset(R, res));
+				}
+
+				// done
+				return;
+			}
+
+			// otherwise treat it as usual
+			super::visitCallExpr(call, ctxt, constraints);
+		}
 	};
 
 

@@ -43,6 +43,7 @@
 #include "insieme/analysis/cba/analysis/jobs.h"
 #include "insieme/analysis/cba/analysis/callables.h"
 #include "insieme/analysis/cba/analysis/thread_groups.h"
+#include "insieme/analysis/cba/analysis/reaching_spawn_points.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -119,6 +120,11 @@ namespace cba {
 				// add the constraint
 				constraints.add(createThreadBodyMergeConstraint<Context>(cba, groups, res));
 			}
+
+			/**
+			 * NOTE: the merge all can not be supported here since a merge is merging more than one thread.
+			 * Hence the data structure of a set of Thread-bodies is not sufficient to represent this information.
+			 */
 
 			// nothing else is interesting (no default processing)
 		}

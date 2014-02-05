@@ -47,6 +47,7 @@ namespace backend {
         BackendConfig() : mainFunctionName("main") {};
 
         std::string mainFunctionName;
+        std::vector<std::string> additionalHeaderFiles;
 	};
 
 	typedef std::shared_ptr<BackendConfig> BackendConfigPtr;

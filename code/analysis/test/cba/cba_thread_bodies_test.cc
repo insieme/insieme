@@ -39,6 +39,7 @@
 
 #include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/analysis/thread_bodies.h"
+#include "insieme/analysis/cba/analysis/merge_all_thread_bodies.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -106,6 +107,9 @@ namespace cba {
 
 		CBA analysis(code);
 
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(3,analysis.getLabel(code[3].as<DeclarationStmtAddress>()->getInitialization()));
+
 		const auto& T = ThreadBodies;
 
 		auto res = analysis.getValuesOf(code[3].as<DeclarationStmtAddress>()->getInitialization(), T);
@@ -121,6 +125,48 @@ namespace cba {
 
 		EXPECT_EQ(2u, res2.size());
 		EXPECT_EQ(resStr, res2Str);
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, MergeAll) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.variable(mgr.getLangBasic().getBool(), 100);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> x = var(12);"
+				"	"
+				"	auto j1 = job { x = 1; };"
+				"	auto j2 = job { x = 2; };"
+				"	"
+				"	parallel((c)?j1:j2);"
+				"	sync;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(3,analysis.getLabel(code[3]));
+
+		const auto& T = MergeAllThreadBodies;
+
+		auto res = analysis.getValuesOf(code[4], T);
+		ASSERT_EQ(1u, res.size());
+		EXPECT_EQ(2u, res.begin()->size());
+		auto resStr = toString(res);
+
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-4-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-4-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}

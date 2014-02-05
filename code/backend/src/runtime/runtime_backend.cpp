@@ -88,6 +88,7 @@ namespace runtime {
 
         if(isGemsclaim) {
             config->mainFunctionName = "insieme_main";
+            config->additionalHeaderFiles.push_back("input_file.h");
         }
 
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);

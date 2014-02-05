@@ -99,6 +99,8 @@ namespace backend {
 		fragment->addDependencies(context.getDependencies());
 		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
+        if(!config->additionalHeaderFiles.empty())
+            fragment->addIncludes(config->additionalHeaderFiles);
 
 		vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
 
