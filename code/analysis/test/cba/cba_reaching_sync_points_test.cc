@@ -195,6 +195,37 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, ImmediateMerge) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	merge(spawn a = 1);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+dumpPretty(in);
+		CBA analysis(code);
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPin)));
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPout)));
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPin)));
+		// EXPECT_EQ("{T0-1-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPtmp)));
+		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPout)));
+
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPin)));
+		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPtmp)));
+		EXPECT_EQ("{T0-1-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPout)));
+
+		createDotDump(analysis);
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

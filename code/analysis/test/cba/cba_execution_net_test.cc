@@ -261,6 +261,97 @@ namespace cba {
 //		createDotDump(code);
 	}
 
+	TEST(CBA, MergeAll) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				"	auto c = channel.create(lit(int<4>),param(1));"
+				" 	spawn {"
+				"		a = 1;"
+				"	};"
+				" 	spawn {"
+				"		a = 2;"
+				"	};"
+				"	a = 3;"
+				"	sync;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(6, net.getNumPlaces());
+		EXPECT_EQ(3, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(4, states.getNumStates());
+		EXPECT_EQ(3, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
+	TEST(CBA, MergeAllAndChannels) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				"	auto c = channel.create(lit(int<4>),param(1));"
+				" 	spawn {"
+				"		a = 1;"
+				"		channel.send(c,1);"
+				"	};"
+				" 	spawn {"
+				"		channel.recv(c);"
+				"		a = 2;"
+				"	};"
+				"	a = 3;"
+				"	sync;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(9, net.getNumPlaces());
+		EXPECT_EQ(5, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(7, states.getNumStates());
+		EXPECT_EQ(7, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
 
 } // end namespace cba
 } // end namespace analysis

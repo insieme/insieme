@@ -210,10 +210,10 @@ namespace cba {
 		}
 
 		Transition<Context> createTransition(const ProgramPoint<Context>& point) {
-			TransitionKind kind;
+			TransitionKind kind = Spawn;
 			if (point.isSpawn()) {
 				kind = Spawn;
-			} else if (point.isMerge()) {
+			} else if (point.isMerge() || point.isMergeAll()) {
 				kind = Merge;
 			} else if (point.isSend()) {
 				kind = Send;

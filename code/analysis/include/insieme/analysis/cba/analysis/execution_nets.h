@@ -44,6 +44,8 @@
 #include "insieme/analysis/cba/analysis/thread_regions.h"
 #include "insieme/analysis/cba/analysis/thread_bodies.h"
 #include "insieme/analysis/cba/analysis/channels.h"
+#include "insieme/analysis/cba/analysis/reaching_spawn_points.h"
+#include "insieme/analysis/cba/analysis/merge_all_thread_bodies.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/utils/constraint_utils.h"
@@ -106,11 +108,12 @@ namespace cba {
 		class ExecutionNetConstraint : public utils::constraint::Constraint {
 
 			// some type definitions
-			typedef TypedValueID<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 		ExecutionNetValueID;
-			typedef TypedValueID<typename sync_points_analysis::lattice<analysis_config<Context>>::type> 		SyncPointValueID;
-			typedef TypedValueID<typename thread_regions_analysis::lattice<analysis_config<Context>>::type> 	ThreadRegionValueID;
-			typedef TypedValueID<typename thread_body_analysis::lattice<analysis_config<Context>>::type> 		ThreadBodyValueID;
-			typedef TypedValueID<typename channel_analysis_data::lattice<analysis_config<Context>>::type> 		ChannelValueID;
+			typedef TypedValueID<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 					ExecutionNetValueID;
+			typedef TypedValueID<typename sync_points_analysis::lattice<analysis_config<Context>>::type> 					SyncPointValueID;
+			typedef TypedValueID<typename thread_regions_analysis::lattice<analysis_config<Context>>::type> 				ThreadRegionValueID;
+			typedef TypedValueID<typename thread_body_analysis::lattice<analysis_config<Context>>::type> 					ThreadBodyValueID;
+			typedef TypedValueID<typename channel_analysis_data::lattice<analysis_config<Context>>::type> 					ChannelValueID;
+			typedef TypedValueID<typename merge_all_thread_body_analysis::lattice<analysis_config<Context>>::type> 			MergeAllThreadBodyValueID;
 
 			CBA& cba;
 
@@ -123,6 +126,8 @@ namespace cba {
 			mutable std::map<ProgramPoint<Context>, ThreadBodyValueID> threadBodies;
 
 			mutable std::map<ProgramPoint<Context>, ChannelValueID> channelValues;
+
+			mutable std::map<ProgramPoint<Context>, MergeAllThreadBodyValueID> mergedBodies;
 
 			mutable std::vector<ValueID> inputs;
 
@@ -166,7 +171,9 @@ namespace cba {
 
 					// sort out the different types of sync points
 					if (point.isThreadStart() || point.isThreadEnd()) {
+
 						// nothing to do
+
 					} else if (point.isSpawn() || point.isMerge()) {
 
 						// check whether the thread body is already known
@@ -175,6 +182,17 @@ namespace cba {
 						// add dependency to thread bodies
 						auto bodySet = cba.getSet(ThreadBodies, point.getStatement(), point.getContext());
 						threadBodies[point] = bodySet;
+						inputs.push_back(bodySet);
+						changed = true;
+
+					} else if (point.isMergeAll()) {
+
+						// check whether the thread body is already known
+						if (mergedBodies.find(point) != mergedBodies.end()) continue;
+
+						// add dependency to thread bodies
+						auto bodySet = cba.getSet(MergeAllThreadBodies, point.getStatement(), point.getContext());
+						mergedBodies[point] = bodySet;
 						inputs.push_back(bodySet);
 						changed = true;
 
@@ -188,6 +206,10 @@ namespace cba {
 						channelValues[point] = channelSet;
 						inputs.push_back(channelSet);
 						changed = true;
+
+					} else if (point.isRedistribute()) {
+
+						// nothing to do in this case
 
 					} else {
 						assert_not_implemented() << " No support implemented for: " << point << " = " << *point.getStatement();
@@ -416,6 +438,27 @@ namespace cba {
 						// link spawn-transition with body
 						res.addPrePlace(body, merge);
 
+					} else if (p.isMergeAll()) {
+
+						// create operation within thread
+						auto mergeAll = buildInOut(p);
+
+						// link merged threads
+						const std::set<set<ThreadBody<Context>>>& bodies = ass[mergedBodies[p]];
+
+						// here we are not introducing special handling for individual cases
+						for(const auto& cur : bodies) {
+							Place<Context> done;
+							if (cur.size() == 1u) {
+								done = endPlace[*cur.begin()];
+							} else {
+								done = res.createAuxiliary();
+								for(const auto& body : cur) {
+									res.link(endPlace[body], done);
+								}
+							}
+							res.addPrePlace(done, mergeAll);
+						}
 
 					} else if (p.isSend()) {
 
@@ -462,6 +505,12 @@ namespace cba {
 
 						// link send to channel
 						res.addPrePlace(chl, recv);
+
+					} else if (p.isRedistribute()) {
+
+						// just link operation for now
+						buildInOut(p);
+//						auto redist = buildInOut(p);
 
 					} else {
 						assert_not_implemented() << "Unsupported sync-point encountered: " << p << "\n";

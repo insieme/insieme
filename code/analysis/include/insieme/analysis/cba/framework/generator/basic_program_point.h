@@ -498,6 +498,13 @@ namespace cba {
 				return;
 			}
 
+			// handle marker stmt
+			if (auto markerStmt = parent.isa<MarkerStmtAddress>()) {
+				// marker stmts are just ignored
+				this->connectSets(this->Ain, markerStmt, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+				return;
+			}
+
 			assert_fail() << "Unsupported parent type encountered: " << parent->getNodeType();
 		}
 	};
@@ -956,6 +963,13 @@ namespace cba {
 			this->connectSets(this->Aout, body, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
+		void visitMarkerStmt(const MarkerStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			// link out of body with out of for stmt
+			auto body = stmt->getSubStatement();
+			// TODO: consider continues and breaks!
+			this->connectSets(this->Aout, body, ctxt, this->Aout, stmt, ctxt, params..., constraints);
+		}
+
 		void visitNode(const NodeAddress& node, const Context& ctxt, const ExtraParams& ... params, Constraints& res) {
 			assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
 		}
@@ -989,6 +1003,8 @@ namespace cba {
 			const auto& stmt = cba.getStmt(label);
 			const auto& call = stmt.isa<CallExprAddress>();
 
+			// check whether it is actually a call - only calls are interesting
+			if (!call) return;		// no temporary value for non-call statements
 
 			// obtain properly typed value ID instance
 			auto A_tmp = getValueID(cba, Atmp, utils::int_type<2>(), data, call);
@@ -1000,6 +1016,8 @@ namespace cba {
 				constraints.add(subset(A_in, A_tmp));
 				return;
 			}
+
+			// TODO: make the following part virtual such that it can be overridden by sub-classes ...
 
 			// create constraints
 			for(const auto& cur : call) {
