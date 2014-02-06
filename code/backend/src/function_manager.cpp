@@ -1094,6 +1094,16 @@ namespace backend {
 					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
 				}
 
+				void visitSwitchCases(const core::SwitchCasesAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+					// iterate through sub-statements
+					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
+				}
+
+				void visitSwitchCase(const core::SwitchCaseAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+					// iterate through sub-statements
+					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
+				}
+
 				void visitForStmt(const core::ForStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
 					visitAll(cur->getChildList(), thisVar, params, touched, res, true);
@@ -1134,7 +1144,7 @@ namespace backend {
 					res.push_back(cur);
 				}
 
-				void visitExpression(const core::ExpressionAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitStatement(const core::StatementAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// terminate decent here!
 				}
 

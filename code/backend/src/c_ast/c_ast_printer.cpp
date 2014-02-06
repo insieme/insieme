@@ -826,10 +826,20 @@ namespace c_ast {
 			vector<Pointer> pointers; // true is a const pointer, false a standard pointer
 			vector<ExpressionPtr> subscripts;
 			vector<TypePtr> parameters;
-			StructTypePtr owner;
+			IdentifierPtr owner;
 			bool hasParameters;
 			TypeLevel() : pointers(), hasParameters(false) {}
 		};
+
+		IdentifierPtr getNameFrom(const TypePtr& type) {
+			// could only be a struct or named type ...
+			if (auto structType = type.isa<StructTypePtr>()) {
+				return structType->name;
+			} else if (auto namedType = type.isa<NamedTypePtr>()) {
+				return namedType->name;
+			}
+			return IdentifierPtr();
+		}
 
 		typedef vector<TypeLevel> TypeNesting;
 		typedef TypeNesting::const_iterator NestIterator;
@@ -867,12 +877,12 @@ namespace c_ast {
 					FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
 					copy(funType->parameterTypes, std::back_inserter(res.parameters));
 					res.hasParameters = true;
-					res.owner = static_pointer_cast<StructType>(static_pointer_cast<FunctionType>(cur)->classType);
+					res.owner = getNameFrom(cur.as<FunctionTypePtr>()->classType);
 					cur = funType->returnType;
 				}
 				if (cur->getType() == NT_MemberFieldPointer){
 					res.hasParameters = false;
-					res.owner = static_pointer_cast<StructType>(static_pointer_cast<MemberFieldPointer>(cur)->parentType);
+					res.owner = getNameFrom(cur.as<MemberFieldPointerPtr>()->parentType);
 					cur = static_pointer_cast<MemberFieldPointer>(cur)->type;
 					data.push_back(res);
 					res.pointers.push_back(false);
@@ -921,7 +931,7 @@ namespace c_ast {
 
 				// here is the place to print any membership of a function pointer
 				if(cur.owner){
-					out << CPrint(static_pointer_cast<StructType>(cur.owner)->name);	
+					out << CPrint(cur.owner);
 					out << "::";
 				}
 

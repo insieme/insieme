@@ -269,6 +269,7 @@ namespace backend {
 
 	}
 
+	TypeInfo::TypeInfo() : externalize(&type_info_utils::NoOp), internalize(&type_info_utils::NoOp) {}
 
 	namespace detail {
 
@@ -1458,6 +1459,7 @@ namespace backend {
 
 				// register new type information
 				typeInfos.insert(std::make_pair(type, info));
+				allInfos.insert(info);
 			});
 
 			// B) unroll types and add definitions

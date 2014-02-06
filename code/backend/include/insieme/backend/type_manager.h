@@ -158,6 +158,8 @@ namespace backend {
 
 		c_ast::CodeFragmentPtr definition;
 
+		TypeInfo();
+
 		virtual ~TypeInfo() {};
 	};
 

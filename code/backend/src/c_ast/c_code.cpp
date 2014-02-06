@@ -190,6 +190,20 @@ namespace c_ast {
 			addFragment(fragment, graph, map);
 		});
 
+		// TODO: remove this debug print
+//		std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);
+//		boost::write_graphviz(outFile, graph, [&](std::ostream& out, const Vertex& v) {
+//			string label = toString(*graph[v]);
+//			boost::replace_all(label, "\n", " ");
+//			const unsigned limit = 40;
+//			if (label.size() > limit) {
+//				label = label.substr(0,limit) + "...";
+//			}
+//			out << "[label=\"" << label << "\"]";
+//		});
+//		outFile.close();
+
+
 		try {
 			// obtain topological order
 			vector<Vertex> vertexOrder;
@@ -200,20 +214,6 @@ namespace c_ast {
 			::transform(vertexOrder, std::back_inserter(result), [&](const Vertex& curV) {
 				return graph[curV];
 			});
-
-
-			// TODO: remove this debug print
-//				std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);
-//				boost::write_graphviz(outFile, graph, [&](std::ostream& out, const Vertex& v) {
-//					string label = toString(*graph[v]);
-//					boost::replace_all(label, "\n", " ");
-//					const unsigned limit = 40;
-//					if (label.size() > limit) {
-//						label = label.substr(0,limit) + "...";
-//					}
-//					out << "[label=\"" << label << "\"]";
-//				});
-//				outFile.close();
 
 			return result;
 
