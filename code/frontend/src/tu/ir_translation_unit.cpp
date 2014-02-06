@@ -337,7 +337,7 @@ namespace tu {
 
 						// migrate annotations
 						core::transform::utils::migrateAnnotations(pos->second, res);
-						if (!hasFreeTypeVariables(res)) {
+						if (allRecVarsBound(res.as<TypePtr>())) {
 							cache[ptr] = res;
 
 							// also, register results in recursive variable resolution map
@@ -476,8 +476,14 @@ namespace tu {
 				// make sure it is handling a struct or union type
 				if(!type.isa<StructTypePtr>() && !type.isa<UnionTypePtr>())return type;
 
-				// see whether there is any free type variable
-				if (!hasFreeTypeVariables(type)) return type;
+				auto containsRecVar = [&](const TypePtr& type)->bool {
+					return visitDepthFirstOnceInterruptible(type, [&](const TypePtr& type)->bool { return type == var; }, true, true);
+				};
+
+				// see whether the recursive variable is present
+				if (!containsRecVar(type)) {
+					return type;
+				}
 
 				// 1) check nested recursive types - those include this type
 
@@ -502,7 +508,7 @@ namespace tu {
 				visitDepthFirstOncePrunable(type, [&](const TypePtr& cur) {
 					//if (containsVarFree(cur)) ;
 					if (cur.isa<RecTypePtr>()) return !hasFreeTypeVariables(cur);
-					if (cur.isa<NamedCompositeTypePtr>() && hasFreeTypeVariables(cur)) {
+					if (cur.isa<NamedCompositeTypePtr>() && containsRecVar(cur)) {
 						structs.push_back(cur.as<TypePtr>());
 					}
 					return false;
@@ -527,7 +533,7 @@ namespace tu {
 				RecTypeDefinitionPtr def = builder.recTypeDefinition(bindings);
 
 				// test whether this is actually a closed type ..
-				if(hasFreeTypeVariables(def.as<NodePtr>())) return type;
+				if(!allRecVarsBound(def)) return type;
 
 				// normalize recursive representation
 				RecTypeDefinitionPtr old;
@@ -560,8 +566,7 @@ namespace tu {
 				// convert structs into list of definitions
 
 				// build up new recursive type (only if it is closed)
-				auto res = builder.recType(var, def);
-				return hasFreeTypeVariables(res.as<TypePtr>())?type:res;
+				return builder.recType(var, def);
 			}
 
 			/**
@@ -657,6 +662,63 @@ namespace tu {
 
 				// and return it
 				return res;
+			}
+
+		private:
+
+
+			bool allRecVarsBound(const TypePtr& type) {
+				// if it is a rec type it has been closed by the rec-type fixer
+				if (type.isa<RecTypePtr>()) return true;
+
+				// otherwise - if it contains any variable those are unbound variables!
+				bool freeVariable = false;
+				visitDepthFirstOncePrunable(type, [&](const TypePtr& type)->bool {
+					if (freeVariable) return true;
+					if (type.isa<TypeVariablePtr>()) {
+						freeVariable = true;
+						return true;
+					}
+
+					if (type.isa<RecTypePtr>()) {
+						return true;		// do not decent into closed recursive types
+					}
+
+					// everything else: continue
+					return false;
+
+				}, true);
+				return !freeVariable;
+			}
+
+			bool allRecVarsBound(const RecTypeDefinitionPtr& def) {
+				bool allRecVarsBound = true;
+				visitDepthFirstOncePrunable(def, [&](const TypePtr& type)->bool {
+
+					// if it already failed => no need to continue search
+					if (!allRecVarsBound) return true;
+
+					/**
+					 * WARNING: this implementation utilizes the fact that the frontend will NEVER
+					 * 		generate any types including type variables - all variables have been
+					 * 		introduced by this resolver as recursive-type variables!!
+					 */
+
+					// all encountered type variables are recursive type variables and need to be defined
+					if (auto typeVar = type.isa<TypeVariablePtr>()) {
+						if (!def->getDefinitionOf(typeVar)) {
+							allRecVarsBound = false;
+							return true;
+						}
+					}
+
+					// nested recursive types should all be closed => we can stop here
+					if (auto recType = type.isa<RecTypePtr>()) return true;
+
+					// otherwise continue
+					return false;
+				});
+				return allRecVarsBound;
 			}
 
 		};

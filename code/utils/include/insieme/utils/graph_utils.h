@@ -67,28 +67,6 @@ namespace graph {
 	class SimpleUnorderedMap : public boost::unordered_map<V, D> {};
 
 	/**
-	 * A functor class capable of printing labels within dot files for nodes and edges.
-	 */
-	template <class Graph, class Printer, class Decorator>
-	class label_printer {
-		Graph graph;
-		const Printer& printer;
-		const Decorator& decorator;
-	public:
-		label_printer(Graph _graph, const Printer& printer, const Decorator& decorator)
-			: graph(_graph), printer(printer), decorator(decorator) {}
-
-		template <class VertexOrEdge>
-		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=\"";
-			printer(out, graph[v]);
-			out << "\" ";
-			decorator(out, graph[v]);
-			out << "]";
-		}
-	};
-
-	/**
 	 * A functor realizing no label.
 	 */
 	struct no_label {
@@ -114,6 +92,27 @@ namespace graph {
 		void operator()(std::ostream& out, const T& t) const {}
 	};
 
+	/**
+	 * A functor class capable of printing labels within dot files for nodes and edges.
+	 */
+	template <class Graph, class Printer = default_label, class Decorator = default_deco>
+	class label_printer {
+		Graph graph;
+		const Printer& printer;
+		const Decorator& decorator;
+	public:
+		label_printer(Graph _graph, const Printer& printer, const Decorator& decorator)
+			: graph(_graph), printer(printer), decorator(decorator) {}
+
+		template <class VertexOrEdge>
+		void operator()(std::ostream& out, const VertexOrEdge& v) const {
+			out << "[label=\"";
+			printer(out, graph[v]);
+			out << "\" ";
+			decorator(out, graph[v]);
+			out << "]";
+		}
+	};
 
 	/**
 	 * A template for a boost graph wrapper supporting an arbitrary vertex nodes and edge labels. The resulting graph will
