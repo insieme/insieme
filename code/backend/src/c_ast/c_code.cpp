@@ -207,13 +207,12 @@ namespace c_ast {
 //				boost::write_graphviz(outFile, graph, [&](std::ostream& out, const Vertex& v) {
 //					string label = toString(*graph[v]);
 //					boost::replace_all(label, "\n", " ");
-//					const int limit = 40;
+//					const unsigned limit = 40;
 //					if (label.size() > limit) {
 //						label = label.substr(0,limit) + "...";
 //					}
 //					out << "[label=\"" << label << "\"]";
 //				});
-//				boost::write_graphviz(outFile, graph, insieme::utils::graph::label_printer<Graph, print<deref<CodeFragmentPtr>>>(graph, print<deref<CodeFragmentPtr>>()));
 //				outFile.close();
 
 			return result;

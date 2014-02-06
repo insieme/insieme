@@ -1453,6 +1453,9 @@ namespace backend {
 				info->rValueType = cType;
 				info->externalType = cType;
 
+				// create the definition block (empty so far)
+				info->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
+
 				// register new type information
 				typeInfos.insert(std::make_pair(type, info));
 			});
@@ -1476,14 +1479,18 @@ namespace backend {
 				// remove dependency to old declaration (would produce duplicated declaration)
 				newInfo->definition->remDependency(newInfo->declaration);
 
-				// combine them and updated within type info map (not being owned by the pointer)
-				newInfo->declaration = declaration;
+				// we move the definition part of the newInfo to the curInfo
+				*static_pointer_cast<c_ast::CCodeFragment>(curInfo->definition) =
+						*static_pointer_cast<c_ast::CCodeFragment>(newInfo->definition);
 
-				// remove old information
-				delete curInfo;
+				// also update lValue, rValue and external type
+				curInfo->lValueType = newInfo->lValueType;
+				curInfo->rValueType = newInfo->rValueType;
+				curInfo->externalType = newInfo->externalType;
 
-				// use new information
-				curInfo = newInfo;
+				// also re-direct the new setup (of the unrolled which might be used in the future)
+				newInfo->declaration = curInfo->declaration;
+				newInfo->definition = curInfo->definition;
 			});
 
 		}

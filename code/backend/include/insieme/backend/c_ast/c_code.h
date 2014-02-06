@@ -175,7 +175,7 @@ namespace c_ast {
 	 * An abstract base class for various kinds of specialized code fragments. This base class
 	 * defines an interface for code fragments to be handled uniformly.
 	 */
-	class CodeFragment : public utils::VirtualPrintable, private boost::noncopyable {
+	class CodeFragment : public utils::VirtualPrintable {
 
 		/**
 		 * The set of code fragments this fragment is depending on. The dependencies should form
@@ -322,7 +322,7 @@ namespace c_ast {
 		 * A shared pointer referencing the node manager used for maintaining the nodes
 		 * forming the C AST describing the represented target code.
 		 */
-		const SharedCNodeManager cNodeManager;
+		SharedCNodeManager cNodeManager;
 
 		/**
 		 * The code encapsulated by this fragment. The fragment may represent an abitrary sequence of
