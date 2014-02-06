@@ -1,10 +1,16 @@
 #ifndef __GEM_STDIO_H
 #define __GEM_STDIO_H
 
-#include "input_file.h" /* This header should contain the array to be used as stdin */
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
+
+/* The following 3 fields should be provided to the backend compiler
+ * test/gemsclaim/tools/enc.cpp produces the header file with proper
+ * definitions  */
+extern long input_file_pos;
+extern const char input_file[];
+extern const unsigned long INPUT_FILE_LEN;
 
 typedef struct FILE {
 } FILE;
