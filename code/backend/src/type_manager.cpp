@@ -1483,6 +1483,11 @@ namespace backend {
 				*static_pointer_cast<c_ast::CCodeFragment>(curInfo->definition) =
 						*static_pointer_cast<c_ast::CCodeFragment>(newInfo->definition);
 
+				// also update lValue, rValue and external type
+				curInfo->lValueType = newInfo->lValueType;
+				curInfo->rValueType = newInfo->rValueType;
+				curInfo->externalType = newInfo->externalType;
+
 				// also re-direct the new setup (of the unrolled which might be used in the future)
 				newInfo->declaration = curInfo->declaration;
 				newInfo->definition = curInfo->definition;
