@@ -1187,7 +1187,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		if (utils::isRefArray(lhs->getType()) &&
 			utils::isRefArray(rhs->getType()) &&
 			baseOp == clang::BO_Sub) {
-			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
+			return retIr = builder.callExpr(gen.getArrayRefDistance(), lhs, rhs); 
 		}
 
 		if(isLogical) {
