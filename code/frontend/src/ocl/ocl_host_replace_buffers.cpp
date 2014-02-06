@@ -220,27 +220,44 @@ BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
 	collectInformation();
 	generateReplacements();
 
-	NodePtr newProg = transform::replaceAll(prog->getNodeManager(), prog->getElement(0), clMemReplacements);
+	newProg = prog->getElement(0);
+	for_each(clMemReplacements, [&](std::pair<core::NodePtr, core::NodePtr> replacement){
+//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurences of the addressed expression
+		newProg = transform::replaceAll(prog->getNodeManager(), newProg, NodePtr(replacement.first), replacement.second, false);
+	});
 
-//	printer::PrettyPrinter pp(newProg);
-//	std::cout << pp << std::endl;
+	newProg = transform::replaceAll(prog->getNodeManager(), newProg, generalReplacements, false);
+
+	printer::PrettyPrinter pp(newProg);
+//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
 }
 
 void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog->getChild(0));
+	IRBuilder builder(mgr);
 
-	TreePatternPtr clCreateBuffer = irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) );
-	TreePatternPtr bufferDecl = irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
-			pattern::single(clCreateBuffer)));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+	TreePatternPtr clCreateBuffer = var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) ));
+	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
+			pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
 			var("buffer", pattern::any) << clCreateBuffer);
-	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
+	TreePatternPtr bufferPattern = var("all", bufferDecl | bufferAssign);
+/*
+	visitDepthFirst(pA, [&](const NodeAddress& node) {
+		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
 
-	irp::matchAll(bufferPattern, pA, [&](const AddressMatch& createBuffer) {
+		if(createBuffer) {
+			std::cout << "All: " << createBuffer->getVarBinding("all").getValue() << std::endl;
+		}
+	});
+*/
 
+	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
 
+//std::cout << "All: " << createBuffer["all"].getValue() << std::endl;
 //	visitDepthFirst(pA, [&](const NodeAddress& node) {
 //		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
 
@@ -249,9 +266,18 @@ void BufferReplacer::collectInformation() {
 
 		std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);
 		// check if CL_MEM_USE_HOST_PTR is set
-//		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
+		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
+
+		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
+		if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
+			assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+			if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+			}
+		}
+
 
 		// extract type form size argument
 		ExpressionPtr size;
@@ -262,16 +288,16 @@ void BufferReplacer::collectInformation() {
 		assert(extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false)
 				&& "cannot extract size and type from size paramater fo clCreateBuffer");
 #endif
-		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
 
-		// get the buffer expression
-		ExpressionAddress lhs = createBuffer["buffer"].getValue().as<ExpressionAddress>();
 // 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
-		ExpressionPtr deviceMemAlloc = copyPtr ? hostPtr :
-				getCreateBuffer(type, size, copyPtr, hostPtr, createBuffer["err"].getValue().as<ExpressionPtr>());
-		generalReplacements[createBuffer.getRoot().getAddressedNode()] = deviceMemAlloc;
 
+		ExpressionPtr deviceMemAlloc = usePtr ? hostPtr :
+				getCreateBuffer(type, size, copyPtr, hostPtr, createBuffer["err"].getValue().as<ExpressionPtr>());
+		generalReplacements[createBuffer["clCreateBuffer"].getValue()] = deviceMemAlloc;
+
+		// get the buffer expression address relative to root node of the pattern query
+		ExpressionAddress lhs = matchAddress >> createBuffer["buffer"].getValue().as<ExpressionAddress>();
 
 		// add gathered information to clMemMetaMap
 		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, hostPtr);
@@ -279,19 +305,19 @@ void BufferReplacer::collectInformation() {
 
 }
 
-bool BufferReplacer::alreadyThereAndCorrect(ExpressionPtr& bufferExpr, const TypePtr& newType) {
+bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const TypePtr& newType) {
 	bool alreadyThereAndCorrect = false;
 
 	// check if there is already a replacement for the current expression (or an alias of it) with a different type
-//				std::cout << "\nnewTy " << *bufferExpr << std::endl;
-	for_each(clMemReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
-//				std::cout << "repty " << *replacement.first << std::endl;
-		if(*replacement.first == *bufferExpr){// || analysis::cba::isAlias(replacement.first, bufferExpr)) {
-			ExpressionPtr repExpr = replacement.second.as<ExpressionPtr>();
+//std::cout << "\nnewTy " << *bufferExpr << std::endl;
+	for_each(clMemReplacements, [&](std::pair<ExpressionAddress, ExpressionPtr> replacement) {
+//std::cout << "\tchecking " << *replacement.first << std::endl;
+		if(*replacement.first == *bufferExpr /*|| analysis::cba::isAlias(replacement.first, bufferExpr)*/) {
+			ExpressionPtr repExpr = replacement.second;
 			if(*repExpr->getType() != *newType) {
 				if(types::isSubTypeOf(repExpr->getType(), newType)) { // if the new type is subtype of the current one, replace the type
 					//newType = replacement.second->getType();
-					bufferExpr = replacement.first.as<ExpressionPtr>(); // do not add aliases to the replacement map
+					bufferExpr = replacement.first; // do not add aliases to the replacement map
 				} else if(types::isSubTypeOf(newType, repExpr->getType())) { // if the current type is subtype of the new type, do nothing
 					alreadyThereAndCorrect = true;
 					return;
@@ -313,9 +339,9 @@ void BufferReplacer::generateReplacements() {
 	TypePtr clMemTy;
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
-		ExpressionPtr bufferExpr = extractVariable(meta.first);
+		ExpressionAddress bufferExpr = extractVariable(meta.first);
+//std::cout << "\nto replace: " << *bufferExpr << std::endl;
 		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
-	//			std::cout << node << std::endl;
 		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
 			if(GenericTypePtr gt = dynamic_pointer_cast<const GenericType>(node)) {
 				if(gt.toString().compare("_cl_mem") == 0)
@@ -330,12 +356,12 @@ void BufferReplacer::generateReplacements() {
 		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
 
 		// local variable case
-		if(VariablePtr variable = dynamic_pointer_cast<const Variable>(bufferExpr)) {
+		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
 			clMemReplacements[variable] = builder.variable(newType);
 			return;
 		}
 		// global variable case
-		if(LiteralPtr lit = dynamic_pointer_cast<const Literal>(bufferExpr)) {
+		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
 			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
 			return;
 		}
@@ -345,11 +371,11 @@ void BufferReplacer::generateReplacements() {
 		TreePatternPtr subscriptPattern = irp::subscript1D("operation",
 				var("variable", irp::variable()) | irp::callExpr(pattern::any, var("variable", irp::variable())));
 
-		MatchOpt subscript = subscriptPattern->matchPointer(bufferExpr);
+		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 
 		if(subscript) {
 //			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
-			ExpressionPtr expr = dynamic_pointer_cast<const Expression>(subscript.get()["variable"].getValue());
+			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
@@ -359,8 +385,8 @@ void BufferReplacer::generateReplacements() {
 		}
 	});
 /*
-	for_each(generalReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
-		std::cout << replacement.first << " -> " << replacement.second << std::endl;
+	for_each(clMemReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
+		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
 */
 }
