@@ -152,7 +152,6 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	irt_wg_event_register_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 	// check if last
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		// remove own handler from event register
 		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 		// trigger barrier completion
