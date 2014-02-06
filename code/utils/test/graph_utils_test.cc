@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "insieme/utils/graph_utils.h"
+#include "insieme/utils/set_utils.h"
 
 using std::pair;
 using std::string;
@@ -156,6 +157,22 @@ TEST(GraphUtils, PointerGraph) {
 
 }
 
+
+TEST(GraphUtils, CycleDetection) {
+
+	// build a dummy graph including a cycle
+	Graph<int> graph;
+
+	// start with a real cycle
+	graph.addEdge(1,2);
+	graph.addEdge(2,3);
+	graph.addEdge(3,4);
+	graph.addEdge(4,1);
+
+	auto cycle = detectCycle(graph);
+	std::cout << cycle << "\n";
+
+}
 
 
 } // end namespace graph

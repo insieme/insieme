@@ -41,6 +41,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/graph/depth_first_search.hpp>
 
 #include <boost/unordered_map.hpp>
 #include <boost/optional.hpp>
@@ -141,10 +142,12 @@ namespace graph {
 		// the type of underlying boost graph
 		typedef typename boost::adjacency_list<boost::hash_setS, boost::vecS, DirectedS, Vertex, EdgeLabel> GraphType;
 
+		// also some derived types
+		typedef typename boost::graph_traits<GraphType>::vertex_descriptor vertex_descriptor;
+
 	private:
 
 		// some private type definitions
-		typedef typename boost::graph_traits<GraphType>::vertex_descriptor vertex_descriptor;
 		typedef VertexMap<Vertex, vertex_descriptor> VertexMapType;
 
 		/**
@@ -205,6 +208,13 @@ namespace graph {
 		vertex_descriptor getVertexDescriptor(const Vertex& vertex) const {
 			assert(vertexMap.find(vertex) != vertexMap.end());
 			return vertexMap.find(vertex)->second;
+		}
+
+		/**
+		 * Looks up the vertex-value associated with the given descriptor.
+		 */
+		const Vertex& getVertexFromDescriptor(const vertex_descriptor& desc) const {
+			return graph[desc];
 		}
 
 		/**
@@ -488,6 +498,64 @@ namespace graph {
 				label_printer<GraphType, EdgePrinter, EdgeDecorator>(graph, edgePrinter, edgeDeco)
 		);
 		return out;
+	}
+
+	namespace detail {
+
+		template<typename VertexDecriptorType>
+		struct cycle_detector : public boost::dfs_visitor<> {
+
+			std::vector<VertexDecriptorType>& cycle;
+			std::map<VertexDecriptorType, VertexDecriptorType> predecessors;
+
+			cycle_detector(std::vector<VertexDecriptorType>& cycle) : cycle(cycle) {}
+
+			template<typename Edge, typename Graph>
+			void tree_edge(const Edge& e, const Graph& g) {
+				predecessors[boost::target(e,g)] = boost::source(e,g);		// record predecessor relation
+			}
+
+			template<typename Edge, typename Graph>
+			void back_edge(const Edge& e, const Graph& g) {
+
+				// check whether a cycle has already been found
+				if (!cycle.empty()) return;
+
+				// we have a back-edge => compute cycle
+				auto start = boost::target(e,g);
+
+				// restore cycle
+				auto cur = boost::source(e,g);
+				cycle.push_back(cur);
+				while(cur != start) {
+					cur = predecessors[cur];
+					cycle.push_back(cur);
+				}
+			}
+
+		};
+
+	}
+
+	template<
+		typename Graph,
+		typename VertexType = typename Graph::VertexType,
+		typename VertexDecriptorType = typename Graph::vertex_descriptor
+	>
+	std::set<VertexType> detectCycle(const Graph& graph) {
+
+		std::vector<VertexDecriptorType> cycle;
+		detail::cycle_detector<VertexDecriptorType> detector(cycle);
+
+		boost::depth_first_search(graph.asBoostGraph(), boost::visitor(detector));
+
+		// extract result
+		std::set<VertexType> res;
+		for(const auto& cur : cycle) {
+			res.insert(graph.getVertexFromDescriptor(cur));
+		}
+
+		return res;
 	}
 
 } // end namespace graph
