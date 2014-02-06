@@ -209,21 +209,21 @@ namespace cba {
 		).as<CompoundStmtPtr>();
 
 		CompoundStmtAddress code(in);
-dumpPretty(in);
+
 		CBA analysis(code);
 
 		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPin)));
 		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[0], RSPout)));
 
 		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPin)));
-		// EXPECT_EQ("{T0-1-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPtmp)));
+		EXPECT_EQ("{T0-1-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPtmp)));
 		EXPECT_EQ("{T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1], RSPout)));
 
 		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPin)));
 		EXPECT_EQ("{I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPtmp)));
 		EXPECT_EQ("{T0-1-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]}", toString(analysis.getValuesOf(code[1].as<CallExprAddress>()[0], RSPout)));
 
-		createDotDump(analysis);
+//		createDotDump(analysis);
 	}
 
 } // end namespace cba

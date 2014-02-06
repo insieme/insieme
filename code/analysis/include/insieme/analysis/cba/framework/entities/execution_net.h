@@ -98,6 +98,7 @@ namespace cba {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
+			if (kind == Aux && id == 0) return out << "dummy";
 			switch(kind) {
 			case Reg: 		return out << "R(" << id << ")";
 			case Chl:		return out << "C(" << id << ")";

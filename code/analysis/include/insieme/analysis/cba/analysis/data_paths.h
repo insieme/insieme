@@ -132,7 +132,7 @@ namespace cba {
 
 				constraints.add(combine(this->getValueManager(), DP_src, A_index, DP_trg,
 						[](const DataPath& head, const Formula& index)->DataPath {
-							assert_true(index);
+							if (!index) return head << ElementIndex();
 							return head << ElementIndex(*index.formula);
 						})
 				);

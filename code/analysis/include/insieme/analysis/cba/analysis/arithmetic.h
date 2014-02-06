@@ -233,7 +233,7 @@ namespace cba {
 		}
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			static const value_type unknown;
+			static const Formula unknown;
 
 			// conduct std-procedure
 			super::visitCallExpr(call, ctxt, constraints);

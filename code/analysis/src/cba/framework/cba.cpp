@@ -93,7 +93,7 @@ namespace cba {
 		// get solutions as strings
 		auto solution = ass.toStringMap();
 
-		out << "digraph G {";
+		out << "digraph G {\n\t";
 
 		// solution resolution utility
 		auto getSolution = [&](const ValueID& value)->const string& {
@@ -109,7 +109,7 @@ namespace cba {
 			out << id << " [label=\"";
 			cur.second->printValueInfo(out, *this, id);
 			out << " = " << getSolution(id) << "\""
-						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];";
+						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];\n\t";
 		}
 
 		// print constraints

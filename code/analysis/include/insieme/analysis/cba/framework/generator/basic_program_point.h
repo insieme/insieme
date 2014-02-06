@@ -901,7 +901,7 @@ namespace cba {
 			}
 
 			// also connect stmt-out with all returns if it is a lambda body
-			if (stmt.isRoot() || !stmt.getParentNode().isa<LambdaPtr>()) return;
+			if (!stmt.isRoot() && !stmt.getParentNode().isa<LambdaPtr>()) return;
 
 			// TODO: locate return statements more efficiently
 
@@ -984,7 +984,9 @@ namespace cba {
 		typename Context,
 		typename ... ExtraParams
 	>
-	class BasicTmpConstraintGenerator : public ConstraintGenerator {
+	class BasicTmpConstraintGenerator : public DataValueConstraintGenerator<Context, ExtraParams...> {
+
+		CBA& cba;
 
 		const InValueType& Ain;
 		const TmpValueType& Atmp;
@@ -993,89 +995,31 @@ namespace cba {
 	public:
 
 		BasicTmpConstraintGenerator(CBA& cba, const InValueType& Ain, const TmpValueType& Atmp, const OutValueType& Aout)
-			: Ain(Ain), Atmp(Atmp), Aout(Aout) {}
+			: DataValueConstraintGenerator<Context, ExtraParams...>(cba), cba(cba), Ain(Ain), Atmp(Atmp), Aout(Aout) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
-			// nothing to do here
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 
-			const auto& data = cba.getValueParameters<Label,Context,ExtraParams...>(value);
-			Label label = std::get<1>(data);
-			const auto& stmt = cba.getStmt(label);
-			const auto& call = stmt.isa<CallExprAddress>();
-
-			// check whether it is actually a call - only calls are interesting
-			if (!call) return;		// no temporary value for non-call statements
-
-			// obtain properly typed value ID instance
-			auto A_tmp = getValueID(cba, Atmp, utils::int_type<2>(), data, call);
-			assert_eq(value, A_tmp) << "Queried a value set of invalid type!";
-
-			// if it is not a call Atmp should be the same as Ain
-			if (!call) {
-				auto A_in = getValueID(cba, Ain, utils::int_type<2>(), data, call);
-				constraints.add(subset(A_in, A_tmp));
-				return;
-			}
-
-			// TODO: make the following part virtual such that it can be overridden by sub-classes ...
+			auto A_tmp = cba.getSet(Atmp, call, ctxt, params...);
 
 			// create constraints
 			for(const auto& cur : call) {
 				if (!isCapturedValue(cur)) {
-					auto A_out = getValueID(cba, Aout, utils::int_type<2>(), data, cur);
+					auto A_out = cba.getSet(Aout, cur, ctxt, params...);
 					constraints.add(subset(A_out, A_tmp));
 				}
 			}
 
 			// and the function
-			auto A_fun = getValueID(cba, Aout, utils::int_type<2>(), data, call->getFunctionExpr());
+			auto A_fun = cba.getSet(Aout, call->getFunctionExpr(), ctxt, params...);
 			constraints.add(subset(A_fun, A_tmp));
 
 		}
 
-		/**
-		 * Produces a human-readable representation of the value represented by the given value ID.
-		 */
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
-
-			auto& data = cba.getValueParameters<int,Context,ExtraParams...>(value);
-			int label = std::get<1>(data);
-			const core::NodeAddress& node = cba.getStmt(label);
-
-			out << value << " = " << getAnalysisName(std::get<0>(data)) <<
-					"[l" << label << " = " << node->getNodeType() << " : "
-						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : ";
-
-			// print remaining set parameters (including context)
-			printParams(out, utils::int_type<2>(), data);
-
-			// done
-			out << "]";
-		}
-
-	private:
-
-		template<int i, typename ValueType, typename Tuple, typename ... Args>
-		sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-		getValueID(CBA& cba, const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) {
-			return getValueID(cba, type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
-		}
-
-		template<typename ValueType, typename Tuple, typename ... Args>
-		sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-		getValueID(CBA& cba, const ValueType& type, const utils::int_type<sizeof...(ExtraParams)+3>& c, const Tuple& t, const Args& ... args) {
-			return cba.getSet(type, args...);
-		}
-
-		template<int i, typename Tuple>
-		void printParams(std::ostream& out, const utils::int_type<i>& c, const Tuple& t) const {
-			out << std::get<i>(t) << ",";
-			printParams(out, utils::int_type<i+1>(), t);
-		}
-
-		template<typename Tuple>
-		void printParams(std::ostream& out, const utils::int_type<sizeof...(ExtraParams)+2>& c, const Tuple& t) const {
-			out << std::get<sizeof...(ExtraParams)+2>(t);
+		void visitStatement(const StatementAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			// simply link in with tmp
+			auto A_in  = cba.getSet(Ain, stmt, ctxt, params...);
+			auto A_tmp = cba.getSet(Atmp, stmt, ctxt, params...);
+			constraints.add(subset(A_in, A_tmp));
 		}
 
 	};

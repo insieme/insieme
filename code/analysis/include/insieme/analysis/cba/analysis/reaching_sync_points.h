@@ -147,15 +147,21 @@ namespace cba {
 
 			// check whether it is a sync-operation call
 			auto fun = call->getFunctionExpr();
-std::cout << "Fun: " << *fun << " - sync-fun: " << isSynchronizingFunction(fun) << "\n";
+
 			if (isSynchronizingFunction(fun)) {
 
 				// the result value to be constraint
 				auto res = cba.getSet(RSPtmp, call, ctxt);
 
+				// for the sync-functions without arguments (merge-all call)
+				if (call.empty()) {
+					// link with in-state
+					constraints.add(subset(cba.getSet(RSPin, call, ctxt), res));
+					return;
+				}
+
 				// skip evaluation of the function (since this is a path leaking the in-state to the tmp state)
 				for(const auto& arg : call) {
-std::cout << "  Argument: " << *arg << "\n";
 					auto l = cba.getLabel(arg);
 					auto R = cba.getSet(RSPout, l, ctxt);
 					constraints.add(subset(R, res));
