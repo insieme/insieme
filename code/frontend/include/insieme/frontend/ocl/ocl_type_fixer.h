@@ -1,5 +1,4 @@
-/**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+/* Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,33 +33,20 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
-namespace fe = insieme::frontend;
-
-using namespace insieme::frontend;
+#include "insieme/frontend/ocl/ocl_host_utils.h"
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace ocl {
 
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	ocl::TypeFixer otf;
-	core::NodePtr root = otf.mapElement(0, br.getTransformedProgram());
+class TypeFixer: public core::transform::CachedNodeMapping {
 
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-//	prog = builder.program(list);
+	virtual const core::NodePtr resolveElement(const core::NodePtr& ptr);
+};
 
-	return prog;
 }
-
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions
+}
+}

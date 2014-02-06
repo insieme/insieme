@@ -34,33 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_type_fixer.h"
+#include "insieme/core/printer/pretty_printer.h"
 
-namespace fe = insieme::frontend;
-
-using namespace insieme::frontend;
+using namespace insieme::core;
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace ocl {
 
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	ocl::TypeFixer otf;
-	core::NodePtr root = otf.mapElement(0, br.getTransformedProgram());
-
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-//	prog = builder.program(list);
-
-	return prog;
+const NodePtr TypeFixer::resolveElement(const NodePtr& ptr){
+	return ptr;
 }
 
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions
+
+}
+}
+}
