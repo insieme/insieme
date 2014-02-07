@@ -91,13 +91,17 @@ public:
 private:
 //	BufferMapper bufferMapper;
 	ClMemMetaMap clMemMeta;
-	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> clMemReplacements;
+	insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> clMemReplacements;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> generalReplacements;
 	core::ProgramPtr& prog;
+	core::NodePtr newProg;
 
-	bool alreadyThereAndCorrect(core::ExpressionPtr& bufferExpr, const core::TypePtr& newType);
+	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
 	void collectInformation();
 	void generateReplacements();
+
+public:
+	core::NodePtr getTransformedProgram() {return newProg;}
 };
 } //namespace ocl
 } //namespace frontend

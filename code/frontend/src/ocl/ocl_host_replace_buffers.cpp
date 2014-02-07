@@ -306,7 +306,7 @@ void BufferReplacer::collectInformation() {
 }
 
 bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const TypePtr& newType) {
-	bool alreadyThereAndCorrect = false;
+	bool correct = false;
 
 	// check if there is already a replacement for the current expression (or an alias of it) with a different type
 //std::cout << "\nnewTy " << *bufferExpr << std::endl;
@@ -319,12 +319,12 @@ bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const
 					//newType = replacement.second->getType();
 					bufferExpr = replacement.first; // do not add aliases to the replacement map
 				} else if(types::isSubTypeOf(newType, repExpr->getType())) { // if the current type is subtype of the new type, do nothing
-					alreadyThereAndCorrect = true;
+					correct = true;
 					return;
 				} else // if the types are not related, fail
 					assert(false && "Buffer used twice with different types. Not supported by Insieme.");
 			} else
-				alreadyThereAndCorrect = true;
+				correct = true;
 		}
 	});
 
