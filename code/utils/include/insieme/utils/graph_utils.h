@@ -502,6 +502,9 @@ namespace graph {
 
 	namespace detail {
 
+		/**
+		 * A utility visitor for detecting cycles.
+		 */
 		template<typename VertexDecriptorType>
 		struct cycle_detector : public boost::dfs_visitor<> {
 
@@ -537,22 +540,25 @@ namespace graph {
 
 	}
 
+	/**
+	 * Searches for a cycle in the given graph.
+	 */
 	template<
-		typename Graph,
-		typename VertexType = typename Graph::VertexType,
-		typename VertexDecriptorType = typename Graph::vertex_descriptor
+		typename GraphType,
+		typename VertexType = typename boost::vertex_bundle_type<GraphType>::type,
+		typename VertexDecriptorType = typename boost::graph_traits<GraphType>::vertex_descriptor
 	>
-	std::set<VertexType> detectCycle(const Graph& graph) {
+	std::vector<VertexType> detectCycle(const GraphType& graph) {
 
 		std::vector<VertexDecriptorType> cycle;
 		detail::cycle_detector<VertexDecriptorType> detector(cycle);
 
-		boost::depth_first_search(graph.asBoostGraph(), boost::visitor(detector));
+		boost::depth_first_search(graph, boost::visitor(detector));
 
 		// extract result
-		std::set<VertexType> res;
+		std::vector<VertexType> res;
 		for(const auto& cur : cycle) {
-			res.insert(graph.getVertexFromDescriptor(cur));
+			res.push_back(graph[cur]);
 		}
 
 		return res;

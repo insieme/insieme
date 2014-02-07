@@ -163,15 +163,39 @@ TEST(GraphUtils, CycleDetection) {
 	// build a dummy graph including a cycle
 	Graph<int> graph;
 
-	// start with a real cycle
+	auto cycle = detectCycle(graph.asBoostGraph());
+	EXPECT_TRUE(cycle.empty()) << cycle;
+
+	// start with no cycle
 	graph.addEdge(1,2);
 	graph.addEdge(2,3);
 	graph.addEdge(3,4);
+
+	cycle = detectCycle(graph.asBoostGraph());
+	EXPECT_TRUE(cycle.empty()) << cycle;
+
+	// close the cycle
 	graph.addEdge(4,1);
 
-	auto cycle = detectCycle(graph);
-	std::cout << cycle << "\n";
+	cycle = detectCycle(graph.asBoostGraph());
+	EXPECT_FALSE(cycle.empty()) << cycle;
+	EXPECT_EQ(4, cycle.size());
 
+
+	// create something with extra nodes
+	graph = Graph<int>();
+
+	graph.addEdge(1,2);
+	graph.addEdge(1,3);
+	graph.addEdge(1,4);
+	graph.addEdge(2,3);
+	graph.addEdge(3,4);
+	graph.addEdge(4,5);
+	graph.addEdge(5,3);
+
+	cycle = detectCycle(graph.asBoostGraph());
+	EXPECT_FALSE(cycle.empty()) << cycle;
+	EXPECT_EQ(3,cycle.size());
 }
 
 
