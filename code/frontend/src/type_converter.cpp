@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -150,8 +150,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::Long:			return gen.getInt8();
 
 									// long long is packed in a struct to avoid aliases with just long
-	case BuiltinType::LongLong:		return builder.structType(toVector( builder.namedType("longlong_val", gen.getInt8()))); 
-	case BuiltinType::ULongLong:	return builder.structType(toVector( builder.namedType("longlong_val", gen.getUInt8()))); 
+	case BuiltinType::LongLong:		return builder.structType(toVector( builder.namedType("longlong_val", gen.getInt8())));
+	case BuiltinType::ULongLong:	return builder.structType(toVector( builder.namedType("longlong_val", gen.getUInt8())));
 
 	// real types
 	case BuiltinType::Float:		return gen.getFloat();
@@ -381,7 +381,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 			// if target is an annonymous type, we create a new type with the name of the typedef
 			if (structTy->getName()->getValue().substr(0,5) == "_anon"){
 				impl = builder.structType ( builder.stringValue( name), structTy->getParents(), structTy->getEntries());
-				
+
 				core::annotations::attachName(impl,name);
 
 				if( decl && convFact.getHeaderTagger().isDefinedInSystemHeader(decl) ) {
@@ -565,6 +565,19 @@ core::TypePtr Converter::TypeConverter::VisitParenType(const ParenType* parenTy)
 	LOG_TYPE_CONVERSION( parenTy, retTy );
 	return retTy;
 }
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                             ATOMIC TYPE
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr Converter::TypeConverter::VisitAtomicType(const AtomicType* atomicTy) {
+    core::TypePtr ret = convert(atomicTy->getValueType().getTypePtr());
+    convFact.warnings.insert("Atomic type lost in INSPIRE");
+    return ret;
+}
+
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							POINTER TYPE (FIXME)
 // Pointer types need to be converted into reference types within the IR.
@@ -591,10 +604,10 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
 		subTy : builder.refType(builder.arrayType( subTy ));
 
-    // Function pointers are IR function but 
+    // Function pointers are IR function but
     // pointers of function pointers should be IR array of functions
     // hence we must stop recursion
-    auto innerPtr = pointerTy->getPointeeType(); 
+    auto innerPtr = pointerTy->getPointeeType();
     if(innerPtr->isPointerType()) {
             if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
                 subTy = convert(innerPtr->getPointeeType().getTypePtr());
@@ -608,7 +621,7 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 
 
 core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decTy) {
-	
+
 	core::TypePtr&& subTy = convert( decTy->getPointeeType().getTypePtr() );
 	// ~~~~~ Handling of special cases ~~~~~~~
 	// void* -> array<'a>
@@ -619,10 +632,10 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
 		subTy : builder.refType(builder.arrayType( subTy ));
 
-    // Function pointers are IR function but 
+    // Function pointers are IR function but
     // pointers of function pointers should be IR array of functions
     // hence we must stop recursion
-    auto innerPtr = decTy->getPointeeType(); 
+    auto innerPtr = decTy->getPointeeType();
     if(innerPtr->isPointerType()) {
             if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
                 subTy = convert(innerPtr->getPointeeType().getTypePtr());
@@ -647,7 +660,7 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 
 core::TypePtr Converter::CTypeConverter::convertInternal(const clang::Type* type) {
    	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-   	
+
     return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
 }
 

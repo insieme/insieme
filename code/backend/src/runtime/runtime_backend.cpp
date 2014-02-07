@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -164,6 +164,9 @@ namespace runtime {
 			table["irt_lock_acquire"] 	= "irt_all_impls.h";
 			table["irt_lock_release"] 	= "irt_all_impls.h";
 
+            table["irt_atomic_fetch_and_or"]			= "irt_atomic.h";
+			table["irt_atomic_fetch_and_xor"]			= "irt_atomic.h";
+			table["irt_atomic_fetch_and_and"]			= "irt_atomic.h";
 			table["irt_atomic_fetch_and_add"]			= "irt_atomic.h";
 			table["irt_atomic_fetch_and_sub"]			= "irt_atomic.h";
 			table["irt_atomic_add_and_fetch"]			= "irt_atomic.h";

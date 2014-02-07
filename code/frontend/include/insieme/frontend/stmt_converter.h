@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -211,6 +211,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
+    FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -282,6 +283,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
+    FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
 
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXConstructExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXNewExpr)
