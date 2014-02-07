@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -158,8 +158,8 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 				else if (core::analysis::isConstCppRef(funcParamTy)) {
 					// Note, const refs extend lifetime of values, therefore materialize the value into a ref
 					if (!arg->getType().isa<core::RefTypePtr>()) {
-						arg =  builder.callExpr(builder.refType(arg->getType()), 
-												mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), 
+						arg =  builder.callExpr(builder.refType(arg->getType()),
+												mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(),
 												arg);
 					}
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
@@ -329,6 +329,11 @@ public:
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     core::ExpressionPtr VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr);
 
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                  Atomic EXPRESSION
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    core::ExpressionPtr VisitAtomicExpr(const clang::AtomicExpr* atom);
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -372,6 +377,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, AtomicExpr)
 
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr);
 };
@@ -406,6 +412,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, AtomicExpr)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++

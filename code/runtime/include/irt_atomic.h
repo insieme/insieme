@@ -43,6 +43,11 @@
 
 	#define irt_atomic_fetch_and_add(__location, __value, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
 	#define irt_atomic_fetch_and_sub(__location, __value, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_or(__location, __value, ...)   __sync_fetch_and_or(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_and(__location, __value, ...)  __sync_fetch_and_and(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_xor(__location, __value, ...)  __sync_fetch_and_xor(__location, __value, ##__VA_ARGS__)
+
+
 
 	#define irt_atomic_add_and_fetch(__location, __value, ...)  __sync_add_and_fetch(__location, __value, ##__VA_ARGS__)
 	#define irt_atomic_sub_and_fetch(__location, __value, ...)  __sync_sub_and_fetch(__location, __value, ##__VA_ARGS__)

@@ -84,6 +84,7 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, ParenType)
 	DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 	DECLARE_TYPE_VISIT(TypeConverter, DecayedType)
+    DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
 
 	// main entry point
 	core::TypePtr convert(const clang::Type* type);
@@ -95,7 +96,7 @@ protected:
 	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
-    
+
     core::TypePtr convertImpl(const clang::Type* type);
 };
 
@@ -132,6 +133,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
+    CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
 
 protected:
 
@@ -173,6 +175,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
+    CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  C++ specific types
