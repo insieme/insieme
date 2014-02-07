@@ -158,7 +158,7 @@ namespace cba {
 		virtual void visit(const core::NodeAddress& node, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 
 			// filter out invalid contexts
-			if (!isValidContext(cba, ctxt)) return;
+//			if (!isValidContext(cba, ctxt)) return;
 
 			// for valid content => std procedure
 			visitInternal(node, ctxt, args..., constraints);

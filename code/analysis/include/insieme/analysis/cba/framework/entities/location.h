@@ -132,6 +132,10 @@ namespace cba {
 			return path;
 		}
 
+		bool isRoot() const {
+			return path.isRoot();
+		}
+
 		bool isAlias(const Reference& other) const {
 			// it needs to be the same location
 			if (location != other.location) return false;

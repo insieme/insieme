@@ -143,7 +143,7 @@ namespace cba {
 
 			out << value << " = Sin - " << getAnalysisName<BaseAnalysis>() << "@" << location
 						 << "[l" << label << " = " << node->getNodeType() << " : "
-						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+//						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
 						 << ctxt << "]";
 		}
 

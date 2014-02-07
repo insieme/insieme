@@ -446,7 +446,6 @@ namespace cba {
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[21].as<ExpressionAddress>(), D)));
 		EXPECT_EQ("{AP(4)}", toString(analysis.getValuesOf(code[22].as<ExpressionAddress>(), D)));
 //		createDotDump(analysis);
-
 	}
 
 	TEST(CBA, References4) {
@@ -474,7 +473,7 @@ namespace cba {
 		EXPECT_EQ("{5}", toString(analysis.getValuesOf(root[5].as<ExpressionAddress>(), A)));
 
 		// the tricky part - there should only be a small number of sets involved
-		EXPECT_LE(analysis.getNumSets(), 35);
+		EXPECT_LE(analysis.getNumSets(), 40);
 
 //		createDotDump(analysis);
 	}

@@ -100,7 +100,6 @@ namespace cba {
 		class Container : public ContainerBase {
 
 			utils::Lazy<std::vector<Context>> contexts;
-			utils::Lazy<std::vector<Location<Context>>> locations;
 			map<std::size_t, std::vector<Callable<Context>>> callables;
 
 		public:
@@ -121,30 +120,6 @@ namespace cba {
 				}
 
 				return contexts;
-			}
-
-			const std::vector<Location<Context>>& getLocations(CBA& cba) {
-				if (locations) return locations;
-
-				locations = std::vector<Location<Context>>();
-
-				// collect all memory location constructors
-				core::visitDepthFirst(cba.getRoot(), [&](const core::ExpressionAddress& cur) {
-
-					// TODO: filter contexts - not all locations may occur in all contexts
-					// (this will reduce the number of sets / constraints)
-
-					if (isMemoryConstructor(cur)) {
-						for(const auto& ctxt : this->getContexts(cba)) {
-							// TODO: move location creation utility to location constructor
-							auto loc = getLocation<Context>(cur, ctxt);
-							if (!::contains(*locations, loc)) {
-								locations->push_back(loc);
-							}
-						}
-					}
-				});
-				return locations;
 			}
 
 			const std::vector<Callable<Context>>& getCallables(CBA& cba, std::size_t numParams) {

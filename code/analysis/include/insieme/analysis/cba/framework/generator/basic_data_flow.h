@@ -176,9 +176,9 @@ namespace cba {
 
 		/**
 		 * A custom constraint for the data flow equation solver obtaining the value
-		 * from a location in case a given reference is pointing to it.
+		 * from a location a given reference is pointing to it.
 		 */
-		template<typename ValueLattice, typename RefLattice, typename Context>
+		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
 		struct ReadConstraint : public Constraint {
 
 			typedef typename RefLattice::base_lattice::value_type ref_set_type;
@@ -189,26 +189,37 @@ namespace cba {
 			typedef typename ValueLattice::projection_op_type projection_op_type;
 			typedef typename ValueLattice::less_op_type less_op_type;
 
-			// the location the location state value is referencing to.
-			Location<Context> loc;
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the read operation itself
+			CallExprAddress readOp;
+
+			// the context of the read operation
+			Context ctxt;
 
 			// the value covering the read reference
 			TypedValueID<RefLattice> ref;
 
-			// the value to be potentially read
-			TypedValueID<ValueLattice> loc_value;
-
 			// the set to be updated
 			TypedValueID<ValueLattice> res;
+
+			// a map of referenced locations to their values
+			mutable std::map<Location<Context>, TypedValueID<ValueLattice>> loc_value_map;
 
 			// the input values reference by this constraint
 			mutable std::vector<ValueID> inputs;
 
 		public:
 
-			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
-				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res), true),
-				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
+			ReadConstraint(
+					CBA& cba, const CallExprAddress& call, const Context& ctxt,
+					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res
+				) : Constraint(toVector<ValueID>(ref), toVector<ValueID>(res), true, true),
+				  cba(cba), readOp(call), ctxt(ctxt), ref(ref), res(res)
+			{
+				inputs.push_back(ref);
+			}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// read input data and add it to result value
@@ -216,78 +227,90 @@ namespace cba {
 				return meet_assign_op(ass[res], getReadData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get list of references
+				const set<Reference<Context>>& refs = ass[ref];
+
+				bool changed = false;
+				for(const auto& cur : refs) {
+
+					// get the current location
+					const auto& loc = cur.getLocation();
+
+					// check whether location has already been referenced before
+					if (loc_value_map.find(loc) != loc_value_map.end()) continue;
+
+					// it is a new location
+					auto valueSet = cba.getSet(Stmp<NestedAnalysesType>(), readOp, ctxt, loc);
+					loc_value_map[loc] = valueSet;
+					inputs.push_back(valueSet);
+					changed = true;
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
 			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
 				// check whether data to be read is in result set
 				less_op_type less_op;
 				return less_op(getReadData(ass), ass[res]);
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-				return out << loc_value << " -> " << res << "[label=\"" << *this << "\"]\n";
-			}
-
-			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
-				out << loc_value << " -> " << res << "[label=\"" << *this << "\"";
-				if (!isReferenced(ass)) out << " style=dotted";
-				return out << "]\n";
+				for(const auto& cur : loc_value_map) {
+					out << cur.second << " -> " << res << "[label=\"reads\"]\n";
+				}
+				return out << ref << " -> " << res << "[label=\"defined reference\"]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
+				return out << "*" << ref << " in " << res;
 			}
 
 			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
-				inputs.clear();
-				inputs.push_back(ref);
-				if (isReferenced(ass)) inputs.push_back(loc_value);
 				return inputs;
 			}
 
 		private:
 
-			bool isReferenced(const Assignment& ass) const {
-				// obtain set of references
-				const ref_set_type& ref_set = ass[ref];
-				for(const auto& cur : ref_set) {
-					if (cur.getLocation() == loc) return true;
-				}
-				return false;
-			}
-
 			value_type getReadData(const Assignment& ass) const {
-				// check whether location is present in reference set
-				const ref_set_type& ref_set = ass[ref];
 
-				// get list of accessed data paths in memory location
-				vector<DataPath> paths;
-				for(const auto& cur : ref_set) {
-					if (cur.getLocation() == loc) {
-						paths.push_back(cur.getDataPath());
-					}
-				}
-
-				// check whether something is referenced
-				value_type res;
-				if (paths.empty()) return res;
-
-				// get current value of location
-				const value_type& mem_value = ass[loc_value];
-
-				// collect all values from the loc_value referenced by the paths
+				// instances of required operators
 				meet_assign_op_type meet_assign_op;
 				projection_op_type projection_op;
 
-				for(const auto& cur : paths) {
-					meet_assign_op(res, projection_op(mem_value, cur));
+				// initialize empty result
+				value_type res;
+
+				// collect data from all referenced memory locations
+				const std::set<Reference<Context>>& refs = ass[ref];
+				for(const auto& cur : refs) {
+
+					// get targeted location
+					const auto& loc = cur.getLocation();
+
+					// get current value of location
+					const value_type& mem_value = ass[loc_value_map[loc]];
+
+					// collect all values from the loc_value referenced by the paths
+					meet_assign_op(res, projection_op(mem_value, cur.getDataPath()));
 				}
+
+				// return result
 				return res;
 			}
 
 		};
 
-		template<typename ValueLattice, typename RefLattice, typename Context>
-		ConstraintPtr read(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res) {
-			return std::make_shared<ReadConstraint<ValueLattice,RefLattice,Context>>(loc, ref, loc_value, res);
+		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
+		ConstraintPtr read(CBA& cba, const CallExprAddress& readOp, const Context& readCtxt, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<ReadConstraint<NestedAnalysesType,ValueLattice,RefLattice,Context>>(cba, readOp, readCtxt, ref, res);
 		}
 
 	}
@@ -709,15 +732,14 @@ namespace cba {
 					// one special case: if it is a read operation
 					const auto& base = call->getNodeManager().getLangBasic();
 					if (base.isRefDeref(targets[0].getDefinition())) {
+
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
 						auto R_trg = this->cba.getSet(R, l_trg, ctxt);
-						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
-							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getSet(Sin<ValueAnalysisType>(), l_call, ctxt, loc);
-							constraints.add(read(loc, R_trg, S_in, A_call));
-						}
+						// add read constraint
+						constraints.add(read<ValueAnalysisType>(cba, call, ctxt, R_trg, A_call));
+
 					}
 
 					// another case: accessing struct members

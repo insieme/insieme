@@ -836,7 +836,7 @@ namespace cba {
 				// skip handling of literals
 				if (targets[0].isLiteral()) {
 					// we assume literals have no affect
-					this->connectStateSets(this->Ain, l_call, ctxt, this->Aout, l_call, ctxt, params..., constraints);
+					this->connectStateSets(this->Atmp, l_call, ctxt, this->Aout, l_call, ctxt, params..., constraints);
 					return;
 				}
 
