@@ -190,6 +190,23 @@ namespace c_ast {
 			addFragment(fragment, graph, map);
 		});
 
+		// test for cycles
+//		auto cycle = utils::graph::detectCycle(graph);
+//		if (!cycle.empty()) {
+//
+//			std::cout << "---------------- ERROR - CYCLIC DEPENDENCY DETECTED ------------------- \n";
+//
+//			for(const auto& cur : cycle) {
+//				std::cout << " - Begin - \n";
+//				std::cout << "Type: " << typeid(*cur).name() << "\n";
+//				std::cout << toString(*cur) << "\n";
+//				std::cout << "Includes: " << cur->getIncludes() << "\n";
+//				std::cout << " - End - \n";
+//			}
+//
+//			assert_fail();
+//		}
+
 		// TODO: remove this debug print
 //		std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);
 //		boost::write_graphviz(outFile, graph, [&](std::ostream& out, const Vertex& v) {

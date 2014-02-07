@@ -321,7 +321,6 @@ namespace backend {
 
 					// add dependency to inner type
 					info->declaration->addDependency(curInfo->declaration);
-					info->definition->addDependency(curInfo->definition);
 
 					// add type to parameter list
 					cType->parameters.push_back(curInfo->rValueType);

@@ -1271,7 +1271,8 @@ namespace backend {
 
 			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
-			res.prototypeDependencies.insert(returnTypeInfo.definition);
+			res.prototypeDependencies.insert(returnTypeInfo.declaration);
+			res.definitionDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external)?returnTypeInfo.externalType:returnTypeInfo.rValueType;
 
 			// create a new variable scope for the resolution of the body
@@ -1290,7 +1291,8 @@ namespace backend {
 
 				// resolve parameter type
 				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
-				res.prototypeDependencies.insert(paramTypeInfo.definition);
+				res.prototypeDependencies.insert(paramTypeInfo.declaration);
+				res.definitionDependencies.insert(paramTypeInfo.definition);
 
 				c_ast::TypePtr paramType = (external)?paramTypeInfo.externalType:paramTypeInfo.rValueType;
 
@@ -1315,7 +1317,7 @@ namespace backend {
 			// resolve body
 			c_ast::StatementPtr cBody;
 			c_ast::Constructor::InitializationList initializer;
-			res.definitionDependencies.insert(res.prototypeDependencies.begin(), res.prototypeDependencies.end());
+
 			if (lambda) {
 
 				// set up variable manager
