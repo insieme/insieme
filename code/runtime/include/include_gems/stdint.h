@@ -38,6 +38,8 @@
 #ifndef __GUARD_INCLUDE_GEMS_STDINT_H
 #define __GUARD_INCLUDE_GEMS_STDINT_H
 
+#define UINT64_MAX (18446744073709551615ULL)
+
 typedef int intptr_t;
 typedef unsigned int uintptr_t;
 

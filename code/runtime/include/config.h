@@ -130,6 +130,9 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
+#ifdef _GEMS
+	#define	GEMS_CORE_FREQ_MHZ 100
+#endif
 
 
 #endif // ifndef __GUARD_CONFIG_H

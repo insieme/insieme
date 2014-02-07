@@ -102,7 +102,19 @@ METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AG
 )
 #endif
 
+GROUP(rapmi_group, int rapmi_dummy, { rapmi_ctrl(LEM_SENS_MODE_ACC, 10000, 0); }, {}, {}, {}, {}, {})
+
+METRIC(rapmi_energy,                 50,   j,      uint32,      "%u",        IRT_HW_SCOPE_CORE,     IRT_METRIC_AGGREGATOR_SUM,   rapmi_group, \
+    { rapmi_start(); }, \
+    { rapmi_t rapmi_data; rapmi_read(&rapmi_data); rapmi_stop(); wi->inst_region_data->aggregated_rapmi_energy += rapmi_data.cpu_power; }, \
+    {}, \
+    {}, \
+    1 \
+)
+
 GROUP(energy_group, , rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
+	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
+	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
 	{}, \
 	{}, \
 	{ irt_get_energy_consumption(&(rapl_data)); }, \

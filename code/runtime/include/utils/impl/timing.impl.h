@@ -126,6 +126,9 @@ uint64 irt_time_set_ticks_per_sec() {
  */
 
 uint64 irt_time_ticks_per_sec_calibration_mark() {
+#ifdef _GEMS
+	return GEMS_CORE_FREQ_MHZ * 1e6;
+#else
 	static uint64 before = 0;
 	//static struct timespec time_before;
 	static struct timeval time_before;
@@ -183,6 +186,7 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 
 		return irt_g_time_ticks_per_sec;
 	}
+#endif
 }
 
 // converts clock ticks to nanoseconds

@@ -35,7 +35,15 @@
  */
 
 #pragma once
+#ifndef __GUARD_INSTRUMENTATION_INCLUDES_H
+#define __GUARD_INSTRUMENTATION_INCLUDES_H
 
 #include "utils/energy.h"
 #include "utils/timing.h"
 #include "papi_helper.h"
+
+#ifdef _GEMS
+    #include "rapmi.h"
+#endif
+
+#endif // __GUARD_INSTRUMENTATION_INCLUDES_H

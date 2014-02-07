@@ -38,15 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
 #define __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
 
-#include <math.h>
-#include "irt_inttypes.h"
-#include "abstraction/msr.h"
-#include "hwinfo.h"
-#include "utils/affinity.h"
-#include "worker.h"
 #include "abstraction/rapl.h"
-#include "abstraction/impl/msr.impl.h"
-
 
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 }
@@ -54,6 +46,5 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 bool irt_rapl_is_supported() {
 	return false;
 }
-
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H

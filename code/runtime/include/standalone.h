@@ -99,10 +99,8 @@ void irt_init_globals() {
 	irt_log_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
-#ifndef _GEMS
-	// TODO [_GEMS]: file io is not supported
 	irt_time_ticks_per_sec_calibration_mark();
-#endif
+
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -122,11 +120,8 @@ void irt_init_globals() {
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
-#ifndef _GEMS
-	// TODO [_GEMS]: file io is not supported
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
-#endif
 }
 
 // cleanup global variables and delete global data structures
@@ -189,10 +184,7 @@ void irt_exit_handler() {
 	irt_g_exit_handling_done = true;
 	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
-#ifndef _GEMS
-	// TODO [_GEMS]: file io is not supported
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	if(irt_g_instrumentation_event_output_is_enabled)
 		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
@@ -296,6 +288,9 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
+	#ifdef _GEMS
+		irt_inst_region_select_metrics("rapmi_energy");
+	#endif
 #endif
 
 	irt_log_comment("starting worker threads");
