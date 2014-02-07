@@ -295,6 +295,7 @@ namespace backend {
 			T* res = createInfo<T>(type);
 			res->declaration = declaration;
 			res->definition = definition;
+			res->declaration->addRequirement(definition);
 			return res;
 		}
 
