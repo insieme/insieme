@@ -1187,7 +1187,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		if (utils::isRefArray(lhs->getType()) &&
 			utils::isRefArray(rhs->getType()) &&
 			baseOp == clang::BO_Sub) {
-			return retIr = builder.callExpr(gen.getArrayRefDistance(), lhs, rhs); 
+			return retIr = builder.callExpr(gen.getArrayRefDistance(), lhs, rhs);
 		}
 
 		if(isLogical) {
@@ -1459,6 +1459,22 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	// in C++, string literals with same size may produce an error, do not cast to avoid
 	// weird behaviour
 	if (!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())){
+        //if one of true or false exprs is a cpp
+        //ref the other one has to be a cpp ref too
+        if(core::analysis::isAnyCppRef(falseExpr->getType()) && !core::analysis::isAnyCppRef(trueExpr->getType())) {
+            //ok, false is a ref, but is it a const cpp ref
+            if(core::analysis::isConstCppRef(falseExpr->getType()))
+                trueExpr = builder.toConstCppRef(trueExpr);
+            else
+                trueExpr = builder.toCppRef(trueExpr);
+        }
+        if(core::analysis::isAnyCppRef(trueExpr->getType()) && !core::analysis::isAnyCppRef(falseExpr->getType())) {
+            //ok, false is a ref, but is it a const cpp ref
+            if(core::analysis::isConstCppRef(trueExpr->getType()))
+                falseExpr = builder.toConstCppRef(falseExpr);
+            else
+                falseExpr = builder.toCppRef(falseExpr);        }
+
 		if(trueExpr->getType() != falseExpr->getType()) {
 			trueExpr  = utils::cast(trueExpr, retTy);
 			falseExpr = utils::cast(falseExpr, retTy);
