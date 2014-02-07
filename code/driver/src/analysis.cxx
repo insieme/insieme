@@ -118,7 +118,6 @@ int main(int argc, char** argv) {
 	const auto& analysis = cba::getCBA(main);
 
 	if (dump_equations) {
-		auto graph = cba::getExecutionStateGraph(main);
 		std::cout << "Dumping Equations ... \n";
 		std::cout << "		Creating Dot file ... \n";
 		{
