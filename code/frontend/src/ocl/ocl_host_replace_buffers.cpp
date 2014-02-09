@@ -210,6 +210,21 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
 }
 
+NodeAddress getRootDeclaration(NodeAddress var) {
+	// search in declaration in siblings
+	NodeAddress parent = var.getParentAddress(0);
+/*
+	for_each(parent.getChildAddresses(), [&](NodeAddress child) {
+		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
+			if(*(decl->getVariable()) == *var)
+				return decl->getVariable();
+		}
+	});
+
+	return getRootDeclaration(parent);
+*/
+	return var;
+}
 }
 
 const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
