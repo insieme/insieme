@@ -210,20 +210,39 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
 }
 
-NodeAddress getRootDeclaration(NodeAddress var) {
+NodeAddress getRootDeclaration(NodeAddress scope, NodeAddress var) {
 	// search in declaration in siblings
 	NodeAddress parent = var.getParentAddress(0);
-/*
-	for_each(parent.getChildAddresses(), [&](NodeAddress child) {
+	NodeManager& mgr = var.getNodeManager();
+
+	TreePatternPtr localOrGlobalVar = irp::variable() | irp::literal(irp::refType(pattern::any), pattern::any);
+	TreePatternPtr assign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()), single(pattern::any));
+			//var("lhs", pattern::any) << (var("rhs", irp::variable()) | irp::callExpr(mgr.getLangBasic().getRefDeref(), var("rhs", irp::variable()))));
+
+	for(auto I = parent.getChildAddresses().rbegin(); I != parent.getChildAddresses().rend(); ++I) {
+		NodeAddress child = *I;
+
+	//	if(child.isa<CallExprAddress>()) {
+			if(AddressMatchOpt assignment = assign->matchAddress(child)){
+				return getRootDeclaration(scope, var);
+			}
+	//	}
+
 		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
 			if(*(decl->getVariable()) == *var)
 				return decl->getVariable();
 		}
-	});
+	}
 
-	return getRootDeclaration(parent);
-*/
+	return getRootDeclaration(parent, var);
+
 	return var;
+}
+
+NodeAddress getRootDeclaration(NodeAddress var) {
+	// search in declaration in siblings
+	NodeAddress parent = var.getParentAddress(0);
+	return getRootDeclaration(parent, var);
 }
 }
 
@@ -255,8 +274,8 @@ void BufferReplacer::collectInformation() {
 
 	TreePatternPtr clCreateBuffer = var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
 			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) ));
-	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
-			pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any),
+			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
 	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
 			var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = var("all", bufferDecl | bufferAssign);
