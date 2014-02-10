@@ -115,8 +115,8 @@ namespace cba {
 
 		// get locations surrounding function might get used
 		set<Label> res;
-		if (!fun) {
-			// there is no free surrounding function => only root context can reach this call
+		if (!fun || (!fun.isRoot() && fun.getParentNode().isa<JobExprPtr>())) {
+			// there is no free surrounding function or it is the body of a job => only root context can reach this call
 			res.insert(0);
 		} else {
 			// get all potential uses of the surrounding function

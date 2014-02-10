@@ -122,35 +122,6 @@ namespace cba {
 				return contexts;
 			}
 
-			const std::vector<Callable<Context>>& getCallables(CBA& cba, std::size_t numParams) {
-				auto pos = callables.find(numParams);
-				if (pos != callables.end()) {
-					return pos->second;
-				}
-
-				vector<Callable<Context>>& res = callables[numParams];
-
-				for(const auto& fun : cba.getCallSiteManager().getFreeCallees(numParams)) {
-
-					if (fun.isLambda() || fun.isLiteral()) {
-
-						res.push_back(Callable<Context>(fun));
-
-					} else if (fun.isBind()) {
-
-						for(const auto& ctxt : getContexts(cba)) {
-							res.push_back(Callable<Context>(fun, ctxt));
-						}
-
-					} else {
-
-						assert_fail() << "Encountered unexpected function type: " << fun.getDefinition()->getNodeType();
-					}
-				}
-
-				return res;
-			}
-
 		};
 
 		typedef utils::TypedMap<Container, ContainerBase> index_map_type;
@@ -391,11 +362,6 @@ namespace cba {
 		template<typename Context>
 		const std::vector<Location<Context>>& getLocations() {
 			return getContainer<Context>().getLocations(*this);
-		}
-
-		template<typename Context>
-		const std::vector<Callable<Context>>& getCallables(std::size_t numParams) {
-			return getContainer<Context>().getCallables(*this, numParams);
 		}
 
 

@@ -450,6 +450,40 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+
+	TEST(CBA, ThreadContext) {
+
+		// a test verifying whether binds also working within threads
+		// (this was a bug discovered in a real-world application)
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(5);"
+				"	merge(spawn { "
+				"		if(a<2 || a>4) {"
+				"			a = 3;"
+				"		}"
+				"	});"
+				"	*a;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+std::cout << analysis.getValidContexts<DefaultContext>() << "\n";
+		dumpPretty(code);
+
+		// obtain value of a after parallel operation
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[2], A)));
+
+		createDotDump(analysis);
+	}
+
+
 //	TEST(CBA, DiamondOneAssignStructure) {
 //
 //		// a simple test cases checking the handling of simple value structs
