@@ -216,17 +216,17 @@ NodeAddress getRootDeclaration(NodeAddress scope, NodeAddress var) {
 	NodeManager& mgr = var.getNodeManager();
 
 	TreePatternPtr localOrGlobalVar = irp::variable() | irp::literal(irp::refType(pattern::any), pattern::any);
-	TreePatternPtr assign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()), single(pattern::any));
-			//var("lhs", pattern::any) << (var("rhs", irp::variable()) | irp::callExpr(mgr.getLangBasic().getRefDeref(), var("rhs", irp::variable()))));
+	TreePatternPtr assign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()), //	single(pattern::any));
+			pattern::var("lhs", pattern::any) << (pattern::var("rhs", irp::variable()) | irp::callExpr(mgr.getLangBasic().getRefDeref(), pattern::var("rhs", irp::variable()))));
 
 	for(auto I = parent.getChildAddresses().rbegin(); I != parent.getChildAddresses().rend(); ++I) {
 		NodeAddress child = *I;
 
-	//	if(child.isa<CallExprAddress>()) {
+		if(child.isa<CallExprAddress>()) {
 			if(AddressMatchOpt assignment = assign->matchAddress(child)){
 				return getRootDeclaration(scope, var);
 			}
-	//	}
+		}
 
 		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
 			if(*(decl->getVariable()) == *var)
@@ -272,13 +272,13 @@ void BufferReplacer::collectInformation() {
 	NodeAddress pA(prog->getChild(0));
 	IRBuilder builder(mgr);
 
-	TreePatternPtr clCreateBuffer = var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) ));
-	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any),
+	TreePatternPtr clCreateBuffer = pattern::var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) << pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
+	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
 			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
-			var("buffer", pattern::any) << clCreateBuffer);
-	TreePatternPtr bufferPattern = var("all", bufferDecl | bufferAssign);
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
+			pattern::var("buffer", pattern::any) << clCreateBuffer);
+	TreePatternPtr bufferPattern = pattern::var("all", bufferDecl | bufferAssign);
 /*
 	visitDepthFirst(pA, [&](const NodeAddress& node) {
 		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
@@ -401,9 +401,9 @@ void BufferReplacer::generateReplacements() {
 		}
 
 		// try to extract the variable
-//		TreePatternPtr subscriptPattern = irp::subscript1D("operation", aT(var("variable", irp::variable())), aT(var("idx", pattern::any)));
+//		TreePatternPtr subscriptPattern = irp::subscript1D("operation", aT(pattern::var("variable", irp::variable())), aT(pattern::var("idx", pattern::any)));
 		TreePatternPtr subscriptPattern = irp::subscript1D("operation",
-				var("variable", irp::variable()) | irp::callExpr(pattern::any, var("variable", irp::variable())));
+				pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable())));
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 
