@@ -1,3 +1,9 @@
+#TODO
+# OVERVIEW DIFFERENT CATEGORIES, split table, ocl, omp, mpi, default DONE
+# EVTL. MEM/COMP BOUND
+# FIX TABLE WIDTH OVERVIEW
+# seqruntime not in overview if 0
+
 ###################################################################################################
 ## Insieme Integration Test Script [v 2.0]
 ###################################################################################################
@@ -5,8 +11,11 @@
 """:"
 exec python3 $0 ${1+"$@"}
 """
-import optparse, sys, os, re, random, math, shutil, time, subprocess, shlex, copy, configparser
+import optparse, collections, sys, os, re, math, time, subprocess, shlex, copy, configparser, pickle
 from multiprocessing import Pool, Process, Queue
+from collections import defaultdict
+from decimal import Decimal
+import xml.etree.ElementTree as ET
 
 #
 # Figure out command to compute version of Code
@@ -151,33 +160,48 @@ class Commands:
 
 def read_test_cfg( path, cfg_file_name ):
 	assert os.path.exists( path )
-	return [path + '/' + x.strip() \
-			  for x in open(path+'/'+cfg_file_name).read().split('\n') \
-					if len(x) > 0 and not x.startswith('#') ]
 
-def expand(tests):
+	return [path + '/' + x.strip().replace("#","",1) \
+			  for x in re.split('\n|\s',open(path+'/'+cfg_file_name).read()) \
+					if len(x) > 0 and ((not x.startswith('#') or force_tests ) ) and not x.strip().replace("#","",1)==""]
+	
+
+def shortPath(path):
+	basename=os.path.basename(path)
+	if(len(basename)<10):
+		basename=os.path.join(os.path.basename(os.path.dirname(path)),basename)
+	elif(len(basename)>20):
+		basename="..."+basename[len(basename)-20:]
+	return basename
+
+def expand(tests,benchSuite="IT"):
+	#print(tests)
+	#time.sleep(0.2)
+	
 	if isinstance(tests, list):
 		ret = []
 		for test in tests:
-			ret.extend(expand(test))
+			ret.extend(expand(test,benchSuite))
 		return ret
 
 	# Handle the cases where we need to recur and resolve
 	if not os.path.isdir( tests ):
+		if("$" in tests):
+			return expand(tests[:tests.find("$")],tests[tests.find("$")+1:])		
 		return [ ]
 
 	# If the directoy has a test.cfg file it means we have to run all the
 	# contained tests
-	if os.path.exists( tests+'/'+CFG_FILE_NAME ):
-		return expand( read_test_cfg( tests, CFG_FILE_NAME ) )
+	if os.path.exists( tests+'/'+CFG_FILE_NAME ): 
+		return expand( read_test_cfg( tests, CFG_FILE_NAME ),benchSuite)
 
-	return [ tests ]
+	return [ tests+"$"+benchSuite ]
 
 
 # Class used to store the data gathered during the execution of a benchmark 
 class CmdExecReport:
 
-	def __init__(self, type, cmd, desc, ret_code, output, memory, time):
+	def __init__(self, type, cmd, desc, ret_code, output, memory, time, threads=-1, failState=""):
 		self.type = type
 		self.cmd =  cmd
 		self.desc = desc
@@ -186,6 +210,8 @@ class CmdExecReport:
 		self.memory = memory
 		self.time = time
 		self.stdev = 0.0
+		self.threads = threads
+		self.failState=failState
 
 	def __repr__(self):
 		return "{0} {1} {2} {3} {4}".format(self.type, self.cmd, self.ret_code, self.memory, self.time)
@@ -201,9 +227,10 @@ class CmdExecReport:
 ###################################################################################################
 class TestData:
 
-	def __init__(self, name):
+	def __init__(self, name, benchmarkSuite=""):
 		self.__name = name
 		self.reports = []
+		self.benchmarkSuite=benchmarkSuite
 
 	@property
 	def path(self):		return self.__name
@@ -259,47 +286,148 @@ def print_sum(benchmarks_data) :
 
 completed = Queue()
 
-def reporter( report_queue ):
+def median(values):
+	med=0.0
+	if not (len(values)==0):
+		index=int((len(values)/2))
+		
+		if len(values)%2==0:
+			if not (values[index]=="NA") and not (values[index-1]=="NA"):
+				med=float(values[index]+values[index-1])/2
+			else:
+				return "NA"
+		else:
+			med=values[index]
+	
+	if(med=="NA"):
+		return "NA"
+	else:
+		return round(float(med),4)
 
+#needed to safely use format
+class SafeDict(dict):
+	def __missing__(self, key):
+		return '{' + key + '}'
+
+def reporter( report_queue ):
 	success_count = 0
 	failedTests = []
 	num = 1
-
+	latexCode=""
+	txtHeaderDecl="{name}"		
+	txtHeader="name\t\t\t"	#header for txtdocument
+	suites=dict()
+	
+	headerWritten=False
+	if(enable_stat and 'txt' in stat_output and not mock_run):
+		fileTxt = open("statistics.txt", "a")
+		fileTxt.write("\n############################### RUN "+time.strftime("%d/%m/%Y %H:%M")+" ###############################\n\n")
+			
+	if(enable_stat and 'csv' in stat_output and not mock_run):
+		if(os.path.exists("statistics.csv")):
+			os.remove("statistics.csv")
+		fileCsv=open("statistics.csv","w")
+			
+	if(enable_stat and 'bin' in stat_output and not mock_run):
+		if(os.path.exists("statistics.bin")):
+			os.rename("statistics.bin","statistics_bak.bin")
+		fileBin=open("statistics.bin","wb")
+			
 	while True:
 		job = completed.get()
-
+		
+		jobName=""
+		jobTimes=collections.OrderedDict()
+		
 		# The work is completed, exit the loop and print the summary 
 		if job is None: break
+
+		totalTimes=collections.OrderedDict()
+
+		cached=False		#set to true if totalTimes and statistics already built
+		cachedMark=""
+		if not(job.statistics==None):
+			statistics=job.statistics
+			cached=True
+			cachedMark=" -- CACHED"
+		else:
+			statistics=[]
 		
 		sep = "#"+"-"*(COLUMNS-2)+"#\n"
 		col_print("\n"+sep, BOLD)
-		col_print("# {0:>3}/{1:<3}: {2:<{3}} #\n".format(num, test_cases_number, job.data.path,
+		col_print("# {0:>3}/{1:<3}: {2:<{3}} #\n".format(num, test_cases_number, job.data.path+cachedMark,
 			COLUMNS-13), BOLD)
 		col_print(sep, BOLD)
-
+						
 		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
 
+		failState=""
+		#determine why test fails
+		if not success:
+			failState= job.data.reports[-1].failState
+			print("fs:"+failState)
+		
 		# Store the result data for future evaluations 
 		benchmarks_data.append( job )
-
+		
 		# Check the output for all the selected backends
 		for rep in job.data.reports[:-1]:
 			# Cmds with an id greater than 3 are not important to be shown 
 			if rep.type[0] > 4:
 				continue
+		
+			omp=True
+			if rep.threads==-1:
+				omp=False
 			
+			#cached file has more thread runs than needed, skipping
+			if omp and cached and int(str(rep.threads).split(";")[-1])>max(threadRuns):
+				continue
+			
+			#log times of different omp threads
+			if omp and rep.type==Commands.RUN:
+				if not (jobName==rep.desc):
+					if(len(jobTimes)>0):
+						
+						totalTimes[jobName]=jobTimes.copy()
+					jobName=rep.desc
+					jobTimes.clear()
+				
+				jobTimes["r"+str(rep.threads).split(";")[-1]]=Decimal(rep.time).quantize(Decimal(10) ** -2)
+				jobTimes["m"+str(rep.threads).split(";")[-1]]=Decimal(rep.memory/1024,2).quantize(Decimal(10) ** -2)
+				#calculate speedup/efficiency
+				if not(str(rep.threads).startswith(("dyn","stat","guid"))):	#no efficiency/speedup for schedule runs
+					if(rep.threads>1):
+						if(rep.time==0):
+							jobTimes["s"+str(rep.threads)]="NA"
+							jobTimes["e"+str(rep.threads)]="NA"						
+						else:
+							jobTimes["s"+str(rep.threads)]=Decimal(jobTimes["r1"]/Decimal(rep.time)).quantize(Decimal(10) ** -2)
+							jobTimes["e"+str(rep.threads)]=Decimal(jobTimes["s"+str(rep.threads)]/rep.threads).quantize(Decimal(10) ** -2)
+			elif rep.type==Commands.RUN:
+				totalTimes[jobName]=jobTimes.copy()
+				jobTimes.clear()
+				jobName=rep.desc
+				jobTimes["r1"]=Decimal(rep.time).quantize(Decimal(10) ** -2)
+				jobTimes["m1"]=Decimal(round(rep.memory/1024,2)).quantize(Decimal(10) ** -2)
+
+			rep.desc_omp=rep.desc
+			if omp:
+				rep.desc_omp=rep.desc+" "+str(rep.threads).split(";")[-1]+" threads"	
+			
+			#output
 			if rep.ret_code == 0:
-				col_print("# {0:<{1}}".format(rep.desc, COLUMNS-18), NONE),
-				col_print("[{0:>8.4f} secs {1}]\n".
-					format(rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""),
+				col_print("# {0:<{1}}".format(rep.desc_omp, COLUMNS-18), NONE),
+				col_print("[{0:>6.2f} secs {1}, {2:>6.2f} MB]\n".
+					format(rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else "",round(rep.memory/1024,2)),
 					BLUE if rep.type == Commands.RUN else BOLD)
 			else:
-				col_print("# {0:<{1}}[{2:>8.4f} secs {3}]\n".
-					format( rep.desc, COLUMNS-18, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
+				col_print("# {0:<{1}}[{2:>8.4f} secs {3}, {4:>6.2f} MB]\n".
+					format( rep.desc_omp, COLUMNS-18, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else "",round(rep.memory/1024,2)), RED)
 				col_print(sep, RED)
 				
 				if rep.output is "" or rep.output is None:
-					sys.stderr.write('Program exist with error code {0}\n'.format(rep.ret_code))
+					sys.stderr.write('Program exits with error code {0}\n'.format(rep.ret_code))
 				else:
 					# Prints the failed command 
 					col_print("Command: ")
@@ -318,9 +446,429 @@ def reporter( report_queue ):
 			col_print("#{0:^{1}}#\n".format("SUCCESS -- " + job.data.path, COLUMNS-2), GREEN)
 			col_print(sep, GREEN)
 			success_count += 1
-
+			
 		sys.stderr.flush()
-		num += 1
+		num += 1			
+			
+		#build latex table
+		if(enable_stat and not mock_run):
+			testEnv=("\\section{HEADER}\\label{LABEL}\n"
+					"\\subsection{{Runtime results}}\n"
+					"{RUNTIME_TABLE}\n"
+					"\\subsection{{Code statistics}}\n"
+					"{STATISTICS}")
+			
+			tableEnv=(
+				"\\begin{{table}}[H] \n"
+				"\\centering\n"
+				"\t\\begin{{tabular}}{COLUMN_SPEC}\n"
+				"\t\t\\hline\n"
+				"\t\t {COLUMN_HEADERS}\\\\\hline\n"
+				"\t\t{ROWS}\n"
+				"\t\\end{{tabular}}\n"
+				"\\caption{CAPTION}\n"
+				"\\end{{table}}\n")
+			
+			longTableEnv=(
+				"\t\\begin{{longtable}}{COLUMN_SPEC}\n"
+				"\\caption{CAPTION}\\\\\n"
+				"\\hline\n"
+				"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
+				"\\endfirsthead\n"
+				"\\caption[]{{(continued)}}	\\\\\n"
+				"\t\t\\hline\n"
+				"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
+				"\endhead"
+				"\t\t{ROWS}\n"
+				"\t\\end{{longtable}}\n")
+	
+			usedPrefixes=("\\begin{table} \n"
+				"\\begin{tabular}{|l|l|l|}\\hline \n"
+				"Prefix & Description & Reference \\\\\\hline \n"
+				"IT & Insieme Test Case &  \\\\ \\hline \n"
+				"OS & OpenMP Source Code Repository & \\url{http://llc.pcg.ull.es/node/28} \\\\ \\hline \n"
+				"OTBS & OpenMP Task Microbenchmark Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
+				"OVS & OpenMP Validation Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
+				"HMPI & HOMB-MPI & \\url{http://homb.sourceforge.net/} \\\\ \\hline \n"
+				"S2 & Splash2 & \\url{http://liuyix.org/splash2-benchmark/} \\\\ \\hline \n"
+				"NPB & SNU-NPB Suite & \\url{http://aces.snu.ac.kr/Center_for_Manycore_Programming/SNU_NPB_Suite.html} \\\\ \\hline \n"
+				"SSC & SSCA2 (HPC Graph Analysis) & \\url{http://www.graphanalysis.org/benchmark/} \\\\ \\hline \n"
+				"SEQ & Sequoia Benchmark Suite & \\url{https://asc.llnl.gov/sequoia/benchmarks/} \\\\ \\hline \n"
+				"EX & ExMatEx Benchmarks & \\url{http://codesign.lanl.gov/projects/exmatex/} \\\\ \\hline \n"
+				"AP & ApexMap & \\url{http://crd.lbl.gov/groups-depts/ftg/projects/previous-projects/apex/} \\\\ \\hline \n"
+				"COR & Coral Benchmarks & \\url{https://asc.llnl.gov/CORAL-benchmarks/} \\\\ \\hline \n"
+				"BOT & Barcelona OpenMP Task Suite & \\url{https://pm.bsc.es/projects/bots} \\\\ \\hline \n"
+				"OEX & Common OpenMP Example Codes &  \\\\ \\hline \n"
+				"PAR & PARSEC Benchmarks & \\url{http://parsec.cs.princeton.edu/} \\\\ \\hline \n"
+				"VEL & Velvet & \\url{http://www.ebi.ac.uk/~zerbino/velvet/} \\\\ \\hline \n"
+				"STR & STREAM Memory Benchmark & \\url{http://www.cs.virginia.edu/stream/} \\\\ \\hline \n"
+				"VIV & Vivid OpenCL Benchmarks & \\url{https://github.com/mertdikmen/ViVid} \\\\\\hline \n"
+				"NAS & NAS Parallel Benchmarks & \\url{http://www.nas.nasa.gov/publications/npb.html} \\\\\\hline \n" 
+				"\\end{tabular} \n"
+				"\\caption{Used Prefixes} \n"
+				"\\end{table} \n"
+			)
+	
+			if not len(jobTimes)==0:
+				totalTimes[jobName]=jobTimes.copy()
+			
+			suite=job.data.benchmarkSuite
+			
+			#initialize overViewStatisticTable
+			if not suite in suites.keys():
+				suites[suite]=dict()
+			suites[suite][job.data.path]=dict()
+			suites[suite][job.data.path]["GCCMinEff"]=""
+			suites[suite][job.data.path]["GCCMaxEff"]=""
+			suites[suite][job.data.path]["GCCMedEff"]=""
+			suites[suite][job.data.path]["InsMinEff"]=""
+			suites[suite][job.data.path]["InsMaxEff"]=""
+			suites[suite][job.data.path]["InsMedEff"]=""
+			suites[suite][job.data.path]["CompEff"]=""			
+			suites[suite][job.data.path]["GCCMinMem"]=""			
+			suites[suite][job.data.path]["GCCMedMem"]=""			
+			suites[suite][job.data.path]["GCCMaxMem"]=""			
+			suites[suite][job.data.path]["InsMinMem"]=""			
+			suites[suite][job.data.path]["InsMedMem"]=""			
+			suites[suite][job.data.path]["InsMaxMem"]=""			
+			suites[suite][job.data.path]["seqRun"]=""
+			suites[suite][job.data.path]["Dyn/Stat"]=""
+			suites[suite][job.data.path]["Guid/Stat"]=""
+			suites[suite][job.data.path]["Stat/Stat"]=""
+			suites[suite][job.data.path]["CodeStyle"]=""
+			header=job.data.path
+						
+			#transform keys to better readable stuff
+			if("Run c_run" in totalTimes):
+				totalTimes["Insieme"]=totalTimes.pop("Run c_run")
+			if("Run gcc" in totalTimes):
+				totalTimes["GCC"]=totalTimes.pop("Run gcc")
+			if("Run g++" in totalTimes):
+				totalTimes["G++"]=totalTimes.pop("Run g++")
+			if("Run cxx_seq" in totalTimes):
+				totalTimes["Sequential"]=totalTimes.pop("Run cxx_seq")
+			if("Run cxx_run" in totalTimes):
+				totalTimes["Insieme"]=totalTimes.pop("Run cxx_run")
+			if("Run cxx11_seq" in totalTimes):
+				totalTimes["Sequential"]=totalTimes.pop("Run cxx11_seq")
+			if("Run cxx11_run" in totalTimes):
+				totalTimes["Insieme"]=totalTimes.pop("Run cxx11_run")
+			if("Run c_seq" in totalTimes):
+				totalTimes["Sequential"]=totalTimes.pop("Run c_seq")			
+			if("Run mpi" in totalTimes):
+				totalTimes["MPI"]=totalTimes.pop("Run mpi")
+			if("Run c_run_dyn" in totalTimes):
+				dyn=totalTimes.pop("Run c_run_dyn")
+				if(enable_sched):
+					totalTimes["Dyn"]=dyn
+			if("Run c_run_stat" in totalTimes):
+				stat=totalTimes.pop("Run c_run_stat")
+				if(enable_sched):
+					totalTimes["Stat"]=stat
+			if("Run c_run_guid" in totalTimes):
+				guid=totalTimes.pop("Run c_run_guid")
+				if(enable_sched):
+					totalTimes["Guid"]=guid
+
+			#set code style, assume that mpi code is c++
+			if("G++" in totalTimes or "MPI" in totalTimes or failState=="G++"):
+				suites[suite][job.data.path]["CodeStyle"]="C++"
+			if("GCC" in totalTimes or failState=="GCC"):
+				suites[suite][job.data.path]["CodeStyle"]="C"			
+			
+			#for more readable failStates								
+			#if not success:
+			#	failState=failState.replace("Run c_run","Run Insieme")
+			#	failState=failState.replace("Run gcc","Run GCC")
+			#	failState=failState.replace("Run G++","Run GCC")
+			#	failState=failState.replace("Run cxx_seq","Run Sequential")
+			#	failState=failState.replace("Run cxx_run","Run Insieme")
+			#	failState=failState.replace("Run cxx11_run","Run Insieme")
+			#	failState=failState.replace("Run c_seq","Run Sequential")
+			#	failState=failState.replace("Run c_run_dyn","Run Dynamic")
+			#	failState=failState.replace("Run c_run_stat","Run Static")
+			#	failState=failState.replace("Run c_run_guid","Run Guided")
+			#	failState=failState.replace("Comparing output c_run","Run Insieme")
+			#	failState=failState.replace("Comparing output cxx_run","Run Insieme")
+			#	failState=failState.replace("Comparing output cxx11_run","Run Insieme")
+			#	failState=failState.replace("Comparing output gcc","Run GCC")
+			#	failState=failState.replace("Comparing output g++","Run GCC")
+			#	failState=failState.replace("Comparing output c_seq","Run Sequential")
+			#	failState=failState.replace("Comparing output cxx_seq","Run Sequential")
+			#	failState=failState.replace("_","\_")
+
+			suites[suite][job.data.path]["failState"]=failState
+			
+			rows=""		#row for latex table
+
+			numThreadRuns=len(threadRuns)
+			colheaders=(""
+				"~ & \multicolumn{THREADS}{{|c||}}{{Runtime}} & \multicolumn{THREADS-1}{{|c||}}{{Efficiency}}"
+				" & \multicolumn{THREADS-1}{{|c||}}{{Speedup}} & \multicolumn{THREADS}{{|c||}}{{Memory}} & \\multicolumn{{1}}{{c|}}{{medEff}} & \\multicolumn{{1}}{{c|}}{{medMem}} \\\\\nThreads & "
+			).format(**({'THREADS':"{"+str(numThreadRuns)+"}",'THREADS-1':"{"+str(numThreadRuns-1)+"}"}))
+
+			colspec="{|r"
+			rowDecl=" & "
+			rowDeclPrefix=["r","e","s","m"]
+			
+			for k in range(0,4):
+				colspec=colspec+"|"
+				if(k == 0 or k==3):
+					rowDecl=rowDecl+"{"+rowDeclPrefix[k]+"1} & "
+					colspec=colspec+"|r"
+					colheaders=colheaders+"\\multicolumn{1}{|c|}{1} & "
+				for i in range(1,numThreadRuns-1):
+					rowDecl=rowDecl+"{"+rowDeclPrefix[k]+str(pow(2,i%(numThreadRuns)))+"} & "
+					colspec=colspec+"|r"
+					colheaders=colheaders+"\\multicolumn{1}{|c|}{"+str(pow(2,i%(numThreadRuns)))+"} & "
+				colspec=colspec+"|r"
+				rowDecl=rowDecl+"{"+rowDeclPrefix[k]+str(max(threadRuns))+"} &"
+				colheaders=colheaders+"\\multicolumn{1}{|c||}{"+str(max(threadRuns))+"} & "
+
+			#create headers for txt/csv
+			if not headerWritten:
+				for k,v in totalTimes.items():
+					for key,value in v.items():
+						txtHeaderDecl=txtHeaderDecl+"{"+k[:3].upper()+str(key)+"}\t"	
+						txtHeader=txtHeader+k[:3].upper()+str(key)+"\t"
+	
+			colspec=colspec+"||r|r|}"								
+			colheaders=colheaders+" & "
+			txtRow=txtHeaderDecl
+			rows="\\hline "
+			
+			for k,v in totalTimes.items():
+				effs=[]
+				mems=[]
+				rows=rows+k+rowDecl.format_map(defaultdict(str,v.items()))
+				
+				for key,value in v.items():
+					if key.startswith("e"):		#collect efficiencies for median calculation
+						effs.append(value)	
+					elif key.startswith("m"):
+						mems.append(value)	
+
+				totalTimes[k]["maxEff"]=""
+				totalTimes[k]["minEff"]=""
+				medEff=""
+				if(len(effs)>0):
+					medEff=median(effs)
+					totalTimes[k]["maxEff"]=max(effs)
+					totalTimes[k]["minEff"]=min(effs)
+					if not (medEff=="NA"):
+						medEff=Decimal(median(effs)).quantize(Decimal(10) ** -3)
+				rows=rows+str(medEff)
+				totalTimes[k]["medEff"]=medEff
+				
+				totalTimes[k]["maxMem"]=""
+				totalTimes[k]["minMem"]=""				
+				medMem=""
+				if(len(mems)>0):
+					totalTimes[k]["maxMem"]=max(mems)
+					totalTimes[k]["minMem"]=min(mems)
+					medMem=median(mems)
+					if not (medMem=="NA"):
+						medMem=Decimal(median(mems)).quantize(Decimal(10) ** -3)
+				rows=rows+" & "+str(medMem)
+				totalTimes[k]["medMem"]=medMem
+				rows=rows+"\\\\\\hline\n\t\t"
+				txtRow=txtRow.format_map(SafeDict(dict((k[:3].upper()+str(key),val) for key,val in v.items())))
+
+			suites[suite][job.data.path]["Type"]="ompOrSeq"		#i don't know yet if seq or omp	
+
+			if(hasattr(job,'cur_passes')):
+				for tmp in job.cur_passes:
+					if(tmp[0]=='ocl'):
+						suites[suite][job.data.path]["Type"]="OCL"
+						break
+					if(tmp[0]=='mpi'):
+						suites[suite][job.data.path]["Type"]="MPI"
+						break
+			if(omp):
+				suites[suite][job.data.path]["Type"]="OMP"						
+
+			#compVal=""
+			gccVariant=""
+			if("GCC" in totalTimes):	
+				gccVariant="GCC"
+			elif("G++" in  totalTimes):
+				gccVariant="G++"
+			elif("CPP" in totalTimes):
+				gccVariant="CPP"
+			elif("CPP11" in totalTimes):
+				gccVariant="CPP11"
+			elif("MPI" in totalTimes):
+				gccVariant="MPI"
+			
+			if not gccVariant=="":
+				if "medEff" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMedEff"]=totalTimes[gccVariant]["medEff"]
+				if "medMem" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMedMem"]=totalTimes[gccVariant]["medMem"]
+				if "maxEff" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMaxEff"]=totalTimes[gccVariant]["maxEff"]
+				if "maxMem" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMaxMem"]=totalTimes[gccVariant]["maxMem"]
+				if "minEff" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMinEff"]=totalTimes[gccVariant]["minEff"]
+				if "minMem" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["GCCMinMem"]=totalTimes[gccVariant]["minMem"]				
+				
+				
+			if("Insieme" in totalTimes) and omp:
+				maxThread="r"+str(max(threadRuns))
+				if "medEff" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMedEff"]=totalTimes["Insieme"]["medEff"]
+				if "medMem" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMedMem"]=totalTimes["Insieme"]["medMem"]
+				if "minEff" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMinEff"]=totalTimes["Insieme"]["minEff"]
+				if "minMem" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMinMem"]=totalTimes["Insieme"]["minMem"]					
+				if "maxEff" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMaxEff"]=totalTimes["Insieme"]["maxEff"]
+				if "maxMem" in totalTimes["Insieme"].keys():
+					suites[suite][job.data.path]["InsMaxMem"]=totalTimes["Insieme"]["maxMem"]					
+					
+				if not (totalTimes["Insieme"][maxThread]==0) and enable_sched:
+					if("Dyn" in totalTimes):
+						suites[suite][job.data.path]["Dyn/Stat"]=Decimal(totalTimes["Dyn"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
+					if("Guid" in totalTimes):
+						suites[suite][job.data.path]["Guid/Stat"]=Decimal(totalTimes["Guid"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
+					if("Stat" in totalTimes):
+						suites[suite][job.data.path]["Stat/Stat"]=Decimal(totalTimes["Stat"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
+								
+			#COMPARISON REMOVED	
+			#	rows=rows+"\\textbf{Comparison}"
+			#	for key,value in totalTimes["Insieme"].items():
+			#		if key.startswith(("e","medEff")):
+			#			if key in totalTimes["GCC"].keys():
+			#				gccTime=totalTimes["GCC"][key]
+			#			else:
+			#				gccTime=0
+			#			if not gccTime==0 and not gccTime=="undefined" and not value=="undefined":
+			#				compVal=round(value/gccTime,4)
+			#				compTex="\\textbf{"+str(compVal)+"}";
+			#		else:
+			#			compTex=""
+			#		rows=rows+" & "+compTex
+			#	rows=rows+"\\\\\\hline\n"
+			#	overviewStatistics[job.data.path]["CompEff"]=compVal			
+								
+			if("Insieme" in totalTimes.keys()):
+				suites[suite][job.data.path]["seqRun"]=totalTimes["Insieme"]["r1"]
+			
+			caption="{ Runtime results for "+os.path.abspath(header).replace("_","\_")+"}"
+
+			tableRuntime=tableEnv.format(**({'COLUMN_SPEC':colspec,'COLUMN_HEADERS':colheaders,'ROWS':rows,'CAPTION':caption}))
+			#else:
+			#	tableRuntime="No times available!"
+			
+			if not cached:
+				statLOC=LOCStatistics("",job,"LOC")
+				statistics.append(statLOC)
+				statistics.append(Statistic("du -chL {INPUT} | grep \"total\" | awk '{{print $1;}}'",job,"Size of Source","size"))
+			
+				#omp statistics
+				statNumPragmas=Statistic("egrep '#pragma omp' {INPUT} | wc -l",job,"Num omp pragmas","numOmp" )
+				statistics.append(statNumPragmas)
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*for' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp for ","ompFor" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel' {INPUT} | egrep -v '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for'| egrep -v '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*sections' | wc -l",job,"\\hspace{0.5cm}Num omp parallel","ompPar" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*task' {INPUT} | egrep -v '#pragma[[:blank:]]*omp[[:blank:]]*taskwait' | wc -l",job,"\\hspace{0.5cm}Num omp task","ompTask" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp parallel for","ompFor" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*sections' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp parallel sections","ompSect",True ))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*critical' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp critical","ompCrit" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*atomic' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp atomic","ompAtom" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*single' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp single","ompSing" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*master' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp master","ompMas" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*barrier' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp barrier","ompBarr" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*flush' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp flush","ompFlush" ,True))
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*taskwait' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp taskwait","ompTaskwait" ,True))			
+				statistics.append(Statistic("egrep '#pragma[[:blank:]]*omp[[:blank:]]*threadprivate' {INPUT} | wc -l",job,"\\hspace{0.5cm}Num omp threadprivate","ompThreadpriv" ,True))
+				statistics.append(Statistic("(egrep '#pragma[[:blank:]]*omp[[:blank:]]*for' {INPUT} && egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for' {INPUT})| egrep 'schedule[[:blank:]]*\([[:blank:]]*static' | wc -l" ,job,"Num static schedule","scheduleStat" ,True))
+				statistics.append(Statistic("(egrep '#pragma[[:blank:]]*omp[[:blank:]]*for' {INPUT} && egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for' {INPUT})| egrep 'schedule[[:blank:]]*\([[:blank:]]*dynamic' | wc -l" ,job,"Num dynamic schedule","scheduleDyn" ,True))
+				statistics.append(Statistic("(egrep '#pragma[[:blank:]]*omp[[:blank:]]*for' {INPUT} && egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for' {INPUT})| egrep 'schedule[[:blank:]]*\([[:blank:]]*guided' | wc -l" ,job,"Num guided schedule","scheduleGui" ,True))
+				statistics.append(Statistic("(egrep '#pragma[[:blank:]]*omp[[:blank:]]*for' {INPUT} && egrep '#pragma[[:blank:]]*omp[[:blank:]]*parallel[[:blank:]]*for' {INPUT})| egrep 'schedule[[:blank:]]*\([[:blank:]]*runtime' | wc -l" ,job,"Num runtime schedule","scheduleRun" ,True))
+
+				#count of not recognized omp pragmas, MUST BE THE LAST IN LIST!!
+				statistics.append(Statistic("echo ",job,"\\hspace{0.5cm}Num unknown omp","ompUnknown",True))	
+				
+			rows=""		#latexRows
+			caption="{Statistics for "+os.path.abspath(header).replace("_","\_")+"}"
+			
+			countOmp=0		#values to count all omp pragmas and get not recognized ones		
+			numOmp=0				
+			for k in statistics:
+				if(k.shortName=="ompUnknown"):
+					k.command=k.command+str(numOmp-countOmp)
+					
+				latex=k.getLatex()
+				result=k.execute()
+				txtHeader=txtHeader+k.shortName+"\t"
+				if(result.endswith("\n")):
+					result=result[:-1]
+				txtRow=txtRow+result[:7]+"\t"
+
+				if latex==-1 or result==-1:
+					print("ERROR executing statistic ",k.name)
+				elif not latex=="":
+					rows=rows+str(latex)
+
+				if(k.shortName=="LOC"):
+					suites[suite][job.data.path]["LOC"]=result
+				if(k.shortName=="size"):
+					suites[suite][job.data.path]["size"]=result					
+				if(k.shortName=="numOmp"):
+					suites[suite][job.data.path]["NumOMP"]=result
+					numOmp=int(result)
+				if(k.shortName.startswith("omp")):
+					countOmp=countOmp+int(result)
+					
+				if(len(k.shortName)>7):				#for better readability introduce additional tabs
+					txtRow=txtRow+"\t"				
+				
+			#header for txt/csv
+			shortHeader=shortPath(header)
+			header=os.path.abspath(header)
+			label=header
+			# Mark in doc that test failed
+			if not success:
+				shortHeader=shortPath(header)+"-FAILED"[:22]
+				header=header+" --- TEST FAILED"
+				#overviewStatistics[job.data.path + " -- FAILED"] = overviewStatistics.pop(job.data.path)
+			
+			if('tex' in stat_output):
+				tableStatistics=tableEnv.format(**({'COLUMN_SPEC':'{|l|l|}','COLUMN_HEADERS':'\\textbf{Name} & \\textbf{Value}','ROWS':rows,'CAPTION':caption}))
+				latexCode=latexCode+testEnv.format(**({'HEADER':"{"+header.replace("_","\_")+"}",'LABEL':"{"+label+"}",'RUNTIME_TABLE':tableRuntime,'STATISTICS':tableStatistics}))
+			if('txt' in stat_output):
+				if not (headerWritten):
+					fileTxt.write(txtHeader+"\n")
+				
+				txtName=""
+				
+				leng=(len(suite)+len(shortHeader))
+				if(leng>14) and not (leng>21):
+					txtName=suite+":"+shortHeader+"\t"
+				elif(leng>6):
+					txtName=suite+":"+shortHeader+"\t\t"
+				else:
+					txtName=suite+":"+shortHeader+"\t\t\t"
+				txtRow=txtRow.format_map( defaultdict(lambda: 'NA',{'name':txtName}))
+				fileTxt.write(txtRow+"\n")
+				fileTxt.flush()
+			if('csv' in stat_output):
+				if not (headerWritten):
+					fileCsv.write(txtHeader.replace("\t\t\t",",").replace("\t",",")[:-1]+"\n")
+				fileCsv.write(txtRow.replace("\t\t\t",",").replace("\t\t",",").replace("\t",",")[0:-1]+"\n")
+				fileCsv.flush()
+			
+			if('bin' in stat_output):# and success:
+				job.statistics=statistics
+				pickle.dump(job,fileBin)
+				fileBin.flush()
+				#fileBin.close
+				#fileBin=open("statistics.bin","ab")
+			headerWritten=True
 
 	if not mock_run:
 		# Before exiting the reporter prints a summary of the test case 
@@ -341,7 +889,185 @@ def reporter( report_queue ):
 	# print_summary(benchmarks_data)
 
 	report_queue.put( len(failedTests) )
+	
+	#build latex document
+	if(enable_stat and not mock_run and ('tex' in stat_output or 'pdf' in stat_output)):
+		docEnv=("\\documentclass[12pt]{{article}}\n"
+			"\\usepackage[margin=0.8in,landscape,a4paper]{{geometry}}\n"
+			"\\usepackage{{hyperref}}\n"
+			"\\usepackage{{float}}\n"
+			"\\usepackage{{longtable}}\n"
+			"\\begin{{document}}\n"
+			"\\begin{{center}}\n"
+			"{CONTENT}"
+			"\\end{{center}}"
+			"\\end{{document}}")
+		
+		#create summary table
+		#rowsSummary=""
+		rowsC=""
+		rowsCPP=""		
+		rowsUnknown=""
+		rowsUnknownStatic=""
+		rowsCStatic=""
+		rowsCPPStatic=""
+		rowsUnknownDynamic=""
+		rowsCDynamic=""
+		rowsCPPDynamic=""
+		colspecSummary="{|l|r|r|r|r|r|r|r|}"			#name loc numPragmas effGcc effIns comp
+		colheadersSummary="Name & seqRun & LOC & parType & effGCC & effInsieme & memGCC & memIns"
+		
+		colspecStatic="{|l|r|r|r|r|}"
+		colheadersStatic="Name & LOC & size & parType & failsAt"
+		
+		colspecDynamic="{|l|r||r|r|r||r|r|r||r|r|r||r|r|r|}"
+		colheadersDynamic="Name & seqRun & \\multicolumn{3}{|c||}{effGcc} & \\multicolumn{3}{|c||}{effIns} & \\multicolumn{3}{|c||}{memGcc} & \\multicolumn{3}{|c|}{memIns}"
+				
+		rowsStatic=""
+		rowsDynamic="&&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX"
+		addRowsDyn=""	#help variable for the 1st row
+		if(enable_sched):
+			colheadersSummary=colheadersSummary+" & Dyn/Ins & Guid/Ins & Stat/Ins"
+			colspecSummary=colspecSummary[:-1]+"r|r|r|}"
+			
+			colspecDynamic=colSpecDynamic[:-1]+"r|r|r|}"
+			colheadersDynamic=colheadersDynamic+" & Dyn/Ins & Guid/Ins & Stat/Ins"
+			addRowsDyn="&&&"		#help variable for the 1st row
+		colheadersDynamic=colheadersDynamic+"\\\\\\hline\n&&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX"+addRowsDyn
+		
+		for suite,stat in suites.items():
+			for key,value in stat.items():
+				rowsDynamic=""
+				rowsStatic="\n"
+				#rowsSummary=rowsSummary+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
+				rowsStatic=rowsStatic+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
+	
+				#rowsSummary=rowsSummary+" & "+str(value["seqRun"]).replace("\n","")			
+				#rowsSummary=rowsSummary+" & "+str(value["LOC"]).replace("\n","")
+				#rowsSummary=rowsSummary+" & "+str(value["NumOMP"]).replace("\n","")
+				#rowsSummary=rowsSummary+" & "+str(value["GCCMedEff"]).replace("\n","")
+				#rowsSummary=rowsSummary+" & "+str(value["InsMedEff"]).replace("\n","")
+				#rowsSummary=rowsSummary+" & "+str(value["GCCMedMem"]).replace("\n","")
+				#rowsSummary=rowsSummary+" & "+str(value["InsMedMem"]).replace("\n","")
+				
+				if(value["Type"]=="OMP"):
+					rowsDynamic="\n"+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
+					rowsDynamic=rowsDynamic+" & "+str(value["seqRun"]).replace("\n","")			
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMinEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMedEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMaxEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMinEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMedEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMaxEff"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMinMem"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMedMem"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["GCCMaxMem"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMinMem"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMedMem"]).replace("\n","")
+					rowsDynamic=rowsDynamic+" & "+str(value["InsMaxMem"]).replace("\n","")
+					if(enable_sched):
+						#rowsSummary=rowsSummary+" & "+str(value["Dyn/Stat"]).replace("\n","")
+						#rowsSummary=rowsSummary+" & "+str(value["Guid/Stat"]).replace("\n","")
+						#rowsSummary=rowsSummary+" & "+str(value["Stat/Stat"]).replace("\n","")
+						
+						rowsDynamic=rowsDynamic+" & "+str(value["Dyn/Stat"]).replace("\n","")
+						rowsDynamic=rowsDynamic+" & "+str(value["Guid/Stat"]).replace("\n","")
+						rowsDynamic=rowsDynamic+" & "+str(value["Stat/Stat"]).replace("\n","")
+					rowsDynamic=rowsDynamic+"\\\\\\hline"
+	
+				rowsStatic=rowsStatic+" & "+str(value["LOC"]).replace("\n","")
+				rowsStatic=rowsStatic+" & "+str(value["size"]).replace("\n","")
+				
+				if(value["Type"]=="OMP"):
+					rowsStatic=rowsStatic+" & "+str(value["NumOMP"])+" ompPragmas"
+				elif(value["Type"]=="ompOrSeq"):
+					if(int(value["NumOMP"])>0):
+						rowsStatic=rowsStatic+" & "+str(value["NumOMP"])+" ompPragmas"
+					else:
+						rowsStatic=rowsStatic+" & sequential"
+				else:
+					rowsStatic=rowsStatic+" & "+value["Type"].replace("\n","")
+					
+				rowsStatic=rowsStatic+" & \\verb|"+value["failState"]+"|"				
 
+				rowsStatic=rowsStatic+"\\\\\\hline"
+				#rowsSummary=rowsSummary+"\\\\\\hline"
+				
+				if(value["CodeStyle"]=="C"):
+					#rowsC=rowsC+rowsSummary
+					rowsCStatic=rowsCStatic+rowsStatic		
+					rowsCDynamic=rowsCDynamic+rowsDynamic	
+				elif (value["CodeStyle"]=="C++"):
+					#rowsCPP=rowsCPP+rowsSummary
+					rowsCPPStatic=rowsCPPStatic+rowsStatic
+					rowsCPPDynamic=rowsCPPDynamic+rowsDynamic
+				else:
+					#rowsUnknown=rowsUnknown+rowsSummary
+					rowsUnknownStatic=rowsUnknownStatic+rowsStatic
+					rowsUnknownDynamic=rowsUnknownDynamic+rowsDynamic
+					
+				#rowsSummary=""
+				rowsStatic=""
+
+		tableStaticC=longTableEnv.format(**({'COLUMN_SPEC':colspecStatic,'COLUMN_HEADERS':colheadersStatic,'ROWS':rowsCStatic,'CAPTION':"{Static characteristics of C codes}"}))
+		tableStaticCPP=longTableEnv.format(**({'COLUMN_SPEC':colspecStatic,'COLUMN_HEADERS':colheadersStatic,'ROWS':rowsCPPStatic,'CAPTION':"{Static characteristics of CPP codes}"}))
+		tableStaticUnkn=longTableEnv.format(**({'COLUMN_SPEC':colspecStatic,'COLUMN_HEADERS':colheadersStatic,'ROWS':rowsUnknownStatic,'CAPTION':"{Static characteristics}"}))
+		
+		tableDynamicC=""
+		tableDynamicCPP=""
+		tableDynamicUnkn=""
+		if(len(rowsCDynamic)>0):
+			tableDynamicC="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCDynamic,'CAPTION':"{OpenMP characteristics of C codes}"}))
+		if(len(tableDynamicCPP)>0):
+			tableDynamicCPP="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCPPDynamic,'CAPTION':"{OpenMP characteristics of CPP codes}"}))
+		if(len(tableDynamicUnkn)>0):
+			tableDynamicUnkn="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsUnknownDynamic,'CAPTION':"{OpenMP characteristics}"}))
+
+		#tableSummaryC=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsC,'CAPTION':"{Summary of all C Codes}"}))
+		#tableSummaryCPP=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsCPP,'CAPTION':"{Summary of all C++ Codes}"}))
+		#tableSummaryUnkn=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsUnknown,'CAPTION':"{Summary of all unclassified codes}"}))		
+		
+		cTable=""
+		cppTable=""
+		unknTable=""
+		if not rowsCStatic=="":
+			cTable="\\subsection{C Codes}\n\\subsubsection{{Static characteristics}}\n"+tableStaticC+tableDynamicC
+		if not rowsCPPStatic=="":
+			cppTable="\\subsection{CPP Codes}\n\\subsubsection{{Static characteristics}}\n"+tableStaticCPP+tableDynamicCPP
+		if not rowsUnknownStatic=="":
+			unknTable="\\subsection{Unclassifieable (C or C++)}\n\\subsubsection{{Static characteristics}}\n"+tableStaticUnkn+tableDynamicUnkn
+		
+		latexCode="\\section{{Overall statistics}}\n"+cTable+cppTable+unknTable+latexCode+usedPrefixes
+		
+		#put the whole stuff into latex document
+		file = open("statistics.tex", "w")
+
+		file.write(docEnv.format(**({'CONTENT':latexCode})))
+		file.close()
+
+		#build pdf
+		if('pdf' in stat_output):
+			command=subprocess.Popen(["pdflatex","-halt-on-error","-file-line-error","statistics.tex"],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+			(output, error) =command.communicate()
+				
+			if(command.returncode):
+				print("ERROR IN PDFTOLATEX (see also file statistics.tex):")
+				print(error.decode('utf8'))
+				print(output.decode('utf8'))
+				print("\n LATEX CODE:\n"+docEnv.format(**({'CONTENT':latexCode})))
+			else:
+				if 'Rerun LaTeX.' in open('statistics.log').read():	#rerun latex because of width of longtable
+					command=subprocess.Popen(["pdflatex","-halt-on-error","-file-line-error","statistics.tex"],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+					(output, error) =command.communicate()    				
+		
+		if(enable_stat and 'csv' in stat_output and not mock_run):
+			fileCsv.close()
+		if(enable_stat and 'txt' in stat_output and not mock_run):
+			fileTxt.close()
+		if(enable_stat and 'bin' in stat_output and not mock_run):
+			fileBin.close()
+			if(os.path.exists("statistics_bak.bin")):
+				os.remove("statistics_bak.bin")
 
 def exec_shell_cmd(cmd, env):
 	
@@ -366,14 +1092,12 @@ def exec_shell_cmd(cmd, env):
 	return pid.returncode, output.decode("utf-8")
 
 # Generic executor of commands
-def runner( job ):
+def runner( job):
 	if mock_run:
 		col_print("@{0:~^80}\n".format('~'), BOLD)
 		col_print("@Benchmark: {0}\n".format(job.data.path), BOLD)
 
-	# run cmd
 	for cmd in job.cmds:
-
 		if mock_run and cmd.type[0] < 5:
 			print(cmd.desc)
 			command = os.path.expandvars(cmd.cmd)
@@ -388,16 +1112,17 @@ def runner( job ):
 		real_cmd = "/usr/bin/time -f \"\nTIME(%e):MEM(%M)\" {0}".format(cmd.cmd)
 
 		if cmd.out_file:
-			file = open(cmd.out_file, "w")
-
+			file=open(cmd.out_file,"w")
 		try:
 			(retcode, output) = exec_shell_cmd(real_cmd, cmd.env)
 		except Exception as e:
 			retcode = 1
-			output = "{0}".format(e)
+			print("{0}".format(e))
+			break
+
 
 		time_spec = output.split('\n')[-2]
-		# print(time_spec)
+		#print(time_spec)
 		
 		m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
 
@@ -415,14 +1140,14 @@ def runner( job ):
 			file.close()
 
 		# Create a report and append it to the result
-		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, tot_mem, elapsed) )
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, tot_mem, elapsed,cmd.threads) )
 
 		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0, 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0, 0.0,cmd.threads,cmd.desc) )
 			# there was an error during compilation or running of the program, we mark the
 			# test case as failed
 			break
-
+					
 		# if the command is a RUN command and we have to perform multiple runs, then benchmarks this code
 		if cmd.type == Commands.RUN and runs > 1:
 			time = [ elapsed ] 
@@ -431,8 +1156,9 @@ def runner( job ):
 				(retcode, output) = exec_shell_cmd(real_cmd, cmd.env)
 				if retcode != 0:
 					# something went wrong, the program which was supposed to work is now failing
-					job.data.reports[-1].ret_code = pid.retcode
+					job.data.reports[-1].ret_code = retcode
 					job.data.reports[-1].output = output
+					job.data.reports[-1].failState=cmd.desc
 					break
 				
 				time_spec = output.split('\n')[-2]
@@ -447,25 +1173,130 @@ def runner( job ):
 				mem.append( tot_mem )
 
 			# compute mean value
-			mean_time = sum(time)/runs
-			mean_mem  = sum(mem)/runs
-			job.data.reports[-1].time = mean_time
-			job.data.reports[-1].memory = mean_mem
+			mean_time = sum(time)/runs			#changed to median but needed for stdev
+			#mean_mem  = sum(mem)/runs
+			
+			median_time=median(time)
+			median_mem=median(mem)
+			
+			job.data.reports[-1].time = median_time
+			job.data.reports[-1].memory = median_mem
 			# compute stdev
 			job.data.reports[-1].stdev = math.sqrt(sum( map(lambda x: (x-mean_time)**2, time)) / runs)
 
 		# time.sleep (5)
-
 	if not mock_run:
 		completed.put( job )
 
+class Statistic:
+	def __init__(self,command,job,name,shortName="",suppressZero=False):
+		self.command=command
+		self.suppressZero=suppressZero
+		self.job=job
+		self.name=name
+		self._cachedValue=None
+		if(shortName==""):
+			self.shortName=name
+		else:
+			self.shortName=shortName
+		
+	#gets the total set of input files (inputs.data + files in current dir)
+	def getInput(self):
+		path=self.job.path
+		inputs=self.job.files.split()
+		
+		files=[];
+		#find all files in current dir with extension c, cpp, h, cc, hh
+		for root,dirnames,filenames in os.walk(path):
+			for filename in filenames:
+				if(filename.endswith(('.c','.cpp','.h','.cc','.hh'))):
+					files.append(os.path.abspath(os.path.join(root,filename)))
+					
+		#find all files in inputs.data and append them to the list
+		for path in inputs:
+			if not (path.startswith(("-I","-L","-D"))):
+				absPath=os.path.abspath(path)
+				if not (absPath in files):
+					files.append(absPath)
+
+		return files
+		
+	def execute(self):	
+		if not(self._cachedValue==None):
+			return self._cachedValue	
+		if("INPUT" in self.command):
+			sourceFiles=' '.join(self.getInput())
+			command=subprocess.Popen(self.command.format(**({'INPUT':sourceFiles})),shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+		else:
+			command=subprocess.Popen(self.command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+				
+		(output, error) =command.communicate()
+
+		if(command.returncode):
+			print("ERROR in executing statistic "+self.name+":"+error.decode('utf8'))
+			return -1
+	
+		self._cachedValue=output.decode('utf8')
+		return output.decode('utf8')
+	
+	def getLatex(self):
+		output=self.execute()
+		if(self.suppressZero):
+			if(output == str(0)+"\n"):
+				return ""
+		if(output==str(-1)+"\n"):
+			return -1
+		else:
+			return self.name+" & "+str(output)+"\\\\\\hline\n"
+
+class LOCStatistics(Statistic):
+	def extractLOC(self,xmlString):
+		xmldoc = ET.fromstring(xmlString)
+		stat=xmldoc.find("languages")
+		
+		if not stat==None:
+			tot=stat.find("total")
+			if not tot==None:
+				return tot.get("code")
+			else:
+				return -1
+		else:
+			return -1
+		
+	def execute(self):
+		if not(self._cachedValue==None):
+			return self._cachedValue	
+		commandStr = '@CMAKE_SOURCE_DIR@'+"/test/cloc.pl {0} --quiet --xml"
+		
+		files=	' '.join(self.getInput())
+
+		command=subprocess.Popen(commandStr.format(files),shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+		(output, error) =command.communicate()
+		if not (output.decode('utf8')==""):		
+			loc=self.extractLOC("\n".join((output.decode('utf8').split("\n")[1:])))		#remove blank line at the beginning
+
+		if(command.returncode):
+			print("ERROR in executing LOC statistic:"+error.decode('utf8'))
+			return -1		
+		
+		if int(loc) >= 0:
+			self._cachedValue=loc
+			return loc
+		elif loc == -1:
+			print("ERROR in executing LOC statistic: XML received from CLOC not valid, xml file:"+output.decode('utf8')[1:])
+			return -1	
+		else:
+			print("ERROR in executing LOC statistic:")
+			return -1			
+
 class Cmd:
-	def __init__(self, type, desc, cmd, out_file=None, env=dict()):
+	def __init__(self, type, desc, cmd, out_file=None, env=dict(),threads=-1):
 		self.type = type
 		self.desc = desc
 		self.cmd  = cmd
 		self.out_file = out_file
 		self.env = env
+		self.threads=threads
 
 
 def load_from_file(file, path="./", default=''):
@@ -515,6 +1346,9 @@ def toAbsolutePaths(path, args):
 		if arg.startswith('-I') and not os.path.isabs(arg[2:].strip()) and not arg[2:].strip().startswith('$'): 
 			abs_args.append("-I{0}/{1}".format(path, arg[2:]))
 			continue
+		if arg.startswith('-L') and not os.path.isabs(arg[2:].strip()) and not arg[2:].strip().startswith('$'): 
+			abs_args.append("-L{0}/{1}".format(path, arg[2:]))
+			continue		
 		if arg.startswith('--intercept'): 
 			abs_args.append("--intercept {0}".format(arg[11:]))
 			continue
@@ -534,12 +1368,16 @@ def toAbsolutePaths(path, args):
 class TestJob:
 
 	def __init__(self, test_case_name):
+		self.statistics=None
 		
-		assert os.path.isdir(test_case_name)
 		save_path = os.path.abspath(os.getcwd())
 
 		if test_case_name.endswith('/'): 
 			test_case_name=test_case_name[:-1]
+		
+		if "$" in test_case_name:
+			benchmarkSuite= test_case_name[test_case_name.find("$")+1:]
+			test_case_name=	test_case_name[:test_case_name.find("$")]
 
 		# save the absolute path to the test case before we switch directory 
 
@@ -557,10 +1395,9 @@ class TestJob:
 				cur_passes.append( (id, val) )
 				if id == "g++" or id == "icpc" or id.startswith("cxx"): isCxx = True
 
-		self.__data = TestData(test_case_name)
+		self.__data = TestData(test_case_name,benchmarkSuite)
 		self.__cmds = [ ]
 		self.__is_parallel = False
-
 		#ext = '.cpp' if isCxx==True else '.c'
 		if isCxx == True:
 			if os.path.exists(self.__data.name + '.cpp'):
@@ -576,6 +1413,9 @@ class TestJob:
 
 		path = os.path.abspath(".")
 
+		self.cur_passes=cur_passes	#added by kofler to support cleanup in destructor 
+		self.path=path
+
 		inputs 		 = load_from_file(INPUTS_DATA, path, self.__data.name + ext)
 		insiemeFlags = toAbsolutePaths(path, load_from_file(INSIEME_FLAGS, path))
 		gccFlagsRef  = toAbsolutePaths(path, load_from_file(REF_GCC_FLAGS, path))
@@ -586,40 +1426,51 @@ class TestJob:
 			input_args = open(PROG_INPUTS).read().strip()
 
 		abs_input_files = toAbsolutePaths(path, inputs)
-
-		if do_clean is True:
-			for id, P in cur_passes:
-				if P.frontend is not None:
-					for file in P.frontend.files:
-						ext = os.path.split(file)[1].split('.')[-1]
-						abs_name = '/'.join( [os.path.split(file)[0], \
-							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
-						ref_file = "{0}.ref.{1}".format(abs_name, ext).format(**{
-							'CASE_NAME': self.__data.name,
-							'PATH': path
-						})
-						if os.path.exists(ref_file): os.remove(ref_file)
-
-				if P.backend is not None:
-					for file in P.backend.files:
-						ext = os.path.split(file)[1].split('.')[-1]
-						abs_name = '/'.join( [os.path.split(file)[0], \
-							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
-						ref_file = "{0}.ref".format(abs_name,ref).format(**{
-							'CASE_NAME': self.__data.name,
-							'PATH': path
-						})
-						if os.path.exists(ref_file): os.remove(ref_file)
+		self.files=abs_input_files
 
 		finalize_cmds = []
-		cleanup_cmds = []
 		
 		first = True 
 		ref = None
 
+		schedules=[]
+		if(enable_sched):
+			schedules.append("IRT_STATIC")
+			schedules.append("IRT_DYNAMIC")
+			schedules.append("IRT_GUIDED")
+	#	env_vars["IRT_LOOP_SCHED_POLICY"]="IRT_DYNAMIC"
+					
+		omp=False
 		# Compile for selected backends (without rerunning semantic checks)
 		for id, P in cur_passes:
-
+			threadRunsLoc=threadRuns
+			env_vars = dict()
+			env_vars["OMP_NUM_THREADS"]="1"		#default nr of threads is 1
+			env_vars["IRT_NUM_WORKERS"]="1"			
+			
+			if(enable_sched):
+				if(id=="c_run"):							#clone insieme runs with different sched_policies
+					cur_passes.append(("c_run_stat",P))
+					cur_passes.append(("c_run_dyn",P))
+					cur_passes.append(("c_run_guid",P))
+				elif(id=="c_run_stat"):						#do static policy
+					env_vars["IRT_SCHED_POLICY"]="IRT_SCHED_POLICY_STATIC"
+					env_vars["IRT_LOOP_SCHED_POLICY"]="IRT_STATIC"
+					threadRunsLoc=["stat;"+str(threadRuns[-1])]					
+				elif(id=="c_run_dyn"):						#do dyn policy
+					env_vars["IRT_SCHED_POLICY"]="IRT_SCHED_POLICY_STATIC"
+					env_vars["IRT_LOOP_SCHED_POLICY"]="IRT_DYNAMIC"
+					threadRunsLoc=["dyn;"+str(threadRuns[-1])]										
+				elif(id=="c_run_guid"):						#do guid policy
+					env_vars["IRT_SCHED_POLICY"]="IRT_SCHED_POLICY_STATIC"
+					env_vars["IRT_LOOP_SCHED_POLICY"]="IRT_GUIDED"			
+					threadRunsLoc=["guid;"+str(threadRuns[-1])]					
+				
+			if("fopenmp" in gccFlagsRef) and ("omp-sema" in insiemeFlags) and len(threadRuns)>1:
+				omp=True			
+			if (id=="c_seq"):
+				omp=False
+				
 			if P.frontend:
 				self.__cmds.append(
 					Cmd(Commands.COMPILE, P.frontend.desc,
@@ -630,7 +1481,8 @@ class TestJob:
 								'CASE_NAME': self.__data.name,
 								'PATH': path
 							})
-						})
+						}),
+					env=env_vars
 					)
 				)
 
@@ -651,20 +1503,23 @@ class TestJob:
 						self.__cmds.append(
 							Cmd(Commands.SDIFF, "Comparing with reference {0}".format(id),
 							 "{0}/test/sortdiff {1}/{2} {1}/{3}".format(SRC_DIR, path, file_name,
-								 ref_file)
+								 ref_file),
+			 					env=env_vars
 							)
 						)
 						# If everything worked out, we overwrite the ref file 
 						finalize_cmds.append( 
 							Cmd(Commands.COPY, "Rewriting file as ref file {0}".format(id),
-							 "mv {0}/{1} {0}/{2}".format(path, file_name, ref_file)
+							 "mv {0}/{1} {0}/{2}".format(path, file_name, ref_file),
+		 					env=env_vars
 							)
 						)
 
 					else:
 						self.__cmds.append(
 							Cmd(Commands.COPY, "Copying file as ref file {0}".format(id),
-							 "cp {0}/{1} {0}/{2}".format(path, file_name, ref_file)
+							 "cp {0}/{1} {0}/{2}".format(path, file_name, ref_file),
+		 					env=env_vars
 							)
 						)
 
@@ -678,7 +1533,6 @@ class TestJob:
 								'CASE_NAME': self.__data.name,
 								'PATH': path
 							})
-
 				self.__cmds.append(
 					Cmd(Commands.COMPILE, P.backend.desc,
 					"{BACKEND} {FILE} {LDFLAGS} {GCCFLAGS}".format(
@@ -690,7 +1544,8 @@ class TestJob:
 							'FILE': 	 input_file,
 							'LDFLAGS':	 LDFLAGS_GCC,
 							'GCCFLAGS':	 gccFlagsTest if P.frontend else gccFlagsRef
-						})
+						}),
+	 					env=env_vars
 					)
 				)
 
@@ -700,9 +1555,8 @@ class TestJob:
 				  	 			'PATH': path
 				  	 		})
 
-				file_name ="{0}.out".format(executable)
-				env_vars = dict()
-
+				file_name ="{0}".format(executable)
+				
 				if input_args:
 					exec_idx = input_args.index("{PATH}/{EXEC}")
 					assert exec_idx != -1
@@ -711,24 +1565,49 @@ class TestJob:
 						# it means we have some environment variable to set 
 						env_vars = { x.split('=')[0].strip() : x.split('=')[1].strip() \
 								 for x in input_args[0:exec_idx].split() if '=' in x }
-
 						input_args = input_args[exec_idx:]
 
-				self.__cmds.append(
-					Cmd(Commands.RUN, "Run {0}".format(id),
-						"{0} {1} {2}".format(
-							P.exec,
-							'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
-							P.exec.strip() != ''  else '',
-							input_args.format(**{'PATH':path, 
-												 'EXEC': executable
-												})
-							if input_args else "{0}/{1}".format(path, executable)
-					 	  ),
-						"{0}/{1}".format(path, file_name), 
-						env_vars
-					)
-				)
+				if(omp):
+					for thr in threadRunsLoc:	
+						env_vars_copy=env_vars.copy()
+						env_vars_copy["OMP_NUM_THREADS"]=str(thr).split(";")[-1]
+						env_vars_copy["IRT_NUM_WORKERS"]=str(thr).split(";")[-1]
+	
+						self.__cmds.append(
+							Cmd(Commands.RUN, "Run {0}".format(id),
+								"{0} {1} {2}".format(
+									P.exec,
+									'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
+									P.exec.strip() != ''  else '',
+									input_args.format(**{'PATH':path, 
+														 'EXEC': executable,
+														 'THREADS': str(thr)
+														})
+									if input_args else "{0}/{1}".format(path, executable)
+							 	  ),
+								"{0}/{1}.thr{2}.out".format(path, file_name,thr), 
+								env_vars_copy,
+								thr
+							)
+						)
+				else:
+					self.__cmds.append(
+							Cmd(Commands.RUN, "Run {0}".format(id),
+								"{0} {1} {2}".format(
+									P.exec,
+									'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
+									P.exec.strip() != ''  else '',
+									input_args.format(**{'PATH':path, 
+														 'EXEC': executable,
+														 'THREADS': 1
+														})
+									if input_args else "{0}/{1}".format(path, executable)
+							 	  ),
+								"{0}/{1}.thr1.out".format(path, file_name), 
+								env_vars
+							)
+						)		
+					
 			
 				#if not mock_run:
 				#	# upon finalization, remove the generated output files 
@@ -746,7 +1625,8 @@ class TestJob:
 						Cmd(Commands.EXT, "Extract pattern {0}".format(id),
 							"{0} {1}/{2}".format(open("{0}/output.match".format(path)).read().strip(),
 							path, file_name),
-							"{0}/{1}.match".format(path, file_name)
+							"{0}/{1}.match".format(path, file_name),
+							env=env_vars
 						)
 					)
 					file_name ="{0}.match".format(file_name)
@@ -763,21 +1643,32 @@ class TestJob:
 					ref = file_name
 
 				# if we have a reference file, then check with a DIFF
-				if not first:
-					self.__cmds.append(
-						Cmd(Commands.HDIFF, "Comparing output  {0}".format(id),
-						 "{0}/test/sortdiff {1}/{2} {1}/{3}".format(SRC_DIR, path, ref, file_name)
+				if(omp):
+					for thr in threadRunsLoc:
+						if not first:
+							self.__cmds.append(
+								Cmd(Commands.HDIFF, "Comparing output {0}".format(id),
+								"{0}/test/sortdiff {1}/{2}.out {1}/{3}.out".format(SRC_DIR, path, ref+".thr1", file_name+".thr"+str(thr)),
+								threads=thr,
+								env=env_vars
+							))
+						first = False
+				else:
+						self.__cmds.append(
+									Cmd(Commands.HDIFF, "Comparing output {0}".format(id),
+									"{0}/test/sortdiff {1}/{2}.out {1}/{3}.out".format(SRC_DIR, path, ref+".thr1", file_name+".thr1"),
+									env=env_vars
+									)
 						)
-					)
-
-				first = False
+						first = False
 
 		self.__cmds += finalize_cmds
 		self.__cmds.append(
 			Cmd(Commands.SUCC, "Set as Successful","")
 		)
-
 		os.chdir(save_path)
+		self.ref=ref
+		self.omp=omp
 
 	def __str__(self):
 		return "\n\n".join( map(lambda x: "# {0} -> {1}\n{2}".format(x.type, x.desc, x.cmd), self.__cmds) )
@@ -788,21 +1679,71 @@ class TestJob:
 	@property
 	def data(self): return self.__data
 
+	@property
+	def inputs(self): return self.files
+
+	def __del__(self):		#introduced by kofler to support cleanup, not very elegant but im no python pro ;)
+		if do_clean is True:
+			#print("Removing all generated files")
+			for id, P in self.cur_passes:
+				if P.frontend is not None:
+					for file in P.frontend.files:
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						nat_file = "{0}.{1}".format(abs_name, ext).format(**{
+							'CASE_NAME': self.__data.name,
+							'PATH': self.path
+						})
+
+						ref_file = "{0}.ref.{1}".format(abs_name, ext).format(**{
+							'CASE_NAME': self.__data.name,
+							'PATH': self.path
+						})
+						ref_file=self.path+ref_file
+						nat_file=self.path+nat_file
+						match_file=self.path+ref_file+".match"						
+						if os.path.exists(ref_file): os.remove(ref_file)
+						if os.path.exists(nat_file): os.remove(nat_file)
+						if os.path.exists(match_file): os.remove(match_file)
+							
+
+				if P.backend is not None:
+					for file in P.backend.files:
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						nat_file="{0}.{1}".format(abs_name,ext).format(**{
+							'CASE_NAME': self.__data.name,
+							'PATH': self.path
+						})
+						
+						for thr in threadRuns:
+							ref_file = "{0}.{1}".format(abs_name,ext).format(**{
+								'CASE_NAME': self.__data.name,
+								'PATH': self.path,
+							})
+							ref_file_thr=self.path+ref_file+".thr"+str(thr)+".out"
+							if os.path.exists(ref_file_thr): os.remove(ref_file_thr)
+						nat_file=self.path+nat_file
+						match_file=self.path+ref_file+".match"
+						if os.path.exists(nat_file): os.remove(nat_file)
+						if os.path.exists(match_file): os.remove(match_file)
+
 def main(argv=None):
 
 	# setput enviroment variables for spetial libraries lookup
 	os.environ['BOOST_ROOT'] = '@BOOST_ROOT@'
-	if 'LD_LIBRARY_PATH' in os.environ:
-		os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib:'+os.environ['LD_LIBRARY_PATH']
-	else:
-		os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib'
-		
+	os.environ['LD_LIBRARY_PATH'] = '@BOOST_ROOT@/lib:'+os.environ['LD_LIBRARY_PATH']
 
 	config = configparser.ConfigParser()
 	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
+	
+	supportedOutputFormats=('pdf','tex','txt','csv','bin')
 
 	# Global variable which stores the list of backends to be used
 	global passes
+	global threadRuns
 	global passes_str
 
 	# Load passes from the configuration file 
@@ -832,8 +1773,32 @@ def main(argv=None):
 
 	parser.add_option("-r", "--runs", dest="runs", type="int",
 							help=("Execute the binary multiple times and produce a report on"
-							" average execution time and standard deviation , default= %default"),
+							" median execution time and standard deviation , default= %default"),
 							default=1)
+
+	parser.add_option("-s","--statistics",action="store_true", dest="stat_enabled",
+							help=("Execute the statistics mode, saves code statistics into specified output formats, default= %default"),
+							default=False)
+	
+	parser.add_option("-S","--scheduling",action="store_true", dest="sched_enabled",
+							help=("Execute using different scheduling variants for insieme, default= %default"),
+							default=False)	
+	
+	parser.add_option("-o","--output-format",dest="outputFiles",type="string",
+							help=("Set the output formats of the statistics module seperated by ',', supported formats: "+",".join(supportedOutputFormats)+". default=%default"),
+							default=("tex,pdf"))
+	
+	parser.add_option("-t","--max-threads",dest="max_threads", type="int",
+							help=("Execute each test case multiple times with a different number of threads (increased by ^2) until max threads is reached. Saves time measurements in specified output formats if statistics are enabled. default= %default"),
+							default=0)
+
+	parser.add_option("-f","--force",action="store_true",dest="force", 
+							help=("Try to execute all tests in test.cfg (even commented with #). default= %default"),
+							default=False)
+
+	parser.add_option("-i","--input-file",dest="inputFile",type="string",
+							help=("Use input file of previous runs (saved by using -o bin). Reads out job and statistics of the input file."),
+							default="")
 
 	parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
 							help=("Print to standard output occurred errors verbosily"
@@ -874,16 +1839,34 @@ def main(argv=None):
 
 	# If the script is executed without specifying a path, the test folder
 	# in the SOURCE directory is used as entry point 
-	if not args: args = '@CMAKE_SOURCE_DIR@/test'
+	if not args: args = '@CMAKE_SOURCE_DIR@/test' 
 	
+	global force_tests
+	force_tests=options.force
+
 	assert(args)
-	test_cases = expand( args )
+	test_cases_orig = expand( args )
+	
+	test_cases=[]
+	#create a second structure without testSuites
+	for k in test_cases_orig:
+		if "$" in k:
+			test_cases.append(k[:k.find("$")])
+		else:
+			test_cases.append(k)
+	assert(len(test_cases)==len(test_cases_orig))
 
 	if options.show_cases:
 		print (" ".join(test_cases))
-
+	
 	global test_cases_number
 	test_cases_number = len(test_cases)
+	
+	global enable_stat
+	enable_stat=options.stat_enabled	
+	
+	global enable_sched
+	enable_sched=options.sched_enabled	
 
 	print("|{0:^{1}}|".format("Running '{0}' benchmark(s)".format( len(test_cases) ), COLUMNS-2))
 	print("|"+"-"*(COLUMNS-2)+"|")
@@ -893,6 +1876,56 @@ def main(argv=None):
 		print("|{0:^{1}}|".format("DONE", COLUMNS-2))
 		print("|"+"-"*(COLUMNS-2)+"|")
 		return os._exit(0)
+
+	threadRuns = []
+	threadRuns.append(1)
+	if not (options.max_threads == 0):
+		threadNum = 2
+		while threadNum <= options.max_threads:
+			threadRuns.append(threadNum)
+			threadNum = threadNum * 2
+		if not (options.max_threads in threadRuns):
+			threadRuns.append(options.max_threads)
+		print ("Each OpenMP test (tests using -fopenmp AND --omp-sema) is executed with: {0} threads".format(threadRuns))
+
+	if not (options.inputFile==""):		#use input file
+		jobs=[]
+		file=open(options.inputFile,"rb")
+		try:
+			while 1==1:
+				jobs.append(pickle.load(file))
+		except EOFError:
+			file.close()
+
+		test_cases_abs=[]
+		for x in range(0,len(test_cases)):		#convert path to abs path to compare them with tests in file
+			test_cases_abs.append(os.path.abspath(test_cases[x]))
+
+		#look if data in input file is valid and sufficient
+		for job in jobs:
+			dataSufficient=True
+			if(job.omp):
+				for threadRun in threadRuns:
+					if not threadRun in (node.threads for node in job.data.reports):
+						dataSufficient=False
+						#break
+				if enable_sched:
+					if not "dyn;"+str(threadRuns[-1]) in  (node.threads for node in job.data.reports):
+						dataSufficient=False
+					if not "stat;"+str(threadRuns[-1]) in  (node.threads for node in job.data.reports):
+						dataSufficient=False
+					if not "guid;"+str(threadRuns[-1]) in  (node.threads for node in job.data.reports):
+						dataSufficient=False					
+			
+			if(not dataSufficient):	
+				print("WARNING: Cached job "+job.data.name+" contains insufficient data, executing again!")
+			else:		
+				if(os.path.abspath(job.data.path) in test_cases_abs):
+					ind = test_cases_abs.index(os.path.abspath(job.data.path))
+					del test_cases[ind]
+					del test_cases_abs[ind]
+					del test_cases_orig[ind]
+					completed.put(job)
 
 	# Read the backends provided by the user and select the one to be used in the run 
 	backends = list({x.strip() for x in options.backends.split(',')})
@@ -920,14 +1953,20 @@ def main(argv=None):
 			del passes[x]
 			del passes_str[x]
 
-
 	global no_colors
 	no_colors=options.no_colors
-
+				
 	print(" * Selected passes are: {0}".
 			format( ", ".join(list(map(lambda x: "'"+x+"'", passes_str) ))) 
 		 )
-
+	
+	if((options.stat_enabled or options.max_threads>1) and options.workers>1):
+		print("ERROR, multiple worker not allowed in statistics/multiple thread mode")
+		#exit()
+	if(options.stat_enabled and options.mock_run):
+		print("WARNING: statistics are not written since running only a mock run")
+	
+	
 	# Global variable which stores whether the reference files should be removed
 	global do_clean
 	do_clean=options.clean
@@ -940,6 +1979,14 @@ def main(argv=None):
 
 	global verbose
 	verbose=options.verbose
+	
+	global stat_output
+	stat_output=options.outputFiles.split(',')
+	
+	#print warning if outputFormat not supported
+	for out in stat_output:
+		if not (out in supportedOutputFormats):
+			print("WARNING output format '"+out+"' not supported, format is ignored!\n")
 
 	global SRC_DIR
 	SRC_DIR=config.get("Test", "SRC_DIR")
@@ -953,16 +2000,17 @@ def main(argv=None):
 	t = Process(target=reporter, args=[report_queue] )
 	t.start()
 
-	test_jobs = [TestJob(x) for x in test_cases]
+	if len(test_cases)>0:
+		test_jobs = [TestJob(x) for x in test_cases_orig]
 
-	# ldPath = os.getenv("LD_LIBRARY_PATH", "");
-	os.putenv("SLOTS", "1");
+		# ldPath = os.getenv("LD_LIBRARY_PATH", "");
+		os.putenv("SLOTS", "1");
 
-	# instantiate the pool of threads which are used to run test cases
-	pool = Pool(processes=num_cores)
-	pool.map(runner, test_jobs, 1)
-	pool.close()
-	pool.join()
+		# instantiate the pool of threads which are used to run test cases
+		pool = Pool(processes=num_cores)
+		pool.map(runner, test_jobs, 1)
+		pool.close()
+		pool.join()
 
 	# make the reporter exit
 	completed.put( None )
@@ -975,4 +2023,4 @@ def main(argv=None):
 	return os._exit(ret_val)
 
 if __name__ == "__main__":
-    sys.exit(main())
+	sys.exit(main())
