@@ -88,19 +88,15 @@ const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 	const clang::TagDecl* decl = tagType->getDecl();
 
 	TagDecl::redecl_iterator i,e = decl->redecls_end();
-	for(i = decl->redecls_begin(); i != e && !i->isCompleteDefinition(); ++i) ;
+	for(i = decl->redecls_begin(); i != e; ++i) {
 
-	if (i!=e) {
-		const clang::TagDecl* def = (*i)->getDefinition();
-	//	clang::SourceLocation loc = def->getLocation();
-
-	//	auto fit = locMap.find({ def->getNameAsString(), loc.getRawEncoding() });
-	//	if (fit != locMap.end()) {
-	//		return fit->second;
-	//	}
-		// add this definition to the map
-	//	locMap.insert({ { def->getNameAsString(), loc.getRawEncoding()}, def });
-		return def;
+		if (i->isCompleteDefinition()){
+			return i->getDefinition();
+		}
+		if ( llvm::isa<clang::ClassTemplateSpecializationDecl> (*i)) {
+		//if ( const clang::ClassTemplateSpecializationDecl* tmpl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (*i)) {
+			return *i;
+		}
 	}
 
 	return NULL;
@@ -438,6 +434,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	// test whether we can get a definiton
 	auto def = findDefinition(tagType);
 	if (!def) {
+
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
 
