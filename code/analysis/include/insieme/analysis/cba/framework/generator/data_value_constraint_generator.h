@@ -141,7 +141,7 @@ namespace cba {
 
 			out << value << " = " << getAnalysisName(std::get<0>(data)) <<
 					"[l" << label << " = " << node->getNodeType() << " : "
-						 << node;// << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : ";
+						 << node; // << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : ";
 
 			// print remaining set parameters (including context)
 			printParams(out, utils::int_type<2>(), data);
