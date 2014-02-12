@@ -432,7 +432,7 @@ void irt_inst_region_debug_output() {
 }
 
 void irt_inst_region_output() {
-    FILE* outputfile = stdout;
+    FILE* outputfile = stderr;
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
