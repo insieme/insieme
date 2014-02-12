@@ -202,6 +202,54 @@ namespace cba {
 
 	}
 
+	TEST(CBA, UndefinedValues) {
+		typedef DefaultContext Context;
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string,NodePtr> symbols;
+		symbols["c"] = builder.parse("lit(\"c\":ref<int<4>>)");
+		symbols["d"] = builder.parse("lit(\"c\":struct { int<4> x; vector<int<4>,3> y; })");
+		symbols["e"] = builder.parse("lit(\"c\":ref<struct { int<4> x; vector<int<4>,3> y; }>)");
+
+		auto in = builder.parseStmt(
+				"{"
+				"	int<4> a;"
+				"	ref<int<4>> b;"
+				"	a;"
+				"	*b;"
+				"	*c;"
+				"	d;"
+				"	*e;"
+				"	"
+				"	b = 2;"
+				"	c = 3;"
+				"	e.x = 4;"
+				"	"
+				"	*b;"
+				"	*c;"
+				"	*e;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[2], A)));
+		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[3], A)));
+		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[4], A)));
+		EXPECT_EQ("[x={-unknown-},y=[*={-unknown-}]]", toString(analysis.getValuesOf(code[5], A)));
+		EXPECT_EQ("[x={-unknown-},y=[*={-unknown-}]]", toString(analysis.getValuesOf(code[6], A)));
+
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[10], A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[11], A)));
+		EXPECT_EQ("[x={4},y=[*={-unknown-}]]", toString(analysis.getValuesOf(code[12], A)));
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, BasicControlFlow) {
 		typedef DefaultContext Context;
 
@@ -505,7 +553,7 @@ namespace cba {
 		CBA analysis(root);
 
 		// check whether globals are propery handled
-		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{1}", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));

@@ -523,6 +523,8 @@ namespace cba {
 
 		void plot(std::ostream& out = std::cout) const;
 
+		void plotRoots(std::ostream& out = std::cout) const;
+
 		std::size_t getNumSets() const {
 			return value2generator.size();
 		}
