@@ -156,6 +156,17 @@ core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::
 	return expr;
 }
 
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionPtr tryRemoveDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
+	if(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(expr)) {
+		if(BASIC.isRefDeref(call->getFunctionExpr()))
+			return tryRemoveDeref(call->getArgument(0), builder);
+	}
+	return expr;
+}
+
 
 /*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned

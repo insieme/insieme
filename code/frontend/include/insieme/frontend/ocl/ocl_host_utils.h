@@ -97,6 +97,11 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
 core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionPtr tryRemoveDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
+
+/*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
  * Usefull to get variable out of nests of array and struct accesses
  */

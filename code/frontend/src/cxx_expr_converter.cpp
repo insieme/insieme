@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -536,7 +536,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		}
 		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint no constructor call in here, no way to translate NEW\n";
 
-
 		core::TypePtr type = ctorCall->getType();
 		core::ExpressionPtr newCall = builder.undefinedNew(type);
 
@@ -568,12 +567,16 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			else {
 				//if constructor of is NOT userprovided we get back the "plain" object, no wrapping
 				//ctor to take care of for the exchange of "refVar" with "newCall"
-				VLOG(2) << addr.as<core::CallExprPtr>();
-				retExpr = core::transform::replaceNode (convFact.mgr,
-													addr,
-													newCall ).as<core::CallExprPtr>();
+				if(!callExpr->getConstructExpr()->getConstructor()->isUserProvided()) {
+                    VLOG(2) << addr.as<core::CallExprPtr>();
+                    retExpr = core::transform::replaceNode (convFact.mgr,
+                                                            addr,
+                                                            newCall ).as<core::CallExprPtr>();
 
-				retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
+                    retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
+				} else {
+                    retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(addr->getArgument(0)));
+				}
 			}
 		}
 	}
