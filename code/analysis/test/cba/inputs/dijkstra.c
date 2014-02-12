@@ -35,66 +35,52 @@
  */
 
 /**
- * A test case verifying that malloc calls can be properly handled
+ * A stripped-down version of a real-world code example.
  */
 
-#include <stdlib.h>
 #include "cba.h"
 
-typedef struct {
-	int x;
-	int y;
-} point;
+int f(int g) {
 
-extern int data;
+	#pragma omp parallel
+	{
 
+		#pragma omp single
+		{
+
+		}
+
+		for(int i=0; i<10; i++) {
+
+			#pragma omp single
+			{
+
+			}
+
+			#pragma omp critical
+			{
+
+			}
+
+			#pragma omp barrier
+		}
+
+	}
+
+	return 0;
+
+}
 
 int main(int argc, char** argv) {
 
 	cba_print_code();
 
-	// test external part
-	cba_print_int(data);
-	data = 2;
-	cba_expect_eq_int(data, 2);
+	// for now this is simply testing the primitives
+	cba_dump_thread_regions();
+	cba_dump_execution_net();
+	cba_dump_state_graph();
 
-/*
-	// test an array of scalars
-	int* a = (int*)(malloc(sizeof(int) * 5));
+	f(10);
 
-	// the reference should be unique
-	cba_expect_is_alias(&(a[0]), &(a[0]));
-
-	// check value before / after first usage
-	cba_print_int(a[2]);
-	for(int i = 0; i<5; i++) {
-		a[i] = 1;
-	}
-	cba_print_int(a[2]);
-
-
-	//cba_dump_equations();
-
-	a[0] = 10;
-	a[1] = 12;
-	a[2] = 14;
-	a[3] = argc;
-
-	cba_expect_eq_int(a[0]+2, a[1]);
-	cba_expect_eq_int(a[0]+argc, 10+a[3]);
-
-
-	// test an array of points
-	point* p = (point*)(malloc(sizeof(point) * 3));
-	p[0] = (point) { 0, 1 };
-	p[1] = (point) { 1, argc };
-	p[2] = (point) { argc, 2 };
-
-	cba_expect_eq_int(p[0].y, p[1].x);
-	cba_expect_eq_int(p[1].y, p[2].x);
-
-	cba_expect_is_alias(&(p[0]), &(p[0]));
-
-	//cba_dump_equations();
-*/
+	return 0;
 }
