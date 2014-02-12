@@ -133,8 +133,14 @@ class PrunableDeclVisitor{
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
+			case clang::Decl::NamespaceAlias:  // clang 3.4
+				{
+					dispatchDecl(llvm::cast<clang::NamespaceAliasDecl>(decl)->getNamespace());
+					break;
+				}
 			case clang::Decl::Record:
 				{
+					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
@@ -224,11 +230,13 @@ class PrunableDeclVisitor{
 			case clang::Decl::Field:
 			case clang::Decl::IndirectField:
 			case clang::Decl::Friend:
+			case clang::Decl::Label:
 
 				break;
 
 			default:
-			//	std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
+				std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
+				assert(false && "not implemented type of Decl");
 				return;
 		}
 	}
