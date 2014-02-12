@@ -642,8 +642,7 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 
 // the work-sharing construct
-LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a>, int<#a>)=>'a)->unit")
-
+DERIVED(PFor, "pfor", "(threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
 
 // the data-sharing construct
 LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
