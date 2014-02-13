@@ -228,8 +228,11 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl) {
     std::string name = enumDecl->getQualifiedNameAsString();
     //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
-    if(name.empty()) {
-        name = "anonymous";
+    if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
+		std::stringstream ss;
+		ss << "_anonEnum";
+		ss << (unsigned long long) enumDecl;
+		name =  ss.str();
     }
     return name;
 }
