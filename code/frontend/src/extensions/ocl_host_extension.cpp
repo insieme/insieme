@@ -88,8 +88,8 @@ OclHostPlugin::OclHostPlugin() {
 
 			return builder.literal("1u", BASIC.getUInt4());
 	);
-
-/*	ADD_Handler(o2i, "clCreateBuffer",
+/*
+	ADD_Handler(o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
 			// check if CL_MEM_USE_HOST_PTR is set
@@ -116,11 +116,18 @@ OclHostPlugin::OclHostPlugin() {
 	);
 
 	ADD_Handler(o2i, "icl_create_buffer",
-			// Flags can be ignored, INSPIRE is always blocking
-			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0), BASIC.getRefNull());
-	);
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
 
+			// Flags can be ignored, INSPIRE is always blocking
+			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
+					mgr.getLangBasic().getRefNull());
+	);
+*/
 	ADD_Handler(o2i, "clEnqueueCopyBuffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			vector<ExpressionPtr> args;
 
@@ -130,7 +137,7 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClCopyBufferFallback(), args);
+			return builder.callExpr(o2i.getClCopyBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -141,11 +148,14 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClCopyBuffer(builder) : o2i.getClCopyBufferFallback(builder), args);
 #endif
 	);
 
 	ADD_Handler(o2i, "clEnqueueWriteBuffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			NullLitSearcher nls(builder);
 			vector<ExpressionPtr> args;
@@ -156,7 +166,7 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(o2i.getClWriteBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -167,11 +177,14 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer(builder) : o2i.getClWriteBufferFallback(builder), args);
 #endif
 	);
 
 	ADD_Handler(o2i, "icl_write_buffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
@@ -180,7 +193,7 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(o2i.getClWriteBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -192,11 +205,14 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer(builder) : o2i.getClWriteBufferFallback(builder), args);
 #endif
 	);
 
 	ADD_Handler(o2i, "clEnqueueReadBuffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
 			args.push_back(node->getArgument(1));
@@ -204,7 +220,7 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(o2i.getClReadBufferFallback(builder), args);
 #else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -217,11 +233,14 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer(builder) : o2i.getClReadBufferFallback(builder), args);
 #endif
 	);
 
 	ADD_Handler(o2i, "icl_read_buffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
 			args.push_back(node->getArgument(0));
@@ -229,7 +248,7 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(o2i.getClReadBufferFallback(builder), args);
 #else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -242,17 +261,20 @@ OclHostPlugin::OclHostPlugin() {
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer(builder) : o2i.getClReadBufferFallback(builder), args);
 #endif
 	);
 
 
-
+/*
 	ADD_Handler(o2i, "clSetKernelArg",
 			return collectArgument("clSetKernelArg", node->getArgument(0), node->getArgument(1), node->getArgument(2), node->getArgument(3));
 	);
 
 	ADD_Handler(o2i, "oclLoadProgSource",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			this->findKernelsUsingPathString("oclLoadProgSource", node->getArgument(0), node);
 			// set source string to an empty char array
 			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
@@ -260,6 +282,9 @@ OclHostPlugin::OclHostPlugin() {
 
 	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
 	ADD_Handler(o2i, "icl_create_kernel",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
 			// find kernel source code
 			this->findKernelsUsingPathString("icl_create_kernel", node->getArgument(1), node);
 			return builder.uintLit(0);
