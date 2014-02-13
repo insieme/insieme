@@ -36,7 +36,9 @@
 
 #pragma once
 
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/extension.h" 
+
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace insieme {
 namespace core {
@@ -114,6 +116,14 @@ namespace lang {
                      gt->getTypeParameter().size() == 1u &&
                      gt->getIntTypeParameter().empty()
                     );
+		}
+
+		bool isEnumConstant (const NodePtr& node) const{
+			if (const LiteralPtr lit= node.isa<LiteralPtr>()){
+				if (!isEnumType(lit->getType())) return false;
+				return  (boost::starts_with(lit->getStringValue(), "__insieme_enum_constant__"));
+			}
+			return false;
 		}
 
 	};

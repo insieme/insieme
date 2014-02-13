@@ -46,6 +46,8 @@
 #include <clang/AST/DeclTemplate.h>
 #include <llvm/Support/Casting.h>
 
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceManager.h>
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
@@ -61,12 +63,14 @@ using namespace llvm;
 { \
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
-		boost::replace_all(str, "::", "_"); \
+		boost::replace_all(str, "::","_"); \
 		boost::replace_all(str, " ", "_"); \
 		boost::replace_all(str, "(", "_"); \
 		boost::replace_all(str, ")", "_"); \
 		boost::replace_all(str, ",", "_"); \
 		boost::replace_all(str, "*", "_"); \
+		boost::replace_all(str, ".", "_"); \
+		boost::replace_all(str, "/", "_"); \
 }
 
 
@@ -224,15 +228,20 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl){
 }
 
 
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl) {
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
     std::string name = enumDecl->getQualifiedNameAsString();
     //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
     if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
 		std::stringstream ss;
 		ss << "_anonEnum";
-		ss << (unsigned long long) enumDecl;
+
+		ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
+		ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
+		ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
+
 		name =  ss.str();
+		REMOVE_SYMBOLS(name);
     }
     return name;
 }
