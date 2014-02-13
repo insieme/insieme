@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
 	//		example a few standard options are considered.
 	bool compileOnly;
 	bool runIRChecks;
+    bool optimize;
 	string tuCodeFile;		// a file to dump the TU code
 	string irCodeFile;		// a file to dump IR code to
 	string trgCodeFile;		// a file to dump the generated target code
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
 		// one extra parameter to limit the compiler to creating an .o file
 		("compile", 	'c', 	compileOnly, 	"compilation only")
         ("strict-semantic", 'S', runIRChecks,   "semantic checks")
+        ("full-optimization", 'O',      optimize,   "full optimization")
 		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
 		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
 		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
@@ -108,7 +110,9 @@ int main(int argc, char** argv) {
 
 	// disable cilk, omp, ocl support for insiemecc
 	options.job.setOption(fe::ConversionJob::Cilk, false);
-	options.job.setOption(fe::ConversionJob::OpenMP, false);
+    // turn off openmp frontend if -fopenmp is not provided
+    if (options.job.getFFlags().find("-fopenmp") == options.job.getFFlags().end())
+    	options.job.setOption(fe::ConversionJob::OpenMP, false);
 	options.job.setOption(fe::ConversionJob::OpenCL, false);
 
 	if (!options.valid) return (options.help)?0:1;
@@ -207,11 +211,31 @@ int main(int argc, char** argv) {
 				: cp::Compiler::getDefaultC99CompilerO3();
 
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	for(auto cur : extLibs) {
+	
+    //add needed library flags
+    for(auto cur : extLibs) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3,libname.find(".")-3));
 	}
+
+    //add the given optimization flags (-f flags)
+    for(auto cur : options.job.getFFlags()) {
+        compiler.addFlag(cur);
+    }
+    
+    //FIXME: Add support for -O1, -O2, ... 
+    //if an optimization flag is set (e.g. -O3) 
+    //set this flag in the backend compiler
+    if (optimize)
+        compiler.addFlag("-O3");
+
+    //check if the c++11 standard was set when calling insieme
+    //if yes, use the same standard in the backend compiler
+    if (options.job.getStandard() == fe::ConversionSetup::Standard::Cxx11) {
+        compiler.addFlag("-std=c++0x");
+    }
+    
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
