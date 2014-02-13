@@ -63,6 +63,7 @@ namespace cmd {
 					("library-path,L", bpo::value<vector<frontend::path>>(), "library paths - optional")
 					("include-path,I", bpo::value<vector<frontend::path>>(), "include files - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
+                    ("fopt,f", bpo::value<vector<string>>(), "optimization flags - optional")
 					("std", bpo::value<string>()->default_value("auto"), "determines the language standard")
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
@@ -225,6 +226,14 @@ namespace cmd {
 				for(auto i : map["intercept"].as<vector<string>>()) {
 					res.job.setInterception(i);
 				}
+            }
+
+            //f flags
+            if (map.count("fopt")) {
+                for(auto i : map["fopt"].as<vector<string>>()) {
+                    std::string&& s = "-f"+i;
+                    res.job.addFFlag(s);
+                }
             }
 
 			// extra flags
