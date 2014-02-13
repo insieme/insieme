@@ -280,6 +280,7 @@ namespace cba {
 		private:
 
 			value_type getReadData(const Assignment& ass) const {
+				typedef typename generator<NestedAnalysesType, analysis_config<Context>>::type BaseGenerator;
 
 				// instances of required operators
 				meet_assign_op_type meet_assign_op;
@@ -294,6 +295,18 @@ namespace cba {
 
 					// get targeted location
 					const auto& loc = cur.getLocation();
+
+					// special handling for reading global any-refs => undefined values in those cases
+					if (loc.isUnknown()) {
+
+						// add the unknown value to the result
+						auto unknownValue = BaseGenerator(cba).getUnknownValue();
+						unknownValue = getUndefinedValue(cba.template getDataManager(this->res), readOp->getType(), unknownValue);
+
+						// include unknown value
+						meet_assign_op(res, unknownValue);
+						continue;
+					}
 
 					// get current value of location
 					const value_type& mem_value = ass[loc_value_map[loc]];
@@ -632,8 +645,12 @@ namespace cba {
 			return valueMgr;
 		}
 
-		const value_type& getUnknownValue() const {
+		value_type getUnknownValue() const {
 			return unknown;
+		}
+
+		value_type getUnknownValue(const TypePtr& type) const {
+			return getUndefinedValue(valueMgr, type, unknown);
 		}
 
 		template<typename V>
@@ -684,7 +701,7 @@ namespace cba {
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 			// external literals are by default unknown values - could be overloaded by sub-classes
 			auto A_lit = cba.getSet(A, literal, ctxt);
-			constraints.add(subset(unknown, A_lit));
+			constraints.add(subset(getUnknownValue(literal->getType()), A_lit));
 		}
 
 		void visitVariable(const VariableAddress& variable, const Context& ctxt, Constraints& constraints) {
@@ -976,6 +993,16 @@ namespace cba {
 									StructProject<lattice_type>(A_in, field, A_call)
 								)
 						);
+					}
+
+					// and always: if it is the undefined literal
+					if (base.isUndefined(targets[0].getDefinition())) {
+
+						// built up resulting value
+						auto value = getUnknownValue(call->getType());
+
+						// in this case initialize the value with the undefined value
+						constraints.add(subset(value, A_call));
 					}
 
 					// no other literals supported by default - overloads may add more

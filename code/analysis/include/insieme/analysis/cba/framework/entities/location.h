@@ -83,6 +83,15 @@ namespace cba {
 			return creationPoint;
 		}
 
+		bool isGlobal() const {
+			return creationPoint.isRoot();
+		}
+
+		bool isUnknown() const {
+			const auto& base = creationPoint->getNodeManager().getLangBasic();
+			return isGlobal() && base.isAnyRef(creationPoint->getType());
+		}
+
 		const Context& getContext() const {
 			return creationContext;
 		}

@@ -23,3 +23,6 @@ worker_efficiency_log
 *.log
 *.pgm
 *.out.match
+*.test.match
+*.ref.match
+

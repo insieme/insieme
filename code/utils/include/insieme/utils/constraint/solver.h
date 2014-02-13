@@ -839,6 +839,15 @@ namespace constraint {
 		}
 
 		/**
+		 * Obtains all constraints for the given value set.
+		 */
+		const std::set<const Constraint*>& getConstraintsFor(const ValueID& value) const {
+			const static std::set<const Constraint*> empty;
+			auto pos = edges.find(value);
+			return (pos == edges.end()) ? empty : pos->second;
+		}
+
+		/**
 		 * Obtains a reference to the current assignment maintained internally.
 		 */
 		const Assignment& getAssignment() const {
