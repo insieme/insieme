@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/logging.h"
 

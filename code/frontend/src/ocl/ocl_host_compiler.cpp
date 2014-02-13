@@ -58,6 +58,7 @@ namespace ba = boost::algorithm;
 namespace insieme {
 namespace frontend {
 namespace ocl {
+using namespace insieme::frontend::ocl::old;
 using namespace insieme::core;
 
 /*

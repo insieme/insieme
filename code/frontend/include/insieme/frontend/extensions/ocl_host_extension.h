@@ -38,16 +38,22 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
+#include "insieme/frontend/ocl/ocl_host_handler.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-
 // extension for OpenCl host files
 
 class OclHostPlugin : public FrontendPlugin {
-public:
+	ocl::HandlerTable handles;
+	ocl::Ocl2Inspire o2i;
+	// set to store paths of loaded kernel files
+	std::set<string> kernelFileCache;
 
+public:
+	OclHostPlugin();
 private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
