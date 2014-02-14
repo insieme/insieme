@@ -369,6 +369,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	return builder.callExpr(BASIC.getInt4(), function, kernel, tryDeref(arg, builder));
 }
 
+
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
 	core::NodeManager& mgr = arg.getNodeManager();
 	core::IRBuilder builder(mgr);
@@ -597,43 +598,49 @@ ExpressionPtr Ocl2Inspire::getClSetKernelArg(core::IRBuilder builder) {
   		"}");
 }
 
-#if 0
-HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJob& job) :
-	builder(build), job(job), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
-		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-		hash_target_specialized(build, eqMap), equal_variables(build, program)), localMemDecls(
-		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-		hash_target_specialized(build, eqMap), equal_variables(build, program)) {
-	eqIdx = 1;
 
+
+HandlerPtr& OclSimpleFunHandler::findHandler(const string& fctName) {
+	// for performance reasons working with function prefixes is only enabled for funcitons containing cl
+	// needed for cl*, ocl* and icl_* functions
+	if (fctName.find("cl") == string::npos)
+		return handles[fctName];
+	// checking function names, starting from the full name
+	for (int i = fctName.size(); i > 2; --i) {
+		if (HandlerPtr& h = handles[fctName.substr(0,i)])
+			return h;
+	}
+	return handles["break"]; // function is not in map
+}
+
+OclSimpleFunHandler::OclSimpleFunHandler() {
 	// TODO at the moment there will always be one platform and one device, change that!
-	ADD_Handler(builder, o2i, "clGetDeviceIDs",
-			NullLitSearcher nls(builder);
+	ADD_Handler(o2i, "clGetDeviceIDs",
+			ocl::NullLitSearcher nls(builder);
 			ExpressionPtr ret;
 			if(visitDepthFirstInterruptible(node->getArgument(4), nls))
 				ret = builder.intLit(0);
 			else
-				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(4));
+				ret = builder.callExpr(o2i.getClGetIDs(IRBuilder(node->getNodeManager())), node->getArgument(4));
 			return ret;
 	);
 
-	ADD_Handler(builder, o2i, "clGetPlatformIDs",
-			NullLitSearcher nls(builder);
+	ADD_Handler(o2i, "clGetPlatformIDs",
+			ocl::NullLitSearcher nls(builder);
 			ExpressionPtr ret;
 
 			if(visitDepthFirstInterruptible(node->getArgument(2), nls))
 				ret = builder.intLit(0);
 			else
-				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(2));
+				ret = builder.callExpr(o2i.getClGetIDs(IRBuilder(node->getNodeManager())), node->getArgument(2));
 			return ret;
 	);
 
-	ADD_Handler(builder, o2i, "icl_get_num_devices",
+	ADD_Handler(o2i, "icl_get_num_devices",
 			return builder.literal("1u", BASIC.getUInt4());
 	);
-
-/*	already done in ocl_host_replace_buffers
-	ADD_Handler(builder, o2i, "clCreateBuffer",
+/*
+	ADD_Handler(o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
 			// check if CL_MEM_USE_HOST_PTR is set
@@ -658,13 +665,17 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 
 			return getCreateBuffer("clCreateBuffer", node->getArgument(1), node->getArgument(2), copyPtr, hostPtr, node->getArgument(4));
 	);
-*/
-	ADD_Handler(builder, o2i, "icl_create_buffer",
-			// Flags can be ignored, INSPIRE is always blocking
-			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0), BASIC.getRefNull());
-	);
 
-	ADD_Handler(builder, o2i, "clEnqueueCopyBuffer",
+	ADD_Handler(o2i, "icl_create_buffer",
+			core::NodeManager& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+
+			// Flags can be ignored, INSPIRE is always blocking
+			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
+					mgr.getLangBasic().getRefNull());
+	);
+*/
+	ADD_Handler(o2i, "clEnqueueCopyBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			vector<ExpressionPtr> args;
 
@@ -674,7 +685,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClCopyBufferFallback(), args);
+			return builder.callExpr(o2i.getClCopyBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -685,11 +696,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClCopyBuffer(builder) : o2i.getClCopyBufferFallback(builder), args);
 #endif
 	);
 
-	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
+	ADD_Handler(o2i, "clEnqueueWriteBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			NullLitSearcher nls(builder);
 			vector<ExpressionPtr> args;
@@ -700,7 +711,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(o2i.getClWriteBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -711,11 +722,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer(builder) : o2i.getClWriteBufferFallback(builder), args);
 #endif
 	);
 
-	ADD_Handler(builder, o2i, "icl_write_buffer",
+	ADD_Handler(o2i, "icl_write_buffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
@@ -724,7 +735,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(o2i.getClWriteBufferFallback(builder), args);
 #else
 			ExpressionPtr size;
 			TypePtr type;
@@ -736,11 +747,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer(builder) : o2i.getClWriteBufferFallback(builder), args);
 #endif
 	);
 
-	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
+	ADD_Handler(o2i, "clEnqueueReadBuffer",
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
 			args.push_back(node->getArgument(1));
@@ -748,7 +759,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(o2i.getClReadBufferFallback(builder), args);
 #else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -761,11 +772,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer(builder) : o2i.getClReadBufferFallback(builder), args);
 #endif
 	);
 
-	ADD_Handler(builder, o2i, "icl_read_buffer",
+	ADD_Handler(o2i, "icl_read_buffer",
 			vector<ExpressionPtr> args;
 #if ALWAYS_FALLBACK
 			args.push_back(node->getArgument(0));
@@ -773,7 +784,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(o2i.getClReadBufferFallback(builder), args);
 #else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -786,30 +797,30 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer(builder) : o2i.getClReadBufferFallback(builder), args);
 #endif
 	);
 
 
-
-	ADD_Handler(builder, o2i, "clSetKernelArg",
+/*
+	ADD_Handler(o2i, "clSetKernelArg",
 			return collectArgument("clSetKernelArg", node->getArgument(0), node->getArgument(1), node->getArgument(2), node->getArgument(3));
 	);
 
-	ADD_Handler(builder, o2i, "oclLoadProgSource",
+	ADD_Handler(o2i, "oclLoadProgSource",
 			this->findKernelsUsingPathString("oclLoadProgSource", node->getArgument(0), node);
 			// set source string to an empty char array
 			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
 	);
 
 	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
-	ADD_Handler(builder, o2i, "icl_create_kernel",
+	ADD_Handler(o2i, "icl_create_kernel",
 			// find kernel source code
 			this->findKernelsUsingPathString("icl_create_kernel", node->getArgument(1), node);
 			return builder.uintLit(0);
 	);
-
-	ADD_Handler(builder, o2i, "clEnqueueNDRangeKernel",
+*/
+	ADD_Handler(o2i, "clEnqueueNDRangeKernel",
 			// get argument vector
 /*			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(1), builder);
 //			tryStructExtract(k, builder);
@@ -825,8 +836,8 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 */
 			return node;
 	);
-
-	ADD_Handler(builder, o2i, "icl_run_kernel",
+/*
+	ADD_Handler(o2i, "icl_run_kernel",
 			// construct argument vector
 			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder);
 			// get Varlist tuple
@@ -864,7 +875,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 					}
 				}
 			}
-/*
+*//*
 			// get argument vector
 			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
 
@@ -873,42 +884,42 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			// will be added to kernelArgs in 3rd pass like when using standard ocl routines
 			args.push_back(node->getArgument(2) );
 			args.push_back(node->getArgument(3) );
-*/
+*//*
 			return node;
 	);
-
-	ADD_Handler(builder, o2i, "clBuildProgram",
+*/
+	ADD_Handler(o2i, "clBuildProgram",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO add flags for profiling and out of order
-	ADD_Handler(builder, o2i, "clGetEventProfilingInfo",
+	ADD_Handler(o2i, "clGetEventProfilingInfo",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO add syncronization means when adding asynchronous queue
-	ADD_Handler(builder, o2i, "clFinish",
+	ADD_Handler(o2i, "clFinish",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, o2i, "clWaitForEvents",
+	ADD_Handler(o2i, "clWaitForEvents",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// need to release clMem objects
-	ADD_Handler(builder, o2i, "clReleaseMemObject",
+	ADD_Handler(o2i, "clReleaseMemObject",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
 			// updating of the type to update the deref operation in the argument done in thrid pass
 	);
-	ADD_Handler(builder, o2i, "icl_release_buffer",
+	ADD_Handler(o2i, "icl_release_buffer",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
 			// updating of the type to update the deref operation in the argument done in third pass
 	);
-	ADD_Handler(builder, o2i, "icl_release_buffers",
+	ADD_Handler(o2i, "icl_release_buffers",
 			// execute a ref.delete for each pointer in the argument list inside a compound statement
 			StatementList dels;
 
@@ -923,95 +934,118 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 	);
 
 	// release of kernel will be used to free the tuple holding the kernel arguments
-	ADD_Handler(builder, o2i, "clReleaseKernel",
+	ADD_Handler(o2i, "clReleaseKernel",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
 			// updating of the type to update the deref operation in the argument done in third pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
-	ADD_Handler(builder, o2i, "clRelease",
+	ADD_Handler(o2i, "clRelease",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, o2i, "clRetain",
+	ADD_Handler(o2i, "clRetain",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO implement, may have some semantic meaning
-	ADD_Handler(builder, o2i, "clGetEventInfo",
+	ADD_Handler(o2i, "clGetEventInfo",
 			LOG(WARNING) << "Removing clGetEventInfo. Check the semantics!";
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, o2i, "clFlush",
+	ADD_Handler(o2i, "clFlush",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO maybe a bit too optimisitc?
-	ADD_Handler(builder, o2i, "clGet",
+	ADD_Handler(o2i, "clGet",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO need to add exception this when adding image support
-	ADD_Handler(builder, o2i, "clCreate",
+	ADD_Handler(o2i, "clCreate",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, o2i, "clUnloadCompiler",
+	ADD_Handler(o2i, "clUnloadCompiler",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// DEPRECATED, but used in the NVIDIA examples
-	ADD_Handler(builder, o2i, "clSetCommandQueueProperty",
+	ADD_Handler(o2i, "clSetCommandQueueProperty",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// exceptions, will be handled in a later step
-	ADD_Handler(builder, o2i, "clCreateContext", return node;);
-	ADD_Handler(builder, o2i, "clCreateCommandQueue", return node;);
-	ADD_Handler(builder, o2i, "clCreateKernel", return node;);
+	ADD_Handler(o2i, "clCreateContext", return node;);
+	ADD_Handler(o2i, "clCreateCommandQueue", return node;);
+	ADD_Handler(o2i, "clCreateKernel", return node;);
 
 	// exceptions for runtime functions, keep them as they are
-	ADD_Handler(builder, o2i, "icl_init_args", return node;);
-	ADD_Handler(builder, o2i, "icl_parse_args", return node;);
-	ADD_Handler(builder, o2i, "icl_release_args", return node;);
+	ADD_Handler(o2i, "icl_init_args", return node;);
+	ADD_Handler(o2i, "icl_parse_args", return node;);
+	ADD_Handler(o2i, "icl_release_args", return node;);
 
 	// exceptions for the icl_lib_bmp library
-	ADD_Handler(builder, o2i, "icl_savebmp", return node;);
-	ADD_Handler(builder, o2i, "icl_loadbmp", return node;);
+	ADD_Handler(o2i, "icl_savebmp", return node;);
+	ADD_Handler(o2i, "icl_loadbmp", return node;);
 
 	// exceptions for icl_lib power measurent
-	ADD_Handler(builder, o2i, "icl_start_energy_measurement", return node;);
-	ADD_Handler(builder, o2i, "icl_stop_energy_measurement", return node;);
+	ADD_Handler(o2i, "icl_start_energy_measurement", return node;);
+	ADD_Handler(o2i, "icl_stop_energy_measurement", return node;);
 
 
 	// handlers for insieme opencl runtime stuff
-	ADD_Handler(builder, o2i, "icl_",
+	ADD_Handler(o2i, "icl_",
 		return builder.literal(node->getType(), "0"); // default handling, remove it
 	);
-};
-
-HandlerPtr& HostMapper::findHandler(const string& fctName) {
-	// for performance reasons working with function prefixes is only enabled for funcitons containing cl
-	// needed for cl*, ocl* and icl_* functions
-	if (fctName.find("cl") == string::npos)
-		return handles[fctName];
-	// checking function names, starting from the full name
-	for (int i = fctName.size(); i > 2; --i) {
-		if (HandlerPtr& h = handles[fctName.substr(0,i)])
-			return h;
-	}
-	return handles["break"]; // function is not in map
 }
-#endif
+
+const NodePtr OclSimpleFunHandler::resolveElement(const NodePtr& ptr){
+	// stopp recursion at type level
+	if (ptr->getNodeCategory() == NodeCategory::NC_Type) {
+		return ptr;
+	}
+
+	if(ptr->getNodeType() != NT_CallExpr)
+		return ptr->substitute(ptr.getNodeManager(), *this);
+
+	CallExprPtr callExpr = ptr.as<CallExprPtr>();
+
+	const ExpressionPtr fun = callExpr->getFunctionExpr();
+
+	if(const LiteralPtr literal = dynamic_pointer_cast<const Literal>(fun)) {
+//std::cout << "\nTry to handle " << literal->getValue();
+		//			callExpr->substitute(builder.getNodeManager(), *this);
+		if(const HandlerPtr& replacement = findHandler(literal->getStringValue())) {
+			NodePtr ret = replacement->handleNode(callExpr);
+//std::cout << "\nHandling fct " << literal->getValue() << " -> " << ret << std::endl;
+			// check if new kernels have been created
+/*			const vector<ExpressionPtr>& kernels = replacement->getKernels();
+			if(kernels.size() > 0) {
+				for_each(kernels, [&](ExpressionPtr kernel) {
+						kernelEntries.push_back(kernel);
+					});
+				replacement->resetKernels();
+			}
+			copyAnnotations(callExpr, ret);
+			*/
+			return ret;
+		} else
+			return ptr->substitute(ptr.getNodeManager(), *this);
+	} else
+		return ptr->substitute(ptr.getNodeManager(), *this);
+	return ptr;
+}
 
 } //namespace ocl
 } //namespace frontend

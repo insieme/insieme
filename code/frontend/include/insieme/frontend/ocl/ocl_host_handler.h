@@ -150,9 +150,12 @@ public:
 	// creating a shared pointer to a LambdaHandler
 
 	core::NodePtr handleNode(core::CallExprPtr node) {
+		core::NodeManager& mgr = node.getNodeManager();
+		core::IRBuilder builder(mgr);
+
 //		LOG(DEBUG) << "Handling node " << node << std::endl;
 
-		return body(node, kernels);
+		return body(node, builder, kernels);
 	}
 
 };
@@ -167,8 +170,22 @@ HandlerPtr make_handler(Ocl2Inspire& o2i, const char* fct, std::set<string> kern
 }
 
 #define ADD_Handler(o2i, fct, BODY) \
-    handles.insert(std::make_pair(fct, make_handler(o2i, fct, kernelFileCache, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
+    handles.insert(std::make_pair(fct, make_handler(o2i, fct, kernelFileCache, \
+    		[&](core::CallExprPtr node, core::IRBuilder builder, core::ProgramPtr& kernels){ BODY }))).second;
 
+class OclSimpleFunHandler: public core::transform::CachedNodeMapping {
+	ocl::HandlerTable handles;
+	ocl::Ocl2Inspire o2i;
+	// set to store paths of loaded kernel files
+	std::set<string> kernelFileCache;
+
+	ocl::HandlerPtr& findHandler(const string& fctName);
+
+public:
+	OclSimpleFunHandler();
+
+	const core::NodePtr resolveElement(const core::NodePtr& ptr);
+};
 
 } //namespace ocl
 } //namespace frontend
