@@ -387,8 +387,8 @@ TEST(DeclsStage, MatchVisits) {
 //	std::cout << typesPre  <<" , " << typesPost<< std::endl;
 
 	EXPECT_EQ (10, varsPre);
-	EXPECT_EQ (18, funcsPre);   // this is weird, but works
-	EXPECT_EQ (6, typesPre);
+	EXPECT_EQ (18, funcsPre);   // check the test code to count the instances
+	EXPECT_EQ (3, typesPre);    // one class and two template spetializations
 
 	EXPECT_EQ (varsPre, varsPost);
 	EXPECT_EQ (funcsPre, funsPost);
