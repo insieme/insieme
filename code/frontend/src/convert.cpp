@@ -291,15 +291,18 @@ tu::IRTranslationUnit Converter::convert() {
         }
 
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
-			// we do not convert templates or partial spetialized classes/functions, the full
-			// type will be found and converted once the instantaion is found
-			converter.trackSourceLocation (typeDecl->getLocStart());
-			converter.convertTypeDecl(typeDecl);
-			converter.untrackSourceLocation ();
+			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
+				// we do not convert templates or partial spetialized classes/functions, the full
+				// type will be found and converted once the instantaion is found
+				converter.trackSourceLocation (typeDecl->getLocStart());
+				converter.convertTypeDecl(typeDecl);
+				converter.untrackSourceLocation ();
+			}
 
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
-		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
+		// typedefs and typealias
+		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
 
 			// get contained type
@@ -368,8 +371,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
-			//std::cout << " == converting function: " << funcDecl->getNameAsString() << std::endl;
-			//std::cout << "\t@" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << std::endl;
 
 			converter.trackSourceLocation (funcDecl->getLocStart());
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
