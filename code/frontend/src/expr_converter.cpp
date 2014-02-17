@@ -1831,8 +1831,9 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
     }
 
     if(!retIr){
-		convFact.trackSourceLocation(expr->getLocStart());
+		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages
