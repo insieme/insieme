@@ -81,7 +81,7 @@ class PrunableDeclVisitor{
 	/**
 	 * Default implementation, overide to add functionality
 	 */
-	void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
+	void VisitTypedefNameDecl(const clang::TypedefNameDecl* typeDecl) {
 	}
 	/**
 	 * Default implementation, overide to add functionality
@@ -133,8 +133,14 @@ class PrunableDeclVisitor{
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
+			case clang::Decl::NamespaceAlias:  // clang 3.4
+				{
+					dispatchDecl(llvm::cast<clang::NamespaceAliasDecl>(decl)->getNamespace());
+					break;
+				}
 			case clang::Decl::Record:
 				{
+					if (llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
@@ -173,9 +179,10 @@ class PrunableDeclVisitor{
 					break;
 				}
 			case clang::Decl::Typedef:
+			case clang::Decl::TypeAlias:
 				{
-					if (llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
-                    static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
+					if (llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefNameDecl>(decl)->getUnderlyingType().getTypePtr())) break;
+                    static_cast<BASE*>(this)->VisitTypedefNameDecl(llvm::cast<clang::TypedefNameDecl>(decl));
 					break;
 				}
 			case clang::Decl::LinkageSpec:
@@ -191,12 +198,16 @@ class PrunableDeclVisitor{
 					clang::ClassTemplateDecl::spec_iterator spec_it = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_begin ();
 					clang::ClassTemplateDecl::spec_iterator spec_end = const_cast<clang::ClassTemplateDecl*> (classTmplDecl)->spec_end ();
 					for (; spec_it != spec_end; ++spec_it){
-						dispatchDecl(*spec_it);
+						if (!spec_it->isDependentType()){
+							dispatchDecl(*spec_it);
+						}
 					}
 					break;
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
+					if (llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(decl)) break;
+
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;
@@ -224,11 +235,15 @@ class PrunableDeclVisitor{
 			case clang::Decl::Field:
 			case clang::Decl::IndirectField:
 			case clang::Decl::Friend:
+			case clang::Decl::Label:    // clang 3.4
+			case clang::Decl::Empty:	// clang 3.4
+			case clang::Decl::TypeAliasTemplate:	// clang 3.4   // TODO: check if needed
 
 				break;
 
 			default:
-			//	std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
+				std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
+				assert(false && "not implemented type of Decl");
 				return;
 		}
 	}

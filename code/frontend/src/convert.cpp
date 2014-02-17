@@ -247,7 +247,7 @@ Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const Co
 		convSetup(setup),
 		pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
-		lastTrackableLocation(nullptr),
+		lastTrackableLocation(),
 		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
 	if (translationUnit.isCxx()){
@@ -291,19 +291,23 @@ tu::IRTranslationUnit Converter::convert() {
         }
 
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
-			// we do not convert templates or partial spetialized classes/functions, the full
-			// type will be found and converted once the instantaion is found
-			converter.trackSourceLocation (typeDecl->getLocStart());
-			converter.convertTypeDecl(typeDecl);
-			converter.untrackSourceLocation ();
+			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
+
+				// we do not convert templates or partial spetialized classes/functions, the full
+				// type will be found and converted once the instantaion is found
+				converter.trackSourceLocation (typeDecl);
+				converter.convertTypeDecl(typeDecl);
+				converter.untrackSourceLocation ();
+			}
 
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
-		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
+		// typedefs and typealias
+		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
 
 			// get contained type
-			converter.trackSourceLocation (typedefDecl->getLocStart());
+			converter.trackSourceLocation (typedefDecl);
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
 
@@ -334,7 +338,7 @@ tu::IRTranslationUnit Converter::convert() {
 			if (var->hasExternalStorage()) { return; }
 			if (var->isStaticLocal()) { return; }
 
-			converter.trackSourceLocation (var->getLocStart());
+			converter.trackSourceLocation (var);
 			converter.lookUpVariable(var);
 			converter.untrackSourceLocation();
 
@@ -368,10 +372,8 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
-			//std::cout << " == converting function: " << funcDecl->getNameAsString() << std::endl;
-			//std::cout << "\t@" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << std::endl;
 
-			converter.trackSourceLocation (funcDecl->getLocStart());
+			converter.trackSourceLocation (funcDecl);
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
 			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
@@ -961,7 +963,7 @@ core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 //
 core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* funcDecl){
 	const clang::Type* type= GET_TYPE_PTR(funcDecl);
-	trackSourceLocation(funcDecl->getLocStart());
+	trackSourceLocation(funcDecl);
 	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
 
 	// check whether it is actually a member function

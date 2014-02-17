@@ -280,11 +280,11 @@ public:
     }
 
 	insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog) {
-	    std::cout << "############SEMANTIC CHECKS AGAIN############\n";
-        auto msg = insieme::core::checks::check(prog);
-        if(!msg.empty()) {
-            std::cout << msg.getErrors().size() << " errors found.\n";
-        }
+	   // std::cout << "############ SEMANTIC CHECKS AGAIN ############\n";
+       // auto msg = insieme::core::checks::check(prog);
+       // if(!msg.empty()) {
+       //     std::cout << msg.getErrors().size() << " errors found.\n";
+       // }
 	    return prog;
 	}
 

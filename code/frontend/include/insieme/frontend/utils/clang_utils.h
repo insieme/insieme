@@ -100,7 +100,7 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl);
  * @param tagType clang TagType pointer
  * @return name for enumeration
  */
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl);
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) ;
 
 /**
  * build names for enumeration constants. 

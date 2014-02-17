@@ -123,8 +123,9 @@ std::string location(clang::SourceLocation const& l, clang::SourceManager const&
 			}
 			*/
 		}
+		return string("UNKNOWN FILE");
 	}
-	return string("UNKNOWN FILE");
+	return string("INVALID LOC");
 }
 
 clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc) {

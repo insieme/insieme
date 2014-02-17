@@ -249,7 +249,6 @@ namespace tu {
 			}
 
 			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
-
 				// check whether value is already cached
 				{
 					auto pos = cache.find(ptr);
@@ -400,23 +399,13 @@ namespace tu {
 				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
 					auto call = res.as<CallExprPtr>();
 
-					if (!call[0]->getType().isa<RefTypePtr>()){
-						std::cout << "composite without ref" << std::endl;
-						dumpPretty(res);
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " the element is:" << std::endl;
-						dumpPretty(call[0]);
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " ================================================================= " << std::endl;
-						std::cout << " the element type is:" << std::endl;
-						dumpPretty(call[0]->getType());
-					}
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
+
+						assert(call[0]);
+						assert(call[1]);
+
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
-							// type changed... do we have any cppRef to unwrap?
+						// type changed... do we have any cppRef to unwrap?
 						if (*(tmp->getType()) != *(call->getType())  &&
 							core::analysis::isAnyCppRef(tmp->getType().as<RefTypePtr>()->getElementType()))
 							res = builder.toIRRef(builder.deref(tmp));

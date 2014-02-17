@@ -1057,8 +1057,9 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 			break;
     }
     if(!retIr){
-		convFact.trackSourceLocation(expr->getLocStart());
+		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

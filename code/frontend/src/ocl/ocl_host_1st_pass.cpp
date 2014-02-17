@@ -1125,8 +1125,8 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
 	if(type == POINTER(builder.genericType("_cl_program"))) {
 		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(createProgramWithSource, builder))) {
-			if(annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>
-					(createProgramWithSource->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
+			if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
+					(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
 				const string& path = kfa->getKernelPath();
 				if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
 					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));

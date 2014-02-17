@@ -36,10 +36,6 @@
 
 #include "insieme/frontend/expr_converter.h"
 
-#include <clang/AST/StmtVisitor.h>
-#include <clang/Basic/FileManager.h>
-
-
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/utils/source_locations.h"
@@ -1831,8 +1827,9 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
     }
 
     if(!retIr){
-		convFact.trackSourceLocation(expr->getLocStart());
+		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
+		convFact.untrackSourceLocation();
 	}
 
 	// print diagnosis messages

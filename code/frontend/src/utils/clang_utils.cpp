@@ -46,6 +46,8 @@
 #include <clang/AST/DeclTemplate.h>
 #include <llvm/Support/Casting.h>
 
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceManager.h>
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
@@ -61,7 +63,7 @@ using namespace llvm;
 { \
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
-		boost::replace_all(str, "::", "_"); \
+		boost::replace_all(str, "::","_"); \
 		boost::replace_all(str, " ", "_"); \
 		boost::replace_all(str, "(", "_"); \
 		boost::replace_all(str, ")", "_"); \
@@ -145,6 +147,8 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//and less equals, greater equals (handled in one case)
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
+	// also * symbol
+	boost::algorithm::replace_last(name, "operator*","ASTdummy");
 
 	// beware of spetialized functions, the type does not show off
 	// check if we have template spec args otherwise seg faults may occur
@@ -211,6 +215,8 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//if nothing was found check for the other ones
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
+	// and the asterisc symbol
+	boost::algorithm::replace_last(name, "ASTdummy","operator*");
 
 	// all done
 	return name;
@@ -224,12 +230,22 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl){
 }
 
 
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl) {
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
     std::string name = enumDecl->getQualifiedNameAsString();
     //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
-    if(name.empty()) {
-        name = "anonymous";
+    if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
+		std::stringstream ss;
+		ss << "_anonEnum";
+
+		ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
+		ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
+		ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
+
+		name =  ss.str();
+		REMOVE_SYMBOLS(name);
+		boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
+		boost::replace_all(name, "/", "_"); 
     }
     return name;
 }

@@ -36,11 +36,13 @@
 
 
 
+#include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -48,8 +50,11 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/annotations/c/decl_only.h"
+#include "insieme/annotations/c/include.h"
 
-#include "insieme/frontend/expr_converter.h"
+#include "insieme/core/checks/full_check.h"
+
+//#include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/utils/assert.h"
 
@@ -62,34 +67,37 @@
 
 		core::NodePtr applyCleanup(const core::NodePtr& node, std::function<core::NodePtr(const core::NodePtr&)>  pass){
 
-			core::NodePtr res = pass(node);
+			core::NodePtr res;
+
+			if (!node.isa<core::TypePtr>())
+				res = pass(node); 
 
 			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
-					if (core::hasMetaInfo(type)){
-						auto meta = core::getMetaInfo(type);
-
-						vector<core::LambdaExprPtr> ctors = meta.getConstructors();
-						for (auto& ctor : ctors){
-							ctor = pass(ctor).as<core::LambdaExprPtr>();
-						}
-						if (!ctors.empty()) meta.setConstructors(ctors);
-
-						if (meta.hasDestructor()){
-							auto dtor = meta.getDestructor();
-							dtor = pass(dtor).as<core::LambdaExprPtr>();
-							meta.setDestructor(dtor);
-						}
-
-						vector<core::MemberFunction> members = meta.getMemberFunctions();
-						for (core::MemberFunction& member : members){
-							member = core::MemberFunction(member.getName(), pass(member.getImplementation()).as<core::ExpressionPtr>(),
-														  member.isVirtual(), member.isConst());
-						}
-						if(!members.empty()) meta.setMemberFunctions(members);
-						core::setMetaInfo(type, meta);
-
+				if (core::hasMetaInfo(type)){
+					auto meta = core::getMetaInfo(type);
+	
+					vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+					for (auto& ctor : ctors){
+						ctor = pass(ctor).as<core::LambdaExprPtr>();
 					}
-			} );
+					if (!ctors.empty()) meta.setConstructors(ctors);
+
+					if (meta.hasDestructor()){
+						auto dtor = meta.getDestructor();
+						dtor = pass(dtor).as<core::LambdaExprPtr>();
+						meta.setDestructor(dtor);
+					}
+
+					vector<core::MemberFunction> members = meta.getMemberFunctions();
+					for (core::MemberFunction& member : members){
+						member = core::MemberFunction(member.getName(), pass(member.getImplementation()).as<core::ExpressionPtr>(),
+													  member.isVirtual(), member.isConst());
+					}
+					if(!members.empty()) meta.setMemberFunctions(members);
+					core::setMetaInfo(type, meta);
+
+				}
+			});
 			return res;
 		}
 
@@ -223,13 +231,31 @@
 
 		}
 
-
 	} // anonymous namespace
-
-
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
+	//
+	void printErrors ( const core::TypePtr& obj, const core::checks::MessageList& ml , const char* msg, bool& flag){
+		if (!ml.empty()){
+
+			if (flag){
+				dumpPretty(obj);
+				flag = false;
+			}
+
+			for (unsigned i=0 ; i < ml.size(); i++){
+				std::cout << " == Sema error " << msg << "  ==== " << std::endl;
+				std::cout << " - " <<  ml[i].getErrorCode() << std::endl;
+			//	dumpPretty(ml[i].getOrigin());
+
+				std::string msg = ml[i].getMessage();
+				std::cout << " msg: " << std::string(msg.begin(), (msg.length() > 80)? msg.begin()+80 : msg.end()) << std::endl;
+			}
+		}
+	}
+
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
 
@@ -238,6 +264,52 @@
 		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, declarationCleanup).as<core::ProgramPtr>();
 
+
+	//	core::NodeManager& nm (prog.getNodeManager());
+	//	core::IRBuilder builder (nm);
+
+	//	auto triangleThing = builder.genericType("Triangle_3");
+	//	if (core::hasMetaInfo(triangleThing)){
+	//		std::cout << "Hey: there is meta" << std::endl << std::flush;
+	//	}
+	//	else{
+	//		std::cout << " no meta at all" << std::endl << std::flush;
+	//	}
+
+	//	if ( annotations::c::hasIncludeAttached(triangleThing) ){
+	//		std::cout << " there is an include" << std::endl << std::flush;
+	//	}
+	//	else{
+	//		std::cout << " no include at all" << std::endl << std::flush;
+	//	}
+
+	//  ///////////////////////////////////////////////////////////////
+	//  //   make independent semantic checks
+	//	core::visitDepthFirstOnce(prog, [&] (const core::TypePtr& type){
+	//			if (core::hasMetaInfo(type)){
+	//				bool dumpClass =true;
+	//				auto meta = core::getMetaInfo(type);
+
+	//				vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+	//				for (auto& ctor : ctors){
+	//					auto semaErrors = core::checks::check(ctor);
+	//					printErrors (type, semaErrors, "ctor", dumpClass);
+	//				}
+
+	//				if (meta.hasDestructor()){
+	//					auto dtor = meta.getDestructor();
+	//					auto semaErrors = core::checks::check(dtor);
+	//					printErrors (type, semaErrors, "dtor", dumpClass);
+	//				}
+
+	//				vector<core::MemberFunction> members = meta.getMemberFunctions();
+	//				for (core::MemberFunction& member : members){
+	//					auto semaErrors = core::checks::check(member.getImplementation());
+	//					printErrors (type, semaErrors, "member", dumpClass);
+	//				}
+	//			}
+	//	});
+		
 		return prog;
 	}
 

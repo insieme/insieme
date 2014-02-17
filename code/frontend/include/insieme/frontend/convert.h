@@ -224,7 +224,7 @@ class Converter :  boost::noncopyable {
 	/**
 	 *  keeps track of the last point a source location to the input code could be found
 	 */
-	 const clang::SourceLocation* lastTrackableLocation;
+	std::stack<clang::SourceLocation> lastTrackableLocation;
 
 	frontend::utils::HeaderTagger headerTagger;
 
@@ -542,26 +542,41 @@ public:
 	void printDiagnosis(const clang::SourceLocation& loc);
 	
 	/**
-	 *  keeps track of the last point a source location to the input code could be found
+	 *  keeps track of the last point a source location to the Declaration
+	 *  this might be different depending of what we are dealing with. 
+	 *  Template spetialization might have 2 locations, template and instantiation location, both of those
+	 *  are not the location retrieved by the getLocation method in Decl
 	 */
-	void trackSourceLocation (const clang::SourceLocation& sl){
-		lastTrackableLocation = &sl;
+	void trackSourceLocation (const clang::Decl* decl){
+		if (const clang::ClassTemplateSpecializationDecl* spet = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)){
+			lastTrackableLocation.push(spet->getPointOfInstantiation());
+		}
+		else{
+			lastTrackableLocation.push(decl->getLocation ());
+		}
+	}
+
+	/**
+	 *  keeps track of the last point a source location to the Statement
+	 *  this might be different depending of what we are dealing with
+	 */
+	void trackSourceLocation (const clang::Stmt* stmt){
+		lastTrackableLocation.push(stmt->getLocStart());
 	}
 
 	void untrackSourceLocation (){
-		lastTrackableLocation = nullptr;
+		assert(!lastTrackableLocation.empty());
+		lastTrackableLocation.pop();
 	}
 	
 	/**
 	 *  returns readable location of the last registered source location
 	 */
 	std::string getLastTrackableLocation() const{
-		if (lastTrackableLocation){
-			return utils::location(*lastTrackableLocation, getSourceManager());
-		}
-		else{
-			return " << unable to identify last input code location >>";
-		}
+		if (!lastTrackableLocation.empty())
+			return utils::location(lastTrackableLocation.top(), getSourceManager());
+		else
+			return "ERROR: unable to identify last input code location ";
 	}
 
 };
