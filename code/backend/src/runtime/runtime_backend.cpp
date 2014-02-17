@@ -90,6 +90,7 @@ namespace runtime {
         if(isGemsclaim) {
             config->mainFunctionName = "insieme_main";
             config->additionalHeaderFiles.push_back("input_file.h");
+            config->areShiftOpsSupported = false;
         }
 
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
@@ -130,7 +131,7 @@ namespace runtime {
 
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
-		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable());
+		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), config);
 
 		// done
 		return converter;

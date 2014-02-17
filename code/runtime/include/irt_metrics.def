@@ -102,6 +102,8 @@ METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AG
 )
 #endif
 
+#ifdef _GEMS
+
 GROUP(rapmi_group, rapmi_t rapmi_data, { rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0); }, \
       {}, \
       { rapmi_start(); rapmi_read(&(context->inst_region_metric_group_support_data.rapmi_data)); }, \
@@ -132,6 +134,8 @@ METRIC(rapmi_ticks,                 52,   us,      uint32,      "%u",        IRT
     {}, \
     1 \
 )
+
+#endif
 
 GROUP(energy_group, , rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
 	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
