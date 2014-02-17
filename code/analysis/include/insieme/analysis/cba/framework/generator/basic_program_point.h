@@ -219,6 +219,7 @@ namespace cba {
 			if (!isCallWithinBind) this->connectStateSetsIf(callee, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
 
 			// just connect the effect of the arguments of the call-site with the in of the body call statement
+			bool hasUnboundArgument = false;
 			for(auto arg : call) {
 
 				// skip bound parameters
@@ -227,10 +228,13 @@ namespace cba {
 				// add effect of argument
 				auto l_arg = cba.getLabel(arg);
 				this->connectStateSetsIf(callee, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
+
+				// there are unbound values
+				hasUnboundArgument = true;
 			}
 
-			// special case: if this is a bind with no parameters
-			if (bind && bind->getParameters()->empty()) {
+			// special case: if this is a bind with no free parameters
+			if (bind && !hasUnboundArgument) {
 				// connect in of call site with in of body
 				this->connectStateSetsIf(callee, F_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
 			}
