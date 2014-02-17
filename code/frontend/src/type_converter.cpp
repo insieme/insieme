@@ -72,7 +72,10 @@ using namespace insieme;
 namespace std {
 
 std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
-	return out << decl->getNameAsString();
+	if (decl)
+		return out << decl->getNameAsString();
+	else
+		return out << "[UNNAMED]";
 }
 
 } // end std namespace
@@ -80,28 +83,73 @@ std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
 
 namespace {
 
-const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
+	const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 
-	// typedef std::map<std::pair<std::string, unsigned>, const clang::TagDecl*> DeclLocMap;
-	// static DeclLocMap locMap;
+		const clang::TagDecl* decl = tagType->getDecl();
+		clang::TagDecl* res = nullptr;
 
-	const clang::TagDecl* decl = tagType->getDecl();
+		TagDecl::redecl_iterator i,e = decl->redecls_end();
+		for(i = decl->redecls_begin(); i != e; ++i) {
 
-	TagDecl::redecl_iterator i,e = decl->redecls_end();
-	for(i = decl->redecls_begin(); i != e; ++i) {
+			if (llvm::isa<clang::TypedefDecl> (*i)) {
+				std::cout << "this is a typedef aliased type" << std::endl;
+				assert(false);
+			}
 
-		if (i->isCompleteDefinition()){
-			return i->getDefinition();
+			if (i->isCompleteDefinition()){
+				res =  i->getDefinition();
+			}
+			if ( llvm::isa<clang::ClassTemplatePartialSpecializationDecl> (*i)) {
+				continue;
+			}
+
+			if ( llvm::isa<clang::ClassTemplateSpecializationDecl> (*i)) {
+				if (i->isCompleteDefinitionRequired () )
+					res =  *i;
+			}
 		}
-		if ( llvm::isa<clang::ClassTemplateSpecializationDecl> (*i)) {
-		//if ( const clang::ClassTemplateSpecializationDecl* tmpl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (*i)) {
-			return *i;
+
+
+		if (res){
+			return res;
 		}
+
+		return NULL;
 	}
 
-	return NULL;
-}
+	core::TypePtr attachEnumName( const core::TypePtr& enumTy, const clang::EnumDecl* enumDecl){
+		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
+					const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(ecd);
+					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
+					out << enumConstantName << "=" << enumConstantInitVal;
+				};
 
+		//enumTypes can be shadowed if redeclared in different scope (similar to variables)
+		//we add all enumTypes to the global scope so the enumconstants need a distinguishable name
+		//(delivered by buildNameForEnumConstant)
+		if(!core::annotations::hasNameAttached(enumTy)) {
+			std::stringstream ss;
+			ss << join(", ", enumDecl->enumerator_begin(), enumDecl->enumerator_end(), enumConstantPrinter);
+			core::annotations::attachName(enumTy, ss.str());
+		} else {
+			std::stringstream annotation;
+			annotation << core::annotations::getAttachedName(enumTy);
+			// go through all possible enumConstants and attach them to the enumTy, if they aren't
+			// there already
+			for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
+				const clang::EnumConstantDecl* enumConstant = *it;
+				std::stringstream attachment;
+                enumConstantPrinter(attachment, enumConstant);
+
+                //check if element is already in enum list
+                if(annotation.str().find(attachment.str()) == std::string::npos) {
+                    annotation << ", " << attachment.str();
+                }
+			}
+			core::annotations::attachName(enumTy, annotation.str());
+		}
+		return enumTy;
+	}
 } // end anonymous namespace
 
 namespace insieme {
@@ -362,6 +410,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
 
+
 	// typedefs take ownership of the inner type, this way, same anonimous types along translation units will
 	// be named as the typdef if any
 	if (core::GenericTypePtr symb = retTy.isa<core::GenericTypePtr>()){
@@ -393,17 +442,6 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		}
 	}
 
-    //it may happen that we have something like 'typedef enum {...} name;'
-    //in this case we can forget the annotation
-    //typedef name annotation for struct/union messes with recursive type resolution
-    //as typeDef is syntactic sugar drop the name annotation
-    /*
-    if( !mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(retTy)
-		&& !retTy.isa<core::StructTypePtr>() && !retTy.isa<core::UnionTypePtr>()) {
-        // Adding the name of the typedef as annotation
-        core::annotations::attachName(retTy,typedefType->getDecl()->getNameAsString());
-    }
-    */
     return  retTy;
 }
 
@@ -431,12 +469,17 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
  core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( tagType, retTy );
-	// test whether we can get a definiton
+
+	// test whether we can get a definiton 
+//	auto def = tagType->getDecl();
+	
 	auto def = findDefinition(tagType);
 	if (!def) {
 
+		std::string name = utils::getNameForRecord(tagType->getDecl(), tagType);
+
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+		retTy = builder.genericType( name );
 
 		if (!tagType->getDecl()->getNameAsString().empty()) {
 			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
@@ -457,7 +500,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
        	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
 
 
-        const string& enumTypeName = utils::buildNameForEnum(enumDecl);
+        const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
 
 		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
@@ -470,36 +513,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		}
 
 		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream
-		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
-					const string& enumConstantName = utils::buildNameForEnumConstant(ecd);
-					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
-					out << enumConstantName << "=" << enumConstantInitVal;
-				};
-
-		//enumTypes can be shadowed if redeclared in different scope (similar to variables)
-		//we add all enumTypes to the global scope so the enumconstants need a distinguishable name
-		//(delivered by buildNameForEnumConstant)
-		if(!core::annotations::hasNameAttached(enumTy)) {
-			std::stringstream ss;
-			ss << join(", ", enumDecl->enumerator_begin(), enumDecl->enumerator_end(), enumConstantPrinter);
-			core::annotations::attachName(enumTy, ss.str());
-		} else {
-			std::stringstream annotation;
-			annotation << core::annotations::getAttachedName(enumTy);
-			// go through all possible enumConstants and attach them to the enumTy, if they aren't
-			// there already
-			for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
-				const clang::EnumConstantDecl* enumConstant = *it;
-				std::stringstream attachment;
-                enumConstantPrinter(attachment, enumConstant);
-
-                //check if element is already in enum list
-                if(annotation.str().find(attachment.str()) == std::string::npos) {
-                    annotation << ", " << attachment.str();
-                }
-			}
-			core::annotations::attachName(enumTy, annotation.str());
-		}
+		enumTy =  attachEnumName( enumTy, enumDecl);
 		VLOG(2) << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")";
 
 		//return enum type
@@ -518,6 +532,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	unsigned mid = 0;
 	for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+
 		RecordDecl::field_iterator::value_type curr = *it;
 		core::TypePtr&& fieldType = convert( GET_TYPE_PTR(curr) );
 
@@ -527,6 +542,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		mid++;
 	}
 
+
 	// build a struct or union IR type
 	retTy = handleTagType(def, structElements);
 
@@ -534,6 +550,32 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if (!recDecl->getNameAsString().empty()) {
         core::annotations::attachName(retTy,recDecl->getName());
 	}
+
+//	if (tagType->getDecl()->getNameAsString() == "Lazy_construction_nt"){
+//	//	Debug hook
+//	
+//
+//		std::cout << "###################################################################" << std::endl;
+//		std::cout << "#################  Lazy!               ############################" << std::endl;
+//		std::cout << "###################################################################" << std::endl;
+//		std::cout << *retTy << std::endl;
+//		std::cout << mid << std::endl;
+//		std::cout << "complete required: " << tagType->getDecl()->isCompleteDefinitionRequired ()  << std::endl;
+//		std::cout << "is complete: " << tagType->getDecl()->isCompleteDefinition ()  << std::endl;
+//		std::cout << "is free standing: " << tagType->getDecl()->isFreeStanding ()  << std::endl;
+//		std::cout << "###################################################################" << std::endl;
+//
+//		if (recDecl->field_empty () ){
+//
+//
+//
+//			recDecl->dump();
+//			abort();
+//			
+//
+//		}
+//	}
+
 	return retTy;
 }
 
@@ -546,9 +588,6 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 core::TypePtr Converter::TypeConverter::VisitElaboratedType(const ElaboratedType* elabType) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( elabType, retTy );
-	// elabType->dump();
-	//elabType->desugar().getTypePtr()->dump();
-	//std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 
 	return (retTy = convert( elabType->getNamedType().getTypePtr() ));
 }
@@ -662,19 +701,6 @@ core::TypePtr Converter::CTypeConverter::convertInternal(const clang::Type* type
 }
 
 
-namespace {
-
-	const RecordDecl* toRecordDecl(const clang::Type* type) {
-		if (auto tagType = dyn_cast<const clang::TagType>(type)) {
-			if (auto def = findDefinition(tagType)) {
-				return dyn_cast<const RecordDecl>(def);
-			}
-		}
-		return nullptr;
-	}
-
-}
-
 core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	auto& typeCache = convFact.typeCache;
 
@@ -688,7 +714,8 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	core::TypePtr res;
 
 	// assume a recursive construct for record declarations
-	if (auto recDecl = toRecordDecl(type)) {
+	if (auto tagType = llvm::dyn_cast<clang::TagType>( type)) {
+		auto recDecl = tagType->getDecl();
 		std::string name = utils::getNameForRecord(recDecl, type);
 
 		// create a (temporary) type variable for this type
@@ -710,7 +737,8 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 			convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 		}
 
-		frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
+		frontend_assert(res) << "it seems that no type was converted, this is not ok";
+
 
 	//	// give the type a name to structs
 	//	if (core::StructTypePtr strTy = res.isa<core::StructTypePtr>())
@@ -719,11 +747,22 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 		// check typeCache consistency
 		frontend_assert(typeCache[type] == symbol); // should not change in the meantime
 
-		// register type within resulting translation unit
-		convFact.getIRTranslationUnit().addType(symbol, res);
+		// it might be that type was not complete, keep just the symbol and the name will be forwarded to be linked
+		if (!res.isa<core::GenericTypePtr>()) {
+			frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
 
-		// run post-conversion actions
-		postConvertionAction(type, res);
+			// run post-conversion actions
+			postConvertionAction(type, res);
+
+			// register type within resulting translation unit
+			convFact.getIRTranslationUnit().addType(symbol, res);
+		}
+		
+		// is an enum, return it as it is
+		if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(res)){
+			typeCache[type] = res; 
+			return res;
+		}
 
 		// but the result is just the symbol
 		return symbol;

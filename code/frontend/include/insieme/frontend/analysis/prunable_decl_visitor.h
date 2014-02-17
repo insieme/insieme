@@ -206,6 +206,8 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::ClassTemplateSpecialization:
 				{
+					if (llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(decl)) break;
+
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
                     static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					break;

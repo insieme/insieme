@@ -293,15 +293,6 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
 
-				if  (typeDecl->getNameAsString() == "Lazy_construction_nt"){
-
-					std::cout << "==================================================" << std::endl;
-					std::cout << " complete:  " << typeDecl->isCompleteDefinition() << std::endl;
-					std::cout << "==================================================" << std::endl;
-						assert(typeDecl->isCompleteDefinition() );
-				}
-
-
 				// we do not convert templates or partial spetialized classes/functions, the full
 				// type will be found and converted once the instantaion is found
 				converter.trackSourceLocation (typeDecl);

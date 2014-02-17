@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
@@ -159,6 +160,15 @@ namespace tu {
 			assert_eq(*symbol->getType(), *definition->getType());
 			//check if function exists, if it exists we
 			//have to check if they are really the same.
+			
+	//		if (functions.find(symbol) != functions.end() && !core::analysis::equalNormalize ( definition, functions[symbol] )){
+	//			std::cout << "alias on symbol " << symbol << " \n with type: " << symbol->getType() << std::endl;
+	//			core::annotations::LocationOpt firstLoc = core::annotations::getLocation(functions[symbol]);
+	//			core::annotations::LocationOpt aliasLoc = core::annotations::getLocation(definition);
+	//			if (firstLoc) std::cout << " -first @ " << *firstLoc << std::endl;
+	//			if (aliasLoc) std::cout << " -alias @ " << *aliasLoc << std::endl;
+	//		}
+
 			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
 					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
 					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"

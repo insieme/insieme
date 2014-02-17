@@ -69,8 +69,6 @@ using namespace llvm;
 		boost::replace_all(str, ")", "_"); \
 		boost::replace_all(str, ",", "_"); \
 		boost::replace_all(str, "*", "_"); \
-		boost::replace_all(str, ".", "_"); \
-		boost::replace_all(str, "/", "_"); \
 }
 
 
@@ -149,6 +147,8 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//and less equals, greater equals (handled in one case)
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
+	// also * symbol
+	boost::algorithm::replace_last(name, "operator*","ASTdummy");
 
 	// beware of spetialized functions, the type does not show off
 	// check if we have template spec args otherwise seg faults may occur
@@ -215,6 +215,8 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//if nothing was found check for the other ones
 	boost::algorithm::replace_last(name, "sdummy", "operator<");
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
+	// and the asterisc symbol
+	boost::algorithm::replace_last(name, "ASTdummy","operator*");
 
 	// all done
 	return name;
@@ -242,6 +244,8 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 
 		name =  ss.str();
 		REMOVE_SYMBOLS(name);
+		boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
+		boost::replace_all(name, "/", "_"); 
     }
     return name;
 }

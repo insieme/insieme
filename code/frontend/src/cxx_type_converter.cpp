@@ -80,6 +80,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* p
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
+
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, ty) ;
 
