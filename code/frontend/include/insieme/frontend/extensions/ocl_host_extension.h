@@ -42,12 +42,11 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-
 // extension for OpenCl host files
 
 class OclHostPlugin : public FrontendPlugin {
 public:
-
+	OclHostPlugin();
 private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };

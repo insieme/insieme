@@ -95,6 +95,10 @@ namespace cba {
 			return callee.getBody();
 		}
 
+		const Context& getContext() const {
+			return context;
+		}
+
 		std::ostream& printTo(std::ostream& out) const {
 			if (callee.isLiteral()) return out << callee;
 			return out << "(" << callee << "," << context << ")";

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -52,6 +52,8 @@
 #include "insieme/annotations/c/include.h"
 
 #include "insieme/core/checks/full_check.h"
+
+#include "insieme/frontend/expr_converter.h"
 
 #include "insieme/utils/assert.h"
 
@@ -107,14 +109,14 @@
 		//  the problem comes when we pass it as parameter to functions, because it produces overload, even when in the backend both functions
 		//  are going to have the same parameter type
 		//
-		//  after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and statically 
+		//  after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and statically
 		//  resolved, so we wont find any problem related with typing.
 		//
-		//  The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit 
+		//  The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit
 		//  overloads in 3rd party libraries (they do not make much sense anyway, do they? )
 		insieme::core::NodePtr longLongCleanup (const insieme::core::NodePtr& prog){
 
-			core::NodePtr res; 
+			core::NodePtr res;
 
 			// remove all superfluous casts
 			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
@@ -129,15 +131,15 @@
 							// From
 							if (core::analysis::isCallOf(call, ext.getLongLongToLong()))  return call[0];
 							if (core::analysis::isCallOf(call, ext.getULongLongToULong())) return call[0];
-							
+
 							// between
 							if (core::analysis::isCallOf(call, ext.getLongLongToULongLong()))
-								return builder.callExpr(builder.getLangBasic().getUInt8(), 
-														builder.getLangBasic().getSignedToUnsigned(), 
+								return builder.callExpr(builder.getLangBasic().getUInt8(),
+														builder.getLangBasic().getSignedToUnsigned(),
 														toVector (call[0], builder.getIntParamLiteral(8)));
 							if (core::analysis::isCallOf(call, ext.getULongLongToLongLong()))
-								return builder.callExpr(builder.getLangBasic().getInt8(), 
-														builder.getLangBasic().getUnsignedToInt(), 
+								return builder.callExpr(builder.getLangBasic().getInt8(),
+														builder.getLangBasic().getUnsignedToInt(),
 														toVector (call[0], builder.getIntParamLiteral(8)));
 						}
 						return node;
@@ -146,8 +148,8 @@
 
 			// finaly, substitute any usage of the long long types
 			core::IRBuilder builder (prog->getNodeManager());
-			core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8()))); 
-			core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8()))); 
+			core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8())));
+			core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8())));
 			core::NodeMap replacements;
 			replacements [ longlongTy ] = builder.getLangBasic().getInt8();
 			replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
@@ -214,7 +216,7 @@
 			core::IRBuilder builder(prog->getNodeManager());
 
 			visitDepthFirstOnce(prog, [&](const core::GenericTypePtr& cur) {
-					if(insieme::annotations::c::isDeclOnly(cur)) { 
+					if(insieme::annotations::c::isDeclOnly(cur)) {
 						insieme::annotations::c::markDeclOnly(cur,false);
 						core::NamedCompositeType::Entries structElements;
 						auto replacement = builder.structType( builder.stringValue(cur.toString()),structElements );
@@ -309,6 +311,53 @@
 		
 		return prog;
 	}
+
+
+    //used to replace all malloc and calloc calls with the correct IR expression
+    insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+        for (auto& pair : tu.getFunctions()) {
+            core::ExpressionPtr lit = pair.first;
+            core::LambdaExprPtr func = pair.second;
+
+            core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
+            assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
+
+            core::IRBuilder builder(func->getNodeManager());
+            const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+
+            // filter to filter out the recursive transition to another called function
+            auto filter = [&func] (const core::NodePtr& node) ->bool{
+                if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()){
+                    if (call == func) return true;
+                    else return false;
+                }
+                return true;
+            };
+
+            // fix all malloc and calloc calls
+			auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
+			    if(core::analysis::isCallOf(node,gen.getRefReinterpret())) {
+                    if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
+                        if (core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
+                            if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
+                                return exprutils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
+                            }
+                        }
+                    }
+                }
+				return node;
+			};
+
+			// modify all returns at once!
+			auto memallocFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+			func = memallocFixer.map(func);
+
+            //update function of translation unit
+            tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
+        }
+        return tu;
+    }
+
 
 } // frontend
 } // insieme

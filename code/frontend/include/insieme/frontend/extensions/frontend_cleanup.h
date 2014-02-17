@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,13 +43,14 @@
 
 /**
  *
- * This is the frontend cleanup tool. 
+ * This is the frontend cleanup tool.
  * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
  * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
- * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code 
+ * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code
  */
 class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
 		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
 

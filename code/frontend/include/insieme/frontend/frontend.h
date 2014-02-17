@@ -131,6 +131,12 @@ namespace frontend {
 		 */
 		set<string> interceptions;
 
+        /**
+         * A list of optimization flags (-f flags) that need to be used at least in the
+         * backend compiler
+         */
+        set<string> fflags;
+
 		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
 		 */
@@ -265,6 +271,20 @@ namespace frontend {
 		const set<string>& getInterceptions() const {
 			return interceptions;
 		}
+
+        /**
+         * Adds a single optimization flag
+         */
+        void addFFlag(const string& flag) {
+            this->fflags.insert(flag);
+        }
+
+        /**
+         * Obtains a reference to the currently defined f flags
+         */
+        const set<string>& getFFlags() const {
+            return fflags;
+        }
 
 		/**
 		 * A utility method to determine whether the given file should be

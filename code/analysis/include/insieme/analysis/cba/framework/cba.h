@@ -100,7 +100,6 @@ namespace cba {
 		class Container : public ContainerBase {
 
 			utils::Lazy<std::vector<Context>> contexts;
-			utils::Lazy<std::vector<Location<Context>>> locations;
 			map<std::size_t, std::vector<Callable<Context>>> callables;
 
 		public:
@@ -121,59 +120,6 @@ namespace cba {
 				}
 
 				return contexts;
-			}
-
-			const std::vector<Location<Context>>& getLocations(CBA& cba) {
-				if (locations) return locations;
-
-				locations = std::vector<Location<Context>>();
-
-				// collect all memory location constructors
-				core::visitDepthFirst(cba.getRoot(), [&](const core::ExpressionAddress& cur) {
-
-					// TODO: filter contexts - not all locations may occur in all contexts
-					// (this will reduce the number of sets / constraints)
-
-					if (isMemoryConstructor(cur)) {
-						for(const auto& ctxt : this->getContexts(cba)) {
-							// TODO: move location creation utility to location constructor
-							auto loc = getLocation<Context>(cur, ctxt);
-							if (!::contains(*locations, loc)) {
-								locations->push_back(loc);
-							}
-						}
-					}
-				});
-				return locations;
-			}
-
-			const std::vector<Callable<Context>>& getCallables(CBA& cba, std::size_t numParams) {
-				auto pos = callables.find(numParams);
-				if (pos != callables.end()) {
-					return pos->second;
-				}
-
-				vector<Callable<Context>>& res = callables[numParams];
-
-				for(const auto& fun : cba.getCallSiteManager().getFreeCallees(numParams)) {
-
-					if (fun.isLambda() || fun.isLiteral()) {
-
-						res.push_back(Callable<Context>(fun));
-
-					} else if (fun.isBind()) {
-
-						for(const auto& ctxt : getContexts(cba)) {
-							res.push_back(Callable<Context>(fun, ctxt));
-						}
-
-					} else {
-
-						assert_fail() << "Encountered unexpected function type: " << fun.getDefinition()->getNodeType();
-					}
-				}
-
-				return res;
 			}
 
 		};
@@ -418,11 +364,6 @@ namespace cba {
 			return getContainer<Context>().getLocations(*this);
 		}
 
-		template<typename Context>
-		const std::vector<Callable<Context>>& getCallables(std::size_t numParams) {
-			return getContainer<Context>().getCallables(*this, numParams);
-		}
-
 
 		// -------------- Static Context Filter -----------------
 
@@ -581,6 +522,8 @@ namespace cba {
 		// ----------------------- some debugging utilities ---------------------------
 
 		void plot(std::ostream& out = std::cout) const;
+
+		void plotRoots(std::ostream& out = std::cout) const;
 
 		std::size_t getNumSets() const {
 			return value2generator.size();

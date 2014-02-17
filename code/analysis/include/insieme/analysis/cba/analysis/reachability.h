@@ -111,6 +111,11 @@ namespace cba {
 		ReachableOutConstraintGenerator(CBA& cba)
 			: super(cba, Rin, Rtmp, Rout), cba(cba) { }
 
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			// every call reached will be finished
+			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rout,call,ctxt)));
+		}
+
 		/**
 		 * Here we need a special handling (not considering reachability) since it is what we try to compute.
 		 */

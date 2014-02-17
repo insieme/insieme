@@ -176,9 +176,9 @@ namespace cba {
 
 		/**
 		 * A custom constraint for the data flow equation solver obtaining the value
-		 * from a location in case a given reference is pointing to it.
+		 * from a location a given reference is pointing to it.
 		 */
-		template<typename ValueLattice, typename RefLattice, typename Context>
+		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
 		struct ReadConstraint : public Constraint {
 
 			typedef typename RefLattice::base_lattice::value_type ref_set_type;
@@ -189,26 +189,37 @@ namespace cba {
 			typedef typename ValueLattice::projection_op_type projection_op_type;
 			typedef typename ValueLattice::less_op_type less_op_type;
 
-			// the location the location state value is referencing to.
-			Location<Context> loc;
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the read operation itself
+			CallExprAddress readOp;
+
+			// the context of the read operation
+			Context ctxt;
 
 			// the value covering the read reference
 			TypedValueID<RefLattice> ref;
 
-			// the value to be potentially read
-			TypedValueID<ValueLattice> loc_value;
-
 			// the set to be updated
 			TypedValueID<ValueLattice> res;
+
+			// a map of referenced locations to their values
+			mutable std::map<Location<Context>, TypedValueID<ValueLattice>> loc_value_map;
 
 			// the input values reference by this constraint
 			mutable std::vector<ValueID> inputs;
 
 		public:
 
-			ReadConstraint(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res)
-				: Constraint(toVector<ValueID>(ref, loc_value), toVector<ValueID>(res), true),
-				  loc(loc), ref(ref), loc_value(loc_value), res(res) {}
+			ReadConstraint(
+					CBA& cba, const CallExprAddress& call, const Context& ctxt,
+					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res
+				) : Constraint(toVector<ValueID>(ref), toVector<ValueID>(res), true, true),
+				  cba(cba), readOp(call), ctxt(ctxt), ref(ref), res(res)
+			{
+				inputs.push_back(ref);
+			}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				// read input data and add it to result value
@@ -216,80 +227,384 @@ namespace cba {
 				return meet_assign_op(ass[res], getReadData(ass)) ? Constraint::Incremented : Constraint::Unchanged;
 			}
 
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get list of references
+				const set<Reference<Context>>& refs = ass[ref];
+
+				bool changed = false;
+				for(const auto& cur : refs) {
+
+					// get the current location
+					const auto& loc = cur.getLocation();
+
+					// check whether location has already been referenced before
+					if (loc_value_map.find(loc) != loc_value_map.end()) continue;
+
+					// it is a new location
+					auto valueSet = cba.getSet(Stmp<NestedAnalysesType>(), readOp, ctxt, loc);
+					loc_value_map[loc] = valueSet;
+					inputs.push_back(valueSet);
+					changed = true;
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
 			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
 				// check whether data to be read is in result set
 				less_op_type less_op;
 				return less_op(getReadData(ass), ass[res]);
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-				return out << loc_value << " -> " << res << "[label=\"" << *this << "\"]\n";
-			}
-
-			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
-				out << loc_value << " -> " << res << "[label=\"" << *this << "\"";
-				if (!isReferenced(ass)) out << " style=dotted";
-				return out << "]\n";
+				for(const auto& cur : loc_value_map) {
+					out << cur.second << " -> " << res << "[label=\"reads\"]\n";
+				}
+				return out << ref << " -> " << res << "[label=\"defined reference\"]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << loc << " touched by " << ref << " => " << loc_value << " in " << res;
+				return out << "*" << ref << " in " << res;
 			}
 
 			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
-				inputs.clear();
-				inputs.push_back(ref);
-				if (isReferenced(ass)) inputs.push_back(loc_value);
 				return inputs;
 			}
 
 		private:
 
-			bool isReferenced(const Assignment& ass) const {
-				// obtain set of references
-				const ref_set_type& ref_set = ass[ref];
-				for(const auto& cur : ref_set) {
-					if (cur.getLocation() == loc) return true;
-				}
-				return false;
-			}
-
 			value_type getReadData(const Assignment& ass) const {
-				// check whether location is present in reference set
-				const ref_set_type& ref_set = ass[ref];
+				typedef typename generator<NestedAnalysesType, analysis_config<Context>>::type BaseGenerator;
 
-				// get list of accessed data paths in memory location
-				vector<DataPath> paths;
-				for(const auto& cur : ref_set) {
-					if (cur.getLocation() == loc) {
-						paths.push_back(cur.getDataPath());
-					}
-				}
-
-				// check whether something is referenced
-				value_type res;
-				if (paths.empty()) return res;
-
-				// get current value of location
-				const value_type& mem_value = ass[loc_value];
-
-				// collect all values from the loc_value referenced by the paths
+				// instances of required operators
 				meet_assign_op_type meet_assign_op;
 				projection_op_type projection_op;
 
-				for(const auto& cur : paths) {
-					meet_assign_op(res, projection_op(mem_value, cur));
+				// initialize empty result
+				value_type res;
+
+				// collect data from all referenced memory locations
+				const std::set<Reference<Context>>& refs = ass[ref];
+				for(const auto& cur : refs) {
+
+					// get targeted location
+					const auto& loc = cur.getLocation();
+
+					// special handling for reading global any-refs => undefined values in those cases
+					if (loc.isUnknown()) {
+
+						// add the unknown value to the result
+						auto unknownValue = BaseGenerator(cba).getUnknownValue();
+						unknownValue = getUndefinedValue(cba.template getDataManager(this->res), readOp->getType(), unknownValue);
+
+						// include unknown value
+						meet_assign_op(res, unknownValue);
+						continue;
+					}
+
+					// get current value of location
+					const value_type& mem_value = ass[loc_value_map[loc]];
+
+					// collect all values from the loc_value referenced by the paths
+					meet_assign_op(res, projection_op(mem_value, cur.getDataPath()));
 				}
+
+				// return result
 				return res;
 			}
 
 		};
 
-		template<typename ValueLattice, typename RefLattice, typename Context>
-		ConstraintPtr read(const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& loc_value, const TypedValueID<ValueLattice>& res) {
-			return std::make_shared<ReadConstraint<ValueLattice,RefLattice,Context>>(loc, ref, loc_value, res);
+		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
+		ConstraintPtr read(CBA& cba, const CallExprAddress& readOp, const Context& readCtxt, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<ReadConstraint<NestedAnalysesType,ValueLattice,RefLattice,Context>>(cba, readOp, readCtxt, ref, res);
 		}
 
+
+		/**
+		 * ----------------------------- Bound Value Collector Constraint --------------------------------
+		 */
+
+		/**
+		 * A custom constraint collecting bound values from a call site depending on the called
+		 * bind closure.
+		 */
+		template<typename ValueAnalysisType, typename ValueLattice, typename CallableLattice, typename Context>
+		struct BoundValueCollectorConstraint : public Constraint {
+
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::projection_op_type projection_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the list of callees referenced at the call site
+			TypedValueID<CallableLattice> callees;
+
+			// the bind expression looking for
+			BindExprAddress bind;
+
+			// the address of the captured value to be collected (with unspecified context)
+			ExpressionAddress capturedValue;
+
+			// the set to be updated
+			TypedValueID<ValueLattice> res;
+
+			// the list of value sources where captured values are defined
+			mutable std::vector<TypedValueID<ValueLattice>> sources;
+
+			// the inputs referenced by this constraint
+			mutable std::vector<ValueID> inputs;
+
+		public:
+
+			BoundValueCollectorConstraint(
+					CBA& cba, const TypedValueID<CallableLattice>& callees,
+					const BindExprAddress& bind, const ExpressionAddress& capturedValue,
+					const TypedValueID<ValueLattice>& res
+				) : Constraint(toVector<ValueID>(callees), toVector<ValueID>(res), true, true),
+				  cba(cba), callees(callees), bind(bind), capturedValue(capturedValue), res(res)
+			{
+				inputs.push_back(callees);
+			}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				// the operator merging values
+				meet_assign_op_type meet_assign_op;
+
+				// update the value by merging all known sources
+				auto& value = ass[res];
+				bool changed = false;
+				for(const auto& cur : sources) {
+					changed = meet_assign_op(value, ass[cur]) || changed;
+				}
+
+				// check whether something has changed
+				return (changed) ? Constraint::Incremented : Constraint::Unchanged;
+			}
+
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get list of references
+				const set<Callable<Context>>& funs = ass[callees];
+
+				bool changed = false;
+				for(const auto& cur : funs) {
+
+					// just interested in the processed bind
+					if (cur.getDefinition() != bind) continue;
+
+					// get the set representing the value captured by the current bind
+					auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+
+					// add it to the source-list
+					if (::contains(sources, captured)) continue;
+					sources.push_back(captured);
+					inputs.push_back(captured);
+					changed = true;
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
+				// check whether data to be read is in result set
+				less_op_type less_op;
+				const auto& value = ass[res];
+				for(const auto& cur : sources) {
+					if (!less_op(ass[cur], value)) return false;
+				}
+
+				// everything is fine
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				for(const auto& cur : sources) {
+					out << cur << " -> " << res << "[label=\"passed to\"]\n";
+				}
+				return out << callees << " -> " << res << "[label=\"defines\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "boundValues(" << callees << ") in " << res;
+			}
+
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				return inputs;
+			}
+
+		};
+
+		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename CallableLattice>
+		ConstraintPtr collectCapturedValue(CBA& cba, const TypedValueID<CallableLattice>& callables, const BindExprAddress& bind, const ExpressionAddress& capturedValue, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<BoundValueCollectorConstraint<ValueAnalysisType,ValueLattice,CallableLattice,Context>>(cba, callables, bind, capturedValue, res);
+		}
+
+
+		/**
+		 * ----------------------------- Job Value Collector Constraint --------------------------------
+		 */
+
+		/**
+		 * A custom constraint collecting values bound at the creation point of a job.
+		 */
+		template<typename ValueAnalysisType, typename ValueLattice, typename JobLattice, typename Context>
+		struct JobValueCollectorConstraint : public Constraint {
+
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::projection_op_type projection_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			typedef typename lattice<job_analysis_data, analysis_config<Context>>::type CallableLattice;
+
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the list of jobs considered by this constraint
+			TypedValueID<JobLattice> jobs;
+
+			// the bind expression looking for
+			BindExprAddress bind;
+
+			// the address of the captured value to be collected (with unspecified context)
+			ExpressionAddress capturedValue;
+
+			// the set to be updated
+			TypedValueID<ValueLattice> res;
+
+			// the list of referenced thread bodies
+			mutable std::vector<TypedValueID<CallableLattice>> bodies;
+
+			// the list of captured values
+			mutable std::vector<TypedValueID<ValueLattice>> sources;
+
+			// the inputs referenced by this constraint
+			mutable std::vector<ValueID> inputs;
+
+		public:
+
+			JobValueCollectorConstraint(
+					CBA& cba, const TypedValueID<JobLattice>& jobs,
+					const BindExprAddress& bind, const ExpressionAddress& capturedValue,
+					const TypedValueID<ValueLattice>& res
+				) : Constraint(toVector<ValueID>(jobs), toVector<ValueID>(res), true, true),
+				  cba(cba), jobs(jobs), bind(bind), capturedValue(capturedValue), res(res)
+			{
+				inputs.push_back(jobs);
+			}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				// the operator merging values
+				meet_assign_op_type meet_assign_op;
+
+				// update the value by merging all known sources
+				auto& value = ass[res];
+				bool changed = false;
+				for(const auto& cur : sources) {
+					changed = meet_assign_op(value, ass[cur]) || changed;
+				}
+
+				// check whether something has changed
+				return (changed) ? Constraint::Incremented : Constraint::Unchanged;
+			}
+
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get list of covered jobs
+				const set<Job<Context>>& job_set = ass[jobs];
+
+				bool changed = false;
+				for(const auto& j : job_set) {
+
+					// get set of job-bodies
+					auto body = cba.getSet(C, j.getAddress()->getDefaultExpr(), j.getContext());
+
+					// register body
+					if (!::contains(bodies, body)) {
+						bodies.push_back(body);
+						inputs.push_back(body);
+						changed = true;
+					}
+
+					// get list of references
+					const set<Callable<Context>>& funs = ass[body];
+
+					for(const auto& cur : funs) {
+
+						// just interested in the processed bind
+						if (cur.getDefinition() != bind) continue;
+
+						// get the set representing the value captured by the current bind
+						auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+
+						// add it to the source-list
+						if (::contains(sources, captured)) continue;
+						sources.push_back(captured);
+						inputs.push_back(captured);
+						changed = true;
+					}
+
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
+				// check whether data to be read is in result set
+				less_op_type less_op;
+				const auto& value = ass[res];
+				for(const auto& cur : sources) {
+					if (!less_op(ass[cur], value)) return false;
+				}
+
+				// everything is fine
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				for(const auto& cur : bodies) {
+					out << cur << " -> " << res << "[label=\"depends\"]\n";
+				}
+				for(const auto& cur : sources) {
+					out << cur << " -> " << res << "[label=\"passed to\"]\n";
+				}
+				return out << jobs << " -> " << res << "[label=\"defines\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "boundValues(bodiesOf(" << jobs << ")) in " << res;
+			}
+
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				return inputs;
+			}
+
+		};
+
+		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename JobLattice>
+		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedValueID<JobLattice>& jobs, const BindExprAddress& bind, const ExpressionAddress& capturedValue, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<JobValueCollectorConstraint<ValueAnalysisType,ValueLattice,JobLattice,Context>>(cba, jobs, bind, capturedValue, res);
+		}
 	}
 
 
@@ -330,8 +645,12 @@ namespace cba {
 			return valueMgr;
 		}
 
-		const value_type& getUnknownValue() const {
+		value_type getUnknownValue() const {
 			return unknown;
+		}
+
+		value_type getUnknownValue(const TypePtr& type) const {
+			return getUndefinedValue(valueMgr, type, unknown);
 		}
 
 		template<typename V>
@@ -382,7 +701,7 @@ namespace cba {
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 			// external literals are by default unknown values - could be overloaded by sub-classes
 			auto A_lit = cba.getSet(A, literal, ctxt);
-			constraints.add(subset(unknown, A_lit));
+			constraints.add(subset(getUnknownValue(literal->getType()), A_lit));
 		}
 
 		void visitVariable(const VariableAddress& variable, const Context& ctxt, Constraints& constraints) {
@@ -525,18 +844,10 @@ namespace cba {
 									auto l_fun_bind_call = cba.getLabel(bindCall->getFunctionExpr());
 									auto C_fun_bind_call = cba.getSet(C, l_fun_bind_call, bindCallCtxt);
 
-									// add constraints for all potential contexts the closure could be created
-									for(const auto& bindCtxt : cba.getValidContexts<Context>()) {
+									// create a constraint collecting all captured values
+									constraints.add(collectCapturedValue<ValueAnalysisType,Context>(cba, C_fun_bind_call, bind, arg, a_var));
 
-										// get value of argument within bind context
-										auto A_bind_arg = cba.getSet(A, l_arg, bindCtxt);
-
-										// add constraint:
-										//   [b,bindCtxt] \in C[bind_call,call_ctxt] => A[arg,bindCtxt] \sub a[param,ctxt]
-										constraints.add(subsetIf(Callable<Context>(bind, bindCtxt), C_fun_bind_call, A_bind_arg, a_var));
-									}
 								}
-
 
 							}
 
@@ -551,63 +862,11 @@ namespace cba {
 								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprAddress>();
 								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
 
-								assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
-									<< "Not yet supporting nested threads!\n";
-
-								// get list of jobs - TODO: do this once at a cached place
-								vector<Job<Context>> jobs;
-								visitDepthFirstOnce(cba.getRoot(), [&](const JobExprAddress& job) {
-									for(const auto& jobCtxt : cba.getValidContexts<Context>()) {
-										jobs.push_back(Job<Context>(job, jobCtxt));
-									}
-								});
-
-								// this is a two-stage requirement
-								//		- the job must be correct
-								//		- the job must have the current bind as its body
-								//		- in this case we can forward the captured value
-
 								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
 
-								// for each job ...
-								for(const auto& job : jobs) {
-
-									auto job_body = cba.getSet(C, job.getAddress().getDefaultExpr(), job.getContext());
-
-									// ... and for each potential bind context
-									for(const auto& bindCtxt : cba.getValidContexts<Context>()) {
-
-										// get value of argument within bind context
-										auto A_bind_arg = cba.getSet(A, l_arg, bindCtxt);
-
-										// if job and bind is fitting => connect bound value with variable
-										constraints.add(subsetIf(job, J_spawned_job, Callable<Context>(bind, bindCtxt), job_body, A_bind_arg, a_var));
-									}
-
-
-								}
+								constraints.add(collectCapturedJobValues<ValueAnalysisType,Context>(cba, J_spawned_job, bind, arg, a_var));
 
 							}
-
-//							const typename Context::thread_id& threadID = ctxt.threadContext[0];
-//							auto l_spawn_call = threadID.getSpawnLabel();
-//							const auto& spawnCtxt = threadID.getSpawnContext();
-//
-//							// check whether current flow is not within the top-level thread
-//							if (l_spawn_call == 0) continue;	// in this case we do not have to consider this option
-
-							// What we have to do here:
-							// 		- for all potential thread contexts the spawn could be executed in
-							//		- get the jobs started at the spawn points
-							//		- get the bodies of those jobs sing the callables-analysis
-							//		- check whether any of those callables is the current bind - if so, take the context and transfer the variable value
-
-//							Label l_job_label = cba.getLabel(cba.getStmt(l_spawn_call).as<CallExprAddress>()[0]);
-//							auto J_spawned_jobs = cba.getSet(Jobs, l_job_label, spawnCtxt);
-
-							// for all jobs in all contexts ... or also just for all jobs in J_spawned_job!!
-							//		=> find a nice way to implement this option
-
 
 							// done
 							continue;
@@ -709,15 +968,14 @@ namespace cba {
 					// one special case: if it is a read operation
 					const auto& base = call->getNodeManager().getLangBasic();
 					if (base.isRefDeref(targets[0].getDefinition())) {
+
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
 						auto R_trg = this->cba.getSet(R, l_trg, ctxt);
-						for(const auto& loc : this->cba.template getLocations<Context>()) {
 
-							// if loc is in R(target) then add Sin[A,trg] to A[call]
-							auto S_in = this->cba.getSet(Sin<ValueAnalysisType>(), l_call, ctxt, loc);
-							constraints.add(read(loc, R_trg, S_in, A_call));
-						}
+						// add read constraint
+						constraints.add(read<ValueAnalysisType>(cba, call, ctxt, R_trg, A_call));
+
 					}
 
 					// another case: accessing struct members
@@ -735,6 +993,16 @@ namespace cba {
 									StructProject<lattice_type>(A_in, field, A_call)
 								)
 						);
+					}
+
+					// and always: if it is the undefined literal
+					if (base.isUndefined(targets[0].getDefinition())) {
+
+						// built up resulting value
+						auto value = getUnknownValue(call->getType());
+
+						// in this case initialize the value with the undefined value
+						constraints.add(subset(value, A_call));
 					}
 
 					// no other literals supported by default - overloads may add more

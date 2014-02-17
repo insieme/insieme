@@ -230,8 +230,8 @@ private:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
-		if (ptr->getNodeType() == NT_Variable) {
-			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
+		if (VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
+			auto pos = replacements.find(var);
 			if(pos != replacements.end()) {
 				return pos->second;
 			}
@@ -270,7 +270,7 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	IRBuilder builder;
-	const PointerMap<VariablePtr, VariablePtr>& replacements;
+	const ExpressionMap& replacements;
 	bool limitScope;
 	const TypeRecoveryHandler& recoverTypes;
 	const TypeHandler& typeHandler;
@@ -279,7 +279,7 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 
 public:
 
-	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
+	RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope,
 			const TypeRecoveryHandler& recoverTypes, const TypeHandler& typeHandler)
 		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope),
 		  recoverTypes(recoverTypes), typeHandler(typeHandler) {}
@@ -311,8 +311,8 @@ private:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
-        if (ptr->getNodeType() == NT_Variable) {
-			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
+        if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(ptr)) {
+			auto pos = replacements.find(expr);
 			if(pos != replacements.end()) {
 				return pos->second;
 			}
@@ -1234,7 +1234,7 @@ TypeHandler getVarInitUpdater(NodeManager& manager){
 }
 
 
-NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements,
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const ExpressionMap& replacements,
 		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {

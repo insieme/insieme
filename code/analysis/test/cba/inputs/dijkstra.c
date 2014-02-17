@@ -29,55 +29,58 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_handler.h"
+/**
+ * A stripped-down version of a real-world code example.
+ */
 
-namespace fe = insieme::frontend;
+#include "cba.h"
 
-using namespace insieme::frontend;
+int f(int g) {
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+	#pragma omp parallel
+	{
 
-using namespace insieme::core;
-using namespace insieme::frontend::ocl;
+		#pragma omp single
+		{
 
-OclHostPlugin::OclHostPlugin() {
+		}
+
+		for(int i=0; i<10; i++) {
+
+			#pragma omp single
+			{
+
+			}
+
+			#pragma omp critical
+			{
+
+			}
+
+			#pragma omp barrier
+		}
+
+	}
+
+	return 0;
 
 }
 
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	core::NodePtr root = br.getTransformedProgram();
+int main(int argc, char** argv) {
 
-	ocl::OclSimpleFunHandler osfh;
-	root = osfh.mapElement(0, root);
+	cba_print_code();
 
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
+	// for now this is simply testing the primitives
+	cba_dump_thread_regions();
+	cba_dump_execution_net();
+	cba_dump_state_graph();
 
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
+	f(10);
 
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
-//	prog = builder.program(list);
-
-	return prog;
+	return 0;
 }
-
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions

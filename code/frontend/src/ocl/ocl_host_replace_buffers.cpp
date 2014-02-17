@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/utils/logging.h"
 #include "insieme/analysis/cba/analysis.h"
 #include "insieme/core/ir_visitor.h"
@@ -44,6 +43,7 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -53,6 +53,46 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+/*
+ * Returns either the expression itself or the first argument if expression was a call to function
+ */
+core::ExpressionAddress tryRemove(const core::ExpressionPtr& function, const core::ExpressionAddress& expr) {
+	core::ExpressionAddress e = expr;
+	while(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(e)) {
+		if(call->getFunctionExpr() == function)
+			e = call->getArgument(0);
+		else
+			break;
+	}
+	return e;
+}
+
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
+ */
+core::ExpressionAddress tryRemoveAlloc(const core::ExpressionAddress& expr) {
+	NodeManager& mgr = expr->getNodeManager();
+	if(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(expr)) {
+		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
+			return tryRemoveAlloc(call->getArgument(0));
+	}
+	return expr;
+}
+
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr) {
+	NodeManager& mgr = expr->getNodeManager();
+	if(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(expr)) {
+		if(mgr.getLangBasic().isRefDeref(call->getFunctionExpr()))
+			return tryRemoveDeref(call->getArgument(0));
+	}
+	return expr;
+}
+
+
+
 bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
 	// get rid of casts
 	NodePtr uncasted = arg;
@@ -210,6 +250,88 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
 }
 
+NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
+	// if the variable is a literal, its a global variable and should therefore be the root
+	if(var.isa<LiteralAddress>()) {
+//std::cout << "found literal " << *var << std::endl;
+		return var;
+	}
+
+	// search in declaration in siblings
+	NodeManager& mgr = var.getNodeManager();
+
+	TreePatternPtr localOrGlobalVar = irp::variable() | irp::literal(irp::refType(pattern::any), pattern::any);
+	TreePatternPtr valueCopy = pattern::var("val", irp::variable()) |
+			irp::callExpr(mgr.getLangBasic().getRefDeref(), pattern::var("val", irp::variable())) |
+			irp::callExpr(mgr.getLangBasic().getRefNew(), pattern::var("val", irp::variable())) |
+			irp::callExpr(mgr.getLangBasic().getRefVar(), pattern::var("val", irp::variable()));
+	TreePatternPtr valueCopyCast = valueCopy | irp::castExpr(pattern::any, valueCopy);
+	TreePatternPtr assign = irp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(pattern::any));
+			pattern::var("lhs", irp::variable()) << valueCopyCast);
+
+//std::cout << "\nscope: " << (scope.getChildAddresses().size()) << std::endl;
+
+	vector<NodeAddress> childAddresses = scope.getChildAddresses();
+	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
+//std::cout << "iterating " << *I << std::endl;
+
+		NodeAddress child = *I;
+//std::cout << "Tolles I " << NodePtr(child) << std::endl;
+
+		/* will be implplemented when a propper testcase can be found
+		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(child)) {
+			// if there is an assignment, continue with the variable found at the right hand side
+			if(AddressMatchOpt assignment = assign->matchAddress(call)){
+std::cout << "assigning  " << printer::PrettyPrinter(assignment->getVarBinding("val").getValue()) << std::endl;
+std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").getValue()) << std::endl;
+				if(assignment->getVarBinding("lhs").getValue() == var) {
+					return getRootVariable(scope, assignment->getVarBinding("val").getValue());
+				}
+			}
+		}
+		*/
+
+		if(LambdaAddress lambda = dynamic_address_cast<const Lambda>(child)) {
+//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
+			// if var is a parameter, continue search for declaration of corresponding argument in outer scope
+
+			CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
+			NodeAddress nextScope, nextVar;
+
+			for_range(make_paired_range(call->getArguments(), lambda->getParameters()->getElements()),
+					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+				if(*var == *pair.second) {
+					nextScope = call.getParentAddress(1);
+					nextVar = tryRemoveDeref(pair.first);
+					return;
+				}
+			});
+			return getRootVariable(nextScope, nextVar);
+		}
+
+		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
+			if(*(decl->getVariable()) == *var) {
+				// check if init expression is another variable
+				if(AddressMatchOpt valueInit = valueCopy->matchAddress(decl->getInitialization())) {
+					// if so, continue walk with other variable
+					return getRootVariable(scope, valueInit->getVarBinding("val").getValue());
+				}
+//std::cout << "found decl of " << *var << std::endl;
+				// if init is no other varable, the root is found
+				return decl->getVariable();
+			}
+		}
+	}
+
+	//compound expressions may not open a new scope, therefore declaration can be in the parent
+	return getRootVariable(scope.getParentAddress(), var);
+}
+
+NodeAddress getRootVariable(NodeAddress var) {
+	// search in declaration in siblings
+	NodeAddress parent = var.getParentAddress(1);
+	return getRootVariable(parent, var);
+}
 }
 
 const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
@@ -221,12 +343,15 @@ BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
 	generateReplacements();
 
 	newProg = prog->getElement(0);
-	for_each(clMemReplacements, [&](std::pair<core::NodePtr, core::NodePtr> replacement){
+	ExpressionMap em;
+	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
 //		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
 		// use pointer in replacements to replace all occurences of the addressed expression
-		newProg = transform::replaceAll(prog->getNodeManager(), newProg, NodePtr(replacement.first), replacement.second, false);
+//		newProg = transform::replaceAll(prog->getNodeManager(), newProg, NodePtr(replacement.first), replacement.second, false);
+		em[replacement.first] = replacement.second;
 	});
 
+	newProg = transform::replaceVarsRecursive(prog->getNodeManager(), newProg, em, false);
 	newProg = transform::replaceAll(prog->getNodeManager(), newProg, generalReplacements, false);
 
 	printer::PrettyPrinter pp(newProg);
@@ -238,13 +363,13 @@ void BufferReplacer::collectInformation() {
 	NodeAddress pA(prog->getChild(0));
 	IRBuilder builder(mgr);
 
-	TreePatternPtr clCreateBuffer = var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << var("flags", pattern::any) << var("size", pattern::any) << var("host_ptr", pattern::any) << var("err", pattern::any) ));
-	TreePatternPtr bufferDecl = var("type", irp::declarationStmt(var("buffer", pattern::any), irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()),
-			pattern::single(clCreateBuffer))));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
-			var("buffer", pattern::any) << clCreateBuffer);
-	TreePatternPtr bufferPattern = var("all", bufferDecl | bufferAssign);
+	TreePatternPtr clCreateBuffer = pattern::var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) << pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
+	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
+			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
+			pattern::var("buffer", pattern::any) << clCreateBuffer);
+	TreePatternPtr bufferPattern = pattern::var("all", bufferDecl | bufferAssign);
 /*
 	visitDepthFirst(pA, [&](const NodeAddress& node) {
 		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
@@ -315,13 +440,14 @@ bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const
 		if(*replacement.first == *bufferExpr /*|| analysis::cba::isAlias(replacement.first, bufferExpr)*/) {
 			ExpressionPtr repExpr = replacement.second;
 			if(*repExpr->getType() != *newType) {
+/* FORBID subtypes, too complicated in terms of size to allocate and memory layout anyway
 				if(types::isSubTypeOf(repExpr->getType(), newType)) { // if the new type is subtype of the current one, replace the type
 					//newType = replacement.second->getType();
 					bufferExpr = replacement.first; // do not add aliases to the replacement map
 				} else if(types::isSubTypeOf(newType, repExpr->getType())) { // if the current type is subtype of the new type, do nothing
 					correct = true;
 					return;
-				} else // if the types are not related, fail
+				} else*/ // if the types are not related, fail
 					assert(false && "Buffer used twice with different types. Not supported by Insieme.");
 			} else
 				correct = true;
@@ -337,6 +463,8 @@ void BufferReplacer::generateReplacements() {
 	IRBuilder builder(mgr);
 
 	TypePtr clMemTy;
+	TreePatternPtr subscriptPattern = irp::subscript1D("operation",
+			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable())));
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
 		ExpressionAddress bufferExpr = extractVariable(meta.first);
@@ -351,39 +479,43 @@ void BufferReplacer::generateReplacements() {
 
 //std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
 
-		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
-
-		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
-
-		// local variable case
-		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
-			clMemReplacements[variable] = builder.variable(newType);
-			return;
-		}
-		// global variable case
-		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
-			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
-			return;
-		}
-
-		// try to extract the variable
-//		TreePatternPtr subscriptPattern = irp::subscript1D("operation", aT(var("variable", irp::variable())), aT(var("idx", pattern::any)));
-		TreePatternPtr subscriptPattern = irp::subscript1D("operation",
-				var("variable", irp::variable()) | irp::callExpr(pattern::any, var("variable", irp::variable())));
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
-
 		if(subscript) {
 //			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
 			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
+
+//std::cout << "arr: " << expr << " root " << getRootVariable(expr) << std::endl;
+			expr = getRootVariable(expr).as<ExpressionAddress>();
+
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
 //std::cout << "\nall: " << *expr << "\n" << newArrType << std::endl;
 			clMemReplacements[expr] = builder.variable(newArrType);
 			return;
 		}
+
+		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
+
+//std::cout << "var: " << bufferExpr << " root " << getRootVariable(bufferExpr) << std::endl;
+		bufferExpr = getRootVariable(bufferExpr).as<ExpressionAddress>();
+
+		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
+
+		// local variable case
+		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
+
+			clMemReplacements[variable] = builder.variable(newType);
+			return;
+		}
+		// global variable case
+		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
+			clMemReplacements[lit] = builder.literal(newType, "newLit");//lit->getStringValue());
+			return;
+		}
 	});
+
 /*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
 		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;

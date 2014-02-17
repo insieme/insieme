@@ -130,6 +130,29 @@ namespace cba {
 		ImperativeInStateConstraintGenerator(CBA& cba)
 			: super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()), cba(cba) {}
 
+		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			typedef typename generator<BaseAnalysis, analysis_config<Context>>::type BaseGenerator;
+
+			// we can stop at the creation point - no definitions will be killed before
+			if (loc.isGlobal() && addr == cba.getRoot() && ctxt == Context()) {
+				// at the initial point a global value is undefined
+				auto setID = cba.getSet(Sin<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto unknownValue = BaseGenerator(cba).getUnknownValue();
+
+				// get type of value stored in memory location
+				auto type = loc.getAddress().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
+				if (!type) return;
+
+				// compute undefined value and add constraint fixing value
+				auto undefined = getUndefinedValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
+				constraints.add(subset(undefined, setID));
+				return;
+			}
+
+			// all others should be handled as usual
+			super::visit(addr, ctxt, loc, constraints);
+		}
+
 		/**
 		 * Produces a humna-readable representation of the value represented by the given value ID.
 		 */
@@ -143,7 +166,7 @@ namespace cba {
 
 			out << value << " = Sin - " << getAnalysisName<BaseAnalysis>() << "@" << location
 						 << "[l" << label << " = " << node->getNodeType() << " : "
-						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+//						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
 						 << ctxt << "]";
 		}
 
@@ -584,11 +607,26 @@ namespace cba {
 		}
 
 		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+			typedef typename generator<BaseAnalysis, analysis_config<Context>>::type BaseGenerator;
+
 			// we can stop at the creation point - no definitions will be killed before
-			if (loc.getAddress() == addr) {
-				// the default initialization value is the default value (bottom value of lattice)
+			if (loc.getAddress() == addr && ctxt == loc.getContext()) {
+				// every reference is initialized by its default value
+				auto setID = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto unknownValue = BaseGenerator(cba).getUnknownValue();
+
+				// get type of value stored in memory location
+				auto type = loc.getAddress().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
+				if (!type) return;
+
+				// fix undefined value
+				auto undefined = getUndefinedValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
+				constraints.add(subset(undefined, setID));
 				return;
 			}
+
+			// for other unknown references no handling is necessary since those are never read
+			if (loc.isUnknown()) return;
 
 			// all others should be handled as usual
 			super::visit(addr, ctxt, loc, constraints);

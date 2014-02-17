@@ -43,7 +43,8 @@ short* short_host_ptr;
 cl_mem dev_ptr1 = NULL;
 cl_event event = NULL;
 
-cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize, size_t* localSize) {
+cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize, size_t* localSize, cl_context context, cl_mem buf_arg) {
+	buf_arg = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
 	return clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
 }
 
@@ -66,9 +67,11 @@ int main(int argc, char **argv) {
 	gqueue = clCreateCommandQueue(gcontext, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
 	float* host_ptr;
-	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_float) * 100, host_ptr, NULL);
+	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, NULL);
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4[2];
+	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
+	clReleaseMemObject(dev_ptr5);
 
 	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
 	dev_ptr4[0] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
@@ -102,7 +105,7 @@ int main(int argc, char **argv) {
 	size_t localSize[] = { 3, 5, 6 };
 
 	for(int i = 0; i < 1; ++i)
-		err = subfunction(kernel[i], queue[0], globalSize, localSize);
+		err = subfunction(kernel[i], queue[0], globalSize, localSize, context, dev_ptr5);
 //		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
@@ -120,6 +123,7 @@ int main(int argc, char **argv) {
 	clReleaseMemObject(dev_ptr3);
 	for(int i = 1; i < 2; ++i)
 		clReleaseMemObject(dev_ptr4[i]);
+	clReleaseMemObject(dev_ptr5);
 
 	clReleaseCommandQueue(queue[0]);
 	clReleaseCommandQueue(gqueue);

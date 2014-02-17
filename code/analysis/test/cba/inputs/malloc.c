@@ -29,55 +29,72 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_handler.h"
+/**
+ * A test case verifying that malloc calls can be properly handled
+ */
 
-namespace fe = insieme::frontend;
+#include <stdlib.h>
+#include "cba.h"
 
-using namespace insieme::frontend;
+typedef struct {
+	int x;
+	int y;
+} point;
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+extern int data;
 
-using namespace insieme::core;
-using namespace insieme::frontend::ocl;
 
-OclHostPlugin::OclHostPlugin() {
+int main(int argc, char** argv) {
 
+	cba_print_code();
+
+	// test external part
+	cba_print_int(data);
+	data = 2;
+	cba_expect_eq_int(data, 2);
+
+/*
+	// test an array of scalars
+	int* a = (int*)(malloc(sizeof(int) * 5));
+
+	// the reference should be unique
+	cba_expect_is_alias(&(a[0]), &(a[0]));
+
+	// check value before / after first usage
+	cba_print_int(a[2]);
+	for(int i = 0; i<5; i++) {
+		a[i] = 1;
+	}
+	cba_print_int(a[2]);
+
+
+	//cba_dump_equations();
+
+	a[0] = 10;
+	a[1] = 12;
+	a[2] = 14;
+	a[3] = argc;
+
+	cba_expect_eq_int(a[0]+2, a[1]);
+	cba_expect_eq_int(a[0]+argc, 10+a[3]);
+
+
+	// test an array of points
+	point* p = (point*)(malloc(sizeof(point) * 3));
+	p[0] = (point) { 0, 1 };
+	p[1] = (point) { 1, argc };
+	p[2] = (point) { argc, 2 };
+
+	cba_expect_eq_int(p[0].y, p[1].x);
+	cba_expect_eq_int(p[1].y, p[2].x);
+
+	cba_expect_is_alias(&(p[0]), &(p[0]));
+
+	//cba_dump_equations();
+*/
 }
-
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	core::NodePtr root = br.getTransformedProgram();
-
-	ocl::OclSimpleFunHandler osfh;
-	root = osfh.mapElement(0, root);
-
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
-
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
-//	prog = builder.program(list);
-
-	return prog;
-}
-
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions

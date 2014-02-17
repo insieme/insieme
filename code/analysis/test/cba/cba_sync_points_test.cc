@@ -94,6 +94,9 @@ namespace cba {
 
 		CBA analysis(code);
 
+		// fix some labels
+		EXPECT_EQ(1, analysis.getLabel(code[1]));
+
 		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
 		ASSERT_EQ(5, syncPoints.size());
 
@@ -102,8 +105,8 @@ namespace cba {
 		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
 		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
 		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the thread spawn operation
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
 
 //		createDotDump(analysis);
 	}

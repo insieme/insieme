@@ -43,7 +43,7 @@
 namespace insieme {
 namespace frontend {
 namespace ocl {
-
+namespace old {
 
 // enums corresponding to the flags in clCreateBuffer
 enum CreateBufferFlags {
@@ -265,6 +265,7 @@ public:
 	core::NodeMap& getReplacements() { return replacements; }
 };
 
+}
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

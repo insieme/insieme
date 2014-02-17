@@ -121,6 +121,42 @@ namespace cba {
 		out << "\n}\n";
 	}
 
+	void CBA::plotRoots(std::ostream& out) const {
+		const Constraints& constraints = solver.getConstraints();
+		const Assignment& ass = solver.getAssignment();
+
+		// get solutions as strings
+		auto solution = ass.toStringMap();
+
+		out << "digraph G {\n\t";
+
+		// solution resolution utility
+		auto getSolution = [&](const ValueID& value)->const string& {
+			static const string& none = "";
+			auto pos = solution.find(value);
+			return (pos != solution.end()) ? pos->second : none;
+		};
+
+		// print names of all sets
+		for(const auto& cur : value2generator) {
+			// only print root nodes
+			bool isRoot = all(constraints, [&](const ConstraintPtr& cstr)->bool {
+				return !::contains(cstr->getOutputs(), cur.first);
+			});
+
+			if (!isRoot) continue;
+
+			ValueID id = cur.first;
+			// use constraint generator to format value
+			out << id << " [label=\"";
+			cur.second->printValueInfo(out, *this, id);
+			out << " = " << getSolution(id) << "\""
+						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];\n\t";
+		}
+
+		out << "\n}\n";
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

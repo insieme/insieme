@@ -220,7 +220,7 @@ namespace cba {
 			// special case: it is the parameter of an entry-point function
 			if (var.getDepth() > 5) {
 				auto lambda = var.getParentAddress(5).isa<LambdaExprAddress>();
-				if (lambda->getBody() == cba.getRoot()) {
+				if (lambda && lambda->getBody() == cba.getRoot()) {
 					// it is a input parameter of the function => use symbolic value as well
 					addSymbolicValue();
 					return;

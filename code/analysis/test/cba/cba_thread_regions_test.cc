@@ -94,6 +94,9 @@ namespace cba {
 
 		CBA analysis(code);
 
+		// fix some labels
+		EXPECT_EQ(1, analysis.getLabel(code[1]));
+
 		set<ThreadRegion<DefaultContext>> regions = analysis.getValuesOf(ThreadRegions);
 		EXPECT_EQ(3, regions.size());
 
@@ -101,7 +104,7 @@ namespace cba {
 
 		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from creation - spawn
 		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]] - O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// main-thread from spawn - end
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");				// spawned thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]] - O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// spawned thread
 
 //		createDotDump(analysis);
 	}

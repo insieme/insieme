@@ -189,6 +189,9 @@ namespace cba {
 
 		DefaultContext ctxt;
 
+		// fix some labels
+		EXPECT_EQ(1, analysis.getLabel(code[4].as<DeclarationStmtAddress>()->getInitialization()));
+
 		// obtain location referenced by variable x
 		set<Reference<DefaultContext>> refs = analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getVariable(), R);
 		EXPECT_EQ(1u, refs.size()) << refs;
@@ -211,10 +214,10 @@ namespace cba {
 
 		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDin, ctxt, loc)));
 		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDtmp, ctxt, loc)));
-		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, loc)));
 
-		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
-		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<21,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-4-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
 
 
 		// -- killed definitions --
@@ -446,6 +449,40 @@ namespace cba {
 
 //		createDotDump(analysis);
 	}
+
+
+	TEST(CBA, ThreadContext) {
+
+		// a test verifying whether binds also working within threads
+		// (this was a bug discovered in a real-world application)
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(5);"
+				"	merge(spawn { "
+				"		if(a<2 || a>4) {"
+				"			a = 3;"
+				"		}"
+				"	});"
+				"	*a;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		CBA analysis(code);
+std::cout << analysis.getValidContexts<DefaultContext>() << "\n";
+		dumpPretty(code);
+
+		// obtain value of a after parallel operation
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[2], A)));
+
+		createDotDump(analysis);
+	}
+
 
 //	TEST(CBA, DiamondOneAssignStructure) {
 //

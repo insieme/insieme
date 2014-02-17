@@ -29,55 +29,32 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_handler.h"
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-namespace fe = insieme::frontend;
+#include "cba.h"
 
-using namespace insieme::frontend;
+int main(int argc, char** argv) {
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+	int x;
 
-using namespace insieme::core;
-using namespace insieme::frontend::ocl;
+	#pragma omp parallel shared(x)
+	{
+		#pragma omp single
+		x = 2;
+	}
 
-OclHostPlugin::OclHostPlugin() {
+	cba_expect_may_eq_int(x, 2);
+//	cba_expect_eq_int(x, 2);
+
+
+//	cba_dump_equations();
+//	cba_print_code();
 
 }
-
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	core::NodePtr root = br.getTransformedProgram();
-
-	ocl::OclSimpleFunHandler osfh;
-	root = osfh.mapElement(0, root);
-
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
-
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
-//	prog = builder.program(list);
-
-	return prog;
-}
-
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions
