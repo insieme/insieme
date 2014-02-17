@@ -36,10 +36,6 @@
 
 #include "insieme/frontend/expr_converter.h"
 
-#include <clang/AST/StmtVisitor.h>
-#include <clang/Basic/FileManager.h>
-
-
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/utils/source_locations.h"
