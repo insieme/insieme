@@ -34,54 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
-#include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_handler.h"
+#pragma once
 
-namespace fe = insieme::frontend;
-
-using namespace insieme::frontend;
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/utils/map_utils.h"
+#include "insieme/frontend/frontend.h"
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace ocl {
 
-using namespace insieme::core;
-using namespace insieme::frontend::ocl;
+namespace {
+/*
+ * Collects the kernel function names, specified using clCreateKernel and stores them in a map
+ *
+class FindKernelNames: public core::transform::CachedNodeMapping {
+	std::map<core::ExpressionPtr, std::string> kernelNames;
+	core::pattern::TreePatternPtr clCreateKernel;
 
-OclHostPlugin::OclHostPlugin() {
+	const core::NodePtr resolveElement(const core::CallExprPtr& ptr);
 
+public:
+	FindKernelNames();
+};
+*/
 }
 
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	core::NodePtr root = br.getTransformedProgram();
+/*
+ * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
+ * Loads kernel source codes from files and adds them to the program
+ * Replaces nd_range calls with calls to the actual function
+ */
+class KernelReplacer {
+public:
+	KernelReplacer(core::ProgramPtr& prog);
+private:
+	core::ProgramPtr& prog;
 
-	ocl::KernelReplacer kr(prog);
-	root = kr.getTransformedProgram();
-
-//	ocl::OclSimpleFunHandler osfh;
-//	root = osfh.mapElement(0, root);
-
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
-
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
-//	prog = builder.program(list);
-
-	return prog;
-}
-
-} //namespace plugin
+public:
+	core::NodePtr getTransformedProgram() {return prog;}
+};
+} //namespace ocl
 } //namespace frontend
-} //namespace extensions
+} //namespace insieme
