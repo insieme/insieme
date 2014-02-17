@@ -436,6 +436,21 @@ bool isStaticVar (const ExpressionPtr& var);
  */
 bool compareTypes(const TypePtr& a, const TypePtr& b);
 
+
+// ----------------------------------- Jobs ----------------------------
+
+/**
+ * Tests whether the given job expression is a task (only processed by a single thread) or not.
+ */
+bool isTask(const JobExprPtr& job);
+
+/**
+ * Tests whether the given job expression is a task (only processed by a single thread) or not.
+ */
+inline bool isTask(const NodePtr& job) {
+	return isTask(job.isa<JobExprPtr>());
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

@@ -1505,9 +1505,16 @@ namespace parser {
 
 			// -- job expressions --
 			g.addRule("E", rule(
-					seq("job", S),
+					seq("task", S),
 					[](Context& cur)->NodePtr {
 						return cur.jobExpr(cur.getTerm(0).as<StatementPtr>(), 1);
+					}
+			));
+
+			g.addRule("E", rule(
+					seq("job", S),
+					[](Context& cur)->NodePtr {
+						return cur.jobExpr(cur.getTerm(0).as<StatementPtr>(), -1);		// builds a job for more than a single thread
 					}
 			));
 

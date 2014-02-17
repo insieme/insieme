@@ -99,6 +99,24 @@ namespace cba {
 		}
 	};
 
+	template<typename Context>
+	bool isSameThreadTeam(const ThreadBody<Context>& a, const ThreadBody<Context>& b) {
+		// the body has to be the same
+		if (a.getBody() != b.getBody()) return false;
+
+		// if the context is equal => also the same
+		if (a.getContext() == b.getContext()) return true;
+
+		// they are also in the same team if they are only different in the thread ID
+		Context cA = a.getContext();
+		Context cB = b.getContext();
+
+		// cancel out the thread ID
+		cA.threadContext[0].id = 0;
+		cB.threadContext[0].id = 0;
+		return cA == cB;
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

@@ -81,6 +81,43 @@ namespace cba {
 		EXPECT_TRUE(res.begin()->getBody().isa<CallExprPtr>());
 	}
 
+	TEST(CBA, ParallelGroup) {
+
+		// a simple test cases checking the handling of a spawned group
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> x = var(12);"
+				"	"
+				"	parallel(job {"
+				"		x = 15;"
+				"	});"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// fix the label of the parallel call
+		EXPECT_EQ(1,analysis.getLabel(code[1]));
+
+		const auto& T = ThreadBodies;
+
+		auto res = analysis.getValuesOf(code[1], T);
+		EXPECT_EQ(2u, res.size());
+		auto resStr = toString(res);
+
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-4-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-4-2::[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, Uncertain) {
 
 		// a simple test cases checking the handling of simple value structs
@@ -94,8 +131,8 @@ namespace cba {
 				"	let int = int<4>;"
 				"	ref<int> x = var(12);"
 				"	"
-				"	auto j1 = job { x = 1; };"
-				"	auto j2 = job { x = 2; };"
+				"	auto j1 = task { x = 1; };"
+				"	auto j2 = task { x = 2; };"
 				"	"
 				"	auto t = parallel((c)?j1:j2);"
 				"	sync t;"
@@ -142,8 +179,8 @@ namespace cba {
 				"	let int = int<4>;"
 				"	ref<int> x = var(12);"
 				"	"
-				"	auto j1 = job { x = 1; };"
-				"	auto j2 = job { x = 2; };"
+				"	auto j1 = task { x = 1; };"
+				"	auto j2 = task { x = 2; };"
 				"	"
 				"	parallel((c)?j1:j2);"
 				"	sync;"
