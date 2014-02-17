@@ -413,5 +413,50 @@ namespace core {
 
 	}
 
+	TEST(ClassInfo, SemanticChecks) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// built a type
+		auto type = builder.parseType("A");
+
+		// this type should be error-free
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+
+
+		// build a valid class-meta info
+		ClassMetaInfo info;
+		info.addConstructor(builder.parse("A::() {}").as<LambdaExprPtr>());
+		setMetaInfo(type, info);
+
+		// the check should still be fine
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+
+
+		// now something with an error
+		info = ClassMetaInfo();
+
+		auto faulty = builder.parse("A::() { lit(\"ads\":int<4>); }").as<LambdaExprPtr>();
+		EXPECT_FALSE(checks::check(faulty).empty()) << checks::check(faulty);
+		info.addConstructor(faulty);
+		setMetaInfo(type, info);
+
+		EXPECT_FALSE(checks::check(type).empty()) << checks::check(type);
+
+
+		// also check a member function
+		info = ClassMetaInfo();
+
+		faulty = builder.parse("A::()->unit { lit(\"ads\":int<4>); }").as<LambdaExprPtr>();
+		EXPECT_FALSE(checks::check(faulty).empty()) << checks::check(faulty);
+		info.addMemberFunction("fun", faulty, false, false);
+		setMetaInfo(type, info);
+
+		EXPECT_FALSE(checks::check(type).empty()) << checks::check(type);
+
+	}
+
+
 } // end namespace core
 } // end namespace insieme
