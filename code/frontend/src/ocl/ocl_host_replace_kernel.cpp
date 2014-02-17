@@ -34,54 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
-#include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_handler.h"
 
-namespace fe = insieme::frontend;
-
-using namespace insieme::frontend;
+using namespace insieme::core;
+using namespace insieme::core::pattern;
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace ocl {
 
-using namespace insieme::core;
-using namespace insieme::frontend::ocl;
+namespace {
+void findKernelNames(NodePtr root) {
+	NodeManager& mgr = root->getNodeManager();
 
-OclHostPlugin::OclHostPlugin() {
+
+	TreePatternPtr oclFun = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),
+			pattern::any << pattern::var("kernel_name", pattern::any) << pattern::var("err", pattern::any) );
+	TreePatternPtr clCreateKernel = pattern::var("clCreateKernel", irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+			pattern::var("kernel", pattern::any) << clCreateKernel));
+}
 
 }
 
-core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
-	core::NodePtr root = br.getTransformedProgram();
+KernelReplacer::KernelReplacer(core::ProgramPtr& prog1) : prog(prog1){
 
-//	ocl::KernelReplacer kr(prog);
-//	root = kr.getTransformedProgram();
-
-	ocl::OclSimpleFunHandler osfh;
-	root = osfh.mapElement(0, root);
-
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
-
-	core::IRBuilder builder(prog->getNodeManager());
-	core::ExpressionList list;
-	list.push_back(root.as<core::ExpressionPtr>());
-
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
-//	prog = builder.program(list);
-
-	return prog;
 }
 
-} //namespace plugin
+} //namespace ocl
 } //namespace frontend
-} //namespace extensions
+} //namespace insieme
+
