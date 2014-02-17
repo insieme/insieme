@@ -63,9 +63,7 @@ void findKernelNames(NodePtr root) {
 
 }
 
-KernelReplacer::KernelReplacer(core::ProgramPtr& prog1) : prog(prog1){
-
-}
+KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){ }
 
 } //namespace ocl
 } //namespace frontend

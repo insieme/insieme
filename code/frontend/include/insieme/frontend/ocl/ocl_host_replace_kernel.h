@@ -68,9 +68,9 @@ public:
  */
 class KernelReplacer {
 public:
-	KernelReplacer(core::ProgramPtr& prog);
+	KernelReplacer(core::NodePtr prog);
 private:
-	core::ProgramPtr& prog;
+	core::NodePtr prog;
 
 public:
 	core::NodePtr getTransformedProgram() {return prog;}
