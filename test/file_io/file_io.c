@@ -21,9 +21,9 @@ void printFile(char* name) {
 	fclose(fp);
 }
 
-int main() {
+int main(int argc, char** argv) {
 
-	printFile("file.txt");
+	printFile(argv[1]);
 	printFile("file2.txt");
 	printf("Done.\n");
 
