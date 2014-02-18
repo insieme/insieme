@@ -13,19 +13,21 @@ struct Source {
 struct EnumStruct;
 typedef struct EnumStruct EnumStruct;
 
-enum Enum { E=1 }; 
+enum ThingWithE { E=1 }; 
 void f() {
 	//Shadows the outside enum
-	enum Enum { E=10 };
-	enum Enum e = E;
+	enum ThingWithE { E=10 };
+	enum ThingWithE e = E;
 	printf("f %i\n",e);
 }
 
 struct EnumStruct {
-	enum Enum e;
+	enum ThingWithE e;
 };
 
+// two annonymous enums to test names aliasing
 enum {ZERO, ONE, TWO} var1;
+enum {GREEN, BLUE, RED} var2;
 
 int main() {
 	//enum used in struct
@@ -43,9 +45,14 @@ int main() {
 	
 	//normal anon. enum
 	Kind k1 = Linear;
-	var1 = ONE;
 	printf("%i\n", k1);
+
+	// globals
+	var1 = ONE;
 	printf("%i\n", var1);	
+
+	var2 = GREEN;
+	printf("%i\n", var2);	
 
 	//enum in struct
 	EnumStruct es;
@@ -53,7 +60,7 @@ int main() {
 	printf("%i\n", es.e);
 	
 	//enum shadowing
-	enum Enum e = E;
+	enum ThingWithE e = E;
 	printf("%i\n", e);
 	f();
 	return 0;
