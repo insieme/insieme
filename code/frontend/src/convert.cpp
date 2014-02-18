@@ -557,8 +557,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			irType = builder.refType(irType);
 		}
 		else{
-			// beware of const pointers
-			if (utils::isRefArray(irType) && varTy.isConstQualified()) {
+			// beware of const pointers, they may lack one ref (but do not change if a parameter)
+			if (utils::isRefArray(irType) && varTy.isConstQualified() && !llvm::isa<clang::ParmVarDecl>(valDecl)) {
 				irType = builder.refType(irType);
 			}
 		}
@@ -1334,10 +1334,22 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else
-			if (!classInfo.hasMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()))
+			if (!classInfo.hasMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(funcDecl->getNameAsString(), lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
+			}
+			else {
+				// TODO: check if normalized look nearly the same
+//				std::cout << "function already exists" << std::endl;
+//				std::cout << "=== NEW ====================== ================================" << std::endl;
+//				dumpPretty(lambda);
+//				std::cout << "=== PREV==========================" << std::endl;
+//				dumpPretty(classInfo.getMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())->getImplementation());
+//				std::cout << "============================== ================================" << std::endl;
+//
+				//abort();
+			}
 
 		core::setMetaInfo(classType, classInfo);
 	}
