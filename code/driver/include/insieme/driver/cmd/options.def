@@ -83,6 +83,7 @@ OPTION("out-file,o", 		"out-file", 			Output, 		std::string, 				"output file")
 OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph of the CFG")
 
 OPTION("intercept",			"intercept", 		Interceptions,		std::vector<std::string>, 	"Add a regular expression to be intercepted")
+OPTION("intercept-include",			"intercept-include", 		InterceptionHeaderDirs , std::vector<path>, 	"Add include dir which contains headers to be intercepted")
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")

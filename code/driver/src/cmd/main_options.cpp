@@ -149,6 +149,8 @@ namespace cmd {
 
 		// add intercepts
 		for (auto i : Interceptions) job.setInterception(i);
+		
+		for (auto i : InterceptionHeaderDirs) job.addInterceptedHeaderDir(i);
 
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);

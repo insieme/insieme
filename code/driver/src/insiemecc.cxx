@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -217,6 +217,11 @@ int main(int argc, char** argv) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3,libname.find(".")-3));
+	}
+
+	//add needed includeDirs for intercepted stuff
+	for(auto cur : options.job.getInterceptedHeaderDirs()) {
+		compiler.addIncludeDir(cur.string());
 	}
 
     //add the given optimization flags (-f flags)

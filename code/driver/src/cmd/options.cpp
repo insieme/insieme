@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -69,6 +69,7 @@ namespace cmd {
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
 					("intercept", bpo::value<vector<string>>(), "regular expressions to be intercepted - optional")
+					("intercept-include", bpo::value<vector<frontend::path>>(), "intercepted include file - optional")
 					("progress", "shows a progress bar as the frontend translates the input")
 					("no-warning,w", " Inhibit all warning messages")
 			;
@@ -227,6 +228,11 @@ namespace cmd {
 					res.job.setInterception(i);
 				}
             }
+            
+            if (map.count("intercept-include")) {
+				res.job.setInterceptedHeaderDirs(map["intercept-include"].as<vector<frontend::path>>());
+            }
+
 
             //f flags
             if (map.count("fopt")) {

@@ -89,11 +89,13 @@ namespace compiler {
 
 		ExternalLibraries libs;
 
+		vector<string> incDirs;
+		
 		bool silent;
 
 	public:
 
-		Compiler(const string& executable) : executable(executable), libs(), silent(false) {};
+		Compiler(const string& executable) : executable(executable), libs(), incDirs(), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();
@@ -127,6 +129,10 @@ namespace compiler {
 		void addExternalLibrary(const string& path, const string& lib) {
 			libs.addPath(path);
 			libs.addLib(lib);
+		}
+
+		void addIncludeDir(const string& path) {
+			incDirs.push_back(path);
 		}
 
 		string getCommand(const vector<string>& inputFiles, const string& outputFile) const;
