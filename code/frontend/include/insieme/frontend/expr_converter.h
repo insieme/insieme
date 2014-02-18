@@ -72,13 +72,9 @@ using namespace insieme;
  */
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start);
 
-core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
-
 /**
  * Special method which handle malloc and calloc which need to be treated in a special way in the IR.
  */
-core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr);
-
 core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 
 core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy,
