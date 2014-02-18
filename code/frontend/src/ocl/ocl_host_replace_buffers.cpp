@@ -44,6 +44,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
+#include "insieme/frontend/ocl/ocl_host_utils1.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -53,43 +54,6 @@ namespace frontend {
 namespace ocl {
 
 namespace {
-/*
- * Returns either the expression itself or the first argument if expression was a call to function
- */
-core::ExpressionAddress tryRemove(const core::ExpressionPtr& function, const core::ExpressionAddress& expr) {
-	core::ExpressionAddress e = expr;
-	while(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(e)) {
-		if(call->getFunctionExpr() == function)
-			e = call->getArgument(0);
-		else
-			break;
-	}
-	return e;
-}
-
-/*
- * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
- */
-core::ExpressionAddress tryRemoveAlloc(const core::ExpressionAddress& expr) {
-	NodeManager& mgr = expr->getNodeManager();
-	if(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(expr)) {
-		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
-			return tryRemoveAlloc(call->getArgument(0));
-	}
-	return expr;
-}
-
-/*
- * Returns either the expression itself or the expression inside a nest of ref.deref calls
- */
-core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr) {
-	NodeManager& mgr = expr->getNodeManager();
-	if(const core::CallExprAddress& call = core::dynamic_address_cast<const core::CallExpr>(expr)) {
-		if(mgr.getLangBasic().isRefDeref(call->getFunctionExpr()))
-			return tryRemoveDeref(call->getArgument(0));
-	}
-	return expr;
-}
 
 
 
@@ -180,27 +144,6 @@ std::set<Enum> getFlags(const NodePtr& flagExpr) {
 	return flags;
 }
 
-ExpressionAddress extractVariable(ExpressionAddress expr) {
-	const lang::BasicGenerator& gen = expr->getNodeManagerPtr()->getLangBasic();
-
-	if(expr->getNodeType() == NT_Variable) // return variable
-		return expr;
-
-	if(expr->getNodeType() == NT_Literal) // rreturn literal, e.g. global varialbe
-		return expr;
-
-	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(expr)) {
-		if(gen.isSubscriptOperator(call->getFunctionExpr()))
-			return expr;
-
-		if(gen.isCompositeRefElem(call->getFunctionExpr())) {
-			return expr;
-		}
-	}
-
-	return expr;
-}
-
 
 ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, IRBuilder builder) {
 	// read/write flags ignored
@@ -248,89 +191,6 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	if(copyPtr) args.push_back(hostPtr);
 	args.push_back(errcode_ret);
 	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
-}
-
-NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
-	// if the variable is a literal, its a global variable and should therefore be the root
-	if(var.isa<LiteralAddress>()) {
-//std::cout << "found literal " << *var << std::endl;
-		return var;
-	}
-
-	// search in declaration in siblings
-	NodeManager& mgr = var.getNodeManager();
-
-	TreePatternPtr localOrGlobalVar = irp::variable() | irp::literal(irp::refType(pattern::any), pattern::any);
-	TreePatternPtr valueCopy = pattern::var("val", irp::variable()) |
-			irp::callExpr(mgr.getLangBasic().getRefDeref(), pattern::var("val", irp::variable())) |
-			irp::callExpr(mgr.getLangBasic().getRefNew(), pattern::var("val", irp::variable())) |
-			irp::callExpr(mgr.getLangBasic().getRefVar(), pattern::var("val", irp::variable()));
-	TreePatternPtr valueCopyCast = valueCopy | irp::castExpr(pattern::any, valueCopy);
-	TreePatternPtr assign = irp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(pattern::any));
-			pattern::var("lhs", irp::variable()) << valueCopyCast);
-
-//std::cout << "\nscope: " << (scope.getChildAddresses().size()) << std::endl;
-
-	vector<NodeAddress> childAddresses = scope.getChildAddresses();
-	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
-//std::cout << "iterating " << *I << std::endl;
-
-		NodeAddress child = *I;
-//std::cout << "Tolles I " << NodePtr(child) << std::endl;
-
-		/* will be implplemented when a propper testcase can be found
-		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(child)) {
-			// if there is an assignment, continue with the variable found at the right hand side
-			if(AddressMatchOpt assignment = assign->matchAddress(call)){
-std::cout << "assigning  " << printer::PrettyPrinter(assignment->getVarBinding("val").getValue()) << std::endl;
-std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").getValue()) << std::endl;
-				if(assignment->getVarBinding("lhs").getValue() == var) {
-					return getRootVariable(scope, assignment->getVarBinding("val").getValue());
-				}
-			}
-		}
-		*/
-
-		if(LambdaAddress lambda = dynamic_address_cast<const Lambda>(child)) {
-//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
-			// if var is a parameter, continue search for declaration of corresponding argument in outer scope
-
-			CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
-			NodeAddress nextScope, nextVar;
-
-			for_range(make_paired_range(call->getArguments(), lambda->getParameters()->getElements()),
-					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-				if(*var == *pair.second) {
-					nextScope = call.getParentAddress(1);
-					nextVar = tryRemoveDeref(pair.first);
-					return;
-				}
-			});
-			return getRootVariable(nextScope, nextVar);
-		}
-
-		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
-			if(*(decl->getVariable()) == *var) {
-				// check if init expression is another variable
-				if(AddressMatchOpt valueInit = valueCopy->matchAddress(decl->getInitialization())) {
-					// if so, continue walk with other variable
-					return getRootVariable(scope, valueInit->getVarBinding("val").getValue());
-				}
-//std::cout << "found decl of " << *var << std::endl;
-				// if init is no other varable, the root is found
-				return decl->getVariable();
-			}
-		}
-	}
-
-	//compound expressions may not open a new scope, therefore declaration can be in the parent
-	return getRootVariable(scope.getParentAddress(), var);
-}
-
-NodeAddress getRootVariable(NodeAddress var) {
-	// search in declaration in siblings
-	NodeAddress parent = var.getParentAddress(1);
-	return getRootVariable(parent, var);
 }
 }
 
@@ -515,11 +375,11 @@ void BufferReplacer::generateReplacements() {
 		}
 	});
 
-/*
-	for_each(clMemReplacements, [&](std::pair<NodePtr, NodePtr> replacement) {
-		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
+
+	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
+		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
 	});
-*/
+
 }
 
 } //namespace ocl

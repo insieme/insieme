@@ -33,7 +33,6 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -42,6 +41,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
+#include "insieme/frontend/ocl/ocl_host_utils1.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -51,19 +51,51 @@ namespace frontend {
 namespace ocl {
 
 namespace {
-void findKernelNames(NodePtr root) {
-	NodeManager& mgr = root->getNodeManager();
 
+}
 
-	TreePatternPtr oclFun = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),
-			pattern::any << pattern::var("kernel_name", pattern::any) << pattern::var("err", pattern::any) );
-	TreePatternPtr clCreateKernel = pattern::var("clCreateKernel", irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){
+	findKernelNames();
+}
+
+void KernelReplacer::findKernelNames() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	NodeAddress pA(prog);
+
+	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
+	TreePatternPtr mayEncapsulatedNameLiteral = irp::callExpr(pattern::any, pattern::any, *pattern::any << nameLiteral << *pattern::any) | nameLiteral;
+	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
+			mayEncapsulatedNameLiteral << pattern::var("err", pattern::any) );
+	TreePatternPtr createKernelPattern = pattern::var("clCreateKernel", irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
 			pattern::var("kernel", pattern::any) << clCreateKernel));
+
+//std::cout << printer::PrettyPrinter(pA) << "matching\n";
+	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
+//std::cout << "kernel: " << *createKernel["clCreateKernel"].getValue() << std::endl;
+
+		std::string kernelName = createKernel["kernel_name"].getValue().as<LiteralPtr>()->getStringValue();
+		ExpressionAddress kernelExpr = matchAddress >> createKernel["kernel"].getValue().as<ExpressionAddress>();
+		ExpressionAddress kernelVar = extractVariable(kernelExpr).as<ExpressionAddress>();
+
+		kernelVar = getRootVariable(kernelVar).as<ExpressionAddress>();
+
+//std::cout << "varAddr: " << kernelVar << " - " << *kernelVar << std::endl;
+		kernelNames[kernelName] = kernelVar;
+
+		// remove the clCreateKernel call including the assignment and its lhs
+		prog = transform::replaceAll(mgr, prog, NodePtr(createKernel["clCreateKernel"].getValue()), builder.getNoOp(), false);
+	});
 }
 
-}
+void KernelReplacer::collectArguments() {
+//	NodeManager& mgr = prog->getNodeManager();
+//	NodeAddress pA(prog);
 
-KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){ }
+//	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
+//			mayEncapsulatedNameLiteral << pattern::var("err", pattern::any) );
+
+}
 
 } //namespace ocl
 } //namespace frontend
