@@ -29,14 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-
-
-#include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/extensions/frontend_cleanup.h"
 
 #include "insieme/core/ir.h"
@@ -54,7 +51,8 @@
 
 #include "insieme/core/checks/full_check.h"
 
-//#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/utils/memalloc.h"
 
 #include "insieme/utils/assert.h"
 
@@ -70,12 +68,12 @@
 			core::NodePtr res;
 
 			if (!node.isa<core::TypePtr>())
-				res = pass(node); 
+				res = pass(node);
 
 			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
 				if (core::hasMetaInfo(type)){
 					auto meta = core::getMetaInfo(type);
-	
+
 					vector<core::LambdaExprPtr> ctors = meta.getConstructors();
 					for (auto& ctor : ctors){
 						ctor = pass(ctor).as<core::LambdaExprPtr>();
@@ -309,7 +307,7 @@
 	//				}
 	//			}
 	//	});
-		
+
 		return prog;
 	}
 
@@ -341,7 +339,7 @@
                     if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
                         if (core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
                             if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
-                                return exprutils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
+                                return frontend::utils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
                             }
                         }
                     }
