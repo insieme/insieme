@@ -184,7 +184,7 @@ namespace compiler {
 		return getDefaultIncludePaths(cmd);
 	}
 
-	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
+	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler, bool keepOutput) {
 
 		string&& cmd = compiler.getCommand(sourcefile, targetfile);
 
@@ -195,42 +195,42 @@ namespace compiler {
 		return res == 0;
 	}
 
-	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler) {
+	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler, bool keepOutput) {
 		vector<string> files(1);
 		files[0] = sourcefile;
-		return compile(files, targetfile, compiler);
+		return compile(files, targetfile, compiler, keepOutput);
 	}
 
 
-	bool compile(const VirtualPrintable& source, const Compiler& compiler) {
+	bool compile(const VirtualPrintable& source, const Compiler& compiler, bool keepOutput) {
 
 		string target = compileToBinary(source, compiler);
 
 		if(target.empty()) return false;
 
 		// delete target file
-		if (boost::filesystem::exists(target)) {
+		if (!keepOutput && boost::filesystem::exists(target)) {
 			boost::filesystem::remove(target);
 		}
 
 		return true;
 	}
 
-	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
+	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler, bool keepOutput) {
 
 		// create temporary target file name
 		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "trg%%%%%%%%");
 
 		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
 
-		if (compileToBinary(source, targetFile.string(), compiler)) {
+		if (compileToBinary(source, targetFile.string(), compiler), keepOutput) {
 			return targetFile.string();
 		}
 		return string();
 	}
 
 
-	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler) {
+	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler, bool keepOutput) {
 
 		// create a temporary source file
 		fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%");
@@ -246,7 +246,7 @@ namespace compiler {
 		bool res = compile(sourceFile.string(), targetFile, compiler);
 
 		// delete source file
-		if (boost::filesystem::exists(sourceFile)) {
+		if (!keepOutput && boost::filesystem::exists(sourceFile)) {
 			boost::filesystem::remove(sourceFile);
 		}
 
