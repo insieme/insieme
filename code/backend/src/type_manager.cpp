@@ -312,7 +312,6 @@ namespace backend {
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 
 				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
-
 				if (!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
 					// extract resulting c-type
 					c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
@@ -579,9 +578,6 @@ namespace backend {
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
-			//if (ptr->getName()->getValue() == "_anonEnum_usr_include_mpfr_h799"){
-			//	abort();
-			//}
 			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));
 		}
 
