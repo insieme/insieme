@@ -338,29 +338,28 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 	return ptr;
 }
 
-BufferReplacer::BufferReplacer(ProgramPtr& prog) : prog(prog) {
+BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {
 	collectInformation();
 	generateReplacements();
 
-	newProg = prog->getElement(0);
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
 //		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
 		// use pointer in replacements to replace all occurences of the addressed expression
-//		newProg = transform::replaceAll(prog->getNodeManager(), newProg, NodePtr(replacement.first), replacement.second, false);
+//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
 		em[replacement.first] = replacement.second;
 	});
 
-	newProg = transform::replaceVarsRecursive(prog->getNodeManager(), newProg, em, false);
-	newProg = transform::replaceAll(prog->getNodeManager(), newProg, generalReplacements, false);
+	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false);
+	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
 
-	printer::PrettyPrinter pp(newProg);
+	printer::PrettyPrinter pp(prog);
 //	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
 }
 
 void BufferReplacer::collectInformation() {
 	NodeManager& mgr = prog->getNodeManager();
-	NodeAddress pA(prog->getChild(0));
+	NodeAddress pA(prog);
 	IRBuilder builder(mgr);
 
 	TreePatternPtr clCreateBuffer = pattern::var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),

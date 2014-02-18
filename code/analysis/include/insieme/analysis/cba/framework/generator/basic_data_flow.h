@@ -995,8 +995,8 @@ namespace cba {
 						);
 					}
 
-					// and always: if it is the undefined literal
-					if (base.isUndefined(targets[0].getDefinition())) {
+					// and always: if it is the undefined literal or the create array call
+					if (base.isUndefined(targets[0].getDefinition()) || base.isArrayCreate1D(targets[0].getDefinition())) {
 
 						// built up resulting value
 						auto value = getUnknownValue(call->getType());

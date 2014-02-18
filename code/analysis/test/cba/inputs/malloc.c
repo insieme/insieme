@@ -54,11 +54,10 @@ int main(int argc, char** argv) {
 	cba_print_code();
 
 	// test external part
-	cba_print_int(data);
+	cba_expect_undefined_int(data);
 	data = 2;
 	cba_expect_eq_int(data, 2);
 
-/*
 	// test an array of scalars
 	int* a = (int*)(malloc(sizeof(int) * 5));
 
@@ -66,7 +65,7 @@ int main(int argc, char** argv) {
 	cba_expect_is_alias(&(a[0]), &(a[0]));
 
 	// check value before / after first usage
-	cba_print_int(a[2]);
+	cba_expect_undefined_int(a[2]);
 	for(int i = 0; i<5; i++) {
 		a[i] = 1;
 	}
@@ -96,5 +95,4 @@ int main(int argc, char** argv) {
 	cba_expect_is_alias(&(p[0]), &(p[0]));
 
 	//cba_dump_equations();
-*/
 }

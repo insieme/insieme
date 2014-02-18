@@ -59,11 +59,11 @@ OclHostPlugin::OclHostPlugin() {
 }
 
 core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	ocl::BufferReplacer br(prog);
+	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
-//	ocl::KernelReplacer kr(prog);
-//	root = kr.getTransformedProgram();
+	ocl::KernelReplacer kr(root);
+	root = kr.getTransformedProgram();
 
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);

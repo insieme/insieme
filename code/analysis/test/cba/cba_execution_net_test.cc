@@ -216,7 +216,52 @@ namespace cba {
 //		createDotDump(code);
 	}
 
-	TEST(CBA, Uncertain) {
+	TEST(CBA, Uncertain1) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.variable(mgr.getLangBasic().getBool(), 100);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> x = var(12);"
+				"	"
+				"	auto j1 = task { x = 1; };"
+				"	auto j2 = task { x = 2; };"
+				"	"
+				"	auto t = parallel((c)?j1:j2);"
+				"	sync t;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(7, net.getNumPlaces());
+		EXPECT_EQ(6, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(6, states.getNumStates());
+		EXPECT_EQ(6, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
+	TEST(CBA, Uncertain2) {
 
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
@@ -244,16 +289,61 @@ namespace cba {
 		// get execution net
 		auto net = getExecutionNet(code);
 
-		EXPECT_EQ(7, net.getNumPlaces());
-		EXPECT_EQ(6, net.getNumTransitions());
+		EXPECT_EQ(13, net.getNumPlaces());
+		EXPECT_EQ(10, net.getNumTransitions());
 		EXPECT_EQ(1, net.getNumInitialPlaces());
 
 //		std::cout << "Plotting network ...\n";
 //		utils::petri_net::plot(net);
 
 		auto states = getExecutionStateGraph(code);
-		EXPECT_EQ(6, states.getNumStates());
-		EXPECT_EQ(6, states.getNumEdges());
+		EXPECT_EQ(10, states.getNumStates());
+		EXPECT_EQ(10, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
+	TEST(CBA, Uncertain3) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.variable(mgr.getLangBasic().getBool(), 100);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	ref<int> x = var(12);"
+				"	"
+				"	auto j1 = task { x = 1; };"
+				"	auto j2 = job { x = 2; };"
+				"	"
+				"	auto t = parallel((c)?j1:j2);"
+				"	sync t;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(10, net.getNumPlaces());
+		EXPECT_EQ(8, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(8, states.getNumStates());
+		EXPECT_EQ(8, states.getNumEdges());
 //		std::cout << "State Graph: " << states << "\n";
 //		std::cout << "Plotting state graph ...\n";
 //		utils::petri_net::plot(states, "state_graph.svg");
@@ -306,6 +396,59 @@ namespace cba {
 //		createDotDump(code);
 	}
 
+	TEST(CBA, MergeAllTeams) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.variable(mgr.getLangBasic().getBool(), 100);
+
+
+		auto in = builder.parseStmt(
+				"{"
+				"	auto a = var(0);"
+				" 	parallel(job {"
+				"		a = 1;"
+				"	});"
+				"	"
+				"	auto j1 = task { a = 1; };"
+				"	auto j2 = job { a = 2; };"
+				"	"
+				"	parallel((c)?j1:j2);"
+				"	"
+				" 	spawn {"
+				"		a = 2;"
+				"	};"
+				"	a = 3;"
+				"	sync;"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(16, net.getNumPlaces());
+		EXPECT_EQ(11, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(35, states.getNumStates());
+		EXPECT_EQ(72, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
 	TEST(CBA, MergeAllAndChannels) {
 
 		// a simple test cases checking the handling of simple value structs
@@ -346,6 +489,87 @@ namespace cba {
 		auto states = getExecutionStateGraph(code);
 		EXPECT_EQ(7, states.getNumStates());
 		EXPECT_EQ(7, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
+
+	TEST(CBA, SimpleParallelGroup) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				" 	merge(parallel(job {"
+				"		int<4> a = 1;"
+				"	}));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		dumpPretty(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(7, net.getNumPlaces());
+		EXPECT_EQ(4, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(5, states.getNumStates());
+		EXPECT_EQ(4, states.getNumEdges());
+//		std::cout << "State Graph: " << states << "\n";
+//		std::cout << "Plotting state graph ...\n";
+//		utils::petri_net::plot(states, "state_graph.svg");
+
+//		createDotDump(code);
+	}
+
+	TEST(CBA, SimpleParallelGroupBarrier) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				" 	merge(parallel(job {"
+				"		barrier(getThreadGroup(0u));"
+				"	}));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		dumpPretty(code);
+
+		// get execution net
+		auto net = getExecutionNet(code);
+
+		EXPECT_EQ(9, net.getNumPlaces());
+		EXPECT_EQ(5, net.getNumTransitions());
+		EXPECT_EQ(1, net.getNumInitialPlaces());
+
+//		std::cout << "Plotting network ...\n";
+//		utils::petri_net::plot(net);
+
+		auto states = getExecutionStateGraph(code);
+		EXPECT_EQ(6, states.getNumStates());
+		EXPECT_EQ(5, states.getNumEdges());
 //		std::cout << "State Graph: " << states << "\n";
 //		std::cout << "Plotting state graph ...\n";
 //		utils::petri_net::plot(states, "state_graph.svg");

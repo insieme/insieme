@@ -63,7 +63,7 @@ namespace cba {
 	namespace {
 
 		template<typename Context, typename JobSetType, typename ThreadBodySetType>
-		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const Context& rootCtxt);
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprAddress& spawn, const Context& spawnCtxt);
 
 		template<typename Context, typename ThreadGroupSetType, typename ThreadBodySetType>
 		ConstraintPtr createThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res);
@@ -86,7 +86,6 @@ namespace cba {
 			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			typedef typename Context::thread_id thread_id;
 
 			// check whether this is a call to parallel
 			auto fun = call->getFunctionExpr();
@@ -98,14 +97,8 @@ namespace cba {
 				// get result set
 				auto res = cba.getSet(ThreadBodies, call, ctxt);
 
-				// build root context of spawned threads
-				// TODO: support thread-groups larger than 1
-				auto threadContext = ctxt.threadContext;
-				threadContext >>= thread_id(cba.getLabel(call), ctxt.callContext);
-				auto rootCtxt = Context(typename Context::call_context(), threadContext);
-
 				// add constraint
-				constraints.add(createThreadBodySpawnConstraint(cba, jobs, res, rootCtxt));
+				constraints.add(createThreadBodySpawnConstraint(cba, jobs, res, call, ctxt));
 			}
 
 			// another case: if it is the merge part
@@ -149,18 +142,20 @@ namespace cba {
 
 			ThreadBodySetType out;
 
-			Context rootCtxt;
+			CallExprAddress spawn;
+
+			Context spawnCtxt;
 
 			// the bodies to be collected
-			mutable std::vector<TypedValueID<callable_lattice_type>> bodies;
+			mutable std::map<Job<Context>, TypedValueID<callable_lattice_type>> bodies;
 
 			// the inputs this constraint is depending on
 			mutable std::vector<ValueID> inputs;
 
 		public:
 
-			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const Context& rootCtxt) :
-				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), rootCtxt(rootCtxt) {
+			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const CallExprAddress& spawn, const Context& spawnCtxt) :
+				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), spawn(spawn), spawnCtxt(spawnCtxt) {
 				inputs.push_back(job);
 			}
 
@@ -172,14 +167,15 @@ namespace cba {
 				// just collect all bodies from the bodies set
 				bool newElement = false;
 				for(const auto& cur : bodies) {
-					const std::set<Callable<Context>>& callables = ass[cur];
+					const std::set<Callable<Context>>& callables = ass[cur.second];
 					for(const auto& callable : callables) {
+						for (const Context& rootCtxt : getThreadContexts(cur.first)) {
+							// take the body of the callable the the root ctxt
+							auto body = ThreadBody<Context>(callable.getBody(), rootCtxt);
 
-						// take the body of the callable the the root ctxt
-						auto body = ThreadBody<Context>(callable.getBody(), rootCtxt);
-
-						// see whether the body is already known => otherwise add it
-						newElement = set.insert(body).second || newElement;
+							// see whether the body is already known => otherwise add it
+							newElement = set.insert(body).second || newElement;
+						}
 					}
 				}
 
@@ -197,12 +193,13 @@ namespace cba {
 				for(const auto& job : jobs) {
 
 					// get body sets
+					if (bodies.find(job) != bodies.end()) continue;
+
+					// register body reference
 					auto curBodySet = cba.getSet(C, job.getAddress()->getDefaultExpr(), job.getContext());
-					if (!contains(bodies, curBodySet)) {
-						bodies.push_back(curBodySet);
-						inputs.push_back(curBodySet);
-						changed = true;
-					}
+					bodies[job] = curBodySet;
+					inputs.push_back(curBodySet);
+					changed = true;
 				}
 
 				return changed;
@@ -222,14 +219,15 @@ namespace cba {
 
 				// just collect all bodies from the bodies set
 				for(const auto& cur : bodies) {
-					const std::set<Callable<Context>>& callables = ass[cur];
+					const std::set<Callable<Context>>& callables = ass[cur.second];
 					for(const auto& callable : callables) {
+						for (const Context& rootCtxt : getThreadContexts(cur.first)) {
+							// take the body of the callable the the root ctxt
+							auto body = ThreadBody<Context>(callable.getBody(), rootCtxt);
 
-						// take the body of the callable the the root ctxt
-						auto body = ThreadBody<Context>(callable.getBody(), rootCtxt);
-
-						// see whether the body is really there
-						if (set.find(body) == set.end()) return false;
+							// see whether the body is really there
+							if (set.find(body) == set.end()) return false;
+						}
 					}
 				}
 
@@ -251,12 +249,41 @@ namespace cba {
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "ThreadBodies(" << in << ") in " << this->out;
 			}
+
+			vector<Context> getThreadContexts(const Job<Context>& job) const {
+				typedef typename Context::thread_id thread_id;
+
+				// init result
+				vector<Context> res;
+
+				// get label of spawn point
+				auto spawnLabel = cba.getLabel(spawn);
+
+				// build root context of spawned threads
+				// TODO: support thread-groups larger than 1
+				auto threadContext = spawnCtxt.threadContext;
+				threadContext >>= thread_id(spawnLabel, spawnCtxt.callContext, 0);
+				res.push_back(Context(typename Context::call_context(), threadContext));
+
+				// if it is not only a sequential task ...
+				if (!job.isTask()) {
+					for(unsigned i=1; i<Context::thread_ctxt_size; i++) {
+						// ... add contexts for additional IDs in the group
+						auto threadContext = spawnCtxt.threadContext;
+						threadContext >>= thread_id(spawnLabel, spawnCtxt.callContext, i);
+						res.push_back(Context(typename Context::call_context(), threadContext));
+					}
+				}
+
+				// done
+				return res;
+			}
 		};
 
 
 		template<typename Context, typename JobSetType, typename ThreadBodySetType>
-		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const Context& rootCtxt) {
-			return std::make_shared<ThreadBodySpawnConstraint<Context, JobSetType, ThreadBodySetType>>(cba, jobs, res, rootCtxt);
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprAddress& spawn, const Context& spawnCtxt) {
+			return std::make_shared<ThreadBodySpawnConstraint<Context, JobSetType, ThreadBodySetType>>(cba, jobs, res, spawn, spawnCtxt);
 		}
 
 

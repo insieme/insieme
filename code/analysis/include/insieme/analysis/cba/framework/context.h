@@ -123,6 +123,11 @@ namespace cba {
 			return sequence[index];
 		}
 
+		T& operator[](std::size_t index) {
+			assert_lt(index, s) << "Sequence-Index out of bound!";
+			return sequence[index];
+		}
+
 		Sequence<T,s>& operator<<=(const T& elem) {
 			if (empty) return *this;
 			this->invalidateHash();
@@ -217,13 +222,11 @@ namespace cba {
 	 * The class representing threads.
 	 */
 	template<unsigned s>
-	class ThreadID : public utils::Printable, public utils::HashableMutableData<ThreadID<s>> {
+	struct ThreadID : public utils::Printable, public utils::HashableMutableData<ThreadID<s>> {
 
 		Label spawn;
 		Sequence<Label, s> spawnContext;
 		int id;
-
-	public:
 
 		ThreadID() : spawn(0), spawnContext(), id(0) {}
 

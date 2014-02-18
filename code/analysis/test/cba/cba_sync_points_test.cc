@@ -207,6 +207,49 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+
+	TEST(CBA, SimpleParallelGroup) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				" 	merge(parallel(job {"
+				"		int<4> a = 1;"
+				"	}));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+//		dumpPretty(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(1,analysis.getLabel(code[0].as<CallExprAddress>()[0]));
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+
+		EXPECT_EQ(8, syncPoints.size());
+		auto resStr = toString(syncPoints);
+
+		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
+		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
+		EXPECT_PRED2(containsSubString, resStr, "T0-0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");	// spawning the thread group
+		EXPECT_PRED2(containsSubString, resStr, "T0-0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// merging the thread group
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the thread group - thread 0
+		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the end of the thread group - thread 0
+
+		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the begin of the thread group - thread 1
+		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the end of the thread group - thread 1
+
+//		createDotDump(code);
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

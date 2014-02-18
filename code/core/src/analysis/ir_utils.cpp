@@ -1018,6 +1018,15 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 	return false;
 }
 
+bool isTask(const JobExprPtr& job) {
+	// make a null-check
+	if (!job) return false;
+
+	core::IRBuilder builder(job->getNodeManager());
+	return job->getThreadNumRange() == builder.getThreadNumRange(1,1);
+}
+
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

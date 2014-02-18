@@ -48,6 +48,7 @@ void cba_expect_not_alias(void* a, void* b);
 void cba_expect_may_alias(void* a, void* b);
 
 // integer tests
+void cba_expect_undefined_int(int a);
 void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
 void cba_expect_may_eq_int(int a, int b);

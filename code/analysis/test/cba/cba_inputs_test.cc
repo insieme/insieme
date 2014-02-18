@@ -131,6 +131,11 @@ namespace cba {
 							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
 
 			// arithmetic analysis
+			} else if (name == "cba_expect_undefined_int") {
+				const std::set<cba::Formula>& values = cba::getValues(call[0], A);
+				EXPECT_TRUE(values.find(Formula()) != values.end())
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
 			} else if (name == "cba_expect_eq_int") {
 				EXPECT_PRED2(isArithmeticEqual, call[0], call[1])
 							<< *core::annotations::getLocation(call) << "\n"
@@ -156,13 +161,17 @@ namespace cba {
 				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 			} else if (name == "cba_dump_execution_net") {
 				// dump the dot plot of the execution net
-				utils::petri_net::plot(getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()), "execution_net.svg");
+				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				EXPECT_LT(1, net.getNumPlaces());
+				utils::petri_net::plot(net, "execution_net.svg");
 			} else if (name == "cba_dump_state_graph") {
 				// dump the dot plot of the execution net
-				utils::petri_net::plot(getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()), "state_graph.svg");
+				const auto& states = getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				EXPECT_LT(1, states.getNumStates());
+				utils::petri_net::plot(states, "state_graph.svg");
 			} else if (name == "cba_dump_thread_regions") {
 				// dump the list of thread regions
-				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody()));
+				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n";
 			} else if (name == "cba_print_ref") {
 				// print the result of the reference analysis
 				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";

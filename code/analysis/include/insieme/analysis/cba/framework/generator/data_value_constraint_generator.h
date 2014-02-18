@@ -208,7 +208,7 @@ namespace cba {
 
 			// built up the value representing an undefined array
 			std::map<ElementIndex,value_type> data;
-			data[ElementIndex()] = getUndefinedValue(valueMgr, vec->getElementType(), unknown);
+			data[ElementIndex()] = getUndefinedValue(valueMgr, array->getElementType(), unknown);
 			return valueMgr.compound(data);
 
 		} else if (auto compound = type.isa<NamedCompositeTypePtr>()) {

@@ -341,6 +341,31 @@ namespace cba {
 
 				// ------- create transitions -----------
 
+				std::map<ProgramPoint<Context>, Transition<Context>> redistributeOps;
+				auto createTransition = [&](const ProgramPoint<Context>& point)->Transition<Context> {
+
+					// special treatment for redistribute operation
+					if (point.isRedistribute()) {
+
+						// get root operation (master thread operation
+						Context rootCtxt = point.getContext();
+						rootCtxt.threadContext[0].id = 0;
+						auto op = ProgramPoint<Context>(point.getState(), point.getStatement(), rootCtxt);
+
+						// check whether root-operation has already been processed
+						auto pos = redistributeOps.find(op);
+						if (pos != redistributeOps.end()) {
+							return pos->second;
+						}
+
+						// otherwise: create a new transition and cache it
+						return redistributeOps[op] = res.createTransition(op);
+					}
+
+					// all others => just create a fresh transition
+					return res.createTransition(point);
+				};
+
 				auto buildInOut = [&](const ProgramPoint<Context>& point)->Transition<Context> {
 
 					// get list of pre- and post-states
@@ -380,7 +405,7 @@ namespace cba {
 					}
 
 					// create spawn-transition
-					Transition<Context> trans = res.createTransition(point);
+					Transition<Context> trans = createTransition(point);
 					res.addPrePlace(in, trans);
 					res.addPostPlace(trans, out);
 
@@ -400,16 +425,54 @@ namespace cba {
 						auto spawn = buildInOut(p);
 
 						// link spawn-transition with
-						const std::set<ThreadBody<Context>>& bodies = ass[threadBodies[p]];
+						auto bodies = aggregateBodies(ass[threadBodies[p]]);
 
 						Place<Context> body;
-						if (bodies.size() == 1u) {
+						if (bodies.size() == 1u && bodies[0].size() == 1u) {
 							// direct body
-							body = startPlace[*bodies.begin()];
+							body = startPlace[*(bodies.begin()->begin())];
+
+						} else if (bodies.size() == 1u) {
+
+							// there is one team only
+							body = res.createAuxiliary();
+							auto start = res.createTransition();
+
+							// link body head to start transition
+							res.addPrePlace(body, start);
+
+							// link start transition to all thread bodies
+							for(const auto& b : bodies[0]) {
+								// link team node to start node
+								res.addPostPlace(start, startPlace[b]);
+							}
+
 						} else {
+
+							// we have several different optional teams ...
 							body = res.createAuxiliary();
 							for(const auto& cur : bodies) {
-								res.link(body, startPlace[cur]);
+
+								// if short-cut if there is only one body in this team
+								if (cur.size() == 1u) {
+
+									// use start place as start node of team
+									res.link(body, startPlace[cur[0]]);
+
+								} else {
+
+									// create a artificial team node
+									auto team = res.createAuxiliary();
+									auto start = res.createTransition();
+									res.addPrePlace(team, start);
+									for(const auto& b : cur) {
+										// link team node to start node
+										res.addPostPlace(start, startPlace[b]);
+									}
+
+									// link body node with team node
+									res.link(body, team);
+								}
 							}
 						}
 
@@ -422,16 +485,54 @@ namespace cba {
 						auto merge = buildInOut(p);
 
 						// link merge-transition with bodies
-						const std::set<ThreadBody<Context>>& bodies = ass[threadBodies[p]];
+						auto bodies = aggregateBodies(ass[threadBodies[p]]);
 
 						Place<Context> body;
-						if (bodies.size() == 1u) {
+						if (bodies.size() == 1u && bodies[0].size() == 1u) {
 							// direct body
-							body = endPlace[*bodies.begin()];
+							body = endPlace[*(bodies.begin()->begin())];
+
+						} else if (bodies.size() == 1u) {
+
+							// there is one team only
+							body = res.createAuxiliary();
+							auto end = res.createTransition();
+
+							// link body head to start transition
+							res.addPostPlace(end, body);
+
+							// link start transition to all thread bodies
+							for(const auto& b : bodies[0]) {
+								// link team node to start node
+								res.addPrePlace(endPlace[b], end);
+							}
+
 						} else {
+
+							// we have several different optional teams ...
 							body = res.createAuxiliary();
 							for(const auto& cur : bodies) {
-								res.link(endPlace[cur], body);
+
+								// if short-cut if there is only one body in this team
+								if (cur.size() == 1u) {
+
+									// use start place as start node of team
+									res.link(endPlace[cur[0]], body);
+
+								} else {
+
+									// create a artificial team node
+									auto team = res.createAuxiliary();
+									auto end = res.createTransition();
+									res.addPostPlace(end, team);
+									for(const auto& b : cur) {
+										// link team node to start node
+										res.addPrePlace(endPlace[b], end);
+									}
+
+									// link body node with team node
+									res.link(team, body);
+								}
 							}
 						}
 
@@ -453,8 +554,15 @@ namespace cba {
 								done = endPlace[*cur.begin()];
 							} else {
 								done = res.createAuxiliary();
-								for(const auto& body : cur) {
-									res.link(endPlace[body], done);
+
+								const auto& sorted = aggregateBodies(cur);
+
+								for(const auto& team : sorted) {
+									auto teamEnd = res.createTransition();
+									res.addPostPlace(teamEnd, done);
+									for(const auto& body : team) {
+										res.addPrePlace(endPlace[body], teamEnd);
+									}
 								}
 							}
 							res.addPrePlace(done, mergeAll);
@@ -508,9 +616,10 @@ namespace cba {
 
 					} else if (p.isRedistribute()) {
 
+						// TODO: implement support for non-lexicographical redistribute connection
+
 						// just link operation for now
 						buildInOut(p);
-//						auto redist = buildInOut(p);
 
 					} else {
 						assert_not_implemented() << "Unsupported sync-point encountered: " << p << "\n";
@@ -528,6 +637,30 @@ namespace cba {
 				res.removePlace(dummy);
 
 				// done
+				return res;
+			}
+
+			std::vector<std::vector<ThreadBody<Context>>> aggregateBodies(const std::set<ThreadBody<Context>>& bodies) const {
+
+				std::vector<std::vector<ThreadBody<Context>>> res;
+
+				// sort out bodies
+				for(const auto& cur : bodies) {
+					bool added = false;
+					for(auto& list : res) {
+						if (isSameThreadTeam(list[0], cur)) {
+							list.push_back(cur);
+							added = true;
+							break;
+						}
+					}
+
+					// if not processed => create a new group
+					if (!added) {
+						res.push_back(toVector(cur));
+					}
+				}
+
 				return res;
 			}
 

@@ -210,6 +210,10 @@ namespace cba {
 			return initialPlaces;
 		}
 
+		Transition<Context> createTransition() {
+			return Transition<Context>(Choice, ++id);
+		}
+
 		Transition<Context> createTransition(const ProgramPoint<Context>& point) {
 			TransitionKind kind = Spawn;
 			if (point.isSpawn()) {
