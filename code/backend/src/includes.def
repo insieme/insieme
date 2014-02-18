@@ -107,11 +107,6 @@ FUN("time.h", strftime)
 FUN("time.h", gmtime)
 FUN("time.h", clock)
 
-FUN("sys/time.h", gettimeofday)
-
-TYPE("sys/time.h", "struct timeval")
-TYPE("sys/time.h", "struct timezone")
-
 FUN("math.h", floor)
 FUN("math.h", ceil)
 FUN("math.h", min)
