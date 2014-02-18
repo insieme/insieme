@@ -57,6 +57,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -310,21 +311,25 @@ namespace backend {
 				const string& header = annotations::c::getAttachedInclude(type);
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 
-				// extract resulting c-type
-				c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
+				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
 
-				// add generic parameters
-				for(auto cur : genericType->getTypeParameter()) {
+				if (!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
+					// extract resulting c-type
+					c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
+		
+					// add generic parameters
+					for(auto cur : genericType->getTypeParameter()) {
 
-					// resolve info for current parameter
-					const TypeInfo* curInfo = resolveInternal(cur);
+						// resolve info for current parameter
+						const TypeInfo* curInfo = resolveInternal(cur);
 
-					// add dependency to inner type
-					info->declaration->addDependency(curInfo->declaration);
-					info->definition->addDependency(curInfo->definition);
+						// add dependency to inner type
+						info->declaration->addDependency(curInfo->declaration);
+						info->definition->addDependency(curInfo->definition);
 
-					// add type to parameter list
-					cType->parameters.push_back(curInfo->rValueType);
+						// add type to parameter list
+						cType->parameters.push_back(curInfo->rValueType);
+					}
 				}
 
 				// TODO: add int-type parameters
@@ -362,7 +367,7 @@ namespace backend {
 			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
 				const string& name   = core::annotations::getAttachedName(type);
 				const string& header = annotations::c::getAttachedInclude(type);
-				std::cout << "system header type " << name << "-" << header << " " << type << std::endl;
+				//std::cout << "system header type " << name << "-" << header << " " << type << std::endl;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 				addInfo(type, info);
 				return info;
@@ -574,6 +579,9 @@ namespace backend {
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
+			//if (ptr->getName()->getValue() == "_anonEnum_usr_include_mpfr_h799"){
+			//	abort();
+			//}
 			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));
 		}
 
