@@ -223,7 +223,7 @@ namespace compiler {
 
 		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
 
-		if (compileToBinary(source, targetFile.string(), compiler), keepOutput) {
+		if (compileToBinary(source, targetFile.string(), compiler, keepOutput)) {
 			return targetFile.string();
 		}
 		return string();
