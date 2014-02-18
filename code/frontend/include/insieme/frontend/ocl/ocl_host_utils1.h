@@ -37,52 +37,39 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/utils/map_utils.h"
-#include "insieme/frontend/frontend.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/pattern/pattern_utils.h"
+
+namespace icp = insieme::core::pattern;
+namespace pirp = insieme::core::pattern::irp;
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
-namespace {
 /*
- * Collects the kernel function names, specified using clCreateKernel and stores them in a map
- *
-class FindKernelNames: public core::transform::CachedNodeMapping {
-	std::map<core::ExpressionPtr, std::string> kernelNames;
-	core::pattern::TreePatternPtr clCreateKernel;
-
-	const core::NodePtr resolveElement(const core::CallExprPtr& ptr);
-
-public:
-	FindKernelNames();
-};
-*/
-}
-
-typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
-
-/*
- * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
- * Loads kernel source codes from files and adds them to the program
- * Replaces nd_range calls with calls to the actual function
+ * Returns either the expression itself or the first argument if expression was a call to function
  */
-class KernelReplacer {
-public:
-	KernelReplacer(core::NodePtr prog);
-private:
-	core::NodePtr prog;
-	KernelNames kernelNames;
-	KernelArgs kernelArgs;
+core::ExpressionAddress tryRemove(const core::ExpressionPtr& function, const core::ExpressionAddress& expr);
 
-	void findKernelNames();
-	void collectArguments();
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
+ */
+core::ExpressionAddress tryRemoveAlloc(const core::ExpressionAddress& expr);
 
-public:
-	core::NodePtr getTransformedProgram() {return prog;}
-};
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
+
+core::ExpressionAddress extractVariable(core::ExpressionAddress expr);
+
+
+core::NodeAddress getRootVariable(core::NodeAddress scope, core::NodeAddress var);
+
+
+core::NodeAddress getRootVariable(core::NodeAddress var);
+
+}
+}
+}
