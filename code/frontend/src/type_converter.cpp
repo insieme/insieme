@@ -317,7 +317,8 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	// so that the semantics of C argument passing is maintained
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
 		// exceptions are OpenCL vectors and gcc-vectors
-		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType()) // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
+		// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
+		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType()) 
 		{
 			retTy = builder.refType(retTy);
 		}
@@ -336,7 +337,8 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
 				// exceptions are OpenCL vectors and gcc-vectors
-				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType()) // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
+				// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
+				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType()) 
 				{
 					argTy = builder.refType(argTy);
 				}
@@ -550,31 +552,6 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if (!recDecl->getNameAsString().empty()) {
         core::annotations::attachName(retTy,recDecl->getName());
 	}
-
-//	if (tagType->getDecl()->getNameAsString() == "Lazy_construction_nt"){
-//	//	Debug hook
-//	
-//
-//		std::cout << "###################################################################" << std::endl;
-//		std::cout << "#################  Lazy!               ############################" << std::endl;
-//		std::cout << "###################################################################" << std::endl;
-//		std::cout << *retTy << std::endl;
-//		std::cout << mid << std::endl;
-//		std::cout << "complete required: " << tagType->getDecl()->isCompleteDefinitionRequired ()  << std::endl;
-//		std::cout << "is complete: " << tagType->getDecl()->isCompleteDefinition ()  << std::endl;
-//		std::cout << "is free standing: " << tagType->getDecl()->isFreeStanding ()  << std::endl;
-//		std::cout << "###################################################################" << std::endl;
-//
-//		if (recDecl->field_empty () ){
-//
-//
-//
-//			recDecl->dump();
-//			abort();
-//			
-//
-//		}
-//	}
 
 	return retTy;
 }

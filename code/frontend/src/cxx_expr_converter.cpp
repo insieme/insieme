@@ -831,6 +831,16 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(innerIr);
 	}
 	else{
+		if (core::encoder::isListType(innerIr->getType())) {
+			vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>>(innerIr);
+			if (core::encoder::isListType(retList[0]->getType())) 
+				retList = core::encoder::toValue<vector<core::ExpressionPtr>>(retList[0]);
+			for (core::ExpressionPtr& expr : retList){
+				expr = builder.deref(expr);
+			}
+
+			innerIr = builder.callExpr (lambdaRetType, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(lambdaRetType),  builder.tupleExpr(retList));
+		}
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
