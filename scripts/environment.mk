@@ -12,3 +12,10 @@ SLOTS = `grep 'processor' /proc/cpuinfo | sort -u | wc -l`
 CC  = gcc
 CXX = g++
 
+NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
+NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
+
+export CC
+export CXX
+export NEW_CC
+export NEW_CXX

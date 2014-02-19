@@ -35,9 +35,6 @@ PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
 
-NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
-NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
-
 all: INSIEME
 
 water: ${GCC} ${BOOST} ${CMAKE} ${OPENMPI}
