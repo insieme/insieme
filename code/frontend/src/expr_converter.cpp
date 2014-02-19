@@ -187,6 +187,7 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 		membType = convFact.convertType(membExpr->getType().getTypePtr());
 	}
 	else {
+
 		// if we translated the object, is better to retrieve info from our struct or union
 		frontend_assert(baseTy.isa<core::NamedCompositeTypePtr>()) << baseTy << "is not a NamedCompositeType";
 		for (const auto& cur : baseTy.as<core::NamedCompositeTypePtr>()->getEntries()){
