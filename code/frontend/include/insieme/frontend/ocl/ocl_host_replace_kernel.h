@@ -62,7 +62,7 @@ public:
 }
 
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs1;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > KernelTypes;
 
 /*
  * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
@@ -75,7 +75,7 @@ public:
 private:
 	core::NodePtr prog;
 	KernelNames kernelNames;
-	KernelArgs1 kernelArgs;
+	KernelTypes kernelTypes;
 
 	void findKernelNames();
 	void collectArguments();

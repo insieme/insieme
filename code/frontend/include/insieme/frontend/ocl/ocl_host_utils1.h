@@ -70,6 +70,9 @@ core::NodeAddress getRootVariable(core::NodeAddress scope, core::NodeAddress var
 
 core::NodeAddress getRootVariable(core::NodeAddress var);
 
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct1(const core::ExpressionPtr& arg, const core::IRBuilder& builder);
+
+
 }
 }
 }

@@ -89,17 +89,32 @@ void KernelReplacer::findKernelNames() {
 	});
 }
 
+
 void KernelReplacer::collectArguments() {
-//	NodeManager& mgr = prog->getNodeManager();
+	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog);
 
+	TreePatternPtr localOrGlobalVar = node(node(node(single(aT(irp::genericType("_cl_kernel"))) << single(pattern::any)) << single(pattern::any)) << single(pattern::any));
+
 	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clSetKernelArg"),
-			pattern::var("kernel", pattern::any) << pattern::var("arg_index", pattern::any) << pattern::any << pattern::var("arg_value", pattern::any) );
+			(aT(pattern::var("kernel", localOrGlobalVar))) << pattern::var("arg_index", irp::literal()) << pattern::any << pattern::var("arg_value", pattern::any) );
 
 
 	irp::matchAllPairs(clCreateKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& setArg) {
-//		std::cout << "Kernel: " << *setArg["kernel"].getValue() << "\n\tidx: " << *setArg["arg_index"].getValue() << " val "
-//				<< *setArg["arg_value"].getValue() << std::endl;
+//		std::cout << "Kernel: " << setArg["kernel"].getValue() << "\n\tidx: " << *setArg["arg_index"].getValue() << " val "
+//				<< *getVarOutOfCrazyInspireConstruct1(setArg["arg_value"].getValue().as<ExpressionPtr>(), IRBuilder(mgr)) << std::endl;
+
+		ExpressionAddress kernel = getRootVariable(matchAddress >> setArg["kernel"].getValue().as<ExpressionAddress>()).as<ExpressionAddress>();
+		LiteralPtr idx = setArg["arg_index"].getValue().as<LiteralPtr>();
+		ExpressionPtr arg = setArg["arg_value"].getValue().as<ExpressionPtr>();
+
+		int argIdx = utils::numeric_cast<int>(idx->getStringValue());
+		// reserve memory
+		for(int i = kernelTypes[kernel].size(); i <= argIdx; ++i)
+			kernelTypes[kernel].push_back(TypePtr());
+
+		//collect types of the arguments
+		kernelTypes[kernel].at(argIdx) = (arg->getType());
 	});
 }
 

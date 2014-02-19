@@ -156,25 +156,27 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 		}
 		*/
 
-		if(LambdaAddress lambda = dynamic_address_cast<const Lambda>(child)) {
-//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
-			// if var is a parameter, continue search for declaration of corresponding argument in outer scope
+		if(child.getDepth() >= 4) {
+			if(LambdaAddress lambda = dynamic_address_cast<const Lambda>(child)) {
+	//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
+				// if var is a parameter, continue search for declaration of corresponding argument in outer scope
 
-//for(int i = 1; i < 5; ++i)
-//	std::cout << "\nlp: " << lambda << " - " << printer::PrettyPrinter(lambda) << std::endl;
+	//for(int i = 1; i < 5; ++i)
+	//	std::cout << "\nlp: " << lambda << " - " << printer::PrettyPrinter(lambda) << std::endl;
 
-			CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
-			NodeAddress nextScope, nextVar;
+				CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
+				NodeAddress nextScope, nextVar;
 
-			for_range(make_paired_range(call->getArguments(), lambda->getParameters()->getElements()),
-					[&](const std::pair<const ExpressionAddress, const VariableAddress>& pair) {
-				if(*var == *pair.second) {
-					nextScope = call.getParentAddress(1);
-					nextVar = tryRemoveDeref(pair.first);
-					return;
-				}
-			});
-			return getRootVariable(nextScope, nextVar);
+				for_range(make_paired_range(call->getArguments(), lambda->getParameters()->getElements()),
+						[&](const std::pair<const ExpressionAddress, const VariableAddress>& pair) {
+					if(*var == *pair.second) {
+						nextScope = call.getParentAddress(1);
+						nextVar = tryRemoveDeref(pair.first);
+						return;
+					}
+				});
+				return getRootVariable(nextScope, nextVar);
+			}
 		}
 
 		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
@@ -205,6 +207,24 @@ NodeAddress getRootVariable(NodeAddress var) {
 	NodeAddress parent = var.getParentAddress(1);
 	return getRootVariable(parent, var);
 }
+
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct1(const core::ExpressionPtr& arg, const core::IRBuilder& builder) {
+// remove stuff added by (void*)&
+	core::CallExprPtr stripped = arg.isa<core::CallExprPtr>();
+
+	if (!stripped) {
+		return arg;
+	}
+
+	auto funExpr = stripped->getFunctionExpr();
+	if(builder.getNodeManager().getLangBasic().isScalarToArray(funExpr) ||
+			builder.getNodeManager().getLangBasic().isRefDeref(funExpr) || builder.getNodeManager().getLangBasic().isRefReinterpret(funExpr)) {
+		return getVarOutOfCrazyInspireConstruct1(stripped->getArgument(0), builder);
+	}
+
+	return arg;
+}
+
 
 }
 }

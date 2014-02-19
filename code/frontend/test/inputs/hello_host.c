@@ -50,7 +50,7 @@ cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize,
 
 //#pragma insieme mark
 int main(int argc, char **argv) {
-	cl_kernel kernel[2] = {NULL};
+	cl_kernel kernel;
 	cl_int err;
 	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
 	cl_platform_id* platforms;
@@ -88,24 +88,24 @@ int main(int argc, char **argv) {
 	#pragma insieme kernelFile "hello.cl"
 	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
 
-	kernel[1] = clCreateKernel(program, "hello", &err);
-	err = clSetKernelArg(kernel[1], 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	kernel = clCreateKernel(program, "hello", &err);
+	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*) &dev_ptr1);
 	for(int i = 0; i < 1; ++i)
-		err = clSetKernelArg(kernel[i], 1, sizeof(cl_mem), (void*) &(dev_ptr4[i]));
+		err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*) &(dev_ptr4[i]));
 	// local memory
-	clSetKernelArg(kernel[1], 2, sizeof(float) * n, 0);
+	clSetKernelArg(kernel, 2, sizeof(float) * n, 0);
 	// private memory
 	cl_int ta = 7;
-	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);
+	clSetKernelArg(kernel , 3, sizeof(cl_int), &ta);
 	cl_short2 sv = {0,1};
-	clSetKernelArg(kernel[1] , 4, sizeof(cl_short2), &sv);
+	clSetKernelArg(kernel , 4, sizeof(cl_short2), &sv);
 
 
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
 	for(int i = 0; i < 1; ++i)
-		err = subfunction(kernel[i], queue[0], globalSize, localSize, context, dev_ptr5);
+		err = subfunction(kernel, queue[0], globalSize, localSize, context, dev_ptr5);
 //		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 	clReleaseCommandQueue(gqueue);
 	clReleaseContext(context);
 	clReleaseEvent(event);
-	if(&kernel[0]) clReleaseKernel(kernel[0]);
+	clReleaseKernel(kernel);
 	free(host_ptr);
 //	free(device);
 
