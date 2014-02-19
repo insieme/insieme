@@ -3,9 +3,9 @@
 
 VERSION=1.6.0
 
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-O3"
 CXXFLAGS=$CFLAGS
-LDFLAGS="-mtune=native -O3"
+LDFLAGS="-O3"
 
 ########################################################################
 ##                             Google Test

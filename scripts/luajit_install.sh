@@ -3,8 +3,8 @@
 
 VERSION=2.0.0-beta9
 
-CFLAGS="-O3 -mtune=native -fgraphite-identity -fPIC"
-LDFLAGS="-O3 -mtune=native -fPIC"
+CFLAGS="-O3 -fPIC"
+LDFLAGS="-O3 -fPIC"
 
 ########################################################################
 ##								LuaJIT

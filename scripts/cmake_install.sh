@@ -15,9 +15,9 @@ fi
 
 rm -Rf $PREFIX/cmake-$VERSION
 
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-O3"
 CXXFLAGS=$CFLAGS
-LDFLAGS="-mtune=native -O3"
+LDFLAGS="-O3"
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 
