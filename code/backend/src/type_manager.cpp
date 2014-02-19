@@ -315,7 +315,7 @@ namespace backend {
 				if (!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
 					// extract resulting c-type
 					c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
-		
+
 					// add generic parameters
 					for(auto cur : genericType->getTypeParameter()) {
 
@@ -324,7 +324,7 @@ namespace backend {
 
 						// add dependency to inner type
 						info->declaration->addDependency(curInfo->declaration);
-						info->definition->addDependency(curInfo->definition);
+						info->definition->addRequirement(curInfo->definition);
 
 						// add type to parameter list
 						cType->parameters.push_back(curInfo->rValueType);
