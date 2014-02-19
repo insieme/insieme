@@ -131,6 +131,11 @@ namespace frontend {
 		 */
 		set<string> interceptions;
 
+		/**
+		 * A list of include directories containing intercepted headers.
+		 */
+		vector<path> interceptedHeaderDirs;
+
         /**
          * A list of optimization flags (-f flags) that need to be used at least in the
          * backend compiler
@@ -270,6 +275,27 @@ namespace frontend {
 		 */
 		const set<string>& getInterceptions() const {
 			return interceptions;
+		}
+
+		/**
+		 * Obtains a reference to the covered set of include directories.
+		 */
+		const vector<path>& getInterceptedHeaderDirs() const {
+			return interceptedHeaderDirs;
+		}
+
+		/**
+		 * Updates the set of considered include directories.
+		 */
+		void setInterceptedHeaderDirs(const vector<path>& interceptedHeaderDirs) {
+			this->interceptedHeaderDirs = interceptedHeaderDirs;
+		}
+
+		/**
+		 * Adds an additional include directory.
+		 */
+		void addInterceptedHeaderDir(const path& directory) {
+			this->interceptedHeaderDirs.push_back(directory);
 		}
 
         /**

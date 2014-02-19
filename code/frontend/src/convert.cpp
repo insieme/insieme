@@ -248,7 +248,7 @@ Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const Co
 		pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
 		lastTrackableLocation(),
-		headerTagger(setup.getSystemHeadersDirectories(),setup.getIncludeDirectories(), getCompiler().getSourceManager())
+		headerTagger(setup.getSystemHeadersDirectories(),setup.getInterceptedHeaderDirs(), setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
 	if (translationUnit.isCxx()){
 		typeConvPtr = std::make_shared<CXXTypeConverter>(*this);

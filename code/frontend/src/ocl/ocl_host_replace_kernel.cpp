@@ -56,6 +56,7 @@ namespace {
 
 KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){
 	findKernelNames();
+	collectArguments();
 }
 
 void KernelReplacer::findKernelNames() {
@@ -90,11 +91,16 @@ void KernelReplacer::findKernelNames() {
 
 void KernelReplacer::collectArguments() {
 //	NodeManager& mgr = prog->getNodeManager();
-//	NodeAddress pA(prog);
+	NodeAddress pA(prog);
 
-//	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
-//			mayEncapsulatedNameLiteral << pattern::var("err", pattern::any) );
+	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clSetKernelArg"),
+			pattern::var("kernel", pattern::any) << pattern::var("arg_index", pattern::any) << pattern::any << pattern::var("arg_value", pattern::any) );
 
+
+	irp::matchAllPairs(clCreateKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& setArg) {
+//		std::cout << "Kernel: " << *setArg["kernel"].getValue() << "\n\tidx: " << *setArg["arg_index"].getValue() << " val "
+//				<< *setArg["arg_value"].getValue() << std::endl;
+	});
 }
 
 } //namespace ocl

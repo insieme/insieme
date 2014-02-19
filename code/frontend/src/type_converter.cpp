@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -711,6 +711,10 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 		//in backend to avoid redeclaration of type
 		if( convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl) ) {
 			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
+			if( core::annotations::hasNameAttached(symbol) ) {
+				name  = (recDecl->isStruct() ? "struct " : "" ) + core::annotations::getAttachedName(symbol);
+				core::annotations::attachName(symbol,name);
+			}
 			convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 		}
 

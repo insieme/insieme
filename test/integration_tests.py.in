@@ -1350,8 +1350,12 @@ def toAbsolutePaths(path, args):
 			abs_args.append("-L{0}/{1}".format(path, arg[2:]))
 			continue		
 		if arg.startswith('--intercept'): 
-			abs_args.append("--intercept {0}".format(arg[11:]))
-			continue
+			if arg.startswith('--intercept-include'): 
+				abs_args.append("--intercept-include {0}".format(arg[19:]))
+				continue
+			if arg.startswith('--intercept'): 
+				abs_args.append("--intercept {0}".format(arg[11:]))
+				continue
 		if not arg.startswith('-') and not os.path.isabs(arg):
 			abs_args.append("{0}/{1}".format(path, arg))
 			continue

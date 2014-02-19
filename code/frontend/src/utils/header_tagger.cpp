@@ -58,10 +58,14 @@ namespace utils {
 	namespace ba = boost::algorithm;
 
 
-		HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr ):
+		HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr ):
 			stdLibDirs( ::transform(stdLibDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
+			interceptedHeaderDirs( ::transform(interceptedHeaderDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
 			userIncludeDirs( ::transform(userIncludeDirs, [](const fs::path& cur) { return fs::canonical(cur); } ) ), 
 			sm(srcMgr) { 
+				VLOG(2) << "stdLibDirs: \n\t" << this->stdLibDirs;
+				VLOG(2) << "interceptedHedaerDirs: \n\t" << this->interceptedHeaderDirs;
+				VLOG(2) << "userIncludeDirs: \n\t" << this->userIncludeDirs;
 		}
 
 		/**
@@ -101,7 +105,42 @@ namespace utils {
 		bool HeaderTagger::isStdLibHeader(const fs::path& path) const{
 			return toStdLibHeader(fs::canonical(path)); // expensive, dont go crazy with this
 		}
-	
+
+		bool HeaderTagger::isInterceptedLibHeader(const clang::SourceLocation& loc) const{
+			if (!loc.isValid()) return false;
+			auto fit = locationCache.find(sm.getFileID(loc));
+			if (fit != locationCache.end()){
+				return !fit->second.second;
+			}
+
+			std::string filename =  sm.getPresumedLoc(loc).getFilename();
+			bool isIntercepted = isInterceptedLibHeader (filename);
+			locationCache[sm.getFileID(loc)] = { filename, !isIntercepted };
+			return isIntercepted;
+		}	
+
+		bool HeaderTagger::isInterceptedLibHeader(const fs::path& path) const{
+			return toInterceptedLibHeader(path);	
+		}
+
+		boost::optional<fs::path> HeaderTagger::toInterceptedLibHeader(const fs::path& path) const {
+			static const boost::optional<fs::path> fail;
+
+			if (interceptedHeaderDirs.empty() ) { return fail; }
+
+			if (contains(interceptedHeaderDirs, fs::canonical(path) )) {
+				return fs::path();
+			}
+
+			if (!path.has_parent_path()) {
+				return fail;
+			}
+
+			// if it is within the user-added-include directory, build relative path
+			auto res = toInterceptedLibHeader(path.parent_path());
+			return (res)? (*res/path.filename()) : fail;
+		}	
+
 		bool HeaderTagger::isUserLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
 			auto fit = locationCache.find(sm.getFileID(loc));
@@ -122,8 +161,6 @@ namespace utils {
 		boost::optional<fs::path> HeaderTagger::toUserLibHeader(const fs::path& path) const {
 			static const boost::optional<fs::path> fail;
 
-			// FIXME somebody should check where this <command line> is coming form and avoid it
-			//if (userIncludeDirs.empty() || path.string().compare("<command line>") == 0) { return fail; }
 			if (userIncludeDirs.empty() ) { return fail; }
 
 			if (contains(userIncludeDirs, fs::canonical(path) )) {
@@ -194,12 +231,21 @@ namespace utils {
 				// this case is a system header included inside of a programmer include chain
 				// BUT if both are still in the search path, continue cleaning the include
 				if (isStdLibHeader(loc) && !isStdLibHeader(includeLoc)){
-					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename()))  {
 						return ploc.getFilename();
+					}
 				}
-				if (isUserLibHeader(loc) && !isUserLibHeader(includeLoc)){
-					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) 
+
+				if (isInterceptedLibHeader(loc) && !isInterceptedLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) {
 						return ploc.getFilename();
+					}
+				}
+
+				if (isUserLibHeader(loc) && !isUserLibHeader(includeLoc)){
+					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) {
+						return ploc.getFilename();
+					}
 				}
 				
 				return getTopLevelInclude(includeLoc);
@@ -212,6 +258,10 @@ namespace utils {
 				} 
 			
 				if (isStdLibHeader(ploc.getFilename()) ) {
+					return ploc.getFilename(); // this happens when header file is included straight in the code
+				}
+				
+				if (isInterceptedLibHeader(ploc.getFilename())) {
 					return ploc.getFilename(); // this happens when header file is included straight in the code
 				} 
 				
@@ -290,13 +340,16 @@ namespace utils {
 		// check if header is in STL
 		if( auto stdLibHeader = toStdLibHeader(header) ) {
 			header = *stdLibHeader;
+		} else if (auto interceptedLibHeader = toInterceptedLibHeader(header) ) {
+			header = *interceptedLibHeader;
 		} else if( auto intrinsicHeader = toIntrinsicHeader(header) ) {
 			header = *intrinsicHeader;
 		} else if (auto userLibHeader = toUserLibHeader(header) ) {
-			if(attachUserDefined )
+			if(attachUserDefined ) {
 				header = *userLibHeader;
-			else
+			} else {
 				return;
+			}
 		}
 
 		VLOG(2) << "		header to be attached: " << header.string();

@@ -76,6 +76,7 @@ namespace frontend {
 		  standard(Auto),
 		  definitions(),
 		  interceptions( { "std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*" } ),
+		  interceptedHeaderDirs(),
 		  flags(DEFAULT_FLAGS) {
     };
 

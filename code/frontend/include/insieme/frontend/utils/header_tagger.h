@@ -71,6 +71,7 @@ namespace utils {
 		class HeaderTagger { 
 			
 			vector<fs::path> stdLibDirs;
+			vector<fs::path> interceptedHeaderDirs;
 			vector<fs::path> userIncludeDirs;
 			const clang::SourceManager& sm;
 
@@ -84,6 +85,12 @@ namespace utils {
 			bool isStdLibHeader(const clang::SourceLocation& loc) const;
 
 			bool isStdLibHeader(const fs::path& path) const;
+
+			bool isInterceptedLibHeader(const clang::SourceLocation& loc) const;
+
+			bool isInterceptedLibHeader(const fs::path& path) const;
+
+			boost::optional<fs::path> toInterceptedLibHeader(const fs::path& path) const;
 
 			bool isUserLibHeader(const clang::SourceLocation& loc) const;
 
@@ -104,7 +111,7 @@ namespace utils {
 
 		public:
 
-			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
+			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
 
 
 			/**
