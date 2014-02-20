@@ -147,8 +147,10 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	//and less equals, greater equals (handled in one case)
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
-	// also * symbol
+	// also other*symbols
 	boost::algorithm::replace_last(name, "operator*","ASTdummy");
+	boost::algorithm::replace_last(name, "operator,","COMdummy");
+	boost::algorithm::replace_last(name, "operator()","PARENdummy");
 
 	// beware of spetialized functions, the type does not show off
 	// check if we have template spec args otherwise seg faults may occur
@@ -217,6 +219,8 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
 	// and the asterisc symbol
 	boost::algorithm::replace_last(name, "ASTdummy","operator*");
+	boost::algorithm::replace_last(name, "COMdummy","operator-");
+	boost::algorithm::replace_last(name, "PARENdummy", "operator()");
 
 	// all done
 	return name;

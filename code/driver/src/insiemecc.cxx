@@ -92,7 +92,6 @@ int main(int argc, char** argv) {
 	string tuCodeFile;		// a file to dump the TU code
 	string irCodeFile;		// a file to dump IR code to
 	string trgCodeFile;		// a file to dump the generated target code
-	bool keepOutputCode;		
  	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter to limit the compiler to creating an .o file
 		("compile", 	'c', 	compileOnly, 	"compilation only")
@@ -101,7 +100,6 @@ int main(int argc, char** argv) {
 		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
 		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
 		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
-		("keep-code",  keepOutputCode,	false, "do not delete output code")
 	;
 
 	//indicates that a shared object files should be created
@@ -243,7 +241,7 @@ int main(int argc, char** argv) {
         compiler.addFlag("-std=c++0x");
     }
     
-	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler, keepOutputCode);
+	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
 	return (success)?0:1;

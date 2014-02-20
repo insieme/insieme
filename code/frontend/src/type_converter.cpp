@@ -719,15 +719,16 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 		//check if type is defined in a system header --> if so add includeAnnotation which is used
 		//in backend to avoid redeclaration of type
 
-		//if( convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl) ) {
-		bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(recDecl->getCanonicalDecl()->getSourceRange().getBegin());
-		if(systemHeaderOrigin) {
-			VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-			if( core::annotations::hasNameAttached(symbol) ) {
-				name  = (recDecl->isStruct() ? "struct " : "" ) + core::annotations::getAttachedName(symbol);
-				core::annotations::attachName(symbol,name);
+		if( convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl) ) {
+			bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(recDecl->getCanonicalDecl()->getSourceRange().getBegin());
+			if(systemHeaderOrigin) {
+				VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
+				if( core::annotations::hasNameAttached(symbol) ) {
+					name  = (recDecl->isStruct() ? "struct " : "" ) + core::annotations::getAttachedName(symbol);
+					core::annotations::attachName(symbol,name);
+				}
+				convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 			}
-			convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
 		}
 
 		frontend_assert(res) << "it seems that no type was converted, this is not ok";
