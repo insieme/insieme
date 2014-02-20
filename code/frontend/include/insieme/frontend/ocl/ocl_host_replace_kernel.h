@@ -79,6 +79,7 @@ private:
 
 	void findKernelNames();
 	void collectArguments();
+	void replaceKernels();
 
 public:
 	core::NodePtr getTransformedProgram() {return prog;}

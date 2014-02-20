@@ -57,6 +57,7 @@ namespace {
 KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){
 	findKernelNames();
 	collectArguments();
+	replaceKernels();
 
 //	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
 }
@@ -206,14 +207,33 @@ void KernelReplacer::collectArguments() {
 		// store argument in a tuple
 		replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, kernel, utils::tryDeref(arg));
 
-
+/*
 for_each(kernelTypes[kernel], [](NodePtr doll) {
 	std::cout << "new arg: " << (doll) << std::endl;
 });
+*/
 	});
 
 	// perform the replacements
 	prog = transform::replaceAll(mgr, prog, replacements, false);
+}
+
+void KernelReplacer::replaceKernels() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	// generate tuple variables for each kernel and replace kernel variables
+	ExpressionMap kernelReplacements;
+
+	for_each(kernelTypes, [&](std::pair<ExpressionPtr, std::vector<TypePtr> > kT) {
+		ExpressionPtr k = kT.first;
+		TupleTypePtr tt = builder.tupleType(kT.second);
+		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(tt).as<ExpressionPtr>()
+				: builder.literal(tt, kT.first.as<LiteralPtr>()->getStringValue());
+		kernelReplacements[kT.first] = replacement;
+	});
+
+	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements);
 }
 
 } //namespace ocl
