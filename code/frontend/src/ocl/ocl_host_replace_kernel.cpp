@@ -91,7 +91,7 @@ void KernelReplacer::findKernelNames() {
 
 
 void KernelReplacer::collectArguments() {
-	NodeManager& mgr = prog->getNodeManager();
+//	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog);
 
 	TreePatternPtr localOrGlobalVar = node(node(node(single(aT(irp::genericType("_cl_kernel"))) << single(pattern::any)) << single(pattern::any)) << single(pattern::any));
