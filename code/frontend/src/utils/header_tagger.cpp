@@ -91,14 +91,14 @@ namespace utils {
 
 		bool HeaderTagger::isStdLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
-			auto fit = locationCache.find(sm.getFileID(loc));
-			if (fit != locationCache.end()){
+			auto fit = isStdCache.find(sm.getFileID(loc));
+			if (fit != isStdCache.end()){
 				return fit->second.second;
 			}
 
 			std::string filename =  sm.getPresumedLoc(loc).getFilename();
 			bool isSys = isStdLibHeader (filename);
-			locationCache[sm.getFileID(loc)] = { filename, isSys };
+			isStdCache[sm.getFileID(loc)] = { filename, isSys };
 			return isSys;
 		}
 
@@ -108,14 +108,14 @@ namespace utils {
 
 		bool HeaderTagger::isInterceptedLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
-			auto fit = locationCache.find(sm.getFileID(loc));
-			if (fit != locationCache.end()){
+			auto fit = isInterceptedCache.find(sm.getFileID(loc));
+			if (fit != isInterceptedCache.end()){
 				return !fit->second.second;
 			}
 
 			std::string filename =  sm.getPresumedLoc(loc).getFilename();
 			bool isIntercepted = isInterceptedLibHeader (filename);
-			locationCache[sm.getFileID(loc)] = { filename, !isIntercepted };
+			isInterceptedCache[sm.getFileID(loc)] = { filename, !isIntercepted };
 			return isIntercepted;
 		}	
 
@@ -143,14 +143,14 @@ namespace utils {
 
 		bool HeaderTagger::isUserLibHeader(const clang::SourceLocation& loc) const{
 			if (!loc.isValid()) return false;
-			auto fit = locationCache.find(sm.getFileID(loc));
-			if (fit != locationCache.end()){
+			auto fit = isUserCache.find(sm.getFileID(loc));
+			if (fit != isUserCache.end()){
 				return !fit->second.second;
 			}
 
 			std::string filename =  sm.getPresumedLoc(loc).getFilename();
 			bool isUser = isUserLibHeader (filename);
-			locationCache[sm.getFileID(loc)] = { filename, !isUser };
+			isUserCache[sm.getFileID(loc)] = { filename, !isUser };
 			return isUser;
 		}	
 
@@ -188,28 +188,32 @@ namespace utils {
 					ba::ends_with(name, ".C"));
 		}
 
-		string HeaderTagger::getTopLevelInclude(const clang::SourceLocation& loc) const{
+		string HeaderTagger::getTopLevelInclude(const clang::SourceLocation& includeLocation) const{
 
 			// if it is a dead end
-			if (!loc.isValid()) {
+			if (!includeLocation.isValid()) {
 				return "";
 			}
 
+			auto toFilename = [&sm] (const clang::SourceLocation& loc) {
+				return sm.getPresumedLoc(loc).getFilename();
+			};
+
 			// get the presumed location (whatever this is, ask clang) ...
-			// ~ ploc represents the file were loc is located
-			clang::PresumedLoc ploc = sm.getPresumedLoc(loc);
+			// ~ ploc represents the file were includeLocation is located
+			clang::PresumedLoc ploc = sm.getPresumedLoc(includeLocation);
 
 			// .. and retrieve the associated include
 			// ~ from where the file ploc represents was included
-			clang::SourceLocation includeLoc = ploc.getIncludeLoc();
+			clang::SourceLocation includingLocation = ploc.getIncludeLoc();
 			
 			// check whether the stack can be continued
-			if (!includeLoc.isValid()) {
+			if (!includingLocation.isValid()) {
 				return ""; 		// this happens when element is declared in c / cpp file => no header
 			}
 			
 			// ~ pIncludeLoc represents the file were includLoc is located
-			clang::PresumedLoc pIncludeLoc = sm.getPresumedLoc(includeLoc);
+			clang::PresumedLoc pIncludeLoc = sm.getPresumedLoc(includingLocation);
 
 			if( isInjectedHeader(pIncludeLoc) ){
 				//the header was injected -- has no valid filename ("<command line">)
@@ -224,31 +228,31 @@ namespace utils {
 			//
 			//*******************
 
-			// descent further as long as we have a header file as presumed include loc
-			if ( isHeaderFile(pIncludeLoc.getFilename()) ) {
+			// descent further as long as we have a header file as presumed include includeLocation
+			if ( isHeaderFile(toFilename(includingLocation) )) {
 
 				// check if last include was in the search path and next is not,
 				// this case is a system header included inside of a programmer include chain
 				// BUT if both are still in the search path, continue cleaning the include
-				if (isStdLibHeader(loc) && !isStdLibHeader(includeLoc)){
-					if(!isIntrinsicHeader(pIncludeLoc.getFilename()))  {
+				if (isStdLibHeader(includeLocation) && !isStdLibHeader(includingLocation)){
+					if(!isIntrinsicHeader(toFilename(includingLocation)))  {
 						return ploc.getFilename();
 					}
 				}
 
-				if (isInterceptedLibHeader(loc) && !isInterceptedLibHeader(includeLoc)){
-					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) {
+				if (isInterceptedLibHeader(includeLocation) && !isInterceptedLibHeader(includingLocation)){
+					if(!isIntrinsicHeader(toFilename(includingLocation))) {
 						return ploc.getFilename();
 					}
 				}
 
-				if (isUserLibHeader(loc) && !isUserLibHeader(includeLoc)){
-					if(!isIntrinsicHeader(pIncludeLoc.getFilename())) {
+				if (isUserLibHeader(includeLocation) && !isUserLibHeader(includingLocation)){
+					if(!isIntrinsicHeader(toFilename(includingLocation))) {
 						return ploc.getFilename();
 					}
 				}
 				
-				return getTopLevelInclude(includeLoc);
+				return getTopLevelInclude(includingLocation);
 			}
 
 			// we already visited all the headers and we are in the .c/.cpp file

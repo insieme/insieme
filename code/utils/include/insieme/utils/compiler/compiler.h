@@ -152,7 +152,7 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return true if successful, false otherwise
 	 */
-	bool compile(const vector<string>& sourcefiles, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false);
+	bool compile(const vector<string>& sourcefiles, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
 	 * Compiles the given source file using the defined compiler (by default, it is the default C compiler) and
@@ -163,7 +163,7 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return true if successful, false otherwise
 	 */
-	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false);
+	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
@@ -171,7 +171,7 @@ namespace compiler {
 	 * @param source the source code to be compiled
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 */
-	bool compile(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false);
+	bool compile(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
@@ -181,8 +181,8 @@ namespace compiler {
 	 */
 	template<typename Printable>
 	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, bool>::type
-	compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false) {
-		return compile(toVirtualPrintable(source), compiler, keepOutput);
+	compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compile(toVirtualPrintable(source), compiler);
 	}
 
 	/**
@@ -192,7 +192,7 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return the name of the binary (or empty string if compilation failed)
 	 */
-	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false);
+	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
@@ -203,8 +203,8 @@ namespace compiler {
 	 */
 	template<typename Printable>
 	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, string>::type
-	compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false) {
-		return compileToBinary(toVirtualPrintable(source), compiler, keepOutput);
+	compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compileToBinary(toVirtualPrintable(source), compiler);
 	}
 
 	/**
@@ -216,7 +216,7 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return true if successful, false otherwise
 	 */
-	bool compileToBinary(const VirtualPrintable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false);
+	bool compileToBinary(const VirtualPrintable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
 	 * Compiles the given source code using the given compiler to the given target file using a temporary
@@ -229,8 +229,8 @@ namespace compiler {
 	 */
 	template<typename Printable>
 	typename std::enable_if<!std::is_base_of<VirtualPrintable, Printable>::value, bool>::type
-	compileToBinary(const Printable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler(), bool keepOutput = false) {
-		return compileToBinary(toVirtualPrintable(source), target, compiler, keepOutput);
+	compileToBinary(const Printable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
+		return compileToBinary(toVirtualPrintable(source), target, compiler);
 	}
 
 

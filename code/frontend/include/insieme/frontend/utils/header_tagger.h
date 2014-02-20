@@ -75,7 +75,9 @@ namespace utils {
 			vector<fs::path> userIncludeDirs;
 			const clang::SourceManager& sm;
 
-			mutable std::map<clang::FileID, std::pair<std::string, bool> > locationCache;
+			mutable std::map<clang::FileID, std::pair<std::string, bool> > isStdCache;
+			mutable std::map<clang::FileID, std::pair<std::string, bool> > isInterceptedCache;
+			mutable std::map<clang::FileID, std::pair<std::string, bool> > isUserCache;
 
 			/**
 			 * A utility function cutting down std-lib header files.

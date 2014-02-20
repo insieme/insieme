@@ -185,53 +185,74 @@ namespace compiler {
 		return getDefaultIncludePaths(cmd);
 	}
 
-	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler, bool keepOutput) {
+	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
 
 		string&& cmd = compiler.getCommand(sourcefile, targetfile);
 
 		LOG(DEBUG) << "Running command: " << cmd << "\n";
+		std::cout << "Running command: " << cmd << std::endl;
 		int res = system(cmd.c_str());
 		LOG(DEBUG) << "Result of command " << cmd << ": " << res << "\n";
+
+		//{
+		//	FILE *fp;
+		//	char path[1024];
+
+		//	/* Open the command for reading. */
+		//	fp = popen(cmd.c_str(), "r");
+		//	if (fp == NULL) {
+		//		std::cerr << "Error running command" << std::endl;
+		//		return false;
+		//	}
+
+		//	/* Read the output a line at a time - output it. */
+		//	while (fgets(path, sizeof(path)-1, fp) != NULL) {
+		//		std::cout <<  path << std::endl;
+		//	}
+
+		//	/* close */
+		//	pclose(fp);
+		//}
 
 		return res == 0;
 	}
 
-	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler, bool keepOutput) {
+	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler) {
 		vector<string> files(1);
 		files[0] = sourcefile;
-		return compile(files, targetfile, compiler, keepOutput);
+		return compile(files, targetfile, compiler);
 	}
 
 
-	bool compile(const VirtualPrintable& source, const Compiler& compiler, bool keepOutput) {
+	bool compile(const VirtualPrintable& source, const Compiler& compiler) {
 
 		string target = compileToBinary(source, compiler);
 
 		if(target.empty()) return false;
 
 		// delete target file
-		if (!keepOutput && boost::filesystem::exists(target)) {
+		if (boost::filesystem::exists(target)) {
 			boost::filesystem::remove(target);
 		}
 
 		return true;
 	}
 
-	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler, bool keepOutput) {
+	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
 
 		// create temporary target file name
 		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "trg%%%%%%%%");
 
 		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
 
-		if (compileToBinary(source, targetFile.string(), compiler, keepOutput)) {
+		if (compileToBinary(source, targetFile.string(), compiler)) {
 			return targetFile.string();
 		}
 		return string();
 	}
 
 
-	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler, bool keepOutput) {
+	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler) {
 
 		// create a temporary source file
 		fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%");
@@ -247,7 +268,9 @@ namespace compiler {
 		bool res = compile(sourceFile.string(), targetFile, compiler);
 
 		// delete source file
-		if (!keepOutput && boost::filesystem::exists(sourceFile)) {
+		std::cout << "temporary: " << sourceFile << std::endl;
+		if (boost::filesystem::exists(sourceFile)) {
+			std::cout << "deleting temp file" << std::endl;
 			boost::filesystem::remove(sourceFile);
 		}
 
