@@ -201,34 +201,6 @@
 					});
 			return castRemover.map(prog);
 		}
-
-		//////////////////////////////////////////////////////////////////////
-		// Declaration Only structs
-		// ========================
-		//
-		// If we encounter a sturct declaration without a definition we generate a GenericType with
-		// its name and mark it as DeclOnly, if in a different TU we encounter and definition for
-		// that type we drop the genericType. all genericTypes with an DeclOnlyAnnotation are turned
-		// into empty structs
-		insieme::core::NodePtr declarationCleanup (const insieme::core::NodePtr& prog){
-			core::NodeMap replacements;
-			core::IRBuilder builder(prog->getNodeManager());
-
-			visitDepthFirstOnce(prog, [&](const core::GenericTypePtr& cur) {
-					if(insieme::annotations::c::isDeclOnly(cur)) {
-						insieme::annotations::c::markDeclOnly(cur,false);
-						core::NamedCompositeType::Entries structElements;
-						auto replacement = builder.structType( builder.stringValue(cur.toString()),structElements );
-
-						insieme::core::transform::utils::migrateAnnotations(cur.as<core::NodePtr>(), replacement.as<core::NodePtr>());
-						replacements[cur] = replacement;
-					}
-				}, true, true);
-
-			return  core::transform::replaceAllGen (prog->getNodeManager(), prog, replacements, false);
-
-		}
-
 	} // anonymous namespace
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -260,8 +232,6 @@
 		prog = applyCleanup(prog, longLongCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, declarationCleanup).as<core::ProgramPtr>();
-
 
 	//	core::NodeManager& nm (prog.getNodeManager());
 	//	core::IRBuilder builder (nm);

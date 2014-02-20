@@ -34,25 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/decl_only.h"
 
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
+
 
 namespace insieme {
 namespace annotations {
 namespace c {
 
 	using namespace insieme::core;
-
-	/**
-	 * The value annotation type to be attached to nodes to store
-	 * the actual name.
-	 */
-	struct DeclOnlyTag : public core::value_annotation::copy_on_migration {
-		bool operator==(const DeclOnlyTag& other) const { return true; }
-	};
 
 	// ---------------- Support Dump ----------------------
 
@@ -61,31 +54,39 @@ namespace c {
 		typedef core::value_node_annotation<DeclOnlyTag>::type annotation_type;
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only include annotations supported!");
-			return encoder::toIR(manager, string("declOnly"));
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only DeclOnly annotations supported!");
+			return encoder::toIR(manager, (unsigned) (static_pointer_cast<annotation_type>(annotation)->getValue().kind));
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-			return std::make_shared<annotation_type>(DeclOnlyTag());
+			assert(encoder::isEncodingOf<unsigned>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			unsigned value = encoder::toValue<unsigned>(node);
+
+			DeclOnlyTag::Kind kind = DeclOnlyTag::Kind::Struct;
+			switch(value) {
+				case 0: kind = DeclOnlyTag::Struct; break;
+				case 1: kind = DeclOnlyTag::Class; break;
+				case 2:	kind = DeclOnlyTag::Enum; break;
+				case 3: kind = DeclOnlyTag::Union; break;
+				default: assert(false && "what DeclOnlyTag::Kind is it then?"); break;
+			}
+
+			return std::make_shared<annotation_type>(DeclOnlyTag(kind));
 		}
 	};
 
 	// ----------------------------------------------------
 
 
-	bool isDeclOnly(const insieme::core::GenericTypePtr& type) {
-		return type->hasAttachedValue<DeclOnlyTag>();
-	}
-
-	void markDeclOnly(const insieme::core::GenericTypePtr& type, bool value) {
-		if (value) {
-			type->attachValue(DeclOnlyTag());
-		} else {
-			type->detachValue<DeclOnlyTag>();
-		}
-	}
-
+	bool isDeclOnly(const insieme::core::GenericTypePtr& type) { return type->hasAttachedValue<DeclOnlyTag>(); }
+	void markDeclOnlyStruct(const insieme::core::GenericTypePtr& type) { type->attachValue(DeclOnlyTag(DeclOnlyTag::Kind::Struct)); }
+	void markDeclOnlyClass(const insieme::core::GenericTypePtr& type) { type->attachValue(DeclOnlyTag(DeclOnlyTag::Kind::Class)); }
+	void markDeclOnlyEnum(const insieme::core::GenericTypePtr& type) { type->attachValue(DeclOnlyTag(DeclOnlyTag::Kind::Enum)); }
+	void markDeclOnlyUnion(const insieme::core::GenericTypePtr& type) { type->attachValue(DeclOnlyTag(DeclOnlyTag::Kind::Union)); }
+	void unmarkDeclOnly(const insieme::core::GenericTypePtr& type) { type->detachValue<DeclOnlyTag>(); }
+	DeclOnlyTag::Kind getDeclOnlyKind(const insieme::core::GenericTypePtr& type) { return type->getAttachedValue<DeclOnlyTag>().kind; } 
+		
+			
 } // end namespace c
 } // end namespace annotations
 } // end namespace insieme

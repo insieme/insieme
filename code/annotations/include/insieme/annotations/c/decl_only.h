@@ -38,6 +38,7 @@
 
 #include <string>
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_annotation.h"
 
 /**
  * Marks the given type as declaration only, which means that the type is only declared but never
@@ -47,6 +48,17 @@
 namespace insieme {
 namespace annotations {
 namespace c {
+
+	/**
+	 * The value annotation type to be attached to nodes to store
+	 * the actual name.
+	 */
+	struct DeclOnlyTag : public insieme::core::value_annotation::copy_on_migration {
+		enum Kind { Struct=0, Class=1, Enum=2, Union=3 };
+		Kind kind;
+		DeclOnlyTag(Kind kind) : kind(kind) {}
+		bool operator==(const DeclOnlyTag& other) const { return true; }
+	};
 
 	/**
 	 * Checks whether the given type is marked to be declaration only.
@@ -62,8 +74,14 @@ namespace c {
 	 * @param type the GenericType to be marked declaration only 
 	 * @param value a flag determining whether to mark it declaration only or not
 	 */
-	void markDeclOnly(const insieme::core::GenericTypePtr& type, bool value = true);
 
+	void markDeclOnlyStruct(const insieme::core::GenericTypePtr& type); 
+	void markDeclOnlyClass(const insieme::core::GenericTypePtr& type);
+	void markDeclOnlyEnum(const insieme::core::GenericTypePtr& type);
+	void markDeclOnlyUnion(const insieme::core::GenericTypePtr& type);
+	void unmarkDeclOnly(const insieme::core::GenericTypePtr& type); 
+	DeclOnlyTag::Kind getDeclOnlyKind(const insieme::core::GenericTypePtr& type); 
+			
 } // end namespace c
 } // end namespace annotations
 } // end namespace insieme

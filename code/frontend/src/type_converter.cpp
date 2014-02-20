@@ -477,18 +477,27 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	
 	auto def = findDefinition(tagType);
 	if (!def) {
-
-		std::string name = utils::getNameForRecord(tagType->getDecl(), tagType);
+		//tag type isonly declared
+		auto decl = tagType->getDecl();
+		std::string name = utils::getNameForRecord(decl, tagType);
 
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( name );
 
-		if (!tagType->getDecl()->getNameAsString().empty()) {
-			core::annotations::attachName(retTy,tagType->getDecl()->getNameAsString());
-			//we mark the declaration only tagTypes to reconstruct them in the IRProgram post visit
-			//into empty structs
-			annotations::c::markDeclOnly(retTy.as<core::GenericTypePtr>(),true);
+		if (!decl->getNameAsString().empty()) {
+			core::annotations::attachName(retTy,decl->getNameAsString());
 		}
+		
+		//we mark the declaration only tagTypes to reconstruct them in the backend 
+		if(decl->isStruct()) 
+			annotations::c::markDeclOnlyStruct(retTy.as<core::GenericTypePtr>());
+		else if(decl->isClass()) 
+			annotations::c::markDeclOnlyClass(retTy.as<core::GenericTypePtr>());
+		else if(decl->isEnum()) 
+			annotations::c::markDeclOnlyEnum(retTy.as<core::GenericTypePtr>());
+		else if(decl->isUnion()) 
+			annotations::c::markDeclOnlyUnion(retTy.as<core::GenericTypePtr>());
+
 		return retTy;
 	}
 

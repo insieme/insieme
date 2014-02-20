@@ -42,7 +42,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
-#include "insieme/annotations/c/include.h"
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
@@ -57,6 +56,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/decl_only.h"
 #include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/utils/logging.h"
@@ -575,6 +576,24 @@ namespace backend {
 
                 return res;
             }
+
+			if(annotations::c::isDeclOnly(ptr)) {
+				//if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
+				switch(annotations::c::getDeclOnlyKind(ptr)) {
+					case annotations::c::DeclOnlyTag::Kind::Struct: 
+						return type_info_utils::createInfo(manager, "struct "+toString(*ptr));
+						break;
+					case annotations::c::DeclOnlyTag::Kind::Class: 
+						return type_info_utils::createInfo(manager, "class "+toString(*ptr));
+						break;
+					case annotations::c::DeclOnlyTag::Kind::Enum: 
+						return type_info_utils::createInfo(manager, "enum "+toString(*ptr));
+						break;
+					case annotations::c::DeclOnlyTag::Kind::Union: 
+						return type_info_utils::createInfo(manager, "union "+toString(*ptr));
+						break;
+				}
+			}
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
