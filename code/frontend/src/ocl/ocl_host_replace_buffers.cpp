@@ -57,50 +57,6 @@ namespace {
 
 
 
-bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
-	// get rid of casts
-	NodePtr uncasted = arg;
-	while (uncasted->getNodeType() == core::NT_CastExpr) {
-		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
-	}
-
-	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
-		// check if there is a multiplication
-		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
-			IRBuilder builder(arg->getNodeManager());
-			// recursively look into arguments of multiplication
-			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {
-				if(size)
-					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
-				else
-					size = call->getArgument(1);
-				return true;
-			}
-			if(extractSizeFromSizeof(call->getArgument(1), size, type, true)){
-				if(size)
-					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
-				else
-					size = call->getArgument(0);
-				return true;
-			}
-		}
-		// check if we reached a sizeof call
-		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
-			// extract the type to be allocated
-			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
-			assert(type && "Type could not be extracted!");
-
-			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
-				IRBuilder builder(arg->getNodeManager());
-				size = builder.literal(arg->getNodeManager().getLangBasic().getUInt8(), "1");
-				return true;
-			}
-
-			return true;
-		}
-	}
-	return false;
-}
 
 
 template<typename Enum>
@@ -269,7 +225,7 @@ void BufferReplacer::collectInformation() {
 #ifdef	NDEBUG
 		extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false);
 #else
-		assert(extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false)
+		assert(utils::extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false)
 				&& "cannot extract size and type from size paramater fo clCreateBuffer");
 #endif
 
@@ -326,7 +282,7 @@ void BufferReplacer::generateReplacements() {
 			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable())));
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
-		ExpressionAddress bufferExpr = extractVariable(meta.first);
+		ExpressionAddress bufferExpr = utils::extractVariable(meta.first);
 //std::cout << "\nto replace: " << *bufferExpr << std::endl;
 		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
 		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
@@ -346,7 +302,7 @@ void BufferReplacer::generateReplacements() {
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
 //std::cout << "arr: " << expr << " root " << getRootVariable(expr) << std::endl;
-			expr = getRootVariable(expr).as<ExpressionAddress>();
+			expr = utils::getRootVariable(expr).as<ExpressionAddress>();
 
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
@@ -358,7 +314,7 @@ void BufferReplacer::generateReplacements() {
 		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
 //std::cout << "var: " << bufferExpr << " root " << getRootVariable(bufferExpr) << std::endl;
-		bufferExpr = getRootVariable(bufferExpr).as<ExpressionAddress>();
+		bufferExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
 
 		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
 
@@ -377,7 +333,7 @@ void BufferReplacer::generateReplacements() {
 
 
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
-		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
+		std::cout << printer::PrettyPrinter(replacement.second) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
 	});
 
 }

@@ -44,6 +44,7 @@ using namespace insieme::core;
 namespace insieme {
 namespace frontend {
 namespace ocl {
+namespace utils {
 
 /*
  * Returns either the expression itself or the first argument if expression was a call to function
@@ -69,6 +70,54 @@ ExpressionAddress tryRemoveAlloc(const ExpressionAddress& expr) {
 			return tryRemoveAlloc(call->getArgument(0));
 	}
 	return expr;
+}
+
+/*
+ * takes the expression passed to size (in bytes) and tries to extract the size in number of elements as well as the type to be used
+ */
+bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
+	// get rid of casts
+	NodePtr uncasted = arg;
+	while (uncasted->getNodeType() == core::NT_CastExpr) {
+		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
+	}
+
+	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
+		// check if there is a multiplication
+		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
+			IRBuilder builder(arg->getNodeManager());
+			// recursively look into arguments of multiplication
+			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
+				else
+					size = call->getArgument(1);
+				return true;
+			}
+			if(extractSizeFromSizeof(call->getArgument(1), size, type, true)){
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
+				else
+					size = call->getArgument(0);
+				return true;
+			}
+		}
+		// check if we reached a sizeof call
+		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
+			// extract the type to be allocated
+			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
+			assert(type && "Type could not be extracted!");
+
+			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
+				IRBuilder builder(arg->getNodeManager());
+				size = builder.literal(arg->getNodeManager().getLangBasic().getUInt8(), "1");
+				return true;
+			}
+
+			return true;
+		}
+	}
+	return false;
 }
 
 /*
@@ -114,6 +163,20 @@ ExpressionAddress extractVariable(ExpressionAddress expr) {
 	return expr;
 }
 
+/*
+ * Builds a ref.deref call around an expression if the it is of ref-type
+ */
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) {
+	NodeManager& mgr = expr.getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
+
+	// core::ExpressionPtr retExpr = expr;
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		return builder.callExpr(refTy->getElementType(), gen.getRefDeref(), expr);
+	}
+	return expr;
+}
 
 NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
 	// if the variable is a literal, its a global variable and should therefore be the root
@@ -208,7 +271,11 @@ NodeAddress getRootVariable(NodeAddress var) {
 	return getRootVariable(parent, var);
 }
 
-core::ExpressionPtr getVarOutOfCrazyInspireConstruct1(const core::ExpressionPtr& arg, const core::IRBuilder& builder) {
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg) {
+	core::NodeManager& mgr = arg->getNodeManager();
+	core::IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = mgr.getLangBasic();
+
 // remove stuff added by (void*)&
 	core::CallExprPtr stripped = arg.isa<core::CallExprPtr>();
 
@@ -218,14 +285,46 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct1(const core::ExpressionPtr&
 
 	auto funExpr = stripped->getFunctionExpr();
 	if(builder.getNodeManager().getLangBasic().isScalarToArray(funExpr) ||
-			builder.getNodeManager().getLangBasic().isRefDeref(funExpr) || builder.getNodeManager().getLangBasic().isRefReinterpret(funExpr)) {
-		return getVarOutOfCrazyInspireConstruct1(stripped->getArgument(0), builder);
+			builder.getNodeManager().getLangBasic().isRefDeref(funExpr) || gen.isRefReinterpret(funExpr)) {
+		return getVarOutOfCrazyInspireConstruct(stripped->getArgument(0));
 	}
 
 	return arg;
 }
 
+bool isNullPtr(const ExpressionPtr& expr) {
+	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
 
+	// cast to void pointer
+	if (gen.isRefNull(expr))
+		return true;
+
+	// null literal
+	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr);
+	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : expr;
+	const LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+	if(!!idx && idx->getValueAs<int>() == 0)
+		return true;
+
+
+	return false;
+}
+
+void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder){
+	core::visitDepthFirstOnce(localMemInit, core::makeLambdaVisitor([&](const core::NodePtr& node) {
+		if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(node))
+		if(varMapping.find(var) == varMapping.end()) // variable does not have a replacement in map now
+			varMapping[var] = builder.variable(var->getType());
+	}));
+
+	for_each(varMapping, [&](std::pair<core::VariablePtr, core::VariablePtr> replacement) {
+//		std::cout << "\nreplaceinig " << replacement.first << " with " << replacement.second << std::endl;
+		localMemInit = static_pointer_cast<const core::Expression>(
+				core::transform::replaceAll(builder.getNodeManager(), localMemInit, replacement.first, replacement.second));
+	});
+}
+
+}
 }
 }
 }

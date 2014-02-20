@@ -46,6 +46,7 @@ namespace pirp = insieme::core::pattern::irp;
 namespace insieme {
 namespace frontend {
 namespace ocl {
+namespace utils {
 
 /*
  * Returns either the expression itself or the first argument if expression was a call to function
@@ -62,6 +63,15 @@ core::ExpressionAddress tryRemoveAlloc(const core::ExpressionAddress& expr);
  */
 core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
 
+/*
+ * Builds a ref.deref call around an expression if the it is of ref-type
+ */
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr);
+/*
+ * takes the expression passed to size (in bytes) and tries to extract the size in number of elements as well as the type to be used
+ */
+bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul = false);
+
 core::ExpressionAddress extractVariable(core::ExpressionAddress expr);
 
 
@@ -70,9 +80,12 @@ core::NodeAddress getRootVariable(core::NodeAddress scope, core::NodeAddress var
 
 core::NodeAddress getRootVariable(core::NodeAddress var);
 
-core::ExpressionPtr getVarOutOfCrazyInspireConstruct1(const core::ExpressionPtr& arg, const core::IRBuilder& builder);
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg);
 
+bool isNullPtr(const core::ExpressionPtr& expr);
 
+void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
+}
 }
 }
 }
