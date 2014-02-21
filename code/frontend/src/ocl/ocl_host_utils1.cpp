@@ -60,12 +60,31 @@ ExpressionAddress tryRemove(const ExpressionPtr& function, const ExpressionAddre
 	return e;
 }
 
+ExpressionPtr tryRemove(const ExpressionPtr& function, const ExpressionPtr& expr) {
+	ExpressionPtr e = expr;
+	while(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(e)) {
+		if(call->getFunctionExpr() == function)
+			e = call->getArgument(0);
+		else
+			break;
+	}
+	return e;
+}
+
 /*
  * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
  */
 ExpressionAddress tryRemoveAlloc(const ExpressionAddress& expr) {
 	NodeManager& mgr = expr->getNodeManager();
 	if(const CallExprAddress& call = dynamic_address_cast<const CallExpr>(expr)) {
+		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
+			return tryRemoveAlloc(call->getArgument(0));
+	}
+	return expr;
+}
+ExpressionPtr tryRemoveAlloc(const ExpressionPtr& expr) {
+	NodeManager& mgr = expr->getNodeManager();
+	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(expr)) {
 		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
 			return tryRemoveAlloc(call->getArgument(0));
 	}
