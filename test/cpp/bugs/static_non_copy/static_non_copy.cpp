@@ -4,8 +4,13 @@ class Obj{
 
 	int val;
 
+	Obj(const Obj& obj){
+	}
+	Obj operator=(const Obj& obj){
+	}
+
 public:
-	Obj(int a): val(a){
+	Obj(): val(0){
 	}
 
 	int getVal(){
@@ -16,28 +21,24 @@ public:
 
 
 ////////////////////////////////////////////////////
-int f(int a){
-	static int x = a;
-	return x;
-}
+//int f(int a){
+//	static int x = a;
+//	return x;
+//}
 
 ////////////////////////////////////////////////////
-//int g(int a){
-//	static Obj x(a);
-//	return x.getVal();
-//}
-//
+int g(int a){
+	static Obj x;
+	return x.getVal();
+}
+
 
 int main (){
 
 	{
-		std::cout << f(1) << std::endl;
-		std::cout << f(2) << std::endl;
+		std::cout << g(1) << std::endl;
+		std::cout << g(2) << std::endl;
 	}
-//	{
-//		std::cout << g(1) << std::endl;
-//		std::cout << g(2) << std::endl;
-//	}
 
 
 	return 0;
