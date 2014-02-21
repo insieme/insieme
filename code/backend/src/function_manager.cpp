@@ -308,11 +308,79 @@ namespace backend {
 			return res;
 		}
 
+		core::CallExprPtr wrapPlainFunctionArguments(const core::CallExprPtr& call) {
+
+			// extract node manager
+			auto& manager = call->getNodeManager();
+			core::IRBuilder builder(manager);
+
+			// check whether there is a argument which is a vector but the parameter is not
+			const core::TypePtr& type = call->getFunctionExpr()->getType();
+			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
+
+			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
+			const core::ExpressionList& args = call->getArguments();
+
+			// check number of arguments
+			if (paramTypes.size() != args.size()) {
+				// => invalid call, don't touch this
+				return call;
+			}
+
+			// generate new argument list
+			bool changed = false;
+			core::ExpressionList newArgs = call->getArguments();
+			for (unsigned i=0; i<newArgs.size(); i++) {
+
+				// get pair of types
+				core::FunctionTypePtr paramType = paramTypes[i].isa<core::FunctionTypePtr>();
+				core::FunctionTypePtr argType = newArgs[i]->getType().isa<core::FunctionTypePtr>();
+
+				// ignore identical types or non-function types
+				if (!paramType || !argType || *paramType == *argType) {
+					continue;
+				}
+
+				// only interested if param is a bind and arg a function
+				if (!(paramType->isClosure() && argType->isPlain())) {
+					continue;
+				}
+
+				// create a bind wrapping the targeted function
+				core::VariableList bindParams;
+				core::ExpressionList argList;
+				for(const core::TypePtr& type : argType->getParameterTypes()) {
+					auto var = builder.variable(type);
+					bindParams.push_back(var);
+					argList.push_back(var);
+				}
+
+				// the argument needs to be wrapped into a bind
+				const core::TypePtr& retType = argType->getReturnType();
+				core::FunctionTypePtr newType = builder.functionType(argType->getParameterTypes(), retType, core::FK_CLOSURE);
+				newArgs[i] = builder.bindExpr(newType, bindParams, builder.callExpr(retType, newArgs[i], argList));
+
+				// note the change
+				changed = true;
+			}
+			if (!changed) {
+				// return original call
+				return call;
+			}
+
+			// exchange arguments and done
+			return core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
+		}
+
 	}
 
 
 
-	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, ConversionContext& context) {
+	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
+
+		// conducte some cleanup (argument wrapping)
+		core::CallExprPtr call = wrapPlainFunctionArguments(in);
 
 		// extract target function
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
@@ -806,7 +874,7 @@ namespace backend {
 				// and initializes all the closure's fields.
 
 				// create return type
-				c_ast::TypePtr returnType = varClosure->type;
+				c_ast::TypePtr returnType = funInfo.rValueType;
 
 				// assemble parameters
 				vector<c_ast::VariablePtr> params;
@@ -818,7 +886,7 @@ namespace backend {
 				c_ast::InitializerPtr init = c_ast::init(res->closureType, c_ast::ref(res->mapperName), varNested);
 				addAll(init->values, varsCaptured);
 				c_ast::ExpressionPtr assign = c_ast::assign(c_ast::deref(varClosure), init);
-				c_ast::StatementPtr body = compound(assign, c_ast::ret(varClosure));
+				c_ast::StatementPtr body = compound(assign, c_ast::ret(c_ast::cast(returnType, varClosure)));
 
 				// assemble constructor
 				constructor = manager->create<c_ast::Function>(

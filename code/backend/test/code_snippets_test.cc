@@ -437,6 +437,46 @@ TEST(FunctionCall, GenericFunctionsWithLazy) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+TEST(FunctionCall, PassLabmdaToBind) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    core::ProgramPtr program = builder.parseProgram(
+    	"int<4> main() {"
+    	"	"
+    	"	let f = ()->int<4> { return 4; };"
+    	"	let g = (()=>'a a)->'a { return a(); };"
+    	"	"
+    	"	g(f);"
+		"	"
+    	"	return 0;"
+    	"}"
+    );
+
+    ASSERT_TRUE(program);
+
+    // check for semantic errors
+    EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+    dumpPretty(program);
+
+    LOG(INFO) << "Converting IR to C...";
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+    LOG(INFO) << "Printing converted code: " << *converted;
+
+    string code = toString(*converted);
+
+    EXPECT_PRED2(notContainsSubString, code, "<?>");
+    EXPECT_PRED2(notContainsSubString, code, "<a>");
+    EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
 } // namespace backend
 } // namespace insieme
 

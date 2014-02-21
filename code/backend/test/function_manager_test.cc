@@ -297,9 +297,9 @@ TEST(FunctionManager, Bind) {
 	);
 
 	EXPECT_PRED2(containsSubString, def,
-		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
+		"static inline name* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
 		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
-		"    return closure;\n"
+		"    return (name*)closure;\n"
 		"}"
 	);
 
@@ -386,9 +386,9 @@ TEST(FunctionManager, NestedBind) {
 	);
 
 	EXPECT_PRED2(containsSubString, def,
-		"static inline name_closure* name_ctr(name_closure* closure, name* nested, float c1) {\n"
+		"static inline name* name_ctr(name_closure* closure, name* nested, float c1) {\n"
 		"    *closure = (name_closure){&name_mapper, nested, c1};\n"
-		"    return closure;\n"
+		"    return (name*)closure;\n"
 		"}"
 	);
 
