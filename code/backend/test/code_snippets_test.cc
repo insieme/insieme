@@ -48,6 +48,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -382,6 +383,54 @@ TEST(References, RefAny) {
 	EXPECT_PRED2(containsSubString, code, "&w;");
 
 	// try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+
+TEST(FunctionCall, GenericFunctionsWithLazy) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    core::ProgramPtr program = builder.parseProgram(
+    	"int<4> main() {"
+    	"	"
+    	"	let f = (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {"
+    	"		if(c(*a)) {"
+    	"			a = v();"
+    	"		}"
+    	"	};"
+    	"	"
+    	"	ref<int<4>> a = var(1);"
+    	"	ref<real<4>> b = var(2.0f);"
+    	"	"
+    	"	f(a, (int<4> a)=> true, ()=>3);"
+		"	f(b, (real<4> b)=> true, ()=>4.0f);"
+		"	"
+    	"	return 0;"
+    	"}"
+    );
+
+    ASSERT_TRUE(program);
+
+    // check for semantic errors
+    EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+    dumpPretty(program);
+
+    LOG(INFO) << "Converting IR to C...";
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+    LOG(INFO) << "Printing converted code: " << *converted;
+
+    string code = toString(*converted);
+
+    EXPECT_PRED2(notContainsSubString, code, "<?>");
+    EXPECT_PRED2(notContainsSubString, code, "<a>");
+    EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+    // try compiling the code fragment
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-lm");
 	compiler.addFlag("-c"); // do not run the linker
