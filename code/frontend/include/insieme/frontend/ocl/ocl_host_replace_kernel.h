@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/frontend/frontend.h"
@@ -59,6 +60,35 @@ public:
 	FindKernelNames();
 };
 */
+
+
+/**
+ * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
+ */
+class KernelCodeRetriver: public core::IRVisitor<bool> {
+	const core::ExpressionPtr& pathToKernelFile; // Variable to look for
+	const core::NodePtr& breakingStmt; // place where the path would be needed, can stop searching there
+	const core::ProgramPtr program;
+	const core::IRBuilder builder;
+	const core::lang::BasicGenerator& gen;
+	string path;
+
+	bool visitNode(const core::NodePtr& node);
+	bool visitCallExpr(const core::CallExprPtr& callExpr);
+	bool visitDeclarationStmt(const core::DeclarationStmtPtr& decl);
+
+	bool saveString(const core::LiteralPtr& lit);
+	bool saveString(const core::CallExprPtr& call);
+public:
+	KernelCodeRetriver(const core::ExpressionPtr lookFor,
+			const core::NodePtr& stopAt, core::ProgramPtr prog, core::IRBuilder build) :
+		IRVisitor<bool> (false), pathToKernelFile(lookFor),
+				breakingStmt(stopAt), program(prog), builder(build), gen(build.getNodeManager().getLangBasic()) { }
+	string getKernelFilePath() {
+		return path;
+	}
+};
+
 }
 
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
@@ -80,6 +110,7 @@ private:
 	void findKernelNames();
 	void collectArguments();
 	void replaceKernels();
+	void loadKernelCode();
 
 public:
 	core::NodePtr getTransformedProgram() {return prog;}

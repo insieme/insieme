@@ -51,6 +51,84 @@ namespace frontend {
 namespace ocl {
 
 namespace {
+bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
+	path = lit->getStringValue();
+	return true;
+}
+
+bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
+	if (const LiteralPtr lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
+		if (gen.isRefVectorToRefArray(lit)) {
+			if (const LiteralPtr pl = dynamic_pointer_cast<const Literal>(utils::tryRemove(gen.getRefDeref(), call->getArgument(0)))) {
+				path = pl->getStringValue();
+				return true;
+			}
+		}
+
+		if(lit->getStringValue() == "shrFindFilePath") {
+
+			const ExpressionPtr arg = utils::tryRemove(gen.getRefDeref(), call->getArgument(0));
+			if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(arg))
+				return saveString(call);
+			if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(arg))
+				return saveString(lit);
+			if(const VariablePtr var = dynamic_pointer_cast<const Variable>(arg)){
+				KernelCodeRetriver nkcr(var, call, program, builder);
+				visitDepthFirstInterruptible(program, nkcr);
+				string pathFound = nkcr.getKernelFilePath();
+				if(pathFound.size() > 0) {
+					path = pathFound;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
+	if (node == breakingStmt) {
+		return true; // stop recursion
+	}
+	return false; // go on with search
+}
+
+bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
+	if (callExpr->getFunctionExpr() != gen.getRefAssign())
+		return false;
+	// check if it is the variable we are looking for
+	if (const VariablePtr pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (const VariablePtr lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
+			if (lhs->getId() != pathVar->getId())
+				return false;
+		}
+
+		if (const CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
+		}
+	}
+
+	if(callExpr->getArgument(0) == pathToKernelFile) {
+		if (const CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
+		}
+
+	}
+
+	return false;
+}
+
+bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
+	if (const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (decl->getVariable()->getId() != pathVar->getId())
+			return false;
+
+		if (const CallExprPtr initCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(decl->getInitialization()))) {
+			return saveString(initCall);
+		}
+	}
+	return false;
+}
 
 }
 
@@ -58,8 +136,9 @@ KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){
 	findKernelNames();
 	collectArguments();
 	replaceKernels();
+	loadKernelCode();
 
-//	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
+	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
 }
 
 void KernelReplacer::findKernelNames() {
@@ -94,7 +173,7 @@ void KernelReplacer::findKernelNames() {
 
 void KernelReplacer::collectArguments() {
 	NodeManager& mgr = prog->getNodeManager();
-	const lang::BasicGenerator&	gen = mgr.getLangBasic();
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
 	IRBuilder builder(mgr);
 
 	NodeAddress pA(prog);
@@ -139,6 +218,9 @@ void KernelReplacer::collectArguments() {
 			ExpressionPtr hostPtr;
 			utils::extractSizeFromSizeof(sizeArg, size, type);
 			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+
+			// add ref<array< >> to type
+			type = builder.refType(builder.arrayType(type));
 
 			//collect types of the arguments
 			kernelTypes[kernel].at(argIdx) = (type);
@@ -187,14 +269,14 @@ void KernelReplacer::collectArguments() {
 			return;
 		}
 
+	std::cout << "ARGUMENT: \t" << *arg->getType() << "  " << *arg << std::endl;
 		//collect types of the arguments
 		kernelTypes[kernel].at(argIdx) = (arg->getType());
 
-		arg = utils::getVarOutOfCrazyInspireConstruct(arg);
+//		arg = utils::getVarOutOfCrazyInspireConstruct(arg);
 
 	//	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
 	//ßßß	kernelArgs[kernel].push_back(arg);
-	std::cout << "ARGUMENT: \t" << *arg << std::endl;
 
 		FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType().as<TypePtr>(), utils::tryDeref(arg)->getType()), gen.getInt4());
 		params.push_back(src);
@@ -234,6 +316,10 @@ void KernelReplacer::replaceKernels() {
 	});
 
 	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements);
+}
+
+void KernelReplacer::loadKernelCode() {
+
 }
 
 } //namespace ocl

@@ -52,11 +52,13 @@ namespace utils {
  * Returns either the expression itself or the first argument if expression was a call to function
  */
 core::ExpressionAddress tryRemove(const core::ExpressionPtr& function, const core::ExpressionAddress& expr);
+core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr);
 
 /*
  * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
  */
 core::ExpressionAddress tryRemoveAlloc(const core::ExpressionAddress& expr);
+core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr);
 
 /*
  * Returns either the expression itself or the expression inside a nest of ref.deref calls
