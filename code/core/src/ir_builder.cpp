@@ -1560,15 +1560,13 @@ StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, con
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
 	//assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
-	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, initValue);
+	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, wrapLazy(initValue));
 }
 
 StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
-	TypePtr staticWrap = staticVariable.getType().as<RefTypePtr>().getElementType();
-	ExpressionPtr init =  callExpr(staticWrap, ext.getCreateStatic(), getTypeLiteral(ext.unwrapStaticType(staticWrap)));
-	return assign(staticVariable, init);
+	return callExpr(ext.getCreateStatic(), staticVariable);
 }
 
 ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {

@@ -70,10 +70,8 @@ namespace lang {
 		LANG_EXT_DERIVED(CreateStatic,
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
-				"(type<'a> t)->type { "
-				"	ref<type> res = var(type);"
+				"(ref<type> res)->unit { "
 				"	res->initialized = false;"
-				"	return *res;"
 				"}"
 		);
 
@@ -83,10 +81,10 @@ namespace lang {
 		LANG_EXT_DERIVED(InitStatic,
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
-				"(ref<type> var, 'a value)->unit { "
+				"(ref<type> var, ()=>'a value)->unit { "
 				"	if (*var->initialized) return;"
 				"	var->initialized = true;"
-				"	var->value = value;"
+				"	var->value = value();"
 				"}"
 		);
 

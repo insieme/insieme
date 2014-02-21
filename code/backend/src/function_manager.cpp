@@ -498,8 +498,25 @@ namespace backend {
 		c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(info.closureType),
 				c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, info.closureType)));
 
+		// pre-process target function
+		auto fun = bind->getCall()->getFunctionExpr();
+
+		// instantiate generic lambdas if necessary
+		if (operatorTable.find(fun) == operatorTable.end() && fun.isa<core::LambdaExprPtr>()) {
+
+			// extract node manager
+			auto& mgr = bind->getNodeManager();
+
+			// get type variable substitution for call
+			core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(mgr, bind->getCall());
+
+			// instantiate function expression
+			fun = core::transform::instantiate(mgr, fun.as<core::LambdaExprPtr>(), map);
+
+		}
+
 		// create nested closure
-		c_ast::ExpressionPtr nested = getValue(bind->getCall()->getFunctionExpr(), context);
+		c_ast::ExpressionPtr nested = getValue(fun, context);
 
 		//  create constructor call
 		c_ast::CallPtr res = c_ast::call(info.constructorName, alloc, nested);
@@ -661,6 +678,25 @@ namespace backend {
 			res->mapperName = manager->create(name + "_mapper");
 			res->constructorName = manager->create(name + "_ctr");
 
+			// instantiate nested call
+			auto call = bind->getCall();
+
+			// instantiate generic lambdas if necessary
+			if (auto fun = call->getFunctionExpr().isa<core::LambdaExprPtr>()) {
+
+				// extract node manager
+				auto& mgr = bind->getNodeManager();
+
+				// get type variable substitution for call
+				core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(mgr, bind->getCall());
+
+				// instantiate function expression
+				fun = core::transform::instantiate(mgr, fun.as<core::LambdaExprPtr>(), map);
+
+				// replace call with call to instantiated function
+				call = core::IRBuilder(call->getNodeManager()).callExpr(call->getType(), fun, call->getArguments());
+			}
+
 			// create a map between expressions in the IR and parameter / captured variable names in C
 			utils::map::PointerMap<core::ExpressionPtr, c_ast::VariablePtr> variableMap;
 
@@ -673,7 +709,7 @@ namespace backend {
 
 			// add arguments of call
 			int argumentCounter = 0;
-			const vector<core::ExpressionPtr>& args = bind->getCall()->getArguments();
+			const vector<core::ExpressionPtr>& args = call->getArguments();
 			for_each(args, [&](const core::ExpressionPtr& cur) {
 				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("c%d", ++argumentCounter));
 			});
@@ -705,7 +741,7 @@ namespace backend {
 			c_ast::VariablePtr varCall = c_ast::var(manager->create<c_ast::PointerType>(mapperType), "call");
 
 			// get generic type of nested closure
-			core::FunctionTypePtr nestedFunType = static_pointer_cast<const core::FunctionType>(bind->getCall()->getFunctionExpr()->getType());
+			core::FunctionTypePtr nestedFunType = static_pointer_cast<const core::FunctionType>(call->getFunctionExpr()->getType());
 			const FunctionTypeInfo& nestedClosureInfo = typeManager.getTypeInfo(nestedFunType);
 
 			// define variable / struct entry pointing to the nested closure variable

@@ -1072,17 +1072,21 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
 
 	// update body
-	const CompoundStmtPtr body = static_pointer_cast<CompoundStmtPtr>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
+	CompoundStmtPtr body = static_pointer_cast<CompoundStmtPtr>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
 
 	// update parameters
 	VariableList params;
-	::transform(lambda->getParameterList()->getParameters(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
-		TypePtr newType = substitution->applyTo(cur->getType());
-		if (newType == cur->getType()) {
-			return cur;
-		}
-		return Variable::get(manager, newType, cur->getId());
-	});
+	VariableMap paramMap;
+	for(const VariablePtr& var : lambda->getParameterList()->getParameters()) {
+		// create new parameter
+		auto newVar = Variable::get(manager, substitution->applyTo(var->getType()), var->getId());
+		// collect new parameters
+		params.push_back(newVar);
+		paramMap[var] = newVar;
+	}
+
+	// update variables in body
+	body = transform::replaceVarsGen(manager, body, paramMap);
 
 	// construct result
 	return LambdaExpr::get(manager, funType, params, body);
