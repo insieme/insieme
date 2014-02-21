@@ -124,6 +124,8 @@ int main() {
 
 	int a = 1 + 2;
 
+	double x = PI+2;
+
 	List l;
 	Even e;
 	Odd o;

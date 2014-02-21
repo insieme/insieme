@@ -806,10 +806,21 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 
 				auto call = initIr.isa<core::CallExprPtr>();
 				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
-					//this can also be done by substituting the first param of ctor by the unwrapped static var
-					initIr = builder.deref(initIr);
+
+					// if this is a default constructor, there is no need to initialize. the global will have already this value
+					if (call->getArguments().size() == 1  && call->getType() ==  call[0]->getType()){
+					//if (core::analysis::isDefaultConstructor(call->getFunctionExpr().as<core::LambdaExprPtr>())){
+						retStmt = builder.getNoOp();
+					}
+					else{
+						//this can also be done by substituting the first param of ctor by the unwrapped static var
+						initIr = builder.deref(initIr);
+						retStmt = builder.initStaticVariable(lit, initIr);
+					}
 				}
-				retStmt = builder.initStaticVariable(lit, initIr);
+				else{
+					retStmt = builder.initStaticVariable(lit, initIr);
+				}
 			} else {
 				retStmt = builder.getNoOp();
 			}

@@ -153,7 +153,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 
 			//we assume that exceptionVarDecl is not in the varDeclMap
 			frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
-					&& "excepionVarDecl already in vardeclmap");
+							&& "excepionVarDecl already in vardeclmap");
 			//insert var to be used in conversion of handlerBlock
 			convFact.varDeclMap.insert( { exceptionVarDecl, var } );
 			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
@@ -202,13 +202,16 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 
 	// build the wrapper for single statements
 	if ( retStmt.isSingleStmt() ) {
+
 		core::StatementPtr&& irStmt = retStmt.getSingleStmt();
+		assert(irStmt);
 
 		// Deal with mpi pragmas
 		mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
 
 		// Deal with transfromation pragmas
 		pragma::attachPragma(irStmt,stmt,convFact);
+
 
 		// Deal with omp pragmas
 		if ( irStmt->getAnnotations().empty() )
