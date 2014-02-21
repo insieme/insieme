@@ -222,12 +222,9 @@ void BufferReplacer::collectInformation() {
 		// extract type form size argument
 		ExpressionPtr size;
 		TypePtr type;
-#ifdef	NDEBUG
-		extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false);
-#else
-		assert(utils::extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false)
-				&& "cannot extract size and type from size paramater fo clCreateBuffer");
-#endif
+		__unused bool check = utils::extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false);
+
+		assert(check && "cannot extract size and type from size paramater fo clCreateBuffer");
 
 // 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
