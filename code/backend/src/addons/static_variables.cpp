@@ -73,49 +73,34 @@ namespace addons {
 		}
 
 
-//		c_ast::NodePtr convertStatement(ConversionContext& context, const core::NodePtr& node) {
-//			static const c_ast::NodePtr NOT_HANDLED;
-//
-//			if (node.isa<core::LiteralPtr>())
-//			return NOT_HANDLED;
-//
-//		}
-
-
 
 		OperatorConverterTable getStaticVariableOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res;
 
-//			const auto& ext = manager.getLangExtension<core::lang::StaticVariableExtension>();
+			const auto& ext = manager.getLangExtension<core::lang::StaticVariableExtension>();
 
 			#include "insieme/backend/operator_converter_begin.inc"
-
-//			res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-//			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-//
-//			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-//			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-//
-//			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
-//
-//			// FIXME: find the right place for this
-//			res[ext.getMaterialize()]	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0));});
-
+			res[ext.getCreateStatic()] 	= OP_CONVERTER({
+				return c_ast::ref(CONVERT_ARG(0)); 
+			});
+			res[ext.getInitStatic()] 	= OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getAccessStatic()]  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 
 			#include "insieme/backend/operator_converter_end.inc"
+
 			return res;
 		}
 
-	}
+	} // namespace
 
 	void StaticVariables::installOn(Converter& converter) const {
-
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(StaticVariableTypeHandler);
-
-		// register additional operators
-		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
-
+		
+//		// registers type handler
+//		converter.getTypeManager().addTypeHandler(StaticVariableTypeHandler);
+//
+//		// register additional operators
+//		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
+//
 	}
 
 } // end namespace addons
