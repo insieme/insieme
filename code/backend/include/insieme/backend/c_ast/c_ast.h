@@ -259,7 +259,6 @@ namespace c_ast {
 		Statement(NodeType type) : Node(type) {}
 	};
 
-
 	struct VarDecl : public Statement {
 		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
 		VarDecl(VariablePtr var)
@@ -267,6 +266,16 @@ namespace c_ast {
 		VarDecl(VariablePtr var, ExpressionPtr init)
 			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, init))) {};
 		VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct StaticVarDecl : public Statement {
+		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
+		StaticVarDecl(VariablePtr var)
+			: Statement(NT_StaticVarDecl), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
+		StaticVarDecl(VariablePtr var, ExpressionPtr init)
+			: Statement(NT_StaticVarDecl), varInit(toVector(std::make_pair(var, init))) {};
+		StaticVarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
 		virtual bool equals(const Node& node) const;
 	};
 

@@ -81,10 +81,20 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 			res[ext.getCreateStatic()] 	= OP_CONVERTER({
+
+		//		return nullptr;
 				return c_ast::ref(CONVERT_ARG(0)); 
 			});
-			res[ext.getInitStatic()] 	= OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-			res[ext.getAccessStatic()]  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getInitStatic()] 	= OP_CONVERTER({ 
+
+				dumpPretty(ARG(0));
+		//		return c_ast::create<
+		//	return manager->create<c_ast::VarDecl>(info.var, initValue);
+				return c_ast::ref(CONVERT_ARG(0)); 
+			});
+			res[ext.getAccessStatic()]  = OP_CONVERTER({ 
+				return c_ast::ref(CONVERT_ARG(0));
+			});
 
 			#include "insieme/backend/operator_converter_end.inc"
 
@@ -95,12 +105,12 @@ namespace addons {
 
 	void StaticVariables::installOn(Converter& converter) const {
 		
-//		// registers type handler
+		// registers type handler
 //		converter.getTypeManager().addTypeHandler(StaticVariableTypeHandler);
-//
-//		// register additional operators
+
+		// register additional operators
 //		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
-//
+
 	}
 
 } // end namespace addons

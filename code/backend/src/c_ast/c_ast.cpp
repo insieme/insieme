@@ -264,6 +264,12 @@ namespace c_ast {
 		return ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
 	}
 
+	bool StaticVarDecl::equals(const Node& node) const {
+		assert(dynamic_cast<const VarDecl*>(&node));
+		auto other = static_cast<const VarDecl&>(node);
+		return ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
+	}
+
 	bool Compound::equals(const Node& node) const {
 		assert(dynamic_cast<const Compound*>(&node));
 		auto other = static_cast<const Compound&>(node);
@@ -328,7 +334,6 @@ namespace c_ast {
 		auto other = static_cast<const Label&>(node);
 		return value==other.value;
 	}
-
 
 	bool Literal::equals(const Node& node) const {
 		assert(dynamic_cast<const Literal*>(&node));
