@@ -250,6 +250,7 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 		REMOVE_SYMBOLS(name);
 		boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
 		boost::replace_all(name, "/", "_"); 
+        boost::replace_all(name, "-", "_");
     }
     return name;
 }
