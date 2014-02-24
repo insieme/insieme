@@ -971,6 +971,51 @@ TEST(TypeManager, VolatileType) {
 
 }
 
+
+TEST(TypeManager, ConstType) {
+
+	core::NodeManager nodeManager;
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
+
+
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+	TypeInfo info;
+	auto lit = cManager->create<c_ast::Literal>("X");
+
+	core::TypePtr type = builder.parseType("const<int<4>>");
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("const int32_t", toC(info.lValueType));
+	EXPECT_EQ("const int32_t", toC(info.rValueType));
+	EXPECT_EQ("const int32_t", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+
+	// try pointer (ref<ref<int<4>>)
+	type = builder.parseType("const<ref<ref<int<4>>>>");
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("const int32_t*", toC(info.lValueType));
+	EXPECT_EQ("const int32_t**", toC(info.rValueType));
+	EXPECT_EQ("const int32_t**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+
+	// TODO: test for pointers, structs, ...
+
+}
+
 } // end namespace backend
 } // end namespace insieme
 

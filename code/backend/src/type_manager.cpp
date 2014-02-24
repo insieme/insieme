@@ -59,6 +59,7 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -552,6 +553,25 @@ namespace backend {
 				TypeInfo* res = new TypeInfo();
 				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::VOLATILE);
 				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::VOLATILE);
+				res->externalType = res->rValueType;
+				res->externalize = subType->externalize;
+				res->internalize = subType->internalize;
+				res->declaration = subType->declaration;
+				res->definition = subType->definition;
+				return res;
+			}
+
+			// handle const wrapper
+			auto& ext = converter.getNodeManager().getLangExtension<core::lang::ConstExtension>();
+			if (ext.isConstType(ptr)) {
+
+				// load information of nested type
+				const TypeInfo* subType = resolveInternal(ext.getWrappedConstType(ptr));
+
+				// build wrapped information for const type
+				TypeInfo* res = new TypeInfo();
+				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::CONST);
+				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::CONST);
 				res->externalType = res->rValueType;
 				res->externalize = subType->externalize;
 				res->internalize = subType->internalize;
