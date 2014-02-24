@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <boost/filesystem/path.hpp>
+
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
@@ -45,8 +47,9 @@ namespace extensions {
 // extension for OpenCl host files
 
 class OclHostPlugin : public FrontendPlugin {
+	const std::vector<boost::filesystem::path>& includeDirs;
 public:
-	OclHostPlugin();
+	OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
 private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };

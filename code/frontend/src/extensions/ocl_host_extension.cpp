@@ -54,7 +54,7 @@ namespace extensions {
 using namespace insieme::core;
 using namespace insieme::frontend::ocl;
 
-OclHostPlugin::OclHostPlugin() {
+OclHostPlugin::OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs)  : includeDirs(includeDirs) {
 
 }
 
@@ -62,7 +62,7 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
-	ocl::KernelReplacer kr(root);
+	ocl::KernelReplacer kr(root, includeDirs);
 	root = kr.getTransformedProgram();
 
 	ocl::OclSimpleFunHandler osfh;
