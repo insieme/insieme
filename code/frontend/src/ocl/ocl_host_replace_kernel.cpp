@@ -42,6 +42,7 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
@@ -374,9 +375,23 @@ void KernelReplacer::loadKernelCode() {
 	TreePatternPtr kernelDecl = irp::declarationStmt(aT(var("kernelVar", pattern::any)) ,aT(clCreateProgramWithSource));
 	TreePatternPtr clCreateProgramWithSourcePattern = kernelAssign | kernelDecl;
 
+	std::map<string, int> checkDuplicates;
 	irp::matchAllPairs(clCreateProgramWithSourcePattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
 
-		lookForKernelFilePragma(createKernel["kernelVar"].getValue().as<ExpressionPtr>()->getType(), createKernel["cpws"].getValue().as<ExpressionPtr>());
+		std::vector<ExpressionPtr> kernelEntries = lookForKernelFilePragma(createKernel["kernelVar"].getValue().as<ExpressionPtr>()->getType(),
+				createKernel["cpws"].getValue().as<ExpressionPtr>());
+/*
+		for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
+			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
+                assert(cname.empty() && "cannot find the name of the kernel function");
+std::cout << "Cname: " << cname << std::endl;
+				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+				checkDuplicates[cname] = 1;
+//std::cout << "found " << kernelNames;
+			}
+
+		});*/
 	});
 }
 
