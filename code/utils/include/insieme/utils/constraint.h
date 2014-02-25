@@ -209,6 +209,8 @@ struct CombinerPtr : public std::shared_ptr<Combiner<FuncTy>> {
 	CombinerPtr(CombinerPtr<FuncTy>&& other) :
 		std::shared_ptr<Combiner<FuncTy>>( std::move(other) ) { }
 
+	CombinerPtr& operator=(const CombinerPtr&) = default;
+
 	/** 
 	 * Automatic conversion to bool of a combiner
 	 */

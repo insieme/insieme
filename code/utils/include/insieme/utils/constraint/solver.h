@@ -82,7 +82,7 @@ namespace constraint {
 		bool operator!=(const ValueID& other) const { return !(*this == other); }
 		bool operator<(const ValueID& other) const { return id < other.id; }
 
-		virtual std::ostream& printTo(std::ostream& out) const { return out << "v" << id; }
+		std::ostream& printTo(std::ostream& out) const { return out << "v" << id; }
 	};
 
 
@@ -674,7 +674,7 @@ namespace constraint {
 
 		std::size_t size() const { return data.size(); }
 
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << "{" << join(",", data, print<deref<ConstraintPtr>>()) << "}";
 		}
 	};
@@ -750,6 +750,8 @@ namespace constraint {
 		const typename L::value_type& operator[](const TypedValueID<L>& value) const {
 			return get(value);
 		}
+
+		Assignment& operator=(const Assignment& other) = default;
 
 		bool operator==(const Assignment& other) const {
 			return data == other.data;
