@@ -976,7 +976,7 @@ TEST(TypeManager, ConstType) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
+//	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	Converter converter(nodeManager);
