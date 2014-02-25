@@ -229,6 +229,33 @@ namespace tu {
 
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
 
+		template<typename Visitor>
+		void visitAll(Visitor& visit) const {
+
+			for(const auto& cur : types) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : functions) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : globals) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : initializer) {
+				visit(cur);
+			}
+
+			for(const auto& cur : entryPoints) {
+				visit(cur);
+			}
+		}
+
 		bool isCXX() const{
 			return isCppCode;
 		}
