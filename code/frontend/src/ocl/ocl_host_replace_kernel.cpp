@@ -139,7 +139,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
-std::cout << "Path: " << path << std::endl;
+//std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
 			string root = path;
 	size_t nIncludes = includeDirs.size();
@@ -181,8 +181,8 @@ std::cout << "Path: " << path << std::endl;
 KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){
 	findKernelNames();
 	collectArguments();
-	replaceKernels();
 	loadKernelCode();
+	replaceKernels();
 
 //	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
 }
@@ -203,12 +203,16 @@ void KernelReplacer::findKernelNames() {
 //std::cout << "kernel: " << *createKernel["clCreateKernel"].getValue() << std::endl;
 
 		std::string kernelName = createKernel["kernel_name"].getValue().as<LiteralPtr>()->getStringValue();
+
+		// remove " "
+		kernelName = kernelName.substr(1, kernelName.length()-2);
+
 		ExpressionAddress kernelExpr = matchAddress >> createKernel["kernel"].getValue().as<ExpressionAddress>();
 		ExpressionAddress kernelVar = utils::extractVariable(kernelExpr).as<ExpressionAddress>();
 
 		kernelVar = utils::getRootVariable(kernelVar).as<ExpressionAddress>();
 
-//std::cout << "varAddr: " << kernelVar << " - " << *kernelVar << std::endl;
+//std::cout << "varAddr: " << kernelName << " - " << *kernelVar << std::endl;
 		kernelNames[kernelName] = kernelVar;
 
 		// remove the clCreateKernel call including the assignment and its lhs
@@ -366,6 +370,7 @@ void KernelReplacer::replaceKernels() {
 
 void KernelReplacer::loadKernelCode() {
 	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
 
 	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(pattern::any, irp::literal("clCreateProgramWithSource"),	pattern::any <<
@@ -376,23 +381,43 @@ void KernelReplacer::loadKernelCode() {
 	TreePatternPtr clCreateProgramWithSourcePattern = kernelAssign | kernelDecl;
 
 	std::map<string, int> checkDuplicates;
-	irp::matchAllPairs(clCreateProgramWithSourcePattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
+	irp::matchAllPairs(clCreateProgramWithSourcePattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createProgram) {
 
-		std::vector<ExpressionPtr> kernelEntries = lookForKernelFilePragma(createKernel["kernelVar"].getValue().as<ExpressionPtr>()->getType(),
-				createKernel["cpws"].getValue().as<ExpressionPtr>());
-/*
+		std::vector<ExpressionPtr> kernelEntries = lookForKernelFilePragma(createProgram["kernelVar"].getValue().as<ExpressionPtr>()->getType(),
+				createProgram["cpws"].getValue().as<ExpressionPtr>());
+
 		for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
-                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
-                assert(cname.empty() && "cannot find the name of the kernel function");
-std::cout << "Cname: " << cname << std::endl;
+                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
+                assert(!cname.empty() && "cannot find the name of the kernel function");
 				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname] = 1;
-//std::cout << "found " << kernelNames;
+
+				kernelFunctions[kernelNames[cname]] = lambdaEx;
 			}
 
-		});*/
+		});
 	});
+
+	NodeMap replacements;
+	// Replace clEnqueueNDRangeKernel calls with calls to the associated function
+	TreePatternPtr clEnqueueNDRangeKernel = var("enrk", irp::callExpr(pattern::any, irp::literal("clEnqueueNDRangeKernel"),	pattern::any <<
+			var("kernel", pattern::any) << var("work_dim", pattern::any) << pattern::var("global_work_offset", pattern::any) <<
+			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
+			pattern::any << pattern::any << pattern::var("err", pattern::any) ));
+
+	irp::matchAllPairs(clEnqueueNDRangeKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& ndrangeKernel) {
+
+		ExpressionPtr kernelVar = utils::getRootVariable(matchAddress >> ndrangeKernel["kernel"].getValue()).as<ExpressionPtr>();
+		// try to find coresponding kernel function
+		assert(kernelFunctions.find(kernelVar) != kernelFunctions.end());
+
+		// TODO add kernel call here
+		replacements[ndrangeKernel["enrk"].getValue()] = builder.uintLit(0);
+	});
+
+
+	prog = transform::replaceAll(mgr, prog, replacements);
 }
 
 ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
@@ -468,6 +493,9 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 						if(kernelFileCache.find(path) == kernelFileCache.end()) {
 							kernelFileCache.insert(path);
 							const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
+
+//std::cout << "\nProgram: " << printer::PrettyPrinter(kernels) << std::endl;
+
 							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 									kernelEntries.push_back(kernel);
 							});
