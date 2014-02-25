@@ -192,6 +192,99 @@ namespace tu {
 
 	}
 
+	TEST(TranslationUnit, TypeMerge) {
+		core::NodeManager mgrA;
+		core::NodeManager mgrB;
+		
+		IRTranslationUnit unitA(mgrA);
+		{
+			core::IRBuilder builderA(mgrA);
+			
+			auto symbol = builderA.parseType("A").as<core::GenericTypePtr>();
+			auto type   = builderA.parseType("struct A { int<4> x; }");
+
+			unitA.addType(symbol, type);
+		}
+
+
+		{
+			IRTranslationUnit unitB(mgrB);
+			core::IRBuilder builderB(mgrB);
+
+			auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
+			auto type   = builderB.parseType("struct A { int<4> x; }");
+
+			auto member = builderB.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
+
+//	std::cout << symbol << std::endl;
+//	std::cout << type << std::endl;
+//	std::cout << member << std::endl;
+
+			core::ClassMetaInfo classInfo;
+			classInfo.addMemberFunction("method", member, false, false);
+			core::setMetaInfo(type, classInfo);
+			EXPECT_EQ(1, classInfo.getMemberFunctions().size());
+
+			unitB.addType(symbol, type);
+
+			merge(mgrA, unitA, unitB);
+			EXPECT_TRUE(core::hasMetaInfo(type));
+		}
+
+
+		core::IRBuilder builder(mgrA);
+		core::GenericTypePtr symbol = builder.parseType("A").as<core::GenericTypePtr>();
+
+		core::TypePtr type = unitA[symbol];
+
+		EXPECT_TRUE(core::hasMetaInfo(type));
+		{
+			IRTranslationUnit unitB(mgrB);
+			core::IRBuilder builderB(mgrB);
+
+			auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
+			auto type   = builderB.parseType("struct A { int<4> x; }");
+
+			auto member = builderB.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
+			core::ClassMetaInfo classInfo;
+			classInfo.addMemberFunction("method2", member, false, false);
+			core::setMetaInfo(type, classInfo);
+
+			unitB.addType(symbol, type);
+
+			merge(mgrA, unitA, unitB);
+			EXPECT_TRUE(core::hasMetaInfo(type));
+			auto meta = core::getMetaInfo(type);
+			EXPECT_EQ(1, meta.getMemberFunctions().size());
+		}
+
+		auto meta = core::getMetaInfo(type);
+		EXPECT_EQ(2, meta.getMemberFunctions().size());
+
+		// create a in-memory stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+		// dump unit
+		dump(buffer, unitA);
+
+		
+		{
+			// reload unit
+			core::NodeManager manager;
+			core::IRBuilder builder(manager);
+
+			IRTranslationUnit unitB = load(buffer, manager);
+
+			auto symbol = builder.parseType("A").as<core::GenericTypePtr>();
+			EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unitB[symbol]));
+
+			EXPECT_TRUE(core::hasMetaInfo(unitB[symbol]));
+			auto meta = core::getMetaInfo(unitB[symbol]);
+			EXPECT_EQ(2, meta.getMemberFunctions().size());
+		}
+	}
+
+
 } // end namespace tu
 } // end namespace frontend
 } // end namespace insieme

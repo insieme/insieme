@@ -146,7 +146,7 @@ namespace tu {
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
 			assert(symbol );
 			assert(definition);
-			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
+			types.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
 		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
