@@ -152,6 +152,22 @@ struct numeric_cast_impl<RetTy, InTy, 2> {
 template <class RetTy, class InTy>
 struct numeric_cast_impl<RetTy, InTy, 2>;
 
+/**
+ * We are overloading the conversion of float literals to append the trailing 'f' suffix when
+ * converting floats to strings.
+ */
+template <>
+struct numeric_cast_impl<std::string, float, 0> {
+	static std::string convert(float f) {
+		auto res = boost::lexical_cast<std::string>(f);
+		if (find(res.begin(),res.end(),'.') == res.end()) {
+			return res + ".0f";
+		}
+		return res + "f";
+	}
+};
+
+
 } // end anonymous namespace
 
 namespace insieme {

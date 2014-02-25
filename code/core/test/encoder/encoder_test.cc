@@ -87,17 +87,24 @@ TEST(PrimitiveTypes, Base) {
 	expr = toIR(manager, (short)4);
 	EXPECT_EQ("int<2>", toString(*expr->getType()));
 	EXPECT_EQ("4", toString(*expr));
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 	expr = toIR(manager, (unsigned)14);
 	EXPECT_EQ("uint<4>", toString(*expr->getType()));
 	EXPECT_EQ("14", toString(*expr));
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
+	float y = 1.5f;
+	expr = toIR(manager, y);
+	EXPECT_EQ("real<4>", toString(*expr->getType()));
+	EXPECT_EQ("1.5f", toString(*expr));
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 	double x = 123.123;
 	expr = toIR(manager, x);
 	EXPECT_EQ("real<8>", toString(*expr->getType()));
 	EXPECT_EQ("123.123", toString(*expr));
-	// EXPECT_EQ(x, toValue<double>(expr));
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 
 	// check strings
@@ -106,11 +113,13 @@ TEST(PrimitiveTypes, Base) {
 	EXPECT_EQ("ref<array<char,1>>", toString(*expr->getType()));
 	EXPECT_EQ("Hello", toString(*expr));
 	EXPECT_EQ(test, toValue<string>(expr));
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 	// check exceptions
 	expr = builder.variable(basic.getInt4());
 	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
 	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
+	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 
 	// check types

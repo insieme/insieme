@@ -72,12 +72,15 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ("8", numeric_cast<std::string>('8'));
 
 	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
-	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
+	EXPECT_EQ("53876.0f", numeric_cast<std::string>(5.3876e4f));
 
 	EXPECT_EQ(321000l, numeric_cast<long>("321000l"));
 
 	EXPECT_EQ(2000LL, numeric_cast<long long>("2000LL"));
 	EXPECT_EQ(2000ll, numeric_cast<long long>("2000LL"));
 
-
+	EXPECT_EQ("1.0f", numeric_cast<std::string>(1.0f));
+	EXPECT_EQ("1.5f", numeric_cast<std::string>(1.5f));
+	EXPECT_EQ(1.0f, numeric_cast<float>("1.0f"));
 }
+
