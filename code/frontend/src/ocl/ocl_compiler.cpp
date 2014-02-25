@@ -355,9 +355,9 @@ private:
 
     core::ExpressionPtr resolveConvert(const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
-std::cout << "TRYing on " << name << std::endl;
+//std::cout << "TRYing on " << name << std::endl;
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
-std::cout << "Ftype: " << ftype << std::endl;
+//std::cout << "Ftype: " << ftype << std::endl;
         	if(core::VectorTypePtr retTy = dynamic_pointer_cast<const core::VectorType>(ftype->getReturnType())) {
 				// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
 				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
@@ -386,7 +386,7 @@ std::cout << "Ftype: " << ftype << std::endl;
 
 				return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
         	} else {
-std::cout << "\nCONVDERT: " << ftype->getReturnType() << " -" << builder.castExpr(ftype->getReturnType(), args.at(0)) << std::endl;
+//std::cout << "\nCONVDERT: " << ftype->getReturnType() << " -" << builder.castExpr(ftype->getReturnType(), args.at(0)) << std::endl;
         		// scalar converts are translated to a cast
         		return builder.castExpr(ftype->getReturnType(), args.at(0));
         	}

@@ -104,7 +104,7 @@ namespace frontend {
         }
 
         if(flags & OpenCL) {
-        	registerFrontendPlugin<extensions::OclHostPlugin>();
+        	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
 		}
        
        	registerFrontendPlugin<FrontendCleanup>();

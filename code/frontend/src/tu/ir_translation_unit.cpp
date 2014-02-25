@@ -143,7 +143,7 @@ namespace tu {
 			res.addGlobal(cur);
 		}
 
-		// copy initalizer
+		// copy initializer
 		for(auto cur : b.getInitializer()) {
 			res.addInitializer(cur);
 		}
@@ -151,6 +151,29 @@ namespace tu {
 		// entry points
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
+		}
+
+		// migrate all meta information
+		if (&b.getNodeManager() != &mgr) {
+			auto& mgrB = b.getNodeManager();
+
+			// built a visitor searching all meta-info entries and merge them
+			auto visitor = core::makeLambdaVisitor([&](const core::TypePtr& type) {
+
+				// check whether there is a meta-info annotation at the original type
+				auto other = mgrB.get(type);
+
+				// if there is some meta-info
+				if (core::hasMetaInfo(other)) {
+					// merge it
+					core::setMetaInfo(type, core::merge(core::getMetaInfo(type), core::getMetaInfo(other)));
+				}
+
+			});
+			auto cachedVisitor = core::makeDepthFirstOnceVisitor(visitor);
+
+			// apply visitor
+			res.visitAll(cachedVisitor);
 		}
 
 		// done

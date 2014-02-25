@@ -976,8 +976,6 @@ TEST(TypeManager, ConstType) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
-
 
 	Converter converter(nodeManager);
 	converter.setNameManager(std::make_shared<TestNameManager>());

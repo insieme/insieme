@@ -81,9 +81,9 @@ class KernelCodeRetriver: public core::IRVisitor<bool> {
 	bool saveString(const core::CallExprPtr& call);
 public:
 	KernelCodeRetriver(const core::ExpressionPtr lookFor,
-			const core::NodePtr& stopAt, core::ProgramPtr prog, core::IRBuilder build) :
+			const core::NodePtr& stopAt, core::ProgramPtr prog) :
 		IRVisitor<bool> (false), pathToKernelFile(lookFor),
-				breakingStmt(stopAt), program(prog), builder(build), gen(build.getNodeManager().getLangBasic()) { }
+				breakingStmt(stopAt), program(prog), builder(prog->getNodeManager()), gen(prog->getNodeManager().getLangBasic()) { }
 	string getKernelFilePath() {
 		return path;
 	}
@@ -101,17 +101,20 @@ typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > K
  */
 class KernelReplacer {
 public:
-	KernelReplacer(core::NodePtr prog);
+	KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs);
 private:
 	core::NodePtr prog;
 	KernelNames kernelNames;
 	KernelTypes kernelTypes;
+	const std::vector<boost::filesystem::path>& includeDirs;
+	std::set<string> kernelFileCache;
 
 	void findKernelNames();
 	void collectArguments();
 	void replaceKernels();
 	void loadKernelCode();
-
+	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
+	std::vector<core::ExpressionPtr> lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 public:
 	core::NodePtr getTransformedProgram() {return prog;}
 };

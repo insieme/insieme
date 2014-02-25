@@ -33,6 +33,8 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+#include <fstream>
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -40,8 +42,11 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
+#include "insieme/frontend/extensions/ocl_kernel_extension.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -73,7 +78,7 @@ bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 			if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(arg))
 				return saveString(lit);
 			if(const VariablePtr var = dynamic_pointer_cast<const Variable>(arg)){
-				KernelCodeRetriver nkcr(var, call, program, builder);
+				KernelCodeRetriver nkcr(var, call, program);
 				visitDepthFirstInterruptible(program, nkcr);
 				string pathFound = nkcr.getKernelFilePath();
 				if(pathFound.size() > 0) {
@@ -130,15 +135,56 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 	return false;
 }
 
+const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, const std::vector<boost::filesystem::path>& includeDirs) {
+	// delete quotation marks form path
+	if (path[0] == '"')
+		path = path.substr(1, path.length() - 2);
+std::cout << "Path: " << path << std::endl;
+	std::ifstream check;
+			string root = path;
+	size_t nIncludes = includeDirs.size();
+	// try relative path first
+	check.open(path);
+	// if not found now, check the include directories
+	for (size_t i = 0; i < nIncludes && check.fail(); ++i) {
+		check.close();
+		// try with include paths
+		path = (includeDirs.at(i) / root).string();
+		check.open(path);
+	}
+	// if there is still no match, try the paths of the input files
+/*	no job, no current file :/
+	if (check.fail()) {
+		assert(job.getFiles().size() == 1u);
+		string ifp = job.getFiles()[0].string();
+		size_t slash = ifp.find_last_of("/");
+		path = ifp.substr(0u, slash + 1) + root;
+		check.open(path);
+	}
+*/
+	check.close();
+
+	if (check.fail()) {// no kernel file found, leave the error printing to the compiler frontend
+	//		std::cerr << "FAIL! " << path << std::endl;
+		path = root;
+	}
+
+	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
+	ConversionJob kernelJob(path, includeDirs);
+	kernelJob.registerFrontendPlugin<extensions::OclKernelPlugin>();
+//	kernelJob.setFiles(toVector<frontend::path>(path));
+	return kernelJob.execute(builder.getNodeManager(), false);
 }
 
-KernelReplacer::KernelReplacer(core::NodePtr prog) : prog(prog){
+}
+
+KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){
 	findKernelNames();
 	collectArguments();
 	replaceKernels();
 	loadKernelCode();
 
-	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
+//	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
 }
 
 void KernelReplacer::findKernelNames() {
@@ -269,7 +315,7 @@ void KernelReplacer::collectArguments() {
 			return;
 		}
 
-	std::cout << "ARGUMENT: \t" << *arg->getType() << "  " << *arg << std::endl;
+//	std::cout << "ARGUMENT: \t" << *arg->getType() << "  " << *arg << std::endl;
 		//collect types of the arguments
 		kernelTypes[kernel].at(argIdx) = (arg->getType());
 
@@ -319,7 +365,119 @@ void KernelReplacer::replaceKernels() {
 }
 
 void KernelReplacer::loadKernelCode() {
+	NodeManager& mgr = prog->getNodeManager();
+	NodeAddress pA(prog);
 
+	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(pattern::any, irp::literal("clCreateProgramWithSource"),	pattern::any <<
+			pattern::any << var("kernelCodeString", pattern::any) << pattern::any << pattern::var("err", pattern::any) ));
+	TreePatternPtr kernelAssign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()),
+			var("kernelVar", pattern::any), (clCreateProgramWithSource));
+	TreePatternPtr kernelDecl = irp::declarationStmt(aT(var("kernelVar", pattern::any)) ,aT(clCreateProgramWithSource));
+	TreePatternPtr clCreateProgramWithSourcePattern = kernelAssign | kernelDecl;
+
+	std::map<string, int> checkDuplicates;
+	irp::matchAllPairs(clCreateProgramWithSourcePattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
+
+		std::vector<ExpressionPtr> kernelEntries = lookForKernelFilePragma(createKernel["kernelVar"].getValue().as<ExpressionPtr>()->getType(),
+				createKernel["cpws"].getValue().as<ExpressionPtr>());
+/*
+		for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
+			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
+                assert(cname.empty() && "cannot find the name of the kernel function");
+std::cout << "Cname: " << cname << std::endl;
+				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+				checkDuplicates[cname] = 1;
+//std::cout << "found " << kernelNames;
+			}
+
+		});*/
+	});
+}
+
+ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
+	std::set<string> kernelFileCache;
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	lang::BasicGenerator gen(mgr);
+	ConversionJob job;
+	ProgramPtr kernels;
+
+	if(const CallExprPtr callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
+		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
+			if(gen.isRefVectorToRefArray(stringAsChar)) {
+				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
+					// check if file has already been added
+//std::cout << "\n using path string " << path->getStringValue() << " \n\n";
+					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
+						kernelFileCache.insert(path->getStringValue());
+						kernels = loadKernelsFromFile(path->getStringValue(), builder, includeDirs);
+					}
+					//return;
+// set source string to an empty char array
+//					ret = builder.refVar(builder.literal("", builder.arrayType(gen.getChar())));
+				}
+			}
+		}
+	}
+
+	string kernelFilePath;
+	if(const VariablePtr pathVar = dynamic_pointer_cast<const Variable>(utils::tryRemove(gen.getRefDeref(), path))) {
+		KernelCodeRetriver kcr(pathVar, root, mProgram);
+		visitDepthFirst(mProgram, kcr);
+		kernelFilePath = kcr.getKernelFilePath();
+	}
+
+	if(const CallExprPtr pathCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemove(gen.getRefDeref(), path))) {
+		if(gen.isCompositeRefElem(pathCall->getFunctionExpr())) {
+			KernelCodeRetriver kcr(pathCall, root, mProgram);
+			visitDepthFirst(mProgram, kcr);
+			kernelFilePath = kcr.getKernelFilePath();
+		}
+	}
+	if(kernelFilePath.size() > 0) {
+		// check if file has already been added
+		if(kernelFileCache.find(kernelFilePath) == kernelFileCache.end()) {
+			kernelFileCache.insert(kernelFilePath);
+			kernels = loadKernelsFromFile(kernelFilePath, builder, includeDirs);
+		}
+	}
+
+	return kernels;
+}
+
+std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	lang::BasicGenerator gen(mgr);
+	ConversionJob job;
+	// set to store paths of loaded kernel files
+
+	std::vector<ExpressionPtr> kernelEntries;
+
+	if(type == builder.refType(builder.refType(builder.arrayType((builder.genericType("_cl_program")))))) {
+		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
+			if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
+					(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
+				const string& path = kfa->getKernelPath();
+				if(cpwsCall->getFunctionExpr() == gen.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
+					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
+				if(const LiteralPtr clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
+					if(clCPWS->getStringValue() == "clCreateProgramWithSource") {
+						// check if file has already been added
+						if(kernelFileCache.find(path) == kernelFileCache.end()) {
+							kernelFileCache.insert(path);
+							const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
+							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+									kernelEntries.push_back(kernel);
+							});
+						}
+					}
+				}
+			}
+		}
+	}
+	return kernelEntries;
 }
 
 } //namespace ocl
