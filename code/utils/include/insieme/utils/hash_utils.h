@@ -326,8 +326,6 @@ std::size_t hashList(const Container& container) {
  */
 template<typename Container, typename Hasher>
 std::size_t hashList(const Container& container, Hasher hasher) {
-	typedef typename Container::value_type Element;
-
 	std::size_t seed = 0;
 	hashList(seed, container, hasher);
 	return seed;

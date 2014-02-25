@@ -86,7 +86,6 @@ namespace {
 	 */
 	SubstitutionOpt computeSubstitution(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list) {
 		typedef std::pair<TypePtr, TypePtr> Pair;
-		typedef std::list<Pair> List;
 
 		// create result
 		Substitution res;
