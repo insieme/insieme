@@ -628,7 +628,7 @@ public:
 							strideExpr,
 							body );
 
-		}catch(RangedFunction&& ex) {
+		}catch(const RangedFunction& ex) {
 			__unused const RangedFunction::VarVect& ranges = ex.getRangedVariables();
 			irStmt = stmtStack.top().front();
 
@@ -659,7 +659,7 @@ public:
 
 		try {
 			visit( userStmt->statement );
-		} catch(RangedFunction&& ex) {
+		} catch(const RangedFunction& ex) {
 			ranges = ex.getRangedVariables();
 		}
 		assert(stmtStack.top().size() == 1 && "Expected 1 statement!");

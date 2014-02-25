@@ -181,24 +181,24 @@ namespace cba {
 
 		Place<Context> createRegion(const ThreadRegion<Context>& region) {
 			Place<Context> place(Reg, ++id);
-			addPlace(place);
+			this->addPlace(place);
 			return place;
 		}
 
 		Place<Context> createChannel(const Channel<Context>& channel) {
 			Place<Context> place(Chl, ++id);
-			addPlace(place);		// TODO: add channel size
+			this->addPlace(place);		// TODO: add channel size
 			return place;
 		}
 
 		Place<Context> createAuxiliary() {
 			Place<Context> place(Aux, ++id);
-			addPlace(place);
+			this->addPlace(place);
 			return place;
 		}
 
 		void markInitial(const Place<Context>& place) {
-			assert_true(containsPlace(place)) << "Unknown place " << place;
+			assert_true(this->containsPlace(place)) << "Unknown place " << place;
 			initialPlaces.insert(place);
 		}
 
@@ -235,8 +235,8 @@ namespace cba {
 
 		void link(const Place<Context>& a, const Place<Context>& b) {
 			Transition<Context> trans(Choice, ++id);
-			addPrePlace(a, trans);
-			addPostPlace(trans, b);
+			this->addPrePlace(a, trans);
+			this->addPostPlace(trans, b);
 		}
 
 		std::ostream& printTo(std::ostream& out) const {

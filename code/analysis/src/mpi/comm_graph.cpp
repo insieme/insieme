@@ -128,7 +128,6 @@ void merge(CFGPtr& cfg, const CommGraph& commGraph) {
 	// The idea of this function is to iterator over each vertex of the communication graph. For
 	// every vertex containing outgoing edges we find in cfg the cfg block containing that
 	// communication statement and inesert a corresponding communication edge
-	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
 	typedef boost::graph_traits<CommGraph>::vertex_iterator   VertexIter;
 	typedef boost::graph_traits<CommGraph>::out_edge_iterator OutEdgeIter;
 

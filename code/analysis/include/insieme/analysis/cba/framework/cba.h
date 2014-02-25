@@ -443,54 +443,6 @@ namespace cba {
 			return getSurroundingContexts(in, levels);
 		}
 
-		// --- nested contexts ---
-
-		template<typename Context>
-		void addNestedContexts(const Context& ctxt, set<Context>& res) {
-
-			// special case for empty context
-			if (Context::call_context::empty) {
-				res.insert(ctxt);
-				return;
-			}
-
-			// extend call context by valid labels
-			auto last = ctxt.callContext.back();
-			for (auto l : getDynamicCallLabels()) {
-				if (contains(getAllStaticPredecessors(l), last)) {
-					Context cur = ctxt;
-					cur.callContext <<= l;
-					res.insert(cur);
-				}
-			}
-
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const set<Context>& ctxts) {
-			set<Context> res;
-			for (const auto& cur : ctxts) {
-				addNestedContexts(cur, res);
-			}
-			return res;
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const set<Context>& ctxts, unsigned levels = 1) {
-			set<Context> res;
-			for(unsigned i = 0; i<levels; i++) {
-				res = getNestedConexts(res);
-			}
-			return res;
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const Context& ctxt, unsigned levels = 1) {
-			set<Context> in; in.insert(ctxt);
-			return getNestedContexts(in, levels);
-		}
-
-
 		// ------------------------ data manager handling -----------------------------
 
 	private:

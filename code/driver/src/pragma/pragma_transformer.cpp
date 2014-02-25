@@ -210,7 +210,7 @@ core::ProgramPtr applyTransformations(const core::ProgramPtr& program) {
 				replacements.insert( std::make_pair(cur, pipeline->apply( cur )) );
 
 			// Add more transformations here
-			} catch(transform::InvalidTargetException&& e) {
+			} catch(const transform::InvalidTargetException& e) {
 				
 				LOG(WARNING) << "Transformation hint from user at position" << " [" 
 						  << getStartLocation(cur) << "] "

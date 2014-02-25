@@ -198,7 +198,7 @@ namespace access {
 
 				return std::make_shared<Subscript>(expr, subAccess);
 
-			} catch (arithmetic::NotAFormulaException&& e) {
+			} catch (const arithmetic::NotAFormulaException& e) {
 				// What if this is a piecewise? we can handle it
 				assert (false && "Array access is not a formula");
 				return SubscriptPtr();
@@ -384,7 +384,7 @@ namespace access {
 					SubscriptVisitor sv(mgr, accesses, tmpVarMap);
 					sv.visit(last);
 
-				} catch (NotAnAccessException&& e) { }
+				} catch (const NotAnAccessException& e) { }
 
 				return true;
 			}

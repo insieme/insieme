@@ -267,7 +267,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 		return make_pair(prev, cons);
 
-	} catch (NotAffineExpr&& e) {
+	} catch (const NotAffineExpr& e) {
 		// The expression is not an affine function, therefore we give up
 		return std::make_pair(prev, AffineConstraintPtr());
 	}
