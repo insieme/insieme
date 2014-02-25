@@ -42,20 +42,22 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <mutex>
 
-#define STOPWATCH(name, expr)\
-{ \
-	StopWatch::swTicket wsT#name = StopWatch::start(#name); \
-	expr;\
-	StopWatch::stop(swT#name);\
-}
+
+
+#define STOPWATCH(name)\
+	auto swt = uibk::StopWatch::start(name); 
 
 namespace insieme{
 namespace utils{
 
+
 using namespace std;
 
-typedef	chrono::time_point<chrono::high_resolution_clock> tTime;
+typedef chrono::high_resolution_clock   clock;
+typedef	clock::time_point tTime;
+typedef	tTime::duration tDuration;
 
 
 ////////////////////////////////////////////////////////////
@@ -69,7 +71,7 @@ inline int getMemUsage(){
  * high preccission timer
  */
 inline tTime getTime(){
-	return chrono::high_resolution_clock::now();
+	return clock::now();
 }
 
 /**
@@ -141,7 +143,7 @@ class StopWatch{
 			thread::id thid;
 			string name;
 			double mem;
-			std::chrono::microseconds time;
+			tDuration time;
 
 			tTime start;
 			tTime end;
@@ -154,12 +156,13 @@ class StopWatch{
 			void update(double m, tTime t){
 				end = t;
 				mem = m-mem;
-				time = t-start;
+
+ 				time = chrono::duration_cast<tDuration>(t - start);
 			}
 
 			void dump(ostream& os, tTime globalStart)const{
-				std::chrono::microseconds st = start-globalStart;
-				std::chrono::microseconds nd = end-globalStart;
+				tDuration st = chrono::duration_cast<tDuration>(start-globalStart);
+				tDuration nd = chrono::duration_cast<tDuration>(end-globalStart);
 				os << thid << "\t" << st.count() << "\t" << nd.count() << "\t" << name << "\t"<< time.count() << endl;
 			}
 		};
@@ -260,6 +263,6 @@ class StopWatch{
 };
 
 
-} //utils namespace
+} // utils namespace
 } // insieme namespace
 
