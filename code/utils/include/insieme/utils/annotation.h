@@ -46,6 +46,7 @@
 #include <boost/type_traits/is_stateless.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include "insieme/utils/assert.h"
 
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -491,19 +492,11 @@ public:
 
 		// insert new element
 		auto key = annotation->getKey();
-		auto value = std::make_pair(key, annotation);
-		auto res = map->insert(value);
-
-		if (!res.second) {
-			// equivalent element already present => remove old and add new element
-			map->erase(res.first);
-			res = map->insert(value);
-		}
+		(*map)[key] = annotation;
 
 		// check post-condition
-		assert ( res.second && "Insert not successful!");
 		assert ( hasAnnotation(key) && "Insert not successful!");
-		assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
+		assert_eq( map->find(key)->second.get(), annotation.get() ) << "Insert not successful!";
 	}
 
 	/**
