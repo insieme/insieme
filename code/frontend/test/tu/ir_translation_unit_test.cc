@@ -189,8 +189,114 @@ namespace tu {
 		EXPECT_EQ(*resC, *def);
 		EXPECT_EQ(3, core::getMetaInfo(resC).getConstructors().size()) << core::getMetaInfo(resC);
 
+	}
+
+
+	TEST(TranslationUnit, MetaClassInfoDumpMerge) {
+
+		// build elements
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto symbol = builder.genericType("A");
+		auto def = builder.parseType("struct { int<4> a; }");
+
+		// create a in-memory streams
+		stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
+		stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
+
+		// build a first translation unit in a first manager
+		{
+			core::NodeManager mgrA;
+			core::IRBuilder builderA(mgrA);
+
+			IRTranslationUnit unitA(mgrA);
+
+			auto symbolA = mgrA.get(symbol);
+			auto defA = mgrA.get(def);
+
+			// attach meta info to the definition
+			core::ClassMetaInfo infoA;
+			infoA.addConstructor(builderA.parseExpr(
+					"let A = struct { int<4> a; } in "
+					"A::() {}"
+			).as<core::LambdaExprPtr>());
+			infoA.addConstructor(builderA.parseExpr(
+					"let A = struct { int<4> a; } in "
+					"A::(int<4> a) {}"
+			).as<core::LambdaExprPtr>());
+			core::setMetaInfo(defA, infoA);
+
+			// add type to unit A
+			unitA.addType(symbolA, defA);
+
+			// test the properties
+			auto resA = unitA.resolve(symbol).as<core::TypePtr>();
+			ASSERT_TRUE(core::hasMetaInfo(resA));
+			EXPECT_EQ(*resA, *def);
+			EXPECT_EQ(2, core::getMetaInfo(resA).getConstructors().size()) << core::getMetaInfo(resA);
+
+			// dump it
+			dump(bufferA, unitA);
+
+		}
+
+		// -----------------------------------
+
+		{
+			// built a second translation unit in another manager
+			core::NodeManager mgrB;
+			core::IRBuilder builderB(mgrB);
+
+			IRTranslationUnit unitB(mgrB);
+
+			auto symbolB = mgrB.get(symbol);
+			auto defB = mgrB.get(def);
+
+			// attach meta info to the definition
+			core::ClassMetaInfo infoB;
+			infoB.addConstructor(builderB.parseExpr(
+					"let A = struct { int<4> a; } in "
+					"A::() {}"
+			).as<core::LambdaExprPtr>());
+			infoB.addConstructor(builderB.parseExpr(
+					"let A = struct { int<4> a; } in "
+					"A::(int<4> a, int<4> b) {}"
+			).as<core::LambdaExprPtr>());
+			core::setMetaInfo(defB, infoB);
+
+			// add type to unit A
+			unitB.addType(symbolB, defB);
+
+			// test the properties
+			auto resB = unitB.resolve(symbol).as<core::TypePtr>();
+			ASSERT_TRUE(core::hasMetaInfo(resB));
+			EXPECT_EQ(*resB, *def);
+			EXPECT_EQ(2, core::getMetaInfo(resB).getConstructors().size()) << core::getMetaInfo(resB);
+
+			// dump it
+			dump(bufferB, unitB);
+
+		}
+
+		// -----------------------------------
+
+		// load the translation units
+		core::NodeManager mgrC;
+		IRTranslationUnit unitC(mgrC);
+
+		unitC = merge(mgrC, unitC, load(bufferA, mgrC));
+		unitC = merge(mgrC, unitC, load(bufferB, mgrC));
+
+		// -----------------------------------
+
+		auto resC = unitC.resolve(symbol).as<core::TypePtr>();
+		ASSERT_TRUE(core::hasMetaInfo(resC));
+		EXPECT_EQ(*resC, *def);
+		EXPECT_EQ(3, core::getMetaInfo(resC).getConstructors().size()) << core::getMetaInfo(resC);
 
 	}
+
 
 } // end namespace tu
 } // end namespace frontend

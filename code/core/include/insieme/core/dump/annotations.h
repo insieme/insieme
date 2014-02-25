@@ -115,7 +115,7 @@ namespace dump {
 		void attachAnnotation(const NodePtr& target, const ExpressionPtr& annotation) const {
 			if (!target) return;
 			auto res = toAnnotation(annotation);
-			if (res) target->addAnnotation(res);
+			if (res) res->clone(res, target);
 		}
 
 	};
