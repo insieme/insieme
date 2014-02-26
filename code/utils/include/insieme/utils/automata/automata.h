@@ -711,7 +711,6 @@ namespace automata {
 	 */
 	template<typename P, typename M>
 	NFA<P,M> toNFA(const Automata<P,M>& automata) {
-		typedef typename Automata<P,M>::transition_type Transition;
 		typedef typename Automata<P,M>::state_type State;
 		typedef const std::set<State> StateSet;
 

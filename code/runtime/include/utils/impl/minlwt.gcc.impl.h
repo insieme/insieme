@@ -52,11 +52,11 @@ void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /
 		"movq (%%rdx), %%rsp ;"
 		/* call function if func != NULL */
 		"movq %%rsi, %%rcx ;"
-		"jrcxz .NOCALL ;"
+		"jrcxz 1f ;"			/* jump to local label 1 - forward */
 		/* rdi still has wi, rsi still has func, so just call */
 		"call *%%rax ;"
 		/* restore registers for other coroutine */
-		".NOCALL:"
+		"1:"					/* the target of the jump */
 		"pop %%r15 ;"
 		"pop %%r14 ;"
 		"pop %%r13 ;"

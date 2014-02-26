@@ -93,7 +93,6 @@ namespace cba {
 			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
 
 		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-			typedef typename Context::thread_id thread_id;
 
 			// only interested in merge-all calls
 			if (basic.isMergeAll(call->getFunctionExpr())) {

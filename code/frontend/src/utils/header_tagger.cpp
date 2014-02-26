@@ -195,7 +195,7 @@ namespace utils {
 				return "";
 			}
 
-			auto toFilename = [&sm] (const clang::SourceLocation& loc) {
+			auto toFilename = [&] (const clang::SourceLocation& loc) {
 				return sm.getPresumedLoc(loc).getFilename();
 			};
 

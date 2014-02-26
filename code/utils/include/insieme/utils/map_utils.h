@@ -56,7 +56,7 @@ namespace map {
 
 template<class KeyPtr, class ValueType>
 struct PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> {
-	template<typename Container> void insertAll(const Container& c) { insert(c.begin(), c.end()); }
+	template<typename Container> void insertAll(const Container& c) { this->insert(c.begin(), c.end()); }
 };
 
 template<class KeyPtr, class ValueType>

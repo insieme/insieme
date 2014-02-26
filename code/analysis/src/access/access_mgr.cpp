@@ -173,7 +173,7 @@ namespace access {
 					for (auto& cl : clSet) { cl->storeAccess(access); }
 
 					return clSet;
-				} catch (NotAnAccessException&& e) { }
+				} catch (const NotAnAccessException& e) { }
 			}
 		}
 

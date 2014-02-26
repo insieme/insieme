@@ -1145,8 +1145,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 
 	// build lambda expression for post/pre increment/decrement unary operators
 	auto encloseIncrementOperator =
-	[ this, &builder, &gen ]
-	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+	[&](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
 		core::TypePtr type = subExpr->getType();
         //if we have a cpp ref we have to unwrap it
@@ -1299,7 +1298,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	}
 
 	//fixes the return type to retTy of the given expression toFix
-	auto fixingThrowExprType = [&mgr](core::ExpressionPtr toFix, const core::TypePtr& retTy){
+	auto fixingThrowExprType = [&](core::ExpressionPtr toFix, const core::TypePtr& retTy){
 		//get address of callExpr: callExpr(lambdaExpr(throwExpr),(argument))
 		core::CallExprPtr callExpr = toFix.as<core::CallExprPtr>();
 		core::CallExprAddress callExprAddr(callExpr);

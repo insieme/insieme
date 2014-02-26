@@ -1151,8 +1151,9 @@ public:
                     // put opencl annotation to the new function for eventual future use
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
-                    if(!cName.empty())
+                    if(!cName.empty()) {
                         insieme::core::annotations::attachName(newFunc,cName);
+                    }
                     // put source location annotation to it if existent
 					if(sourceLoc) core::annotations::attachLocationGen(newFunc, sourceLoc.get());
                     // put the datarange annotation that was on the body before on the kernel function

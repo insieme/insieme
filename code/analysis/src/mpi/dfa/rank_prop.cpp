@@ -220,7 +220,7 @@ dfa::Value<ExpressionPtr> eval(const AccessManager&	aMgr,
 			).as<ExpressionPtr>() 
 		);
 
-	} catch(NotAFormulaException&& e) { 
+	} catch(const NotAFormulaException& e) {
 
 		try {
 
@@ -230,7 +230,7 @@ dfa::Value<ExpressionPtr> eval(const AccessManager&	aMgr,
 												   cfg.getTmpVarMap()), 
 												   in, cfg);
 
-		} catch( NotAnAccessException&& e) { return dfa::top; }
+		} catch(const NotAnAccessException& e) { return dfa::top; }
 	}
 
 	assert( false  && "Something odd happened" );

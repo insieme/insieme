@@ -231,6 +231,8 @@ struct Address : public utils::Printable {
 
 	inline operator bool() const { return static_cast<bool>(block); }
 
+	Address& operator=(const Address&) = default;
+
 	/** 
 	 * Retrieve the CFG block to which this address referes to 
 	 */

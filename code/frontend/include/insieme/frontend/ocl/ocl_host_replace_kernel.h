@@ -93,6 +93,7 @@ public:
 
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
 typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > KernelTypes;
+typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelFunctions;
 
 /*
  * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
@@ -106,6 +107,7 @@ private:
 	core::NodePtr prog;
 	KernelNames kernelNames;
 	KernelTypes kernelTypes;
+	KernelFunctions kernelFunctions;
 	const std::vector<boost::filesystem::path>& includeDirs;
 	std::set<string> kernelFileCache;
 

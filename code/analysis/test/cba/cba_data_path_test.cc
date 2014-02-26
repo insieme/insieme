@@ -112,9 +112,6 @@ namespace cba {
 
 	TEST(CBA, DataPathComparison) {
 
-		// simply check whether data paths can be sorted lexicographically
-		typedef NominalIndex<string> NominalIndex;
-
 		DataPath root;
 
 		DataPath a = root << SingleIndex(1) << SingleIndex(3);

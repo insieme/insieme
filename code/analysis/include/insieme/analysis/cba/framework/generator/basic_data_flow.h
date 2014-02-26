@@ -685,7 +685,7 @@ namespace cba {
 					constraints.add(subsetIf(Reachable(), R_ret, A_return, A_body));
 
 					// TODO: this is just a performance improvement - but for now disabled
-//						visit(returnStmt, ctxt, constraints);
+//						this->visit(returnStmt, ctxt, constraints);
 					return true;
 				}
 
@@ -723,7 +723,7 @@ namespace cba {
 			// let it be handled by the definition point
 			VariableAddress def = getDefinitionPoint(variable);
 			if (def != variable) {
-				visit(def, ctxt, constraints);
+				this->visit(def, ctxt, constraints);
 				return;
 			}
 

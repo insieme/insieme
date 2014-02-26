@@ -131,7 +131,7 @@ namespace features {
 					unsigned size = 0;
 					try { 
 						size = this->visit(extractor(cur));
-					} catch(const UndefinedSize&& ex) {
+					} catch(const UndefinedSize& ex) {
 						isUndefined = true;
 						size = ex.getEstimatedSize();
 					} 
@@ -212,7 +212,7 @@ namespace features {
 	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize) {
 		try {
 			return getSizeInBytes(type, unknownContainerSize);
-		} catch (const UndefinedSize&& ex) {
+		} catch (const UndefinedSize& ex) {
 			return ex.getEstimatedSize();
 		}
 		return 0;
