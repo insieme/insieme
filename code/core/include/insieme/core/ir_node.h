@@ -1214,5 +1214,6 @@ namespace core {
 
 void dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 void dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+void dumpColor(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 void dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 void dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);

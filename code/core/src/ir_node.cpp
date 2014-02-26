@@ -258,16 +258,23 @@ void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
 	out << insieme::core::dump::text::TextDump(node) << std::endl;
 }
 
-void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
+void dumpColor (const insieme::core::NodePtr& node, std::ostream& out) {
 	insieme::core::printer::PrettyPrinter print(node);
 	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 	print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
 	out << print << std::endl;
 }
 
+void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
+	insieme::core::printer::PrettyPrinter print(node);
+	//print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+	print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+	out << print << std::endl;
+}
+
 void dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
 	insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
-	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+	//print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 	out << print << std::endl;
 }
 
