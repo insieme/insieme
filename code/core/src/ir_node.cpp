@@ -250,31 +250,38 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-void dump(const insieme::core::NodePtr& node, std::ostream& out) {
-	dumpPretty(node, out);
+
+IRDump dump(const insieme::core::NodePtr& node, std::ostream& out) {
+	return dumpPretty(node, out);
 }
 
-void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
-	out << insieme::core::dump::text::TextDump(node) << std::endl;
+IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		return out << insieme::core::dump::text::TextDump(node) << std::endl;
+	}, out);
 }
 
-void dumpColor (const insieme::core::NodePtr& node, std::ostream& out) {
-	insieme::core::printer::PrettyPrinter print(node);
-	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
-	print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
-	out << print << std::endl;
+IRDump dumpColor (const insieme::core::NodePtr& node, std::ostream& out) {
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node);
+		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		return out << print << std::endl;
+	}, out);
 }
 
-void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
-	insieme::core::printer::PrettyPrinter print(node);
-	//print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
-	print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
-	out << print << std::endl;
+IRDump dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node);
+		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		return out << print << std::endl;
+	}, out);
 }
 
-void dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
-	insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
-	//print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
-	out << print << std::endl;
+IRDump dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
+		return out << print << std::endl;
+	}, out);
 }
 
