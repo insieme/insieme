@@ -41,27 +41,10 @@
 namespace insieme {
 namespace backend {
 
-	namespace {
-
-		core::LiteralPtr createRegisterGlobal(core::NodeManager& manager) {
-			core::IRBuilder builder(manager);
-
-			// construct type (type<'a>, identifier)->unit
-			core::TypePtr identifier = builder.getLangBasic().getIdentifier();
-			core::TypePtr typeAlpha = builder.getLangBasic().getTypeLiteralTypeGen();
-			core::TypePtr unit = builder.getLangBasic().getUnit();
-			core::FunctionTypePtr funType = builder.functionType(toVector(identifier, typeAlpha), unit);
-
-			return builder.literal(funType, "registerGlobal");
-		}
-
-	}
-
 	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
 	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			core::lang::Extension(manager),
-			registerGlobal(createRegisterGlobal(manager)) { }
+			core::lang::Extension(manager) { }
 
 } // end namespace simple_backend
 } // end namespace insieme

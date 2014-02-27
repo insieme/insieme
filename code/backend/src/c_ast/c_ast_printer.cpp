@@ -215,6 +215,12 @@ namespace c_ast {
 
 
 			PRINT(VarDecl) {
+
+				// handle static modifier
+				if (node->isStatic) {
+					out << "static ";
+				}
+
 				// handle single-variable declaration ...
 				if (node->varInit.size() == 1u) {
 					// print a variable declaration
@@ -614,6 +620,10 @@ namespace c_ast {
 				return out << node->value;
 			}
 
+			PRINT(StmtExpr) {
+				return out << print(node->stmt);
+			}
+
 			PRINT(TypeDeclaration) {
 				// forward declaration + type definition
 				bool isStruct   = (node->type->getNodeType() == NT_StructType);
@@ -659,7 +669,11 @@ namespace c_ast {
 			}
 
 			PRINT(GlobalVarDecl) {
-				return out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name)) << ";\n";
+				out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name));
+				if (node->init) {
+					out << " = " << print(node->init);
+				}
+				return out << ";\n";
 			}
 
 			PRINT(Parent) {
