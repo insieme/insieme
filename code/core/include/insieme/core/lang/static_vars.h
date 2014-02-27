@@ -89,6 +89,19 @@ namespace lang {
 				"}"
 		);
 
+		/**
+		 * An alternative version for a variable being initialized by a constant value.
+		 */
+		LANG_EXT_DERIVED(InitStatic,
+				"let type = struct __static_var { bool initialized; 'a value; }  in "
+				""
+				"(ref<type> var, 'a value)->ref<'a> { "
+				"	if (*var->initialized) return var->value;"
+				"	var->initialized = true;"
+				"	var->value = value;"
+				"	return var->value;"
+				"}"
+		);
 	};
 
 
