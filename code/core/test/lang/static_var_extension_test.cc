@@ -57,11 +57,22 @@ namespace lang {
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
 
-	TEST(StaticVarExtensionTest, InitStatic) {
+	TEST(StaticVarExtensionTest, InitStaticConst) {
 		NodeManager nm;
 
 		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getInitStatic();
+		auto element = ext.getInitStaticConst();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+	TEST(StaticVarExtensionTest, InitStaticLazy) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+		auto element = ext.getInitStaticLazy();
 		dump(element);
 
 		// just check whether the code is not exhibiting errors
