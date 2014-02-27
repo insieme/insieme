@@ -55,46 +55,110 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* StaticVariableTypeHandler(const Converter& converter, const core::TypePtr& type) {
-			static const TypeInfo* NOT_HANDLED = NULL;
+		class StaticVarBackendExtension : public core::lang::Extension {
 
-			core::NodeManager& manager = type.getNodeManager();
-			const core::lang::StaticVariableExtension& ext = manager.getLangExtension<core::lang::StaticVariableExtension>();
+			/**
+			 * Allow the node manager to create instances of this class.
+			 */
+			friend class core::NodeManager;
 
-			// check whether it is a cpp reference
-			if (!ext.isStaticType(type)) {
-				return NOT_HANDLED;	// not handled by this handler
-			}
+			/**
+			 * Creates a new instance based on the given node manager.
+			 */
+			StaticVarBackendExtension(core::NodeManager& manager)
+					: core::lang::Extension(manager) {}
 
-			// unwrap static type wrapper
-			TypeManager& typeManager = converter.getTypeManager();
-			return &typeManager.getTypeInfo(ext.unwrapStaticType(type));
+		public:
 
-		}
+			/**
+			 * A literal masking the initialization of a static literal.
+			 */
+			LANG_EXT_LITERAL(InitStatic, "InitStatic", "(()=>'a)->ref<'a>");
+
+		};
 
 
 
 		OperatorConverterTable getStaticVariableOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res;
 
-			const auto& ext = manager.getLangExtension<core::lang::StaticVariableExtension>();
+			const auto& ext  = manager.getLangExtension<core::lang::StaticVariableExtension>();
+			const auto& ext2 = manager.getLangExtension<StaticVarBackendExtension>();
 
 			#include "insieme/backend/operator_converter_begin.inc"
-			res[ext.getCreateStatic()] 	= OP_CONVERTER({
 
-		//		return nullptr;
-				return c_ast::ref(CONVERT_ARG(0)); 
+			res[ext.getCreateStatic()] 	= OP_CONVERTER({
+				return nullptr;			// no instruction required at this point
 			});
+
 			res[ext.getInitStatic()] 	= OP_CONVERTER({ 
 
-				dumpPretty(ARG(0));
-		//		return c_ast::create<
-		//	return manager->create<c_ast::VarDecl>(info.var, initValue);
-				return c_ast::ref(CONVERT_ARG(0)); 
+				// we have to build a new function for this init call containing a static variable
+				//
+				//		A* initXY(lazy) {
+				//			static A a = lazy();
+				//			return &a;
+				//		}
+				//
+
+				// ... and since the construction of a function and all its dependencies is anoying
+				// in the C-AST we create a new IR function including an artificial construct
+				// InitStatic that only covers the magic part ...
+
+				auto fun = call->getFunctionExpr().as<core::LambdaExprPtr>();
+				auto retType = fun->getFunctionType()->getReturnType();
+
+				auto& mgr = NODE_MANAGER;
+				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
+				core::IRBuilder builder(mgr);
+
+				auto param = fun->getParameterList()[1];
+
+				auto init = builder.callExpr(ext.getInitStatic(), param);
+				auto lambda = builder.lambdaExpr(retType, init, toVector(param));
+
+				// this function call is equivalent to a call to the new artifical lambda
+				return CONVERT_EXPR(builder.callExpr(lambda, call[1]));
 			});
-			//res[ext.getAccessStatic()]  = OP_CONVERTER({ 
-			//	return c_ast::ref(CONVERT_ARG(0));
-			//});
+
+			res[ext2.getInitStatic()] = OP_CONVERTER({
+
+				// a call to this is translated to the following:
+				//
+				//			static A a = lazy();
+				//			return &a;
+				//
+				// where A is the type of the resulting object.
+
+				auto A = call->getType().as<core::RefTypePtr>()->getElementType();
+
+				// get meta-type
+				auto& infoA = GET_TYPE_INFO(A);
+
+				// create variable
+				auto var = C_NODE_MANAGER->create<c_ast::Variable>(
+						infoA.lValueType,
+						C_NODE_MANAGER->create("a")
+				);
+
+				// create init value
+				auto& mgr = NODE_MANAGER;
+				core::IRBuilder builder(mgr);
+				auto init = CONVERT_EXPR(builder.callExpr(call[0], toVector<core::ExpressionPtr>()));
+
+				// built the static initialization
+				auto decl = C_NODE_MANAGER->create<c_ast::VarDecl>(var, init);
+				decl->isStatic = true;
+
+				// build return statement
+				auto ret = C_NODE_MANAGER->create<c_ast::Return>(c_ast::ref(var));
+
+				// build compound
+				auto comp = C_NODE_MANAGER->create<c_ast::Compound>(toVector<c_ast::NodePtr>(decl, ret));
+
+				// done
+				return C_NODE_MANAGER->create<c_ast::StmtExpr>(comp);
+			});
 
 			#include "insieme/backend/operator_converter_end.inc"
 
@@ -105,11 +169,8 @@ namespace addons {
 
 	void StaticVariables::installOn(Converter& converter) const {
 		
-		// registers type handler
-//		converter.getTypeManager().addTypeHandler(StaticVariableTypeHandler);
-
 		// register additional operators
-//		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
 
 	}
 

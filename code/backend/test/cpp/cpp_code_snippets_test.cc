@@ -40,6 +40,7 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -930,5 +931,50 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+
+	TEST(CppSnippet, StaticVariable) {
+
+		// something including a non-parameter!
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["init"] = ext.getInitStatic();
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
+
+					int main() {
+						
+						init(a, ()=> 1);
+						init(a, ()=> 2);
+
+						return 0;
+					}
+				)", symbols
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, " static int32_t a = __insieme_type_");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
 } // namespace backend
 } // namespace insieme

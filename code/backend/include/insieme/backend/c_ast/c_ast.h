@@ -260,11 +260,12 @@ namespace c_ast {
 	};
 
 	struct VarDecl : public Statement {
+		bool isStatic;
 		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
 		VarDecl(VariablePtr var)
-			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
+			: Statement(NT_VarDecl), isStatic(false), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
 		VarDecl(VariablePtr var, ExpressionPtr init)
-			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, init))) {};
+			: Statement(NT_VarDecl), isStatic(false), varInit(toVector(std::make_pair(var, init))) {};
 		VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
 		virtual bool equals(const Node& node) const;
 	};
@@ -594,6 +595,12 @@ namespace c_ast {
 	struct OpaqueExpr : public Expression {
 		std::string value;
 		OpaqueExpr(const std::string& val) : Expression(NT_OpaqueExpr), value(val) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct StmtExpr : public Expression {
+		StatementPtr stmt;
+		StmtExpr(const StatementPtr& stmt) : Expression(NT_StmtExpr), stmt(stmt) {}
 		virtual bool equals(const Node& node) const;
 	};
 
