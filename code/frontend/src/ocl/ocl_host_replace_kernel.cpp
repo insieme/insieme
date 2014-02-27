@@ -35,6 +35,8 @@
  */
 #include <fstream>
 
+#include "insieme/core/checks/full_check.h"
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -328,18 +330,20 @@ void KernelReplacer::collectArguments() {
 	//	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
 	//ßßß	kernelArgs[kernel].push_back(arg);
 
-		FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType().as<TypePtr>(), utils::tryDeref(arg)->getType()), gen.getInt4());
+		FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType().as<TypePtr>(), (arg)->getType()), gen.getInt4());
 		params.push_back(src);
 
 		body.push_back(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg,
 										builder.getTypeLiteral(src->getType())), src));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
-		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg,
+				builder.getTypeLiteral(src->getType())), src)));
 
 		// store argument in a tuple
-		replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, kernel, utils::tryDeref(arg));
+		replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, kernel, arg);
 
 /*
+		dumpPretty(replacements[setArg["clSetKernelArg"].getValue()]);
 for_each(kernelTypes[kernel], [](NodePtr doll) {
 	std::cout << "new arg: " << (doll) << std::endl;
 });
@@ -360,8 +364,8 @@ void KernelReplacer::replaceKernels() {
 	for_each(kernelTypes, [&](std::pair<ExpressionPtr, std::vector<TypePtr> > kT) {
 		ExpressionPtr k = kT.first;
 		TupleTypePtr tt = builder.tupleType(kT.second);
-		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(tt).as<ExpressionPtr>()
-				: builder.literal(tt, kT.first.as<LiteralPtr>()->getStringValue());
+		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(builder.refType(tt)).as<ExpressionPtr>()
+				: builder.literal(builder.refType(tt), kT.first.as<LiteralPtr>()->getStringValue());
 		kernelReplacements[kT.first] = replacement;
 	});
 
@@ -369,6 +373,7 @@ void KernelReplacer::replaceKernels() {
 }
 
 void KernelReplacer::loadKernelCode() {
+	return;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
