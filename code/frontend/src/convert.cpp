@@ -563,46 +563,28 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			}
 		}
 
+
 		// if is a global variable, a literal will be generated, with the qualified name
 		// (two qualified names can not coexist within the same TU)
 		const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
-		if (varDecl && varDecl->hasGlobalStorage()) {
+
+		// const static need an extra ref, we can not deal with pure value globals ;)
+		if (varDecl->isStaticLocal() && !irType.isa<core::RefTypePtr>()){
+			irType = builder.refType(irType);
+		}
+
+		if (varDecl && varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
 			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
 			// we could look for it in the cache, but is fast to create a new one, and we can not get
 			// rid if the qualified name function
 			std::string name = utils::buildNameForVariable(varDecl);
-
-			if(varDecl->isStaticLocal()) {
-				VLOG(2)	<< varDecl->getQualifiedNameAsString() << "         isStaticLocal";
-				if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
-					name = staticVarDeclMap.find(varDecl)->second;
-				} else {
-					std::stringstream ss;
-					//get source location and src file path
-					//hash this string to create unique variable names
-					clang::FullSourceLoc f(varDecl->getLocation(),getSourceManager());
-					std::hash<std::string> str_hash;
-					ss << name << str_hash(getSourceManager().getFileEntryForID(f.getFileID())->getName()) << staticVarCount++;
-					staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl,ss.str()));
-					name = ss.str();
-				}
-			}
 
 			// global/static variables are always leftsides (refType) -- solves problem with const
 			if(!irType.isa<core::RefTypePtr>() ) {
 				irType = builder.refType(irType);
 			}
 
-			if (varDecl->isStaticLocal()){
-				if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
-				irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
-			}
-
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
-
-			if (varDecl->isStaticLocal()){
-				globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
-			}
 
 			// OMP threadPrivate
 			if (insieme::utils::set::contains (thread_private, varDecl)){
@@ -794,36 +776,43 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// but the var remains in the global storage (is an assigment instead of decl)
 			//
 			assert(var);
-			assert(var.isa<core::CallExprPtr>());
+			assert(var.isa<core::VariablePtr>());
+			assert(var->getType().isa<core::RefTypePtr>() && " all static variables need to be ref<'a>");
 
-			// the variable is being unwrapped by default in lookupVariable
-			// we want the inner static object
-			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
+			// build global storage name
+			std::string name;
+			auto varType = var->getType().as<core::RefTypePtr>()->getElementType();
+			auto irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(varType));
 
+			// cache the name (this is fishy, needs explanation)
+			if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
+				name = staticVarDeclMap.find(varDecl)->second;
+			} else {
+				name = utils::buildNameForGlobal(varDecl, getSourceManager());
+				staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl, name));
+			}
+
+			// generate initialization
+			auto lit = builder.literal(name, irType);
+			core::ExpressionPtr initIr;
 			if (definition->getInit()) {
-				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
+				initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
 							var->getType().as<core::RefTypePtr>().getElementType(), false);
 
 				auto call = initIr.isa<core::CallExprPtr>();
 				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
 
-					// if this is a default constructor, there is no need to initialize. the global will have already this value
-					if (call->getArguments().size() == 1  && call->getType() ==  call[0]->getType()){
-					//if (core::analysis::isDefaultConstructor(call->getFunctionExpr().as<core::LambdaExprPtr>())){
-						retStmt = builder.getNoOp();
-					}
-					else{
-						//this can also be done by substituting the first param of ctor by the unwrapped static var
-						initIr = builder.deref(initIr);
-						retStmt = builder.initStaticVariable(lit, initIr);
-					}
+					initIr = builder.deref(initIr);
 				}
-				else{
-					retStmt = builder.initStaticVariable(lit, initIr);
-				}
-			} else {
-				retStmt = builder.getNoOp();
 			}
+			else{
+				// build some default initializationA
+				assert(builder.getZero(varType) && "type needs to have a zero initializaiton" );
+				initIr = builder.getZero(varType);
+					
+			}
+			auto staticInit = builder.initStaticVariable(lit, initIr);
+			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), staticInit);
 		}
 		else{
 			bool isConstant = false;

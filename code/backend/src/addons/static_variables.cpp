@@ -92,9 +92,9 @@ namespace addons {
 		//	return manager->create<c_ast::VarDecl>(info.var, initValue);
 				return c_ast::ref(CONVERT_ARG(0)); 
 			});
-			res[ext.getAccessStatic()]  = OP_CONVERTER({ 
-				return c_ast::ref(CONVERT_ARG(0));
-			});
+			//res[ext.getAccessStatic()]  = OP_CONVERTER({ 
+			//	return c_ast::ref(CONVERT_ARG(0));
+			//});
 
 			#include "insieme/backend/operator_converter_end.inc"
 

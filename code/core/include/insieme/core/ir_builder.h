@@ -662,13 +662,9 @@ namespace core {
 		// --------------------- static variables ----------------------
 
 
-		StatementPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const;
+		ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const;
 
 		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
-
-		ExpressionPtr accessStatic(const LiteralPtr& staticVariable) const;
-
-
 
 		// --------------------------- C++ -----------------------------
 

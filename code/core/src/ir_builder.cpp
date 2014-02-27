@@ -1553,14 +1553,13 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 
 
 
-StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
+ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
 	assert(staticVariable.getType().isa<RefTypePtr>());
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-	//assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
-	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, wrapLazy(initValue));
+	return callExpr(ext.getInitStatic(), staticVariable, wrapLazy(initValue));
 }
 
 StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
@@ -1568,14 +1567,6 @@ StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) c
 
 	return callExpr(ext.getCreateStatic(), staticVariable);
 }
-
-ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-	assert(staticVariable->getType().isa<RefTypePtr>());
-	assert(ext.isStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()));
-	return callExpr(refType(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType())), ext.getAccessStatic(), staticVariable);
-}
-
 
 
 ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
