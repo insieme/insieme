@@ -252,7 +252,7 @@ namespace c_ast {
     }
 
 	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
-				: Statement(NT_VarDecl), varInit(initList) {
+				: Statement(NT_VarDecl), isStatic(false), varInit(initList) {
 		assert(!varInit.empty() && all(varInit, [&](const pair<VariablePtr, ExpressionPtr>& cur)->bool {
 			return cur.first->type == varInit[0].first->type;
 		}));
