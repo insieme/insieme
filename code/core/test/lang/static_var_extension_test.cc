@@ -68,17 +68,6 @@ namespace lang {
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
 
-	TEST(StaticVarExtensionTest, AccessStatic) {
-		NodeManager nm;
-
-		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getAccessStatic();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
