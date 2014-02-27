@@ -565,7 +565,14 @@ namespace backend {
 		core::IRBuilder builder(mgr);
 		std::map<core::NodeAddress, core::NodePtr> replacements;
 		for(const auto& cur : inits) {
-			replacements[cur.second] = builder.callExpr(ext.getInitGlobal(), cur.second[0], cur.second[1]);
+			if (!core::analysis::hasFreeVariables(cur.second[1])) {
+				replacements[cur.second] = builder.callExpr(ext.getInitGlobal(), cur.second[0], cur.second[1]);
+			}
+		}
+
+		// if there is nothing to do => done
+		if (replacements.empty()) {
+			return code;
 		}
 
 		// conduct replacements
