@@ -448,7 +448,7 @@ namespace c_ast {
 	bool GlobalVarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const GlobalVarDecl*>(&node));
 		auto other = static_cast<const GlobalVarDecl&>(node);
-		return *type==*other.type && name==other.name && external == other.external;
+		return *type==*other.type && name==other.name && external == other.external && equalTarget(init, other.init);
 	}
 
 	bool ConstructorPrototype::equals(const Node& node) const {

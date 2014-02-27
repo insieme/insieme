@@ -624,6 +624,7 @@ namespace c_ast {
 	struct GlobalVarDecl : public Declaration {
 		TypePtr type;
 		string name;
+		ExpressionPtr init;
 		bool external;
 		GlobalVarDecl(TypePtr type, const string& name, bool external)
 			: Declaration(NT_GlobalVarDecl), type(type), name(name), external(external) {}

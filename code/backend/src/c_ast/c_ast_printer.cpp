@@ -659,7 +659,11 @@ namespace c_ast {
 			}
 
 			PRINT(GlobalVarDecl) {
-				return out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name)) << ";\n";
+				out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name));
+				if (node->init) {
+					out << " = " << print(node->init);
+				}
+				return out << ";\n";
 			}
 
 			PRINT(Parent) {
