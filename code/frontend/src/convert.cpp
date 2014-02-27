@@ -804,15 +804,22 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 
 					initIr = builder.deref(initIr);
 				}
+
+				// beware of non const initializers, for C codes is required that statics are initialized with const expressions
+				// NOTE:: C++ codes do not need const init
+				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
+				initIr =  builder.initStaticVariable(lit, initIr, isConst);
+
 			}
 			else{
 				// build some default initializationA
 				assert(builder.getZero(varType) && "type needs to have a zero initializaiton" );
 				initIr = builder.getZero(varType);
-					
+				//this one is always const initialization
+				initIr =  builder.initStaticVariable(lit, initIr, true);
 			}
-			auto staticInit = builder.initStaticVariable(lit, initIr);
-			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), staticInit);
+
+			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initIr);
 		}
 		else{
 			bool isConstant = false;
