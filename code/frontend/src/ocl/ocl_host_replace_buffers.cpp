@@ -146,6 +146,7 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	args.push_back(size);
 	if(copyPtr) args.push_back(hostPtr);
 	args.push_back(errcode_ret);
+
 	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
 }
 }
