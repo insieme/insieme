@@ -40,9 +40,6 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 
-// FIXME: move this somewhere
-#include "insieme/core/lang/static_vars.h"
-
 namespace insieme {
 namespace core {
 namespace analysis {

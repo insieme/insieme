@@ -46,6 +46,7 @@
 #include "insieme/analysis/cba/utils/constraint_utils.h"
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/utils/printable.h"
 
 namespace insieme {

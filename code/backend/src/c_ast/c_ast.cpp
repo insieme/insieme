@@ -261,7 +261,7 @@ namespace c_ast {
 	bool VarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const VarDecl*>(&node));
 		auto other = static_cast<const VarDecl&>(node);
-		return ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
+		return isStatic == other.isStatic && ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
 	}
 
 	bool StaticVarDecl::equals(const Node& node) const {
@@ -431,6 +431,12 @@ namespace c_ast {
 		assert(dynamic_cast<const OpaqueExpr*>(&node));
 		auto other = static_cast<const OpaqueExpr&>(node);
 		return value==other.value;
+	}
+
+	bool StmtExpr::equals(const Node& node) const {
+		assert(dynamic_cast<const StmtExpr*>(&node));
+		auto other = static_cast<const StmtExpr&>(node);
+		return stmt==other.stmt;
 	}
 
 	bool TypeDeclaration::equals(const Node& node) const {

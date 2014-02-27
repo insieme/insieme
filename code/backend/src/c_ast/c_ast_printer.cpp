@@ -215,6 +215,12 @@ namespace c_ast {
 
 
 			PRINT(VarDecl) {
+
+				// handle static modifier
+				if (node->isStatic) {
+					out << "static ";
+				}
+
 				// handle single-variable declaration ...
 				if (node->varInit.size() == 1u) {
 					// print a variable declaration
@@ -612,6 +618,10 @@ namespace c_ast {
 
 			PRINT(OpaqueExpr) {
 				return out << node->value;
+			}
+
+			PRINT(StmtExpr) {
+				return out << print(node->stmt);
 			}
 
 			PRINT(TypeDeclaration) {

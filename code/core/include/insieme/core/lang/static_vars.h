@@ -82,7 +82,7 @@ namespace lang {
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
 				"(ref<type> var, ()=>'a value)->ref<'a> { "
-				"	if (*var->initialized) return;"
+				"	if (*var->initialized) return var->value;"
 				"	var->initialized = true;"
 				"	var->value = value();"
 				"	return var->value;"

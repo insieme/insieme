@@ -600,10 +600,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
 
-			if (varDecl->isStaticLocal()){
-				globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
-			}
-
 			// OMP threadPrivate
 			if (insieme::utils::set::contains (thread_private, varDecl)){
 				omp::addThreadPrivateAnnotation(globVar);

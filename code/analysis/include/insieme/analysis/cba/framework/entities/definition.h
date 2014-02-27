@@ -39,6 +39,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/hash_utils.h"

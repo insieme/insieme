@@ -219,6 +219,8 @@ AST_TERMINAL(ConstructorCall, Expression)
 AST_TERMINAL(DestructorCall, Expression)
 AST_TERMINAL(OpaqueExpr, Expression)
 
+AST_TERMINAL(StmtExpr, Expression)
+
 //
 // --- Declarations ---
 //

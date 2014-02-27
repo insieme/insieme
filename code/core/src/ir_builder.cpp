@@ -1569,14 +1569,6 @@ StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) c
 	return callExpr(ext.getCreateStatic(), staticVariable);
 }
 
-ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-	assert(staticVariable->getType().isa<RefTypePtr>());
-	assert(ext.isStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()));
-	return callExpr(refType(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType())), ext.getAccessStatic(), staticVariable);
-}
-
-
 
 ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
 	assert(type->isMemberFunction());
