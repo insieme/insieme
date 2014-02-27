@@ -1553,14 +1553,18 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 
 
 
-StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
+ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const{
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
 	assert(staticVariable.getType().isa<RefTypePtr>());
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-	//assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
-	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, wrapLazy(initValue));
+	if (constant){
+		return callExpr(ext.getInitStaticConst(), staticVariable, initValue);
+	}
+	else{
+		return callExpr(ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+	}
 }
 
 StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
