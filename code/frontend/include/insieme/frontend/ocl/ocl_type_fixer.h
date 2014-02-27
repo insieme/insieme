@@ -38,13 +38,19 @@
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 
+
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
-class TypeFixer: public core::transform::CachedNodeMapping {
+class TypeFixer {
+	core::NodePtr prog;
+	core::NodeMap replacements;
 
-	virtual const core::NodePtr resolveElement(const core::NodePtr& ptr);
+	void fixKernelDecls();
+public:
+	TypeFixer(core::NodePtr toTransform);
+	core::NodePtr getTransformedProg() { return prog; };
 };
 
 }

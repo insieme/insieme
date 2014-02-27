@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/utils/error_report.h"
@@ -68,8 +70,11 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
+	ocl::TypeFixer otf(root);
+	root = otf.getTransformedProg();
+
+	VariableMap nada;
+	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
 
 	core::IRBuilder builder(prog->getNodeManager());
 	core::ExpressionList list;
