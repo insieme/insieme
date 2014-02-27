@@ -97,14 +97,14 @@ int main(int argc, char** argv) {
 	//		of 5 which is always a safe transformation.
 
 	cout << "Before Transformation:\n";
-	dumpPretty(program);
+	cout << dumpPretty(program);
 
 	// for all nodes x | if x is "innermostLoop" => unroll(x)
 	auto transform = tr::makeForAll(tr::filter::innermostLoops(), tr::rulebased::makeLoopUnrolling(unrollingFactor));
 	program = transform->apply(program);
 
 	cout << "After Transformation:\n";
-	dumpPretty(program);
+	cout << dumpPretty(program);
 
 
 	// Step 4: produce output code
