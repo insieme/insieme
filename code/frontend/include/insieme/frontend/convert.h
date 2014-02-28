@@ -397,7 +397,7 @@ public:
 	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
 	 * @return Converted lambda
 	 */
-	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool symbolic=false);
 
 	/**
 	 * retrieves the symbol asociated with a function without the need of triggering the translation

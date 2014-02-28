@@ -1212,11 +1212,11 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << "\tpure virtual function " << funcDecl;
 
 		std::string callName = funcDecl->getNameAsString();
-		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
+		core::ExpressionPtr symbol = builder.literal(callName, funcTy);
 
-		VLOG(2) << retExpr << " " << retExpr.getType();
-		lambdaExprCache[funcDecl] = retExpr;
-		return ;// retExpr;
+		VLOG(2) << symbol<< " " << symbol.getType();
+		lambdaExprCache[funcDecl] = symbol;
+		return ;
 	}
 
 	// handle external functions
@@ -1231,31 +1231,34 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
 
 			lambdaExprCache[funcDecl] = retExpr;
-			return ; //retExpr;
+			return ; 
 		}
 
 		//-----------------------------------------------------------------------------------------------------
 		//     						Handle of 'special' built-in functions
 		//-----------------------------------------------------------------------------------------------------
 		if (funcDecl->getNameAsString() == "__builtin_alloca") {
-			auto retExpr = builder.literal("alloca", funcTy);
-			lambdaExprCache[funcDecl] = retExpr;
+			auto symbol = builder.literal("alloca", funcTy);
+			lambdaExprCache[funcDecl] = symbol;
 			return;
 		}
 
 		// handle extern functions
-		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
+		auto symbol = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
 		// TODO: check if we can optimize the usage of this, consumes too much time
-		getHeaderTagger().addHeaderForDecl(retExpr, funcDecl);
-		lambdaExprCache[funcDecl] = retExpr;
-		return ;// retExpr;
+		getHeaderTagger().addHeaderForDecl(symbol, funcDecl);
+		lambdaExprCache[funcDecl] = symbol;
+		return ;
 	}
 
 	// ---------------  check cases in wich this declaration should not be converted -------------------
 	//  checkout this stuff: http://stackoverflow.com/questions/6496545/trivial-vs-standard-layout-vs-pod
 	if (const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)){
+		core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		lambdaExprCache[funcDecl] = symbol;
+
 		// non public constructors, or non user provided ones should not be converted
 		if (!ctorDecl->isUserProvided () )
 			return;
@@ -1264,6 +1267,9 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 	}
 	if (const clang::CXXDestructorDecl* dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)){
+		core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		lambdaExprCache[funcDecl] = symbol;
+
 		if (!dtorDecl->isUserProvided () )
 			return;
 		else if(dtorDecl->getParent()->isTrivial())
@@ -1374,7 +1380,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	getIRTranslationUnit().addFunction(symbol, lambda);
 }
 
-core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool symbolic) {
 
 	// switch to the declaration containing the body (if there is one)
 	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
@@ -1387,7 +1393,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	core::NodePtr result = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        result = plugin->Visit(funcDecl, *this);
+        result = plugin->Visit(funcDecl, *this, symbolic);
         if(core::ExpressionPtr res = result.isa<core::ExpressionPtr>()) {
             //if plugin does not return a symbol, create the symbol
             //and check if the plugin returned a lambda expr.
@@ -1406,13 +1412,22 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
     }
 
 	if(!result) {
-		convertFunctionDeclImpl(funcDecl);
+		if(symbolic) {
+			// produce only a symbol to be called
+			// the actual conversion happens when we encounter the funcDecl in the DeclContext
+			auto funcTy = convertFunctionType(funcDecl);
+			result = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		} else {
+			convertFunctionDeclImpl(funcDecl);
+			result = lambdaExprCache[funcDecl];
+		}
     }
+    assert(result);
 
-    core::ExpressionPtr expr = getCallableExpression(funcDecl);
+    core::ExpressionPtr expr = result.as<core::ExpressionPtr>();
 
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        auto ret = plugin->PostVisit(funcDecl, expr, *this);
+        auto ret = plugin->PostVisit(funcDecl, expr, *this, symbolic);
         if(ret) {
             expr=ret.as<core::ExpressionPtr>();
         }
@@ -1423,20 +1438,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
-	assert(funcDecl);
-
-	// switch to the declaration containing the body (if there is one)
-	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
-
-	// check whether function has already been converted
-	auto pos = lambdaExprCache.find(funcDecl);
-	if (pos != lambdaExprCache.end()) {
-		return pos->second;		// done
-	}
-
-	// otherwise, build a litteral (with callable type)
-	auto funcTy = convertFunctionType(funcDecl);
-	return builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+	return convertFunctionDecl(funcDecl,true);
 }
 
 //////////////////////////////////////////////////////////////////

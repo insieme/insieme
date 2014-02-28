@@ -40,6 +40,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/simplify.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
@@ -978,6 +979,39 @@ TEST(Manipulation, pushIntoMultiple) {
 	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 }
 
+TEST(Manipulation, ReplaseVaresRecursive) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr intA = builder.variable(mgr.getLangBasic().getInt4());
+	VariablePtr intB = builder.variable(mgr.getLangBasic().getInt4());
+	VariablePtr charA = builder.variable(mgr.getLangBasic().getChar());
+	VariablePtr charB = builder.variable(mgr.getLangBasic().getChar());
+
+	std::map<string,NodePtr> symbols;
+	symbols["A"] = intA;
+	symbols["B"] = intB;
+
+	ExpressionMap replacements;
+
+	replacements[intA] = charA;
+	replacements[intB] = charB;
+
+	auto code = builder.parseStmt(
+			"{"
+			"	let cB = lit(\"subfunction\":(int<4>)->ref<ref<array<real<4>,1>>>);"
+			"	"
+			"	int<4> A = 0;"
+			"}"
+			, symbols
+	).as<CompoundStmtPtr>();
+
+	auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements);
+
+//	EXPECT_NE(code, code1);
+
+	dumpPretty(code1);
+}
 
 
 } // end namespace core

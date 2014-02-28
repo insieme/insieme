@@ -787,7 +787,25 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	OptionalMessageList res;
 
 	// extract type
-	core::StructTypePtr structType = static_pointer_cast<const StructType>(address.getAddressedNode()->getType());
+	core::TypePtr type = address.getAddressedNode()->getType();
+
+	// unroll type if necessary
+	if (auto rec = type.isa<RecTypePtr>()) {
+		type = rec->unroll();
+	}
+
+	// get struct type
+	core::StructTypePtr structType = type.isa<StructTypePtr>();
+
+	// check whether it is a struct type
+	if (!structType) {
+		add(res, Message(address,
+			EC_TYPE_INVALID_TYPE_OF_STRUCT_EXPR,
+			format("Invalid type of struct-expression - type: \n%s",
+					toString(*type).c_str()),
+			Message::ERROR));
+		return res;
+	}
 
 	// check type of values within struct expression
 	for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
@@ -1225,6 +1243,34 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 
 	return res;
 }
+
+OptionalMessageList GenericZeroCheck::visitCallExpr(const CallExprAddress& address) {
+	auto& base = address->getNodeManager().getLangBasic();
+
+	OptionalMessageList res;
+
+	auto call = address.as<CallExprPtr>();
+	auto type = call->getType();
+
+	// if the result type is a generic type everything is fine
+	if (!base.isBuiltIn(type) && type.isa<GenericTypePtr>()) {
+		return res;
+	}
+
+	// only interested in get-zero expressions
+	if (!core::analysis::isCallOf(call, base.getZero())) {
+		return res;
+	}
+
+	// now we have a problem
+	add(res, Message(address,
+		EC_TYPE_ILLEGAL_GENERIC_ZERO_TYPE,
+		format("Can not create generic zero element for type %s", toString(*call->getType())),
+		Message::ERROR));
+
+	return res;
+}
+
 
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///      Narrow check
