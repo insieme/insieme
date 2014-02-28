@@ -820,6 +820,36 @@ TEST(CastExpr, Basic) {
 	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_CAST, "", Message::ERROR));
 }
 
+TEST(GenericZero, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& base = manager.getLangBasic();
+
+	// OK ... create a function literal
+
+	TypePtr type = builder.genericType("int");
+	TypePtr ref = builder.refType(type);
+	TypePtr fun = builder.functionType(toVector(type), ref);
+
+	auto zero = [&](const TypePtr& t) {
+		return builder.callExpr(t, base.getZero(), builder.getTypeLiteral(t));
+	};
+
+	NodePtr ok = zero(builder.genericType("A"));
+	NodePtr err1 = zero(base.getInt4());
+	NodePtr err2 = zero(base.getUnit());
+	NodePtr err3 = zero(builder.parseType("struct A {}"));
+
+	EXPECT_TRUE(check(ok).empty());
+	ASSERT_FALSE(check(err1).empty());
+	ASSERT_FALSE(check(err2).empty());
+	ASSERT_FALSE(check(err3).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1), EC_TYPE_ILLEGAL_GENERIC_ZERO_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2), EC_TYPE_ILLEGAL_GENERIC_ZERO_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_GENERIC_ZERO_TYPE, "", Message::ERROR));
+}
+
 TEST(KeywordCheck, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

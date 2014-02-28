@@ -141,6 +141,9 @@ namespace addons {
 				// get meta-type
 				auto& infoA = GET_TYPE_INFO(A);
 
+				// add dependency to definition
+				context.addDependency(infoA.definition);
+
 				// create variable
 				auto var = C_NODE_MANAGER->create<c_ast::Variable>(
 						infoA.lValueType,
@@ -150,7 +153,12 @@ namespace addons {
 				// create init value
 				auto& mgr = NODE_MANAGER;
 				core::IRBuilder builder(mgr);
-				auto init = CONVERT_EXPR(call[0]);
+				c_ast::ExpressionPtr init;
+
+				if (call[0] != builder.getZero(A)) {
+					// convert the init expression
+					init = CONVERT_EXPR(call[0]);
+				}
 
 				// built the static initialization
 				auto decl = C_NODE_MANAGER->create<c_ast::VarDecl>(var, init);
@@ -212,6 +220,9 @@ namespace addons {
 
 				// get meta-type
 				auto& infoA = GET_TYPE_INFO(A);
+
+				// add dependency to definition
+				context.addDependency(infoA.definition);
 
 				// create variable
 				auto var = C_NODE_MANAGER->create<c_ast::Variable>(

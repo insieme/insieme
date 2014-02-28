@@ -457,6 +457,11 @@ namespace tu {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
 				}
 
+				// and also fix generic-zero constructor
+				if (core::analysis::isCallOf(res, mgr.getLangBasic().getZero())) {
+					res = builder.getZero(core::analysis::getRepresentedType(res.as<CallExprPtr>()[0]));
+				}
+
 				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
 					cache[ptr] = res;

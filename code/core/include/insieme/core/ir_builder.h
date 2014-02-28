@@ -240,6 +240,9 @@ namespace core {
 		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
 
+		// Build zero values
+		ExpressionPtr zero(const TypePtr& type) const;
+
 		/**
 		 * A factory method for intTypeParam literals.
 		 */

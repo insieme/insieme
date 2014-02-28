@@ -75,6 +75,8 @@ SIMPLE_CHECK(RefCast, CastExpr, false);
 
 SIMPLE_CHECK(Cast, CastExpr, false);
 
+SIMPLE_CHECK(GenericZero, CallExpr, false);
+
 SIMPLE_CHECK(Narrow, CallExpr, false);
 SIMPLE_CHECK(Expand, CallExpr, false);
 
