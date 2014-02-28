@@ -666,6 +666,15 @@ private:
 			return builder.assign(args.at(0), args.at(1));
 		}
 
+		if(manager.getLangBasic().isRefNew(fun)) {
+			return builder.refNew(args.at(0));
+		}
+
+		if(manager.getLangBasic().isRefVar(fun)) {
+			std::cout << "\nhandling call to builtin\n" << builder.refVar(args.at(0))->getType() << " - " << args.at(0)->getType() << std::endl;
+			return builder.refVar(args.at(0));
+		}
+
 		// otherwise standard treatment
 		return builder.callExpr(fun, args);
 	}
