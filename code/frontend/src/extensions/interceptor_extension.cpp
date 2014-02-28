@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -80,7 +80,7 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact) {
+    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         // check whether function should be intercected
         if( getInterceptor().isIntercepted(funcDecl) ) {
             auto irExpr = getInterceptor().intercept(funcDecl, convFact);

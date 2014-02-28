@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -91,9 +91,9 @@ namespace extensions {
         return stmtutils::StmtWrapper();
     }
 
-    insieme::core::NodePtr FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact) {
+    insieme::core::NodePtr FrontendPlugin::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         if(llvm::isa<clang::FunctionDecl>(decl)) {
-            return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), convFact);
+            return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), convFact, symbolic);
         }
         if(llvm::isa<clang::ValueDecl>(decl)) {
             return this->ValueDeclVisit(llvm::cast<clang::ValueDecl>(decl), convFact);
@@ -108,7 +108,7 @@ namespace extensions {
         return nullptr;
     }
 
-    insieme::core::ExpressionPtr FrontendPlugin::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+    insieme::core::ExpressionPtr FrontendPlugin::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         return nullptr;
     }
 
@@ -136,7 +136,7 @@ namespace extensions {
         return nullptr;
     }
 
-    insieme::core::ExpressionPtr FrontendPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
+    insieme::core::ExpressionPtr FrontendPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         return nullptr;
     }
 
@@ -144,9 +144,9 @@ namespace extensions {
         return nullptr;
     }
 
-    insieme::core::NodePtr FrontendPlugin::PostVisit(const clang::Decl* decl, core::NodePtr ir, insieme::frontend::conversion::Converter& convFact) {
+    insieme::core::NodePtr FrontendPlugin::PostVisit(const clang::Decl* decl, core::NodePtr ir, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         if(llvm::isa<clang::FunctionDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
-            return this->FuncDeclPostVisit(llvm::cast<clang::FunctionDecl>(decl), ir.as<core::ExpressionPtr>(), convFact);
+            return this->FuncDeclPostVisit(llvm::cast<clang::FunctionDecl>(decl), ir.as<core::ExpressionPtr>(), convFact, symbolic);
         }
         if(llvm::isa<clang::ValueDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
             return this->ValueDeclPostVisit(llvm::cast<clang::ValueDecl>(decl), ir.as<core::ExpressionPtr>(), convFact);

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -249,38 +249,41 @@ insieme::core::TypePtr OclKernelPlugin::Visit(const clang::Type* type, insieme::
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               adding OpenCL kernel annotation
-insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
-    // check Attributes of the function definition
-    annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
+insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 
-    if (decl->hasAttrs()) {
-        const clang::AttrVec attrVec = decl->getAttrs();
+	if(!symbolic) {
+		// check Attributes of the function definition
+		annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
-        for (clang::AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-            if (clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
-                //get annotate string
-                llvm::StringRef&& sr = attr->getAnnotation();
+		if (decl->hasAttrs()) {
+			const clang::AttrVec attrVec = decl->getAttrs();
 
-                //check if it is an OpenCL kernel function
-				if ( sr == "__kernel" ) {
-					VLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
+			for (clang::AttrVec::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
+				if (clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
+					//get annotate string
+					llvm::StringRef&& sr = attr->getAnnotation();
+
+					//check if it is an OpenCL kernel function
+					if ( sr == "__kernel" ) {
+						VLOG(1) << "is OpenCL kernel function";
+						kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
+					}
 				}
-            }
-			else if ( clang::ReqdWorkGroupSizeAttr* attr = llvm::dyn_cast<clang::ReqdWorkGroupSizeAttr>(*I) ) {
-				kernelAnnotation.push_back(
-						std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
-				);
+				else if ( clang::ReqdWorkGroupSizeAttr* attr = llvm::dyn_cast<clang::ReqdWorkGroupSizeAttr>(*I) ) {
+					kernelAnnotation.push_back(
+							std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
+					);
+				}
 			}
-        }
-    }
+		}
 
-	// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
-    if (!kernelAnnotation.empty()) {
-        core::ExpressionPtr lambda = convFact.getLambdaFromCache(decl);
-        lambda->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
-        convFact.addToLambdaCache(decl, lambda);
-    }
+		// if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
+		if (!kernelAnnotation.empty()) {
+			core::ExpressionPtr lambda = convFact.getLambdaFromCache(decl);
+			lambda->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
+			convFact.addToLambdaCache(decl, lambda);
+		}
+	}
     return nullptr;
 }
 

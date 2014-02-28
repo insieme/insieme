@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -157,8 +157,7 @@ public:
         return irStmt;
     }
 
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,
-                                                      insieme::frontend::conversion::Converter& convFact) {
+    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic=false) {
 
         std::cout << "func decl: " << decl->getNameAsString() << std::endl;
         if(decl->getSourceRange().isValid()) {
