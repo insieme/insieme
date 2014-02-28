@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -185,7 +185,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return NodePtr that can either be an expression or a type
          */
-        insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact);
+        insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided clang type decl visitor. Will be called before clang type decl
@@ -205,7 +205,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return Insieme IR ExpressionPtr
          */
-        virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
+        virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided clang value decl visitor. Will be called before clang value decl
@@ -264,7 +264,7 @@ namespace extensions {
          *  @return modified version of IR input
          */
         insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir,
-                                         insieme::frontend::conversion::Converter& convFact);
+                                         insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided post clang type decl visitor. Will be called after clang decl
@@ -286,7 +286,7 @@ namespace extensions {
          *  @return modified version of IR ExpressionPtr
          */
         virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,
-                                                      insieme::frontend::conversion::Converter& convFact);
+                                                      insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided post clang value decl visitor. Will be called after clang decl
