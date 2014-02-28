@@ -226,10 +226,27 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	return name;
 }
 
-
-std::string buildNameForVariable (const clang::VarDecl* varDecl){
+std::string buildNameForVariable  (const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
+	return name;
+
+}
+
+std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm){
+	std::stringstream ss;
+	ss << "_global";
+
+	ss << sm.getFilename(varDecl->getLocStart()).str();   //.getHashValue();
+	ss << sm.getExpansionLineNumber (varDecl->getLocStart());
+	ss << sm.getExpansionColumnNumber(varDecl->getLocStart());
+
+	std::string name =  ss.str();
+	REMOVE_SYMBOLS(name);
+	boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
+	boost::replace_all(name, "/", "_"); 
+    boost::replace_all(name, "-", "_");
+
 	return name;
 }
 

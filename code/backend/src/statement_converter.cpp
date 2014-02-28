@@ -290,7 +290,7 @@ namespace backend {
 		if (core::analysis::isRefType(ptr->getType())) {
 			// look up external variable declaration
 			auto fragmentManager = converter.getFragmentManager();
-			string fragmentName = "extLitDecl:" + ptr->getStringValue();
+			string fragmentName = "global:" + ptr->getStringValue();
 			auto fragment = fragmentManager->getFragment(fragmentName);
 
 			// check fragment

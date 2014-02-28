@@ -994,7 +994,41 @@ namespace backend {
 
 		auto& ext = manager.getLangExtension<IRExtensions>();
 
-		res[ext.registerGlobal] = OP_CONVERTER({
+		res[ext.getInitGlobal()] = OP_CONVERTER({
+			static const c_ast::ExpressionPtr none;
+
+			auto global = call[0].as<core::LiteralPtr>();
+
+			// resolve the global
+			CONVERT_EXPR(global);
+
+			// now there should be a code fragment for the global
+			string fragmentName = "global:" + global->getStringValue();
+			auto fragment = dynamic_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(fragmentName));
+
+			// if there is no fragment defining it there is no point for initializing it
+			if (!fragment) {
+				return none;
+			}
+
+			// get the declaration code fragment
+			auto decl = fragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
+			assert_false(decl->external) << "Can not initialize external declaration!";
+
+			// convert init-value in fresh context
+			ConversionContext innerContext(context.getConverter());
+			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
+
+			// move dependencies to global var-decl fragment
+			fragment->addDependencies(innerContext.getDependencies());
+			fragment->addRequirements(innerContext.getRequirements());
+			fragment->addIncludes(innerContext.getIncludes());
+
+			// no actual code needs to be generated for this operator
+			return none;
+		});
+
+		res[ext.getRegisterGlobal()] = OP_CONVERTER({
 
 			// obtain access to global fragment
 			c_ast::CCodeFragmentPtr globals = static_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));

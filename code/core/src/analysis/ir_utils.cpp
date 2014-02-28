@@ -46,6 +46,7 @@
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
 

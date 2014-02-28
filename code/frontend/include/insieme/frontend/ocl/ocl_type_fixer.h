@@ -45,9 +45,12 @@ namespace ocl {
 
 class TypeFixer {
 	core::NodePtr prog;
-	core::NodeMap replacements;
+	std::map<core::NodeAddress, core::NodePtr>  replacements;
 
-	void fixKernelDecls();
+	core::NodeMap a;
+
+	void fixKernelDecls(core::NodeAddress pA);
+	void fixBufferDecls(core::NodeAddress pA);
 public:
 	TypeFixer(core::NodePtr toTransform);
 	core::NodePtr getTransformedProg() { return prog; };

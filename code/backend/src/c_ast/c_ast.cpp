@@ -252,7 +252,7 @@ namespace c_ast {
     }
 
 	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
-				: Statement(NT_VarDecl), varInit(initList) {
+				: Statement(NT_VarDecl), isStatic(false), varInit(initList) {
 		assert(!varInit.empty() && all(varInit, [&](const pair<VariablePtr, ExpressionPtr>& cur)->bool {
 			return cur.first->type == varInit[0].first->type;
 		}));
@@ -261,7 +261,7 @@ namespace c_ast {
 	bool VarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const VarDecl*>(&node));
 		auto other = static_cast<const VarDecl&>(node);
-		return ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
+		return isStatic == other.isStatic && ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
 	}
 
 	bool StaticVarDecl::equals(const Node& node) const {
@@ -433,6 +433,12 @@ namespace c_ast {
 		return value==other.value;
 	}
 
+	bool StmtExpr::equals(const Node& node) const {
+		assert(dynamic_cast<const StmtExpr*>(&node));
+		auto other = static_cast<const StmtExpr&>(node);
+		return stmt==other.stmt;
+	}
+
 	bool TypeDeclaration::equals(const Node& node) const {
 		assert(dynamic_cast<const TypeDeclaration*>(&node));
 		auto other = static_cast<const TypeDeclaration&>(node);
@@ -448,7 +454,7 @@ namespace c_ast {
 	bool GlobalVarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const GlobalVarDecl*>(&node));
 		auto other = static_cast<const GlobalVarDecl&>(node);
-		return *type==*other.type && name==other.name && external == other.external;
+		return *type==*other.type && name==other.name && external == other.external && equalTarget(init, other.init);
 	}
 
 	bool ConstructorPrototype::equals(const Node& node) const {

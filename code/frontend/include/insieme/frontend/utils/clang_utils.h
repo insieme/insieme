@@ -94,6 +94,10 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
  */
 std::string buildNameForVariable (const clang::VarDecl* varDecl);
 
+
+
+std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm);
+
 /**
  * build names for enumerations. anonymous enumerations need a special naming,
  * otherwise multiple anon. enumerations cannot be distinguished anymore.

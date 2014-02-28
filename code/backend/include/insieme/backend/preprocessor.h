@@ -171,6 +171,16 @@ namespace backend {
 	};
 
 	/**
+	 * This pre-processor is capturing initial values for globals such that those are encoded as initial
+	 * values at the global definition instead of an assignment in the main. Initial assignments will be
+	 * dropped.
+	 */
+	class InitGlobals : public PreProcessor {
+	public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	};
+
+	/**
 	 * A simple pre-processor replacing pointwise operations on vectors with in-lined, equivalent code.
 	 */
 	class InlinePointwise : public PreProcessor {

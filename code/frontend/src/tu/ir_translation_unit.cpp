@@ -47,6 +47,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
