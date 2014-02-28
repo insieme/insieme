@@ -73,12 +73,12 @@ namespace addons {
 			/**
 			 * A literal masking the initialization of a static literal using constants.
 			 */
-			LANG_EXT_LITERAL(InitStaticConst, "InitStaticConst", "('a)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticConst, "InitStaticConst", "('a, 'b)->ref<'a>");
 
 			/**
 			 * A literal masking the initialization of a static literal using lazy expressions.
 			 */
-			LANG_EXT_LITERAL(InitStaticLazy, "InitStaticLazy", "(()=>'a)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticLazy, "InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
 
 		};
 
@@ -120,7 +120,7 @@ namespace addons {
 				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
 				core::IRBuilder builder(mgr);
 
-				auto init = builder.callExpr(ext.getInitStaticConst(), call[1]);
+				auto init = builder.callExpr(ext.getInitStaticConst(), call[1], call[0]);
 				auto lambda = builder.lambdaExpr(call->getType(), init, core::VariableList());
 
 				// this function call is equivalent to a call to the new artifical lambda
@@ -192,7 +192,7 @@ namespace addons {
 
 				auto param = fun->getParameterList()[1];
 
-				auto init = builder.callExpr(ext.getInitStaticLazy(), param);
+				auto init = builder.callExpr(ext.getInitStaticLazy(), param, call[0]);
 				auto lambda = builder.lambdaExpr(retType, init, toVector(param));
 
 				// this function call is equivalent to a call to the new artifical lambda
