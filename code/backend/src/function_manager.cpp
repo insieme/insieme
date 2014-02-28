@@ -904,6 +904,9 @@ namespace backend {
 			res->definitions->addDependency(nestedClosureInfo.definition);
 			res->definitions->addDependency(nestedClosureInfo.caller);
 
+			// finally - add a dependency to the return type definition since it is returned by value
+			res->definitions->addDependency(typeManager.getTypeInfo(call->getType()).definition);
+
 			// done
 			return res;
 		}
