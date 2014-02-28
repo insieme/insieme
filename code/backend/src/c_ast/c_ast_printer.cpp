@@ -221,6 +221,20 @@ namespace c_ast {
 					out << "static ";
 				}
 
+				// a utility function printing the init part
+				auto printInit = [&](const c_ast::ExpressionPtr& expr) {
+					if (!expr) return;
+					// special handling of initializer expressions
+					if (auto init = expr.isa<InitializerPtr>()) {
+						bool backup = init->explicitType;
+						init->explicitType = false;
+						out << " = " << print(init);
+						init->explicitType = backup;
+					} else {
+						out << " = " << print(expr);
+					}
+				};
+
 				// handle single-variable declaration ...
 				if (node->varInit.size() == 1u) {
 					// print a variable declaration
@@ -240,9 +254,7 @@ namespace c_ast {
 					}
 
 					// add init value
-					if (node->varInit[0].second) {
-						out << " = " << print(node->varInit[0].second);
-					}
+					printInit(node->varInit[0].second);
 
 					// done
 					return out;
@@ -257,9 +269,7 @@ namespace c_ast {
 				// add name/value pair
 				return out << " " << join(", ", node->varInit, [&](std::ostream& out, const pair<VariablePtr, ExpressionPtr>& cur) {
 					out << print(cur.first);
-					if (cur.second) {
-						out << " = " << print(cur.second);
-					}
+					printInit(cur.second);
 				});
 			}
 
@@ -671,7 +681,15 @@ namespace c_ast {
 			PRINT(GlobalVarDecl) {
 				out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name));
 				if (node->init) {
-					out << " = " << print(node->init);
+					// special handling of initializer expressions
+					if (auto init = node->init.isa<InitializerPtr>()) {
+						bool backup = init->explicitType;
+						init->explicitType = false;
+						out << " = " << print(init);
+						init->explicitType = backup;
+					} else {
+						out << " = " << print(node->init);
+					}
 				}
 				return out << ";\n";
 			}

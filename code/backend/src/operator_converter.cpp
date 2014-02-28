@@ -995,6 +995,7 @@ namespace backend {
 		auto& ext = manager.getLangExtension<IRExtensions>();
 
 		res[ext.getInitGlobal()] = OP_CONVERTER({
+			static const c_ast::ExpressionPtr none;
 
 			auto global = call[0].as<core::LiteralPtr>();
 
@@ -1005,7 +1006,10 @@ namespace backend {
 			string fragmentName = "global:" + global->getStringValue();
 			auto fragment = dynamic_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(fragmentName));
 
-			assert_true(fragment) << "There should be a fragment covering the global!";
+			// if there is no fragment defining it there is no point for initializing it
+			if (!fragment) {
+				return none;
+			}
 
 			// get the declaration code fragment
 			auto decl = fragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
@@ -1021,7 +1025,7 @@ namespace backend {
 			fragment->addIncludes(innerContext.getIncludes());
 
 			// no actual code needs to be generated for this operator
-			return c_ast::ExpressionPtr();
+			return none;
 		});
 
 		res[ext.getRegisterGlobal()] = OP_CONVERTER({

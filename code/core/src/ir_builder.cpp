@@ -627,6 +627,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return (undefined(type));
 	}
 
+	// for all other generic types we return an undefined object
+	if (type.isa<GenericTypePtr>()) {
+		return undefined(type);
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
