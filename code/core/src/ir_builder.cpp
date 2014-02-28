@@ -521,6 +521,11 @@ ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }
 
+ExpressionPtr IRBuilder::zero(const TypePtr& type) const {
+	assert_true(type.isa<GenericTypePtr>()) << "Only supported for generic types - not for " << type << "\n";
+	return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
+}
+
 ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
@@ -619,7 +624,8 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// FIXME:: this might not be enough, ferdinando fix it!
 	if (type->getNodeType() == core::NT_RecType) {
-		return getZero (type.as<core::RecTypePtr>()->unroll());
+		auto tmp = getZero (type.as<core::RecTypePtr>()->unroll());
+		return core::transform::replaceNode(manager, ExpressionAddress(tmp)->getType(), type).as<ExpressionPtr>();
 	}
 
 	// FIXME: this might be a little dangerous, but at least right typed
@@ -627,9 +633,9 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return (undefined(type));
 	}
 
-	// for all other generic types we return an undefined object
+	// for all other generic types we return a generic zero value
 	if (type.isa<GenericTypePtr>()) {
-		return undefined(type);
+		return zero(type);
 	}
 
 	// TODO: extend for more types
