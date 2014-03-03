@@ -680,6 +680,20 @@ namespace c_ast {
 
 			PRINT(GlobalVarDecl) {
 				out << (node->external?"extern ":"") << ParameterPrinter(node->type, node->getManager()->create(node->name));
+
+				// add constructor call if necessary
+				if (ConstructorCallPtr call = node->init.isa<ConstructorCallPtr>()) {
+
+					// do nothing if it is default constructed
+					if (call->arguments.empty()) return out << ";\n";
+
+					// just add list of parameters
+					return out << "("
+							<< join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
+								out << print(cur);
+					}) << ")" << ";\n";
+				}
+
 				if (node->init) {
 					// special handling of initializer expressions
 					if (auto init = node->init.isa<InitializerPtr>()) {
