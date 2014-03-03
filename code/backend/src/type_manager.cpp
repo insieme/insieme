@@ -597,9 +597,6 @@ namespace backend {
                 return res;
             }
 
-
-			std::cout << " spetialization: " << ptr << std::endl;
-
 			if(annotations::c::isDeclOnly(ptr)) {
 				//if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
 				switch(annotations::c::getDeclOnlyKind(ptr)) {
