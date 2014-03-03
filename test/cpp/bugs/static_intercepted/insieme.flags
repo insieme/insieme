@@ -1,1 +1,1 @@
---interceptboost::.* -I$BOOST_ROOT/include
+--interceptboost::.* --intercept-include$BOOST_ROOT/include -I. -I$BOOST_ROOT/include 
