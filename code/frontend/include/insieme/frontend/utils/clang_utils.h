@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,6 +71,11 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
 	return dyn_cast<const ExpectedTy>(expr);
 }
 
+/**
+ * this function is used when we want to use the REMOVE_SYMBOLS macro from
+ * external files. Used when inserting templated functions into the meta info.
+ */
+std::string removeSymbols(std::string& s);
 
 /**
  * we build a complete name for the class,
@@ -107,7 +112,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) ;
 
 /**
- * build names for enumeration constants. 
+ * build names for enumeration constants.
  * anonymous enumerationconstant will fail!
  * @param ecd enumConstantDecl pointer
  * @return name for enumeration
