@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,7 +71,11 @@ using namespace llvm;
 		boost::replace_all(str, "*", "_"); \
 }
 
-
+std::string removeSymbols(std::string& s) {
+    REMOVE_SYMBOLS(s);
+    boost::replace_all(s, "&", "_");
+    return s;
+}
 
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
@@ -193,7 +197,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
                     break;
                 }
                 case clang::TemplateArgument::Pack: {
-                										
+
 					for(clang::TemplateArgument::pack_iterator it = funcDecl->getTemplateSpecializationArgs()->get(i).pack_begin(), end = funcDecl->getTemplateSpecializationArgs()->get(i).pack_end();it!=end;it++) {
 						const clang::QualType& argType = (*it).getAsType();
                     name.append ("_" +
@@ -265,8 +269,8 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 
 		name =  ss.str();
 		REMOVE_SYMBOLS(name);
-		boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
-		boost::replace_all(name, "/", "_"); 
+		boost::replace_all(name, ".", "_");  // names have full path, remove symbols
+		boost::replace_all(name, "/", "_");
         boost::replace_all(name, "-", "_");
     }
     return name;
