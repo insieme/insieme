@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,6 +48,7 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
@@ -805,9 +806,20 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					initIr = builder.deref(initIr);
 				}
 
-				// beware of non const initializers, for C codes is required that statics are initialized with const expressions
+				// beware of non const initializers, for C codes is required that statics are initialized 
+				// with const expressions
 				// NOTE:: C++ codes do not need const init
 				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
+
+				// if default constructed, avoid artifacts, use the default initializator
+				if( call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor() &&
+					call->getArguments().size() == 1 &&
+					call->getArgument(0)->getType() == var->getType()){
+
+					initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
+					isConst = true;
+				}
+
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
 
 			}
@@ -1109,7 +1121,7 @@ namespace {
 
 				// construct the member access based on the type and the init expression
 				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
-				core::VariablePtr genThis = thisVar; 
+				core::VariablePtr genThis = thisVar;
 
 				expr = converter.convertExpr((*it)->getInit());
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
@@ -1231,7 +1243,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
 
 			lambdaExprCache[funcDecl] = retExpr;
-			return ; 
+			return ;
 		}
 
 		//-----------------------------------------------------------------------------------------------------
@@ -1346,9 +1358,27 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructor(lambda);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
-		else
-			if (!classInfo.hasMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
-				classInfo.addMemberFunction(funcDecl->getNameAsString(), lambda,
+		else {
+            //Normally we use the function name of the member function.
+            //This can be dangerous when using templated member functions.
+            //In this case we have to add the return type information to
+            //the name, because it is not allowed to have overloaded functions
+            //that only differ by the return type.
+            //FIXME: Call to external functions might not work. What should we do with templated operators?!
+            std::string functionname = funcDecl->getNameAsString();
+            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
+                // it might be that we have an overloaded cast
+                // seems that there is no option in clang to check if
+                // funcDecl is an overloaded cast. Yay, string comparison
+                // solves our problem. Check for "operator <type>"
+                if(functionname.find("operator ") == std::string::npos) {
+                    std::string returnType = funcDecl->getResultType().getAsString();
+                    functionname.append(returnType);
+                    utils::removeSymbols(functionname);
+                }
+            }
+            if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
+				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
@@ -1363,7 +1393,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 //
 				//abort();
 			}
-
+		}
 		core::setMetaInfo(classType, classInfo);
 	}
 

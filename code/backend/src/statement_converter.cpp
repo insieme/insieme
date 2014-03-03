@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,6 +56,7 @@
 #include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -782,7 +783,37 @@ namespace backend {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
-		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
+		core::IRBuilder builder(ptr.getNodeManager());
+		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
+
+        // try to find refNarrow calls in the return statement
+        // those calls should be avoided because they create
+        // useless static_casts to base classes (should be done implicitly)
+		bool stopCond = true;
+		core::ExpressionPtr innerExpr = tmpRet;
+		while(stopCond) {
+            if(!innerExpr.isa<core::CallExprPtr>()) {
+                stopCond = false;
+            } else {
+                // we know that this we have a call expr
+                // but we only can handle it if it has an argument
+                if(!innerExpr.as<core::CallExprPtr>()->getArguments().size()) {
+                    stopCond = false;
+                } else {
+                    // ok, we have an argument. replace the innerExpr with the argument
+                    // to dig into the expression. Once we found the narrow, replace it
+                    // and stop the loop
+                    if(core::analysis::isCallOf(innerExpr, builder.getLangBasic().getRefNarrow())) {
+                        tmpRet = core::transform::replaceAll(ptr.getNodeManager(), tmpRet,
+                                                    innerExpr, innerExpr.as<core::CallExprPtr>()->getArgument(0)).as<core::ExpressionPtr>();
+                        stopCond = false;
+                    }
+                    innerExpr = innerExpr.as<core::CallExprPtr>()->getArgument(0);
+                }
+            }
+		}
+
+		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, tmpRet));
 	}
 
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
