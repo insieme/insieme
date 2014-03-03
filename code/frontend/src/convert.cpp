@@ -806,18 +806,20 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					initIr = builder.deref(initIr);
 				}
 
+				// beware of non const initializers, for C codes is required that statics are initialized 
+				// with const expressions
+				// NOTE:: C++ codes do not need const init
+				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
+
 				// if default constructed, avoid artifacts, use the default initializator
 				if( call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor() &&
 					call->getArguments().size() == 1 &&
 					call->getArgument(0)->getType() == var->getType()){
 
-					initIr = builder.deref(builder.getZero(var->getType()));
+					initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
+					isConst = true;
 				}
 
-				// beware of non const initializers, for C codes is required that statics are initialized 
-				// with const expressions
-				// NOTE:: C++ codes do not need const init
-				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
 
 			}
