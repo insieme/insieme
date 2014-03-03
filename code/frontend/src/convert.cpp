@@ -1365,7 +1365,6 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
                     functionname.append(returnType);
                     utils::removeSymbols(functionname);
                 }
-                std::cout << "changed name from " << funcDecl->getNameAsString() << " to " << functionname << std::endl;
             }
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
