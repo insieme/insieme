@@ -1630,6 +1630,18 @@ namespace parser {
 
 			// --------------- add statement rules ---------------
 
+			// -- add Symbols --
+			g.addRule("S", rule(
+					cap(id),
+					[](Context& cur)->NodePtr {
+						// simply lookup name within variable manager
+						NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
+						if (res && res->getNodeCategory() == NC_Statement) return res;
+						return cur.getSymbolManager().lookup(cur.getSubRange(0)).isa<StatementPtr>();
+					},
+					2 // higher priority than other rules
+			));
+
 			// every expression is a statement (if terminated by ;)
 			g.addRule("S", rule(seq(E,";"), forward, -1));	// lower priority since less likely
 
