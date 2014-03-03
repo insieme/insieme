@@ -403,7 +403,6 @@ private:
 			return handleCallToLamba(call);
 		}
 		if(manager.getLangBasic().isRefAssign(fun)) {
-			std::cout << "Renewing call " << call << std::endl;
 			ExpressionPtr lhs = call.getArgument(0);
 			ExpressionPtr rhs = call.getArgument(1);
 			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
