@@ -1,16 +1,6 @@
 #include <iostream>
 
-namespace toIntercept{
-
-	template <typename T>
-	class Obj{
-		int a;
-	public:
-		Obj (int x) : a(x) {}
-		int get() { return a; }
-	};
-
-}// namespace
+#include "header.h"
 
 struct DUMMY;
 

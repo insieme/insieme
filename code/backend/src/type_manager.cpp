@@ -597,21 +597,26 @@ namespace backend {
                 return res;
             }
 
+
+			std::cout << " spetialization: " << ptr << std::endl;
+
 			if(annotations::c::isDeclOnly(ptr)) {
 				//if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
 				switch(annotations::c::getDeclOnlyKind(ptr)) {
 					case annotations::c::DeclOnlyTag::Kind::Struct: 
-						return type_info_utils::createInfo(manager, "struct "+toString(*ptr));
-						break;
 					case annotations::c::DeclOnlyTag::Kind::Class: 
-						return type_info_utils::createInfo(manager, "class "+toString(*ptr));
-						break;
+					{
+						auto name = manager.create(toString(*ptr));
+						auto type = manager.create<c_ast::StructType>(name);
+						auto forwardDecl = manager.create<c_ast::TypeDeclaration>(type);
+						auto decl = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
+						decl->appendCode (forwardDecl);
+						return type_info_utils::createInfo(type, decl);
+					}
 					case annotations::c::DeclOnlyTag::Kind::Enum: 
 						return type_info_utils::createInfo(manager, "enum "+toString(*ptr));
-						break;
 					case annotations::c::DeclOnlyTag::Kind::Union: 
 						return type_info_utils::createInfo(manager, "union "+toString(*ptr));
-						break;
 				}
 			}
 
