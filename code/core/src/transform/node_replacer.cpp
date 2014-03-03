@@ -274,15 +274,16 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	bool limitScope;
 	const TypeRecoveryHandler& recoverTypes;
 	const TypeHandler& typeHandler;
+	const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements;
 
 	mutable NodePtr root;
 
 public:
 
-	RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope,
-			const TypeRecoveryHandler& recoverTypes, const TypeHandler& typeHandler)
+	RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope, const TypeRecoveryHandler& recoverTypes,
+			const TypeHandler& typeHandler, const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements)
 		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope),
-		  recoverTypes(recoverTypes), typeHandler(typeHandler) {}
+		  recoverTypes(recoverTypes), typeHandler(typeHandler), declInitReplacements(declInitReplacements) {}
 
 private:
 
@@ -362,8 +363,16 @@ private:
 
 	NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
 		// check variable and value type
-		TypePtr varType = decl->getVariable()->getType();
+		VariablePtr var = decl->getVariable();
+		TypePtr varType = var->getType();
 		TypePtr valType = decl->getInitialization()->getType();
+
+		// check if the new variable is in declInitReplacements
+		auto newInit = declInitReplacements.find(var);
+		if(newInit != declInitReplacements.end()) {
+			// use the provided init expression in declaration
+			return builder.declarationStmt(var, newInit->second);
+		}
 
 		if (*varType != *valType) {
 			// if types are not matching, try to fix it using type handler
@@ -393,6 +402,16 @@ private:
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call);
 		}
+		if(manager.getLangBasic().isRefAssign(fun)) {
+			std::cout << "Renewing call " << call << std::endl;
+			ExpressionPtr lhs = call.getArgument(0);
+			ExpressionPtr rhs = call.getArgument(1);
+			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
+
+			if(!isSubTypeOf(rhs->getType(), lhsTy))
+				return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rhs));
+		}
+
 		return call;
 	}
 
@@ -671,7 +690,6 @@ private:
 		}
 
 		if(manager.getLangBasic().isRefVar(fun)) {
-			std::cout << "\nhandling call to builtin\n" << builder.refVar(args.at(0))->getType() << " - " << args.at(0)->getType() << std::endl;
 			return builder.refVar(args.at(0));
 		}
 
@@ -1244,14 +1262,15 @@ TypeHandler getVarInitUpdater(NodeManager& manager){
 
 
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const ExpressionMap& replacements,
-		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler) {
+		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler,
+		const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, recoveryHandler, typeHandler);
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, recoveryHandler, typeHandler, declInitReplacements);
 	return applyReplacer(mgr, root, mapper);
 }
 

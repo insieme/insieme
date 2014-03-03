@@ -169,11 +169,13 @@ TypeHandler getVarInitUpdater(NodeManager& manager);
  * @param limitScope a flag determining if also variables in inner scopes should be considered
  * @param recoveryHandler the function to be used to recover the proper typing of function calls during the replacement
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
+ * @param declInitReplacements a map from Variables present in replacements to expressions, which should be used as init expressions of the corresponding variable
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<ExpressionPtr, ExpressionPtr>& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>());
+		const TypeHandler& typeHandler = id<StatementPtr>(),
+		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>());
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -186,26 +188,29 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  * @param limitScope a flag determining if also variables in inner scopes should be considered
  * @param recoveryHandler the function to be used to recover the proper typing of function calls during the replacement
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
+ * @param declInitReplacements a map from Variables present in replacements to expressions, which should be used as init expressions of the corresponding variable
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
 		const ExpressionMap& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>()) {
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, recoveryHandler, typeHandler));
+		const TypeHandler& typeHandler = id<StatementPtr>(),
+		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, recoveryHandler, typeHandler, declInitReplacements));
 }
 
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
 		const VariableMap& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>()) {
+		const TypeHandler& typeHandler = id<StatementPtr>(),
+		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
 	ExpressionMap em;
 	for_each(replacements, [&](std::pair<VariablePtr, VariablePtr> rep) {
 		em[rep.first] = rep.second;
 	});
 
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, em, limitScope, recoveryHandler, typeHandler));
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, em, limitScope, recoveryHandler, typeHandler, declInitReplacements));
 }
 
 /**

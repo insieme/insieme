@@ -43,6 +43,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -983,34 +984,61 @@ TEST(Manipulation, ReplaseVaresRecursive) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr intA = builder.variable(mgr.getLangBasic().getInt4());
-	VariablePtr intB = builder.variable(mgr.getLangBasic().getInt4());
-	VariablePtr charA = builder.variable(mgr.getLangBasic().getChar());
-	VariablePtr charB = builder.variable(mgr.getLangBasic().getChar());
+	DeclarationStmtPtr declA = builder.parseStmt("ref<int<4>> A = var(0);").as<DeclarationStmtPtr>();
+	VariablePtr varA = declA->getVariable();
+	DeclarationStmtPtr declB = builder.declarationStmt(builder.variable(builder.refType(mgr.getLangBasic().getInt4())));
+	VariablePtr varB = declB->getVariable();
+	VariablePtr charA = builder.variable(builder.refType(mgr.getLangBasic().getChar()));
+	VariablePtr uintB = builder.variable(builder.refType(mgr.getLangBasic().getUInt4()));
 
 	std::map<string,NodePtr> symbols;
-	symbols["A"] = intA;
-	symbols["B"] = intB;
+	symbols["declA"] = declA;
+	symbols["declB"] = declB;
+	symbols["A"] = varA;
+	symbols["B"] = varB;
 
 	ExpressionMap replacements;
 
-	replacements[intA] = charA;
-	replacements[intB] = charB;
+	replacements[varA] = charA;
+	replacements[varB] = uintB;
 
-	auto code = builder.parseStmt(
+	CompoundStmtPtr code = builder.parseStmt(
 			"{"
-			"	let cB = lit(\"subfunction\":(int<4>)->ref<ref<array<real<4>,1>>>);"
-			"	"
-			"	int<4> A = 0;"
+			"	declA;"
+			"	declB;"
+			"	A = 4;"
+			"	B = 5;"
+			"	(int<4> arg)->int<4> { return arg; }(*A);"
 			"}"
 			, symbols
 	).as<CompoundStmtPtr>();
 
-	auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements);
 
-//	EXPECT_NE(code, code1);
+	transform::TypeHandler th = [&](const StatementPtr& stmt)->StatementPtr {
+		if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {
+			VariablePtr var = decl->getVariable();
+			ExpressionPtr init = decl->getInitialization();
+			return builder.declarationStmt(var, builder.castExpr(var->getType(), init));
+		}
 
-	dumpPretty(code1);
+		return stmt;
+	};
+
+	utils::map::PointerMap<VariablePtr, ExpressionPtr> declInitReplacements;
+	declInitReplacements[charA] = builder.parseExpr("var(\'c\')");
+	declInitReplacements[uintB] = builder.parseExpr("var(0u)");
+
+	auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements, true, transform::defaultTypeRecovery, th, declInitReplacements);
+
+	EXPECT_NE(code, code1);
+
+	dumpDetail(code);
+	dumpDetail(code1);
+
+	auto semantic = core::checks::check(code1);
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) << errors;
 }
 
 
