@@ -94,18 +94,18 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	});
 
 	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size()) << errors;
+	EXPECT_EQ(0u, errors.size()) ;
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-		core::NodeAddress address = cur.getAddress();
-		core::NodePtr context = address.getParentNode(address.getDepth()-1);
-		std::cout << "\t Context: " <<
-		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
+		std::cout << cur << std::endl;
+//		core::NodeAddress address = cur.getAddress();
+//		core::NodePtr context = address.getParentNode(address.getDepth()-1);
+//		std::cout << "\t Context: " <<
+//		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
 	});
 
 	// check for the kernel's datarange pragma
-	size_t cnt = 0;
+/*	size_t cnt = 0;
 	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
 		if(node->hasAnnotation(annot::DataRangeAnnotation::KEY)) {
 			++cnt;
@@ -113,10 +113,10 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 		}
 	});
 
-//	visitDepthFirstOnce(program, lookForAnnot);
+	visitDepthFirstOnce(program, lookForAnnot);
 
-//	EXPECT_EQ(1u, cnt);
-
+	EXPECT_EQ(1u, cnt);
+*/
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
