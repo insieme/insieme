@@ -405,10 +405,27 @@ private:
 		if(manager.getLangBasic().isRefAssign(fun)) {
 			ExpressionPtr lhs = call.getArgument(0);
 			ExpressionPtr rhs = call.getArgument(1);
+
+			assert(lhs->getType().isa<RefTypePtr>() && "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible");
+
 			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
 
-			if(!isSubTypeOf(rhs->getType(), lhsTy))
+			if(!isSubTypeOf(rhs->getType(), lhsTy)) {
+
+				// if it's a ref.reinterpret or cast, fix type
+				if(CastExprPtr rCast = rhs.isa<CastExprPtr>())
+					return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rCast->getSubExpression()));
+				if(CallExprPtr rCall = rhs.isa<CallExprPtr>()) {
+					if(builder.getLangBasic().isRefReinterpret(rCall->getFunctionExpr())) {
+						assert(lhsTy.isa<RefTypePtr>() &&
+								"Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible");
+
+						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), lhsTy.as<RefTypePtr>()->getElementType()));
+					}
+				}
+				// else add cast
 				return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rhs));
+			}
 		}
 
 		return call;
