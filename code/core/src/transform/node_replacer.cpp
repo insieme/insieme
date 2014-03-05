@@ -270,7 +270,7 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	IRBuilder builder;
-	const ExpressionMap& replacements;
+	ExpressionMap replacements;
 	bool limitScope;
 	const TypeRecoveryHandler& recoverTypes;
 	const TypeHandler& typeHandler;
@@ -365,19 +365,43 @@ private:
 		// check variable and value type
 		VariablePtr var = decl->getVariable();
 		TypePtr varType = var->getType();
-		TypePtr valType = decl->getInitialization()->getType();
+		ExpressionPtr val = decl->getInitialization();
+		TypePtr valType = val->getType();
 
 		// check if the new variable is in declInitReplacements
 		auto newInit = declInitReplacements.find(var);
 		if(newInit != declInitReplacements.end()) {
 			// use the provided init expression in declaration
+//std::cout << "\nchanging init of " << *var << " to ";
+//dumpPretty(newInit->second);
+
 			return builder.declarationStmt(var, newInit->second);
 		}
 
-		if (*varType != *valType) {
-			// if types are not matching, try to fix it using type handler
-			return typeHandler(decl);
+		// if type has not changed we can stop here
+		if(isSubTypeOf(valType, varType))
+			return decl;
+
+		// if types are not matching, try to fix it using type handler
+		StatementPtr handled = typeHandler(decl);
+		if(*handled != *decl)
+			return handled;
+
+		// if one of the replaced variables has been used as init expression for another one the type may changed.
+		// In that case, update the type of the declared variable
+/*		if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
+			if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
+				// create new variable with new type
+				VariablePtr newVar = builder.variable(initCall->getType());
+				DeclarationStmtPtr newDecl = builder.declarationStmt(newVar, val);
+				// add new variable to replacements
+	//			replacements[var] = newVar;
+std::cout << "\nreplacint variable " << *var << " with " << *newVar << std::endl;
+//				return newDecl;
+			}
 		}
+needs to be degugged */
+		// reaching this point, the IR will probably have semantic errors
 		return decl;
 	}
 
@@ -405,6 +429,11 @@ private:
 		if(manager.getLangBasic().isRefAssign(fun)) {
 			ExpressionPtr lhs = call.getArgument(0);
 			ExpressionPtr rhs = call.getArgument(1);
+
+			// some things (i.e. the OpenCL backend) replace variables with variables of the same type, wrapped in a generic wrapper type.
+			// The unwrap is inserted in a later step. To allow this procedure, this hack had to be inserted.
+			if(lhs->getType().isa<GenericTypePtr>())
+				return call;
 
 			assert(lhs->getType().isa<RefTypePtr>() && "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible");
 
