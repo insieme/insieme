@@ -1152,7 +1152,8 @@ namespace backend {
 
 					// check the variable
 					auto curVar = cur.as<core::VariablePtr>();
-					if (!contains(params, curVar)) {
+					//we want only parameters, but make an exception if the thisVar is used
+					if (!contains(params, curVar) && (curVar != thisVar)) {
 						parametersOnly = false;
 						return PRUNE;
 					}
