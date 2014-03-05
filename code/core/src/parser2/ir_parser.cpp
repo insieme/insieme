@@ -1632,14 +1632,12 @@ namespace parser {
 
 			// -- add Symbols --
 			g.addRule("S", rule(
-					seq(cap(id), ";"),
+					seq(cap(id),";"),
 					[](Context& cur)->NodePtr {
-						// simply lookup name within variable manager
-	//					NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
-	//					if (res && res->getNodeCategory() == NC_Statement) return res;
-						return cur.getSymbolManager().lookup(cur.getSubRange(0)).isa<StatementPtr>();
-					},
-					2 // higher priority than other rules
+						// test whether it is a known symbol
+						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
+						return dynamic_pointer_cast<StatementPtr>(res);
+					}
 			));
 
 			// every expression is a statement (if terminated by ;)
