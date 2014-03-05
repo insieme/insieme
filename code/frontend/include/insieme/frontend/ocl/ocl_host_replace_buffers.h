@@ -61,14 +61,14 @@ enum CreateBufferFlags {
 
 
 struct ClMemMetaInfo {
-	ClMemMetaInfo() : size(), type(), flags(), hostPtr() {}
+	ClMemMetaInfo() : size(), type(), flags(), initExpr() {}
 	ClMemMetaInfo(core::ExpressionPtr& size, core::TypePtr& type, std::set<enum CreateBufferFlags> flags, core::ExpressionPtr& hostPtr)
-		: size(size), type(type), flags(flags), hostPtr(hostPtr) {}
+		: size(size), type(type), flags(flags), initExpr(hostPtr) {}
 
 	core::ExpressionPtr size;
 	core::TypePtr type;
 	std::set<enum CreateBufferFlags> flags;
-	core::ExpressionPtr hostPtr;
+	core::ExpressionPtr initExpr;
 };
 
 // definitions
@@ -93,6 +93,7 @@ private:
 	ClMemMetaMap clMemMeta;
 	insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> clMemReplacements;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> generalReplacements;
+	insieme::utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> declInitReplacements;
 	core::NodePtr& prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);

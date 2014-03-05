@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -293,12 +293,15 @@ namespace backend {
 			auto fragmentManager = converter.getFragmentManager();
 			string fragmentName = "global:" + ptr->getStringValue();
 			auto fragment = fragmentManager->getFragment(fragmentName);
-
+				
 			// check fragment
 			if (!fragment) {
 
 				// create new declaration
 				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
+				// register fragment
+				fragmentManager->bindFragment(fragmentName, declaration);
+
 
 				// get type info
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
@@ -310,9 +313,6 @@ namespace backend {
 
 				// add dependency to type declaration
 				declaration->addDependency(info.definition);
-
-				// register fragment
-				fragmentManager->bindFragment(fragmentName, declaration);
 
 				fragment = declaration;
 			}

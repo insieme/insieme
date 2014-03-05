@@ -23,15 +23,19 @@ public:
 	}*/
 
 	// ctor + default args
-	C(int a, int b= 5) : mA(a), mB(b) {
-		printf("C(int a)");
-		printf("mA 0 == %d, mB 5 == %d\n", mA, mB);
+	// doing some "fancy" stuff in the initializer
+	C(int a, int b= 5) : mA(a), mB(mA+b) {
+		printf("C(int a, int b) -- default arg\n");
+		printf("mA %d == %d, mB %d  == %d\n", this->mA, a, mB, mA+b);
 	}
 
 	//ctor + void pointer init
-	C(void * __arg) : mC(__arg) {
-		printf("C(void * __arg)");
+	// doing some "fancy" stuff in the initializer
+	C(void * __arg) : mC(__arg) , mD(&mA){
+		printf("C(void * __arg)\n");
 		printf("mC != NULL -> %d\n", mC!=NULL);
+		printf("mD != NULL -> %d\n", mD!=NULL);
+		printf("mD == &mA -> %d\n", mD==&mA);
 	}
 
 	//ctor + pointer init
@@ -57,16 +61,32 @@ public:
 
 class E {
 public:
-	D dD;
-	E() {
+	int x;
+	D dD;		//doing some strange stuff with initializers
+	D& dr;		//doing some strange stuff with initializers
+	const D& cdr;
+	E() : dr(dD), cdr(dr) {
 		printf("E()\n");
 		printf("dD.ma == %d\n", dD.ma);
+		printf("dr.ma == dD.ma -> %d\n", dr.ma == dD.ma);
+		printf("cdr.ma == dD.ma -> %d\n", cdr.ma == dD.ma);
+		dr = dD;
 	}
-	E(const E& o) { printf("E(const E&)\n"); }
-	E(int e) : dD(e) {
+	E(const E& o): cdr(dD), dr(dD) { printf("E(const E&)\n"); }
+	E(int e) : dD(e), cdr(dD), dr(dD) {
 		printf("E(int)\n");
 		printf("dD.ma == %d\n", dD.ma);
 	}
+
+	E(int e, int d) : x(d), dD(x), cdr(dD), dr(dD) {
+		printf("E(int, int)\n");
+		printf("dD.ma == %d\n", dD.ma);
+	}
+};
+
+struct X {
+	const C& c;
+	X(const C& c) : c(c) {}
 };
 
 int main() {
@@ -74,6 +94,7 @@ int main() {
 	{
 		printf("Ctor+init\n");
 		C ci1;
+		X x(ci1);
 	}
 	{
 		printf("\nArray of objects\n");
@@ -124,6 +145,8 @@ int main() {
 		printf("\nE eA[3]:\n\n");
 		E eA[3];
 	}
+		
+	E e2(10, 10);
 	
 	return 0;
 }

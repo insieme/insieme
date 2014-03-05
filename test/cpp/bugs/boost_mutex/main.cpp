@@ -15,6 +15,7 @@ int main() {
 	std::cout << x.tryLockMutex() << std::endl;
 	x.unlockMutex();
 
+	D d;
 
 	return 0;
 }

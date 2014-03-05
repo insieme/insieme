@@ -868,7 +868,7 @@ namespace backend {
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "A var_1(1, 2);");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x) {");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y((*this).x + y) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

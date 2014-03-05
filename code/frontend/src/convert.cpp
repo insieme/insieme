@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -137,7 +137,8 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
-		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
+		if ( outDecl->hasInit() && 
+			!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
 			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
 	}
@@ -817,7 +818,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					call->getArgument(0)->getType() == var->getType()){
 
 					initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
-					isConst = true;
+					isConst = false;
 				}
 
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
@@ -1095,74 +1096,86 @@ namespace {
 
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
 
-			core::StringValuePtr ident;
-			core::ExpressionPtr expr;
-			core::ExpressionPtr init;
+			core::StringValuePtr ident;	// the identifier of the member to initialize
+			core::ExpressionPtr toInit;	// the access to the member to initialize
+			
+			core::ExpressionPtr expr = converter.convertExpr((*it)->getInit());		// convert the init expr
+			bool isCtor =  insieme::core::analysis::isConstructorCall(expr);		// check if the initExpr is a ctor
 
-			core::StatementPtr  initStmt;
-
+			core::ExpressionPtr result;	// the resulting expr to be used to init the member accessed by "toInit" and initialized with "expr"
+			// for a ctor call will be : ctor(toInit, params...)
+			// for everything else:		 toInit := expr;
+		
 			if((*it)->isBaseInitializer ()){
 
-				expr = converter.convertExpr((*it)->getInit());
-				init = thisVar;
+				toInit = thisVar;
 
-				if(!insieme::core::analysis::isConstructorCall(expr)) {
+				if(!isCtor) {
 					// base init is a non-userdefined-default-ctor call, drop it
 					continue;
 				}
 
 				// if the expr is a constructor then we are initializing a member an object,
-				// we have to substitute first argument on constructor by the
+				// we have to substitute first argument on constructor by the 
 				core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
-				expr = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
-				initList.push_back (expr);
-			}
-			else if ((*it)->isMemberInitializer ()){
+				result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+			} else if ((*it)->isMemberInitializer ()){
 
 				// construct the member access based on the type and the init expression
 				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
 				core::VariablePtr genThis = thisVar;
 
-				expr = converter.convertExpr((*it)->getInit());
+				bool isCtor =  insieme::core::analysis::isConstructorCall(expr);
+
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
-				init =  builder.callExpr (builder.refType(membTy),
+				toInit =  builder.callExpr (builder.refType(membTy),
 										  builder.getLangBasic().getCompositeRefElem(), genThis,
 										  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membTy));
 
-				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-				if (!core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					core::analysis::isAnyCppRef(expr->getType())){
-					expr = builder.deref(builder.toIRRef(expr));
-				}
-				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
-				else if(core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					!core::analysis::isAnyCppRef(expr->getType())) {
+				if(isCtor) {
+					//TODO: the member to init is a reference? what do we do?
+					assert( !core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) && "memberinit with a cppref" );
 
-					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
-						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
-					} else if(core::analysis::isConstCppRef(init.getType().as<core::RefTypePtr>()->getElementType())){
-						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
-					} else { assert(false); }
-				}
-				else{
-					// magic tryDeref if not a pointer.... because!
-					// dont deref if we have a refref as init and an anyref as expr
-					// otherwise void* elements in init list will fail...
-					if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(init.getType()) &&
-                                                                 builder.getLangBasic().isAnyRef(expr->getType())))
-						expr = builder.tryDeref(expr);
-				}
+					VLOG(2) << expr;
+					// if the expr is a constructor then we are initializing a member an object,
+					// we have to substitute first argument on constructor by the
+					core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
+					result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+				} else {
+					// parameter is some kind of cpp ref, but we want to use the value, unwrap it
+					if (!core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) &&
+						core::analysis::isAnyCppRef(expr->getType())){
+						expr = builder.deref(builder.toIRRef(expr));
+					}
+					// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
+					else if(core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) &&
+						!core::analysis::isAnyCppRef(expr->getType())) {
 
-				initList.push_back(builder.assign( init, expr));
-			}
-			if ((*it)->isIndirectMemberInitializer ()){
+						if(core::analysis::isCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType())) {
+							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
+						} else if(core::analysis::isConstCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType())){
+							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
+						} else { assert(false); }
+					}
+					else{
+						// magic tryDeref if not a pointer.... because!
+						// dont deref if we have a refref as init and an anyref as expr
+						// otherwise void* elements in init list will fail...
+						if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(toInit.getType()) &&
+																	builder.getLangBasic().isAnyRef(expr->getType())))
+							expr = builder.tryDeref(expr);
+					}
 
+					// finally build the assigment
+					result = builder.assign( toInit, expr);
+				}
+			} else if ((*it)->isIndirectMemberInitializer ()){
 				// this supports indirect init of anonymous member structs/union
 				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
-				init = thisVar;
+				toInit = thisVar;
 
 				// build a chain of nested access
-					clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
+				clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
 				clang::IndirectFieldDecl::chain_iterator end = ind->chain_end ();
 				for (; ind_it!= end; ++ind_it){
 					assert(llvm::isa<clang::FieldDecl>(*ind_it));
@@ -1174,23 +1187,33 @@ namespace {
 					else{
 						ident = builder.stringValue(field->getNameAsString());
 					}
-					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(),
-											 init, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
+					toInit = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(),
+											 toInit, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
 				}
 
-				// finally build the assigment
-				expr = converter.convertExpr((*it)->getInit());
-				initList.push_back(builder.assign( init, expr));
-			}
-			if ((*it)->isInClassMemberInitializer ()){
+				if(isCtor) {
+					//TODO: the member to init is a reference? what do we do?
+					assert( !core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) && "memberinit with a cppref" );
+
+					VLOG(2) << expr;
+					// if the expr is a constructor then we are initializing a member an object,
+					// we have to substitute first argument on constructor by the
+					core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
+					result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+				} else {
+					// finally build the assigment
+					result = builder.assign( toInit, expr);
+				}
+			} else if ((*it)->isInClassMemberInitializer ()){
 				assert(false && "in class member not implemented");
-			}
-			if ((*it)->isDelegatingInitializer ()){
+			} else if ((*it)->isDelegatingInitializer ()){
 				assert(false && "delegating init not implemented");
-			}
-			if ((*it)->isPackExpansion () ){
+			} else  if ((*it)->isPackExpansion () ){
 				assert(false && "pack expansion not implemented");
 			}
+
+			VLOG(2) << result;				
+			initList.push_back(result);
 		}
 
 		// check whether there is something to do
