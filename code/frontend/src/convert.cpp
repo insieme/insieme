@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -817,7 +817,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					call->getArgument(0)->getType() == var->getType()){
 
 					initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
-					isConst = true;
+					isConst = false;
 				}
 
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
