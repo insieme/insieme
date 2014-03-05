@@ -167,7 +167,7 @@ BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {
 		em[replacement.first] = replacement.second;
 	});
 
-	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false);
+	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
 	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
 
 	printer::PrettyPrinter pp(prog);
@@ -180,7 +180,8 @@ void BufferReplacer::collectInformation() {
 	IRBuilder builder(mgr);
 
 	TreePatternPtr clCreateBuffer = pattern::var("clCreateBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) << pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) <<
+			pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
 	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
 			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
 	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
@@ -237,8 +238,14 @@ void BufferReplacer::collectInformation() {
 		// get the buffer expression address relative to root node of the pattern query
 		ExpressionAddress lhs = matchAddress >> createBuffer["buffer"].getValue().as<ExpressionAddress>();
 
+		// generate new init expression in  case of declaration
+		ExpressionPtr initExpr;
+		if(createBuffer["type"].getValue().isa<DeclarationStmtAddress>()) {
+			initExpr = builder.refVar(deviceMemAlloc);
+		}
+
 		// add gathered information to clMemMetaMap
-		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, hostPtr);
+		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, initExpr);
 	});
 
 }
@@ -319,7 +326,17 @@ void BufferReplacer::generateReplacements() {
 		// local variable case
 		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
 
-			clMemReplacements[variable] = builder.variable(newType);
+			VariablePtr newBuffer = builder.variable(newType);
+			clMemReplacements[variable] = newBuffer;
+
+			// if clCreateBuffer was called at initialization, update it now
+			if(meta.second.initExpr) {
+				declInitReplacements[newBuffer] = meta.second.initExpr;
+
+//std::cout << "initializing " << *newBuffer << " with ";
+//dumpPretty(meta.second.initExpr);
+//std::cout << std::endl;
+			}
 			return;
 		}
 		// global variable case

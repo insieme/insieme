@@ -137,7 +137,8 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
-		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
+		if ( outDecl->hasInit() && 
+			!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
 			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
 	}
