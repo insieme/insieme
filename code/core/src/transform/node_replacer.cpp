@@ -311,6 +311,40 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+		// if one of the replaced variables has been used as init expression for another one the type may changed.
+		// In that case, update the type of the declared variable
+		if(DeclarationStmtPtr decl = ptr.isa<DeclarationStmtPtr>()) {
+			// check variable and value type
+			ExpressionPtr val = decl->getInitialization();
+			TypePtr valType = val->getType();
+
+			if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
+				if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
+					if(VariablePtr iVar = initCall->getArgument(0).isa<VariablePtr>()) {
+						auto ding = replacements.find(iVar);
+						if(ding != replacements.end()) {
+							VariablePtr replaced = ding->second.isa<VariablePtr>();
+
+							VariablePtr var = decl->getVariable();
+							TypePtr varType = var->getType();
+							if(replaced && varType != valType) {
+								// create new variable with new type
+								ExpressionPtr newInit = builder.refVar(replaced);
+								VariablePtr newVar = builder.variable(newInit->getType());
+								DeclarationStmtPtr newDecl = builder.declarationStmt(newVar, newInit);
+								// add new variable to replacements
+								replacements[var] = newVar;
+		//		std::cout << "\nreplacint variable " << *var << " with " << *val << std::endl;
+								return newDecl;
+							}
+						}
+					}
+				}
+			}
+		}
+
+
 		// check whether the element has been found
         if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(ptr)) {
 			auto pos = replacements.find(expr);
@@ -372,8 +406,8 @@ private:
 		auto newInit = declInitReplacements.find(var);
 		if(newInit != declInitReplacements.end()) {
 			// use the provided init expression in declaration
-//std::cout << "\nchanging init of " << *var << " to ";
-//dumpPretty(newInit->second);
+std::cout << "\nchanging init of " << *var << " to ";
+dumpPretty(newInit->second);
 
 			return builder.declarationStmt(var, newInit->second);
 		}
@@ -391,16 +425,28 @@ private:
 		// In that case, update the type of the declared variable
 /*		if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
 			if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
-				// create new variable with new type
-				VariablePtr newVar = builder.variable(initCall->getType());
-				DeclarationStmtPtr newDecl = builder.declarationStmt(newVar, val);
-				// add new variable to replacements
-	//			replacements[var] = newVar;
-std::cout << "\nreplacint variable " << *var << " with " << *newVar << std::endl;
-//				return newDecl;
+				if(VariablePtr iVar = initCall->getArgument(0).isa<VariablePtr>()) {
+					VariablePtr replaced;
+					for_each(replacements, [&](std::pair<ExpressionPtr, ExpressionPtr> r) {
+						if(r.second == iVar) {
+							replaced = iVar;
+							return;
+						}
+					});
+
+					if(replaced) {
+						// create new variable with new type
+						VariablePtr newVar = builder.variable(initCall->getType());
+						DeclarationStmtPtr newDecl = builder.declarationStmt(newVar, val);
+						// add new variable to replacements
+						replacements[var] = newVar;
+		std::cout << "\nreplacint variable " << *var << " with " << *val << std::endl;
+						return newDecl;
+					}
+				}
 			}
 		}
-needs to be degugged */
+*/
 		// reaching this point, the IR will probably have semantic errors
 		return decl;
 	}
@@ -661,9 +707,6 @@ private:
 
 		// test whether args contains something which changed
 		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
-/*if(call->getType()->toString().find("_cl_kernel") != string::npos)
-	std::cout << "\nARG " << call->getType() << " " << *call->getFunctionExpr() << "(" << *cur << " " << *cur->getType() << ")" << std::endl;
-*/
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
@@ -674,10 +717,7 @@ private:
 
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
-/*			if(call->getType() != newCall->getType()) {
-				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
-			}
-*/
+
 			return newCall;
 		}
 		// test whether there has been a change
@@ -1260,7 +1300,7 @@ ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const Expression
 	return newExpr;
 }
 
-// functor which updates the type literal inside a call to undefined in a declareation
+// functor which updates the type literal inside a call to undefined in a declaration
 TypeHandler getVarInitUpdater(NodeManager& manager){
 	return [&](const StatementPtr& node)->StatementPtr {
 		IRBuilder builder(manager);

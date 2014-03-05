@@ -237,11 +237,12 @@ void BufferReplacer::collectInformation() {
 
 		// get the buffer expression address relative to root node of the pattern query
 		ExpressionAddress lhs = matchAddress >> createBuffer["buffer"].getValue().as<ExpressionAddress>();
-
+//std::cout << "\nvariable " << *lhs << std::endl;
 		// generate new init expression in  case of declaration
 		ExpressionPtr initExpr;
 		if(createBuffer["type"].getValue().isa<DeclarationStmtAddress>()) {
 			initExpr = builder.refVar(deviceMemAlloc);
+//std::cout << "Init: " << *initExpr << std::endl;
 		}
 
 		// add gathered information to clMemMetaMap
@@ -348,7 +349,7 @@ void BufferReplacer::generateReplacements() {
 
 
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
-		std::cout << printer::PrettyPrinter(replacement.second) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
+		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
 
 }
