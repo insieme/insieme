@@ -570,7 +570,7 @@ namespace backend {
 		auto fun = bind->getCall()->getFunctionExpr();
 
 		// instantiate generic lambdas if necessary
-		if (operatorTable.find(fun) == operatorTable.end() && fun.isa<core::LambdaExprPtr>()) {
+		if (fun.isa<core::LambdaExprPtr>()) {
 
 			// extract node manager
 			auto& mgr = bind->getNodeManager();
