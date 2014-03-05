@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -137,7 +137,8 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
-		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
+		if ( outDecl->hasInit() && 
+			!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
 			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
 	}
