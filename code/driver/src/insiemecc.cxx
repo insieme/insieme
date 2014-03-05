@@ -164,10 +164,13 @@ int main(int argc, char** argv) {
 
 	// dump the translation unit file (if needed for de-bugging)
 	if (tuCodeFile != "") {
+		std::cout << "Converting Translation Unit ...\n";
 		auto tu = options.job.toIRTranslationUnit(mgr);
 		std::ofstream out(tuCodeFile);
 		out << tu;
 	}
+
+	std::cout << "Extracting executable ...\n";
 
 	// convert src file to target code
     auto program = options.job.execute(mgr);

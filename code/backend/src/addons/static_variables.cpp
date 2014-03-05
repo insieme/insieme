@@ -47,7 +47,9 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/static_vars.h"
+#include "insieme/core/transform/manipulation.h"
 
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 namespace insieme {
 namespace backend {
@@ -73,12 +75,12 @@ namespace addons {
 			/**
 			 * A literal masking the initialization of a static literal using constants.
 			 */
-			LANG_EXT_LITERAL(InitStaticConst, "InitStaticConst", "('a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticConst, "BE.InitStaticConst", "('a, 'b)->ref<'a>");
 
 			/**
 			 * A literal masking the initialization of a static literal using lazy expressions.
 			 */
-			LANG_EXT_LITERAL(InitStaticLazy, "InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticLazy, "BE.InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
 
 		};
 
@@ -128,7 +130,6 @@ namespace addons {
 			});
 
 			res[ext2.getInitStaticConst()] = OP_CONVERTER({
-
 				// a call to this is translated to the following:
 				//
 				//			static A a = lazy();
@@ -174,7 +175,6 @@ namespace addons {
 				return C_NODE_MANAGER->create<c_ast::StmtExpr>(comp);
 			});
 
-
 			// ---------------- lazy initialization -------------------------
 
 			res[ext.getInitStaticLazy()] 	= OP_CONVERTER({
@@ -197,6 +197,18 @@ namespace addons {
 				auto& mgr = NODE_MANAGER;
 				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
 				core::IRBuilder builder(mgr);
+
+				// special case for static variables not depending on free variables
+				if (!core::analysis::hasFreeVariables(ARG(1))) {
+					// use a constant initialization by inlining the bind
+					auto value = core::transform::evalLazy(mgr, ARG(1));
+
+					auto init = builder.callExpr(ext.getInitStaticConst(), value, call[0]);
+					auto lambda = builder.lambdaExpr(builder.refType(value->getType()), init, core::VariableList());
+
+					// this function call is equivalent to a call to the new artifical lambda
+					return CONVERT_EXPR(builder.callExpr(lambda));
+				}
 
 				auto param = fun->getParameterList()[1];
 

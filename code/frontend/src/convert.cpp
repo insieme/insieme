@@ -818,7 +818,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					call->getArgument(0)->getType() == var->getType()){
 
 					initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
-					isConst = true;
+					isConst = false;
 				}
 
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
