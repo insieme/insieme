@@ -309,13 +309,29 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:ref<real<16>>>");	
 }
 
-#define CHECK_REFERENCE(ClangType, IRValue) \
+#define CHECK_TYPE(ClangType, IRValue) \
 {\
-	auto ptrType = ASTctx.getLValueReferenceType ( ClangType.withConst() );\
+	TypePtr convType = convFactory.convertType( ClangType ); \
+	EXPECT_TRUE(convType); \
+	EXPECT_EQ(IRValue, toString(*convType)); \
+}
+
+#define CHECK_POINTER(ClangType, IRValue) \
+{\
+	auto ptrType = ASTctx.getPointerType ( ClangType );\
 	TypePtr convType = convFactory.convertType( ptrType ); \
 	EXPECT_TRUE(convType); \
 	EXPECT_EQ(IRValue, toString(*convType)); \
 }
+
+#define CHECK_REFERENCE(ClangType, IRValue) \
+{\
+	auto ptrType = ASTctx.getLValueReferenceType ( ClangType );\
+	TypePtr convType = convFactory.convertType( ptrType ); \
+	EXPECT_TRUE(convType); \
+	EXPECT_EQ(IRValue, toString(*convType)); \
+}
+
 
 TEST(TypeConversion, ClassType) {
 	Logger::get(std::cerr, INFO);
@@ -331,22 +347,35 @@ TEST(TypeConversion, ClassType) {
 	//classTy->dump();
 	//
 	clang::SourceLocation loc;
-	clang::RecordDecl *classTy  = clang::CXXRecordDecl::Create(ASTctx,  clang::TagTypeKind::TTK_Class , ASTctx.getTranslationUnitDecl(), loc,
-	                                      loc, &ASTctx.Idents.get("BaseClass"));
-	classTy->dump();
+	clang::RecordDecl *classTy  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class, 
+																ASTctx.getTranslationUnitDecl(), loc,
+	                                     						loc, &ASTctx.Idents.get("BaseClass"));
 	clang::BuiltinType fieldType (clang::BuiltinType::UShort);
-	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create (ASTctx, classTy, loc, loc, 
+	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create( ASTctx, classTy, loc, loc, 
 															  &ASTctx.Idents.get("fieldA"), fieldType.getCanonicalTypeInternal(), 
-								 								0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
+								 							  0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldDecl->setAccess(clang::AccessSpecifier::AS_public );
 	classTy->startDefinition ();
 	classTy->addDeclInternal (fieldDecl);
 	classTy->setCompleteDefinition (true);
 
+//	dumpPretty(irType);
+
+	CHECK_TYPE(ASTctx.getRecordType(classTy), 	   "BaseClass");
+	CHECK_POINTER(ASTctx.getRecordType(classTy),   "ref<array<BaseClass,1>>");
+	CHECK_REFERENCE(ASTctx.getRecordType(classTy), "struct<_cpp_ref:ref<BaseClass>>");
+
+	CHECK_TYPE(ASTctx.getRecordType(classTy).withConst(), 	   "BaseClass");
+	CHECK_POINTER(ASTctx.getRecordType(classTy).withConst(),   "ref<array<BaseClass,1>>");
+	CHECK_REFERENCE(ASTctx.getRecordType(classTy).withConst(), "struct<_const_cpp_ref:ref<BaseClass>>");
+
 	auto  irType = convFactory.convertType( ASTctx.getRecordType(classTy)  ); 
-	dumpPretty(irType);
-	CHECK_REFERENCE(ASTctx.getRecordType(classTy), "struct<_const_cpp_ref:ref<BaseClass>>");
-	//dumpPretty(convFactory.getIRTranslationUnit()[irType.as<core::GenericTypePtr>()]);
+	EXPECT_TRUE(irType); 
+	EXPECT_TRUE(irType.isa<core::GenericTypePtr>()); 
+	EXPECT_TRUE(convFactory.getIRTranslationUnit()[irType.as<core::GenericTypePtr>()]);
+
+	auto  full = convFactory.getIRTranslationUnit()[irType.as<core::GenericTypePtr>()];
+	dumpPretty(full);
 
 }
 //CXX Reference Type -- NOT SUPPORTED IN C
