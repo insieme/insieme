@@ -191,7 +191,6 @@ AST_TERMINAL(Return, Statement)
 AST_TERMINAL(Throw, Statement)
 AST_TERMINAL(Goto, Statement)
 AST_TERMINAL(Label, Statement)
-AST_TERMINAL(StaticVarDecl, Statement)
 
 //
 // --- Expressions ---

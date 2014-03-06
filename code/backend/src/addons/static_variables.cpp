@@ -46,10 +46,11 @@
 #include "insieme/backend/statement_converter.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 
-#include "insieme/backend/c_ast/c_ast_printer.h"
+#include "insieme/backend/preprocessor.h"
 
 namespace insieme {
 namespace backend {
@@ -81,6 +82,52 @@ namespace addons {
 			 * A literal masking the initialization of a static literal using lazy expressions.
 			 */
 			LANG_EXT_LITERAL(InitStaticLazy, "BE.InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
+
+		};
+
+		// a marker for annotation for globals only only initialized once
+		struct SingleStaticInitMarker {};
+
+
+		// a pre-processor marking all static variables only used once
+		class StaticInitVisitor : public PreProcessor {
+
+			virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) {
+
+				core::NodeManager& mgr = code->getNodeManager();
+				auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
+
+				std::map<core::LiteralPtr, std::set<core::CallExprPtr>> inits;
+				auto collector = [&](const core::CallExprPtr& call) {
+					// only interested in init-static-lazy calls
+					if (core::analysis::isCallOf(call, ext.getInitStaticLazy())) {
+						inits[call[0].as<core::LiteralPtr>()].insert(call);
+					}
+				};
+
+				// search all InitStaticLazy calls
+				core::visitDepthFirstOnce(code, collector);
+
+				// also search all meta-type infos
+				core::visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
+					if (core::hasMetaInfo(type)) {
+						for(const auto& cur : core::getMetaInfo(type).getChildNodes()) {
+							visitDepthFirstOnce(cur, collector);
+						}
+					}
+				}, true, true);
+
+				// mark init calls that are unique
+				for(const auto& cur : inits) {
+					if (cur.second.size() == 1u) {
+						(*cur.second.begin())->attachValue<SingleStaticInitMarker>();
+					}
+				}
+
+				// that's it
+				return code;
+			}
+
 
 		};
 
@@ -198,8 +245,9 @@ namespace addons {
 				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
 				core::IRBuilder builder(mgr);
 
-				// special case for static variables not depending on free variables
-				if (!core::analysis::hasFreeVariables(ARG(1))) {
+				// special case for static variables not depending on free variables and is a single static init marker
+				// TODO: if this ever causes a problem that only closed init values may be used fix it here
+				if (!core::analysis::hasFreeVariables(ARG(1)) && call->hasAttachedValue<SingleStaticInitMarker>()) {
 					// use a constant initialization by inlining the bind
 					auto value = core::transform::evalLazy(mgr, ARG(1));
 
@@ -270,6 +318,9 @@ namespace addons {
 
 	void StaticVariables::installOn(Converter& converter) const {
 		
+		// install pre-processor
+		converter.setPreProcessor(makePreProcessorSequence(converter.getPreProcessor(), makePreProcessor<StaticInitVisitor>()));
+
 		// register additional operators
 		converter.getFunctionManager().getOperatorConverterTable().insertAll(getStaticVariableOperatorTable(converter.getNodeManager()));
 

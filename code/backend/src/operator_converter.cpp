@@ -968,6 +968,10 @@ namespace backend {
 
 		// -- others --
 
+		res[basic.getId()] = OP_CONVERTER({
+			return CONVERT_ARG(0);		// simply forward input argument
+		});
+
 		res[basic.getIfThenElse()] = OP_CONVERTER({
 			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1))), CONVERT_EXPR(inlineLazy(ARG(2))));
