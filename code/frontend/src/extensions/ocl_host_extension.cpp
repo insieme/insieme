@@ -70,6 +70,9 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
+	ocl::OclSimpleTypeHandler osth(root);
+	root = osth.getTransformedProgram();
+
 	ocl::TypeFixer otf(root);
 	root = otf.getTransformedProg();
 
@@ -80,8 +83,8 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-//std::cout << printer::PrettyPrinter(root) << std::endl;
 
+//std::cout << printer::PrettyPrinter(root) << std::endl;
 //	prog = builder.program(list);
 
 	return prog;
