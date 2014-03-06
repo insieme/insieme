@@ -1020,6 +1020,96 @@ namespace backend {
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
+
+	TEST(CppSnippet, StaticVariableSingle) {
+
+		// something including a non-parameter!
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["init"] = ext.getInitStaticLazy();
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
+
+					int main() {
+						
+						init(a, ()=> 2);
+
+						return 0;
+					}
+				)", symbols
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, " static int32_t a = 2;");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, StaticVariableDefaultCtor) {
+
+		// something including a non-parameter!
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["init"] = ext.getInitStaticLazy();
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					let A = struct A {};
+					let a = lit("a":ref<struct __static_var { bool initialized; A value; }>);
+					let ctorA = A::() { };
+
+					int main() {
+						
+						init(a, ()=> *ctorA(var(undefined(lit(A)))));
+
+						return 0;
+					}
+				)", symbols
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, " static A a;");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
 } // namespace backend
 } // namespace insieme
 

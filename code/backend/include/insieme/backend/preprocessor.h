@@ -148,6 +148,14 @@ namespace backend {
 
 	};
 
+	/**
+	 * A generic factory function for pre-processor sequences.
+	 */
+	template<typename ... P>
+	PreProcessorPtr makePreProcessorSequence(const P& ... processors) {
+		return makePreProcessor<PreProcessingSequence>(processors...);
+	}
+
 
 	// ------- concrete pre-processing step implementations ---------
 
