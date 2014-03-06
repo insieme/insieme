@@ -78,8 +78,7 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 			}
 		case clang::TemplateArgument::ArgKind::Type:
 			{
-				const clang::Type* argType = arg->getAsType().getTypePtr();
-                auto type = convFact.convertType(argType);
+                auto type = convFact.convertType(arg->getAsType());
                 if(arg->getAsType().isConstQualified()) {
                     if(core::GenericTypePtr ptr = type.isa<core::GenericTypePtr>()) {
                         type = builder.getNodeManager().getLangExtension<core::lang::ConstExtension>().getConstType(type);
@@ -147,21 +146,19 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 
 } //end anonymous namespace
 
-insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const{
+insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const{
 	auto builder = convFact.getIRBuilder();
 	core::TypePtr irType;
 
-	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr()) ) {
 		const clang::TagDecl* tagDecl = tagType->getDecl();
 
 		insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
 		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
 			VLOG(2) << " == intercepting template spetialization == ";
-			if (VLOG_IS_ON(2) ) type->dump();
 			const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
 			for(size_t i = 0; i<args.size(); i++) {
 				VLOG(2) << " template elem elem: " << i << " of " ;
-				if (VLOG_IS_ON(2) ) type->dump();
 
 				auto tmp = evaluateTemplatedType(&args[i], convFact);
 				typeList.insert(typeList.end(), tmp.begin(), tmp.end());
@@ -190,7 +187,7 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 		// add header file
 		convFact.getHeaderTagger().addHeaderForDecl(irType, tagDecl, true);
 
-	} else if( llvm::isa<clang::TypedefType>(type) ) {
+	} else if( llvm::isa<clang::TypedefType>(type.getTypePtr()) ) {
 		// don't intercept typedefs -> only sugar, we can use underlying type
 		assert(false && "typedef is sugar -- use underlying type");
 	}
@@ -210,15 +207,15 @@ bool Interceptor::isIntercepted(const string& name) const {
 	return regex_match(name, rx);
 }
 
-bool Interceptor::isIntercepted(const clang::Type* type) const {
+bool Interceptor::isIntercepted(const clang::QualType& type)const {
 	if(toIntercept.empty()) { return false; }
 
 	//not every clang type has a Decl
 	//cast Type and get decl
 	clang::TypeDecl* typeDecl = NULL;
-	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr()) ) {
 		typeDecl = tagType->getDecl();
-	} else if( llvm::isa<clang::TypedefType>(type) ) {
+	} else if( llvm::isa<clang::TypedefType>(type.getTypePtr()) ) {
 		// don't intercept typedefs -> only sugar, we can use underlying type
 		return false;
 	}
@@ -338,7 +335,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	}
 
 
-	core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
+	core::FunctionTypePtr type = convFact.convertType( decl->getType() ).as<core::FunctionTypePtr>();
 
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
@@ -387,7 +384,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDec
 	VLOG(2) << fixedQualifiedName;
 
 	std::string enumConstantName = fixedQualifiedName;
-	core::TypePtr enumTy = convFact.convertType(enumType);
+	core::TypePtr enumTy = convFact.convertType(enumType->getCanonicalTypeInternal());
 	return convFact.getIRBuilder().literal(enumConstantName, enumTy);
 }
 

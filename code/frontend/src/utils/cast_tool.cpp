@@ -477,7 +477,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 	core::NodeManager& mgr = convFact.getNodeManager();
 
 	core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
-	core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
+	core::TypePtr  targetTy = convFact.convertType(castExpr->getType());
 
 	core::TypePtr&& exprTy = expr->getType();
 
@@ -491,6 +491,14 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 	//		VLOG(2)  << "####### clang: #######" << std::endl;
 	//		castExpr->dump();
 	//	}
+			std::cout << "####### Expr: #######" << std::endl;
+			std::cout << (expr);
+			std::cout << "####### Expr Type: #######" << std::endl;
+			std::cout << (exprTy);
+			std::cout << "####### cast Type: #######" << std::endl;
+			std::cout << (targetTy);
+			std::cout  << "####### clang: #######" << std::endl;
+			castExpr->dump();
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
@@ -836,7 +844,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
+				core::TypePtr targetTy= convFact.convertType((*it)->getType());
 				//if it is no ref we have to materialize it, otherwise refParent cannot be called
 				if(expr->getType()->getNodeType() != core::NT_RefType) {
 					expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
@@ -844,7 +852,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.refParent(expr, targetTy);
 			}
 
-			if(GET_TYPE_PTR(castExpr)->isPointerType()){
+			if(castExpr->getType().getTypePtr()->isPointerType()){
 				// is a pointer type -> return pointer
 				expr = builder.callExpr(gen.getScalarToArray(), expr);
 			}
@@ -858,7 +866,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a);
 		{
 			//we want to know the TYPE of static_cast<TYPE>()
-			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			targetTy = convFact.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
 			VLOG(2) << exprTy << " " << targetTy;
 
 			core::ExpressionPtr retIr;
@@ -886,6 +894,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral(targetTy));
 				}
 			} else {
+				std::cout << targetTy<<std::endl;
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 
@@ -898,7 +907,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// A C++ dynamic_cast.
 		{
 			//we want to know the TYPE of dynamic_cast<TYPE>()
-			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			targetTy = convFact.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
 			VLOG(2) << exprTy << " " << targetTy;
 
 			core::ExpressionPtr retIr;

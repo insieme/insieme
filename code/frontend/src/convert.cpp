@@ -536,7 +536,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 		// Conversion of the variable type
 		QualType&& varTy = valDecl->getType();
-		core::TypePtr&& irType = convertType( varTy.getTypePtr() );
+		core::TypePtr&& irType = convertType( varTy );
 		assert(irType && "type conversion for variable failed");
 
 		VLOG(2)	<< "clang type: " << varTy.getAsString();
@@ -881,7 +881,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
 	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
 	assert(enumType);
-	core::TypePtr enumTy = convertType(enumType);
+	core::TypePtr enumTy = convertType(enumType->getCanonicalTypeInternal());
 
 	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
 	string enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
@@ -982,26 +982,25 @@ core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 /////////////////////////////////////////////////////////////////
 //
 core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* funcDecl){
-	const clang::Type* type= GET_TYPE_PTR(funcDecl);
 	trackSourceLocation(funcDecl);
-	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
+	core::FunctionTypePtr funcType = convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
 
 	// check whether it is actually a member function
 	core::TypePtr ownerClassType;
 	core::FunctionKind funcKind;
 	if (const auto* decl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)) {
 		funcKind = core::FK_CONSTRUCTOR;
-		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 	} else if (const auto* decl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)) {
 		funcKind = core::FK_DESTRUCTOR;
-		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 	} else if (const auto* decl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (decl->isStatic()){
 			return funcType;
 		}
 		else{
 			funcKind = core::FK_MEMBER_FUNCTION;
-			ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+			ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 		}
 	} else {
 		// it is not a member function => just take the plain function
@@ -1053,7 +1052,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 	if(!res) {
 		// trigger the actual conversion
-		res = convertType(decl->getTypeForDecl());
+		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1074,8 +1073,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 //////////////////////////////////////////////////////////////////
 //
-core::TypePtr Converter::convertType(const clang::Type* type) {
-	assert(type && "Calling convertType with a NULL pointer");
+core::TypePtr Converter::convertType(const clang::QualType& type) {
 	return typeConvPtr->convert( type);
 }
 
@@ -1122,7 +1120,7 @@ namespace {
 			} else if ((*it)->isMemberInitializer ()){
 
 				// construct the member access based on the type and the init expression
-				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
+				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType());
 				core::VariablePtr genThis = thisVar;
 
 				bool isCtor =  insieme::core::analysis::isConstructorCall(expr);
@@ -1180,7 +1178,7 @@ namespace {
 				for (; ind_it!= end; ++ind_it){
 					assert(llvm::isa<clang::FieldDecl>(*ind_it));
 					const clang::FieldDecl* field = llvm::cast<clang::FieldDecl>(*ind_it);
-					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType().getTypePtr());
+					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType());
 					if ((*ind_it)->getNameAsString().empty()){
 						ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
 					}
@@ -1262,8 +1260,8 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			auto retExpr = builder.getLangBasic().getRefDelete();
 
 			// handle issue with typing of free when not including stdlib.h
-			core::FunctionTypePtr freeTy = typeCache[GET_TYPE_PTR(funcDecl)].as<core::FunctionTypePtr>();
-			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
+			core::FunctionTypePtr freeTy = typeCache[funcDecl->getType()].as<core::FunctionTypePtr>();
+			typeCache[funcDecl->getType()]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
 
 			lambdaExprCache[funcDecl] = retExpr;
 			return ;

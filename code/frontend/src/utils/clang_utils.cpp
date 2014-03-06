@@ -80,14 +80,14 @@ std::string removeSymbols(std::string& s) {
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type){
 
 	// beware of aliasing types, if we find a typedef, better to use the inner type
 	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
 		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
 			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
 			if (!recTy->getDecl()->getNameAsString().empty() ){
-				return getNameForRecord(recTy->getDecl(), recTy);
+				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal());
 			}
 		}
 	}
