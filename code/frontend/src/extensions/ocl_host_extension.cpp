@@ -85,7 +85,7 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 
 
 //std::cout << printer::PrettyPrinter(root) << std::endl;
-//	prog = builder.program(list);
+	prog = builder.program(list);
 
 	return prog;
 }
