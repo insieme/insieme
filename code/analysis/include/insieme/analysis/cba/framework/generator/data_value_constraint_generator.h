@@ -141,7 +141,9 @@ namespace cba {
 
 			out << value << " = " << getAnalysisName(std::get<0>(data)) <<
 					"[l" << label << " = " << node->getNodeType() << " : "
-						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : ";
+						 << node
+						 << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+						 ;
 
 			// print remaining set parameters (including context)
 			printParams(out, utils::int_type<2>(), data);
@@ -189,10 +191,10 @@ namespace cba {
 	 *
 	 * @param valueMgr the value manager to be utilized for the construction
 	 * @param type the type of value for which an unknown value instance shell be constructed
-	 * @param unknown the atomic unknown value
+	 * @param value the atomic value to be composed
 	 */
 	template<typename mgr, typename value_type>
-	value_type getUndefinedValue(mgr& valueMgr, const TypePtr& type, const value_type& unknown) {
+	value_type getUniformValue(mgr& valueMgr, const TypePtr& type, const value_type& value) {
 
 		// check type - handle all structured cases
 
@@ -201,14 +203,14 @@ namespace cba {
 
 			// built up the value representing an undefined vector
 			std::map<ElementIndex,value_type> data;
-			data[ElementIndex()] = getUndefinedValue(valueMgr, vec->getElementType(), unknown);
+			data[ElementIndex()] = getUniformValue(valueMgr, vec->getElementType(), value);
 			return valueMgr.compound(data);
 
 		} else if (auto array = type.isa<ArrayTypePtr>()) {
 
 			// built up the value representing an undefined array
 			std::map<ElementIndex,value_type> data;
-			data[ElementIndex()] = getUndefinedValue(valueMgr, array->getElementType(), unknown);
+			data[ElementIndex()] = getUniformValue(valueMgr, array->getElementType(), value);
 			return valueMgr.compound(data);
 
 		} else if (auto compound = type.isa<NamedCompositeTypePtr>()) {
@@ -216,14 +218,14 @@ namespace cba {
 			// built up the value representing an undefined composite type
 			std::map<FieldIndex,value_type> data;
 			for(const auto& cur : compound) {
-				data[FieldIndex(cur->getName())] = getUndefinedValue(valueMgr, cur->getType(), unknown);
+				data[FieldIndex(cur->getName())] = getUniformValue(valueMgr, cur->getType(), value);
 			}
 			return valueMgr.compound(data);
 
 		}
 
 		// in all other cases it is just the unknown value (default)
-		return unknown;
+		return value;
 	}
 
 } // end namespace cba

@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 	cba_dump_execution_net();
 	cba_dump_state_graph();
 
-//	cba_dump_equations();
+	cba_dump_equations();
 
 	#pragma omp parallel
 	{

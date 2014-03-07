@@ -239,7 +239,7 @@ namespace cba {
 
 				// print merged in thread dependencies
 				for(const auto& cur : bodies) {
-					out << cur << " -> " << this->out << "[label=\"may spawn\"]\n";
+					out << cur.second << " -> " << this->out << "[label=\"may spawn\"]\n";
 				}
 
 				// and the default dependencies

@@ -595,6 +595,8 @@ namespace cba {
 		NominalIndex nA("a");
 		NominalIndex nB("b");
 
+		SingleIndex sI(2);
+
 		mgr_type mgr;
 		mgr.template registerIndexType<NominalIndex>();
 		mgr.template registerIndexType<SingleIndex>();
@@ -649,6 +651,28 @@ std::cout << "Before: " << e << "\n";
 std::cout << "After:  " << r << "\n";
 			// check post-condition
 			EXPECT_PRED2(less_op, s3, projection_op(r, nA));		// a should be updated
+		}
+
+		// write into an empty value a nested value
+		{
+			// update component of an empty structure
+			auto r = mutation_op(mgr, e, DataPath() << nA << nB, s3);
+std::cout << "\n";
+std::cout << "Before: " << e << "\n";
+std::cout << "After:  " << r << "\n";
+			// check post-condition
+			EXPECT_PRED2(less_op, s3, projection_op(projection_op(r, nA), nB));		// a should be updated
+		}
+
+		// write into an empty value a nested value heterogeneous
+		{
+			// update component of an empty structure
+			auto r = mutation_op(mgr, e, DataPath() << nA << sI, s3);
+std::cout << "\n";
+std::cout << "Before: " << e << "\n";
+std::cout << "After:  " << r << "\n";
+			// check post-condition
+			EXPECT_PRED2(less_op, s3, projection_op(projection_op(r, nA), sI));		// a should be updated
 		}
 
 		// a more nested example

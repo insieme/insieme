@@ -193,7 +193,7 @@ namespace cba {
 				res.insert(in_values.begin(), in_values.end());
 
 				// and if loc is referenced, this one might be a new definition
-				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; })) {
+				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref.getLocation() == loc; })) {
 					res.insert(def);
 				}
 

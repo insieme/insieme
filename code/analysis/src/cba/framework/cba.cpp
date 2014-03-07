@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/cba/framework/cba.h"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
 #include "insieme/core/checks/full_check.h"
@@ -85,6 +87,16 @@ namespace cba {
 		pos->second->addConstraints(*this, value, res);
 	}
 
+	namespace {
+
+		string escape(string str) {
+			boost::replace_all(str, "\"", "\\\"");
+			return str;
+		}
+
+	}
+
+
 	void CBA::plot(std::ostream& out) const {
 		const Constraints& constraints = solver.getConstraints();
 		const Assignment& ass = solver.getAssignment();
@@ -107,8 +119,15 @@ namespace cba {
 			ValueID id = cur.first;
 			// use constraint generator to format value
 			out << id << " [label=\"";
+
+			// print it to a intermediate buffer to filter out quotes
+			std::stringstream res;
+			cur.second->printValueInfo(res, *this, id);
+
+			out << escape(res.str());
+
 			cur.second->printValueInfo(out, *this, id);
-			out << " = " << getSolution(id) << "\""
+			out << " = " << escape(getSolution(id)) << "\""
 						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];\n\t";
 		}
 
@@ -139,14 +158,19 @@ namespace cba {
 
 		// print names of all sets
 		for(const auto& cur : value2generator) {
+
+			// skip non-resolved values (not important)
+			ValueID id = cur.first;
+			if (!solver.isResolved(id)) continue;
+
 			// only print root nodes
 			bool isRoot = all(constraints, [&](const ConstraintPtr& cstr)->bool {
 				return !::contains(cstr->getOutputs(), cur.first);
 			});
 
+			// skip everything that isn't a root node
 			if (!isRoot) continue;
 
-			ValueID id = cur.first;
 			// use constraint generator to format value
 			out << id << " [label=\"";
 			cur.second->printValueInfo(out, *this, id);
