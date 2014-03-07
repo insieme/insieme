@@ -187,6 +187,16 @@ public:
 	const core::NodePtr resolveElement(const core::NodePtr& ptr);
 };
 
+class OclSimpleTypeHandler {
+	core::NodePtr prog;
+
+public:
+	OclSimpleTypeHandler(core::NodePtr prog);
+
+	core::NodePtr getTransformedProgram() {return prog;}
+
+};
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

@@ -272,20 +272,21 @@ void KernelReplacer::collectArguments() {
 			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 
 			// add ref<array< >> to type
-			type = builder.refType(builder.arrayType(type));
+			TypePtr arrType = builder.refType(builder.arrayType(type));
 
 			//collect types of the arguments
-			kernelTypes[kernel].at(argIdx) = (type);
+			kernelTypes[kernel].at(argIdx) = (arrType);
 
 
 			// refresh variables used in the generation of the local variable
 			VariableMap varMapping;
 			utils::refreshVariables(size, varMapping, builder);
 
-			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(type));
-			ExpressionPtr allocMemory = builder.refVar(builder.callExpr(type, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size));
+			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(arrType));
+			ExpressionPtr allocMemory = builder.refVar(builder.callExpr(arrType, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size));
 
 			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, allocMemory));
+			body.push_back(builder.intLit(21));
 			body.push_back(builder.returnStmt(builder.intLit(0)));
 
 			//ßßß		kernelArgs[kernel].push_back(builder.getTypeLiteral((builder.refType(type))));
@@ -312,7 +313,6 @@ void KernelReplacer::collectArguments() {
 			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 			replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, args);
 
-
 			// initialize local memory place with undefined
 	/*		return builder.callExpr(gen.getUnit(), gen.getRefAssign(), builder.callExpr(builder.refType(type), gen.getTupleRefElem(), kernel,
 					(gen.isUInt8(idx) ? idx :	builder.castExpr(gen.getUInt8(), idx)),
@@ -333,11 +333,9 @@ void KernelReplacer::collectArguments() {
 		FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType().as<TypePtr>(), (arg)->getType()), gen.getInt4());
 		params.push_back(src);
 
-		body.push_back(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg,
-										builder.getTypeLiteral(src->getType())), src));
+		body.push_back(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(src->getType())), src));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
-		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg,
-				builder.getTypeLiteral(src->getType())), src)));
+		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
 		// store argument in a tuple
 		replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, kernel, arg);
