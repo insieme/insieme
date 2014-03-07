@@ -69,13 +69,13 @@
 
 void irt_papi_init();
 
-void irt_papi_finalize();
+void irt_papi_finalize(irt_context* context);
 
 void irt_papi_start();
 
-void irt_papi_stop();
+void irt_papi_stop(long long int* papi_values);
 
-int64 irt_papi_get_value_by_name(const char* event_name);
+int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name);
 
 void irt_papi_select_events(irt_context* context, const char* papi_events_string);
 

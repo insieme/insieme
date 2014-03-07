@@ -388,7 +388,7 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 
 void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
 
-//	irt_inst_region_select_metrics("");
+	irt_inst_region_select_metrics("");
 //	irt_papi_select_events(irt_context_get_current(), NULL);
 
 	ir_inst_region_start(0);
