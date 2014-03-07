@@ -69,6 +69,21 @@ core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
  * Builds a ref.deref call around an expression if the it is of ref-type
  */
 core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr);
+
+/*
+ * removes the returns 'a if type is ref<'a>, type otherwise
+ */
+core::TypePtr removeSingleRef(const core::TypePtr& type);
+
+/*
+ * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
+ */
+core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr);
+
+/*
+ * takes a type ref<array<vector<'b,#l>,1>> and creates ref<array<'b>,1> from it
+ */
+core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder);
 /*
  * takes the expression passed to size (in bytes) and tries to extract the size in number of elements as well as the type to be used
  */

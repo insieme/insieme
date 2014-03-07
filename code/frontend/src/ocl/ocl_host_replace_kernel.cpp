@@ -45,6 +45,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
@@ -178,6 +179,113 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	return kernelJob.execute(builder.getNodeManager(), false);
 }
 
+/* Assumptions:
+ * 1. the work dimension is a scalar in the arguments
+ * 2. The cast to void* of the local/global size happens in the argument
+*/
+const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
+	NodeManager& mgr = workDim->getNodeManager();
+	IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	const TypePtr vecTy = builder.vectorType(gen.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+	TypePtr argTy;
+	VariablePtr param;
+	ExpressionPtr arg;
+	unsigned int wd;
+
+	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(workDim)) {
+		workDim = cast->getSubExpression();
+	}
+
+	if(const CallExprPtr call = dynamic_pointer_cast<const CallExprPtr>(workDim)) {
+		if (gen.isScalarCast(call->getFunctionExpr()))
+			workDim = call[0];
+	}
+
+	dumpDetail(workDim);
+
+	// check work dimension
+	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);
+	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
+	wd = dim->getValueAs<unsigned int>();
+	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
+	assert(wd < 3u && "Invalid work_dim. Should be 1 - 3!");
+
+	// check if there is a x to array called
+	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
+		if(toArray->getFunctionExpr() == gen.getScalarToArray()) {
+			// check consitency with workDim, should be 1
+			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
+
+			argTy = toArray->getArgument(0)->getType();
+			param = builder.variable(argTy);
+			arg = toArray->getArgument(0);
+		} else if(toArray->getFunctionExpr() == gen.getRefVectorToRefArray()) {
+			arg = toArray->getArgument(0);
+			argTy = arg->getType();
+			param = builder.variable(argTy);
+		} else if(toArray->getFunctionExpr() == gen.getRefVar() ) {
+			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
+	// throw away ref.var
+	// TODO only a dirty fix, check it
+	// this will no longer happen, vector-to-array is gone
+//				if(vta->getFunctionExpr() == gen.getVectorToArray()) {
+//					arg = vta->getArgument(0);
+//					argTy = arg->getType();
+//					param = builder.variable(argTy);
+//				}
+			}
+		} else {
+			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
+			assert(false && "Unexpected function in OpenCL size argument");
+		}
+	} else { // the argument is an array
+		size = utils::removeDoubleRef(size);
+		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
+		argTy = size->getType();
+		param = builder.variable(argTy);
+		arg = size;
+	}
+
+	ExpressionPtr init = utils::removeDoubleRef(param);
+
+	bool isArray = builder.matchType("ref<array<'a, 1>>", init->getType());
+	isArray |= builder.matchType("ref<vector<'a, #n>>", init->getType());
+	isArray |= builder.matchType("array<'a, 1>", init->getType());
+	isArray |= builder.matchType("vector<'a, #n>", init->getType());
+
+	DeclarationStmtPtr vDecl;
+	if(wd == 1) {
+		if(isArray)
+			init = builder.arrayAccess(init, builder.literal(gen.getUInt8(), "0"));
+		if(init->getType() != gen.getUInt8()) {
+			init = builder.castExpr(gen.getUInt8(), utils::tryDeref(init));
+		}
+		vDecl = builder.declarationStmt(vecTy,
+				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(gen.getUInt8(), "1"), builder.literal(gen.getUInt8(), "1"))));
+	} else {
+		assert(isArray && "Size argument of multidimensional group is no vector or array");
+
+		vector<ExpressionPtr> subscripts;
+		subscripts.push_back(builder.arrayAccess(init, builder.literal(gen.getUInt8(), "0")));
+		subscripts.push_back(builder.arrayAccess(init, builder.literal(gen.getUInt8(), "1")));
+		subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.arrayAccess(init, builder.literal(gen.getUInt8(), "2")) :
+				(ExpressionPtr)builder.literal(gen.getUInt8(), "1"));
+
+		for_each(subscripts, [&](ExpressionPtr& r) {
+					if(r->getType() != gen.getUInt8())
+					r = builder.castExpr(gen.getUInt8(), utils::tryDeref(r));
+				});
+
+		vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
+	}
+
+	FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+
+	return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
+							builder.returnStmt(vDecl->getVariable()))), arg);
+}
 }
 
 KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){
@@ -248,10 +356,10 @@ void KernelReplacer::collectArguments() {
 		ExpressionPtr arg = setArg["arg_value"].getValue().as<ExpressionPtr>();
 		ExpressionPtr sizeArg = setArg["arg_size"].getValue().as<ExpressionPtr>();
 
-		int argIdx = insieme::utils::numeric_cast<int>(idx->getStringValue());
+		unsigned int argIdx = insieme::utils::numeric_cast<unsigned int>(idx->getStringValue());
 
 		// reserve memory
-		for(int i = kernelTypes[kernel].size(); i <= argIdx; ++i)
+		for(unsigned int i = kernelTypes[kernel].size(); i <= argIdx; ++i)
 			kernelTypes[kernel].push_back(TypePtr());
 
 		VariablePtr tuple = builder.variable(kernel->getType());
@@ -265,28 +373,35 @@ void KernelReplacer::collectArguments() {
 		if(utils::isNullPtr(arg)) {
 			// in this case arg is a local variable which has to be declared in host code
 			// need to read size parameter
-			ExpressionPtr size;
+/*+			ExpressionPtr size;
 			TypePtr type;
 			ExpressionPtr hostPtr;
 			utils::extractSizeFromSizeof(sizeArg, size, type);
 			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
-
+not needed since we store the entire sizeArg to avoid confusions with different types
++*/
 			// add ref<array< >> to type
-			TypePtr arrType = builder.refType(builder.arrayType(type));
+//+			TypePtr arrType = builder.refType(builder.arrayType(type));
 
 			//collect types of the arguments
-			kernelTypes[kernel].at(argIdx) = (arrType);
+//+			kernelTypes[kernel].at(argIdx) = (arrType);
+			// only store size of local mem arrays, therefore it's always uint4
+			kernelTypes[kernel].at(argIdx) = gen.getUInt4();
+			// store the information that this is a local memory argument
+			localMemArgs[kernel].insert(argIdx);
 
 
 			// refresh variables used in the generation of the local variable
 			VariableMap varMapping;
-			utils::refreshVariables(size, varMapping, builder);
+//+			utils::refreshVariables(size, varMapping, builder);
+			utils::refreshVariables(sizeArg, varMapping, builder);
 
-			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(arrType));
-			ExpressionPtr allocMemory = builder.refVar(builder.callExpr(arrType, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size));
+//+			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(arrType));
+			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(gen.getUInt4()));
+//+			ExpressionPtr allocMemory = builder.refVar(builder.callExpr(arrType, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size));
 
-			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, allocMemory));
-			body.push_back(builder.intLit(21));
+//+			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, allocMemory));
+			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, sizeArg));
 			body.push_back(builder.returnStmt(builder.intLit(0)));
 
 			//ßßß		kernelArgs[kernel].push_back(builder.getTypeLiteral((builder.refType(type))));
@@ -371,7 +486,6 @@ void KernelReplacer::replaceKernels() {
 }
 
 void KernelReplacer::loadKernelCode() {
-	return;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
@@ -411,16 +525,64 @@ void KernelReplacer::loadKernelCode() {
 
 	irp::matchAllPairs(clEnqueueNDRangeKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& ndrangeKernel) {
 
-		ExpressionPtr kernelVar = utils::getRootVariable(matchAddress >> ndrangeKernel["kernel"].getValue()).as<ExpressionPtr>();
+		ExpressionPtr k = utils::getRootVariable(matchAddress >> ndrangeKernel["kernel"].getValue()).as<ExpressionPtr>();
 		// try to find coresponding kernel function
-		assert(kernelFunctions.find(kernelVar) != kernelFunctions.end());
+		assert(kernelFunctions.find(k) != kernelFunctions.end() && "Cannot find OpenCL Kernel");
+std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
+
+		const ExpressionPtr kernelFun = kernelFunctions[k];
+		const ExpressionPtr local = anythingToVec3(ndrangeKernel["work_dim"].getValue().as<ExpressionPtr>(),
+				ndrangeKernel["local_work_size"].getValue().as<ExpressionPtr>());
+		const ExpressionPtr global = anythingToVec3(ndrangeKernel["work_dim"].getValue().as<ExpressionPtr>(),
+				ndrangeKernel["global_work_size"].getValue().as<ExpressionPtr>());
+
+//		dumpPretty(kernelFun);
+//for_each(kernelTypes[k], [&](TypePtr ty) {
+//	std::cout << "->\t" << *ty << std::endl;
+//});
+
+		LambdaExprPtr lambda = kernelFunctions[k].as<LambdaExprPtr>();
+		NodePtr kernelCall;
+
+		/*    assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
+		const VariablePtr& args = kernelArgs[k];
+		const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
+		const VariableList& interface = lambda->getParameterList()->getElements();
+
+		vector<ExpressionPtr> newArgs;
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+		// construct call to kernel function
+//		if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
+	//std::cout << "lmd " << localMemDecls[k] << std::endl;
+		// if there is no local memory in argument, the arguments can simply be copied
+		for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
+			TypePtr argTy = utils::vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
+			ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(k),
+					builder.literal(gen.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
+			if(*argTy != *interface.at(i)->getType()) // argument of kernel is an ocl vector type
+				tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), gen.getRefReinterpret(),
+						tupleMemberAccess, builder.getTypeLiteral(utils::removeSingleRef(interface.at(i)->getType())));
+
+			newArgs.push_back(tupleMemberAccess);
+		}
+
+		// add global and local size to arguments
+		newArgs.push_back(global);
+		newArgs.push_back(local);
+
+		kernelCall = builder.callExpr(gen.getInt4(), lambda, newArgs);
+
+		transform::utils::migrateAnnotations(ndrangeKernel["enrk"].getValue().as<NodePtr>(), kernelCall);
 
 		// TODO add kernel call here
 		replacements[ndrangeKernel["enrk"].getValue()] = builder.uintLit(0);
+
+//	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(kernelCall);
 	});
 
+	prog = transform::replaceAll(mgr, prog, replacements, false);
 
-	prog = transform::replaceAll(mgr, prog, replacements);
 }
 
 ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
