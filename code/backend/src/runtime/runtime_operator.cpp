@@ -315,6 +315,12 @@ namespace runtime {
 
 			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_alloc"), size);
 		});
+
+        // param clause
+
+		table[basic.getPickInRange()] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0));
+		});
 		
 		table[basic.getRefDelete()] = OP_CONVERTER({
             return operators::refDelete(context, call, "irt_free", false);

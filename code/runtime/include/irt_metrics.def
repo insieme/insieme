@@ -138,8 +138,6 @@ METRIC(rapmi_ticks,                 52,   us,      uint32,      "%u",        IRT
 #endif
 
 GROUP(energy_group, , rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
 	{}, \
 	{}, \
 	{ irt_get_energy_consumption(&(rapl_data)); }, \

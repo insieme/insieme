@@ -244,6 +244,10 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	}
 }
 
+void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item *wi) {
+    lwt_continue(&self->basestack, &wi->stack_ptr);
+}
+
 void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi) {
 	irt_worker_run_immediate(self, &wi->range, wi->impl_id, wi->parameters);
 }

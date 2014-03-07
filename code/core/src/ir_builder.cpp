@@ -920,8 +920,7 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 }
 
 CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& max) const {
-	TypePtr type = manager.getLangBasic().getUInt8();
-	return callExpr(max->getType(), manager.getLangBasic().getPickInRange(), castExpr(type, max));
+	return callExpr(manager.getLangBasic().getPickInRange(), max);
 }
 
 

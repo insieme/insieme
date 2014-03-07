@@ -70,7 +70,7 @@ void irt_lock_acquire(irt_lock* lock) {
 		lock->top = &selflocked;
 		irt_spin_unlock(&lock->mutex);
 		irt_inst_insert_wi_event(wo, IRT_INST_WORK_ITEM_SUSPENDED_LOCK, wi->id);
-		lwt_continue(&wo->basestack, &wi->stack_ptr);
+        _irt_worker_switch_from_wi(wo, wi);
 	} else { // acquire lock
 		lock->locked = 1;
 		irt_spin_unlock(&lock->mutex);

@@ -164,7 +164,7 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		// suspend until allowed to leave barrier
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 //		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
@@ -222,7 +222,7 @@ void irt_wg_barrier_timed_busy(irt_work_group* wg) {
 					// suspend
 //					irt_inst_region_suspend(swi);
 					irt_inst_region_end_measurements(swi);
-					lwt_continue(&self->basestack, &swi->stack_ptr);
+                    _irt_worker_switch_from_wi(self, swi);
 //					irt_inst_region_continue(swi);
 					irt_inst_region_start_measurements(swi);
 					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
@@ -282,7 +282,7 @@ void irt_wg_join(irt_work_group* wg) {
 //		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 //		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!

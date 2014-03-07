@@ -748,8 +748,8 @@ protected:
 		auto printfNodePtr = build.literal("printf", build.parseType("(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
-	
-	StatementPtr implementParamClause(const StatementPtr& stmtNode, const RegionPtr& reg)
+
+	StatementPtr implementParamClause(const StatementPtr& stmtNode, const SharedRegionParallelAndTaskClausePtr& reg)
 	{
 		if(!reg->hasParam())
 			return stmtNode;
@@ -812,7 +812,8 @@ protected:
 		StatementList postFix;
 		postFix.push_back(build.mergeAll());
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
-		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		auto paramNode = implementParamClause(newStmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		// mark printf as unordered
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
@@ -833,7 +834,8 @@ protected:
 	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
-		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		auto paramNode = implementParamClause(newStmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);

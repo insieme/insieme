@@ -231,7 +231,7 @@ void irt_wi_join(irt_work_item* wi) {
 		//irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
 		//irt_inst_region_continue(swi);
 	}
@@ -274,7 +274,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// make stack available for children
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
-		lwt_continue(&self->basestack, &wi->stack_ptr);
+        _irt_worker_switch_from_wi(self, wi);
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS

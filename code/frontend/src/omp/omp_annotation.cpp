@@ -77,6 +77,8 @@ std::ostream& SharedRegionParallelAndTaskClause::dump(std::ostream& out) const {
 			targetClause->dump(out) << ", ";
 	if(hasObjective())
 			objectiveClause->dump(out) << ", ";
+	if(hasParam())
+			paramClause->dump(out) << ", ";
 	return out;
 }
 
@@ -117,8 +119,6 @@ std::ostream& CommonClause::dump(std::ostream& out) const {
 ///----- Region -----
 std::ostream& Region::dump(std::ostream& out) const {
 	out << "region(";
-	if(hasParam())
-			paramClause->dump(out) << ", ";
 	SharedRegionParallelAndTaskClause::dump(out);
 	return out << ")";
 }
