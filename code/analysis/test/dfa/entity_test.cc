@@ -234,7 +234,7 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
 TEST(SingleEntity, ValueType) {
 
-	typedef dfa::Entity< dom<int> > e;
+	//typedef dfa::Entity< dom<int> > e;
 
 	//typename dfa::entity_type_traits<e>::type v = 10;
 	//EXPECT_EQ(1u, e::arity());
