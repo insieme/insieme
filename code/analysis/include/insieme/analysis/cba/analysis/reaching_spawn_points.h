@@ -71,6 +71,11 @@ namespace cba {
 	extern const reaching_spawn_points_tmp_analysis ReachingSpawnPointsTmp;
 	extern const reaching_spawn_points_out_analysis ReachingSpawnPointsOut;
 
+	namespace detail {
+
+		bool isSpawnPointFree(const ExpressionPtr& expr);
+
+	}
 
 	template<typename Context>
 	class ReachingSpawnPointsInConstraintGenerator : public BasicInConstraintGenerator<reaching_spawn_points_in_analysis, reaching_spawn_points_tmp_analysis, reaching_spawn_points_out_analysis, ReachingSpawnPointsInConstraintGenerator<Context>, Context> {
@@ -115,9 +120,20 @@ namespace cba {
 				return;
 			}
 
+			// test whether sub-expressions may contain spawn points
+			if (detail::isSpawnPointFree(call)) {
+				// if so in = out
+				auto In  = cba.getSet(this->Ain, call, ctxt);
+				auto Out = cba.getSet(this->Aout, call, ctxt);
+
+				constraints.add(subset(In,Out));
+				return;
+			}
+
 			// the rest treat it as usual
 			super::visitCallExpr(call, ctxt, constraints);
 		}
+
 	};
 
 	template<typename Context>

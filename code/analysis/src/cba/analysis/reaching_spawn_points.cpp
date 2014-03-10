@@ -44,6 +44,123 @@ namespace cba {
 	const reaching_spawn_points_tmp_analysis ReachingSpawnPointsTmp = registerAnalysis<reaching_spawn_points_tmp_analysis>("ReachingSpawnPointsTmp");
 	const reaching_spawn_points_out_analysis ReachingSpawnPointsOut = registerAnalysis<reaching_spawn_points_out_analysis>("ReachingSpawnPointsOut");
 
+	namespace detail {
+
+		struct SpawnFreeTag {
+			bool value;
+			SpawnFreeTag(bool value) : value(value) {}
+			bool operator==(const SpawnFreeTag& other) const {
+				return value == other.value;
+			}
+		};
+
+		class SpawnPointCheck : public IRVisitor<bool> {
+
+		public:
+
+			virtual bool visitVariable(const VariablePtr& var) {
+				return true;		// no sync points here
+			}
+
+			virtual bool visitLiteral(const LiteralPtr& var) {
+				return true;		// the literal itself is never a sync point, only the call to a synchronizing function
+			}
+
+			virtual bool visitCallExpr(const CallExprPtr& call) {
+				auto fun = call->getFunctionExpr();
+				const auto& base = fun->getNodeManager().getLangBasic();
+
+				// if this is a call to a spawn => not free of spawn points
+				if (base.isParallel(fun)) return false;
+
+				// if one of the arguments contains a sync point we are done
+				if (!all(call, isSpawnPointFree)) {
+					return false;		// not sync point free
+				}
+
+				// if any of the arguments is a job or closure => return false (conservative)
+				for(const auto& cur : call) {
+					if (cur->getType().isa<FunctionTypePtr>()) return false;
+					if (cur.isa<JobExprPtr>()) return false;
+				}
+
+				// if it is a call to a literal
+				if (fun.isa<LiteralPtr>()) {
+					// this is fine
+					return true;
+				}
+
+				// if the target is a variable => fail (conservative)
+				if (fun.isa<VariablePtr>()) return false;
+
+				// if the target is anything else => check whether synchronizing expressions are included
+				return !visitDepthFirstOnceInterruptible(fun, [&](const LiteralPtr& lit){
+					return base.isParallel(lit);
+				});
+			}
+
+			virtual bool visitLambdaExpr(const LambdaExprPtr& expr) {
+				return true;		// the evaluation of the lambda expression is not causing sync points
+			}
+
+			virtual bool visitJobExpr(const JobExprPtr& job) {
+				return isSpawnPointFree(job->getThreadNumRange());
+			}
+
+			virtual bool visitTupleExpr(const TupleExprPtr& tuple) {
+				for(const auto& cur : tuple->getExpressions()) {
+					if (!isSpawnPointFree(cur)) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitVectorExpr(const VectorExprPtr& vec) {
+				for(const auto& cur : vec->getExpressions()) {
+					if (!isSpawnPointFree(cur)) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitStructExpr(const StructExprPtr& structExpr) {
+				for(const auto& cur : structExpr->getMembers()) {
+					if (!isSpawnPointFree(cur->getValue())) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitUnionExpr(const UnionExprPtr& unionExpr) {
+				return isSpawnPointFree(unionExpr->getMember());
+			}
+
+			virtual bool visitNode(const NodePtr& node) {
+				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
+				return false;
+			}
+
+		};
+
+
+		bool isSpawnPointFree(const ExpressionPtr& expr) {
+
+			static SpawnPointCheck isSpawnPointFreeInternal;
+
+			// check whether there is an attached sync-free tag
+			if (expr->hasAttachedValue<SpawnFreeTag>()) {
+				return expr->getAttachedValue<SpawnFreeTag>().value;
+			}
+
+			// compute state
+			bool res = isSpawnPointFreeInternal(expr);
+
+			// attach resulting annotation
+			expr->attachValue<SpawnFreeTag>(res);
+
+			// done
+			return res;
+		}
+
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
