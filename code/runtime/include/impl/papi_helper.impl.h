@@ -274,13 +274,7 @@ void irt_papi_init() {
  * free allocated memory, shutdown papi
  */
 
-void irt_papi_finalize() {
-	irt_context* context = irt_context_get_current();
-	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
-		if(context->inst_region_metric_group_support_data.papi_values[i])
-			free(context->inst_region_metric_group_support_data.papi_values[i]);
-	}
-	free(context->inst_region_metric_group_support_data.papi_values);
+void irt_papi_finalize(irt_context* context) {
 	free(context->inst_region_metric_group_support_data.papi_eventset);
 	PAPI_shutdown();
 }
@@ -301,12 +295,12 @@ void irt_papi_start() {
  * stops papi measurements
  */
 
-void irt_papi_stop() {
+void irt_papi_stop(long long int* papi_values) {
 	uint64 worker_id = irt_worker_get_current()->id.full;
 	int32 retval = 0;
 	irt_inst_region_context_declarations* papi_data = &irt_context_get_current()->inst_region_metric_group_support_data;
 
-	if((retval = PAPI_stop(papi_data->papi_eventset[worker_id], (long long int*)papi_data->papi_values[worker_id])) != PAPI_OK)
+	if((retval = PAPI_stop(papi_data->papi_eventset[worker_id], papi_values)) != PAPI_OK)
 		IRT_DEBUG("Instrumentation: Error in PAPI_stop! Reason: %s\n", PAPI_strerror(retval));
 }
 
@@ -314,10 +308,9 @@ void irt_papi_stop() {
  * returns a papi counter value by name
  */
 
-int64 irt_papi_get_value_by_name(const char* event_name) {
+int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) {
 	char event_name_copy[strlen(event_name)];
 	strcpy(event_name_copy, event_name);
-	irt_context* context = irt_context_get_current();
 	uint64 worker_id = irt_worker_get_current()->id.full;
 	int64 retval = 0;
 	int32 eventset = context->inst_region_metric_group_support_data.papi_eventset[worker_id];
@@ -331,7 +324,7 @@ int64 irt_papi_get_value_by_name(const char* event_name) {
 
 	for(int i = 0; i < num_present_events; ++i) {
 		if(present_events[i] == target_event_code) {
-			retval = context->inst_region_metric_group_support_data.papi_values[worker_id][i];
+			retval = papi_values[i];
 			break;
 		}
 	}
@@ -402,26 +395,19 @@ void irt_papi_setup(irt_context* context) {
 	context->inst_region_metric_group_support_data.papi_eventset = (int32*)malloc(sizeof(int32) * irt_g_worker_count);
 
 	irt_papi_select_events_from_env(context);
-
-	context->inst_region_metric_group_support_data.papi_values = (int64**)malloc(sizeof(int64*) * irt_g_worker_count);
-	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
-		//uint32 num_events = PAPI_num_events(context->inst_region_metric_group_support_data.papi_eventset[i]);
-		//context->inst_region_metric_group_support_data.papi_values[i] = (int64*)malloc(sizeof(int64) * num_events);
-		context->inst_region_metric_group_support_data.papi_values[i] = (int64*)malloc(sizeof(int64) * IRT_INST_PAPI_MAX_COUNTERS);
-	}
 }
 
 #else //IRT_USE_PAPI
 
 void irt_papi_init() { }
 
-void irt_papi_finalize() { }
+void irt_papi_finalize(irt_context* context) { }
 
 void irt_papi_start() { }
 
-void irt_papi_stop() { }
+void irt_papi_stop(long long int* papi_values) { }
 
-int64 irt_papi_get_value_by_name(const char* event_name) { return -1; }
+int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) { return -1; }
 
 void irt_papi_select_events(irt_context* context, const char* papi_events_string) { }
 

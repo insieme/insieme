@@ -75,12 +75,12 @@
 #endif
 
 #ifndef GROUP
-#define GROUP( NAME, VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
+#define GROUP( NAME, GLOBAL_VAR_DECLARATIONS, LOCAL_VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
 #endif
 
 
 
-GROUP(cpu_time_group, , {}, {}, {}, {}, {}, {})
+GROUP(cpu_time_group, , , {}, {}, {}, {}, {}, {})
 
 METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
 	{ wi->inst_region_data->last_cpu_time = irt_time_ticks(); }, \
@@ -98,38 +98,38 @@ METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AG
 	((double)1e9/irt_g_time_ticks_per_sec) \
 )
 
-GROUP(energy_group, rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
+GROUP(energy_group, , rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
 	{}, \
-	{} \
+	{}, \
+	{ irt_get_energy_consumption(&(rapl_data)); }, \
+	{ irt_get_energy_consumption(&(rapl_data)); } \
 )
 
 METRIC(cpu_energy,					100,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_cpu_energy = context->inst_region_metric_group_support_data.rapl_data.package; }, \
-	{ wi->inst_region_data->aggregated_cpu_energy = context->inst_region_metric_group_support_data.rapl_data.package - wi->inst_region_data->last_cpu_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_cpu_energy = rapl_data.package; }, \
+	{ rg->aggregated_cpu_energy = rapl_data.package - rg->last_cpu_energy; }, \
 	1 \
 )
 
 METRIC(cores_energy,				101,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_cores_energy = context->inst_region_metric_group_support_data.rapl_data.cores; }, \
-	{ wi->inst_region_data->aggregated_cores_energy = context->inst_region_metric_group_support_data.rapl_data.cores - wi->inst_region_data->last_cores_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_cores_energy = rapl_data.cores; }, \
+	{ rg->aggregated_cores_energy = rapl_data.cores - rg->last_cores_energy; }, \
 	1 \
 )
 
 METRIC(memory_controller_energy,	102,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_memory_controller_energy = context->inst_region_metric_group_support_data.rapl_data.mc; }, \
-	{ wi->inst_region_data->aggregated_memory_controller_energy = context->inst_region_metric_group_support_data.rapl_data.mc - wi->inst_region_data->last_memory_controller_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_memory_controller_energy = rapl_data.mc; }, \
+	{ rg->aggregated_memory_controller_energy = rapl_data.mc - rg->last_memory_controller_energy; }, \
 	1 \
 )
 
-GROUP(socket_occupancy_group, , {}, {}, {}, {}, {}, {})
+GROUP(socket_occupancy_group, , , {}, {}, {}, {}, {}, {})
 
 METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
 	{ wi->inst_region_data->last_socket_occupancy = 42; }, \
@@ -139,11 +139,11 @@ METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_
 	1 \
 )
 
-GROUP(papi_group, int32* papi_eventset; int64** papi_values, { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(); }, { irt_papi_start(); }, { irt_papi_stop(); }, {}, {})
+GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS], { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(context); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
 
 METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name("PAPI_L1_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
@@ -151,7 +151,7 @@ METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METR
 
 METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_DCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name("PAPI_L1_DCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_DCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
@@ -159,7 +159,7 @@ METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METR
 
 METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L2_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name("PAPI_L2_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
@@ -167,7 +167,7 @@ METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METR
 
 METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L3_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name("PAPI_L3_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L3_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
@@ -175,7 +175,7 @@ METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METR
 
 METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_FP_OPS = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name("PAPI_FP_OPS"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name(context, papi_values, "PAPI_FP_OPS"); }, \
 	{  }, \
 	{  }, \
 	1 \

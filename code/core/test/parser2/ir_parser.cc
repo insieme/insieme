@@ -971,6 +971,15 @@ namespace parser {
 		EXPECT_EQ(builder.getTypeLiteral(type), parse_expr(manager, "lit(int<4>)"));
 	}
 
+	TEST(IR_Parser2, BooleanLiterals) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto& base = manager.getLangBasic();
+
+		EXPECT_TRUE(base.isTrue(builder.parseExpr("true")));
+		EXPECT_TRUE(base.isFalse(builder.parseExpr("false")));
+	}
+
 	TEST(IR_Parser2, PreDefinedSymbols) {
 		NodeManager manager;
 		IRBuilder builder(manager);

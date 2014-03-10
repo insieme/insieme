@@ -34,60 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+int s() {
+	static int x = 0;
+	return ++x;
+}
 
-	using namespace core;
+int d() {
+	s();
+	return s();
+}
 
-	namespace {
+int main(int argc, char** argv) {
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	cba_print_code();
 
-				// write file
-				analysis.plot(out);
-			}
 
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
+	// check whether ticks are properly analyzed
+	cba_expect_eq_int(1,s());
+	cba_expect_eq_int(2,s());
+	cba_expect_eq_int(3,s());
 
-		void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
-		}
+	cba_expect_eq_int(5,d());
 
-		void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
-	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+//	cba_dump_equations();
+}

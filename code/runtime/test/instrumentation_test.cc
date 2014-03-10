@@ -63,6 +63,7 @@ void insieme_wi_startup_implementation_merge(irt_work_item* wi);
 void insieme_wi_implementation_for(irt_work_item* wi);
 void insieme_wi_implementation_pfor(irt_work_item* wi);
 void insieme_wi_startup_implementation_papi(irt_work_item* wi);
+void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_simple, NULL, 0, NULL, 0, NULL }
@@ -100,6 +101,10 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_papi[] = {
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_papi, NULL, 0, NULL, 0, NULL }
 };
 
+irt_wi_implementation_variant g_insieme_wi_startup_variants_all_metrics[] = {
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_all_metrics, NULL, 0, NULL, 0, NULL }
+};
+
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants_simple },
 	{ 1, g_insieme_wi_startup_variants_multiple_metrics },
@@ -109,13 +114,14 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants_merge },
 	{ 1, g_insieme_wi_variants_for },
 	{ 1, g_insieme_wi_variants_pfor },
-	{ 1, g_insieme_wi_startup_variants_papi }
+	{ 1, g_insieme_wi_startup_variants_papi },
+	{ 1, g_insieme_wi_startup_variants_all_metrics }
 };
 
 // initialization
 void insieme_init_context_common(irt_context* context) {
 	context->type_table_size = 1;
-	context->impl_table_size = 9;
+	context->impl_table_size = 10;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
@@ -366,7 +372,6 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 		a = a + b;
 	}
 	ir_inst_region_end(0);
-	printf("res: %f\n", a);
 
 	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 
@@ -375,6 +380,27 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 	EXPECT_EQ(reg0->last_PAPI_FP_OPS, 0);
 	EXPECT_GT(reg0->aggregated_wall_time, 0);
 	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg0->last_wall_time, 0);
+	EXPECT_EQ(reg0->num_executions, 1);
+
+	printf("res: %f, floating point ops: %llu\n", a, reg0->aggregated_PAPI_FP_OPS);
+}
+
+void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
+
+	irt_inst_region_select_metrics("");
+//	irt_papi_select_events(irt_context_get_current(), NULL);
+
+	ir_inst_region_start(0);
+	sleep(1);
+	ir_inst_region_end(0);
+
+	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
+	EXPECT_GT(reg0->aggregated_cpu_time, 8e8);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
+	EXPECT_GT(reg0->aggregated_wall_time, 8e8);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e10);
+	EXPECT_EQ(reg0->last_cpu_time, 0);
 	EXPECT_EQ(reg0->last_wall_time, 0);
 	EXPECT_EQ(reg0->num_executions, 1);
 }
@@ -420,4 +446,9 @@ TEST(region_instrumentation, pfor) {
 TEST(region_instrumentation, papi) {
 	uint32 wcount = irt_get_default_worker_count();
 	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 8, NULL);
+}
+
+TEST(region_instrumentation, all_metrics) {
+	uint32 wcount = irt_get_default_worker_count();
+	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 9, NULL);
 }

@@ -82,8 +82,6 @@ void TypeFixer::fixBufferDecls(NodeAddress pA) {
 
 		replacements[matchAddress >> kernelDecl["init"].getValue()] = builder.callExpr(kernelType, BASIC.getRefNew(),
 				builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
-std::cout << "translating : " << printer::PrettyPrinter(kernelDecl["init"].getValue().as<ExpressionPtr>(), printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-std::cout << "\nto: " << printer::PrettyPrinter(replacements[matchAddress >> kernelDecl["init"].getValue()].as<ExpressionPtr>(), printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 //		dumpPretty(replacements[kernelDecl["init"].getValue()]);
 	});
 

@@ -315,7 +315,7 @@ private:
 		// if one of the replaced variables has been used as init expression for another one the type may changed.
 		// In that case, update the type of the declared variable
 		DeclarationStmtPtr decl = newVarFromInit(ptr);
-//		if(decl) return decl;
+		if(decl) return decl;
 
 		// check whether the element has been found
         if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(ptr)) {
@@ -441,7 +441,6 @@ private:
 		if(DeclarationStmtPtr decl = ptr.isa<DeclarationStmtPtr>()) {
 			// check variable and value type
 			ExpressionPtr val = decl->getInitialization();
-			TypePtr valType = val->getType();
 
 			if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
 				if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
@@ -449,13 +448,14 @@ private:
 						auto ding = replacements.find(iVar);
 						if(ding != replacements.end()) {
 							VariablePtr replaced = ding->second.isa<VariablePtr>();
+							ExpressionPtr newInit = builder.refVar(replaced);
+							TypePtr newType = newInit->getType();
 
 							VariablePtr var = decl->getVariable();
 							TypePtr varType = var->getType();
-							if(replaced && varType != valType) {
+							if(replaced && varType != newType) {
 								// create new variable with new type
-								ExpressionPtr newInit = builder.refVar(replaced);
-								VariablePtr newVar = builder.variable(newInit->getType());
+								VariablePtr newVar = builder.variable(newType);
 								newDecl = builder.declarationStmt(newVar, newInit);
 								// add new variable to replacements
 								replacements[var] = newVar;

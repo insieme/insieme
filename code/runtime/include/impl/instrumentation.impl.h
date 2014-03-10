@@ -507,7 +507,8 @@ irt_inst_region_context_data* _irt_inst_region_stack_pop(irt_work_item* wi) {
 
 void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	irt_inst_region_context_data* rg = irt_inst_region_get_current(wi);
-	#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_region_early_start_code__; \
 	}
@@ -527,7 +528,8 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
 #include "irt_metrics.def"
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_region_late_end_code__; \
 	}
@@ -554,20 +556,20 @@ void _irt_inst_region_metrics_init(irt_context* context) {
 	int group_id = 0;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	irt_g_region_metric_##_name__##_id = metric_id++;
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	irt_g_region_metric_group_##_name__##_id = group_id++;
 #include "irt_metrics.def"
 	irt_g_inst_region_metric_count = metric_id;
 	irt_g_inst_region_metric_group_count = group_id;
 	// initialize groups
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_init_code__;
 #include "irt_metrics.def"
 }
 
 void _irt_inst_region_metrics_finalize(irt_context* context) {
 	// finalize groups
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_finalize_code__;
 #include "irt_metrics.def"
 }
@@ -667,7 +669,8 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 
 	irt_context* context = irt_context_table_lookup(wi->context_id);
 
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_wi_start_code__; \
 	}
@@ -690,7 +693,8 @@ void irt_inst_region_end_measurements(irt_work_item* wi) {
 
 	irt_context* context = irt_context_table_lookup(wi->context_id);
 
-#define GROUP(_name__, _var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		wi_end_code__; \
 	}
@@ -771,7 +775,7 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	}
 }
 
-// selectively enable region instrumentation metrics - NOTE: a NULL pointer as an argument will enable all metrics!
+// selectively enable region instrumentation metrics - NOTE: a NULL pointer or an empty string as an argument will enable all metrics!
 void irt_inst_region_select_metrics(const char* selection) {
 	char enabled_types[4096];
 	uint16 enabled_types_counter = 0;

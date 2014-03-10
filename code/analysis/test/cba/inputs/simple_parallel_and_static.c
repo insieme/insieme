@@ -34,60 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+void f() {
+	static char time_buffer[40];
+}
 
-	using namespace core;
+int main(int argc, char** argv) {
 
-	namespace {
+	//cba_dump_execution_net();
+	cba_dump_thread_regions();
+	cba_dump_execution_net();
+	cba_dump_equations();
+	cba_print_code();
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	#pragma omp parallel
+	{}
 
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
-		}
-
-		void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
-	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+	f();
+}

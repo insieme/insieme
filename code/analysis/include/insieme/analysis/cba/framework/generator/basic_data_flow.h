@@ -301,7 +301,7 @@ namespace cba {
 
 						// add the unknown value to the result
 						auto unknownValue = BaseGenerator(cba).getUnknownValue();
-						unknownValue = getUndefinedValue(cba.template getDataManager(this->res), readOp->getType(), unknownValue);
+						unknownValue = getUniformValue(cba.template getDataManager(this->res), readOp->getType(), unknownValue);
 
 						// include unknown value
 						meet_assign_op(res, unknownValue);
@@ -650,7 +650,7 @@ namespace cba {
 		}
 
 		value_type getUnknownValue(const TypePtr& type) const {
-			return getUndefinedValue(valueMgr, type, unknown);
+			return getUniformValue(valueMgr, type, unknown);
 		}
 
 		template<typename V>
@@ -965,9 +965,11 @@ namespace cba {
 				// special handling for literals
 				if (fun.isLiteral()) {
 
+					auto op = targets[0].getDefinition();
+
 					// one special case: if it is a read operation
 					const auto& base = call->getNodeManager().getLangBasic();
-					if (base.isRefDeref(targets[0].getDefinition())) {
+					if (base.isRefDeref(op)) {
 
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
@@ -979,7 +981,7 @@ namespace cba {
 					}
 
 					// another case: accessing struct members
-					if (base.isCompositeMemberAccess(targets[0].getDefinition())) {
+					if (base.isCompositeMemberAccess(op)) {
 
 						// get input struct value
 						auto A_in = this->cba.getSet(A, call[0], ctxt);
@@ -996,13 +998,27 @@ namespace cba {
 					}
 
 					// and always: if it is the undefined literal or the create array call
-					if (base.isUndefined(targets[0].getDefinition()) || base.isArrayCreate1D(targets[0].getDefinition())) {
+					if (base.isUndefined(op) || base.isArrayCreate1D(op) || base.isVectorInitUndefined(op)) {
 
 						// built up resulting value
 						auto value = getUnknownValue(call->getType());
 
 						// in this case initialize the value with the undefined value
 						constraints.add(subset(value, A_call));
+					}
+
+					// also support init-uniform calls
+					if (base.isVectorInitUniform(op)) {
+
+						// get in and out sets
+						auto A_in = cba.getSet(A, call[0], ctxt);
+
+						// init values uniformly based on input value
+						constraints.add(insieme::utils::constraint::subsetUnary(
+								A_in, A_call, [&,call](const value_type& a)->value_type {
+									return getUniformValue(valueMgr, call->getType(), a);
+								}
+						));
 					}
 
 					// no other literals supported by default - overloads may add more

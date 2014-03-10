@@ -933,6 +933,11 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 			return builder.compoundStmt(dels);
 	);
 
+	ADD_Handler(o2i, "clCreateProgram",
+			// return cl_success
+			return builder.refReinterpret(BASIC.getRefNull(), builder.arrayType(BASIC.getInt4()));
+	);
+
 	// release of kernel will be used to free the tuple holding the kernel arguments
 	ADD_Handler(o2i, "clReleaseKernel",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
@@ -1045,6 +1050,26 @@ const NodePtr OclSimpleFunHandler::resolveElement(const NodePtr& ptr){
 	} else
 		return ptr->substitute(ptr.getNodeManager(), *this);
 	return ptr;
+}
+
+
+OclSimpleTypeHandler::OclSimpleTypeHandler(NodePtr progIn) {
+	// replace some OpenCL type variables with int<4>.
+	// Variables will be useless, but the semantics will be correct
+	NodeManager& mgr = progIn->getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
+
+	TypePtr int4 = gen.getInt4();
+
+	NodeMap replacements;
+
+	// replace cl_program
+	TypePtr cl_program = builder.genericType("_cl_program");
+
+	replacements[cl_program] = int4;
+
+	this->prog = transform::replaceAll(mgr, progIn, replacements, false);
 }
 
 } //namespace ocl

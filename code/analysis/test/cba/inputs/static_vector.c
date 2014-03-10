@@ -34,60 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
 
-	using namespace core;
+int set(int i, int v) {
+    static int data[40];
+    if (i<0) {
+    	return data[-i];
+    }
+    data[i] = v;
+    return v;
+}
 
-	namespace {
+int get(int i) {
+	return set(-i, 0);
+}
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
 
-				// write file
-				analysis.plot(out);
-			}
+int main(int argc, char** argv) {
 
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
+	cba_print_code();
 
-		void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
-		}
+	set(5,8);
+	set(7,2);
 
-		void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	cba_expect_eq_int(get(1),0);
+	cba_expect_eq_int(get(2),0);
+	cba_expect_eq_int(get(5),8);
+	cba_expect_eq_int(get(7),2);
 
-				// write file
-				analysis.plotRoots(out);
-			}
+	set(7,3);
+	cba_expect_eq_int(get(7),3);
 
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
-	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+//	cba_dump_equations();
+}
