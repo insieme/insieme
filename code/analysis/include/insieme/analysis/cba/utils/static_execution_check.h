@@ -176,6 +176,10 @@ namespace cba {
 				return false;
 			}
 
+			bool visitCastExpr(const CastExprPtr& castExpr) {
+				return mayReachCallTo(castExpr->getSubExpression(), filter);
+			}
+
 			bool visitCompoundStmt(const CompoundStmtPtr& stmt) {
 				// just check all sub-statements
 				for(const auto& cur : stmt) {
