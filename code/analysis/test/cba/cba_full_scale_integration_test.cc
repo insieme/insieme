@@ -124,7 +124,7 @@ namespace cba {
 
 		// test cases to be tested
 		res.push_back(TEST_ROOT_DIR "/matrix_mul_static/matrix_mul_static.c");
-//		res.push_back(TEST_ROOT_DIR "/pendulum/pendulum.c");
+		res.push_back(TEST_ROOT_DIR "/pendulum/pendulum.c");
 		res.push_back(TEST_ROOT_DIR "/omp/dijkstra/dijkstra.c");
 
 		return res;
