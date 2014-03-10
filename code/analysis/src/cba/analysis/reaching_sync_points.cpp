@@ -78,6 +78,12 @@ namespace cba {
 					return false;		// not sync point free
 				}
 
+				// if any of the arguments is a job or closure => return false (conservative)
+				for(const auto& cur : call) {
+					if (cur->getType().isa<FunctionTypePtr>()) return false;
+					if (cur.isa<JobExprPtr>()) return false;
+				}
+
 				// if it is a call to a literal
 				if (fun.isa<LiteralPtr>()) {
 					// this is fine
@@ -88,7 +94,7 @@ namespace cba {
 				if (fun.isa<VariablePtr>()) return false;
 
 				// if the target is anything else => check whether synchronizing expressions are included
-				return visitDepthFirstOnceInterruptible(fun, [](const LiteralPtr& lit){
+				return !visitDepthFirstOnceInterruptible(fun, [](const LiteralPtr& lit){
 					return isSynchronizingFunction(lit);
 				});
 			}
@@ -135,6 +141,7 @@ namespace cba {
 
 
 		bool isSyncPointFree(const ExpressionPtr& expr) {
+
 			static SyncPointCheck isSyncPointFreeInternal;
 
 			// check whether there is an attached sync-free tag
