@@ -168,6 +168,12 @@ namespace cba {
 
 		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
+			// special case for the lit(1:'a) in the lang def
+			if (literal->getStringValue() == "1") {
+				constraints.add(elem(core::arithmetic::Formula(1), cba.getSet(A, literal, ctxt)));
+				return;
+			}
+
 			// only interested in integer literals
 			if (!base.isInt(literal->getType())) {
 				// default handling for all others
@@ -251,8 +257,14 @@ namespace cba {
 				return;
 			}
 
+			// also support casts
+			if (base.isScalarCast(fun)) {
+				constraints.add(subset(cba.getSet(A, call[0], ctxt), A_res));
+				return;
+			}
+
 			// only care for integer expressions calling literals
-			if (!base.isInt(call->getType())) return;
+			if (!base.isInt(call->getType()) && !base.isGenArithmeticOp(fun)) return;
 
 			// handle unary literals
 			if (call.size() == 1u) {
@@ -272,21 +284,21 @@ namespace cba {
 			auto A_rhs = cba.getSet(A, cba.getLabel(call[1]), ctxt);
 
 			// special handling for functions
-			if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun)) {
+			if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun) || base.isGenAdd(fun)) {
 				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula + *b.formula;
 				})))));
 				return;
 			}
 
-			if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
+			if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun) || base.isGenSub(fun)) {
 				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula - *b.formula;
 				})))));
 				return;
 			}
 
-			if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
+			if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun) || base.isGenMul(fun)) {
 				constraints.add(subsetBinary(A_lhs, A_rhs, A_res, pack(cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 					return *a.formula * *b.formula;
 				})))));

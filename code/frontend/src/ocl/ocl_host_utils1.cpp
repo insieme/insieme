@@ -92,6 +92,46 @@ ExpressionPtr tryRemoveAlloc(const ExpressionPtr& expr) {
 }
 
 /*
+ * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
+ */
+core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr){
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		 // on non array types remove also a single ref
+		if(refTy->getElementType()->getNodeType() == core::NT_RefType || refTy->toString().find("array") == string::npos) {
+			core::NodeManager& mgr = expr->getNodeManager();
+			const core::IRBuilder& builder(mgr);
+			const lang::BasicGenerator& gen = builder.getLangBasic();
+			return builder.callExpr(refTy->getElementType(), gen.getRefDeref(), expr);
+		}
+	}
+	return expr;
+}
+
+/*
+ * removes the returns 'a if type is ref<'a>, type otherwise
+ */
+core::TypePtr removeSingleRef(const core::TypePtr& type){
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+			return refTy->getElementType();
+	}
+	return type;
+}
+
+/*
+ * takes a type ref<array<vector<'b,#l>,1>> and creates ref<array<'b>,1> from it
+ */
+core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder) {
+	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arrayTy)) {
+		if(const core::ArrayTypePtr arrTy = dynamic_pointer_cast<const core::ArrayType>(refTy->getElementType()))
+			if(const core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(arrTy->getElementType())) {
+				return builder.refType(builder.arrayType(vecTy->getElementType()));
+			}
+	}
+
+	return arrayTy;
+}
+
+/*
  * takes the expression passed to size (in bytes) and tries to extract the size in number of elements as well as the type to be used
  */
 bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {

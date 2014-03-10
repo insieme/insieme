@@ -144,7 +144,7 @@ namespace cba {
 				if (!type) return;
 
 				// compute undefined value and add constraint fixing value
-				auto undefined = getUndefinedValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
+				auto undefined = getUniformValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
 				constraints.add(subset(undefined, setID));
 				return;
 			}
@@ -166,7 +166,8 @@ namespace cba {
 
 			out << value << " = Sin - " << getAnalysisName<BaseAnalysis>() << "@" << location
 						 << "[l" << label << " = " << node->getNodeType() << " : "
-//						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+						 << node
+//						 << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
 						 << ctxt << "]";
 		}
 
@@ -602,7 +603,8 @@ namespace cba {
 
 			out << value << " = Sout - " << getAnalysisName<BaseAnalysis>() << "@" << location
 						 << "[l" << label << " = " << node->getNodeType() << " : "
-						 << node << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
+						 << node
+//						 << " = " << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << " : "
 						 << ctxt << "]";
 		}
 
@@ -610,7 +612,7 @@ namespace cba {
 			typedef typename generator<BaseAnalysis, analysis_config<Context>>::type BaseGenerator;
 
 			// we can stop at the creation point - no definitions will be killed before
-			if (loc.getAddress() == addr && ctxt == loc.getContext()) {
+			if ((loc.getAddress() == addr && ctxt == loc.getContext()) || (cba.getRoot() == addr && loc.isGlobal() && ctxt == Context())) {
 				// every reference is initialized by its default value
 				auto setID = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
 				auto unknownValue = BaseGenerator(cba).getUnknownValue();
@@ -620,7 +622,7 @@ namespace cba {
 				if (!type) return;
 
 				// fix undefined value
-				auto undefined = getUndefinedValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
+				auto undefined = getUniformValue(cba.template getDataManager(setID), type->getElementType(), unknownValue);
 				constraints.add(subset(undefined, setID));
 				return;
 			}

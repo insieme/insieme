@@ -399,7 +399,7 @@ tu::IRTranslationUnit Converter::convert() {
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
 	//frontend done
-	std::cout << std::endl;
+//	std::cout << std::endl;
 
 //	std::cout << " ==================================== " << std::endl;
 //	std::cout << getIRTranslationUnit() << std::endl;

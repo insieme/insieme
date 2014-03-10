@@ -559,42 +559,48 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
-	// Known Bug: Variables can not be external - TODO: let external references reference two shared, common location (they may alias each other)!
+	TEST(CBA, ExternalLiteralsStructured) {
 
-//	TEST(CBA, ExternalVariables) {
-//
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		map<string,NodePtr> symbols;
-//		symbols["e"] = builder.variable(builder.parseType("ref<int<4>>"), 1);
-//
-//		auto code = builder.parseStmt(
-//				"{"
-//				"	*e;"
-//				"	e = 1;"
-//				"	*e;"
-//				"	e = 2;"
-//				"	*e;"
-//				"	e = 3;"
-//				"	*e;"
-//				"}",
-//				symbols
-//		).as<CompoundStmtPtr>();
-//
-//		EXPECT_TRUE(code);
-//
-//		CompoundStmtAddress root(code);
-//		CBA analysis(root);
-//
-//		// check whether globals are properly handled
-//		EXPECT_EQ("{}", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
-//
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		map<string,NodePtr> symbols;
+		symbols["e"] = builder.literal("e", builder.parseType("ref<struct{ vector<int<4>,20> value; bool flag; }>"));
+
+		auto code = builder.parseStmt(
+				"{"
+				"	*e;"
+				"	e->flag = true;"
+				"	*e;"
+				"	e->value[2] = 5;"
+				"	*e;"
+				"	e->value[2] = 8;"
+				"	*e;"
+				"}",
+				symbols
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(code);
+
+		CompoundStmtAddress root(code);
+		CBA analysis(root);
+
+		// check whether globals are propery handled
+		EXPECT_EQ("[flag={-unknown-},value=[*={-unknown-}]]", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[flag={0,1},value=[*={0,1}]]", toString(analysis.getValuesOf(root[0].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("[flag={-unknown-},value=[*={-unknown-}]]", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[flag={1},value=[*={0,1}]]", toString(analysis.getValuesOf(root[2].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("[flag={-unknown-},value=[2={5},*={-unknown-}]]", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[flag={1},value=[2={0,1},*={0,1}]]", toString(analysis.getValuesOf(root[4].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("[flag={-unknown-},value=[2={8},*={-unknown-}]]", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[flag={1},value=[2={0,1},*={0,1}]]", toString(analysis.getValuesOf(root[6].as<ExpressionAddress>(), B)));
+
 //		createDotDump(analysis);
-//	}
+	}
+
 
 	TEST(CBA, IfStmt1) {
 
@@ -1824,16 +1830,74 @@ namespace cba {
 
 	}
 
-//
-//	// Known Issues:
-//	//  - for loops
-//	//  - job support
-//	//  - thread context
-//	//	- context on memory locations
-//
-//	TEST(CBA, ThreadContext) {
-//		// TODO ...
-//	}
+
+	TEST(CBA, ArgumentSideEffects) {
+
+		// some code where the context of a memory allocation is relevant
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let inc = (ref<int> a)->int { a = a + 1; return *a; };"
+				"	"
+				"	ref<int> x = new(0);"
+				"	"
+				"	inc(x) + inc(x);"			// this should be 3 (1 + 2 in any evaluation order)
+				"	*x;"						// this should be 2 now
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+
+
+	TEST(CBA, InitExpressionTests) {
+
+		// some code where the context of a memory allocation is relevant
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<string, NodePtr> symbols;
+		symbols["c"] = builder.literal("c", builder.getLangBasic().getBool());
+
+
+		auto in = builder.parseStmt(
+				"{"
+				"	vector.init.undefined(lit(int<4>),param(10));"
+				"	"
+				"	vector.init.uniform(10,param(5));"
+				"	vector.init.uniform((c?4:5),param(5));"
+				"	"
+				"	array.create.1D(lit(int<4>),20u);"
+				"}", symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("[*={-unknown-}]", 	toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[*={10}]", 			toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+
+		auto value = toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A));
+		EXPECT_TRUE("[*={4,5}]" == value || "[*={5,4}]" == value);
+
+		EXPECT_EQ("[*={-unknown-}]", 	toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
 
 } // end namespace cba
 } // end namespace analysis

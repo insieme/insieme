@@ -44,6 +44,116 @@ namespace cba {
 	const reaching_sync_points_tmp_analysis RSPtmp = registerAnalysis<reaching_sync_points_tmp_analysis>("RSPtmp");
 	const reaching_sync_points_out_analysis RSPout = registerAnalysis<reaching_sync_points_out_analysis>("RSPout");
 
+
+	namespace detail {
+
+		struct SyncFreeTag {
+			bool value;
+			SyncFreeTag(bool value) : value(value) {}
+			bool operator==(const SyncFreeTag& other) const {
+				return value == other.value;
+			}
+		};
+
+		class SyncPointCheck : public IRVisitor<bool> {
+
+		public:
+
+			virtual bool visitVariable(const VariablePtr& var) {
+				return true;		// no sync points here
+			}
+
+			virtual bool visitLiteral(const LiteralPtr& var) {
+				return true;		// the literal itself is never a sync point, only the call to a synchronizing function
+			}
+
+			virtual bool visitCallExpr(const CallExprPtr& call) {
+				auto fun = call->getFunctionExpr();
+
+				// if this is a sync point function call => it is not sync point free
+				if (isSynchronizingFunction(fun)) return false;
+
+				// if one of the arguments contains a sync point we are done
+				if (!all(call, isSyncPointFree)) {
+					return false;		// not sync point free
+				}
+
+				// if it is a call to a literal
+				if (fun.isa<LiteralPtr>()) {
+					// this is fine
+					return true;
+				}
+
+				// if the target is a variable => fail (conservative)
+				if (fun.isa<VariablePtr>()) return false;
+
+				// if the target is anything else => check whether synchronizing expressions are included
+				return visitDepthFirstOnceInterruptible(fun, [](const LiteralPtr& lit){
+					return isSynchronizingFunction(lit);
+				});
+			}
+
+			virtual bool visitLambdaExpr(const LambdaExprPtr& expr) {
+				return true;		// the evaluation of the lambda expression is not causing sync points
+			}
+
+			virtual bool visitJobExpr(const JobExprPtr& job) {
+				return isSyncPointFree(job->getThreadNumRange());
+			}
+
+			virtual bool visitTupleExpr(const TupleExprPtr& tuple) {
+				for(const auto& cur : tuple->getExpressions()) {
+					if (!isSyncPointFree(cur)) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitVectorExpr(const VectorExprPtr& vec) {
+				for(const auto& cur : vec->getExpressions()) {
+					if (!isSyncPointFree(cur)) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitStructExpr(const StructExprPtr& structExpr) {
+				for(const auto& cur : structExpr->getMembers()) {
+					if (!isSyncPointFree(cur->getValue())) return false;
+				}
+				return true;
+			}
+
+			virtual bool visitUnionExpr(const UnionExprPtr& unionExpr) {
+				return isSyncPointFree(unionExpr->getMember());
+			}
+
+			virtual bool visitNode(const NodePtr& node) {
+				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
+				return false;
+			}
+
+		};
+
+
+		bool isSyncPointFree(const ExpressionPtr& expr) {
+			static SyncPointCheck isSyncPointFreeInternal;
+
+			// check whether there is an attached sync-free tag
+			if (expr->hasAttachedValue<SyncFreeTag>()) {
+				return expr->getAttachedValue<SyncFreeTag>().value;
+			}
+
+			// compute state
+			bool res = isSyncPointFreeInternal(expr);
+
+			// attach resulting annotation
+			expr->attachValue<SyncFreeTag>(res);
+
+			// done
+			return res;
+		}
+
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
