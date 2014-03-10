@@ -93,7 +93,7 @@ stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::co
 
 		auto expand = [&](char lookup, const char *replacement) {
 			int last = 0;
-			int it;
+			unsigned it;
 			string rep = replacement;
 			while((it = assemblerString.find(lookup, last)) < assemblerString.length()){
 				last = it + rep.length();

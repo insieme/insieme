@@ -516,8 +516,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 	vectorLenght += 1; // add the null char
 
 	auto expand = [&](char lookup, const char *replacement) {
-		int last = 0;
-		int it;
+		unsigned last = 0;
+		unsigned it;
 		string rep = replacement;
 		while((it = strValue.find(lookup, last)) < strValue.length()){
 			last = it + rep.length();

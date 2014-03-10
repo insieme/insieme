@@ -203,8 +203,6 @@ namespace cba {
 	}
 
 	TEST(CBA, UndefinedValues) {
-		typedef DefaultContext Context;
-
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		std::map<string,NodePtr> symbols;

@@ -98,7 +98,7 @@ namespace access {
 		auto rangeStr = getRange() ? toString(*getRange()) : "unbounded";
 
 		size_t pos;
-		while( (pos = rangeStr.find("v4294967295")) != -1) {
+		while( (pos = rangeStr.find("v4294967295")) != (size_t)-1) {
 			auto it = rangeStr.begin()+pos;
 			rangeStr = rangeStr.replace(it, it+(std::string("v4294967295").length()), "i", 1);
 		}
