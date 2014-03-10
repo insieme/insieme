@@ -87,19 +87,19 @@ namespace cba {
 
 	template<typename A>
 	const location_data_in_analysis<A>& Sin() {
-		static const location_data_in_analysis<A> instance;
+		static const location_data_in_analysis<A> instance = registerAnalysis<location_data_in_analysis<A>>("Sin-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
 	template<typename A>
 	const location_data_tmp_analysis<A>& Stmp() {
-		static const location_data_tmp_analysis<A> instance;
+		static const location_data_tmp_analysis<A> instance = registerAnalysis<location_data_tmp_analysis<A>>("Stmp-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
 	template<typename A>
 	const location_data_out_analysis<A>& Sout() {
-		static const location_data_out_analysis<A> instance;
+		static const location_data_out_analysis<A> instance = registerAnalysis<location_data_out_analysis<A>>("Sout-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
@@ -561,6 +561,12 @@ namespace cba {
 
 	}
 
+	namespace detail {
+
+		bool isAssignmentFree(const NodePtr& code);
+
+	}
+
 
 	template<typename Context, typename BaseAnalysis>
 	class ImperativeOutStateConstraintGenerator :
@@ -629,6 +635,15 @@ namespace cba {
 
 			// for other unknown references no handling is necessary since those are never read
 			if (loc.isUnknown()) return;
+
+			// if the current sub-tree does not contain any potential assignment to a pre-existing location we can skip it
+			if (detail::isAssignmentFree(addr)) {
+				// if so in = out
+				auto In  = cba.getSet( Sin<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto Out = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				constraints.add(subset(In,Out));
+				return;
+			}
 
 			// all others should be handled as usual
 			super::visit(addr, ctxt, loc, constraints);

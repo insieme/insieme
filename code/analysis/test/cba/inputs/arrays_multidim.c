@@ -34,28 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/analysis/reaching_spawn_points.h"
-#include "insieme/analysis/cba/utils/static_execution_check.h"
+/**
+ * A simple test case covering some arithmetic.
+ */
+#include <stdlib.h>
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+#include "cba.h"
 
-	const reaching_spawn_points_in_analysis ReachingSpawnPointsIn = registerAnalysis<reaching_spawn_points_in_analysis>("ReachingSpawnPointsIn");
-	const reaching_spawn_points_tmp_analysis ReachingSpawnPointsTmp = registerAnalysis<reaching_spawn_points_tmp_analysis>("ReachingSpawnPointsTmp");
-	const reaching_spawn_points_out_analysis ReachingSpawnPointsOut = registerAnalysis<reaching_spawn_points_out_analysis>("ReachingSpawnPointsOut");
+typedef struct {
+	unsigned** data;
+	int x, y;
+} Image;
 
-	namespace detail {
 
-		bool isSpawnPointFree(const ExpressionPtr& expr) {
-			const auto& base = expr->getNodeManager().getLangBasic();
-			return !mayReachCallTo(expr, [&](const NodePtr& cur) {
-				return base.isParallel(cur);
-			});
-		}
+Image create_image(int x, int y) {
 
+	unsigned* block = (unsigned*)malloc(sizeof(unsigned)*x*y);
+	unsigned** index = (unsigned**)malloc(sizeof(unsigned*)*x);
+
+	for(int i=0; i<x; i++) {
+		index[i] = &(block[i*x]);
 	}
 
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+	return (Image){index, x, y};
+}
+
+int main(int argc, char** argv) {
+
+	cba_print_code();
+
+	// create an image
+	Image i = create_image(20,40);
+
+	cba_print_int(i.data);
+
+	i.data[2][4] = 5;
+
+	cba_print_int(i.data);
+	cba_print_int(i.data[2]);
+	cba_print_int(i.data[2][4]);
+	cba_expect_eq_int(i.data[2][4], 5);
+	cba_dump_equations();
+
+}

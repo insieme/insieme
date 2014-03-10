@@ -126,12 +126,12 @@ public:
     }
 
     //TYPE VISITOR
-	virtual core::TypePtr Visit(const clang::Type* type, frontend::conversion::Converter& convFact) {
+	virtual core::TypePtr Visit(const clang::QualType& type, frontend::conversion::Converter& convFact) {
         typeVisited=true;
         return nullptr;
 	}
 
-    virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+    virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
                                              frontend::conversion::Converter& convFact) {
         postTypeVisited=true;
         return irType;

@@ -109,7 +109,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
 			for (; it != classDecl->bases_end(); it++){
 				// visit the parent to build its type
-				auto parentIrType = convert((it)->getType().getTypePtr());
+				auto parentIrType = convert((it)->getType());
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
 
@@ -175,7 +175,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 	LOG_TYPE_CONVERSION(refTy, retTy);
 
 	// get inner type
-	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
+	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType()->getCanonicalTypeInternal());
 
 	// find out if is a const ref or not
 	QualType  qual;
@@ -212,12 +212,12 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		switch(templTy->getArg(argId).getKind()){
 			case clang::TemplateArgument::Expression: {
 				VLOG(2) << "arg: expression";
-				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType().getTypePtr());
+				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType());
 				break;
 			}
 			case clang::TemplateArgument::Type: {
 				VLOG(2) << "arg: TYPE";
-				convFact.convertType(templTy->getArg(argId).getAsType().getTypePtr());
+				convFact.convertType(templTy->getArg(argId).getAsType());
 				break;
 			}
 				// -------------------   NON IMPLEMENTED ONES ------------------------
@@ -264,7 +264,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
     }
 
 	assert(templTy->isSugared()&& "no idea what to do with non sugar");
- 	return	retTy = convFact.convertType(templTy->desugar().getTypePtr());
+ 	return	retTy = convFact.convertType(templTy->desugar());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -309,7 +309,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const 
 
 	//START_LOG_TYPE_CONVERSION(substTy);
 	//assert(false && "SubstTemplateTypeParmType not yet handled!");
-	retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
+	retTy = convFact.convertType( substTy->getReplacementType() );
 	return retTy;
 }
 
@@ -331,9 +331,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
     core::TypePtr retTy;
     LOG_TYPE_CONVERSION( memPointerTy, retTy );
-    retTy = convert(memPointerTy->getPointeeType().getTypePtr());
+    retTy = convert(memPointerTy->getPointeeType());
 	core::TypePtr memTy=  convFact.lookupTypeDetails(retTy);
-	core::TypePtr classTy = convert(memPointerTy->getClass ());
+	core::TypePtr classTy = convert(memPointerTy->getClass ()->getCanonicalTypeInternal());
 
 	if (memPointerTy->isMemberFunctionPointer()){
 		frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
@@ -355,10 +355,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //			The visitor itself
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
-	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-
-    return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
+core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::QualType& type) {
+    return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
 }
 
 } // End conversion namespace

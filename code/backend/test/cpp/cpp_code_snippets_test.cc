@@ -1013,7 +1013,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, " static int32_t a = __insieme_type_");
+		EXPECT_PRED2(containsSubString, code, "static int32_t a = __insieme_type_");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

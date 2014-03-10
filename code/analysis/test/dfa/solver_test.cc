@@ -62,8 +62,6 @@ TEST(Problem, Variable) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	typedef utils::set::PointerSet<VariablePtr> VarSet; 
-
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
@@ -116,9 +114,7 @@ TEST(Problem, LiveVariables) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	typedef utils::set::PointerSet<VariablePtr> VarSet; 
-
-    auto code = builder.parseStmt(
+	auto code = builder.parseStmt(
 		"{"
 		"	ref<int<4>> a = var(0);"
 		"	for(int<4> i = 10 .. 50) { "

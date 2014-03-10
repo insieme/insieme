@@ -132,7 +132,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 		retExpr = convFact.convertExpr(expr);
 
 		clangTy = expr->getType();
-		retTy = convFact.convertType(clangTy.getTypePtr());
+		retTy = convFact.convertType(clangTy);
 
 		// arrays and vectors in C are always returned as reference, so the type of the return
 		// expression is of array (or vector) type we are sure we have to return a reference, in the
@@ -621,7 +621,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 			llvm::APSInt result;
 			//reduce it and store it in result -- done by clang
 			caseExpr->isIntegerConstantExpr(result, convFact.getCompiler().getASTContext());
-			core::TypePtr type = convFact.convertType(caseExpr->getType().getTypePtr());
+			core::TypePtr type = convFact.convertType(caseExpr->getType());
 			caseLiteral = builder.literal(type, result.toString(10));
 		} else {
 			core::ExpressionPtr caseExprIr = convFact.convertExpr(caseExpr);

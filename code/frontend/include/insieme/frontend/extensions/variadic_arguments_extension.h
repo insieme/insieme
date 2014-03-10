@@ -47,9 +47,9 @@ class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPl
     virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                            insieme::frontend::conversion::Converter& convFact) ;
 
-    virtual core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+    virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
 
-    virtual core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+    virtual core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
                                     insieme::frontend::conversion::Converter& convFact) ;
 
     virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic);

@@ -95,21 +95,21 @@ namespace cba {
 
 		// dump the list of thread regions
 //		std::cout << "SyncPoints:\n\t" << join("\n\t", getSyncPoints(body)) << "\n";
-		std::cout << "SyncPoints:\n\t" << getSyncPoints(body) << "\n";
-		std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(body)) << "\n";
+
+		auto syncPoints = getSyncPoints(body);
+		EXPECT_TRUE(!syncPoints.empty()) << "SyncPoints:\n\t" << syncPoints << "\n";
+
+		auto threadRegions = getThreadRegions(body);
+		EXPECT_TRUE(!threadRegions.empty()) << "Thread Regions:\n\t" << join("\n\t", threadRegions) << "\n";
 
 		// dump the dot plot of the execution net
 		const auto& net = getExecutionNet(body);
 		EXPECT_LT(1, net.getNumPlaces());
 		utils::petri_net::plot(net, "execution_net.svg");
-//
-//		auto node = body.getAddressOfChild(9,3,1,2,0,1,2,20,0,2,2,4,2);
-//		std::cout << "Problem point: " << *node << "\n";
-//		std::cout << "Parent:        " << *node.getParentNode() << "\n";
-//		std::cout << "Parent:        " << *node.getParentNode(2) << "\n";
-//		std::cout << "Parent:        " << *node.getParentNode(3) << "\n";
-//		std::cout << "Parent:        " << *node.getParentNode(4) << "\n";
-//
+
+		// print some equation statistics
+		getCBA(body).plotStats();
+
 //		// dump the dot plot
 //		createDotDump(body);
 //		createDotDumpRoots(body);
@@ -124,7 +124,7 @@ namespace cba {
 
 		// test cases to be tested
 		res.push_back(TEST_ROOT_DIR "/matrix_mul_static/matrix_mul_static.c");
-//		res.push_back(TEST_ROOT_DIR "/pendulum/pendulum.c");
+		res.push_back(TEST_ROOT_DIR "/pendulum/pendulum.c");
 		res.push_back(TEST_ROOT_DIR "/omp/dijkstra/dijkstra.c");
 
 		return res;
