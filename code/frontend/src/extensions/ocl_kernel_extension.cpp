@@ -162,7 +162,7 @@ insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, ins
 
 	llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
 
-	core::TypePtr&& exprTy = convFact.convertType( (vecElemExpr)->getType().getTypePtr() );
+	core::TypePtr&& exprTy = convFact.convertType( (vecElemExpr)->getType() );
 	unsigned int pos = 0u;
 	core::IRBuilder builder = convFact.getIRBuilder();
 
@@ -226,16 +226,16 @@ insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, ins
 
 }
 
-insieme::core::TypePtr OclKernelPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
-	if(!llvm::isa<clang::ExtVectorType>(type))
+insieme::core::TypePtr OclKernelPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+	if(!llvm::isa<clang::ExtVectorType>(type.getTypePtr()))
 		return nullptr;
 
-	const clang::ExtVectorType* vecTy = llvm::cast<clang::ExtVectorType>(type);
+	const clang::ExtVectorType* vecTy = llvm::cast<clang::ExtVectorType>(type.getTypePtr());
 
     // get vector datatype
  	const QualType qt = vecTy->getElementType();
- 	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
- 	core::TypePtr&& subType = convFact.convertType(const_cast<BuiltinType*>(buildInTy));
+ 	//const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+ 	core::TypePtr&& subType = convFact.convertType(qt);
 
  	// get the number of elements
  	size_t num = vecTy->getNumElements();

@@ -77,7 +77,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clan
 												 insieme::frontend::conversion::Converter& convFact){
 	auto builder = convFact.getIRBuilder();
 	insieme::core::ExpressionPtr retIr;
-	insieme::core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullPtrExpr));
+	insieme::core::TypePtr type = convFact.convertType(nullPtrExpr->getType());
 	assert(type->getNodeType() != insieme::core::NT_ArrayType && "C pointer type must of type array<'a,1>");
 	return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
 }
@@ -92,7 +92,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 
 	// convert the enclosing class
 	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
-	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
+	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 
 	// convert the captures
 	auto captureIt  = lambdaExpr->capture_init_begin();
@@ -131,7 +131,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
  * auto type
  */
 insieme::core::TypePtr Cpp11Plugin::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
-	return convFact.convertType(autoTy->getDeducedType().getTypePtr());
+	return convFact.convertType(autoTy->getDeducedType());
 }
 
 /**

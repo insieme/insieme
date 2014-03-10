@@ -41,8 +41,6 @@
  *      shortcuts to access or retrieve specific IR features
 *****************************************************************************************************/
 
-#define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
-
 #define GET_REF_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
 

@@ -536,10 +536,13 @@ namespace tu {
 				if (structs.empty()) return type;
 
 				// create de-normalized recursive bindings
+				// beware of unamed structs
 				vector<RecTypeBindingPtr> bindings;
+				unsigned id =0;
 				for(auto cur : structs) {
-					bindings.push_back(builder.recTypeBinding(builder.typeVariable(cur.as<core::StructTypePtr>()->getName()), cur));
-								//builder.typeVariable(insieme::core::annotations::getAttachedName(cur)), cur));
+					std::string name = cur.as<core::StructTypePtr>()->getName().getValue();
+					if (name.empty()) name = format("t%d", id++);
+					bindings.push_back(builder.recTypeBinding(builder.typeVariable(name), cur));
 				}
 
 				// sort according to variable names

@@ -277,6 +277,17 @@ static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr)
 	return getRepresentedTypeParam(expr->getType());
 }
 
+/**
+ * returns true if the given type models a C pointer type
+ * @param the type to test
+ * @return whenever is a pointer represented in IR
+ */
+static inline bool isPointerType(const TypePtr& ptr){
+	if (!ptr.isa<RefTypePtr>()) return false;
+	if (!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) return false;
+	return true;
+}
+
 
 /**
  * Tests whether the given node is a constructor expression.

@@ -217,7 +217,7 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
     //extract the real type
-    const core::TypePtr& type = convert(bulinTy->getElementType().getTypePtr());
+    const core::TypePtr& type = convert(bulinTy->getElementType());
     frontend_assert(type) << "Conversion of complex element type failed.\n";
     return  mgr.getLangExtension<core::lang::ComplexExtension>().getComplexType(type);
 }
@@ -235,12 +235,14 @@ core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* buli
 core::TypePtr Converter::TypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( arrTy, retTy );
-	if(arrTy->isSugared())
-		// if the type is sugared, we Visit the desugared type
-		return (retTy = convFact.convertType( arrTy->desugar().getTypePtr() ));
+
+	// FIXME: check why we should desugar stuff
+	//if(arrTy->isSugared())
+	//	// if the type is sugared, we Visit the desugared type
+	//	return (retTy = convFact.convertType( arrTy->desugar() ));
 
 	size_t arrSize = *arrTy->getSize().getRawData();
-	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
+	core::TypePtr&& elemTy = convert( arrTy->getElementType());
 	frontend_assert(elemTy) << "Conversion of array element type failed.\n";
 
 	 retTy = builder.vectorType(
@@ -262,9 +264,9 @@ core::TypePtr Converter::TypeConverter::VisitIncompleteArrayType(const Incomplet
 	LOG_TYPE_CONVERSION( arrTy, retTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return (retTy = convert( arrTy->desugar().getTypePtr() ));
+		return (retTy = convert( arrTy->desugar() ));
 
-	auto elemTy = convert( arrTy->getElementType().getTypePtr() );
+	auto elemTy = convert( arrTy->getElementType() );
 	frontend_assert(elemTy ) << "Conversion of array element type failed.\n";
 
 	retTy = builder.arrayType( elemTy );
@@ -289,9 +291,9 @@ core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArr
 	LOG_TYPE_CONVERSION( arrTy, retTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return (retTy = convert( arrTy->desugar().getTypePtr() ));
+		return (retTy = convert( arrTy->desugar() ));
 
-	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
+	core::TypePtr&& elemTy = convert( arrTy->getElementType() );
 	frontend_assert(elemTy ) << "Conversion of array element type failed.\n";
 
 	retTy = builder.arrayType( elemTy );
@@ -308,7 +310,7 @@ core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 
-	core::TypePtr&& retTy = convert( funcTy->getResultType().getTypePtr() );
+	core::TypePtr&& retTy = convert( funcTy->getResultType() );
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	frontend_assert(retTy) <<  "Function has no return type!\n";
@@ -331,7 +333,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 		[ &argTypes, this ] (const QualType& currArgType) {
 
 
-			core::TypePtr&& argTy = this->convert( currArgType.getTypePtr() );
+			core::TypePtr&& argTy = this->convert( currArgType );
 
 
 			// If the argument is of type vector or array we need to add a reference
@@ -366,7 +368,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 // available about its arguments.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-	core::TypePtr&& retTy = convert( funcTy->getResultType().getTypePtr() );
+	core::TypePtr&& retTy = convert( funcTy->getResultType());
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	// If the return type is of type vector or array we need to add a reference
@@ -393,8 +395,8 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 
     // get vector datatype
 	const QualType qt = vecTy->getElementType();
-	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
-	core::TypePtr&& subType = convert(const_cast<BuiltinType*>(buildInTy));
+	//const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
+	core::TypePtr&& subType = convert(qt);
 
 	// get the number of elements
 	size_t num = vecTy->getNumElements();
@@ -408,7 +410,7 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-	core::TypePtr retTy = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	core::TypePtr retTy = convert( typedefType->getDecl()->getUnderlyingType());
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
 
@@ -421,7 +423,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		// a new generic type will point to the previous translation unit decl
 		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
 			auto decl =  typedefType->getDecl();
-			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType);
+			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal());
 			core::GenericTypePtr gen = builder.genericType(name);
 
 			core::TypePtr impl = symb;
@@ -460,7 +462,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfType(const TypeOfType* typeOf
 // 							TYPE OF EXPRESSION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-	core::TypePtr&& retTy = convert( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
+	core::TypePtr&& retTy = convert(typeOfType->getUnderlyingExpr()->getType() );
 	LOG_TYPE_CONVERSION( typeOfType, retTy );
 	return retTy;
 }
@@ -479,7 +481,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if (!def) {
 		//tag type isonly declared
 		auto decl = tagType->getDecl();
-		std::string name = utils::getNameForRecord(decl, tagType);
+		std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal());
 
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( name );
@@ -545,7 +547,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 
 		RecordDecl::field_iterator::value_type curr = *it;
-		core::TypePtr&& fieldType = convert( GET_TYPE_PTR(curr) );
+		core::TypePtr&& fieldType = convert(curr->getType() );
 
 		core::StringValuePtr id = builder.stringValue(
 				curr->getIdentifier() ? curr->getNameAsString() : "__m"+insieme::utils::numeric_cast<std::string>(mid));
@@ -575,7 +577,7 @@ core::TypePtr Converter::TypeConverter::VisitElaboratedType(const ElaboratedType
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( elabType, retTy );
 
-	return (retTy = convert( elabType->getNamedType().getTypePtr() ));
+	return (retTy = convert( elabType->getNamedType()));
 }
 
 
@@ -583,7 +585,7 @@ core::TypePtr Converter::TypeConverter::VisitElaboratedType(const ElaboratedType
 //							   PAREN TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitParenType(const ParenType* parenTy) {
-	core::TypePtr&& retTy = convert( parenTy->getInnerType().getTypePtr() );
+	core::TypePtr&& retTy = convert( parenTy->getInnerType());
 	LOG_TYPE_CONVERSION( parenTy, retTy );
 	return retTy;
 }
@@ -593,7 +595,7 @@ core::TypePtr Converter::TypeConverter::VisitParenType(const ParenType* parenTy)
 //                             ATOMIC TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitAtomicType(const AtomicType* atomicTy) {
-    core::TypePtr ret = convert(atomicTy->getValueType().getTypePtr());
+    core::TypePtr ret = convert(atomicTy->getValueType());
     convFact.warnings.insert("Atomic type lost in INSPIRE");
     return ret;
 }
@@ -616,7 +618,7 @@ core::TypePtr Converter::TypeConverter::VisitAtomicType(const AtomicType* atomic
 // more general case (the array case) has to be conservatively considered.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* pointerTy) {
-	core::TypePtr&& subTy = convert( pointerTy->getPointeeType().getTypePtr() );
+	core::TypePtr&& subTy = convert( pointerTy->getPointeeType());
 	// ~~~~~ Handling of special cases ~~~~~~~
 	// void* -> array<'a>
 	if( gen.isUnit(subTy) ) {
@@ -632,7 +634,7 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
     auto innerPtr = pointerTy->getPointeeType();
     if(innerPtr->isPointerType()) {
             if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
-                subTy = convert(innerPtr->getPointeeType().getTypePtr());
+                subTy = convert(innerPtr->getPointeeType());
 	            retTy = builder.refType(builder.arrayType( subTy ));
             }
     }
@@ -644,7 +646,7 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 
 core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decTy) {
 
-	core::TypePtr&& subTy = convert( decTy->getPointeeType().getTypePtr() );
+	core::TypePtr&& subTy = convert( decTy->getPointeeType() );
 	// ~~~~~ Handling of special cases ~~~~~~~
 	// void* -> array<'a>
 	if( gen.isUnit(subTy) ) {
@@ -660,7 +662,7 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
     auto innerPtr = decTy->getPointeeType();
     if(innerPtr->isPointerType()) {
             if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
-                subTy = convert(innerPtr->getPointeeType().getTypePtr());
+                subTy = convert(innerPtr->getPointeeType());
 	            retTy = builder.refType(builder.arrayType( subTy ));
             }
     }
@@ -671,7 +673,7 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl());
+		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal());
 		return builder.structType( builder.stringValue(name), structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
 		return builder.unionType( structElements );
@@ -680,14 +682,12 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 	return core::TypePtr();
 }
 
-core::TypePtr Converter::CTypeConverter::convertInternal(const clang::Type* type) {
-   	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-
-    return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
+core::TypePtr Converter::CTypeConverter::convertInternal(const clang::QualType& type) {
+    return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
 }
 
 
-core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
+core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type) {
 	auto& typeCache = convFact.typeCache;
 
 	// look up type within typeCache
@@ -778,7 +778,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::Type* type) {
 	return res;
 }
 
-core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
+core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
     core::TypePtr irType;
 
     //iterate clang handler list and check if a handler wants to convert the type

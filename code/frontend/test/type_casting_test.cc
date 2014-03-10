@@ -59,13 +59,6 @@ using namespace insieme::frontend::conversion;
 
 namespace fe = insieme::frontend;
 
-#define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ ConversionFactory convFactory( manager, tu);\
-	clang::BuiltinType builtin(clang::BuiltinType::TypeName); \
-	TypePtr convType = convFactory.convertType( &builtin ); \
-	EXPECT_TRUE(convType); \
-	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); }
-
 
 TEST(TypeCast, FileTest) {
 
@@ -86,7 +79,7 @@ TEST(TypeCast, FileTest) {
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 			}

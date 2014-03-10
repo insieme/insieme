@@ -83,7 +83,7 @@ namespace extensions {
         return nullptr;
     }
 
-    insieme::core::TypePtr FrontendPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+    insieme::core::TypePtr FrontendPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
         return nullptr;
     }
 
@@ -122,7 +122,7 @@ namespace extensions {
         return irExpr;
     }
 
-    insieme::core::TypePtr FrontendPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+    insieme::core::TypePtr FrontendPlugin::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
                                                      insieme::frontend::conversion::Converter& convFact) {
         return irType;
     }

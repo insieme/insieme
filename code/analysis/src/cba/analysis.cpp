@@ -235,8 +235,6 @@ namespace cba {
 		// shortcut for the simple stuff
 		if (a == b) return true;
 
-		typedef Reference<DefaultContext> Reference;
-
 		// compute references set
 		std::set<ExpressionPtr> valA = getValues(a, U);
 		std::set<ExpressionPtr> valB = getValues(b, U);
@@ -261,8 +259,6 @@ namespace cba {
 
 		// shortcut for the simple stuff
 		if (a == b) return true;
-
-		typedef Reference<DefaultContext> Reference;
 
 		// compute references set
 		std::set<ExpressionPtr> valA = getValues(a, U);
