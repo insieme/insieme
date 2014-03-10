@@ -491,14 +491,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 	//		VLOG(2)  << "####### clang: #######" << std::endl;
 	//		castExpr->dump();
 	//	}
-			std::cout << "####### Expr: #######" << std::endl;
-			std::cout << (expr);
-			std::cout << "####### Expr Type: #######" << std::endl;
-			std::cout << (exprTy);
-			std::cout << "####### cast Type: #######" << std::endl;
-			std::cout << (targetTy);
-			std::cout  << "####### clang: #######" << std::endl;
-			castExpr->dump();
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
@@ -870,35 +862,47 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			VLOG(2) << exprTy << " " << targetTy;
 
 			core::ExpressionPtr retIr;
-			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
+
+			// pointers:
+			if (core::analysis::isPointerType(exprTy)){
+				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
+				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
+				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy)));
+			}
+
+			// NORE: All value casts are upgraded to CPP ref, this has no implications for the generated code since lvalues in clang are already refs.
+			// 		 and makes everithing smoother and easyer
+			if (exprTy.isa<core::RefTypePtr>()){
+				expr = builder.toCppRef(expr);
+				exprTy = expr.getType();
+			}
+			
+			if (core::analysis::isCppRef(exprTy)){
+				if (!core::analysis::isCppRef(targetTy)){
+					targetTy =  core::analysis::getCppRef(targetTy);
+				}
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
 			}
-			else if (core::analysis::isConstCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+			else if (core::analysis::isConstCppRef(exprTy)){
+				if (!core::analysis::isCppRef(targetTy)){
+					targetTy =  core::analysis::getConstCppRef(targetTy);
+				}
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastConstCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
 			}
-			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
-				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
-			}
-			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy))
-					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
-				// statically casting an object to a reference
+			else{
 
-				// first wrap object in cpp_ref
-				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
-
-				//depending on targetType
-				if(core::analysis::isCppRef(targetTy) ) {
-					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToRefCpp(), expr, builder.getTypeLiteral(targetTy));
-				}
-				else if(core::analysis::isConstCppRef(targetTy)) {
-					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral(targetTy));
-				}
-			} else {
-				std::cout << targetTy<<std::endl;
-				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+				std::cerr<< " === BASE TO DERIVED FAILED ===========" << std::endl;
+				std::cerr << "####### Expr: #######" << std::endl;
+				std::cerr << (expr);
+				std::cerr << "\n####### Expr Type: #######" << std::endl;
+				std::cerr << (exprTy);
+				std::cerr << "\n####### cast Type: #######" << std::endl;
+				std::cerr << (targetTy);
+				std::cerr  << "\n####### clang: #######" << std::endl;
+				castExpr->dump();
+				abort();
 			}
 
-			VLOG(2) << retIr << " " << retIr->getType();
 			return retIr;
 		}
 
@@ -906,40 +910,52 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
 		{
-			//we want to know the TYPE of dynamic_cast<TYPE>()
+			//we want to know the TYPE of static_cast<TYPE>()
 			targetTy = convFact.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
 			VLOG(2) << exprTy << " " << targetTy;
 
 			core::ExpressionPtr retIr;
-			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
+
+			// pointers:
+			if (core::analysis::isPointerType(exprTy)){
+				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
+				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
+				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy)));
+			}
+
+			// NORE: All value casts are upgraded to CPP ref, this has no implications for the generated code since lvalues in clang are already refs.
+			// 		 and makes everithing smoother and easyer
+			if (exprTy.isa<core::RefTypePtr>()){
+				expr = builder.toCppRef(expr);
+				exprTy = expr.getType();
+			}
+			
+			if (core::analysis::isCppRef(exprTy)){
+				if (!core::analysis::isCppRef(targetTy)){
+					targetTy =  core::analysis::getCppRef(targetTy);
+				}
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
 			}
-			else if (core::analysis::isConstCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+			else if (core::analysis::isConstCppRef(exprTy)){
+				if (!core::analysis::isCppRef(targetTy)){
+					targetTy =  core::analysis::getConstCppRef(targetTy);
+				}
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastConstCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
 			}
-			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
-				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
-			}
-			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy))
-					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
-				// dynamically casting an object to a reference
+			else{
 
-				// first wrap object in cpp_ref
-				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
-
-				//depending on targetType
-				if(core::analysis::isCppRef(targetTy) ) {
-					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToRefCpp(), expr, builder.getTypeLiteral(targetTy));
-				}
-				else if(core::analysis::isConstCppRef(targetTy)) {
-					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToConstCpp(), expr, builder.getTypeLiteral(targetTy));
-				}
-			}
-			else {
-				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+				std::cerr<< " === Dynamic cast  FAILED ===========" << std::endl;
+				std::cerr << "####### Expr: #######" << std::endl;
+				std::cerr << (expr);
+				std::cerr << "\n####### Expr Type: #######" << std::endl;
+				std::cerr << (exprTy);
+				std::cerr << "\n####### cast Type: #######" << std::endl;
+				std::cerr << (targetTy);
+				std::cerr  << "\n####### clang: #######" << std::endl;
+				castExpr->dump();
+				abort();
 			}
 
-			VLOG(2) << retIr << " " << retIr->getType();
 			return retIr;
 		}
 
