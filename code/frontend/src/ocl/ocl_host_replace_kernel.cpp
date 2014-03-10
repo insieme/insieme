@@ -578,7 +578,6 @@ std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
 
 			ExpressionPtr argument;
 
-std::cout << "\nrara " << argTy << std::endl;
 			// check for local memory arguments
 			if(*memberTy == *gen.getUInt8()) {
 				VariablePtr localMemArg = builder.variable(argTy);
@@ -591,8 +590,6 @@ std::cout << "\nrara " << argTy << std::endl;
 			} else {
 				argument = builder.deref(builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0))));
 			}
-
-std::cout << "\nrara " << argument->getType() << " vs " << argTy << std::endl;
 
 			if(*memberTy != *interface.at(i)->getType()) // e.g. argument of kernel is an ocl vector type
 				argument = builder.callExpr(interface.at(i)->getType(), gen.getRefReinterpret(),

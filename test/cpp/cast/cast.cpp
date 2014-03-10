@@ -89,6 +89,12 @@ int main() {
 	}
 
 	{
+		{
+			Derived d;
+			Base ((Base)d);
+		}
+
+
 		//derived to base cast
 		{
 			Derived d;
@@ -96,17 +102,29 @@ int main() {
 
 			Base& rba = d;			//implicit
 			Base& rbb = (Base&) d;	//explicit
+
+			Base& rbc = rd;
+			Base& rbd = (Base&)rd;
+
 		}
 
 		//base to derived cast
 		{
-			Base b;
-			Base& rb = b;
+			Base 		b;
+			Base& 		rb  = b;
+			const Base& crb = b;
+
 			Derived& r1 = (Derived&) b;	//explicit
+			Derived& r2 = (Derived&) rb;
+			//Derived& r3 = (Derived&) crb;  // this is allowed in C++, enforce cast, but i dont want to model it in IR, 
+			const Derived& r3 = (Derived&) crb;
+
+			//Derived& r3 = b;     // implicit in this case is not allowed
+			//Derived& r4 = rb;
 		}
 	}
 
-	// INVALID -- needs polymorphic classes -- see cast_virtual
+//	// INVALID -- needs polymorphic classes -- see cast_virtual
 	//dynamic_cast <new_type> (expression)
 	//{
 //		Base* pba = new Derived();
@@ -119,6 +137,7 @@ int main() {
 //		pd = dynamic_cast<Derived*>(pbb);
 //		if (pd==0) printf("Null pointer on second type-cast\n");
 //	}
+
 
 	//reinterpret_cast <new_type> (expression)
 	{

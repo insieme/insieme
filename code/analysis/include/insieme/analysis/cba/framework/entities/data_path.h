@@ -576,7 +576,7 @@ namespace cba {
 			assert_true(path) << "Unable to delete head of empty list!";
 
 			// make sure the head index is the given value
-			assert_true(path->equalIndex(element))
+			assert_true(path->isOverlapping(element))
 				<< "Path:    " << *path << "\n"
 				<< "Element: " << element << "\n";
 

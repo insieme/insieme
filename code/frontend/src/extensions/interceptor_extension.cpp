@@ -55,7 +55,7 @@ namespace extensions {
 
 			if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl() ) ) {
 				const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-				if( getInterceptor().isIntercepted(enumType) ) {
+				if( getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal()) ) {
 					/*core::TypePtr enumTy = convFact.convertType(enumType);
 					auto enumDecl = enumType->getDecl();
 					std::string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
@@ -90,10 +90,9 @@ namespace extensions {
     	return nullptr;
 	}
 
-    core::TypePtr InterceptorPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+    core::TypePtr InterceptorPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 		if(getInterceptor().isIntercepted(type)) {
 			VLOG(2) << "interceptorplugin\n";
-			VLOG(2) << type << " isIntercepted";
 			auto res = getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;

@@ -132,6 +132,18 @@ namespace cba {
 				return;
 			}
 
+			// skip sub-expressions if we can statically determine that there are no sync points
+			if (detail::isSyncPointFree(call)) {
+
+				// just connect in and out
+				auto In  = cba.getSet(this->Ain, call, ctxt);
+				auto Out = cba.getSet(this->Aout, call, ctxt);
+
+				constraints.add(subset(In,Out));
+				return;
+			}
+
+
 			// otherwise treat it as usual
 			super::visitCallExpr(call, ctxt, constraints);
 		}

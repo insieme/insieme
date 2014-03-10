@@ -34,23 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/analysis/reaching_spawn_points.h"
+#include "insieme/analysis/cba/framework/generator/killed_definitions.h"
 #include "insieme/analysis/cba/utils/static_execution_check.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	const reaching_spawn_points_in_analysis ReachingSpawnPointsIn = registerAnalysis<reaching_spawn_points_in_analysis>("ReachingSpawnPointsIn");
-	const reaching_spawn_points_tmp_analysis ReachingSpawnPointsTmp = registerAnalysis<reaching_spawn_points_tmp_analysis>("ReachingSpawnPointsTmp");
-	const reaching_spawn_points_out_analysis ReachingSpawnPointsOut = registerAnalysis<reaching_spawn_points_out_analysis>("ReachingSpawnPointsOut");
-
 	namespace detail {
 
-		bool isSpawnPointFree(const ExpressionPtr& expr) {
-			const auto& base = expr->getNodeManager().getLangBasic();
-			return !mayReachCallTo(expr, [&](const NodePtr& cur) {
-				return base.isParallel(cur);
+		bool isAssignmentFree(const NodePtr& node) {
+			const auto& base = node->getNodeManager().getLangBasic();
+			return !mayReachCallTo(node, [&](const NodePtr& cur) {
+				return base.isRefAssign(cur) || base.isMerge(cur);
 			});
 		}
 

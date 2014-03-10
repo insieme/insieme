@@ -1238,7 +1238,7 @@ bool Address::operator<(const Address& other) const {
 	return getBlock() < other.getBlock() || 
 			( getBlock() == other.getBlock() && 
 				( stmt_idx < other.stmt_idx || 
-				  ( stmt_idx == other.stmt_idx && addr < other.stmt_idx ) ) ); 
+				  ( stmt_idx == other.stmt_idx && (unsigned)addr < other.stmt_idx ) ) );
 
 }
 

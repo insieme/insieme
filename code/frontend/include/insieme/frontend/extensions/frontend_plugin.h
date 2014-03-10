@@ -47,7 +47,7 @@ namespace clang {
     class Expr;
     class Stmt;
     class Decl;
-    class Type;
+    class QualType;
     class FunctionDecl;
     class TypeDecl;
     class ValueDecl;
@@ -164,7 +164,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return converted clang type or nullptr if not converted
          */
-        virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+        virtual insieme::core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
 
         /**
          *  User provided clang stmt visitor. Will be called before clang stmt
@@ -238,7 +238,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return modified IR type or irType if no modification should be done
          */
-        virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+        virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
                                                  insieme::frontend::conversion::Converter& convFact);
 
         /**
