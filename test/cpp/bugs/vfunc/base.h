@@ -6,7 +6,9 @@ struct CRTP {
 };
 
 struct Base : public CRTP<Base*>{
-	Base() { std::cout << "Base()" << std::endl; }
+	Base() { 
+		std::cout << "Base()" << std::endl; 
+	}
 	virtual void loadArguments() = 0;
 	virtual void run() = 0;
 	virtual void runProc();
