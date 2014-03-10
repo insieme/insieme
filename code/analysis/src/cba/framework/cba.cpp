@@ -47,10 +47,6 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
-//	const StateSetType Sin("Sin");			// in-state of statements
-//	const StateSetType Sout("Sout");		// out-state of statements
-//	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
-
 
 	using std::set;
 
@@ -180,6 +176,45 @@ namespace cba {
 
 		out << "\n}\n";
 	}
+
+	void CBA::plotStats(std::ostream& out) const {
+
+		// some basic stuff
+		out << "-------- CBA Statistics -----------\n";
+		out << format(" %-25s %7d\n", "#Values", getNumSets());
+		out << format(" %-25s %7d\n", "#Constraints", getNumConstraints());
+		out << format(" %-25s %7d\n", "#Labels", labels.size());
+		out << "-----------------------------------\n";
+
+		// statistics on the value types
+		std::map<AnalysisType,int> counts;
+		for(const auto& cur : value2analysis) {
+			counts[cur.second]++;
+		}
+
+		// create a sorted version of the counts
+		std::vector<std::pair<string,int>> sorted_counts;
+		for(const auto& cur : counts) {
+			sorted_counts.push_back(std::make_pair(getAnalysisName(cur.first), cur.second));
+		}
+
+		// sort counts
+		std::sort(sorted_counts.begin(), sorted_counts.end(),
+				[](const std::pair<string,int>& a, const std::pair<string,int>& b)->bool {
+					return a.second > b.second;
+		});
+
+		// print detailed counts
+		int sum = 0;
+		for(const auto& cur : sorted_counts) {
+			out << format(" %-25s %7d\n", cur.first, cur.second);
+			sum += cur.second;
+		}
+		out << "-----------------------------------\n";
+		out << format(" %-25s %7d\n", "Total:", sum);
+		out << "-----------------------------------\n";
+	}
+
 
 } // end namespace cba
 } // end namespace analysis

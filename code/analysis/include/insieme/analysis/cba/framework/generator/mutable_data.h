@@ -87,19 +87,19 @@ namespace cba {
 
 	template<typename A>
 	const location_data_in_analysis<A>& Sin() {
-		static const location_data_in_analysis<A> instance;
+		static const location_data_in_analysis<A> instance = registerAnalysis<location_data_in_analysis<A>>("Sin-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
 	template<typename A>
 	const location_data_tmp_analysis<A>& Stmp() {
-		static const location_data_tmp_analysis<A> instance;
+		static const location_data_tmp_analysis<A> instance = registerAnalysis<location_data_tmp_analysis<A>>("Stmp-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
 	template<typename A>
 	const location_data_out_analysis<A>& Sout() {
-		static const location_data_out_analysis<A> instance;
+		static const location_data_out_analysis<A> instance = registerAnalysis<location_data_out_analysis<A>>("Sout-" + getAnalysisName(typeid(A)));
 		return instance;
 	}
 
