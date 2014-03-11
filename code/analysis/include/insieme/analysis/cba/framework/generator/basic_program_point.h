@@ -424,6 +424,15 @@ namespace cba {
 				return;	// done
 			}
 
+			// if it is a named value of struct expression
+			if (auto value = parent.isa<NamedValueAddress>()) {
+				// TODO: actually here the evaluation should be chained up!
+				// the grant-parent should be a struct expression => link in with this in state
+				auto expr = parent.getParentAddress(2).as<StructExprAddress>();
+				this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+				return; // done
+			}
+
 			// handle full-expressions
 			if (auto compound = parent.isa<CompoundStmtAddress>()) {
 
@@ -992,6 +1001,13 @@ namespace cba {
 			auto B_cond = cba.getSet(B, l_cond, ctxt);
 			this->connectSetsIf(true,  B_cond, this->Aout, stmt->getThenBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 			this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
+		}
+
+		void visitSwitchStmt(const SwitchStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			// link out with out of cases
+			for(const auto& cur : stmt->getCases()) {
+				this->connectSets(this->Aout, cur->getBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
+			}
 		}
 
 		void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {

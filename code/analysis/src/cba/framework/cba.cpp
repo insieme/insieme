@@ -119,10 +119,8 @@ namespace cba {
 			// print it to a intermediate buffer to filter out quotes
 			std::stringstream res;
 			cur.second->printValueInfo(res, *this, id);
-
 			out << escape(res.str());
 
-			cur.second->printValueInfo(out, *this, id);
 			out << " = " << escape(getSolution(id)) << "\""
 						<< ((solver.isResolved(id)) ? " shape=box" : "") << "];\n\t";
 		}
