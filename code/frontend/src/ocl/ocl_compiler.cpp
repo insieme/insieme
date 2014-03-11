@@ -996,8 +996,8 @@ public:
                     args.push_back(kd.globalRange->getType());
                     args.push_back(kd.localRange->getType());
 
-                    // function now will return cl_int (CL_SUCCESS)
-                    newFuncType = builder.functionType(args, BASIC.getInt4());
+                    // function returns unit
+                    newFuncType = builder.functionType(args, BASIC.getUnit());
                 } else {
                     assert(funcType && "Function has unexpected type");
                 }
@@ -1139,9 +1139,6 @@ public:
 
                     newBodyStmts.push_back(globalPar);
                     newBodyStmts.push_back(merge);
-
-                    // always return 0 = CL_SUCCESS to meet the return value of clEnqueueNDRangeKernel
-                    newBodyStmts.push_back(builder.returnStmt(builder.intLit(0)));
 
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
