@@ -60,7 +60,7 @@ core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insi
 		core::ExpressionList args;
 		args.push_back(firstArg);
 		const clang::QualType varTy = vaargexpr->getType();
-		core::TypePtr&& irType = convFact.convertType( varTy.getTypePtr() );
+		core::TypePtr&& irType = convFact.convertType( varTy );
 		args.push_back(builder.getTypeLiteral(irType));
 
 		return builder.callExpr(irType, builderExt.getVaarg(), args);
@@ -119,7 +119,7 @@ core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr,
 	return irExpr;
 }
 
-core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 	if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
 		if(tt->getDecl()->getNameAsString().find("va_list") != std::string::npos) {
 			auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
@@ -131,11 +131,11 @@ core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::Type* type, insieme::
 	return nullptr;
 }
 
-core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
 											 insieme::frontend::conversion::Converter& convFact) {
 
 	 // build the right function type for variadic functions, we have to extend the parameter list with an extra TYPE
-	if(const clang::FunctionProtoType * funType = llvm::dyn_cast<clang::FunctionProtoType>(type)) {
+	if(const clang::FunctionProtoType * funType = llvm::dyn_cast<clang::FunctionProtoType>(type.getTypePtr())) {
 		if(funType->isVariadic()) {
 
 			core::IRBuilder builder = convFact.getIRBuilder();

@@ -34,60 +34,46 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
+#include <stdlib.h>
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "cba.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+typedef struct {
+	unsigned** data;
+	int x, y;
+} Image;
 
-	using namespace core;
 
-	namespace {
+Image create_image(int x, int y) {
 
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
+	unsigned* block = (unsigned*)malloc(sizeof(unsigned)*x*y);
+	unsigned** index = (unsigned**)malloc(sizeof(unsigned*)*x);
 
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
-		}
-
-		void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
+	for(int i=0; i<x; i++) {
+		index[i] = &(block[i*x]);
 	}
-	
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+
+	return (Image){index, x, y};
+}
+
+int main(int argc, char** argv) {
+
+	cba_print_code();
+
+	// create an image
+	Image i = create_image(20,40);
+
+	cba_print_int(i.data);
+
+	i.data[2][4] = 5;
+
+	cba_print_int(i.data);
+	cba_print_int(i.data[2]);
+	cba_print_int(i.data[2][4]);
+	cba_expect_eq_int(i.data[2][4], 5);
+	cba_dump_equations();
+
+}

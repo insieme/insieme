@@ -726,9 +726,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		typedef std::vector<SwitchCasePtr> CaseList;
-		typedef std::vector<IterationVector> IterationVectorList;
-
 		IterationVector ret;
 		
 		bool isSCoP = true;

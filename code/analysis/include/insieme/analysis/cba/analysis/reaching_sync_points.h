@@ -71,6 +71,11 @@ namespace cba {
 	extern const reaching_sync_points_tmp_analysis RSPtmp;
 	extern const reaching_sync_points_out_analysis RSPout;
 
+	namespace detail {
+
+		bool isSyncPointFree(const ExpressionPtr& expr);
+
+	}
 
 	template<typename Context>
 	class ReachingSyncPointsInConstraintGenerator : public BasicInConstraintGenerator<reaching_sync_points_in_analysis, reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, ReachingSyncPointsInConstraintGenerator<Context>, Context> {
@@ -127,8 +132,37 @@ namespace cba {
 				return;
 			}
 
+			// skip sub-expressions if we can statically determine that there are no sync points
+			if (detail::isSyncPointFree(call)) {
+
+				// just connect in and out
+				auto In  = cba.getSet(this->Ain, call, ctxt);
+				auto Out = cba.getSet(this->Aout, call, ctxt);
+
+				constraints.add(subset(In,Out));
+				return;
+			}
+
+
 			// otherwise treat it as usual
 			super::visitCallExpr(call, ctxt, constraints);
+		}
+
+		void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
+
+			// skip sub-expressions if we can statically determine that there are no sync points
+			if (detail::isSyncPointFree(expr)) {
+
+				// just connect in and out
+				auto In  = cba.getSet(this->Ain, expr, ctxt);
+				auto Out = cba.getSet(this->Aout, expr, ctxt);
+
+				constraints.add(subset(In,Out));
+				return;
+			}
+
+			// for the rest => default behavior
+			super::visitExpression(expr, ctxt, constraints);
 		}
 	};
 
@@ -143,37 +177,6 @@ namespace cba {
 
 		ReachingSyncPointsTmpConstraintGenerator(CBA& cba) : super(cba, RSPin, RSPtmp, RSPout), cba(cba) {}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-
-			// check whether it is a sync-operation call
-			auto fun = call->getFunctionExpr();
-
-			if (isSynchronizingFunction(fun)) {
-
-				// the result value to be constraint
-				auto res = cba.getSet(RSPtmp, call, ctxt);
-
-				// for the sync-functions without arguments (merge-all call)
-				if (call.empty()) {
-					// link with in-state
-					constraints.add(subset(cba.getSet(RSPin, call, ctxt), res));
-					return;
-				}
-
-				// skip evaluation of the function (since this is a path leaking the in-state to the tmp state)
-				for(const auto& arg : call) {
-					auto l = cba.getLabel(arg);
-					auto R = cba.getSet(RSPout, l, ctxt);
-					constraints.add(subset(R, res));
-				}
-
-				// done
-				return;
-			}
-
-			// otherwise treat it as usual
-			super::visitCallExpr(call, ctxt, constraints);
-		}
 	};
 
 

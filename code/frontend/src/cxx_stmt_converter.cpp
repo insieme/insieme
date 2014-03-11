@@ -146,7 +146,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 
 		core::VariablePtr var;
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
-			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType());
 
 
 			var = builder.variable(exceptionTy);

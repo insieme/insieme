@@ -87,17 +87,17 @@ public:
     DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
 
 	// main entry point
-	core::TypePtr convert(const clang::Type* type);
+	core::TypePtr convert(const clang::QualType& type);
 
 protected:
 
-	virtual core::TypePtr convertInternal(const clang::Type* type) = 0;
+	virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;
 
-	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
+	virtual void postConvertionAction(const clang::QualType& src, const core::TypePtr& res) { };
 
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
-    core::TypePtr convertImpl(const clang::Type* type);
+    core::TypePtr convertImpl(const clang::QualType& type);
 };
 
 
@@ -138,7 +138,7 @@ public:
 protected:
 
 	// main entry point
-	virtual core::TypePtr convertInternal(const clang::Type* type);
+	virtual core::TypePtr convertInternal(const clang::QualType& type);
 };
 
 
@@ -195,7 +195,7 @@ public:
 protected:
 
 	// main entry point
-	virtual core::TypePtr convertInternal(const clang::Type* type);
+	virtual core::TypePtr convertInternal(const clang::QualType& type);
 };
 
 }

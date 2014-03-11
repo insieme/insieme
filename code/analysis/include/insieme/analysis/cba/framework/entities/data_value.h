@@ -541,9 +541,17 @@ namespace cba {
 					// check whether we are at the end of the path
 					if (begin == end) return new_value;
 
-					// obtain index of field to be updated
+					// special case: if sub-tree is empty so far and this tree is not properly indexed
 					const detail::DataPathElement& elem = **begin;
-					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem));
+					if (data.empty() && !dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem)) {
+						// create an empty instance and mutate the empty one
+						auto sub = ((*begin)->createEmpty(mgr));
+						return sub.mutate(mgr, begin, end, new_value);
+					}
+
+					// obtain index of field to be updated
+					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem))
+						<< "Full: " << *this << "\n" << "Element: " << elem << "\n";
 					IndexType index = static_cast<const detail::ConcreteDataPathElement<IndexType>&>(elem).getIndex();
 
 					// obtain sub-value
@@ -1141,8 +1149,15 @@ namespace cba {
 					// check whether we are at the end of the path
 					if (begin == end) return new_value;
 
-					// obtain index of field to be updated
+					// special case: if sub-tree is empty so far and this tree is not properly indexed
 					const detail::DataPathElement& elem = **begin;
+					if (data.empty() && !dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem)) {
+						// create an empty instance and mutate the empty one
+						auto sub = ((*begin)->createEmpty(mgr));
+						return sub.mutate(mgr, begin, end, new_value);
+					}
+
+					// obtain index of field to be updated
 					assert_true(dynamic_cast<const detail::ConcreteDataPathElement<IndexType>*>(&elem));
 					IndexType index = static_cast<const detail::ConcreteDataPathElement<IndexType>&>(elem).getIndex();
 

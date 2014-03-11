@@ -193,7 +193,7 @@ namespace cba {
 				res.insert(in_values.begin(), in_values.end());
 
 				// and if loc is referenced, this one might be a new definition
-				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref == loc; })) {
+				if (any(refs, [&](const Reference<Context>& ref)->bool { return ref.getLocation() == loc; })) {
 					res.insert(def);
 				}
 
@@ -251,6 +251,12 @@ namespace cba {
 
 	};
 
+	namespace detail {
+
+		bool isAssignmentFree(const NodePtr& code);
+
+	}
+
 	template<typename Context>
 	class ReachingDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
@@ -284,6 +290,14 @@ namespace cba {
 
 				auto RD_out = cba.getSet(RDout, loc.getAddress(), ctxt, loc);
 				constraints.add(elem(set<Definition<Context>>(), RD_out));
+				return;
+			}
+
+			// if the current expression is assignment free we can skip the inner part
+			if (detail::isAssignmentFree(addr)) {
+				auto RD_in  = cba.getSet( RDin, addr.as<StatementAddress>(), ctxt, loc);
+				auto RD_out = cba.getSet(RDout, addr.as<StatementAddress>(), ctxt, loc);
+				constraints.add(subset(RD_in, RD_out));
 				return;
 			}
 

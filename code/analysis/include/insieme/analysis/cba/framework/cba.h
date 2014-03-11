@@ -138,6 +138,7 @@ namespace cba {
 
 		std::map<ValueID, ConstraintGenerator*> value2generator;				// maps value IDs to their associated generator instances
 		std::map<std::type_index, ConstraintGenerator*> generatorIndex;			// to prevent the same type of generator being used multiple times
+		std::map<ValueID, AnalysisType> value2analysis;							// maps value IDs to their analysis type (added for stats)
 
 		// two caches for resolving labels and variables
 		int idCounter;
@@ -238,6 +239,7 @@ namespace cba {
 
 			// fix constraint generator
 			value2generator[res] = getGenerator<typename generator<A,Config>::type>();
+			value2analysis.insert(std::make_pair(res, AnalysisType(typeid(A))));
 
 			// done
 			return res;
@@ -476,6 +478,8 @@ namespace cba {
 		void plot(std::ostream& out = std::cout) const;
 
 		void plotRoots(std::ostream& out = std::cout) const;
+
+		void plotStats(std::ostream& out = std::cout) const;
 
 		std::size_t getNumSets() const {
 			return value2generator.size();

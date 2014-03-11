@@ -153,17 +153,6 @@ namespace cba {
 			auto A = cba.getSet(a, al, ac, params...);
 			auto B = cba.getSet(b, bl, bc, params...);
 			constraints.add(subsetIf(value, set, A, B));
-
-//			if (ac != bc) {
-//				auto pre = cba.getSet(pred, bc.callContext.back());
-//				auto A = cba.getSet(a, al, ac, params...);
-//				auto B = cba.getSet(b, bl, bc, params...);
-//				constraints.add(subsetIf(ac.callContext.back(), pre, value, set, A, B));
-//			} else {
-//				auto A = cba.getSet(a, al, ac, params...);
-//				auto B = cba.getSet(b, bl, bc, params...);
-//				constraints.add(subsetIf(value, set, A, B));
-//			}
 		}
 
 	};
@@ -204,10 +193,6 @@ namespace cba {
 			// check proper number of arguments
 			if (callee.getNumParams() != call.size()) return;
 
-			// check whether call-site is within a bind
-			bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
-			auto bind = (isCallWithinBind) ? call.getParentAddress().as<BindExprAddress>() : BindExprAddress();
-
 			// get label for the body expression
 			auto l_body = cba.getLabel(body);
 
@@ -215,28 +200,16 @@ namespace cba {
 			auto l_fun = cba.getLabel(call->getFunctionExpr());
 			auto F_call = cba.getSet(F, l_fun, callCtxt);
 
-			// add effect of function-expression-evaluation (except within bind calls)
-			if (!isCallWithinBind) this->connectStateSetsIf(callee, F_call, this->Aout, l_fun, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
-
-			// just connect the effect of the arguments of the call-site with the in of the body call statement
-			bool hasUnboundArgument = false;
-			for(auto arg : call) {
-
-				// skip bound parameters
-				if (bind && bind->isBoundExpression(arg)) continue;
-
-				// add effect of argument
-				auto l_arg = cba.getLabel(arg);
-				this->connectStateSetsIf(callee, F_call, this->Aout, l_arg, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
-
-				// there are unbound values
-				hasUnboundArgument = true;
-			}
-
+			// check whether call-site is within a bind
+			bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
+			auto bind = (isCallWithinBind) ? call.getParentAddress().as<BindExprAddress>() : BindExprAddress();
 			// special case: if this is a bind with no free parameters
-			if (bind && !hasUnboundArgument) {
+			if (bind && bind->getParameters().empty()) {
 				// connect in of call site with in of body
 				this->connectStateSetsIf(callee, F_call, this->Ain, l_call, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
+			} else {
+				// connect body with tmp of call
+				this->connectStateSetsIf(callee, F_call, this->Atmp, l_call, callCtxt, this->Ain, l_body, trgCtxt, args..., constraints);
 			}
 
 		}
@@ -382,11 +355,82 @@ namespace cba {
 				}
 			}
 
+			// if the parent is a call expression the state transitions need to be chained up
+			if (auto call = parent.isa<CallExprAddress>()) {
+
+				// we have to distinguish the chain of non-captured values evaluation (during execution)
+				if (!isCapturedValue(stmt.as<ExpressionAddress>())) {
+
+					// the first to evaluate is the function
+					if (call->getFunctionExpr() == stmt) {
+						// in this case the in of the call is the in of the stmt
+						this->connectSets(this->Ain, call, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+						return;
+					}
+
+					// otherwise it is a argument and we connect it to its predecessor (the first predecessor is the function expr)
+					auto pre = parent.getAddressOfChild(stmt.getIndex() - 1).as<ExpressionAddress>();
+					while(isCapturedValue(pre)) {	// skip captured values
+						if (pre == call->getFunctionExpr()) {	// we reached the edge here
+							this->connectSets(this->Ain, call, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+							return;
+						} else {
+							pre = parent.getAddressOfChild(pre.getIndex() - 1).as<ExpressionAddress>();
+						}
+					}
+
+					// connect out of predecessor to in of current statement
+					this->connectSets(this->Aout, pre, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+					return;
+
+				} else {
+					// and the chain of captured value evaluations (during evaluation of a bind)
+					auto bind = call.getParentAddress().as<BindExprAddress>();
+
+					// the first to evaluate is the function
+					if (call->getFunctionExpr() == stmt) {
+						// in this case the in of the call is the in of the stmt
+						this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+						return;
+					}
+
+					// otherwise it is a argument and we connect it to its predecessor (the first predecessor is the function expr)
+					auto pre = parent.getAddressOfChild(stmt.getIndex() - 1).as<ExpressionAddress>();
+					while(!isCapturedValue(pre)) {	// skip captured values
+						if (pre == call->getFunctionExpr()) {	// we reached the edge here
+							this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+							return;
+						} else {
+							pre = parent.getAddressOfChild(pre.getIndex() - 1).as<ExpressionAddress>();
+						}
+					}
+
+					// skip evaluation of function expression when forming bind
+					if (pre == call->getFunctionExpr()) {
+						this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+						return;
+					}
+
+					// connect out of predecessor to in of current statement
+					this->connectSets(this->Aout, pre, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+					return;
+				}
+			}
+
 			// a simple case - it is just a nested expression
 			if (auto expr = parent.isa<ExpressionAddress>()) {
 				// parent is an expression => in of parent is in of current stmt
 				this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 				return;	// done
+			}
+
+			// if it is a named value of struct expression
+			if (auto value = parent.isa<NamedValueAddress>()) {
+				// TODO: actually here the evaluation should be chained up!
+				// the grant-parent should be a struct expression => link in with this in state
+				auto expr = parent.getParentAddress(2).as<StructExprAddress>();
+				this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, args..., constraints);
+				return; // done
 			}
 
 			// handle full-expressions
@@ -872,13 +916,20 @@ namespace cba {
 		}
 
 		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			auto l_bind = cba.getLabel(bind);
 
-			// out-effects are only influenced by bound parameters
-			auto l_cur = cba.getLabel(bind);
-			for(const auto& arg : bind->getBoundExpressions()) {
-				auto l_arg = cba.getLabel(arg);
-				this->connectStateSets(this->Aout, l_arg, ctxt, this->Aout, l_cur, ctxt, params..., constraints);
+			// the out-effect is the effect of the last bound arguments
+			auto call = bind->getCall();
+			for(int i = (call.size()-1); i >= 0; --i) {
+				auto cur = call[i];
+				if (isCapturedValue(cur)) {
+					this->connectStateSets(this->Aout, cba.getLabel(cur), ctxt, this->Aout, l_bind, ctxt, params..., constraints);
+					return;
+				}
 			}
+
+			// if no argument is captured connect out to in state (this way functions are not captured)
+			this->connectStateSets(this->Ain, l_bind, ctxt, this->Aout, l_bind, ctxt, params..., constraints);
 
 			// and no more ! (in particular not the effects of the inner call)
 		}
@@ -952,6 +1003,13 @@ namespace cba {
 			this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
+		void visitSwitchStmt(const SwitchStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			// link out with out of cases
+			for(const auto& cur : stmt->getCases()) {
+				this->connectSets(this->Aout, cur->getBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
+			}
+		}
+
 		void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out of condition to out if condition may ever become false
 			auto cond = stmt->getCondition();
@@ -1005,17 +1063,28 @@ namespace cba {
 
 			auto A_tmp = cba.getSet(Atmp, call, ctxt, params...);
 
-			// create constraints
-			for(const auto& cur : call) {
+			// link it with out-state of last non-captured parameter / function
+			for(int i=(call.size()-1); i>=0; i--) {
+				auto cur = call[i];
 				if (!isCapturedValue(cur)) {
 					auto A_out = cba.getSet(Aout, cur, ctxt, params...);
 					constraints.add(subset(A_out, A_tmp));
+					return;
 				}
 			}
 
-			// and the function
-			auto A_fun = cba.getSet(Aout, call->getFunctionExpr(), ctxt, params...);
-			constraints.add(subset(A_fun, A_tmp));
+			// if we reach this point all arguments have been captured ...
+			if (!isCapturedValue(call->getFunctionExpr())) {
+
+				// link it with the out of the function expression
+				auto A_fun = cba.getSet(Aout, call->getFunctionExpr(), ctxt, params...);
+				constraints.add(subset(A_fun, A_tmp));
+				return;
+			}
+
+			// so the function expression and all its arguments are captured => link it with the in state of the call
+			auto A_in = cba.getSet(Ain, call, ctxt, params...);
+			constraints.add(subset(A_in, A_tmp));
 
 		}
 

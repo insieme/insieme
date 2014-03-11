@@ -139,9 +139,16 @@ namespace cba {
 
 		typedef BasicTmpConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, Context> super;
 
+		CBA& cba;
+
 	public:
 
-		ReachableTmpConstraintGenerator(CBA& cba) : super(cba, Rin, Rtmp, Rout) {}
+		ReachableTmpConstraintGenerator(CBA& cba) : super(cba, Rin, Rtmp, Rout), cba(cba) {}
+
+		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			// every call reached will be finished
+			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rtmp,call,ctxt)));
+		}
 
 	};
 

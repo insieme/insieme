@@ -52,15 +52,18 @@ public:
 	}
 
 private:
-	core::ExpressionPtr Visit(const clang::Expr* expr, conversion::Converter& convFact);
+	core::ExpressionPtr 				 Visit(const clang::Expr* expr, conversion::Converter& convFact);
 
-    core::TypePtr Visit(const clang::Type* type, conversion::Converter& convFact);
+    core::TypePtr 						 Visit(const clang::QualType& type, conversion::Converter& convFact);
 
-    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
+    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, 
+															insieme::frontend::conversion::Converter& convFact);
+    virtual insieme::core::TypePtr 		 TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, 
+														   insieme::frontend::conversion::Converter& convFact);
+    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, 
+														   insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
-    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
+    virtual core::ProgramPtr 			 IRVisit(core::ProgramPtr& prog);
 };
 
 } //namespace plugin

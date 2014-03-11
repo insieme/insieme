@@ -74,10 +74,10 @@ public:
 	}
 
 	bool isIntercepted(const string& name) const;
-	bool isIntercepted(const clang::Type* type) const;
+	bool isIntercepted(const clang::QualType& type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const ;
+	insieme::core::TypePtr 		 intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const ;
 	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs=false) const;
 	insieme::core::ExpressionPtr intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const;
 

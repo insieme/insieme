@@ -180,7 +180,7 @@ Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filenam
 
 	tmpFeatureNormalization.resize(0,0,false);
 	std::string line, buf;
-	size_t nFeatures;
+	size_t nFeatures = 0;
 
 	// read parameters from ssv, one line for each feature in from: avgerage, min, max
 	while(getline(fnp, line)) {

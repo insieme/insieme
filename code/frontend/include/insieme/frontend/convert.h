@@ -108,7 +108,10 @@ class Converter :  boost::noncopyable {
 	/**
 	 * stores converted types
 	 */
-	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	struct CompareQualType { // QualType comparison function
+		bool operator()(const clang::QualType& a, const clang::QualType& b) { return a.getAsOpaquePtr () > b.getAsOpaquePtr ();  }
+	};
+	typedef std::map<clang::QualType, insieme::core::TypePtr, CompareQualType> TypeCache;
 	TypeCache typeCache;
 
     /**
@@ -284,7 +287,7 @@ public:
         return convSetup;
     }
 
-    void addToTypeCache(const clang::Type* type, core::TypePtr ptr) {
+    void addToTypeCache(const clang::QualType type, core::TypePtr ptr) {
         typeCache[type] = ptr;
     }
 
@@ -368,7 +371,7 @@ public:
 	 * @param type is a clang type
 	 * @return the corresponding IR type
 	 */
-	core::TypePtr convertType(const clang::Type* type);
+	core::TypePtr convertType(const clang::QualType& type);
 
 	/**
 	 * Entry point for converting clang statements into IR statements

@@ -113,10 +113,10 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 		return nullptr;
 	}
 
-	virtual insieme::core::TypePtr Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
-		if (const clang::AutoType* autoTy =  llvm::dyn_cast<clang::AutoType>(type))
+	virtual insieme::core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+		if (const clang::AutoType* autoTy =  llvm::dyn_cast<clang::AutoType>(type.getTypePtr()))
 			return VisitAutoType(autoTy, convFact);
-		if (const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type))
+		if (const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type.getTypePtr()))
 			return VisitDecltypeType(declTy, convFact);
 		return nullptr;
 	}

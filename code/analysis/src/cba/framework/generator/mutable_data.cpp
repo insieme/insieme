@@ -34,60 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
+#include "insieme/analysis/cba/framework/generator/killed_definitions.h"
+#include "insieme/analysis/cba/utils/static_execution_check.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
+	namespace detail {
 
-	namespace {
-
-		void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
+		bool isAssignmentFree(const NodePtr& node) {
+			const auto& base = node->getNodeManager().getLangBasic();
+			return !mayReachCallTo(node, [&](const NodePtr& cur) {
+				return base.isRefAssign(cur) || base.isMerge(cur);
+			});
 		}
 
-		void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
-		}
-
-		void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
 	}
-	
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
