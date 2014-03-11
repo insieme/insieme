@@ -55,6 +55,7 @@
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -359,6 +360,7 @@ namespace backend {
 				// the argument needs to be wrapped into a bind
 				const core::TypePtr& retType = argType->getReturnType();
 				core::FunctionTypePtr newType = builder.functionType(argType->getParameterTypes(), retType, core::FK_CLOSURE);
+
 				newArgs[i] = builder.bindExpr(newType, bindParams, builder.callExpr(retType, newArgs[i], argList));
 
 				// note the change
@@ -370,7 +372,9 @@ namespace backend {
 			}
 
 			// exchange arguments and done
-			return core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
+			auto newCall = core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
+			core::transform::utils::migrateAnnotations(call, newCall);
+			return newCall;
 		}
 
 	}

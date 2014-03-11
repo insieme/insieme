@@ -47,6 +47,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 
@@ -86,8 +87,13 @@ namespace addons {
 		};
 
 		// a marker for annotation for globals only only initialized once
-		struct SingleStaticInitMarker {};
-
+		struct SingleStaticInitMarker : public  core::value_annotation::migratable {
+			bool migrate (const core::NodeAnnotationPtr& ann, const core::NodePtr& ptr, const core::NodePtr& after) const {
+				after->attachValue<SingleStaticInitMarker>();
+				return true;
+			}
+		};
+		
 
 		// a pre-processor marking all static variables only used once
 		class StaticInitVisitor : public PreProcessor {
