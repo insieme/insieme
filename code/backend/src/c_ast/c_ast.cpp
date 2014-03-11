@@ -29,12 +29,13 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/backend/c_ast/c_ast.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -522,3 +523,10 @@ namespace c_ast {
 } // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
+
+
+namespace std {
+    std::ostream& operator<< (std::ostream& o, const insieme::backend::c_ast::Node& node) {
+        return o << insieme::backend::c_ast::toC(const_cast<insieme::backend::c_ast::Node*>(&node));
+    }
+}

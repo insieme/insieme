@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -468,7 +468,7 @@ namespace backend {
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj =  converter.getStmtConverter().convertExpression(context, call[0]);
 
-			// make a call to the member pointer executor binary operator 
+			// make a call to the member pointer executor binary operator
 			c_ast::ExpressionPtr funcExpr = c_ast::parenthese(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the binary operation al the n-1 tail arguments
@@ -1100,7 +1100,7 @@ namespace backend {
 
 					// test whether argument is this (super-constructor call)
 					if (target == thisVar) {
-						return funType->getObjectType();
+ 						return funType->getObjectType();
 					}
 
 					// test whether argument is a member (member initializer)
@@ -1265,15 +1265,29 @@ namespace backend {
 			};
 
 			c_ast::IdentifierPtr getIdentifierFor(const Converter& converter, const core::NodePtr& node) {
-				auto mgr = converter.getCNodeManager();
 
+				auto mgr = converter.getCNodeManager();
 				switch(node->getNodeType()) {
 				case core::NT_StructType:
 				case core::NT_GenericType:
-				case core::NT_RecType:
+				case core::NT_RecType: {
+   				    auto type = converter.getTypeManager().getTypeInfo(node.as<core::TypePtr>());
+   				    if (auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
+                        return mgr->create(toString(*structType));
+                    } else if (auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
+                        return mgr->create(toString(*namedType));
+                    }
 					return mgr->create(converter.getNameManager().getName(node));
-				case core::NT_Parent:
+				}
+				case core::NT_Parent: {
+  					auto type = converter.getTypeManager().getTypeInfo(node.as<core::ParentPtr>()->getType());
+				    if (auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
+                        return mgr->create(toString(*structType));
+                    } else if (auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
+                        return mgr->create(toString(*namedType));
+                    }
 					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
+				}
 				case core::NT_NamedType:
 					return mgr->create(node.as<core::NamedTypePtr>()->getName()->getValue());
 				case core::NT_Literal:
@@ -1324,7 +1338,6 @@ namespace backend {
 				const auto& basic = thisVar->getNodeManager().getLangBasic();
 				for(const c_ast::IdentifierPtr& cur : all) {
 					for(const auto& write : firstWriteOps) {
-
 						// check whether write target is current identifier
 						core::CallExprPtr call = write.as<core::CallExprPtr>();
 						if (cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
@@ -1337,7 +1350,6 @@ namespace backend {
 								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
 
 								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
-
 								if( initCall->getNodeType() != c_ast::NT_ConstructorCall) {
 									assert(initCall->getNodeType() == c_ast::NT_UnaryOperation);
 									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();
@@ -1346,7 +1358,6 @@ namespace backend {
 								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
 								assert(initCall->getNodeType() == c_ast::NT_ConstructorCall);
 								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
-
 								// add constructor call to initializer list
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));
 							}
