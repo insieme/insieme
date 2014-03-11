@@ -1,11 +1,11 @@
 #pragma once
 #include <iostream>
-#include "base.h"
+#include "base2.h"
 
-struct Derived : public Base {
+struct Derived2 : public Base2 {
 	//FIXME: if WITHOUT user-provided-ctor we miss the base call
-	//Derived() {} //: Base() {};
-	//Derived() : Base() {};
+	//Derived2() {} //: Base2() {};
+	Derived2() : Base2() {};
 	virtual void loadArguments(); 
 	void run();
 };
