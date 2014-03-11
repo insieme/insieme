@@ -270,7 +270,8 @@ namespace analysis {
 	}
 
 
-	LambdaExprPtr createDefaultConstructor(const StructTypePtr& type) {
+	LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
+		assert(isObjectType(type) && "to create DefaultCtor a objectType is needed");
 		NodeManager& manager = type.getNodeManager();
 		IRBuilder builder(manager);
 
