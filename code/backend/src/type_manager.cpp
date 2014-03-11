@@ -328,10 +328,12 @@ namespace backend {
 						info->declaration->addDependency(curInfo->declaration);
 
 						// add dependency also to the definition if it is not closing a cycle
-						if (curInfo->definition->isDependingOn(info->definition)) {
-							info->definition->addRequirement(curInfo->definition);
-						} else {
-							info->definition->addDependency(curInfo->definition);
+						if (curInfo->definition) {
+							if (curInfo->definition->isDependingOn(info->definition)) {
+								info->definition->addRequirement(curInfo->definition);
+							} else {
+								info->definition->addDependency(curInfo->definition);
+							}
 						}
 
 						// add type to parameter list
