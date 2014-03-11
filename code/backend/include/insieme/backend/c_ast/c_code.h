@@ -252,6 +252,12 @@ namespace c_ast {
 		const FragmentSet& getDependencies() const { return dependencies; };
 
 		/**
+		 * Checks whether this code fragment is directly or indirectly depending on the given
+		 * code fragment.
+		 */
+		bool isDependingOn(const CodeFragmentPtr& fragment);
+
+		/**
 		 * Adds a requirement to this fragment.
 		 *
 		 * @param fragment the code fragment required by this fragment to be present somewhere within the resulting code
