@@ -553,13 +553,13 @@ std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
 		const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
 		const VariableList& interface = lambda->getParameterList()->getElements();
 
-		vector<ExpressionPtr> newArgs;
+		vector<ExpressionPtr> innerArgs;
 		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 
 		// construct call to kernel function
 //		if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 	//std::cout << "lmd " << localMemDecls[k] << std::endl;
-		std::vector<TypePtr> kernelType = kernelTypes[k];
+		TypeList kernelType = kernelTypes[k];
 
 		/* body of a newly created function which replaces clNDRangeKernel. It contains
 		 *  Declarations of the local memory arguments
@@ -568,12 +568,17 @@ std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
 		 */
 		StatementList body;
 
+		// Kernel variable to be used inside the newly creaded function
+		VariablePtr innerKernel = builder.variable(builder.tupleType(kernelType));
+		// local and global size to be used inside the newly created function
+		VariablePtr innerGlobal = builder.variable(gen.getUInt8());
+		VariablePtr innerLocal = builder.variable(gen.getUInt8());
 
 		for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
 //??			TypePtr argTy = utils::vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
 			TypePtr argTy = interface.at(i)->getType();
 			TypePtr memberTy = kernelType.at(i);
-			ExpressionPtr tupleMemberAccess = builder.callExpr(memberTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(localKernel),
+			ExpressionPtr tupleMemberAccess = builder.callExpr(memberTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(innerKernel),
 					builder.literal(gen.getUInt8(), toString(i)), builder.getTypeLiteral(memberTy));
 
 			ExpressionPtr argument;
@@ -581,9 +586,10 @@ std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
 			// check for local memory arguments
 			if(*memberTy == *gen.getUInt8()) {
 				VariablePtr localMemArg = builder.variable(argTy);
-				ExpressionPtr lmSize = builder.div(tupleMemberAccess, builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(argTy)));
+				TypePtr elemTy = argTy.as<RefTypePtr>()->getElementType().as<ArrayTypePtr>()->getElementType();
+				ExpressionPtr lmSize = builder.div(tupleMemberAccess, builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(elemTy)));
 				DeclarationStmtPtr localMemDecl = builder.declarationStmt(localMemArg, builder.refVar(builder.callExpr(gen.getArrayCreate1D(),
-						builder.getTypeLiteral(argTy), lmSize)));
+						builder.getTypeLiteral(elemTy), lmSize)));
 				body.push_back(localMemDecl);
 
 				argument = localMemArg;
@@ -591,26 +597,47 @@ std::cout << "\nI'm tired " << *ndrangeKernel["enrk"].getValue() << std::endl;
 				argument = builder.deref(builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0))));
 			}
 
-			if(*memberTy != *interface.at(i)->getType()) // e.g. argument of kernel is an ocl vector type
+			if(argument->getType() != argTy) {// e.g. argument of kernel is an ocl vector type
+std::cout << "arg " << i << std::endl;
+std::cout << "memberty    " << *argument->getType() << std::endl;
+std::cout << "interfacety " << *argTy << std::endl;
+
 				argument = builder.callExpr(interface.at(i)->getType(), gen.getRefReinterpret(),
 						argument, builder.getTypeLiteral(utils::removeSingleRef(interface.at(i)->getType())));
+			}
 
-			newArgs.push_back(argument);
+			innerArgs.push_back(argument);
 		}
 
 		// add global and local size to arguments
-		newArgs.push_back(global);
-		newArgs.push_back(local);
+		innerArgs.push_back(innerGlobal);
+		innerArgs.push_back(innerLocal);
 
-		kernelCall = builder.callExpr(gen.getInt4(), lambda, newArgs);
+		kernelCall = builder.callExpr(gen.getInt4(), lambda, innerArgs);
 		body.push_back(kernelCall);							   // calling the kernel function
-//		body.push_back(builder.returnStmt(builder.intLit(0))); // return CL_SUCCESS
+		body.push_back(builder.returnStmt(builder.intLit(0))); // return CL_SUCCESS
 
+		// create function type for inner function: kernel tuple, global size, local size
+		TypeList innerFctInterface;
+		innerFctInterface.push_back(innerKernel->getType());
+		innerFctInterface.push_back(gen.getUInt8());
+		innerFctInterface.push_back(gen.getUInt8());
 
-		transform::utils::migrateAnnotations(ndrangeKernel["enrk"].getValue().as<NodePtr>(), kernelCall.as<NodePtr>());
+		FunctionTypePtr innerFctTy = builder.functionType(innerFctInterface, gen.getInt4());
+
+		// collect inner function parameters
+		VariableList innerFctParams;
+		innerFctParams.push_back(innerKernel);
+		innerFctParams.push_back(innerGlobal);
+		innerFctParams.push_back(innerLocal);
+
+		// creeate lambda for inner function
+		LambdaExprPtr innerLambda = builder.lambdaExpr(innerFctTy, builder.parameters(innerFctParams), builder.compoundStmt(body));
+
+		transform::utils::migrateAnnotations(ndrangeKernel["enrk"].getValue().as<NodePtr>(), innerLambda.as<NodePtr>());
 
 		// TODO add kernel call here
-		replacements[ndrangeKernel["enrk"].getValue()] = builder.intLit(0);
+		replacements[ndrangeKernel["enrk"].getValue()] = builder.intLit(0);//builder.callExpr(gen.getInt4(), innerLambda, localKernel, global, local);
 
 //	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(kernelCall);
 	});
