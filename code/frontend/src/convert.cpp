@@ -1373,8 +1373,11 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo = core::getMetaInfo(classType);
 		}
 
-		if (funcTy->isConstructor())
-			classInfo.addConstructor(lambda);
+		if (funcTy->isConstructor()) {
+			//prevent multiple entries of ctors
+			if(!classInfo.containsConstructor(lambda))
+				classInfo.addConstructor(lambda);
+		}
 		else if (funcTy->isDestructor()){
 			classInfo.setDestructor(lambda);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());

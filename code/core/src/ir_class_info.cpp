@@ -466,17 +466,10 @@ namespace core {
 		// merge them
 		ClassMetaInfo res = a;
 
-		// a utility function to prevent multiple copies of constructors
-		auto containsCtor = [&](const LambdaExprPtr& cur) {
-			return contains(res.getConstructors(), cur, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
-				// just check the type - no two constructors with the same type are supported
-				return *a->getType() == *b->getType();
-			});
-		};
-
 		// copy constructors
 		for(auto cur : b.getConstructors()) {
-			if (!containsCtor(cur)) {
+			//prevent multiple copies of constructors
+			if (!res.containsConstructor(cur)) {
 				res.addConstructor(cur);
 			}
 		}
