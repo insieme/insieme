@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -434,15 +434,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 					return retIr;
 				}
 			} else {
-			    //if not POD we are forced to call the constructor, it might be that
-			    //we are dealing with an alias to the type. Therefore we need to
-			    //struct it from the TU
-                if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()){
-					core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(structType);
-					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
-					refToClassTy = builder.refType(structType);
-					return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
-				}
+			    //if not POD we are forced to call the constructor
+			    core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(irClassType);
+				return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {

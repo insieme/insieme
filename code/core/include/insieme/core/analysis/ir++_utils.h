@@ -218,7 +218,7 @@ namespace analysis {
 	 * @param type the type for which a default constructor should be created
 	 * @return the synthesized constructor
 	 */
-	LambdaExprPtr createDefaultConstructor(const StructTypePtr& type);
+	LambdaExprPtr createDefaultConstructor(const TypePtr& type);
 
 	/**
 	 * A check verifying whether the given lambda is a default a default constructor

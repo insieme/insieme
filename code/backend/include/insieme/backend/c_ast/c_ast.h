@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -248,7 +248,7 @@ namespace c_ast {
     struct MemberFieldPointer : public Type {
 		TypePtr parentType;
 		TypePtr type;
-        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy) 
+        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy)
 			: Type(NT_MemberFieldPointer), parentType(parentTy), type(fieldTy) {}
         virtual bool equals(const Node& node) const;
     };
@@ -500,7 +500,7 @@ namespace c_ast {
 			// C++ operators
 			StaticCast,
 			DynamicCast,
-			ScopeResolution,    //  the scope resolution operator is: "::" 
+			ScopeResolution,    //  the scope resolution operator is: "::"
 			PointerToMember		//	pointer to member operator. "->*"
 		};
 
@@ -775,3 +775,7 @@ namespace c_ast {
 } // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
+
+namespace std {
+   std::ostream& operator<< (std::ostream& o, const insieme::backend::c_ast::Node&);
+}
