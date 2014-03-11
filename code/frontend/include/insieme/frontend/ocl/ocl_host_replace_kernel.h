@@ -92,7 +92,7 @@ public:
 }
 
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > KernelTypes;
+typedef boost::unordered_map<core::ExpressionPtr, core::TypeList> KernelTypes;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelFunctions;
 typedef boost::unordered_map<core::ExpressionPtr, std::set<unsigned int> > LocalMemArgs;
 
