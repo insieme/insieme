@@ -540,7 +540,9 @@ namespace backend {
 				ADD_HEADER_FOR("malloc");
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
-				return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				auto cType = CONVERT_TYPE(resType);
+				auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				return c_ast::cast(cType, mallocNode );
 			}
 
 			// special handling for arrays
