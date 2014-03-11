@@ -452,6 +452,19 @@ namespace core {
 		 */
 		TypePtr getClassType() const;
 
+
+		/**
+		 * Tests if the meta-info class already contains the given constructor
+		 * @param constructor to be tested
+		 * @return true if so, false otherwise
+		 */
+		bool containsConstructor(const LambdaExprPtr& constructor) const {
+			return contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
+				// just check the type - no two constructors with the same type are supported
+				return *a->getType() == *b->getType();
+			});
+		}
+	
 	private:
 
 		/**

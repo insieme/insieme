@@ -53,6 +53,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/const_extension.h"
+#include "insieme/core/annotations/naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -183,6 +184,8 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 			// generate a type with the inner elements, and no integer literal
 			irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
+
+        core::annotations::attachName(irType, typeName);
 
 		// add header file
 		convFact.getHeaderTagger().addHeaderForDecl(irType, tagDecl, true);
