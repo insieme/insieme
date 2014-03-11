@@ -540,7 +540,9 @@ namespace backend {
 				ADD_HEADER_FOR("malloc");
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
-				return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				auto cType = CONVERT_TYPE(resType);
+				auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				return c_ast::cast(cType, mallocNode );
 			}
 
 			// special handling for arrays
@@ -1238,6 +1240,10 @@ namespace backend {
 					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);
 				}
+				
+				// cast needs full definition of target type to be done
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+				context.addDependency(info.declaration);
 
 				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
 			});
@@ -1281,6 +1287,10 @@ namespace backend {
 					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);
 				}
+
+				// cast needs full definition of target type to be done
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+				context.addDependency(info.declaration);
 
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -137,7 +137,7 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
-		if ( outDecl->hasInit() && 
+		if ( outDecl->hasInit() &&
 			!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
 			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
@@ -807,7 +807,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 					initIr = builder.deref(initIr);
 				}
 
-				// beware of non const initializers, for C codes is required that statics are initialized 
+				// beware of non const initializers, for C codes is required that statics are initialized
 				// with const expressions
 				// NOTE:: C++ codes do not need const init
 				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
@@ -1096,14 +1096,14 @@ namespace {
 
 			core::StringValuePtr ident;	// the identifier of the member to initialize
 			core::ExpressionPtr toInit;	// the access to the member to initialize
-			
+
 			core::ExpressionPtr expr = converter.convertExpr((*it)->getInit());		// convert the init expr
 			bool isCtor =  insieme::core::analysis::isConstructorCall(expr);		// check if the initExpr is a ctor
 
 			core::ExpressionPtr result;	// the resulting expr to be used to init the member accessed by "toInit" and initialized with "expr"
 			// for a ctor call will be : ctor(toInit, params...)
 			// for everything else:		 toInit := expr;
-		
+
 			if((*it)->isBaseInitializer ()){
 
 				toInit = thisVar;
@@ -1114,7 +1114,7 @@ namespace {
 				}
 
 				// if the expr is a constructor then we are initializing a member an object,
-				// we have to substitute first argument on constructor by the 
+				// we have to substitute first argument on constructor by the
 				core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
 				result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
 			} else if ((*it)->isMemberInitializer ()){
@@ -1210,7 +1210,7 @@ namespace {
 				assert(false && "pack expansion not implemented");
 			}
 
-			VLOG(2) << result;				
+			VLOG(2) << result;
 			initList.push_back(result);
 		}
 
@@ -1373,8 +1373,11 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo = core::getMetaInfo(classType);
 		}
 
-		if (funcTy->isConstructor())
-			classInfo.addConstructor(lambda);
+		if (funcTy->isConstructor()) {
+			//prevent multiple entries of ctors
+			if(!classInfo.containsConstructor(lambda))
+				classInfo.addConstructor(lambda);
+		}
 		else if (funcTy->isDestructor()){
 			classInfo.setDestructor(lambda);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
@@ -1388,15 +1391,9 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
             //FIXME: Call to external functions might not work. What should we do with templated operators?!
             std::string functionname = funcDecl->getNameAsString();
             if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-                // it might be that we have an overloaded cast
-                // seems that there is no option in clang to check if
-                // funcDecl is an overloaded cast. Yay, string comparison
-                // solves our problem. Check for "operator <type>"
-                if(functionname.find("operator ") == std::string::npos) {
-                    std::string returnType = funcDecl->getResultType().getAsString();
-                    functionname.append(returnType);
-                    utils::removeSymbols(functionname);
-                }
+                std::string returnType = funcDecl->getResultType().getAsString();
+                functionname.append(returnType);
+                utils::removeSymbols(functionname);
             }
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
