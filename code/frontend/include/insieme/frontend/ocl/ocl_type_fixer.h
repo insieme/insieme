@@ -49,8 +49,8 @@ class TypeFixer {
 
 	core::NodeMap a;
 
-	void fixKernelDecls(core::NodeAddress pA);
-	void fixBufferDecls(core::NodeAddress pA);
+	void removeClVars();
+	void fixDecls(core::NodeAddress pA, std::string typeString);
 public:
 	TypeFixer(core::NodePtr toTransform);
 	core::NodePtr getTransformedProg() { return prog; };
