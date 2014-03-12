@@ -1052,26 +1052,6 @@ const NodePtr OclSimpleFunHandler::resolveElement(const NodePtr& ptr){
 	return ptr;
 }
 
-
-OclSimpleTypeHandler::OclSimpleTypeHandler(NodePtr progIn) {
-	// replace some OpenCL type variables with int<4>.
-	// Variables will be useless, but the semantics will be correct
-	NodeManager& mgr = progIn->getNodeManager();
-	IRBuilder builder(mgr);
-	const lang::BasicGenerator& gen = builder.getLangBasic();
-
-	TypePtr int4 = gen.getInt4();
-
-	NodeMap replacements;
-
-	// replace cl_program
-	TypePtr cl_program = builder.genericType("_cl_program");
-
-	replacements[cl_program] = int4;
-
-	this->prog = transform::replaceAll(mgr, progIn, replacements, false);
-}
-
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

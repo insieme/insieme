@@ -49,6 +49,8 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
+	if(get_global_id(0) > 7) return;
+
 	__local float ll[4];
 	ll[get_local_id(0)] = dst[get_global_id(0)].z;
 	short bs1 = bitselect(src[0], src[1], src[2]);

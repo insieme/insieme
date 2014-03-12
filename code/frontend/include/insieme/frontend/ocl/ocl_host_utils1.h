@@ -102,6 +102,8 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 bool isNullPtr(const core::ExpressionPtr& expr);
 
 void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
+
+std::string whatIs(core::NodePtr node);
 }
 }
 }

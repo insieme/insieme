@@ -97,7 +97,7 @@ public:
                 const core::TypePtr& retTy = funcType->getReturnType();
 
                 //check return type
-                EXPECT_EQ("int<4>", toString(*retTy));
+                EXPECT_EQ("unit", toString(*retTy));
                 EXPECT_GE(args.size(), static_cast<size_t>(2));
                 core::TypePtr globalRange = args.at(args.size()-2);
                 EXPECT_EQ("vector<uint<8>,3>", toString(*globalRange));
