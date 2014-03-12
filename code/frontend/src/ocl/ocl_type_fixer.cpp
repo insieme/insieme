@@ -49,6 +49,54 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+void TypeFixer::removeClVars() {
+	NodeMapping* h;
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	// removes cl_* variables from argument lists of lambdas
+	auto cleaner = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
+		// stop recursion at type level
+		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			return element;
+		}
+
+		if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
+			if(const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())) {
+				ExpressionList newArgs;
+				core::VariableList newParams;
+				const core::VariableList& oldParams = lambda->getParameterList()->getElements();
+				TypeList paramTypes;
+				bool update = false;
+				int cnt = 0;
+
+				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+					// do nothing if the argument type is not a cl_* type
+					if(arg->getType()->toString().find("array<_cl_") == string::npos) {
+						newArgs.push_back(arg);
+						newParams.push_back(oldParams.at(cnt));
+						paramTypes.push_back(oldParams.at(cnt)->getType());
+					} else {
+						// do not port cl_* types to the new type
+						update = true;
+//std::cout << "\ndropping " << *arg->getType() << " - " << *arg << std::endl;
+					}
+					++cnt;
+				});
+				if(update) {
+					const LambdaExprPtr newLambda = builder.lambdaExpr(builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
+					return builder.callExpr(call->getType(), newLambda, newArgs)->substitute(builder.getNodeManager(), *h);
+				}
+			}
+		}
+
+		return element->substitute(builder.getNodeManager(), *h);
+	});
+
+	h = &cleaner;
+	prog = h->map(0, prog);
+
+}
 
 void TypeFixer::fixDecls(NodeAddress pA, std::string typeString) {
 	NodeManager& mgr = pA->getNodeManager();
@@ -79,6 +127,8 @@ TypeFixer::TypeFixer(NodePtr toTransform) : prog(toTransform) {
 
 	VariableMap emptyMap;
 	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, emptyMap, false);
+
+
 }
 
 }
