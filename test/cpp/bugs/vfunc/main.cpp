@@ -12,9 +12,9 @@ int main() {
 	{
 		//currently failing -- no user-provided default ctor in derived -- we miss the base ctor
 		//call
-		//Base* b = new Derived();
-		//b->runProc();
-		//delete b;
+		Base* b = new Derived();
+		b->runProc();
+		delete b;
 	}
 	{
 		Base1* b = new Derived1();
