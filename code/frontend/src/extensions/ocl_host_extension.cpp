@@ -70,9 +70,6 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
-	ocl::OclSimpleTypeHandler osth(root);
-	root = osth.getTransformedProgram();
-
 	ocl::TypeFixer otf(root);
 	root = otf.getTransformedProg();
 
