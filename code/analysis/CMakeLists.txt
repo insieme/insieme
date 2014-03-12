@@ -31,6 +31,7 @@ target_link_libraries( insieme_analysis
 # add extra dependencies for test cases
 include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_driver_include_dir} )
 
 set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -45,6 +46,8 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_frontend)
+	target_link_libraries(${case_name} insieme_driver)
+	target_link_libraries(${case_name} insieme_backend)
 
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${gmp_LIB})

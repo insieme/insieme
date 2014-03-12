@@ -434,9 +434,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 					return retIr;
 				}
 			} else {
+				VLOG(2) << "HERE";
 			    //if not POD we are forced to call the constructor
 			    core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(irClassType);
-				return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
+				//return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {

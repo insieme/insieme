@@ -49,54 +49,86 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-void TypeFixer::fixKernelDecls(NodeAddress pA) {
-	NodeManager& mgr = pA->getNodeManager();
+void TypeFixer::removeClVars() {
+	NodeMapping* h;
+	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr kernelDecls = irp::declarationStmt(var("kernel", pattern::any), var("init",
-			irp::callExpr(aT(irp::genericType("_cl_kernel")), pattern::any, *pattern::any)));
+	// removes cl_* variables from argument lists of lambdas
+	auto cleaner = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
+		// stop recursion at type level
+		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			return element;
+		}
 
-	irp::matchAllPairs(kernelDecls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& kernelDecl) {
+		if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
+			if(const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())) {
+				ExpressionList newArgs;
+				core::VariableList newParams;
+				const core::VariableList& oldParams = lambda->getParameterList()->getElements();
+				TypeList paramTypes;
+				bool update = false;
+				int cnt = 0;
 
-		TypePtr kernelType = kernelDecl["kernel"].getValue().as<ExpressionPtr>()->getType();
-		TypePtr initType = kernelType.as<RefTypePtr>()->getElementType();
+				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+					// do nothing if the argument type is not a cl_* type
+					if(arg->getType()->toString().find("array<_cl_") == string::npos) {
+						newArgs.push_back(arg);
+						newParams.push_back(oldParams.at(cnt));
+						paramTypes.push_back(oldParams.at(cnt)->getType());
+					} else {
+						// do not port cl_* types to the new type
+						update = true;
+//std::cout << "\ndropping " << *arg->getType() << " - " << *arg << std::endl;
+					}
+					++cnt;
+				});
+				if(update) {
+					const LambdaExprPtr newLambda = builder.lambdaExpr(builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
+					return builder.callExpr(call->getType(), newLambda, newArgs)->substitute(builder.getNodeManager(), *h);
+				}
+			}
+		}
 
-		replacements[matchAddress >> kernelDecl["init"].getValue()] = builder.callExpr(kernelType, BASIC.getRefNew(),
-				builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
+		return element->substitute(builder.getNodeManager(), *h);
 	});
 
+	h = &cleaner;
+	prog = h->map(0, prog);
 
 }
 
-void TypeFixer::fixBufferDecls(NodeAddress pA) {
+void TypeFixer::fixDecls(NodeAddress pA, std::string typeString) {
 	NodeManager& mgr = pA->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr kernelDecls = irp::declarationStmt(var("buffer", pattern::any), var("init",
-			irp::callExpr(aT(irp::genericType("_cl_mem")), pattern::any, *pattern::any)));
+	TreePatternPtr kernelDecls = irp::declarationStmt(var("variable", pattern::any), var("init",
+			irp::callExpr(aT(irp::genericType(typeString)), pattern::any, *pattern::any)));
 
-	irp::matchAllPairs(kernelDecls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& kernelDecl) {
+	irp::matchAllPairs(kernelDecls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& bufferDecl) {
 
-		TypePtr kernelType = kernelDecl["buffer"].getValue().as<ExpressionPtr>()->getType();
-		TypePtr initType = kernelType.as<RefTypePtr>()->getElementType();
+		TypePtr varType = bufferDecl["variable"].getValue().as<ExpressionPtr>()->getType();
+		TypePtr initType = varType.as<RefTypePtr>()->getElementType();
 
-		replacements[matchAddress >> kernelDecl["init"].getValue()] = builder.callExpr(kernelType, BASIC.getRefNew(),
+		replacements[matchAddress >> bufferDecl["init"].getValue()] = builder.callExpr(varType, BASIC.getRefNew(),
 				builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
 //		dumpPretty(replacements[kernelDecl["init"].getValue()]);
 	});
 
-
 }
+
 
 TypeFixer::TypeFixer(NodePtr toTransform) : prog(toTransform) {
 	NodeAddress pA(prog);
-	fixKernelDecls(pA);
-	fixBufferDecls(pA);
+	fixDecls(pA, "_cl_kernel");
+	fixDecls(pA, "_cl_mem");
 
 	prog = transform::replaceAll(prog->getNodeManager(), replacements);
 
 	VariableMap emptyMap;
 	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, emptyMap, false);
+
+
 }
 
 }

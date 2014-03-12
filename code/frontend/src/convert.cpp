@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -1293,8 +1293,13 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		lambdaExprCache[funcDecl] = symbol;
 
 		// non public constructors, or non user provided ones should not be converted
-		if (!ctorDecl->isUserProvided () )
-			return;
+		if (!ctorDecl->isUserProvided () ) {
+			if( ctorDecl->isDefaultConstructor() && !ctorDecl->getParent()->isPOD()) {
+				VLOG(2) << "HERE1";
+			} else {
+				return;
+			}
+		}
 		else if(ctorDecl->getParent()->isTrivial())
 			return;
 
