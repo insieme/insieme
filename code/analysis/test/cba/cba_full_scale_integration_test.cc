@@ -45,6 +45,8 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/petri_net/petri_net_io.h"
 
+#include "insieme/driver/integration/tests.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/frontend/frontend.h"
@@ -122,10 +124,12 @@ namespace cba {
 	vector<string> getInputFiles() {
 		vector<string> res;
 
+		namespace idi = insieme::driver::integration;
+
 		// test cases to be tested
-		res.push_back(TEST_ROOT_DIR "/matrix_mul_static/matrix_mul_static.c");
-		res.push_back(TEST_ROOT_DIR "/pendulum/pendulum.c");
-		res.push_back(TEST_ROOT_DIR "/omp/dijkstra/dijkstra.c");
+		res.push_back(idi::getCase("matrix_mul_static")->getFiles()[0].string());
+		res.push_back(idi::getCase("pendulum")->getFiles()[0].string());
+		res.push_back(idi::getCase("omp/dijkstra")->getFiles()[0].string());
 
 		return res;
 	}

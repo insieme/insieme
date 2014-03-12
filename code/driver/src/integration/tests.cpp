@@ -115,9 +115,14 @@ namespace integration {
 			vector<string> testCases;
 
 			string testCase ;
-			while ( getline(configFile, testCase) ) {  
-				std::remove(testCase.begin(), testCase.end(), ' ');
-				if (!testCase.empty() && testCase[0] != '#' && fs::is_directory(testDir / testCase)) {
+			while ( getline(configFile, testCase) ) {
+				// remove any comments
+				testCase = testCase.substr(0,testCase.find("#",0));
+				// trim
+				testCase.erase(0, testCase.find_first_not_of(" "));
+				testCase.erase(testCase.find_last_not_of(" ")+1);
+
+				if (!testCase.empty() && fs::is_directory(testDir / testCase)) {
 
 					testCases.push_back(testCase);
 				}
