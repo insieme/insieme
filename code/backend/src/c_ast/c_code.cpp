@@ -125,6 +125,30 @@ namespace c_ast {
 		}
 	}
 
+	namespace {
+
+		bool isDependingOnInternal(const CodeFragment& cur, const CodeFragment& trg, std::set<const CodeFragment*>& visited) {
+
+			// if we have found it, we are done!
+			if (&cur == &trg) return true;
+
+			// check whether we have already been here
+			if (!visited.insert(&cur).second) return false;
+
+			// check if any of the 'children' is depending on the targeted fragment
+			return any(cur.getDependencies(), [&](const CodeFragmentPtr& dep)->bool {
+				return isDependingOnInternal(*dep.ptr, trg, visited);
+			});
+ 		}
+
+	}
+
+
+	bool CodeFragment::isDependingOn(const CodeFragmentPtr& fragment) {
+		std::set<const CodeFragment*> visited;
+		return isDependingOnInternal(*this, *fragment.ptr, visited);
+	}
+
 
 	// -- Code Fragment Utility -------------------------------------------------
 

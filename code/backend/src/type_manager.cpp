@@ -326,7 +326,15 @@ namespace backend {
 
 						// add dependency to inner type
 						info->declaration->addDependency(curInfo->declaration);
-						info->definition->addRequirement(curInfo->definition);
+
+						// add dependency also to the definition if it is not closing a cycle
+						if (curInfo->definition) {
+							if (curInfo->definition->isDependingOn(info->definition)) {
+								info->definition->addRequirement(curInfo->definition);
+							} else {
+								info->definition->addDependency(curInfo->definition);
+							}
+						}
 
 						// add type to parameter list
 						cType->parameters.push_back(curInfo->rValueType);
