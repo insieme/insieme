@@ -53,6 +53,7 @@ void TypeFixer::removeClVars() {
 	NodeMapping* h;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
 
 	// removes cl_* variables from argument lists of lambdas
 	auto cleaner = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
@@ -61,8 +62,20 @@ void TypeFixer::removeClVars() {
 			return element;
 		}
 
-		if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
-			if(const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())) {
+		// remove declarations of cl_* variables
+		if(const DeclarationStmtPtr& decl = element.isa<DeclarationStmtPtr>()) {
+			TypePtr varType = decl->getVariable()->getType();
+			TypePtr initType = decl->getInitialization()->getType();
+			if(varType->toString().find("array<_cl_") != string::npos || initType->toString().find("array<_cl_") != string::npos ) {
+				return builder.getNoOp();
+			}
+			return element->substitute(builder.getNodeManager(), *h);
+		}
+
+		if(const CallExprPtr& call = element.isa<CallExprPtr>()) {
+
+			// update lambdas which have cl_* arguments
+			if(const LambdaExprPtr& lambda = call->getFunctionExpr().isa<LambdaExprPtr>()) {
 				ExpressionList newArgs;
 				core::VariableList newParams;
 				const core::VariableList& oldParams = lambda->getParameterList()->getElements();
@@ -79,13 +92,25 @@ void TypeFixer::removeClVars() {
 					} else {
 						// do not port cl_* types to the new type
 						update = true;
-//std::cout << "\ndropping " << *arg->getType() << " - " << *arg << std::endl;
 					}
 					++cnt;
 				});
 				if(update) {
 					const LambdaExprPtr newLambda = builder.lambdaExpr(builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
 					return builder.callExpr(call->getType(), newLambda, newArgs)->substitute(builder.getNodeManager(), *h);
+				}
+			}
+
+			// drop ocl functions
+//if(call->getFunctionExpr()->toString().find("cl") == 0u) {
+//std::cout << dumpPretty(call) << "dropping " << utils::whatIs(call->getFunctionExpr()) << std::endl;
+//assert(false);
+//	}
+			if(gen.isRefAssign(call->getFunctionExpr())) {
+				TypePtr lhsTy = call->getArgument(0)->getType();
+				TypePtr rhsTy = call->getArgument(1)->getType();
+				if(lhsTy->toString().find("array<_cl_") != string::npos || rhsTy->toString().find("array<_cl_") != string::npos) {
+					return builder.getNoOp();
 				}
 			}
 		}
@@ -102,33 +127,47 @@ void TypeFixer::fixDecls(NodeAddress pA, std::string typeString) {
 	NodeManager& mgr = pA->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr kernelDecls = irp::declarationStmt(var("variable", pattern::any), var("init",
+	TreePatternPtr decls = irp::declarationStmt(var("variable", pattern::any), var("init",
 			irp::callExpr(aT(irp::genericType(typeString)), pattern::any, *pattern::any)));
 
-	irp::matchAllPairs(kernelDecls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& bufferDecl) {
+	irp::matchAllPairs(decls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& decl) {
 
-		TypePtr varType = bufferDecl["variable"].getValue().as<ExpressionPtr>()->getType();
+		TypePtr varType = decl["variable"].getValue().as<ExpressionPtr>()->getType();
 		TypePtr initType = varType.as<RefTypePtr>()->getElementType();
 
-		replacements[matchAddress >> bufferDecl["init"].getValue()] = builder.callExpr(varType, BASIC.getRefNew(),
+		replacements[matchAddress >> decl["init"].getValue()] = builder.callExpr(varType, BASIC.getRefNew(),
 				builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
-//		dumpPretty(replacements[kernelDecl["init"].getValue()]);
+//		dumpPretty(replacements[decl["init"].getValue()]);
 	});
 
 }
 
 
 TypeFixer::TypeFixer(NodePtr toTransform) : prog(toTransform) {
+	// replace some OpenCL type variables with int<4>.
+	// Variables will be useless, but the semantics will be correct
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
+	TypePtr int4 = gen.getInt4();
+
+	NodeMap replacements;
+
+	// replace cl_program
+	TypePtr cl_program = builder.genericType("_cl_program");
+	replacements[cl_program] = int4;
+	prog = transform::replaceAll(mgr, prog, replacements, false);
+
 	NodeAddress pA(prog);
 	fixDecls(pA, "_cl_kernel");
 	fixDecls(pA, "_cl_mem");
 
-	prog = transform::replaceAll(prog->getNodeManager(), replacements);
+	prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
 
 	VariableMap emptyMap;
 	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, emptyMap, false);
 
-
+	removeClVars();
 }
 
 }
