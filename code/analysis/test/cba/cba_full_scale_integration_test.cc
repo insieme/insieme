@@ -54,6 +54,8 @@
 #include "insieme/analysis/cba/cba.h"
 #include "insieme/analysis/cba/parallel_analysis.h"
 
+#include "insieme/utils/logging.h"
+
 #include "cba_test.inc.h"
 
 namespace insieme {
@@ -122,6 +124,8 @@ namespace cba {
 
 
 	vector<string> getInputFiles() {
+		Logger::setLevel(ERROR);
+
 		vector<string> res;
 
 		namespace idi = insieme::driver::integration;
