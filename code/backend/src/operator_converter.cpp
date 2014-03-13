@@ -1243,7 +1243,7 @@ namespace backend {
 				
 				// cast needs full definition of target type to be done
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
-				context.addDependency(info.declaration);
+				context.addDependency(info.definition);
 
 				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
 			});
@@ -1290,7 +1290,7 @@ namespace backend {
 
 				// cast needs full definition of target type to be done
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
-				context.addDependency(info.declaration);
+				context.addDependency(info.definition);
 
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
