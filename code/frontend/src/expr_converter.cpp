@@ -938,6 +938,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
 
+			if (frontend::utils::isRefArray (lhs->getType().as<core::RefTypePtr>()->getElementType()) && frontend::utils::isRefVector(rhs->getType() ))
+				rhs = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), rhs);
+
 			//OK!! here there is a problem,
 			//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {
 			//		    decl ref<ref<array<int<4>,1>>> v6 =  var(v5);
