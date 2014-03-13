@@ -87,12 +87,14 @@ namespace integration {
 	namespace {
 
 		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
-			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
 
 			Properties res;
 
 			// if it is the root we are done
 			if (dir.empty()) return res;
+
+			// the directory should be absolute
+			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
 
 			// load configuration of parent directory
 			res = loadProperties(dir.parent_path(), configFileName);

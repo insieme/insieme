@@ -1081,9 +1081,24 @@ namespace backend {
 			} else if (basic.isAnyRef(elementType)) {
 				res->lValueType = subType->lValueType;
 			} else if (elementNodeType == core::NT_ArrayType) {
+
 				// if target is an array, indirection can be skipped (array is always implicitly a reference)
-				res->lValueType = subType->rValueType;
-				res->rValueType = subType->lValueType;
+				res->lValueType = subType->lValueType;
+				res->rValueType = subType->rValueType;
+
+				// special case: if ptr is a source than we have to make the element type of the array const
+				if (ptr->isSource()) {
+					assert_eq(res->lValueType, res->rValueType);		// we assume that those are equal (they should)
+					assert_true(res->lValueType.isa<c_ast::PointerTypePtr>());	// the type should also be a pointer
+
+					// get element type
+					auto elementType = res->lValueType.as<c_ast::PointerTypePtr>()->elementType;
+
+					// create new types
+					res->lValueType = c_ast::ptr(c_ast::makeConst(elementType));
+					res->rValueType = res->lValueType;
+				}
+
 			} else if (elementNodeType != core::NT_RefType) {
 				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
 				res->lValueType = subType->lValueType;
@@ -1098,7 +1113,6 @@ namespace backend {
 				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
 				res->lValueType = subType->lValueType;
 			}
-
 
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);

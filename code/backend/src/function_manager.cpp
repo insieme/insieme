@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -55,7 +55,6 @@
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/manipulation.h"
-#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -372,9 +371,7 @@ namespace backend {
 			}
 
 			// exchange arguments and done
-			auto newCall = core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
-			core::transform::utils::migrateAnnotations(call, newCall);
-			return newCall;
+			return core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
 		}
 
 	}
