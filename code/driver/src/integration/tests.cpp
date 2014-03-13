@@ -86,6 +86,41 @@ namespace integration {
 
 	namespace {
 
+		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
+
+			Properties res;
+
+			// if it is the root we are done
+			if (dir.empty()) return res;
+
+			// the directory should be absolute
+			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
+
+			// load configuration of parent directory
+			res = loadProperties(dir.parent_path(), configFileName);
+
+			// check whether there is a config file
+			auto file = dir / configFileName;
+
+			if (fs::exists(file)) {
+
+				// try loading file
+				fs::ifstream in(file);
+				if (in.is_open()) {
+					// load local configuration
+					res <<= Properties::load(in);
+				} else {
+					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
+				}
+
+			}
+
+			// done
+			return res;
+		}
+
+
+
 		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "") {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
@@ -129,6 +164,8 @@ namespace integration {
 			}
 			configFile.close();
 
+			// load global properties (from current working directory)
+			Properties global = loadProperties(fs::current_path(), "integration_test_config");
 
 			// load individual test cases
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
@@ -139,7 +176,7 @@ namespace integration {
 				bool enableCXX11 = false;
 
 				// check test case directory
-				const fs::path testCaseDir = testDir / cur;
+				const fs::path testCaseDir = fs::canonical(fs::absolute(testDir / cur));
 				if (!fs::exists(testCaseDir)) {
 					LOG(WARNING) << "Directory for test case " + cur + " not found!";
 					continue;
@@ -280,9 +317,11 @@ namespace integration {
 					inputs.close();
 				}
 
+				// load properties
+				Properties prop = global << loadProperties(testCaseDir);
 
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags));
+				res.push_back(IntegrationTestCase(prefix + cur, testCaseDir, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags, prop));
 			}
 
 			return res;
@@ -318,6 +357,24 @@ namespace integration {
 				return *it;
 			}
 		}
+		// no such test case present
+		return IntegrationTestCaseOpt();
+	}
+
+	const IntegrationTestCaseOpt getCaseAt(const string& path) {
+
+		// load list of test cases
+		const vector<IntegrationTestCase>& cases = getAllCases();
+
+		// convert the path into an absolute path
+		frontend::path absolute_path = fs::canonical(fs::absolute(path));
+
+		// search for case with given name
+		for(const auto& cur : cases) {
+			// check the directory
+			if (cur.getDirectory() == absolute_path) return cur;
+		}
+
 		// no such test case present
 		return IntegrationTestCaseOpt();
 	}
