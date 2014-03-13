@@ -366,9 +366,9 @@ if (NOT MEMORY_CHECK_SETUP)
 	# add -all-valgrind target
 	add_custom_target(valgrind)
 
+	# mark as defined
+	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
-# mark as defined
-set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 
 
