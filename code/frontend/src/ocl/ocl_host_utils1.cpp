@@ -383,6 +383,105 @@ void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varM
 	});
 }
 
+#define NTtoString(NodeType) if(node->getNodeType() == NT_##NodeType) return #NodeType;
+std::string whatIs(NodePtr node) {
+	NTtoString(TypeVariable)
+	NTtoString(FunctionType)
+	NTtoString(TupleType)
+	NTtoString(RecType)
+	NTtoString(RefType)
+
+	// + single element types
+	NTtoString(ArrayType)
+	NTtoString(VectorType)
+	NTtoString(ChannelType)
+
+	// + named composite types
+	NTtoString(StructType)
+	NTtoString(UnionType)
+
+
+	//
+	// --- Statements ---
+	//
+	NTtoString(BreakStmt)
+	NTtoString(ContinueStmt)
+	NTtoString(ReturnStmt)
+	NTtoString(DeclarationStmt)
+	NTtoString(CompoundStmt)
+	NTtoString(WhileStmt)
+	NTtoString(ForStmt)
+	NTtoString(IfStmt)
+	NTtoString(SwitchStmt)
+
+	// + exception handling for C++
+	NTtoString(ThrowStmt)
+	NTtoString(TryCatchStmt)
+
+	//labels
+	NTtoString(LabelStmt)
+	NTtoString(GotoStmt)
+
+	//
+	// --- Expressions ---
+	//
+	NTtoString(Variable)
+
+	NTtoString(LambdaExpr)
+	NTtoString(BindExpr)
+
+	NTtoString(Literal)
+	NTtoString(CallExpr)
+	NTtoString(CastExpr)
+
+	NTtoString(TupleExpr)
+	NTtoString(VectorExpr)
+	NTtoString(StructExpr)
+	NTtoString(UnionExpr)
+	NTtoString(JobExpr)
+
+	//
+	// --- Supporting Nodes ---
+	//
+	NTtoString(IntTypeParams)
+	NTtoString(Types)
+
+	NTtoString(RecTypeBinding)
+	NTtoString(RecTypeDefinition)
+
+	NTtoString(Lambda)
+	NTtoString(LambdaBinding)
+	NTtoString(LambdaDefinition)
+
+	NTtoString(NamedType)
+	NTtoString(NamedValue)
+	NTtoString(NamedValues)
+
+	NTtoString(Parent)
+	NTtoString(Parents)
+
+	NTtoString(SwitchCase)
+	NTtoString(SwitchCases)
+
+	NTtoString(CatchClause)
+
+	NTtoString(Expressions)
+	NTtoString(Parameters)
+
+	NTtoString(DeclarationStmts)
+	NTtoString(GuardedExpr)
+	NTtoString(GuardedExprs)
+
+	//
+	// --- Marker ---
+	//
+	NTtoString(MarkerExpr)
+	NTtoString(MarkerStmt)
+
+	return "unknown";
+}
+#undef NTtoString
+
 }
 }
 }
