@@ -58,6 +58,16 @@ namespace integration {
 
 				// run command - //TODO: measure time
 				auto res = system(cmd.c_str());		// TODO: record output of executable and store it in the result
+
+				/**
+				 * TODO:
+				 * 	- add string-streams for std-out and std-err to the TestResult class
+				 * 	- collect outputs of command execution
+				 * 	- also record actual command within test result
+				 * 	- measure execution time => record in result
+				 * 	- measure memory usage => record in result
+				 * 	- if it is a mockRun => fill command filed only
+				 */
 				return TestResult(res == 0);
 			}
 
@@ -331,26 +341,26 @@ namespace integration {
 
 			// --- real steps ----
 
-			add(createRefCompStep("ref_c_comp", C));
-			add(createRefCompStep("ref_c++_comp", CPP));
+			add(createRefCompStep("ref_c_compile", C));
+			add(createRefCompStep("ref_c++_compile", CPP));
 
-			add(createRefRunStep("ref_c_exec", { "ref_c_comp" }));
-			add(createRefRunStep("ref_c++_exec", { "ref_c++_comp" }));
+			add(createRefRunStep("ref_c_execute", { "ref_c_compile" }));
+			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
 			add(createMainSemaStep("main_c_sema", C));
 			add(createMainSemaStep("main_cxx_sema", C));
 
-			add(createMainConversionStep("main_seq_conv", Sequential, C));
-			add(createMainConversionStep("main_run_conv", Runtime, C));
+			add(createMainConversionStep("main_seq_convert", Sequential, C));
+			add(createMainConversionStep("main_run_convert", Runtime, C));
 
-			add(createMainCompilationStep("main_seq_comp", Sequential, C, { "main_seq_conv" }));
-			add(createMainCompilationStep("main_run_comp", Runtime, C, { "main_run_conv" }));
+			add(createMainCompilationStep("main_seq_compile", Sequential, C, { "main_seq_convert" }));
+			add(createMainCompilationStep("main_run_compile", Runtime, C, { "main_run_convert" }));
 
-			add(createMainExecuteStep("main_seq_exec", Sequential, { "main_seq_comp" }));
-			add(createMainExecuteStep("main_run_exec", Runtime, { "main_run_comp" }));
+			add(createMainExecuteStep("main_seq_execute", Sequential, { "main_seq_compile" }));
+			add(createMainExecuteStep("main_run_execute", Runtime, { "main_run_compile" }));
 
-			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_exec", "ref_c_exec" }));
-			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_exec", "ref_c_exec" }));
+			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
+			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
 
 			return list;
 		}
