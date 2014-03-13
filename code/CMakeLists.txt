@@ -15,6 +15,9 @@ foreach( child ${children} )
 	endif()
 endforeach()
 
+# create global integration test configuration file
+include(environment.cmake)
+configure_file(integration_test_config.in ${CMAKE_BINARY_DIR}/integration_test_config  @ONLY IMMEDIATE)
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOXYGEN "Use Doxygen to create the HTML based API documentation" OFF)
