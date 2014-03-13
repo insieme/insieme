@@ -329,7 +329,7 @@ namespace backend {
 
 						// add dependency also to the definition if it is not closing a cycle
 						if (curInfo->definition) {
-							if (curInfo->definition->isDependingOn(info->definition)) {
+							if (cur.isa<core::RecTypePtr>() || curInfo->definition->isDependingOn(info->definition)) {
 								info->definition->addRequirement(curInfo->definition);
 							} else {
 								info->definition->addDependency(curInfo->definition);
