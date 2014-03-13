@@ -6,7 +6,6 @@ comp.gcc: 	 	Conf("${CMAKE_C_COMPILER}" if not "ccache" in "${CMAKE_C_COMPILER}"
 comp.g++: 		Conf("${CMAKE_CXX_COMPILER}" if not "ccache" in "${CMAKE_CXX_COMPILER}" else "g++", "G++")
 comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
 comp.mpicc:		Conf("${MPI_C_COMPILER}", "MPICC")
-comp.insiemecc:		Conf("%(BIN_DIR)s/code/driver/insiemecc","InsiemeCC")
 
 act.sema: 		Conf(Flag("-S"), "Sema")
 act.ir: 		Conf(OutFileFlag("--dump-ir", "ir"))
@@ -44,7 +43,6 @@ back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++98 -fpermissive"))
 
 back.c.opt: 	Conf(Flag('-O3'))
 back.seq: 		Conf(Flag("-lm"), "SEQ")
-back.insiemecc:		%(back.gcc.flags)s 
 back.run:		Conf([
 					Flag('-I%(SRC_DIR)s/code/runtime/include'),
 					Flag('-D_XOPEN_SOURCE=700'),
@@ -122,6 +120,5 @@ pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',
 pass.13.mpi_ocl:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
 					 %(comp.mpicc)s+%(back.gcc)s+%(back.mpi_ocl)s+%(back.c.opt)s, 'mpi_ocl.test', %(execute.mpi)s
 					)
-pass.14.insiemecc: 		Pass(None,None,%(comp.insiemecc)s+%(back.insiemecc)s+%(back.c.opt)s,'run.test',%(execute.seq)s)
 
 
