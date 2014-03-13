@@ -577,6 +577,7 @@ LITERAL(VectorRefProjection, 	"vector.ref.projection",
 							 	"(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
 
 DERIVED(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>> a) -> ref<array<'elem,1>> { return ref.reinterpret(a, lit(array<'elem,1>)); }")
+DERIVED(RefVectorToSrcArray, 	"ref.vector.to.src.array",		"(ref<vector<'elem,#l>> a) -> src<array<'elem,1>> { return ref.reinterpret(a, lit(array<'elem,1>)); }")
 
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------

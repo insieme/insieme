@@ -828,6 +828,25 @@ namespace backend {
 			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
 		});
 
+		res[basic.getRefVectorToSrcArray()] = OP_CONVERTER({
+			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
+			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
+			context.getDependencies().insert(infoSrc.definition);
+
+			const TypeInfo& infoRes = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
+			context.getDependencies().insert(infoRes.definition);
+
+			// special handling for string literals
+			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					return CONVERT_ARG(0);
+				}
+			}
+
+			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
+		});
+
 		res[basic.getVectorReduction()] = OP_CONVERTER({
 			// type of the operation:
 			// (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res

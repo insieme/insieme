@@ -64,9 +64,15 @@ bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
 	return true;
 }
 
+bool isPtrDecay(const core::ExpressionPtr& lit){
+	auto& gen = lit.getNodeManager().getLangBasic();
+	return (gen.isRefVectorToRefArray(lit) || gen.isRefVectorToSrcArray(lit) );
+}
+
+
 bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 	if (const LiteralPtr lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
-		if (gen.isRefVectorToRefArray(lit)) {
+		if (isPtrDecay(lit)) {
 			if (const LiteralPtr pl = dynamic_pointer_cast<const Literal>(utils::tryRemove(gen.getRefDeref(), call->getArgument(0)))) {
 				path = pl->getStringValue();
 				return true;
@@ -142,7 +148,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
-//std::cout << "Path: " << path << std::endl;
+std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
 			string root = path;
 	size_t nIncludes = includeDirs.size();
@@ -168,7 +174,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	check.close();
 
 	if (check.fail()) {// no kernel file found, leave the error printing to the compiler frontend
-	//		std::cerr << "FAIL! " << path << std::endl;
+			std::cerr << "FAIL! " << path << std::endl;
 		path = root;
 	}
 
@@ -221,21 +227,29 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 			argTy = toArray->getArgument(0)->getType();
 			param = builder.variable(argTy);
 			arg = toArray->getArgument(0);
-		} else if(toArray->getFunctionExpr() == gen.getRefVectorToRefArray()) {
+		} else if(isPtrDecay(toArray->getFunctionExpr())) {
 			arg = toArray->getArgument(0);
 			argTy = arg->getType();
 			param = builder.variable(argTy);
-		} else if(toArray->getFunctionExpr() == gen.getRefVar() ) {
-			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
-	// throw away ref.var
-	// TODO only a dirty fix, check it
-	// this will no longer happen, vector-to-array is gone
-//				if(vta->getFunctionExpr() == gen.getVectorToArray()) {
-//					arg = vta->getArgument(0);
-//					argTy = arg->getType();
-//					param = builder.variable(argTy);
-//				}
-			}
+
+		} else if(gen.isRefReinterpret(toArray->getFunctionExpr())){
+
+			arg   = toArray[0];
+			argTy = arg->getType();
+			param = builder.variable(argTy);
+
+// LUIS: all this code is dead and dangerous
+//		} else if(toArray->getFunctionExpr() == gen.getRefVar() ) {
+//			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
+//	// throw away ref.var
+//	// TODO only a dirty fix, check it
+//	// this will no longer happen, vector-to-array is gone
+////				if(vta->getFunctionExpr() == gen.getVectorToArray()) {
+////					arg = vta->getArgument(0);
+////					argTy = arg->getType();
+////					param = builder.variable(argTy);
+////				}
+//			}
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
 			assert(false && "Unexpected function in OpenCL size argument");
@@ -310,9 +324,14 @@ void KernelReplacer::findKernelNames() {
 			pattern::var("kernel", pattern::any) << clCreateKernel));
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
-//std::cout << "kernel: " << *createKernel["clCreateKernel"].getValue() << std::endl;
-
-		std::string kernelName = createKernel["kernel_name"].getValue().as<LiteralPtr>()->getStringValue();
+//std::cout << "kernel: " << *createKernel["kernel_name"].getValue() << std::endl;
+//		
+		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
+		if (kernelNameExpr.isa<core::CallExprPtr>())
+			kernelNameExpr = kernelNameExpr.as<core::CallExprPtr>()[0];
+		assert(kernelNameExpr.isa<LiteralPtr>());
+		
+		std::string kernelName = kernelNameExpr.as<LiteralPtr>()->getStringValue();
 
 		// remove " "
 		kernelName = kernelName.substr(1, kernelName.length()-2);
@@ -352,9 +371,19 @@ void KernelReplacer::collectArguments() {
 //				<< *getVarOutOfCrazyInspireConstruct1(setArg["arg_value"].getValue().as<ExpressionPtr>(), IRBuilder(mgr)) << std::endl;
 
 		ExpressionAddress kernel = utils::getRootVariable(matchAddress >> setArg["kernel"].getValue().as<ExpressionAddress>()).as<ExpressionAddress>();
+
+		assert(setArg["arg_index"].getValue().isa<LiteralPtr>());
+		assert(setArg["arg_value"].getValue().isa<ExpressionPtr>());
+		assert(setArg["arg_size"].getValue().isa<ExpressionPtr>());
+
 		LiteralPtr idx = setArg["arg_index"].getValue().as<LiteralPtr>();
 		ExpressionPtr arg = setArg["arg_value"].getValue().as<ExpressionPtr>();
 		ExpressionPtr sizeArg = setArg["arg_size"].getValue().as<ExpressionPtr>();
+
+		if (CallExprPtr x = arg.isa<CallExprPtr>()){
+			if (gen.isRefReinterpret(x->getFunctionExpr()))
+				arg = x[0];
+		}
 
 		unsigned int argIdx = insieme::utils::numeric_cast<unsigned int>(idx->getStringValue());
 
@@ -652,7 +681,7 @@ ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path,
 
 	if(const CallExprPtr callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
 		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if(gen.isRefVectorToRefArray(stringAsChar)) {
+			if(isPtrDecay(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
 //std::cout << "\n using path string " << path->getStringValue() << " \n\n";

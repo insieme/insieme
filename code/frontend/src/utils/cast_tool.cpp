@@ -440,6 +440,11 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 
 	if (gen.isBool(expr->getType())) return expr;
+	
+	if (isRefVector(expr->getType())) {
+		auto tmp = builder.callExpr(gen.getRefVectorToRefArray(), expr);
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), tmp));
+	}
 
 	if (isRefArray(expr->getType())) {
 		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
@@ -596,7 +601,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = core::analysis::unwrapCppRef(expr);
 			}
 
-			return builder.callExpr(gen.getRefVectorToRefArray(), expr);
+			if (isRefArray(expr->getType()))
+				return expr;
+
+			if (targetTy.isa<core::FunctionTypePtr>())
+				return expr;
+			
+			if (targetTy.as<core::RefTypePtr>()->isSource())
+				return builder.callExpr(gen.getRefVectorToSrcArray(), expr);
+			else 
+				return builder.callExpr(gen.getRefVectorToRefArray(), expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -614,8 +628,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			// cast to void*
 			if (gen.isAnyRef(targetTy)) {
-				//return builder.callExpr(builder.getLangBasic().getRefToAnyRef(), expr); }
-				return expr;
+				return builder.callExpr(targetTy, gen.getRefReinterpret(),
+										expr, builder.getTypeLiteral(targetTy));
 			}
 
 			// is a cast of Null to another pointer type:

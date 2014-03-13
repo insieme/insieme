@@ -208,42 +208,42 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_TYPE(LongDouble,"ref<array<real<16>,1>>");	
 
 	CHECK_POINTER_CONST_TYPE(Void, 		"ref<any>");
-	CHECK_POINTER_CONST_TYPE(Bool, 		"ref<array<bool,1>>");
-	CHECK_POINTER_CONST_TYPE(UChar, 	"ref<array<uint<1>,1>>");
-	CHECK_POINTER_CONST_TYPE(SChar, 	"ref<array<char,1>>");
-	CHECK_POINTER_CONST_TYPE(Char16, 	"ref<array<wchar<16>,1>>");
-	CHECK_POINTER_CONST_TYPE(Char32, 	"ref<array<wchar<32>,1>>");
-	CHECK_POINTER_CONST_TYPE(UShort, 	"ref<array<uint<2>,1>>");
-	CHECK_POINTER_CONST_TYPE(Short, 	"ref<array<int<2>,1>>");
-	CHECK_POINTER_CONST_TYPE(UInt, 		"ref<array<uint<4>,1>>");
-	CHECK_POINTER_CONST_TYPE(Int, 		"ref<array<int<4>,1>>");
-	CHECK_POINTER_CONST_TYPE(ULong, 	"ref<array<uint<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(ULongLong, "ref<array<struct<longlong_val:uint<8>>,1>>");
-	CHECK_POINTER_CONST_TYPE(Long, 		"ref<array<int<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(LongLong, 	"ref<array<struct<longlong_val:int<8>>,1>>");
-	CHECK_POINTER_CONST_TYPE(UInt128, 	"ref<array<uint<16>,1>>");
-	CHECK_POINTER_CONST_TYPE(Float, 	"ref<array<real<4>,1>>");
-	CHECK_POINTER_CONST_TYPE(Double, 	"ref<array<real<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(LongDouble,"ref<array<real<16>,1>>");	
+	CHECK_POINTER_CONST_TYPE(Bool, 		"src<array<bool,1>>");
+	CHECK_POINTER_CONST_TYPE(UChar, 	"src<array<uint<1>,1>>");
+	CHECK_POINTER_CONST_TYPE(SChar, 	"src<array<char,1>>");
+	CHECK_POINTER_CONST_TYPE(Char16, 	"src<array<wchar<16>,1>>");
+	CHECK_POINTER_CONST_TYPE(Char32, 	"src<array<wchar<32>,1>>");
+	CHECK_POINTER_CONST_TYPE(UShort, 	"src<array<uint<2>,1>>");
+	CHECK_POINTER_CONST_TYPE(Short, 	"src<array<int<2>,1>>");
+	CHECK_POINTER_CONST_TYPE(UInt, 		"src<array<uint<4>,1>>");
+	CHECK_POINTER_CONST_TYPE(Int, 		"src<array<int<4>,1>>");
+	CHECK_POINTER_CONST_TYPE(ULong, 	"src<array<uint<8>,1>>");
+	CHECK_POINTER_CONST_TYPE(ULongLong, "src<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_POINTER_CONST_TYPE(Long, 		"src<array<int<8>,1>>");
+	CHECK_POINTER_CONST_TYPE(LongLong, 	"src<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_POINTER_CONST_TYPE(UInt128, 	"src<array<uint<16>,1>>");
+	CHECK_POINTER_CONST_TYPE(Float, 	"src<array<real<4>,1>>");
+	CHECK_POINTER_CONST_TYPE(Double, 	"src<array<real<8>,1>>");
+	CHECK_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");	
 
-	CHECK_CONST_POINTER_CONST_TYPE(Void, 		"ref<any>");
-	CHECK_CONST_POINTER_CONST_TYPE(Bool, 		"ref<array<bool,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(UChar, 	"ref<array<uint<1>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(SChar, 	"ref<array<char,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Char16, 	"ref<array<wchar<16>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Char32, 	"ref<array<wchar<32>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(UShort, 	"ref<array<uint<2>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Short, 	"ref<array<int<2>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(UInt, 		"ref<array<uint<4>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Int, 		"ref<array<int<4>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(ULong, 	"ref<array<uint<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(ULongLong, "ref<array<struct<longlong_val:uint<8>>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Long, 		"ref<array<int<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(LongLong, 	"ref<array<struct<longlong_val:int<8>>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(UInt128, 	"ref<array<uint<16>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Float, 	"ref<array<real<4>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(Double, 	"ref<array<real<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(LongDouble,"ref<array<real<16>,1>>");	
+	CHECK_CONST_POINTER_CONST_TYPE(Void, 	  "ref<any>");
+	CHECK_CONST_POINTER_CONST_TYPE(Bool, 	  "src<array<bool,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(UChar, 	  "src<array<uint<1>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(SChar, 	  "src<array<char,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Char16, 	  "src<array<wchar<16>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Char32, 	  "src<array<wchar<32>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(UShort, 	  "src<array<uint<2>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Short, 	  "src<array<int<2>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(UInt, 	  "src<array<uint<4>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Int, 	  "src<array<int<4>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(ULong, 	  "src<array<uint<8>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(ULongLong, "src<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Long, 	  "src<array<int<8>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(LongLong,  "src<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(UInt128,   "src<array<uint<16>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Float, 	  "src<array<real<4>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(Double, 	  "src<array<real<8>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");	
 }
 
 #define CHECK_REFERENCE_TYPE(TypeName, InsiemeTypeDesc) \
@@ -290,23 +290,23 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(Double, 	"struct<_cpp_ref:ref<real<8>>>");
 	CHECK_REFERENCE_TYPE(LongDouble,"struct<_cpp_ref:ref<real<16>>>");	
 
-	CHECK_REFERENCE_CONST_TYPE(Void, 	"struct<_const_cpp_ref:ref<unit>>");  // <== this is actually not a type...
-	CHECK_REFERENCE_CONST_TYPE(Bool, 	"struct<_const_cpp_ref:ref<bool>>");
-	CHECK_REFERENCE_CONST_TYPE(UChar, 	"struct<_const_cpp_ref:ref<uint<1>>>");
-	CHECK_REFERENCE_CONST_TYPE(SChar, 	"struct<_const_cpp_ref:ref<char>>");
-	CHECK_REFERENCE_CONST_TYPE(Char16, 	"struct<_const_cpp_ref:ref<wchar<16>>>");
-	CHECK_REFERENCE_CONST_TYPE(Char32, 	"struct<_const_cpp_ref:ref<wchar<32>>>");
-	CHECK_REFERENCE_CONST_TYPE(UShort, 	"struct<_const_cpp_ref:ref<uint<2>>>");
-	CHECK_REFERENCE_CONST_TYPE(Short, 	"struct<_const_cpp_ref:ref<int<2>>>");
-	CHECK_REFERENCE_CONST_TYPE(UInt, 	"struct<_const_cpp_ref:ref<uint<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(Int, 	"struct<_const_cpp_ref:ref<int<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(ULong, 	"struct<_const_cpp_ref:ref<uint<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(ULongLong,"struct<_const_cpp_ref:ref<struct<longlong_val:uint<8>>>>");
-	CHECK_REFERENCE_CONST_TYPE(Long, 	"struct<_const_cpp_ref:ref<int<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(LongLong,"struct<_const_cpp_ref:ref<struct<longlong_val:int<8>>>>");
-	CHECK_REFERENCE_CONST_TYPE(UInt128, "struct<_const_cpp_ref:ref<uint<16>>>");
-	CHECK_REFERENCE_CONST_TYPE(Float, 	"struct<_const_cpp_ref:ref<real<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(Double, 	"struct<_const_cpp_ref:ref<real<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:ref<unit>>");  // <== this is actually not a type...
+	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:ref<bool>>");
+	CHECK_REFERENCE_CONST_TYPE(UChar, 	  "struct<_const_cpp_ref:ref<uint<1>>>");
+	CHECK_REFERENCE_CONST_TYPE(SChar, 	  "struct<_const_cpp_ref:ref<char>>");
+	CHECK_REFERENCE_CONST_TYPE(Char16, 	  "struct<_const_cpp_ref:ref<wchar<16>>>");
+	CHECK_REFERENCE_CONST_TYPE(Char32, 	  "struct<_const_cpp_ref:ref<wchar<32>>>");
+	CHECK_REFERENCE_CONST_TYPE(UShort, 	  "struct<_const_cpp_ref:ref<uint<2>>>");
+	CHECK_REFERENCE_CONST_TYPE(Short, 	  "struct<_const_cpp_ref:ref<int<2>>>");
+	CHECK_REFERENCE_CONST_TYPE(UInt, 	  "struct<_const_cpp_ref:ref<uint<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(Int, 	  "struct<_const_cpp_ref:ref<int<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(ULong, 	  "struct<_const_cpp_ref:ref<uint<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(ULongLong, "struct<_const_cpp_ref:ref<struct<longlong_val:uint<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(Long, 	  "struct<_const_cpp_ref:ref<int<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(LongLong,  "struct<_const_cpp_ref:ref<struct<longlong_val:int<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(UInt128,   "struct<_const_cpp_ref:ref<uint<16>>>");
+	CHECK_REFERENCE_CONST_TYPE(Float, 	  "struct<_const_cpp_ref:ref<real<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(Double, 	  "struct<_const_cpp_ref:ref<real<8>>>");
 	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:ref<real<16>>>");	
 }
 
@@ -390,8 +390,8 @@ TEST(TypeConversion, CombinedTypes) {
 
 	CHECK_TYPE		(ASTctx.getRecordType(classDecl).withConst(),"BaseClass",
 															     "struct BaseClass <fieldA:uint<2>>");
-	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"ref<array<BaseClass,1>>",
-															     "ref<array<struct BaseClass <fieldA:uint<2>>,1>>");
+	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
+															     "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
 	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:ref<BaseClass>>", 
 															     "struct<_const_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>");
 
