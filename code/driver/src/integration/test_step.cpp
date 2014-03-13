@@ -90,12 +90,14 @@ namespace integration {
 
 			TestStep createRefCompStep(const string& name, Language l) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
 					std::stringstream cmd;
 
 					// start with executable
 					switch(l) {
-					case C:   cmd << "gcc"; break;			// TODO: make this a setup option
-					case CPP: cmd << "g++"; break;			// TODO: make this a setup option
+					case C:   cmd << props["global.ref.cc"];  break;
+					case CPP: cmd << props["global.ref.cxx"]; break;
 					}
 
 					// standard flags
@@ -148,10 +150,12 @@ namespace integration {
 
 			TestStep createMainSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
 					std::stringstream cmd;
 
 					// start with executable
-					cmd << "./main";		// TODO: add this to a configuration
+					cmd << props["global.insieme.main"];
 
 					// add language flag
 					switch(l) {
@@ -185,10 +189,12 @@ namespace integration {
 
 			TestStep createMainConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
 					std::stringstream cmd;
 
 					// start with executable
-					cmd << "./main";		// TODO: add this to a configuration
+					cmd << props["global.insieme.main"];
 
 					// add language flag
 					switch(l) {
@@ -223,12 +229,14 @@ namespace integration {
 
 			TestStep createMainCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
 					std::stringstream cmd;
 
 					// start with executable
 					switch(l) {
-					case C:   cmd << "gcc"; break;			// TODO: make this a setup option
-					case CPP: cmd << "g++"; break;			// TODO: make this a setup option
+					case C:   cmd << props["global.ref.cc"];  break;
+					case CPP: cmd << props["global.ref.cxx"]; break;
 					}
 
 					// standard flags
@@ -283,16 +291,18 @@ namespace integration {
 
 			TestStep createMainCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
 					std::stringstream cmd;
 
 					// define comparison script
-					cmd << "/home/herbert/insieme/test/sortdiff ";		// TODO: this has to be a configuration
+					cmd << props["global.sortdiff"];
 
 					// determine backend
 					string be = getBackendKey(backend);
 
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getName() << ".ref.out";
+					cmd << " " << test.getDirectory().string() << "/" << test.getName() << ".ref.out";
 
 					// pipe result to output file
 					cmd << " " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << ".test.out";

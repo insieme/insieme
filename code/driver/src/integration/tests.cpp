@@ -86,7 +86,7 @@ namespace integration {
 
 	namespace {
 
-		Properties loadProperties(const fs::path& dir) {
+		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
 			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
 
 			Properties res;
@@ -95,10 +95,10 @@ namespace integration {
 			if (dir.empty()) return res;
 
 			// load configuration of parent directory
-			res = loadProperties(dir.parent_path());
+			res = loadProperties(dir.parent_path(), configFileName);
 
 			// check whether there is a config file
-			auto file = dir / "config";
+			auto file = dir / configFileName;
 
 			if (fs::exists(file)) {
 
@@ -162,6 +162,8 @@ namespace integration {
 			}
 			configFile.close();
 
+			// load global properties (from current working directory)
+			Properties global = loadProperties(fs::current_path(), "integration_test_config");
 
 			// load individual test cases
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
@@ -314,7 +316,7 @@ namespace integration {
 				}
 
 				// load properties
-				Properties prop = loadProperties(testCaseDir);
+				Properties prop = global << loadProperties(testCaseDir);
 
 				// add test case
 				res.push_back(IntegrationTestCase(prefix + cur, testCaseDir, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags, prop));

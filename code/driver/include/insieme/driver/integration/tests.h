@@ -198,6 +198,14 @@ namespace integration {
 		}
 
 		/**
+		 * Obtains a view on the internally maintained properties for the given
+		 * integration test step.
+		 */
+		PropertyView getPropertiesFor(const string& step) const {
+			return properties.getView(step);
+		}
+
+		/**
 		 * Allows to print this test case to some stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {

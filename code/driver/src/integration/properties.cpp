@@ -45,23 +45,34 @@ namespace integration {
 
 	using std::pair;
 
-	const string& Properties::get(const string& key, const string& category) const {
-		static const string empty = "";
+	const string& Properties::get(const string& key, const string& category, const string& def) const {
 
 		// check the first level
 		auto p1 = data.find(key);
-		if (p1 == data.end()) return empty;
+		if (p1 == data.end()) return def;
 
 		// check the second level for a category
 		auto p2 = p1->second.find(category);
 		if (p2 == p1->second.end()) {
 			// if the category is not present => fall-back
-			if(category == "") return empty;
+			if(category == "") return def;
 			return get(key, "");
 		}
 
 		// take the value
 		return p2->second;
+	}
+
+	std::set<string> Properties::getKeys() const {
+		std::set<string> res;
+		for(const auto& cur : data) {
+			res.insert(cur.first);
+		}
+		return res;
+	}
+
+	PropertyView Properties::getView(const string& category) const {
+		return PropertyView(*this, category);
 	}
 
 	std::ostream& Properties::printTo(std::ostream& out) const {
@@ -126,6 +137,12 @@ namespace integration {
 		string line;
 		while (std::getline(in, line)) {
 
+			// skip empty lines
+			if (line.empty()) continue;
+
+			// skip comments
+			if (line[0] == '#') continue;
+
 			// first split at = sign
 			auto sep = line.find('=');
 			if (sep == string::npos) continue;
@@ -166,6 +183,22 @@ namespace integration {
 				out << "\n";
 			}
 		}
+	}
+
+	std::ostream& PropertyView::printTo(std::ostream& out) const {
+
+		// special case: empty
+		if (properties.empty()) {
+			return out << properties;
+		}
+
+		out << "Properties {\n\t";
+		out << join("\n\t", properties.getKeys(), [&](std::ostream& out, const string& key) {
+			out << key << "=" << this->get(key);
+		});
+		out << "\n}\n";
+
+		return out;
 	}
 
 

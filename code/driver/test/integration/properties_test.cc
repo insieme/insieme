@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "insieme/driver/integration/properties.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -49,14 +50,15 @@ namespace integration {
 
 		Properties p;
 
-		std::cout << p << "\n";
+		EXPECT_EQ("Properties { }\n", toString(p));
+
 
 		EXPECT_EQ("", p.get(""));
 		EXPECT_EQ("", p.get("a"));
 		EXPECT_EQ("", p.get("a","b"));
 
 		p.set("a", "v1");
-		std::cout << p << "\n";
+		EXPECT_EQ("Properties {\n\ta=v1\n}\n", toString(p));
 
 		EXPECT_EQ("", p.get(""));
 		EXPECT_EQ("v1", p.get("a"));
@@ -65,7 +67,7 @@ namespace integration {
 		EXPECT_EQ("", p.get("x"));
 
 		p.set("a", "b", "v2");
-		std::cout << p << "\n";
+		EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n}\n", toString(p));
 
 		EXPECT_EQ("", p.get(""));
 		EXPECT_EQ("v1", p.get("a"));
@@ -74,7 +76,7 @@ namespace integration {
 		EXPECT_EQ("", p.get("x"));
 
 		p.set("a", "c", "v3");
-		std::cout << p << "\n";
+		EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n\ta[c]=v3\n}\n", toString(p));
 
 		EXPECT_EQ("", p.get(""));
 		EXPECT_EQ("v1", p.get("a"));
@@ -150,6 +152,47 @@ namespace integration {
 			EXPECT_EQ("x v1 v2", r.get("a")) << r;
 		}
 	}
+
+	TEST(PropertyView, Merge) {
+
+		Properties p;
+		p.set("a", "v1");
+		p.set("a", "c1", "v2");
+		p.set("a", "c2", "v3");
+
+		p.set("b", "v4");
+		p.set("b", "c1", "v5");
+
+		p.set("c", "v6");
+
+		// create views
+		auto view1 = p.getView("c1");
+		auto view2 = p.getView("c2");
+		auto view3 = p.getView("c3");
+
+		// test views
+		EXPECT_EQ("v2", view1["a"]);
+		EXPECT_EQ("v5", view1["b"]);
+		EXPECT_EQ("v6", view1["c"]);
+		EXPECT_EQ("", view1["d"]);
+
+		EXPECT_EQ("v3", view2["a"]);
+		EXPECT_EQ("v4", view2["b"]);
+		EXPECT_EQ("v6", view2["c"]);
+		EXPECT_EQ("", view2["d"]);
+
+		EXPECT_EQ("v1", view3["a"]);
+		EXPECT_EQ("v4", view3["b"]);
+		EXPECT_EQ("v6", view3["c"]);
+		EXPECT_EQ("", view3["d"]);
+
+		// and test print operation
+		EXPECT_EQ("Properties {\n\ta=v2\n\tb=v5\n\tc=v6\n}\n", toString(view1));
+		EXPECT_EQ("Properties {\n\ta=v3\n\tb=v4\n\tc=v6\n}\n", toString(view2));
+		EXPECT_EQ("Properties {\n\ta=v1\n\tb=v4\n\tc=v6\n}\n", toString(view3));
+
+	}
+
 
 
 	TEST(Properties, IO) {

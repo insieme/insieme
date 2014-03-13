@@ -74,11 +74,12 @@ namespace {
 		bool valid;
 		bool mockrun;
 		int num_threads;
+		bool print_configs;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
-			: valid(valid), mockrun(false), num_threads(1) {}
+			: valid(valid), mockrun(false), num_threads(1), print_configs(false) {}
 	};
 
 
@@ -107,10 +108,29 @@ int main(int argc, char** argv) {
 	auto cases = loadCases(options);
 	std::cout << "Loaded " << cases.size() << " Test case(s) ...\n";
 
+	// check whether only the configurations are requested
+	if (options.print_configs) {
+		int counter = 0;
+		// print configurations
+		for(const auto& cur : cases) {
+
+			std::cout << (++counter) << "/" << cases.size() << ":\n";
+			std::cout << "Test Case: " << cur.getName() << "\n";
+			std::cout << "Directory: " << cur.getDirectory().string() << "\n";
+			std::cout << cur.getProperties() << "\n";
+
+		}
+
+		return 0;
+	}
+
+
+
 	// load list of test steps
 	std::cout << "Loading list of steps ...\n";
 	auto steps = getTestSteps(options);
 	std::cout << "Steps: " << steps << "\n";
+
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
@@ -185,10 +205,12 @@ namespace {
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
 				("help,h", 				"produce help message")
+				("config,c", 			"print the configuration of the selected test cases")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
+
 		;
 
 		// define positional options (all options not being named)
@@ -210,6 +232,11 @@ namespace {
 		}
 
 		Options res;
+
+		if (map.count("config")) {
+			res.print_configs = true;
+		}
+
 		if (map.count("cases")) {
 			res.cases = map["cases"].as<vector<string>>();
 		}

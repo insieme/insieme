@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <set>
 #include <map>
 #include <string>
 
@@ -45,8 +46,11 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
+	using std::set;
 	using std::map;
 	using std::string;
+
+	class PropertyView;
 
 	class Properties : public utils::Printable {
 
@@ -55,7 +59,9 @@ namespace integration {
 
 	public:
 
-		const string& get(const string& key, const string& category = "") const;
+		const string& get(const string& key, const string& category = "", const string& def = "") const;
+
+		std::set<string> getKeys() const;
 
 		void set(const string& key, const string& value) {
 			set(key,"",value);
@@ -78,6 +84,8 @@ namespace integration {
 		}
 
 		string mapVars(const string& in) const;
+
+		PropertyView getView(const string& category) const;
 
 		std::ostream& printTo(std::ostream& out) const;
 
@@ -103,6 +111,28 @@ namespace integration {
 
 	};
 
+
+	class PropertyView : public utils::Printable {
+
+		const Properties& properties;
+
+		const string category;
+
+	public:
+
+		PropertyView(const Properties& properties, const string& category)
+			: properties(properties), category(category) {}
+
+		string operator[](const string& key) const {
+			return properties.get(key, category);
+		}
+
+		string get(const string& key, const string& def = "") const {
+			return properties.get(key, category, def);
+		}
+
+		std::ostream& printTo(std::ostream& out) const;
+	};
 
 
 } // end namespace integration
