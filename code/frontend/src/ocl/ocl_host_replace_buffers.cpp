@@ -139,7 +139,11 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
 	NodeManager& mgr = size->getNodeManager();
 	IRBuilder builder(mgr);
-	ExpressionPtr fun = getClCreateBuffer(copyPtr, errcode_ret == builder.getTypeLiteral(builder.arrayType(mgr.getLangBasic().getInt4())), builder);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
+
+	NodePtr intNull = builder.refReinterpret(gen.getRefNull(), builder.arrayType(gen.getInt4()));
+
+	ExpressionPtr fun = getClCreateBuffer(copyPtr, errcode_ret != intNull, builder);
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
