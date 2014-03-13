@@ -893,7 +893,8 @@ namespace tu {
 			}
 		}
 
-		assert(false && "No such entry point!");
+		assert_fail() << "No such entry point!\n"
+				<< "Searching for: " << entryPoint << "\n";
 		return core::ProgramPtr();
 	}
 
