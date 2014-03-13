@@ -255,6 +255,11 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+					// add flags for the runtime code
+					if (backend == Runtime) {
+						cmd << " " << props["global.run.comp.flags"] << " ";
+					}
+
 					// add include directories
 					if (!test.getIncludeDirs().empty()) cmd << " -I " << join(":",test.getIncludeDirs());
 
@@ -323,19 +328,6 @@ namespace integration {
 			auto add = [&](const TestStep& step) {
 				list.insert({step.getName(), step});
 			};
-
-			// --- development steps ----
-
-			add(TestStep("dummy1", [](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
-				// a function obtaining an index of available steps
-				return TestResult();
-			}));
-
-			add(TestStep("dummy2", [](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
-				// a function obtaining an index of available steps
-				return TestResult();
-			}, {"dummy1"}));
-
 
 			// --- real steps ----
 

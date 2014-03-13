@@ -43,3 +43,7 @@ global.insieme.main=@PROJECT_BINARY_DIR@/driver/main
 
 # result comparison script
 global.sortdiff=@insieme_root_dir@/test/sortdiff
+
+# setup insieme runtime compiler flags
+global.run.comp.flags=-I @insieme_code_dir@/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm
+
