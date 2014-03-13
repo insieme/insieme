@@ -415,6 +415,26 @@ const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
 	return headerTagger;
 }
 
+
+namespace {
+
+	//if var is used to create a read-only variable
+bool isUsedToCreateConstRef(const core::StatementPtr& body, const core::VariablePtr& var){
+
+	auto& ext = body->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+	bool flag = false;
+	core::visitDepthFirstOnce (body, [&] (const core::CallExprPtr& call){
+		if (core::analysis::isCallOf(call, ext.getRefIRToConstCpp())){ 
+			if (call[0] == var ){
+				flag = true;
+			}
+		}
+	});
+	return flag;
+}
+
+}
+
 //////////////////////////////////////////////////////////////////
 ///
 core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params){
@@ -428,19 +448,27 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 
 			// if the variable is never written in the function body, avoid materialization
 			const core::VariablePtr& wrap = fit->second;
-			if (core::analysis::isReadOnly(body, wrap)){
-				// replace read uses
-				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
-				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
-				// this variables might apear in annotations inside:
-				core::visitDepthFirstOnce (newBody, [&] (const core::StatementPtr& node){
+			auto transferAnnotations = [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
 						assert(anno);
 						anno->replaceUsage (wrap, currParam);
 					}
-				});
+				};
+
+			if (isUsedToCreateConstRef(body, wrap)){
+				auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
+				core::visitDepthFirstOnce (newBody, transferAnnotations);
+				wrapRefMap.erase(currParam);
+			}
+			else if (core::analysis::isReadOnly(body, wrap)){
+				// replace read uses
+				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
+				// this variables might apear in annotations inside:
+				core::visitDepthFirstOnce (newBody, transferAnnotations);
 				//cleanup the wrap cache to avoid future uses, this var does not exist anymore
 				wrapRefMap.erase(currParam);
 			}
