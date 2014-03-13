@@ -87,12 +87,7 @@ namespace addons {
 		};
 
 		// a marker for annotation for globals only only initialized once
-		struct SingleStaticInitMarker : public  core::value_annotation::migratable {
-			bool migrate (const core::NodeAnnotationPtr& ann, const core::NodePtr& ptr, const core::NodePtr& after) const {
-				after->attachValue<SingleStaticInitMarker>();
-				return true;
-			}
-		};
+		struct SingleStaticInitMarker {};
 		
 
 		// a pre-processor marking all static variables only used once
@@ -126,7 +121,7 @@ namespace addons {
 				// mark init calls that are unique
 				for(const auto& cur : inits) {
 					if (cur.second.size() == 1u) {
-						(*cur.second.begin())->attachValue<SingleStaticInitMarker>();
+						cur.first->attachValue<SingleStaticInitMarker>();
 					}
 				}
 
@@ -253,7 +248,7 @@ namespace addons {
 
 				// special case for static variables not depending on free variables and is a single static init marker
 				// TODO: if this ever causes a problem that only closed init values may be used fix it here
-				if (!core::analysis::hasFreeVariables(ARG(1)) && call->hasAttachedValue<SingleStaticInitMarker>()) {
+				if (!core::analysis::hasFreeVariables(ARG(1)) && ARG(0)->hasAttachedValue<SingleStaticInitMarker>()) {
 					// use a constant initialization by inlining the bind
 					auto value = core::transform::evalLazy(mgr, ARG(1));
 
