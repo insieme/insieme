@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 	setup.mockRun = options.mockrun;
 
 	// run test cases in parallel
-	int failed = 0;
+	vector<TestCase> failed;
 	omp_set_num_threads(options.num_threads);
 	#pragma omp parallel for
 	for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 			}
 			std::cout << "------------------------------------------\n";
 			std::cout << "\n";
-			if (!success) failed++;
+			if (!success) failed.push_back(cur);
 		}
 
 	}
@@ -184,11 +184,14 @@ int main(int argc, char** argv) {
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size());
-	std::cout << format("# FAILED:         %60d #\n", failed);
+	std::cout << format("# FAILED:         %60d #\n", failed.size());
+	for(const auto& cur : failed) {
+		std::cout << format("#   - %090s          #\n", cur.getName());
+	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
 	// done
-	return (failed==0)?0:1;
+	return (failed.empty())?0:1;
 }
 
 
@@ -262,11 +265,11 @@ namespace {
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curCase = itc::getCaseAt(cur);
-			if (!curCase) {
-				std::cout << "WARNING: Unable to load case: " << cur << "\n";
-			} else {
-				cases.push_back(*curCase);
+			auto curSuite = itc::getTestSuite(cur);
+			for(const auto& cur : curSuite) {
+				if (!contains(cases, cur)) {		// make sure every test is only present once
+					cases.push_back(cur);
+				}
 			}
 		}
 		return cases;

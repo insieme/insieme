@@ -361,7 +361,25 @@ namespace integration {
 		return IntegrationTestCaseOpt();
 	}
 
-	const IntegrationTestCaseOpt getCaseAt(const string& path) {
+	namespace {
+
+		bool isParentOf(const fs::path& parent, const fs::path& child) {
+			assert(parent.is_absolute());
+			assert(child.is_absolute());
+
+			// if it is the same => done
+			if (parent == child) return true;
+
+			// if child is empty => terminate
+			if (child.empty()) return false;
+
+			// go one more step
+			return isParentOf(parent, child.parent_path());
+		}
+
+	}
+
+	vector<IntegrationTestCase> getTestSuite(const string& path) {
 
 		// load list of test cases
 		const vector<IntegrationTestCase>& cases = getAllCases();
@@ -370,13 +388,16 @@ namespace integration {
 		frontend::path absolute_path = fs::canonical(fs::absolute(path));
 
 		// search for case with given name
+		vector<IntegrationTestCase> res;
 		for(const auto& cur : cases) {
 			// check the directory
-			if (cur.getDirectory() == absolute_path) return cur;
+			if (isParentOf(absolute_path, cur.getDirectory())) {
+				res.push_back(cur);
+			}
 		}
 
-		// no such test case present
-		return IntegrationTestCaseOpt();
+		// return list of results
+		return res;
 	}
 
 
