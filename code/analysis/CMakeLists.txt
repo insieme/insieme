@@ -57,6 +57,8 @@ foreach ( case_file ${test_cases})
 
 	if(${case_name} STREQUAL ut_analysis_dependence_test)
 		add_unit_test(${case_name} off)
+	elseif(${case_name} STREQUAL ut_analysis_cba_full_scale_integration_test)
+		add_unit_test(${case_name} off)
 	else()
 		add_unit_test(${case_name})
 	endif()

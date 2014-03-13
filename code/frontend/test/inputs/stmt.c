@@ -404,11 +404,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *(v100&[0u]))"
+	"( *(ref.vector.to.ref.array(v100)&[0u]))"
 	a[0];
 
 	#pragma test \
-	"((v100&[0u]) := 1)"
+	"((ref.vector.to.ref.array(v100)&[0u]) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -416,11 +416,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *((v100&[0u])&[0u]))"
+	"( *(ref.vector.to.ref.array((ref.vector.to.ref.array(v100)&[0u]))&[0u]))"
 	b[0][0];
 
 	#pragma test \
-	"(((v100&[1u])&[1u]) := 0)"
+	"((ref.vector.to.ref.array((ref.vector.to.ref.array(v100)&[1u]))&[1u]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test \
@@ -428,11 +428,11 @@ void vector_stmt_test() {
 	int vec[10] = {0};
 
 	#pragma test \
-	"decl ref<ref<array<int<4>,1>>> v0 = ( var(( var(vector.init.partial(([0,5,10]), 10)))))"
+	"decl ref<ref<array<int<4>,1>>> v0 = ( var(ref.vector.to.ref.array(( var(vector.init.partial(([0,5,10]), 10))))))"
 	int *vec_ptr = (int[10]) {0, 5, 10};
 
 	#pragma test \
-	"fun(ref<array<ref<array<int<4>,1>>,1>> v1) -> unit { }(ref.reinterpret(v100, type<array<ref<array<int<4>,1>>,1>>))"
+	"fun(ref<array<ref<array<int<4>,1>>,1>> v1) -> unit { }(ref.reinterpret(ref.vector.to.ref.array(v100), type<array<ref<array<int<4>,1>>,1>>))"
 	evil(b);
 }
 
@@ -444,7 +444,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"( *(( var([1, 2, 3]))&[1u]))"
+	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[1u]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
