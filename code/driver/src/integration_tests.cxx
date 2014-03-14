@@ -53,6 +53,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/string_utils.h"
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
@@ -75,11 +76,12 @@ namespace {
 		bool mockrun;
 		int num_threads;
 		bool print_configs;
+		bool panic_mode;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
-			: valid(valid), mockrun(false), num_threads(1), print_configs(false) {}
+			: valid(valid), mockrun(false), num_threads(1), print_configs(false), panic_mode(false) {}
 	};
 
 
@@ -94,9 +96,6 @@ namespace {
 int main(int argc, char** argv) {
 	Logger::setLevel(ERROR);
 
-
-	std::cout << "---- Insieme Integration Test Utility ----\n";
-
 	// parse parameters
 	Options options = parseCommandLine(argc, argv);
 
@@ -104,9 +103,14 @@ int main(int argc, char** argv) {
 	if (!options.valid) return 1;		// fail otherwise
 
 	// get list of test cases
-	std::cout << "Loading test cases ...\n";
 	auto cases = loadCases(options);
-	std::cout << "Loaded " << cases.size() << " Test case(s) ...\n";
+
+	std::cout <<        "--------------------------------------------------------------------------------\n";
+	std::cout << format("|                 Insieme version: %-43s |\n", "- TODO: get git description -");
+	std::cout <<        "|------------------------------------------------------------------------------|\n";
+	std::cout << format("|                           Running %3d benchmark(s)                           |\n", cases.size());
+	std::cout <<        "|------------------------------------------------------------------------------|\n";
+
 
 	// check whether only the configurations are requested
 	if (options.print_configs) {
@@ -127,20 +131,25 @@ int main(int argc, char** argv) {
 
 
 	// load list of test steps
-	std::cout << "Loading list of steps ...\n";
 	auto steps = getTestSteps(options);
-	std::cout << "Steps: " << steps << "\n";
+	std::cout << "Steps: \n\t" << ::join("\n\t", steps) << "\n";
 
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
 
 	// run test cases in parallel
-	int failed = 0;
+	vector<TestCase> ok;
+	vector<TestCase> failed;
 	omp_set_num_threads(options.num_threads);
+
+	bool panic = false;
+
 	#pragma omp parallel for
 	for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
 		const auto& cur = *it;
+
+		if (panic) continue;
 
 		// filter applicable steps based on test case
 		vector<TestStep> list = itc::filterSteps(steps, cur);
@@ -168,15 +177,24 @@ int main(int argc, char** argv) {
 			std::cout << "Test Case: " << cur << "\n";
 			std::cout << "Results:\n";
 
-			for(const auto& cur : results) {
-				std::cout << "\t" << cur.first << " - " <<
-						((cur.second.wasSuccessfull())?"OK":"ERR")
+			for(const auto& curRes : results) {
+				std::cout << "\t" << curRes.first << " - " <<
+						((curRes.second.wasSuccessfull())?"OK":"ERR")
 						<< "\n";
-				success = success && cur.second.wasSuccessfull();
+				success = success && curRes.second.wasSuccessfull();
 			}
 			std::cout << "------------------------------------------\n";
 			std::cout << "\n";
-			if (!success) failed++;
+			if (success) {
+				ok.push_back(cur);
+			} else {
+				failed.push_back(cur);
+
+				// trigger panic mode and graceful shutdown
+				if (options.panic_mode) {
+					panic = true;
+				}
+			}
 		}
 
 	}
@@ -184,11 +202,15 @@ int main(int argc, char** argv) {
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size());
-	std::cout << format("# FAILED:         %60d #\n", failed);
+	std::cout << format("# PASSED:         %60d #\n", ok.size());
+	std::cout << format("# FAILED:         %60d #\n", failed.size());
+	for(const auto& cur : failed) {
+		std::cout << format("#   - %-63s          #\n", cur.getName());
+	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
 	// done
-	return (failed==0)?0:1;
+	return (failed.empty())?0:1;
 }
 
 
@@ -207,6 +229,7 @@ namespace {
 				("help,h", 				"produce help message")
 				("config,c", 			"print the configuration of the selected test cases")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
+				("panic,p", 			"panic on first sign of trouble and stop execution")
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
@@ -242,6 +265,7 @@ namespace {
 		}
 
 		res.mockrun = map.count("mock");
+		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 
 		if (map.count("step")) {
@@ -262,11 +286,11 @@ namespace {
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curCase = itc::getCaseAt(cur);
-			if (!curCase) {
-				std::cout << "WARNING: Unable to load case: " << cur << "\n";
-			} else {
-				cases.push_back(*curCase);
+			auto curSuite = itc::getTestSuite(cur);
+			for(const auto& cur : curSuite) {
+				if (!contains(cases, cur)) {		// make sure every test is only present once
+					cases.push_back(cur);
+				}
 			}
 		}
 		return cases;

@@ -223,6 +223,11 @@ void BufferReplacer::collectInformation() {
 				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
 			}
 		}
+		if (core::CallExprPtr x = hostPtr.isa<core::CallExprPtr>()){
+			if (mgr.getLangBasic().isRefReinterpret(x->getFunctionExpr()))
+				hostPtr = x[0];
+		}
+
 
 
 		// extract type form size argument
@@ -336,11 +341,13 @@ void BufferReplacer::generateReplacements() {
 
 			// if clCreateBuffer was called at initialization, update it now
 			if(meta.second.initExpr) {
+
+
 				declInitReplacements[newBuffer] = meta.second.initExpr;
 
-//std::cout << "initializing " << *newBuffer << " with ";
-//dumpPretty(meta.second.initExpr);
-//std::cout << std::endl;
+std::cout << "initializing " << *newBuffer << " with ";
+dumpPretty(meta.second.initExpr);
+std::cout << std::endl;
 			}
 			return;
 		}

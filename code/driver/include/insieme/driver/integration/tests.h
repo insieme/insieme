@@ -255,12 +255,12 @@ namespace integration {
 	const IntegrationTestCaseOpt getCase(const string& name);
 
 	/**
-	 * Obtains the test case stored within the given directory.
+	 * Obtains a list of test cases in the given path or below.
 	 *
 	 * @param path the directory representing the integration test
-	 * @return an optional representing the test case or being uninitialized if there is no such test case.
+	 * @return the list of test cases within this directory or below
 	 */
-	const IntegrationTestCaseOpt getCaseAt(const string& path);
+	vector<IntegrationTestCase> getTestSuite(const string& path);
 
 	/**
 	 * This function is loading the integration test with the given name.
