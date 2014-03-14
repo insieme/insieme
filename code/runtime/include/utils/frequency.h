@@ -52,7 +52,6 @@
  * HyperThreading support: Values are only read for the first HT unit, but written for both of them for safety reasons.
  */
 
-bool irt_g_frequency_setting_specified;
 static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
 
 /*
@@ -317,15 +316,11 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 		while(tok) {
 			uint32 freq = atoi(tok);
-			if(irt_cpu_freq_set_frequency_socket(socketid, freq))
-				irt_g_frequency_setting_specified = true;
-			else
-				irt_g_frequency_setting_specified = false;
+			irt_cpu_freq_set_frequency_socket(socketid, freq);
 			tok = strtok(NULL, ",");
 			++socketid;
 		}
 	} else {
-		irt_g_frequency_setting_specified = false;
 		retval = 1;
 	}
 
@@ -339,7 +334,7 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	char cpu_freq_output[1024] = { 0 };
 	char* cur = cpu_freq_output;
-	if(irt_g_frequency_setting_specified)
+	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
 		cur += sprintf(cur, "set, ");
 	else
 		cur += sprintf(cur, "not set, ");
@@ -400,15 +395,12 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 
 			if(strcmp(tok, "OS") == 0) {
 				int32 retval = irt_cpu_freq_reset_frequency_worker(worker);
-				irt_g_frequency_setting_specified = true;
 				return retval;
 			} else if(strcmp(tok, "MAX") == 0) {
 				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[0]);
-				irt_g_frequency_setting_specified = true;
 				return retval;
 			} else if(strcmp(tok, "MIN") == 0) {
 				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[length-1]);
-				irt_g_frequency_setting_specified = true;
 				return retval;
 			} else {
 
@@ -423,20 +415,16 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 
 				if(available) {
 					int32 retval = irt_cpu_freq_set_frequency_worker(worker, freq);
-					irt_g_frequency_setting_specified = true;
 					return retval;
 				} else {
 					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCIES));
-					irt_g_frequency_setting_specified = false;
 					return -1;
 				}
 			}
 		} else {
-			irt_g_frequency_setting_specified = false;
 			return retval;
 		}
 	} else {
-		irt_g_frequency_setting_specified = false;
 		return 0;
 	}
 	return 0;
