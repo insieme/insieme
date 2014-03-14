@@ -191,15 +191,15 @@ void BufferReplacer::collectInformation() {
 	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
 			pattern::var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = pattern::var("all", bufferDecl | bufferAssign);
-/*
-	visitDepthFirst(pA, [&](const NodeAddress& node) {
-		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
-
-		if(createBuffer) {
-			std::cout << "All: " << createBuffer->getVarBinding("all").getValue() << std::endl;
-		}
-	});
-*/
+//
+//  visitDepthFirst(pA, [&](const NodeAddress& node) {
+//  	AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
+//
+//  	if(createBuffer) {
+//  		std::cout << "All: " << createBuffer->getVarBinding("all").getValue() << std::endl;
+//  	}
+//  });
+//
 
 	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
 
