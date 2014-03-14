@@ -289,7 +289,7 @@ insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::Fun
 
 
 insieme::core::TypePtr OclKernelPlugin::TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, insieme::frontend::conversion::Converter& convFact) {
-	decl->dump();
+	//decl->dump();
     return nullptr;
 }
 
@@ -297,7 +297,7 @@ insieme::core::TypePtr OclKernelPlugin::TypeDeclPostVisit(const clang::TypeDecl*
 insieme::core::ExpressionPtr OclKernelPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
     // check var Decls
 	if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
-		varDecl->dump();
+		//varDecl->dump();
 
 		// Add OpenCL attributes
 		insieme::core::NodeAnnotationPtr&& attr = convertAttribute(varDecl, convFact);

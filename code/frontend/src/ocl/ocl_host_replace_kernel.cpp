@@ -148,7 +148,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
-std::cout << "Path: " << path << std::endl;
+//std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
 			string root = path;
 	size_t nIncludes = includeDirs.size();
