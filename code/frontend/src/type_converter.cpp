@@ -625,8 +625,16 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 		return gen.getAnyRef();
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
-		subTy : builder.refType(builder.arrayType( subTy ));
+	core::TypePtr retTy ;
+	if (subTy->getNodeType() == core::NT_FunctionType){
+		retTy = subTy;
+	}
+	else{	
+		if(pointerTy->getPointeeType().isConstQualified ())
+			retTy = builder.refType(builder.arrayType( subTy ), core::RK_SOURCE );
+		else
+			retTy = builder.refType(builder.arrayType( subTy ));
+	}
 
     // Function pointers are IR function but
     // pointers of function pointers should be IR array of functions

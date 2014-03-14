@@ -95,6 +95,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size()) ;
+
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
 		std::cout << cur << std::endl;

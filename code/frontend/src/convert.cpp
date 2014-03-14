@@ -1558,11 +1558,18 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 		// if array or vector
 		if (  elementType.isa<core::VectorTypePtr>() || elementType.isa<core::ArrayTypePtr>()) {
+
 			auto membTy = elementType.as<core::SingleElementTypePtr>()->getElementType();
+
 			ExpressionList elements;
 			// get all values of the init expression
 			for (size_t i = 0; i < inits.size(); ++i) {
-				elements.push_back(getInitExpr(membTy, inits[i] ));
+
+				auto tmp = getInitExpr(membTy, inits[i] );
+				if (frontend::utils::isRefVector(tmp->getType()) && frontend::utils::isRefArray(membTy)){
+					tmp = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), tmp);
+				}
+				elements.push_back(tmp);
 			}
 			retIr = builder.vectorExpr(elements);
 

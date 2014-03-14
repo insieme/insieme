@@ -158,8 +158,8 @@ std::ostream& operator<<(std::ostream& out, const Joinable<Iterator, Printer>& j
 /**
  * Joins the values in the collection to the stream separated by a supplied separator.
  **/
-template<typename Container, typename Printer>
-Joinable<typename Container::const_iterator, Printer> join(const string& separator, const Container& container, const Printer& printer) {
+template<typename Container, typename Printer = print<typename Container::element_type>>
+Joinable<typename Container::const_iterator, Printer> join(const string& separator, const Container& container, const Printer& printer = Printer()) {
 	return Joinable<typename Container::const_iterator ,Printer>(separator, container.begin(), container.end(), printer);
 }
 
