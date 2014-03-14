@@ -68,11 +68,12 @@ std::ostream& ForClause::dump(std::ostream& out) const {
 		out << "collapse(" << *collapseExpr << "), ";
 	if(hasNoWait())
 		out << "nowait, ";
+	SharedOMPP::dump(out);
 	return out;
 }
 
-///----- SharedRegionParallelAndTaskClause -----
-std::ostream& SharedRegionParallelAndTaskClause::dump(std::ostream& out) const {
+///----- SharedOMPP -----
+std::ostream& SharedOMPP::dump(std::ostream& out) const {
 	if(hasTarget())
 			targetClause->dump(out) << ", ";
 	if(hasObjective())
@@ -119,7 +120,7 @@ std::ostream& CommonClause::dump(std::ostream& out) const {
 ///----- Region -----
 std::ostream& Region::dump(std::ostream& out) const {
 	out << "region(";
-	SharedRegionParallelAndTaskClause::dump(out);
+	SharedOMPP::dump(out);
 	return out << ")";
 }
 

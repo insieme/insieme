@@ -102,7 +102,7 @@ DEFINE_TYPE(Param);
 DEFINE_TYPE(Target);
 DEFINE_TYPE(Objective);
 DEFINE_TYPE(Region);
-DEFINE_TYPE(SharedRegionParallelAndTaskClause);
+DEFINE_TYPE(SharedOMPP);
 
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
@@ -509,10 +509,37 @@ public:
 	std::ostream& dump(std::ostream& out) const { return out << "master"; }
 };
 
+class SharedOMPP {
+protected:
+	TargetPtr		targetClause;
+	ObjectivePtr	objectiveClause;
+	ParamPtr        paramClause;
+
+public:
+	SharedOMPP(const TargetPtr& targetClause, const ObjectivePtr& objectiveClause, const ParamPtr& paramClause): targetClause(targetClause), objectiveClause(objectiveClause), paramClause(paramClause) { }
+
+	bool hasTarget() const { return static_cast<bool>(targetClause); }
+	const Target& getTarget() const { assert(hasTarget()); return *targetClause; }
+
+	bool hasObjective() const { return static_cast<bool>(objectiveClause); }
+	const Objective& getObjective() const { assert(hasObjective()); return *objectiveClause; }
+
+	bool hasParam() const { return static_cast<bool>(paramClause); }
+	const Param& getParam() const { assert(hasParam()); return *paramClause; }
+
+	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		if(targetClause) targetClause->replaceUsage(map);
+		if(objectiveClause) objectiveClause->replaceUsage(map);
+		if(paramClause) paramClause->replaceUsage(map);
+	}
+};
+
 /**
  * Represent clauses which are
  */
-class ForClause {
+class ForClause : public virtual SharedOMPP {
 protected:
 	VarListPtr			lastPrivateClause;
 	VarListPtr			lastLocalClause;
@@ -521,10 +548,10 @@ protected:
 	bool 				noWait;
 	bool 				ordered;
 public:
-	ForClause(const VarListPtr& lastPrivateClause, const VarListPtr& lastLocalClause, const SchedulePtr& scheduleClause, 
-              const core::ExpressionPtr& collapseExpr, bool noWait, bool ordered) :
-		lastPrivateClause(lastPrivateClause), lastLocalClause(lastLocalClause), scheduleClause(scheduleClause), 
-        collapseExpr(collapseExpr), noWait(noWait), ordered(ordered) { }
+	ForClause( const VarListPtr& lastPrivateClause, const VarListPtr& lastLocalClause, const SchedulePtr& scheduleClause, const core::ExpressionPtr& collapseExpr, 
+			const TargetPtr& targetClause, const ObjectivePtr& objectiveClause, const ParamPtr& paramClause, bool noWait, bool ordered) :
+        SharedOMPP(targetClause, objectiveClause, paramClause), lastPrivateClause(lastPrivateClause), 
+		lastLocalClause(lastLocalClause), scheduleClause(scheduleClause), collapseExpr(collapseExpr), noWait(noWait), ordered(ordered) {}
 
 	bool hasLastPrivate() const { return static_cast<bool>(lastPrivateClause); }
 	const VarList& getLastPrivate() const { assert(hasLastPrivate()); return *lastPrivateClause; }
@@ -548,37 +575,11 @@ public:
 		if(lastLocalClause) replaceVars (lastLocalClause, map);
 		if(collapseExpr)	 replaceVars (collapseExpr, map);
 		if(scheduleClause) 	scheduleClause->replaceUsage(map);
+		SharedOMPP::replaceUsage(map);
 	}
 };
 
-class SharedRegionParallelAndTaskClause {
-protected:
-	TargetPtr		targetClause;
-	ObjectivePtr	objectiveClause;
-	ParamPtr        paramClause;
-
-public:
-	SharedRegionParallelAndTaskClause(const TargetPtr& targetClause, const ObjectivePtr& objectiveClause, const ParamPtr& paramClause): targetClause(targetClause), objectiveClause(objectiveClause), paramClause(paramClause) { }
-
-	bool hasTarget() const { return static_cast<bool>(targetClause); }
-	const Target& getTarget() const { assert(hasTarget()); return *targetClause; }
-
-	bool hasObjective() const { return static_cast<bool>(objectiveClause); }
-	const Objective& getObjective() const { assert(hasObjective()); return *objectiveClause; }
-
-	bool hasParam() const { return static_cast<bool>(paramClause); }
-	const Param& getParam() const { assert(hasParam()); return *paramClause; }
-
-	std::ostream& dump(std::ostream& out) const;
-
-	virtual void replaceUsage (const core::NodeMap& map){
-		if(targetClause) targetClause->replaceUsage(map);
-		if(objectiveClause) objectiveClause->replaceUsage(map);
-		if(paramClause) paramClause->replaceUsage(map);
-	}
-};
-
-class SharedParallelAndTaskClause : public SharedRegionParallelAndTaskClause {
+class SharedParallelAndTaskClause : public virtual SharedOMPP {
 protected:
 	core::ExpressionPtr	ifClause;
 	DefaultPtr			defaultClause;
@@ -586,7 +587,7 @@ protected:
 public:
 	SharedParallelAndTaskClause(const core::ExpressionPtr& ifClause, const DefaultPtr& defaultClause, const VarListPtr& sharedClause,
 			const TargetPtr& targetClause, const ObjectivePtr& objectiveClause, const ParamPtr& paramClause) :
-		SharedRegionParallelAndTaskClause(targetClause, objectiveClause, paramClause),
+		SharedOMPP(targetClause, objectiveClause, paramClause),
 		ifClause(ifClause), defaultClause(defaultClause), sharedClause(sharedClause) { }
 
 	bool hasIf() const { return static_cast<bool>(ifClause); }
@@ -603,7 +604,7 @@ public:
 	virtual void replaceUsage (const core::NodeMap& map){
 		replaceVars (ifClause, map);
 		replaceVars (sharedClause, map);
-		SharedRegionParallelAndTaskClause::replaceUsage(map);
+		SharedOMPP::replaceUsage(map);
 	}
 };
 
@@ -620,6 +621,7 @@ public:
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
         const ParamPtr& paramClause):
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause, paramClause),
 			numThreadClause(numThreadClause), copyinClause(copyinClause) { }
 
@@ -693,7 +695,7 @@ public:
 /**
  * OpenMP+ 'region' clause
  */
-class Region: public DatasharingClause, public Annotation, public SharedRegionParallelAndTaskClause {
+class Region: public DatasharingClause, public Annotation, public virtual SharedOMPP {
 protected:
 	Reduction dummy;
 public:
@@ -702,8 +704,8 @@ public:
 			const VarListPtr& firstLocalClause,
 			const TargetPtr& targetClause,
 			const ObjectivePtr& objectiveClause) :
+				SharedOMPP(targetClause, objectiveClause, paramClause),
 				DatasharingClause(VarListPtr(), VarListPtr(), localClause, firstLocalClause),
-				SharedRegionParallelAndTaskClause(targetClause, objectiveClause, paramClause),
 				dummy(Reduction::PLUS, VarListPtr()) {}
 
 	virtual bool hasReduction() const { return false; }
@@ -714,7 +716,7 @@ public:
 	virtual void replaceUsage (const core::NodeMap& map){
 		DatasharingClause::replaceUsage(map);
 		Annotation::replaceUsage(map);
-		SharedRegionParallelAndTaskClause::replaceUsage(map);
+		SharedOMPP::replaceUsage(map);
 	}
 };
 
@@ -737,6 +739,7 @@ public:
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
         const ParamPtr& paramClause) :
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, targetClause, objectiveClause, paramClause),
 			reductionClause(reductionClause) { }
@@ -767,9 +770,12 @@ public:
 		const ReductionPtr& reductionClause,
 		const SchedulePtr& scheduleClause,
 		const core::ExpressionPtr& collapseExpr,
-		bool noWait, bool ordered) :
+		const TargetPtr& targetClause,
+		const ObjectivePtr& objectiveClause, 
+        const ParamPtr& paramClause, bool noWait, bool ordered) :
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			DatasharingClause(privateClause, firstPrivateClause),
-			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, noWait, ordered), reductionClause(reductionClause) { }
+			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
@@ -808,9 +814,10 @@ public:
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause, 
         const ParamPtr& paramClause, bool noWait, bool ordered) :
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			CommonClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, targetClause, objectiveClause, paramClause),
-			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, noWait, ordered), reductionClause(reductionClause) { }
+			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
@@ -822,7 +829,7 @@ public:
 	ForPtr toFor() const {
 		// do not duplicate stuff already handled in parallel
 		return std::make_shared<For>(/*private*/VarListPtr(), /*firstprivate*/VarListPtr(), lastPrivateClause, lastLocalClause,
-			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, noWait, ordered);
+			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered);
 	}
 
 	std::ostream& dump(std::ostream& out) const;
@@ -904,6 +911,7 @@ public:
 		const ObjectivePtr& objectiveClause,
 		const ParamPtr& paramClause,
 		bool noWait) :
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			CommonClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause,
 					targetClause, objectiveClause, paramClause),
@@ -977,6 +985,7 @@ public:
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
         const ParamPtr& paramClause) :
+            SharedOMPP(targetClause, objectiveClause, paramClause),
 			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause, paramClause),
 			untied(untied), dummy(Reduction::PLUS, VarListPtr()) { }
