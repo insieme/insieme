@@ -216,16 +216,12 @@ void BufferReplacer::collectInformation() {
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
-		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
+		ExpressionPtr hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
 		if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
 			assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
 			if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
 				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
 			}
-		}
-		if (core::CallExprPtr x = hostPtr.isa<core::CallExprPtr>()){
-			if (mgr.getLangBasic().isRefReinterpret(x->getFunctionExpr()))
-				hostPtr = x[0];
 		}
 
 
