@@ -48,8 +48,11 @@ namespace extensions {
 			auto ctorDecl = ctorExpr->getConstructor ();
 			if (getInterceptor().isIntercepted(ctorDecl)){
 				if (ctorDecl->isDefaultConstructor ()){
-					const core::TypePtr& classTy = convFact.convertType(ctorExpr->getType());
-					return	convFact.getIRBuilder().undefinedVar(classTy);
+					core::TypePtr classTy = convFact.convertType(ctorExpr->getType());
+					if(classTy->getNodeType() == core::NT_RefType) {
+						classTy = classTy.as<core::RefTypePtr>()->getElementType();
+					}
+					return	convFact.getIRBuilder().zero(classTy);
 				}
 			}
 		}
