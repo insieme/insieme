@@ -302,13 +302,12 @@ namespace backend {
 				// register fragment
 				fragmentManager->bindFragment(fragmentName, declaration);
 
-
 				// get type info
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
-				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Variable Declaration ----------"));
+				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Global Variable Declaration ----------"));
 				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
 
 				// add dependency to type declaration
@@ -377,15 +376,12 @@ namespace backend {
         // get type and create init expression
         c_ast::TypePtr type = typeInfo.rValueType;
 
-        std::cout << "\nMember is of type: " << ptr->getMember()->getNodeType() << "\n" << ptr->getMember() << "\n";
-
         auto cmgr = context.getConverter().getCNodeManager();
 
         // special handling for vector initialization (should not be turned into a struct)
         auto value = convertExpression(context, ptr->getMember());
         if (ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
         	assert(dynamic_pointer_cast<c_ast::Initializer>(value));
-        	std::cout << "Number of elements: " << static_pointer_cast<c_ast::Initializer>(value)->values.size() << "\n";
         	value = cmgr->create<c_ast::VectorInit>(
         			static_pointer_cast<c_ast::VectorInit>(
         					static_pointer_cast<c_ast::Initializer>(value)->values[0]

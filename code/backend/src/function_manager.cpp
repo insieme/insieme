@@ -1350,13 +1350,27 @@ namespace backend {
 						if (cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
 							// add filed assignment
 							if (core::analysis::isCallOf(call, basic.getRefAssign())) {
+
+								// avoid default inits, those will be done anyway
+								if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) ||
+									core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())){
+									continue;
+								}
+
 								c_ast::NodePtr value = converter.getStmtConverter().convertExpression(context, call[1]);
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, toVector(value)));
 							} else {
 								// otherwise it needs to be a constructor
 								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
 
+								// avoid default inits, those will be done anyway
+								if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero()) ||
+									core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getUndefined())){
+									continue;
+								}
+
 								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
+
 								if( initCall->getNodeType() != c_ast::NT_ConstructorCall) {
 									assert(initCall->getNodeType() == c_ast::NT_UnaryOperation);
 									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();

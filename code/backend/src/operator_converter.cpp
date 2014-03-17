@@ -1059,7 +1059,13 @@ namespace backend {
 			auto decl = fragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
 			assert_false(decl->external) << "Can not initialize external declaration!";
 
-			// convert init-value in fresh context
+			// avoid zero inits, those are implicit
+			if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) || 
+				core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())){
+				return none;
+			}
+
+			// convert init-value in fresh context, 
 			ConversionContext innerContext(context.getConverter());
 			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
 

@@ -267,7 +267,6 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
-
 				// check initialization
 				auto& basic = decl->getNodeManager().getLangBasic();
 				core::ExpressionPtr init = decl->getInitialization();
