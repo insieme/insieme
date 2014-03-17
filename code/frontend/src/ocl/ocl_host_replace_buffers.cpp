@@ -161,7 +161,7 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 
 BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {
 	collectInformation();
-	generateReplacements();
+	generateReplacements("_cl_mem");
 
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
@@ -284,7 +284,7 @@ bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const
 }
 
 
-void BufferReplacer::generateReplacements() {
+void BufferReplacer::generateReplacements(std::string bufferTypeName) {
 	NodeManager& mgr = prog.getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -294,17 +294,8 @@ void BufferReplacer::generateReplacements() {
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
 		ExpressionAddress bufferExpr = utils::extractVariable(meta.first);
-//std::cout << "\nto replace: " << *bufferExpr << std::endl;
-		visitDepthFirst(ExpressionPtr(bufferExpr)->getType(), [&](const NodePtr& node) {
-		//if(node.toString().compare("_cl_mem") == 0) std::cout << "\nGOCHA" << node << "  " << node.getNodeType() << "\n";
-			if(GenericTypePtr gt = dynamic_pointer_cast<const GenericType>(node)) {
-				if(gt.toString().compare("_cl_mem") == 0)
-					clMemTy = gt;
-			}
-		}, true, true);
 
-//std::cout << NodePtr(meta.first) << " "  << meta.second.type << std::endl;
-
+		clMemTy = builder.genericType(bufferTypeName);
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 		if(subscript) {
@@ -337,13 +328,11 @@ void BufferReplacer::generateReplacements() {
 
 			// if clCreateBuffer was called at initialization, update it now
 			if(meta.second.initExpr) {
-
-
 				declInitReplacements[newBuffer] = meta.second.initExpr;
 
-std::cout << "initializing " << *newBuffer << " with ";
-dumpPretty(meta.second.initExpr);
-std::cout << std::endl;
+//std::cout << "initializing " << *newBuffer << " with ";
+//dumpPretty(meta.second.initExpr);
+//std::cout << std::endl;
 			}
 			return;
 		}
@@ -359,6 +348,14 @@ std::cout << std::endl;
 		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
 
+}
+
+IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) {
+	collectInformation();
+	generateReplacements("icl_buffer");
+}
+
+void IclBufferReplacer::collectInformation() {
 }
 
 } //namespace ocl

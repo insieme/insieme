@@ -88,7 +88,8 @@ class BufferMapper: public core::transform::CachedNodeMapping {
 class BufferReplacer {
 public:
 	BufferReplacer(core::NodePtr prog);
-private:
+	virtual ~BufferReplacer() {}
+protected:
 //	BufferMapper bufferMapper;
 	ClMemMetaMap clMemMeta;
 	insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> clMemReplacements;
@@ -97,12 +98,20 @@ private:
 	core::NodePtr& prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
-	void collectInformation();
-	void generateReplacements();
+	virtual void collectInformation();
+	void generateReplacements(std::string bufferTypeName);
 
 public:
 	core::NodePtr getTransformedProgram() {return prog;}
 };
+
+class IclBufferReplacer  : public BufferReplacer {
+public:
+	IclBufferReplacer(core::NodePtr prog);
+protected:
+	virtual void collectInformation();
+};
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

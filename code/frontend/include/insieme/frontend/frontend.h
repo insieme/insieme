@@ -87,7 +87,9 @@ namespace frontend {
 
 			ProgressBar		= 1<<7,
 			NoWarnings		= 1<<8,
-			StrictSemanticChecks = 1<<9
+			StrictSemanticChecks = 1<<9,
+
+			icl_lib			= 1<<10
 		};
 
 		/**
