@@ -409,17 +409,36 @@ namespace backend {
 		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
+		res[basic.getZero()] = OP_CONVERTER({
+			auto type = call->getType();
+			// special case: intercepted object 
+			if (type.isa<core::GenericTypePtr>()) {
+
+				// write a string witch is the whole type
+				auto cType = CONVERT_TYPE(type);
+				return c_ast::call(cType);
+			}
+			return nullptr;
+		});
 
 		res[basic.getUndefined()] = OP_CONVERTER({
 
-			// one special case: an empty struct
 			auto type = call->getType();
+
+			// 1) special case: an empty struct
 			if (const core::StructTypePtr& structType = type.isa<core::StructTypePtr>()) {
 				if (structType.empty() && structType->getParents().empty()) {
 					auto cType = CONVERT_TYPE(type);
 					auto zero = C_NODE_MANAGER->create("0");
 					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
 				}
+			}
+			// 2) special case: intercepted object 
+			if (type.isa<core::GenericTypePtr>()) {
+
+				// write a string witch is the whole type
+				auto cType = CONVERT_TYPE(type);
+				return c_ast::call(cType);
 			}
 
 			// the rest is handled like a *var(undefined(..))

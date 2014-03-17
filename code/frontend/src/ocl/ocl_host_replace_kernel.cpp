@@ -148,7 +148,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
-std::cout << "Path: " << path << std::endl;
+//std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
 			string root = path;
 	size_t nIncludes = includeDirs.size();
@@ -319,22 +319,24 @@ void KernelReplacer::findKernelNames() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
 	TreePatternPtr mayEncapsulatedNameLiteral = irp::callExpr(pattern::any, pattern::any, *pattern::any << nameLiteral << *pattern::any) | nameLiteral;
 	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
-			mayEncapsulatedNameLiteral << pattern::var("err", pattern::any) );
+			nameLiteral << pattern::var("err", pattern::any) );
 	TreePatternPtr createKernelPattern = pattern::var("clCreateKernel", irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
 			pattern::var("kernel", pattern::any) << clCreateKernel));
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
-//std::cout << "kernel: " << *createKernel["kernel_name"].getValue() << std::endl;
-//		
 		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
-		if (kernelNameExpr.isa<core::CallExprPtr>())
-			kernelNameExpr = kernelNameExpr.as<core::CallExprPtr>()[0];
-		assert(kernelNameExpr.isa<LiteralPtr>());
-		
-		std::string kernelName = kernelNameExpr.as<LiteralPtr>()->getStringValue();
 
-		// remove " "
-		kernelName = kernelName.substr(1, kernelName.length()-2);
+		std::string kernelName;
+
+		visitDepthFirst(kernelNameExpr, [&](const LiteralPtr& nameCandiate) {
+			std::string name = nameCandiate->getStringValue();
+			// check for " "
+			if(name.front() == '\"' && name.back() == '\"') {
+				assert(kernelName.empty() && "Kernel function name in clCreateKernel is ambiguous");
+				// remove " "
+				kernelName = name.substr(1, name.length()-2);
+			}
+		});
 
 		ExpressionAddress kernelExpr = matchAddress >> createKernel["kernel"].getValue().as<ExpressionAddress>();
 		ExpressionAddress kernelVar = utils::extractVariable(kernelExpr).as<ExpressionAddress>();
@@ -372,18 +374,9 @@ void KernelReplacer::collectArguments() {
 
 		ExpressionAddress kernel = utils::getRootVariable(matchAddress >> setArg["kernel"].getValue().as<ExpressionAddress>()).as<ExpressionAddress>();
 
-		assert(setArg["arg_index"].getValue().isa<LiteralPtr>());
-		assert(setArg["arg_value"].getValue().isa<ExpressionPtr>());
-		assert(setArg["arg_size"].getValue().isa<ExpressionPtr>());
-
 		LiteralPtr idx = setArg["arg_index"].getValue().as<LiteralPtr>();
-		ExpressionPtr arg = setArg["arg_value"].getValue().as<ExpressionPtr>();
+		ExpressionPtr arg = utils::tryRemove(gen.getRefReinterpret(), setArg["arg_value"].getValue().as<ExpressionPtr>());
 		ExpressionPtr sizeArg = setArg["arg_size"].getValue().as<ExpressionPtr>();
-
-		if (CallExprPtr x = arg.isa<CallExprPtr>()){
-			if (gen.isRefReinterpret(x->getFunctionExpr()))
-				arg = x[0];
-		}
 
 		unsigned int argIdx = insieme::utils::numeric_cast<unsigned int>(idx->getStringValue());
 

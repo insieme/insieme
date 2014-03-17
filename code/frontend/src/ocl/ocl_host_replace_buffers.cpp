@@ -139,7 +139,11 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
 	NodeManager& mgr = size->getNodeManager();
 	IRBuilder builder(mgr);
-	ExpressionPtr fun = getClCreateBuffer(copyPtr, errcode_ret == builder.getTypeLiteral(builder.arrayType(mgr.getLangBasic().getInt4())), builder);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
+
+	NodePtr intNull = builder.refReinterpret(gen.getRefNull(), builder.arrayType(gen.getInt4()));
+
+	ExpressionPtr fun = getClCreateBuffer(copyPtr, errcode_ret != intNull, builder);
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
@@ -187,15 +191,15 @@ void BufferReplacer::collectInformation() {
 	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
 			pattern::var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = pattern::var("all", bufferDecl | bufferAssign);
-/*
-	visitDepthFirst(pA, [&](const NodeAddress& node) {
-		AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
-
-		if(createBuffer) {
-			std::cout << "All: " << createBuffer->getVarBinding("all").getValue() << std::endl;
-		}
-	});
-*/
+//
+//  visitDepthFirst(pA, [&](const NodeAddress& node) {
+//  	AddressMatchOpt createBuffer = bufferPattern->matchAddress(node);
+//
+//  	if(createBuffer) {
+//  		std::cout << "All: " << createBuffer->getVarBinding("all").getValue() << std::endl;
+//  	}
+//  });
+//
 
 	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
 
@@ -212,16 +216,12 @@ void BufferReplacer::collectInformation() {
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
-		ExpressionPtr hostPtr = createBuffer["host_ptr"].getValue().as<ExpressionPtr>();
+		ExpressionPtr hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
 		if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
 			assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
 			if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
 				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
 			}
-		}
-		if (core::CallExprPtr x = hostPtr.isa<core::CallExprPtr>()){
-			if (mgr.getLangBasic().isRefReinterpret(x->getFunctionExpr()))
-				hostPtr = x[0];
 		}
 
 

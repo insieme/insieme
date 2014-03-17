@@ -77,11 +77,14 @@ namespace {
 		int num_threads;
 		bool print_configs;
 		bool panic_mode;
+		bool list_only;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
-			: valid(valid), mockrun(false), num_threads(1), print_configs(false), panic_mode(false) {}
+			: valid(valid), mockrun(false),
+			  num_threads(1), print_configs(false),
+			  panic_mode(false), list_only(false) {}
 	};
 
 
@@ -124,6 +127,17 @@ int main(int argc, char** argv) {
 			std::cout << cur.getProperties() << "\n";
 
 		}
+
+		return 0;
+	}
+
+	// only list test cases if requested so
+	if (options.list_only) {
+		int counter = 0;
+		for(const auto& cur : cases) {
+			std::cout << format("| %4d/%4d - %-65s|\n", ++counter, cases.size(), cur.getName());
+		}
+		std::cout <<        "|------------------------------------------------------------------------------|\n";
 
 		return 0;
 	}
@@ -230,6 +244,7 @@ namespace {
 				("config,c", 			"print the configuration of the selected test cases")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
 				("panic,p", 			"panic on first sign of trouble and stop execution")
+				("list,l", 				"just list the targeted test cases")
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
@@ -267,6 +282,8 @@ namespace {
 		res.mockrun = map.count("mock");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
+
+		res.list_only = map.count("list");
 
 		if (map.count("step")) {
 			res.steps.push_back(map["step"].as<string>());
