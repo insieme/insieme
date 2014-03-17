@@ -409,6 +409,17 @@ namespace backend {
 		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
+		res[basic.getZero()] = OP_CONVERTER({
+			auto type = call->getType();
+			// special case: intercepted object 
+			if (type.isa<core::GenericTypePtr>()) {
+
+				// write a string witch is the whole type
+				auto cType = CONVERT_TYPE(type);
+				return c_ast::call(cType);
+			}
+			return nullptr;
+		});
 
 		res[basic.getUndefined()] = OP_CONVERTER({
 
