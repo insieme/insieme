@@ -89,7 +89,7 @@ namespace backend {
 			auto res = core::transform::evalLazy(manager, exprPtr);
 
 			// simplify evaluated lazy expression
-			return core::transform::simplify(manager, res);
+			return core::transform::simplify(manager, res, false);
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
