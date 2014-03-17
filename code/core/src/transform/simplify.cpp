@@ -65,24 +65,27 @@ namespace transform {
 
 			NodeManager& manager;
 
+			bool simplifyDerivedOps;
+
 		public:
 
 			/**
 			 * Default constructor for the simplification.
 			 */
-			Simplifier(NodeManager& manager)
-				: manager(manager) {}
+			Simplifier(NodeManager& manager, bool simplifyDerivedOps)
+				: manager(manager), simplifyDerivedOps(simplifyDerivedOps) {}
 
 
 			NodePtr simplifyCall(const NodePtr& ptr) {
 				// it has to be a call expression ...
 				if (ptr->getNodeType() != core::NT_CallExpr) return ptr;
 
+				// check for derived operators
 				core::ExpressionPtr func = ptr.as<CallExprPtr>()->getFunctionExpr();
-				if(manager.getLangBasic().isBuiltIn(func)) return ptr;
-				if (core::lang::isDerived(func))  return ptr;
+				if (!simplifyDerivedOps && core::lang::isDerived(func)) return ptr;
+
 				// try in-lining of call expression
-				return tryInlineToExpr(manager, ptr.as<CallExprPtr>(), true);
+				return tryInlineToExpr(manager, ptr.as<CallExprPtr>(), simplifyDerivedOps);
 			}
 
 			NodePtr simplifyIf(const NodePtr& ptr) {
@@ -277,8 +280,8 @@ namespace transform {
 			 * Conducts the actual simplification.
 			 */
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
-				// skip built-ins
-				if(manager.getLangBasic().isBuiltIn(ptr)) return ptr;
+				// skip built-ins and derived operators
+				if(!simplifyDerivedOps && core::lang::isDerived(ptr)) return ptr;
 				
 				// skip types
 				if (ptr->getNodeCategory() == NC_Type) {
@@ -336,9 +339,9 @@ namespace transform {
 
 
 
-	NodePtr simplify(NodeManager& manager, const NodePtr& code) {
+	NodePtr simplify(NodeManager& manager, const NodePtr& code, bool simplifyDerivedOps) {
 		// use the simplify-mapper for the actual operation operation
-		return Simplifier(manager).map(code);
+		return Simplifier(manager, simplifyDerivedOps).map(code);
 	}
 
 

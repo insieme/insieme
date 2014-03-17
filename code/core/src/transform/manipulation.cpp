@@ -997,7 +997,7 @@ CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {
 	return builder.callExpr(body->getType(), lambda, convertList<Expression>(free));
 }
 
-ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy) {
+ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool evalDerivedOps) {
 
 	// check type of lazy expression
 	core::FunctionTypePtr funType = dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
@@ -1007,7 +1007,7 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy) {
 	core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
 
 	// evaluated call by inlining it
-	return core::transform::tryInlineToExpr(manager, call);
+	return core::transform::tryInlineToExpr(manager, call, evalDerivedOps);
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root) {

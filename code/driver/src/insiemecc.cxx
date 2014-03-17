@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
 	// dump IR code
 	if (irCodeFile != "") {
 		std::ofstream out(irCodeFile);
-		out << co::printer::PrettyPrinter(program);
+		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
 	}
 
 	if (runIRChecks) {

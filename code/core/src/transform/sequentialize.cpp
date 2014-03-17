@@ -202,7 +202,7 @@ namespace transform {
 					newCall = pushBindIntoLambda(manager, newCall, 1);
 
 					// simplify call by eliminating all kind of bind constructs
-					return simplify(manager, newCall);
+					return simplify(manager, newCall, true);
 				}
 
 				// otherwise, don't touch it

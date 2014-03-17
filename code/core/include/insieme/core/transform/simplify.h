@@ -57,20 +57,22 @@ namespace transform {
 	 *
 	 * @param manager the manager to be used for constructing the resulting code
 	 * @param code the code to be simplified
+	 * @param simplifyDerivedOps a flag determining whether derived functions should be simplified as well
 	 * @return the simplified program code
 	 */
-	NodePtr simplify(NodeManager& manager, const NodePtr& code);
+	NodePtr simplify(NodeManager& manager, const NodePtr& code, bool simplifyDerivedOps = false);
 
 	/**
 	 * A generic alternative of the simplify function.
 	 *
 	 * @param manager the manager to be used for constructing the resulting code
 	 * @param code the code to be simplified
+	 * @param simplifyDerivedOps a flag determining whether derived functions should be simplified as well
 	 * @return the simplified program code
 	 */
 	template<typename T>
-	Pointer<const T> simplify(NodeManager& manager, const Pointer<const T>& code) {
-		return simplify(manager, NodePtr(code)).as<Pointer<const T>>();
+	Pointer<const T> simplify(NodeManager& manager, const Pointer<const T>& code, bool simplifyDerivedOps = false) {
+		return simplify(manager, NodePtr(code), simplifyDerivedOps).as<Pointer<const T>>();
 	}
 
 
