@@ -216,15 +216,17 @@ void BufferReplacer::collectInformation() {
 		// check if CL_MEM_COPY_HOST_PTR is set
 		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
-		ExpressionPtr hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
-		if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
-			assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
-			if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
-				hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+
+		ExpressionPtr hostPtr;
+		if(usePtr || copyPtr) {
+			hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
+			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
+				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+				if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+					hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+				}
 			}
 		}
-
-
 
 		// extract type form size argument
 		ExpressionPtr size;
@@ -356,6 +358,71 @@ IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) {
 }
 
 void IclBufferReplacer::collectInformation() {
+	NodeManager& mgr = prog->getNodeManager();
+	NodeAddress pA(prog);
+	IRBuilder builder(mgr);
+
+	TreePatternPtr clCreateBuffer = pattern::var("icl_create_buffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
+	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
+			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
+			pattern::var("buffer", pattern::any) << clCreateBuffer);
+	TreePatternPtr bufferPattern = pattern::var("all", bufferDecl | bufferAssign);
+
+	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
+		NodePtr flagArg = createBuffer["flags"].getValue();
+
+		std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);
+		// check if CL_MEM_USE_HOST_PTR is set
+		bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
+		// check if CL_MEM_COPY_HOST_PTR is set
+		bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
+
+		ExpressionPtr hostPtr;
+		if(usePtr || copyPtr) {
+			hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
+			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
+				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+				if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+					hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+				}
+			}
+		}
+
+
+
+		// extract type form size argument
+		ExpressionPtr size;
+		TypePtr type;
+		__unused bool check = utils::extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false);
+
+		assert(check && "cannot extract size and type from size paramater fo clCreateBuffer");
+
+// 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
+
+
+		ExpressionPtr deviceMemAlloc = usePtr ? hostPtr :
+				getCreateBuffer(type, size, copyPtr, hostPtr,
+						builder.refReinterpret(builder.getLangBasic().getRefNull(), builder.arrayType(builder.getLangBasic().getInt4())));
+		generalReplacements[createBuffer["icl_create_buffer"].getValue()] = deviceMemAlloc;
+
+		// get the buffer expression address relative to root node of the pattern query
+		ExpressionAddress lhs = matchAddress >> createBuffer["buffer"].getValue().as<ExpressionAddress>();
+//std::cout << "\nvariable " << *lhs << std::endl;
+		// generate new init expression in  case of declaration
+		ExpressionPtr initExpr;
+		if(createBuffer["type"].getValue().isa<DeclarationStmtAddress>()) {
+			initExpr = builder.refVar(deviceMemAlloc);
+//std::cout << "Init: " << *initExpr << std::endl;
+		}
+
+		// add gathered information to clMemMetaMap
+		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, initExpr);
+std::cout << *createBuffer["icl_create_buffer"].getValue() << std::endl << std::endl;
+	});
+
+	assert(false && "nope");
 }
 
 } //namespace ocl
