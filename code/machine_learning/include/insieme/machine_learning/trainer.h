@@ -208,7 +208,7 @@ protected:
 	 * @param min the minimum value of all targets (needed for one-to-n coding)
 	 * @param oneOfN an Array of size number-of-classes containing only NEG. The Array will be reset during the call, only needed for performance reasons
 	 */
-	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
+	void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
 
 	/**
 	 * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
@@ -271,7 +271,7 @@ public:
 	 *   error on the validation set is printed to LOG(INFO)
 	 * @return the error after training
 	 */
-	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+	double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
 	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
@@ -279,14 +279,14 @@ public:
 	 * @param errFct the error function to be used
 	 * @return the error calculated with the given error function
 	 */
-	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
+	double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
 
 	/**
 	 * Evaluates a pattern using the internal model.
 	 * @param pattern An Array holding the features of the pattern to be evaluated
 	 * @return the index of the winning class
 	 */
-	virtual size_t evaluate(Array<double>& pattern);
+	size_t evaluate(Array<double>& pattern);
 
 	/**
 	 * Evaluates a pattern using the internal model
@@ -294,7 +294,7 @@ public:
 	 * @param pattern A C pointer holding the static features of the pattern to be evaluated
 	 * @return the index of the winning class
 	 */
-	virtual size_t evaluate(const double* pattern);
+	size_t evaluate(const double* pattern);
 
 	/**
 	 * adds a vector of static features indices to the internal feature vector
