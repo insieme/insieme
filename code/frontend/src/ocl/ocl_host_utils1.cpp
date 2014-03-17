@@ -51,7 +51,7 @@ namespace utils {
  */
 ExpressionAddress tryRemove(const ExpressionPtr& function, const ExpressionAddress& expr) {
 	ExpressionAddress e = expr;
-	while(const CallExprAddress& call = dynamic_address_cast<const CallExpr>(e)) {
+	while(const CallExprAddress& call = e.isa<CallExprAddress>()) {
 		if(call->getFunctionExpr() == function)
 			e = call->getArgument(0);
 		else
@@ -62,7 +62,7 @@ ExpressionAddress tryRemove(const ExpressionPtr& function, const ExpressionAddre
 
 ExpressionPtr tryRemove(const ExpressionPtr& function, const ExpressionPtr& expr) {
 	ExpressionPtr e = expr;
-	while(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(e)) {
+	while(const CallExprPtr& call = e.isa<CallExprPtr>()) {
 		if(call->getFunctionExpr() == function)
 			e = call->getArgument(0);
 		else
@@ -76,7 +76,7 @@ ExpressionPtr tryRemove(const ExpressionPtr& function, const ExpressionPtr& expr
  */
 ExpressionAddress tryRemoveAlloc(const ExpressionAddress& expr) {
 	NodeManager& mgr = expr->getNodeManager();
-	if(const CallExprAddress& call = dynamic_address_cast<const CallExpr>(expr)) {
+	if(const CallExprAddress& call = expr.isa<CallExprAddress>()) {
 		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
 			return tryRemoveAlloc(call->getArgument(0));
 	}
@@ -84,7 +84,7 @@ ExpressionAddress tryRemoveAlloc(const ExpressionAddress& expr) {
 }
 ExpressionPtr tryRemoveAlloc(const ExpressionPtr& expr) {
 	NodeManager& mgr = expr->getNodeManager();
-	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(expr)) {
+	if(const CallExprPtr& call = expr.isa<CallExprPtr>()) {
 		if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr()))
 			return tryRemoveAlloc(call->getArgument(0));
 	}
@@ -95,7 +95,7 @@ ExpressionPtr tryRemoveAlloc(const ExpressionPtr& expr) {
  * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
  */
 core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr){
-	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+	if (core::RefTypePtr&& refTy = expr->getType().isa<core::RefTypePtr>()) {
 		 // on non array types remove also a single ref
 		if(refTy->getElementType()->getNodeType() == core::NT_RefType || refTy->toString().find("array") == string::npos) {
 			core::NodeManager& mgr = expr->getNodeManager();
@@ -111,7 +111,7 @@ core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr){
  * removes the returns 'a if type is ref<'a>, type otherwise
  */
 core::TypePtr removeSingleRef(const core::TypePtr& type){
-	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+	if (core::RefTypePtr&& refTy = type.isa<core::RefTypePtr>()) {
 			return refTy->getElementType();
 	}
 	return type;
@@ -121,9 +121,9 @@ core::TypePtr removeSingleRef(const core::TypePtr& type){
  * takes a type ref<array<vector<'b,#l>,1>> and creates ref<array<'b>,1> from it
  */
 core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder) {
-	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arrayTy)) {
-		if(const core::ArrayTypePtr arrTy = dynamic_pointer_cast<const core::ArrayType>(refTy->getElementType()))
-			if(const core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(arrTy->getElementType())) {
+	if(const core::RefTypePtr refTy = arrayTy.isa<core::RefTypePtr>()) {
+		if(const core::ArrayTypePtr arrTy = refTy->getElementType().isa<core::ArrayTypePtr>())
+			if(const core::VectorTypePtr vecTy = arrTy->getElementType().isa<core::VectorTypePtr>()) {
 				return builder.refType(builder.arrayType(vecTy->getElementType()));
 			}
 	}
@@ -138,10 +138,10 @@ bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& 
 	// get rid of casts
 	NodePtr uncasted = arg;
 	while (uncasted->getNodeType() == core::NT_CastExpr) {
-		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
+		uncasted = uncasted.as<CastExprPtr>()->getSubExpression();
 	}
 
-	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
+	if (const CallExprPtr call = uncasted.isa<CallExprPtr>()) {
 		// check if there is a multiplication
 		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
 			IRBuilder builder(arg->getNodeManager());
@@ -164,7 +164,7 @@ bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& 
 		// check if we reached a sizeof call
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
-			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
+			type = call->getArgument(0)->getType().isa<GenericTypePtr>()->getTypeParameter(0);
 			assert(type && "Type could not be extracted!");
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
@@ -184,7 +184,7 @@ bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& 
  */
 ExpressionAddress tryRemoveDeref(const ExpressionAddress& expr) {
 	NodeManager& mgr = expr->getNodeManager();
-	if(const CallExprAddress& call = dynamic_address_cast<const CallExpr>(expr)) {
+	if(const CallExprAddress& call = expr.isa<CallExprAddress>()) {
 		if(mgr.getLangBasic().isRefDeref(call->getFunctionExpr()))
 			return tryRemoveDeref(call->getArgument(0));
 	}
@@ -200,7 +200,7 @@ ExpressionAddress extractVariable(ExpressionAddress expr) {
 	if(expr->getNodeType() == NT_Literal) // return literal, e.g. global variable
 		return expr;
 
-	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(expr)) {
+	if(CallExprAddress call = expr.isa<CallExprAddress>()) {
 		if(gen.isSubscriptOperator(call->getFunctionExpr()))
 			return expr;
 
@@ -209,10 +209,10 @@ ExpressionAddress extractVariable(ExpressionAddress expr) {
 		}
 	}
 
-	if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(expr))
+	if(CastExprAddress cast = expr.isa<CastExprAddress>())
 		return extractVariable(cast->getSubExpression());
 
-	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(expr)){
+	if(CallExprAddress call = expr.isa<CallExprAddress>()){
 //		if (gen.isRefDeref(call->getFunctionExpr())){
 			return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
 //		}
@@ -231,7 +231,7 @@ core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) {
 	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
 
 	// core::ExpressionPtr retExpr = expr;
-	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+	if (core::RefTypePtr&& refTy = expr->getType().isa<core::RefTypePtr>()) {
 		return builder.callExpr(refTy->getElementType(), gen.getRefDeref(), expr);
 	}
 	return expr;
@@ -279,7 +279,7 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 		*/
 
 		if(child.getDepth() >= 4) {
-			if(LambdaAddress lambda = dynamic_address_cast<const Lambda>(child)) {
+			if(LambdaAddress lambda = child.isa<LambdaAddress>()) {
 	//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
 				// if var is a parameter, continue search for declaration of corresponding argument in outer scope
 
@@ -301,7 +301,7 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 			}
 		}
 
-		if(DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(child)) {
+		if(DeclarationStmtAddress decl = child.isa<DeclarationStmtAddress>()) {
 			if(*(decl->getVariable()) == *var) {
 				// check if init expression is another variable
 				if(icp::AddressMatchOpt valueInit = valueCopy->matchAddress(decl->getInitialization())) {
@@ -315,7 +315,7 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 		}
 	}
 
-	if(CallExprAddress call = dynamic_address_cast<const CallExpr>(var))
+	if(CallExprAddress call = var.isa<CallExprAddress>())
 		return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
 
 
@@ -359,9 +359,9 @@ bool isNullPtr(const ExpressionPtr& expr) {
 		return true;
 
 	// null literal
-	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr);
+	const CastExprPtr cast = expr.isa<CastExprPtr>();
 	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : expr;
-	const LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+	const LiteralPtr idx = idxExpr.isa<LiteralPtr>();
 	if(!!idx && idx->getValueAs<int>() == 0)
 		return true;
 
@@ -371,15 +371,14 @@ bool isNullPtr(const ExpressionPtr& expr) {
 
 void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder){
 	core::visitDepthFirstOnce(localMemInit, core::makeLambdaVisitor([&](const core::NodePtr& node) {
-		if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(node))
+		if(core::VariablePtr var = node.isa<core::VariablePtr>())
 		if(varMapping.find(var) == varMapping.end()) // variable does not have a replacement in map now
 			varMapping[var] = builder.variable(var->getType());
 	}));
 
 	for_each(varMapping, [&](std::pair<core::VariablePtr, core::VariablePtr> replacement) {
 //		std::cout << "\nreplaceinig " << replacement.first << " with " << replacement.second << std::endl;
-		localMemInit = static_pointer_cast<const core::Expression>(
-				core::transform::replaceAll(builder.getNodeManager(), localMemInit, replacement.first, replacement.second));
+		localMemInit = core::transform::replaceAll(builder.getNodeManager(), localMemInit, replacement.first, replacement.second).as<core::ExpressionPtr>();
 	});
 }
 
