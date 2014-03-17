@@ -252,21 +252,31 @@ namespace tu {
 				// copy the source list to avoid invalidation of iterator
 				auto list =metaInfos;
 
-				// re-add meta information
-				for(const auto& cur : list) {
+				// clear the meta-info list
+				while(!list.empty()) {
 
-					// encode meta info into pure IR
-					auto encoded = core::toIR(mgr, cur.second);
+					// clear meta-info collected in last round
+					metaInfos.clear();
 
-					// resolve meta info
-					auto resolved = core::fromIR(map(encoded));
+					// re-add meta information
+					for(const auto& cur : list) {
 
-					// restore resolved meta info for resolved type
-					setMetaInfo(map(cur.first), resolved);
+						// encode meta info into pure IR
+						auto encoded = core::toIR(mgr, cur.second);
+
+						// resolve meta info
+						auto resolved = core::fromIR(map(encoded));
+
+						// restore resolved meta info for resolved type
+						setMetaInfo(map(cur.first), resolved);
+					}
+
+					// get new list of encountered meta-info data
+					list = metaInfos;
 				}
 
-				// clear meta-infos for next run
-				metaInfos.clear();
+				// there should not be any unprocessed meta-info instance
+				assert(metaInfos.empty());
 
 				// done
 				return res;
@@ -769,8 +779,8 @@ namespace tu {
 			core::IRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
-			// check all usedliterals if they are used as global and the global type is vector
-			// and the usedLiteral type is array, if so replace the usedliteral type to vector and
+			// check all used literals if they are used as global and the global type is vector
+			// and the usedLiteral type is array, if so replace the used literal type to vector and
 			// us ref.vector.to.ref.array
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
