@@ -993,7 +993,13 @@ namespace backend {
 
 				// obtain current lambda and add lambda info
 				auto res = funInfos.insert(std::make_pair(lambda, info));
-				if(!res.second) assert(false && "Entry should not be already present!");
+
+				// if this info is new the same function has been handled while resolving the body
+				if (!res.second) {
+					// fun info was already there - delete local copy and be done
+					delete info;
+					return;
+				}
 
 				// add prototype ...
 				if (isMember) {
