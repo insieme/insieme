@@ -1,9 +1,9 @@
 
 #include <iostream>
-#include "header.h"
+#include <boost/thread.hpp>
 
 int f(){
-	static toIntercept::mutex mut;
+	static boost::mutex mut;
 	mut.lock();
 	std::cout << "critical 1" << std::endl;
 	mut.unlock();
