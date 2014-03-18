@@ -54,6 +54,16 @@ private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 
+// extension for icl host files
+
+class IclHostPlugin : public FrontendPlugin {
+	const std::vector<boost::filesystem::path>& includeDirs;
+public:
+	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {}
+private:
+    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
+};
+
 } //namespace plugin
 } //namespace frontend
 } //namespace extensions

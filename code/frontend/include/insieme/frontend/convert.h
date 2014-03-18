@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -404,9 +404,9 @@ public:
 
 	/**
 	 * retrieves the symbol asociated with a function without the need of triggering the translation
-	 * of the function. The function itself should be translated by the clang declaration traverser, 
+	 * of the function. The function itself should be translated by the clang declaration traverser,
 	 * and stored in the translation unit.
-	 * @param functionDecl the function decl 
+	 * @param functionDecl the function decl
 	 * */
 	core::ExpressionPtr getCallableExpression(const clang::FunctionDecl* funcDecl);
 
@@ -543,10 +543,10 @@ public:
 	 * @param loc: the location this warning will be attached to
 	 */
 	void printDiagnosis(const clang::SourceLocation& loc);
-	
+
 	/**
 	 *  keeps track of the last point a source location to the Declaration
-	 *  this might be different depending of what we are dealing with. 
+	 *  this might be different depending of what we are dealing with.
 	 *  Template spetialization might have 2 locations, template and instantiation location, both of those
 	 *  are not the location retrieved by the getLocation method in Decl
 	 */
@@ -571,7 +571,7 @@ public:
 		assert(!lastTrackableLocation.empty());
 		lastTrackableLocation.pop();
 	}
-	
+
 	/**
 	 *  returns readable location of the last registered source location
 	 */
@@ -580,6 +580,13 @@ public:
 			return utils::location(lastTrackableLocation.top(), getSourceManager());
 		else
 			return "ERROR: unable to identify last input code location ";
+	}
+
+    /**
+     *  returns the filename and path of the translation unit
+     */
+	const boost::filesystem::path& getTUFileName() const {
+        return getTranslationUnit().getFileName();
 	}
 
 };
