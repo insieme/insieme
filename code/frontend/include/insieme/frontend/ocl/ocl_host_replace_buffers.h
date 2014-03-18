@@ -100,7 +100,7 @@ protected:
 	insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> clMemReplacements;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> generalReplacements;
 	insieme::utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> declInitReplacements;
-	core::NodePtr& prog;
+	core::NodePtr prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
 	void collectInformationWithPattern(core::pattern::TreePatternPtr& clCreateBuffer);
@@ -108,7 +108,7 @@ protected:
 	void generateReplacements(std::string bufferTypeName);
 
 public:
-	core::NodePtr getTransformedProgram() {return prog;}
+	virtual core::NodePtr getTransformedProgram();
 };
 
 class IclBufferReplacer  : public BufferReplacer {
@@ -116,6 +116,8 @@ public:
 	IclBufferReplacer(core::NodePtr prog);
 protected:
 	virtual void collectInformation();
+public:
+	virtual core::NodePtr getTransformedProgram();
 };
 
 } //namespace ocl
