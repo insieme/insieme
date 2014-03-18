@@ -42,11 +42,16 @@
 #include "insieme/frontend/frontend.h"
 
 namespace insieme {
+
+namespace core {
+namespace pattern {
+class TreePattern;
+typedef std::shared_ptr<TreePattern> TreePatternPtr;
+}
+}
+
 namespace frontend {
 namespace ocl {
-
-namespace {
-}
 
 // enums corresponding to the flags in clCreateBuffer
 enum CreateBufferFlags {
@@ -98,6 +103,7 @@ protected:
 	core::NodePtr& prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
+	void collectInformationWithPattern(core::pattern::TreePatternPtr& clCreateBuffer);
 	virtual void collectInformation();
 	void generateReplacements(std::string bufferTypeName);
 

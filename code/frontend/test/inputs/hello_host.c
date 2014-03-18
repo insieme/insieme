@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 
 	err = clWaitForEvents(1, &event);
 
-	clEnqueueReadBuffer(queue[0], dev_ptr4[0], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, &err);
+	clEnqueueReadBuffer(queue[0], dev_ptr4[0], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 	clFinish(queue[0]);
 
 	cl_ulong start, end;
