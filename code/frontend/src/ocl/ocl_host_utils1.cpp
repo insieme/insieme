@@ -351,24 +351,6 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 	return arg;
 }
 
-bool isNullPtr(const ExpressionPtr& expr) {
-	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
-
-	// cast to void pointer
-	if (gen.isRefNull(expr))
-		return true;
-
-	// null literal
-	const CastExprPtr cast = expr.isa<CastExprPtr>();
-	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : expr;
-	const LiteralPtr idx = idxExpr.isa<LiteralPtr>();
-	if(!!idx && idx->getValueAs<int>() == 0)
-		return true;
-
-
-	return false;
-}
-
 void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder){
 	core::visitDepthFirstOnce(localMemInit, core::makeLambdaVisitor([&](const core::NodePtr& node) {
 		if(core::VariablePtr var = node.isa<core::VariablePtr>())
