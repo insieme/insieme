@@ -688,9 +688,6 @@ bool isRefVector(const core::TypePtr& type) {
 bool isNullPtrExpression(const core::ExpressionPtr& expr){
 	auto mgr (expr->getNodeManager());
 
-	bool iscast =  core::analysis::isCallOf( expr, mgr.getLangBasic().getRefReinterpret());
-	std::cout << "is a reinterpret " << iscast;
-
 	return (core::analysis::isCallOf( expr, mgr.getLangBasic().getRefReinterpret()) && 
 			*mgr.getLangBasic().getRefNull() == *(expr.as<core::CallExprPtr>()[0]) ) || 
 			*mgr.getLangBasic().getRefNull() == *expr;
