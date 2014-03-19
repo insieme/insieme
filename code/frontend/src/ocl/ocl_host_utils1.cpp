@@ -364,6 +364,22 @@ void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varM
 	});
 }
 
+std::string extractQuotedString(core::NodePtr kernelNameExpr) {
+	std::string quotedString = "";
+
+	visitDepthFirst(kernelNameExpr, [&](const LiteralPtr& stringCandiate) {
+		std::string name = stringCandiate->getStringValue();
+		// check for " "
+		if(name.front() == '\"' && name.back() == '\"') {
+			assert(quotedString.empty() && "Kernel function name in clCreateKernel is ambiguous");
+			// remove " "
+			quotedString = name.substr(1, name.length()-2);
+		}
+	});
+
+	return quotedString;
+}
+
 #define NTtoString(NodeType) if(node->getNodeType() == NT_##NodeType) return #NodeType;
 std::string whatIs(NodePtr node) {
 	NTtoString(TypeVariable)

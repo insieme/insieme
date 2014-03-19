@@ -101,6 +101,8 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 
 void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
 
+std::string extractQuotedString(core::NodePtr kernelNameExpr);
+
 std::string whatIs(core::NodePtr node);
 }
 }
