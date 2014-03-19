@@ -455,6 +455,9 @@ namespace backend {
 
 		res[basic.getRefDeref()] = OP_CONVERTER({
 
+			// check type
+			assert_true(ARG(0)->getType().isa<core::RefTypePtr>()) << ARG(0)->getType();
+
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
 			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())) {
@@ -465,6 +468,7 @@ namespace backend {
 
 			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			assert_true(elementType) << "Unable to extract element type from: " << ARG(0)->getType();
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
 
