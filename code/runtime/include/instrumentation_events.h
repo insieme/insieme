@@ -39,7 +39,6 @@
 #include <stdio.h>
 
 #include "declarations.h"
-#include "performance_table.h"
 
 #ifdef USE_OPENCL
 #define IRT_ENABLE_INSTRUMENTATION
@@ -47,10 +46,6 @@
 
 #ifndef IRT_ENABLE_INSTRUMENTATION
 //#define IRT_ENABLE_INSTRUMENTATION
-#endif
-
-#ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-//#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
 #define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
@@ -61,6 +56,66 @@
 	_irt_##__type__##_data* data; \
 }; \
 typedef struct _irt_##__type__##_table irt_##__table__##_table; \
+
+#define IRT_INST_EVENT(event, group_label, event_label) event,
+typedef enum _irt_instrumentation_event {
+#include "instrumentation_events.def"
+} irt_instrumentation_event;
+#undef IRT_INST_EVENT
+
+#define IRT_INST_EVENT(event, group_label, event_label) event_label,
+const char* irt_g_instrumentation_event_names[] = {
+#include "instrumentation_events.def"
+};
+#undef IRT_INST_EVENT
+
+#define IRT_INST_EVENT(event, group_label, event_label) group_label,
+const char* irt_g_instrumentation_group_names[] = {
+#include "instrumentation_events.def"
+};
+#undef IRT_INST_EVENT
+
+#define IRT_INST_EVENT(event, group_label, event_label) +1
+uint32 irt_g_inst_num_event_types = 0
+#include "instrumentation_events.def"
+;
+#undef IRT_INST_EVENT
+
+typedef struct _irt_instrumentation_event_data {
+	uint64 timestamp;
+	union {
+		struct {
+			uint16 event_id;
+			uint16 thread;
+			uint32 index;
+		};
+		uint64 identification;
+	};
+} irt_instrumentation_event_data;
+
+typedef struct _irt_instrumentation_event_data_table {
+	uint32 size;
+	uint32 number_of_elements;
+	irt_instrumentation_event_data* data;
+} irt_instrumentation_event_data_table;
+
+#ifdef USE_OPENCL
+
+typedef struct _irt_inst_ocl_performance_helper {
+	uint64 timestamp;
+	uint64 workitem_id;
+	uint64 event;
+	uint64 origin;
+} _irt_inst_ocl_performance_helper;
+
+typedef enum {
+	IRT_INST_OCL_QUEUED = 0,
+	IRT_INST_OCL_SUBMITTED = 1,
+	IRT_INST_OCL_STARTED = 2,
+	IRT_INST_OCL_FINISHED = 3,
+} _irt_inst_ocl_helper_events;
+
+#endif
 
 // functions for creating and destroying performance tables
 
@@ -105,105 +160,6 @@ void _irt_inst_insert_no_wg_event(irt_worker* worker, irt_instrumentation_event 
 void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
 void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
-
-
-// -----------------------------------------------------------------------------------------------------------------
-//													Regions
-// -----------------------------------------------------------------------------------------------------------------
-
-typedef uint32 irt_inst_region_id;
-
-uint32 irt_g_inst_region_metric_count = 0;
-uint32 irt_g_inst_region_metric_group_count = 0;
-
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-uint32 irt_g_region_metric_##_name__##_id;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-uint32 irt_g_region_metric_group_##_name__##_id;
-#include "irt_metrics.def"
-
-// create metric flags and group counts for selectively enabling/disabling instrumentation
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-bool irt_g_inst_region_metric_measure_##_name__ = false;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-uint32 irt_g_inst_region_metric_group_##_name__##membership_count = 0;
-#include "irt_metrics.def"
-
-typedef enum {
-	IRT_HW_SCOPE_CORE,
-	IRT_HW_SCOPE_SOCKET,
-	IRT_HW_SCOPE_SYSTEM,
-	IRT_HW_SCOPE_NUM_SCOPES
-} IRT_HW_SCOPES;
-
-typedef enum {
-	IRT_METRIC_AGGREGATOR_NONE,
-	IRT_METRIC_AGGREGATOR_SUM,
-	IRT_METRIC_AGGREGATOR_AVG,
-	IRT_METRIC_NUM_AGGREGATORS,
-} IRT_METRIC_AGGREGATORS;
-
-typedef struct {
-	uint64 id;
-	uint64 num_executions;
-	uint64 num_entries;
-	uint64 num_exits;
-	irt_spinlock lock;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	_data_type__ last_##_name__; \
-	_data_type__ aggregated_##_name__;
-#include "irt_metrics.def"
-} irt_inst_region_context_data;
-
-typedef struct {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	_data_type__ last_##_name__; \
-	_data_type__ aggregated_##_name__;
-#include "irt_metrics.def"
-} irt_inst_region_wi_data;
-
-typedef struct {
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-	_global_var_decls__;
-#include "irt_metrics.def"
-} irt_inst_region_context_declarations;
-
-typedef struct {
-	irt_inst_region_context_data** items;
-	uint64 length;
-	uint64 size;
-} irt_inst_region_list;
-
-void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source);
-
-void irt_inst_region_wi_init(irt_work_item* wi);
-
-void irt_inst_region_wi_finalize(irt_work_item* wi);
-
-void irt_inst_region_init(irt_context* context);
-
-void irt_inst_region_finalize(irt_context* context);
-
-void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi);
-
-void irt_inst_region_start_measurements(irt_work_item* wi);
-
-void irt_inst_region_end_measurements(irt_work_item* wi);
-
-void irt_inst_region_start(irt_inst_region_id id);
-
-void irt_inst_region_end(irt_inst_region_id id);
-
-void irt_inst_region_select_metrics(const char* selection);
-
-void irt_inst_region_select_metrics_from_env();
-
-void irt_inst_region_debug_output();
-
-void irt_inst_region_output();
-
-irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi);
-
 
 // -----------------------------------------------------------------------------------------------------------------
 //													File Format

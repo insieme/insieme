@@ -40,7 +40,7 @@
 
 #include "impl/work_item.impl.h"
 #include "irt_atomic.h"
-#include "impl/instrumentation.impl.h"
+#include "impl/instrumentation_events.impl.h"
 
 static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
