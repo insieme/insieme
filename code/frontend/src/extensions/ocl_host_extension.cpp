@@ -91,6 +91,9 @@ core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
+	ocl::IclKernelReplacer kr(root, includeDirs);
+	root = kr.getTransformedProgram();
+
 	core::IRBuilder builder(prog->getNodeManager());
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
