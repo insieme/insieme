@@ -46,6 +46,7 @@
 
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"
+#include "wi_implementation.h"
 
 IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
 
@@ -80,6 +81,9 @@ irt_context* irt_context_create(irt_client_app* app) {
 
 void irt_context_destroy(irt_context* context) {
 	irt_inst_region_finalize(context);
+
+	irt_optimizer_context_destroy(context);
+
 	if (context->client_app && context->client_app->cleanup_context) {
 		context->client_app->cleanup_context(context);
 	}

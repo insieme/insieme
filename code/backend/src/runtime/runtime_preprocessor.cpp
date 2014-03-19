@@ -290,6 +290,30 @@ namespace runtime {
 			return res;
 		}
 
+        WorkItemVariantObjective getObjective(const core::ExpressionPtr& expr) {
+            WorkItemVariantObjective objective;
+
+            if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
+                annotations::OmpObjectiveAnnotationPtr ann = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY);
+
+                objective.energy_weight = ann->getWeight(annotations::ENERGY).as<core::LiteralPtr>().getValueAs<float>();
+                objective.power_weight  = ann->getWeight(annotations::POWER).as<core::LiteralPtr>().getValueAs<float>();
+                objective.time_weight   = ann->getWeight(annotations::TIME).as<core::LiteralPtr>().getValueAs<float>();
+
+                float first = ann->getConstraint(annotations::ENERGY).first.as<core::LiteralPtr>().getValueAs<float>();
+                float second = ann->getConstraint(annotations::ENERGY).second.as<core::LiteralPtr>().getValueAs<float>();
+                objective.energy_constraints = std::make_pair(first, second);
+                first = ann->getConstraint(annotations::POWER).first.as<core::LiteralPtr>().getValueAs<float>();
+                second = ann->getConstraint(annotations::POWER).second.as<core::LiteralPtr>().getValueAs<float>();
+                objective.power_constraints  = std::make_pair(first, second);
+                first = ann->getConstraint(annotations::TIME).first.as<core::LiteralPtr>().getValueAs<float>();
+                second = ann->getConstraint(annotations::TIME).second.as<core::LiteralPtr>().getValueAs<float>();
+                objective.time_constraints   = std::make_pair(first, second);
+                objective.region_id = ann->getRegionId();
+            }
+
+            return objective;
+        }
 
 		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
@@ -348,6 +372,7 @@ namespace runtime {
 
 			// compute work-item implementation variants
 			vector<WorkItemVariant> variants;
+            WorkItemVariantObjective objective = getObjective(job);
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
@@ -406,7 +431,6 @@ namespace runtime {
 			return std::make_pair(impl, parameters);
 		}
 
-
 		class WorkItemIntroducer : public core::transform::CachedNodeMapping {
 
 			core::NodeManager& manager;
@@ -462,12 +486,28 @@ namespace runtime {
 
 					// handle merge call
 					if (basic.isMerge(fun)) {
-						return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
+						const auto& arg = core::analysis::getArgument(res, 0);
+ 
+                        // OMP+ instrumentation
+					    const auto& mergeArg = ptr.as<core::CallExprPtr>()->getArguments()[0];
+				        if (mergeArg->getNodeType() == core::NT_CallExpr) {
+                            const auto& parCall = mergeArg.as<core::CallExprPtr>();
+                            if(basic.isParallel(parCall->getFunctionExpr())) {
+                                const auto& parArg = parCall->getArguments()[0];
+                                if(basic.isJob(parArg->getType())) {
+                                    const auto& job = parArg.as<core::JobExprPtr>();
+                                    return wrapWithInstrumentationRegion(job, builder.callExpr(basic.getUnit(), ext.merge, arg));
+                                }
+                            }
+                        }
+
+						return builder.callExpr(basic.getUnit(), ext.merge, arg);
 					}
 
 					// handle pfor calls
 					if (basic.isPFor(fun)) {
-						return convertPfor(call);
+						auto pFor = convertPfor(call).as<core::CallExprPtr>();
+                        return wrapWithInstrumentationRegion(call, pFor);
 					}
 				}
 
@@ -484,6 +524,20 @@ namespace runtime {
 			}
 
 		private:
+
+            core::NodePtr wrapWithInstrumentationRegion(const core::ExpressionPtr& expr, const core::CallExprPtr& call) {
+                if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
+		    	    const Extensions& extensions = manager.getLangExtension<Extensions>();
+		            core::StatementList stmtList;
+                    unsigned region_id = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
+                    stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
+                    stmtList.push_back(call);
+                    stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
+                    return builder.compoundStmt(stmtList);
+                }
+                else
+                    return call;
+            }
 
 			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
 
@@ -512,8 +566,10 @@ namespace runtime {
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
 
+                WorkItemVariantObjective objective = getObjective(call);
+
 				// convert pfor body
-				auto info = pforBodyToWorkItem(args[4]);
+				auto info = pforBodyToWorkItem(args[4], objective);
 
 				// migrate meta infos
 				for(const auto& cur : info.first.getVariants()) {
@@ -886,6 +942,15 @@ namespace runtime {
 			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
 			if (max < regionId) max = regionId;
 		});
+
+        // OMP+ instrumentationRegionStart calls will be added in a later preprocessing phase
+        // so we have to check annotations on JobExpr
+		core::visitDepthFirstOnce(node, [&](const core::JobExprPtr& job) {
+            if(job->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
+                unsigned regionId = job->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
+			    if (max < regionId) max = regionId;
+            }
+        });
 
 		// add information to application
 		core::NodeAddress root(node);

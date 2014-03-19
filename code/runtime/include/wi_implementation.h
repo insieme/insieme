@@ -42,6 +42,8 @@
 
 #include "data_item.h"
 
+#include "irt_optimizer.h"
+
 /* ------------------------------ data structures ----- */
 
 struct _irt_wi_di_requirement {
@@ -63,6 +65,10 @@ struct _irt_wi_implementation_runtime_data {
 	bool tested;
 	bool force_dyn;
 	double distribution[IRT_MAX_WORKERS];
+    irt_optimizer_wi_data* optimizer_data;
+    size_t optimizer_data_size;
+    size_t optimizer_data_last;
+    irt_spinlock optimizer_spinlock;
 	uint32 chunk_size;
 };
 

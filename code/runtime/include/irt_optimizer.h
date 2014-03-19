@@ -47,6 +47,7 @@
 #endif
 
 void irt_optimizer_context_startup(irt_context *context);
+void irt_optimizer_context_destroy(irt_context *context);
 
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
 
@@ -56,5 +57,38 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time,
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
 #endif
 
+/* OpenMP+ */
+
+typedef struct _irt_optimizer_resources {
+    double energy;
+    float power;
+    float time;
+} irt_optimizer_resources;
+
+typedef struct _irt_optimizer_wi_data {
+    int frequency;
+    int old_frequency;
+    int workers_count;
+    int *param_values;  // the list of picked values (indexes) for the variables in a param clause
+    irt_optimizer_resources resources;
+} irt_optimizer_wi_data;
+
+typedef irt_optimizer_resources irt_optimizer_objective_weights;
+
+typedef struct _irt_optimizer_objective_constraints {
+    irt_optimizer_resources min;
+    irt_optimizer_resources max;
+} irt_optimizer_objective_constraints;
+
+typedef struct _irt_optimizer_objective {
+    irt_optimizer_objective_weights weights;    
+    irt_optimizer_objective_constraints constraints;    
+    irt_inst_region_id region_id;
+} irt_optimizer_objective;
+
+uint64_t irt_optimizer_pick_in_range(uint64_t max);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant);
+void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant);
+void irt_optimizer_remove_optimizations(irt_wi_implementation_runtime_data* data, int pos, bool wi_finalized);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H

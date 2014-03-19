@@ -306,7 +306,15 @@ namespace runtime {
 			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		});
-		
+
+		table[ext.instrumentationRegionStart] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_start"), CONVERT_ARG(0));
+		});
+
+		table[ext.instrumentationRegionEnd] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0));
+		});
+
 		// scratchpad 
 
 		table[basic.getRefLoc()] = OP_CONVERTER({

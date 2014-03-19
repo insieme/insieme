@@ -59,6 +59,8 @@
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
+#include "insieme/annotations/omp/omp_annotations.h"
+
 #include <stack>
 
 #define MAX_THREADPRIVATE 80
@@ -749,7 +751,7 @@ protected:
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
 
-	StatementPtr implementParamClause(const StatementPtr& stmtNode, const SharedRegionParallelAndTaskClausePtr& reg)
+	StatementPtr implementParamClause(const StatementPtr& stmtNode, const SharedOMPPPtr& reg)
 	{
 		if(!reg->hasParam())
 			return stmtNode;
@@ -783,6 +785,81 @@ protected:
 		return build.compoundStmt(resultStmts);
 	}
 
+    insieme::annotations::Parameter annotationParToFrontendPar(Objective::Parameter& par) {
+            switch (par) {
+                case Objective::ENERGY:
+                    return insieme::annotations::ENERGY;
+                case Objective::POWER:
+                    return insieme::annotations::POWER;
+                case Objective::TIME:
+                    return insieme::annotations::TIME;
+                default:
+                    return insieme::annotations::TIME;
+            }
+    }
+
+	void implementObjectiveClause(const NodePtr& node, const Objective& obj)
+    {
+        using namespace insieme::annotations;
+
+        std::map<Parameter, ExpressionPtr> weights;
+        weights[insieme::annotations::ENERGY] = obj.getEnergyWeight();
+        weights[insieme::annotations::POWER ] = obj.getPowerWeight();
+        weights[insieme::annotations::TIME  ] = obj.getTimeWeight();
+
+        /* TODO: 
+         * Constraints are translated as ranges
+         * If a bound is not set, -1 is used but -inf and inf should be used to deal with parameters that can have negative values (not the case now)
+         * If multiple values are provided for a range, the last one is considered but they could be compared to choose the largest one
+         * <= and >= are equivalent to < and >
+         */
+        std::map<Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
+        auto minusOneLit = build.literal(basic.getFloat(), "-1f");
+        constraints[insieme::annotations::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[insieme::annotations::POWER ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[insieme::annotations::TIME  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+
+        if(obj.hasConstraintsParams() && obj.hasConstraintsOps() && obj.hasConstraintsExprs()){
+            auto params = obj.getConstraintsParams();
+            auto ops    = obj.getConstraintsOps();
+            auto exprs  = obj.getConstraintsExprs();
+            
+            if(params.size() == ops.size() && params.size() == exprs.size()) {
+                auto opsIt = ops.begin();
+                auto exprsIt = exprs.begin();
+
+                for(auto par : params) {
+                    auto oldCon = constraints[annotationParToFrontendPar(par)];
+
+                    switch(*opsIt) {
+                        case Objective::LESS:
+                        case Objective::LESSEQUAL:
+                            oldCon.second = *exprsIt;
+                            break;
+                        case Objective::EQUALEQUAL:
+                            oldCon.first = *exprsIt;
+                            oldCon.second = *exprsIt;
+                            break;
+                        case Objective::GREATEREQUAL:
+                        case Objective::GREATER:
+                            oldCon.first = *exprsIt;
+                            break;
+                    }
+
+                    constraints[annotationParToFrontendPar(par)] = oldCon;
+
+                    opsIt++;
+                    exprsIt++;
+                }
+            }
+        }
+
+        OmpObjectiveAnnotationPtr ann = std::make_shared<OmpObjectiveAnnotation>(weights, constraints);
+        node->addAnnotation(ann);
+
+        return;
+    }
+
 	NodePtr handleRegion(const StatementPtr& stmtNode, const RegionPtr& reg) {
 
 		/* if there isn't any clause nothing to do */
@@ -797,6 +874,11 @@ protected:
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1);
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(reg->hasObjective()) {
+            implementObjectiveClause(jobExp, reg->getObjective());
+        }
+
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
@@ -819,6 +901,11 @@ protected:
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(par->hasObjective()) {
+            implementObjectiveClause(jobExp, par->getObjective());
+        }
+
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
@@ -838,6 +925,11 @@ protected:
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(par->hasObjective()) {
+            implementObjectiveClause(jobExp, par->getObjective());
+        }
+
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		resultStmts.push_back(parallelCall);
 
@@ -919,19 +1011,29 @@ protected:
 		return b.compoundStmt(waitLoop, stmtNode, increment);
 	}
 
-	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
+	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 		//outer = collapseForNest(outer);
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(outer, &*forP, resultStmts);
-		resultStmts.push_back(newStmtNode);
+
+        // We keep only the annotation added on the handleParallel
+        if(!isParallel && forP->hasObjective()) {
+             for(auto stmt : newStmtNode.as<CompoundStmtPtr>()->getStatements()) {
+                if(core::analysis::isCallOf(stmt, basic.getPFor())) {
+                    implementObjectiveClause(stmt, forP->getObjective());
+                }
+             }
+        }
+		
+        resultStmts.push_back(newStmtNode);
 		return build.compoundStmt(resultStmts);
 	}
 
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
 		NodePtr newNode = stmtNode;
-		newNode = handleFor(static_pointer_cast<const Statement>(newNode), pforP->toFor());
+		newNode = handleFor(static_pointer_cast<const Statement>(newNode), pforP->toFor(), true);
 		newNode = handleParallel(static_pointer_cast<const Statement>(newNode), pforP->toParallel());
 		return newNode;
 	}

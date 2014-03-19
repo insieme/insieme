@@ -64,7 +64,8 @@ typedef enum _irt_errcode {
 	IRT_ERR_OCL,				// error caused by the opencl runtime system
 	IRT_ERR_INSTRUMENTATION,	// error related to the instrumentation system
 	IRT_ERR_INVALIDARGUMENT,	// error caused by calls to irt functions with invalid arguments
-	IRT_ERR_HW_INFO				// error caused by requesting hardware information that is not available
+	IRT_ERR_HW_INFO,			// error caused by requesting hardware information that is not available
+	IRT_ERR_OMPP			    // error caused by OpenMP+ optimizations 
 } irt_errcode;
 
 struct _irt_error {
