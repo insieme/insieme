@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
@@ -46,7 +46,8 @@
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_events.impl.h"
-#include "impl/instrumentation.impl.h"
+#include "impl/instrumentation_regions.impl.h"
+#include "impl/instrumentation_events.impl.h"
 #include "irt_types.h"
 
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) {
@@ -144,7 +145,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children);
 	}
-	IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : -1);
+	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : -1);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
@@ -393,3 +394,4 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		}
 	}
 }
+

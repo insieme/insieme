@@ -40,7 +40,7 @@
 
 #include "irt_optimizer.h"
 #include "irt_logging.h"
-#include "instrumentation.h"
+#include "instrumentation_regions.h"
 
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"

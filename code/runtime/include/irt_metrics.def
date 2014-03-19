@@ -65,8 +65,8 @@
  * measurements (c.f. the cpu_time METRIC).
  */
  
-#include "instrumentation.h"
-#include "instrumentation_includes.h"
+#include "instrumentation_regions.h"
+#include "instrumentation_regions_includes.h"
 
 
 

@@ -46,7 +46,7 @@
 
 #include "client_app.h"
 #include "irt_all_impls.h"
-#include "instrumentation.h"
+#include "instrumentation_events.h"
 
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
