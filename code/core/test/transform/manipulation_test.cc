@@ -1032,9 +1032,6 @@ TEST(Manipulation, ReplaseVaresRecursive) {
 
 	EXPECT_NE(code, code1);
 
-	dumpDetail(code);
-	dumpDetail(code1);
-
 	auto semantic = core::checks::check(code1);
 
 	auto errors = semantic.getErrors();

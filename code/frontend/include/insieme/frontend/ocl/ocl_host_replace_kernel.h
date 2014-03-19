@@ -104,7 +104,8 @@ typedef boost::unordered_map<core::ExpressionPtr, std::set<unsigned int> > Local
 class KernelReplacer {
 public:
 	KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs);
-private:
+	virtual ~KernelReplacer() {}
+protected:
 	core::NodePtr prog;
 	KernelNames kernelNames;
 	KernelTypes kernelTypes;
@@ -113,15 +114,25 @@ private:
 	const std::vector<boost::filesystem::path>& includeDirs;
 	std::set<string> kernelFileCache;
 
-	void findKernelNames();
+	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
 	void collectArguments();
 	void replaceKernels();
-	void loadKernelCode();
+	virtual void loadKernelCode();
+	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
+	void inlineKernelCode();
 	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
 	std::vector<core::ExpressionPtr> lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 public:
-	core::NodePtr getTransformedProgram() {return prog;}
+	virtual core::NodePtr getTransformedProgram();
 };
+
+class IclKernelReplacer : public KernelReplacer {
+public:
+	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
+	virtual core::NodePtr getTransformedProgram();
+	virtual void loadKernelCode(std::vector<std::string> kernelPaths);
+};
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

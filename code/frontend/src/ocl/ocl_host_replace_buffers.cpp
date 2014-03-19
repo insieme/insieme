@@ -171,18 +171,9 @@ core::NodePtr BufferReplacer::getTransformedProgram() {
 	TypePtr clMemTy = builder.genericType("_cl_mem");
 	generateReplacements(clMemTy);
 
-	ExpressionMap em;
-	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
-		// use pointer in replacements to replace all occurences of the addressed expression
-	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
-		em[replacement.first] = replacement.second;
-	});
+	performReplacements();
 
-	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
-	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
-
-	printer::PrettyPrinter pp(prog);
+	//printer::PrettyPrinter pp(prog);
 	//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
 
 	return prog;
@@ -343,6 +334,19 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 */
 }
 
+void BufferReplacer::performReplacements() {
+	ExpressionMap em;
+	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
+	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurences of the addressed expression
+	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
+		em[replacement.first] = replacement.second;
+	});
+
+	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
+	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
+}
+
 IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) { }
 
 core::NodePtr IclBufferReplacer::getTransformedProgram() {
@@ -392,16 +396,7 @@ core::NodePtr IclBufferReplacer::getTransformedProgram() {
 
 	generateReplacements(iclBufferTy);
 
-	ExpressionMap em;
-	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
-		// use pointer in replacements to replace all occurences of the addressed expression
-	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
-		em[replacement.first] = replacement.second;
-	});
-
-	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
-	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
+	performReplacements();
 
 	printer::PrettyPrinter pp(prog);
 	//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
