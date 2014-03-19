@@ -321,8 +321,8 @@ void KernelReplacer::findKernelNames() {
 	TreePatternPtr mayEncapsulatedNameLiteral = irp::callExpr(pattern::any, pattern::any, *pattern::any << nameLiteral << *pattern::any) | nameLiteral;
 	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
 			nameLiteral << pattern::var("err", pattern::any) );
-	TreePatternPtr createKernelPattern = pattern::var("clCreateKernel", irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
-			pattern::var("kernel", pattern::any) << clCreateKernel));
+	TreePatternPtr createKernelPattern = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+			pattern::var("kernel", pattern::any) << clCreateKernel);
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
 		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
@@ -346,9 +346,10 @@ void KernelReplacer::findKernelNames() {
 
 //std::cout << "varAddr: " << kernelName << " - " << *kernelVar << std::endl;
 		kernelNames[kernelName] = kernelVar;
+		ExpressionPtr createKernelExpr = createKernel.getRoot().as<ExpressionPtr>();
 
 		// remove the clCreateKernel call including the assignment and its lhs
-		prog = transform::replaceAll(mgr, prog, NodePtr(createKernel["clCreateKernel"].getValue()), builder.getNoOp(), false);
+		prog = transform::replaceAll(mgr, prog, createKernelExpr, builder.undefined(createKernelExpr->getType()), false);
 	});
 }
 

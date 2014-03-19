@@ -157,15 +157,25 @@ const NodePtr BufferMapper::resolveElement(const NodePtr& ptr) {
 	return ptr;
 }
 
-BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {
-	collectInformation();
-	generateReplacements("_cl_mem");
+BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {}
+
+core::NodePtr BufferReplacer::getTransformedProgram() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) <<
+			pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
+	collectInformation(clCreateBuffer);
+
+	TypePtr clMemTy = builder.genericType("_cl_mem");
+	generateReplacements(clMemTy);
 
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
 		// use pointer in replacements to replace all occurences of the addressed expression
-//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
+	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
 		em[replacement.first] = replacement.second;
 	});
 
@@ -173,17 +183,21 @@ BufferReplacer::BufferReplacer(NodePtr prog) : prog(prog) {
 	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
 
 	printer::PrettyPrinter pp(prog);
-//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
+	//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
+
+	return prog;
 }
 
-void BufferReplacer::collectInformationWithPattern(TreePatternPtr& clCreateBuffer) {
+void BufferReplacer::collectInformation(TreePatternPtr& clCreateBuffer) {
 	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog);
 	IRBuilder builder(mgr);
 
+	const lang::BasicGenerator& gen = builder.getLangBasic();
+
 	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
-			irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefVar()), pattern::single(clCreateBuffer))));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(mgr.getLangBasic().getRefAssign())),
+			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateBuffer))));
+	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(gen.getRefAssign())),
 			pattern::var("buffer", pattern::any) << clCreateBuffer);
 	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
 
@@ -198,11 +212,11 @@ void BufferReplacer::collectInformationWithPattern(TreePatternPtr& clCreateBuffe
 
 		ExpressionPtr hostPtr;
 		if(usePtr || copyPtr) {
-			hostPtr = utils::tryRemove(mgr.getLangBasic().getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
+			hostPtr = utils::tryRemove(gen.getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
 				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
-				if(c->getSubExpression()->getType() != mgr.getLangBasic().getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
-					hostPtr = builder.callExpr(mgr.getLangBasic().getRefVar(), c->getSubExpression());
+				if(c->getSubExpression()->getType() != gen.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+					hostPtr = builder.callExpr(gen.getRefVar(), c->getSubExpression());
 				}
 			}
 		}
@@ -235,21 +249,8 @@ void BufferReplacer::collectInformationWithPattern(TreePatternPtr& clCreateBuffe
 
 		// add gathered information to clMemMetaMap
 		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, initExpr);
-std::cout << *deviceMemAlloc << std::endl << std::endl;
 	});
 
-}
-
-void BufferReplacer::collectInformation() {
-	NodeManager& mgr = prog->getNodeManager();
-	NodeAddress pA(prog);
-	IRBuilder builder(mgr);
-
-	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) <<
-			pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
-
-	collectInformationWithPattern(clCreateBuffer);
 }
 
 bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const TypePtr& newType) {
@@ -280,18 +281,15 @@ bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const
 }
 
 
-void BufferReplacer::generateReplacements(std::string bufferTypeName) {
+void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 	NodeManager& mgr = prog.getNodeManager();
 	IRBuilder builder(mgr);
 
-	TypePtr clMemTy;
 	TreePatternPtr subscriptPattern = irp::subscript1D("operation",
 			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable())));
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
 		ExpressionAddress bufferExpr = utils::extractVariable(meta.first);
-
-		clMemTy = builder.genericType(bufferTypeName);
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 		if(subscript) {
@@ -311,7 +309,7 @@ void BufferReplacer::generateReplacements(std::string bufferTypeName) {
 
 		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
-//std::cout << "var: " << bufferExpr << " root " << getRootVariable(bufferExpr) << std::endl;
+//std::cout << "var: " << *bufferExpr << " root " << *utils::getRootVariable(bufferExpr) << std::endl;
 		bufferExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
 
 		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
@@ -334,29 +332,83 @@ void BufferReplacer::generateReplacements(std::string bufferTypeName) {
 		}
 		// global variable case
 		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
-			clMemReplacements[lit] = builder.literal(newType, "newLit");//lit->getStringValue());
+			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
 			return;
 		}
 	});
-
-
+/*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
-		std::cout << printer::PrettyPrinter(replacement.first) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
+		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()->getType()) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
 	});
-
+*/
 }
 
-IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) {
-	collectInformation();
-	generateReplacements("icl_buffer");
-}
+IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) { }
 
-void IclBufferReplacer::collectInformation() {
+core::NodePtr IclBufferReplacer::getTransformedProgram() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
+
 	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
 			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
 
-	collectInformationWithPattern(clCreateBuffer);
+	collectInformation(clCreateBuffer);
+
+	std::vector<NamedTypePtr> iclDeviceMembers;
+	iclDeviceMembers.push_back(builder.namedType("device", builder.refType(builder.arrayType( builder.genericType("_cl_device_id")))));
+	iclDeviceMembers.push_back(builder.namedType("context", builder.refType(builder.arrayType( builder.genericType("_cl_context")))));
+	iclDeviceMembers.push_back(builder.namedType("queue", builder.refType(builder.arrayType( builder.genericType("_cl_command_queue")))));
+	iclDeviceMembers.push_back(builder.namedType("mem_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("mem_available", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("max_buffer_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("name", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("type", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("vendor", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("version", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("driver_version", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("profile", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("max_compute_units", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("max_clock_frequency", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("max_work_item_dimensions", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("max_work_item_sizes", builder.refType(builder.arrayType( gen.getUInt8()))));
+	iclDeviceMembers.push_back(builder.namedType("max_work_group_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("image_support", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("single_fp_config", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("endian_little", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("extensions", builder.refType(builder.arrayType( gen.getChar()))));
+	iclDeviceMembers.push_back(builder.namedType("mem_cache_type", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("global_mem_cacheline_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("global_mem_cache_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("max_constant_buffer_size", gen.getUInt8()));
+	iclDeviceMembers.push_back(builder.namedType("local_mem_type", gen.getUInt4()));
+	iclDeviceMembers.push_back(builder.namedType("local_mem_size", gen.getUInt8()));
+	TypePtr iclDeviceTy = builder.structType(builder.stringValue("_icl_device"), iclDeviceMembers);
+
+	TypePtr iclBufferTy = builder.structType(builder.stringValue("_icl_buffer"), toVector(
+			builder.namedType("mem", builder.refType(builder.arrayType(builder.genericType("_cl_mem")))),
+			builder.namedType("size", gen.getUInt8()),
+			builder.namedType("dev", builder.refType(builder.arrayType(iclDeviceTy)))));
+
+	generateReplacements(iclBufferTy);
+
+	ExpressionMap em;
+	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
+	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurences of the addressed expression
+	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
+		em[replacement.first] = replacement.second;
+	});
+
+	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
+	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
+
+	printer::PrettyPrinter pp(prog);
+	//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
+
+	return prog;
 }
+
 
 } //namespace ocl
 } //namespace frontend
