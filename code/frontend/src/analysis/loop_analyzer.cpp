@@ -297,6 +297,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 
 	if (!initStmt){  // there is no init statement, therefore the initial value is the value of the induction expression at the begining of the loop
 		initValue = originalInductionExpr;
+        restoreValue = true;
 	}
 	else{
 		// could be a declaration or could be an assignment
