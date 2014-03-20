@@ -47,6 +47,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -143,7 +144,7 @@ namespace tu {
 			res.addGlobal(cur);
 		}
 
-		// copy initalizer
+		// copy initializer
 		for(auto cur : b.getInitializer()) {
 			res.addInitializer(cur);
 		}
@@ -151,6 +152,29 @@ namespace tu {
 		// entry points
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
+		}
+
+		// migrate all meta information
+		if (&b.getNodeManager() != &mgr) {
+			auto& mgrB = b.getNodeManager();
+
+			// built a visitor searching all meta-info entries and merge them
+			auto visitor = core::makeLambdaVisitor([&](const core::TypePtr& type) {
+
+				// check whether there is a meta-info annotation at the original type
+				auto other = mgrB.get(type);
+
+				// if there is some meta-info
+				if (core::hasMetaInfo(other)) {
+					// merge it
+					core::setMetaInfo(type, core::merge(core::getMetaInfo(type), core::getMetaInfo(other)));
+				}
+
+			});
+			auto cachedVisitor = core::makeDepthFirstOnceVisitor(visitor);
+
+			// apply visitor
+			res.visitAll(cachedVisitor);
 		}
 
 		// done
@@ -228,21 +252,31 @@ namespace tu {
 				// copy the source list to avoid invalidation of iterator
 				auto list =metaInfos;
 
-				// re-add meta information
-				for(const auto& cur : list) {
+				// clear the meta-info list
+				while(!list.empty()) {
 
-					// encode meta info into pure IR
-					auto encoded = core::toIR(mgr, cur.second);
+					// clear meta-info collected in last round
+					metaInfos.clear();
 
-					// resolve meta info
-					auto resolved = core::fromIR(map(encoded));
+					// re-add meta information
+					for(const auto& cur : list) {
 
-					// restore resolved meta info for resolved type
-					setMetaInfo(map(cur.first), resolved);
+						// encode meta info into pure IR
+						auto encoded = core::toIR(mgr, cur.second);
+
+						// resolve meta info
+						auto resolved = core::fromIR(map(encoded));
+
+						// restore resolved meta info for resolved type
+						setMetaInfo(map(cur.first), resolved);
+					}
+
+					// get new list of encountered meta-info data
+					list = metaInfos;
 				}
 
-				// clear meta-infos for next run
-				metaInfos.clear();
+				// there should not be any unprocessed meta-info instance
+				assert(metaInfos.empty());
 
 				// done
 				return res;
@@ -433,6 +467,11 @@ namespace tu {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
 				}
 
+				// and also fix generic-zero constructor
+				if (core::analysis::isCallOf(res, mgr.getLangBasic().getZero())) {
+					res = builder.getZero(core::analysis::getRepresentedType(res.as<CallExprPtr>()[0]));
+				}
+
 				// add result to cache if it does not contain recursive parts (hence hasn't changed at all)
 				if (*ptr == *res) {
 					cache[ptr] = res;
@@ -507,10 +546,13 @@ namespace tu {
 				if (structs.empty()) return type;
 
 				// create de-normalized recursive bindings
+				// beware of unamed structs
 				vector<RecTypeBindingPtr> bindings;
+				unsigned id =0;
 				for(auto cur : structs) {
-					bindings.push_back(builder.recTypeBinding(builder.typeVariable(cur.as<core::StructTypePtr>()->getName()), cur));
-								//builder.typeVariable(insieme::core::annotations::getAttachedName(cur)), cur));
+					std::string name = cur.as<core::StructTypePtr>()->getName().getValue();
+					if (name.empty()) name = format("t%d", id++);
+					bindings.push_back(builder.recTypeBinding(builder.typeVariable(name), cur));
 				}
 
 				// sort according to variable names
@@ -737,8 +779,8 @@ namespace tu {
 			core::IRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
-			// check all usedliterals if they are used as global and the global type is vector
-			// and the usedLiteral type is array, if so replace the usedliteral type to vector and
+			// check all used literals if they are used as global and the global type is vector
+			// and the usedLiteral type is array, if so replace the used literal type to vector and
 			// us ref.vector.to.ref.array
 			core::NodeMap replacements;
 			for (auto cur : unit.getGlobals()) {
@@ -861,7 +903,8 @@ namespace tu {
 			}
 		}
 
-		assert(false && "No such entry point!");
+		assert_fail() << "No such entry point!\n"
+				<< "Searching for: " << entryPoint << "\n";
 		return core::ProgramPtr();
 	}
 

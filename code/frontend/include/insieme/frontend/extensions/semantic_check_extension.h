@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -100,7 +100,7 @@ public:
     }
 
 
-    virtual insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+    virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
                                                  insieme::frontend::conversion::Converter& convFact) {
         if(irType && current < 125000) {
             auto msg = insieme::core::checks::check(irType);
@@ -110,7 +110,7 @@ public:
                     s << m.getMessage() << m.getAddress() << m.getErrorCode();
                     if(handledErrors.find(s.str())==handledErrors.end()) {
                         std::cerr << "\n####TYPE SEM. ERROR####\n" << m << "\n\n";
-                        type->dump();
+                        type.getTypePtr()->dump();
                         std::cerr << "\n\n";
                         std::cerr << toString(*irType);
                         std::cerr << "\n\n";
@@ -157,8 +157,7 @@ public:
         return irStmt;
     }
 
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,
-                                                      insieme::frontend::conversion::Converter& convFact) {
+    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic=false) {
 
         std::cout << "func decl: " << decl->getNameAsString() << std::endl;
         if(decl->getSourceRange().isValid()) {

@@ -46,7 +46,7 @@
 
 #include "client_app.h"
 #include "irt_all_impls.h"
-#include "instrumentation.h"
+#include "instrumentation_events.h"
 
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
@@ -165,7 +165,7 @@ void irt_exit_handler() {
 
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
-	if(irt_g_frequency_setting_specified)
+	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
 		irt_cpu_freq_reset_frequencies();
 #endif
 

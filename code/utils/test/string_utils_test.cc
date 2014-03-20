@@ -87,5 +87,11 @@ TEST(EscapeTest, escape) {
 	EXPECT_EQ("Hello \\n \\\" some \\\\ test ...  \\\" \\\' ", out.str());
 }
 
+TEST(Join, overloads) {
+	vector<int> data({1,3,4,2});
+	EXPECT_EQ("1,3,4,2", toString(join(",", data)));
 
+	std::set<int> data2({1,3,4,2});
+	EXPECT_EQ("1,2,3,4", toString(join(",", data2)));
+}
 

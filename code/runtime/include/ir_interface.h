@@ -37,7 +37,7 @@
 #pragma once
 
 #include "declarations.h"
-#include "instrumentation.h"
+#include "instrumentation_regions.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
 

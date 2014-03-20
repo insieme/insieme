@@ -240,14 +240,14 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
 
-	} catch(NotAFormulaException&& e) { 
+	} catch(const NotAFormulaException& e) {
 
 		try {
 			// we cannot determine whether this is a constant value, we return the bottom symbol then 
 			return lookup(aMgr, 
 				      getImmediateAccess(lit->getNodeManager(), cfg::Address(block,stmt_idx,lit), cfg.getTmpVarMap()), 
 					  in, cfg);
-		} catch( NotAnAccessException&& e) { return dfa::top; }
+		} catch(const NotAnAccessException& e) { return dfa::top; }
 	}
 
 	assert( false  && "Something odd happened" );

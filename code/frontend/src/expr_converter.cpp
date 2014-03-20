@@ -184,7 +184,7 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 	core::TypePtr membType;
 	if (baseTy.isa<core::GenericTypePtr>()){
 		// accessing a member of an intercepted type, nothing to do but trust clang
-		membType = convFact.convertType(membExpr->getType().getTypePtr());
+		membType = convFact.convertType(membExpr->getType());
 	}
 	else {
 
@@ -378,7 +378,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 		}
 		case 8:
 	//		type = builder.getLangBasic().getInt8();
-			type = convFact.convertType(intLit->getType().getTypePtr());
+			type = convFact.convertType(intLit->getType());
 			break;
 
 	//	case 16:
@@ -516,8 +516,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitStringLiteral(const clang::St
 	vectorLenght += 1; // add the null char
 
 	auto expand = [&](char lookup, const char *replacement) {
-		int last = 0;
-		int it;
+		unsigned last = 0;
+		unsigned it;
 		string rep = replacement;
 		while((it = strValue.find(lookup, last)) < strValue.length()){
 			last = it + rep.length();
@@ -574,7 +574,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenE
 // of a pointer).
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
-	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullExpr));
+	core::TypePtr type = convFact.convertType(nullExpr->getType());
 
     core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(nullExpr, retIr);
@@ -659,7 +659,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::P
 		frontend_assert(false ) << "Handle for predefined function not defined\n";
 	}
 
-	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(preExpr));
+	core::TypePtr type = convFact.convertType(preExpr->getType());
 	frontend_assert(type->getNodeType() == core::NT_VectorType);
 	core::TypePtr elemType = type.as<core::VectorTypePtr>()->getElementType();
 	return builder.literal(lit, builder.refType(builder.arrayType(elemType)));
@@ -669,18 +669,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::P
 //						SIZEOF ALIGNOF EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //core::ExpressionPtr VisitSizeOfAlignOfExpr(const clang::SizeOfAlignOfExpr* expr) {
-//START_LOG_EXPR_CONVERSION(expr);
-
-//core::ExpressionPtr irNode;
-//LOG_EXPR_CONVERSION(irNode);
-
-//if ( expr->isSizeOf() ) {
-//core::TypePtr&& type = expr->isArgumentType() ?
-//convFact.convertType( expr->getArgumentType().getTypePtr() ) :
-//convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-//return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
-//}
-//frontend_assert(false && "SizeOfAlignOfExpr not yet supported");
 //}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -694,8 +682,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
     LOG_EXPR_CONVERSION(expr, irNode);
 
 	core::TypePtr&& type = expr->isArgumentType() ?
-		convFact.convertType( expr->getArgumentType().getTypePtr() ) :
-		convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+		convFact.convertType( expr->getArgumentType() ) :
+		convFact.convertType( expr->getArgumentExpr()->getType() );
 
 	switch (expr->getKind()) {
 		case clang::UETT_SizeOf: {
@@ -733,7 +721,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
-	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
+	core::TypePtr exprTy = convFact.convertType( binOp->getType() );
 
 	frontend_assert(lhs) << "no left side could be translated";
 	frontend_assert(rhs) << "no right side could be translated";
@@ -869,7 +857,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
             auto compOp = llvm::cast<clang::CompoundAssignOperator>(binOp);
 
             if(compOp->getComputationLHSType() != binOp->getType()) {
-                exprTy = convFact.convertType(compOp->getComputationLHSType().getTypePtr());
+                exprTy = convFact.convertType(compOp->getComputationLHSType());
                 subExprLHS = frontend::utils::castScalar(exprTy, subExprLHS);
             }
 
@@ -884,7 +872,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 
             if(compOp->getComputationResultType() != binOp->getType()) {
-                rhs = frontend::utils::castScalar(convFact.convertType( GET_TYPE_PTR(binOp) ), rhs);
+                rhs = frontend::utils::castScalar(convFact.convertType( binOp->getType() ), rhs);
             }
 		}
 
@@ -949,6 +937,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
+
+			if (frontend::utils::isRefArray (lhs->getType().as<core::RefTypePtr>()->getElementType()) && frontend::utils::isRefVector(rhs->getType() ))
+				rhs = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), rhs);
 
 			//OK!! here there is a problem,
 			//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {
@@ -1086,8 +1077,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// while they are converted into char or bool int IR. we need to recover the original
 			// CLANG typing
 			if (baseOp != clang::BO_LAnd && baseOp != clang::BO_LOr) {
-				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
-				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
+				lhs = utils::cast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
+				rhs = utils::cast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
 			}
 
 			exprTy = gen.getBool();
@@ -1098,8 +1089,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// TODO: would love to remove this, but some weirdos still need this cast
 			// somehow related with char type. is treated as integer everywhere, not in ir
-				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
-				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
+				lhs = utils::cast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
+				rhs = utils::cast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
 
 
             if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
@@ -1145,8 +1136,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 
 	// build lambda expression for post/pre increment/decrement unary operators
 	auto encloseIncrementOperator =
-	[ this, &builder, &gen ]
-	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+	[&](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
 		core::TypePtr type = subExpr->getType();
         //if we have a cpp ref we have to unwrap it
@@ -1286,7 +1276,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(condOp, retIr);
 
-	core::TypePtr retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
+	core::TypePtr retTy = convFact.convertType( condOp->getType() );
 	core::ExpressionPtr trueExpr  = Visit(condOp->getTrueExpr());
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
 	core::ExpressionPtr condExpr  = Visit(condOp->getCond());
@@ -1299,7 +1289,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	}
 
 	//fixes the return type to retTy of the given expression toFix
-	auto fixingThrowExprType = [&mgr](core::ExpressionPtr toFix, const core::TypePtr& retTy){
+	auto fixingThrowExprType = [&](core::ExpressionPtr toFix, const core::TypePtr& retTy){
 		//get address of callExpr: callExpr(lambdaExpr(throwExpr),(argument))
 		core::CallExprPtr callExpr = toFix.as<core::CallExprPtr>();
 		core::CallExprAddress callExprAddr(callExpr);
@@ -1463,7 +1453,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	// check whether this is a reference to a variable
 	core::ExpressionPtr retExpr;
 	if (const clang::ParmVarDecl* parmDecl = llvm::dyn_cast<clang::ParmVarDecl>(declRef->getDecl())) {
-		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
+		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType() );
 
 		retIr = convFact.lookUpVariable( parmDecl );
 		auto fit = convFact.wrapRefMap.find(retIr.as<core::VariablePtr>());
@@ -1551,7 +1541,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCompoundLiteralExpr(const cla
 				convFact.convertInitExpr(
 						NULL,
 						initList,
-						convFact.convertType(compLitExpr->getType().getTypePtr()),
+						convFact.convertType(compLitExpr->getType()),
 						false
 				)
 		);
@@ -1580,7 +1570,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
         newBody.push_back(*it);
 	}
 
-	core::TypePtr lambdaRetType = convFact.convertType(stmtExpr->getType().getTypePtr());
+	core::TypePtr lambdaRetType = convFact.convertType(stmtExpr->getType());
 	core::ExpressionPtr exprToReturn = (innerIr->getStatements().end()-1)->as<core::ExpressionPtr>();
 
 	// fix type
@@ -1610,7 +1600,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 core::ExpressionPtr Converter::ExprConverter::VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr) {
     core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(initExpr, retIr);
-    core::TypePtr elementType = convFact.convertType ( initExpr->getType().getTypePtr() );
+    core::TypePtr elementType = convFact.convertType ( initExpr->getType() );
     frontend_assert(elementType) << "IR type creation failed (given element type not supported)\n";
     retIr = convFact.defaultInitVal(elementType);
     return retIr;

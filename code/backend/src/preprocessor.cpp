@@ -67,6 +67,7 @@ namespace backend {
 		if (!(options & SKIP_RESTORE_GLOBALS)) {
 			steps.push_back(makePreProcessor<RestoreGlobals>());
 		}
+		steps.push_back(makePreProcessor<InitGlobals>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
@@ -266,8 +267,7 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
-
-				// check initalization
+				// check initialization
 				auto& basic = decl->getNodeManager().getLangBasic();
 				core::ExpressionPtr init = decl->getInitialization();
 				if (!(core::analysis::isCallOf(init, basic.getRefNew()) || core::analysis::isCallOf(init, basic.getRefVar()))) {
@@ -374,13 +374,41 @@ namespace backend {
 			for_each(res_globals, [&](const core::LiteralPtr& cur) {
 				core::ExpressionPtr typeLiteral = builder.getTypeLiteral(cur->getType());
 				core::LiteralPtr nameLiteral = builder.getIdentifierLiteral(cur->getStringValue());
-				core::StatementPtr registerGlobal = builder.callExpr(unit, extensions.registerGlobal, nameLiteral, typeLiteral);
+				core::StatementPtr registerGlobal = builder.callExpr(unit, extensions.getRegisterGlobal(), nameLiteral, typeLiteral);
 				body.push_back(registerGlobal);
 			});
 			body.push_back(res);
 
 			// build resulting body
 			return builder.compoundStmt(body);
+		}
+
+		core::CompoundStmtAddress getMainBody(const core::NodePtr& code) {
+			static const core::CompoundStmtAddress fail;
+
+			// check for the program - only works on the global level
+			if (code->getNodeType() != core::NT_Program) {
+				return fail;
+			}
+
+			// check whether it is a main program ...
+			core::NodeAddress root(code);
+			const core::ProgramAddress& program = core::static_address_cast<const core::Program>(root);
+			if (!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
+				return fail;
+			}
+
+			// extract body of main
+			const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
+			if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
+				return fail;
+			}
+			const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
+			const core::StatementAddress& bodyStmt = main->getBody();
+			if (bodyStmt->getNodeType() != core::NT_CompoundStmt) {
+				return fail;
+			}
+			return core::static_address_cast<const core::CompoundStmt>(bodyStmt);
 		}
 
 	}
@@ -392,29 +420,9 @@ namespace backend {
 
 	core::NodePtr RestoreGlobals::process(core::NodeManager& manager, const core::NodePtr& code) {
 
-		// check for the program - only works on the global level
-		if (code->getNodeType() != core::NT_Program) {
-			return code;
-		}
-
-		// check whether it is a main program ...
-		core::NodeAddress root(code);
-		const core::ProgramAddress& program = core::static_address_cast<const core::Program>(root);
-		if (!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
-			return code;
-		}
-
-		// extract body of main
-		const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
-		if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
-			return code;
-		}
-		const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
-		const core::StatementAddress& bodyStmt = main->getBody();
-		if (bodyStmt->getNodeType() != core::NT_CompoundStmt) {
-			return code;
-		}
-		core::CompoundStmtAddress body = core::static_address_cast<const core::CompoundStmt>(bodyStmt);
+		// get body of main
+		core::CompoundStmtAddress body = getMainBody(code);
+		if (!body) return code; 	// this is not a full program, stop here
 
 
 		// search for global structs
@@ -502,6 +510,79 @@ namespace backend {
 	}
 
 
+	// --------------------------------------------------------------------------------------------------------------
+	//      Turn initial assignments of global variables into values to be assigned to init values.
+	// --------------------------------------------------------------------------------------------------------------
+
+	core::NodePtr InitGlobals::process(const Converter& converter, const core::NodePtr& code) {
+
+		// get body of main
+		auto body = getMainBody(code);
+		if (!body) return code;			// nothing to do if this is not a full program
+
+		auto& mgr = code->getNodeManager();
+		const auto& base = mgr.getLangBasic();
+
+		// search for globals initialized in main body
+		std::map<core::LiteralPtr, core::CallExprAddress> inits;
+		core::visitDepthFirstOncePrunable(body, [&](const core::StatementAddress& stmt)->bool {
+
+			// check out
+			if (auto call = stmt.isa<core::CallExprAddress>()) {
+
+				// check whether it is an assignment
+				if (core::analysis::isCallOf(call.as<core::CallExprPtr>(), base.getRefAssign())) {
+
+					// check whether target is a literal
+					if (auto trg = call[0].isa<core::LiteralPtr>()) {
+
+						// check whether literal is already known
+						auto pos = inits.find(trg);
+						if (pos == inits.end()) {
+							// found a new one
+							inits[trg] = call;
+						}
+					}
+				}
+			}
+
+			// decent into nested compound statements
+			if (stmt.isa<core::CompoundStmtAddress>()) {
+				return false;
+			}
+
+			// but nothing else
+			return true;
+
+		});
+
+		// check if anything has been found
+		if (inits.empty()) return code;
+
+		// build up replacement map
+		const auto& ext = mgr.getLangExtension<IRExtensions>();
+		core::IRBuilder builder(mgr);
+		std::map<core::NodeAddress, core::NodePtr> replacements;
+		for(const auto& cur : inits) {
+			// no free variables shell be moved to the global space
+			if (core::analysis::hasFreeVariables(cur.second[1])) {
+				continue;
+			}
+			// if it is initializing a vector
+			if (cur.second[1].isa<core::VectorExprPtr>()) {
+				continue;
+			}
+			replacements[cur.second] = builder.callExpr(ext.getInitGlobal(), cur.second[0], cur.second[1]);
+		}
+
+		// if there is nothing to do => done
+		if (replacements.empty()) {
+			return code;
+		}
+
+		// conduct replacements
+		return core::transform::replaceAll(mgr, replacements);
+	}
 
 
 	// --------------------------------------------------------------------------------------------------------------

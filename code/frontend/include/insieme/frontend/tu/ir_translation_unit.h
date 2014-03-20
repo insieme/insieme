@@ -146,7 +146,7 @@ namespace tu {
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
 			assert(symbol );
 			assert(definition);
-			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
+			types.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
 		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
@@ -228,6 +228,33 @@ namespace tu {
 		IRTranslationUnit toManager(core::NodeManager& manager) const;
 
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
+
+		template<typename Visitor>
+		void visitAll(Visitor& visit) const {
+
+			for(const auto& cur : types) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : functions) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : globals) {
+				visit(cur.first);
+				visit(cur.second);
+			}
+
+			for(const auto& cur : initializer) {
+				visit(cur);
+			}
+
+			for(const auto& cur : entryPoints) {
+				visit(cur);
+			}
+		}
 
 		bool isCXX() const{
 			return isCppCode;

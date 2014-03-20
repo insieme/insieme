@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -77,7 +77,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clan
 												 insieme::frontend::conversion::Converter& convFact){
 	auto builder = convFact.getIRBuilder();
 	insieme::core::ExpressionPtr retIr;
-	insieme::core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullPtrExpr));
+	insieme::core::TypePtr type = convFact.convertType(nullPtrExpr->getType());
 	assert(type->getNodeType() != insieme::core::NT_ArrayType && "C pointer type must of type array<'a,1>");
 	return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
 }
@@ -92,7 +92,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 
 	// convert the enclosing class
 	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
-	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl());
+	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 
 	// convert the captures
 	auto captureIt  = lambdaExpr->capture_init_begin();
@@ -131,7 +131,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
  * auto type
  */
 insieme::core::TypePtr Cpp11Plugin::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
-	return convFact.convertType(autoTy->getDeducedType().getTypePtr());
+	return convFact.convertType(autoTy->getDeducedType());
 }
 
 /**
@@ -147,57 +147,60 @@ insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType*
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //  Decls post visit
-core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
-	if (const clang::CXXMethodDecl* method= llvm::dyn_cast<clang::CXXMethodDecl>(decl)){
-	// we need to substitute any captured usage name by the reference to the local copy
-	// 		- retrieve the operator() (.. )  func
-	// 		- create this->_mX access for captured vars
-	// 		- substitute every usage by member access
+core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact, bool symbolic) {
+	if(!symbolic) {
+		if (const clang::CXXMethodDecl* method= llvm::dyn_cast<clang::CXXMethodDecl>(decl)){
+		// we need to substitute any captured usage name by the reference to the local copy
+		// 		- retrieve the operator() (.. )  func
+		// 		- create this->_mX access for captured vars
+		// 		- substitute every usage by member access
 
-		// if is the declaration of a lambda that has being processed before
-		auto fit = lambdaMap.find(method);
-		if (fit != lambdaMap.end()){
-			auto builder = convFact.getIRBuilder();
+			// if is the declaration of a lambda that has being processed before
+			auto fit = lambdaMap.find(method);
+			if (fit != lambdaMap.end()){
+				auto builder = convFact.getIRBuilder();
 
-			// retrieve temporal implementation
-			core::ExpressionPtr symb = convFact.getCallableExpression(method);
-			assert(symb.isa<core::LiteralPtr>());
-			core::ExpressionPtr irFunc = convFact.lookupFunctionImpl(symb);
-			assert(irFunc.isa<core::LambdaExprPtr>());
-			insieme::core::ExpressionPtr thisExpr = irFunc.as<core::LambdaExprPtr>()->getParameterList()[0];
+				// retrieve temporal implementation
+				//core::ExpressionPtr symb = expr.as<core::LiteralPtr>();
+				core::ExpressionPtr symb = convFact.getCallableExpression(method);
+				assert(symb.isa<core::LiteralPtr>());
+				core::ExpressionPtr irFunc = convFact.lookupFunctionImpl(symb);
+				assert(irFunc.isa<core::LambdaExprPtr>());
+				insieme::core::ExpressionPtr thisExpr = irFunc.as<core::LambdaExprPtr>()->getParameterList()[0];
 
-			// build replacements for captured vars
-			insieme::core::NodeMap replacements;
-			clang::LambdaExpr::capture_iterator cap_it = fit->second->capture_begin();
-			clang::LambdaExpr::capture_iterator cap_end= fit->second->capture_end();
-			unsigned id(0);
-			for (;cap_it != cap_end; ++cap_it){
-				auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
+				// build replacements for captured vars
+				insieme::core::NodeMap replacements;
+				clang::LambdaExpr::capture_iterator cap_it = fit->second->capture_begin();
+				clang::LambdaExpr::capture_iterator cap_end= fit->second->capture_end();
+				unsigned id(0);
+				for (;cap_it != cap_end; ++cap_it){
+					auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
 
-				core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
-				core::ExpressionPtr access =  builder.callExpr (var->getType(),
-														  builder.getLangBasic().getCompositeRefElem(), thisExpr,
-														  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
-				replacements[var] = access;
-				id++;
+					core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
+					core::ExpressionPtr access =  builder.callExpr (var->getType(),
+															builder.getLangBasic().getCompositeRefElem(), thisExpr,
+															builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
+					replacements[var] = access;
+					id++;
+				}
+
+				// update implementation
+				irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, false );
+				convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
+
+				// update the meta info of the class
+				core::TypePtr classType = thisExpr->getType().as<core::RefTypePtr>().getElementType();
+				core::ClassMetaInfo classInfo = core::getMetaInfo(classType);
+				const vector<core::MemberFunction>& old = classInfo.getMemberFunctions();
+				assert(old.size() ==1);
+				vector<core::MemberFunction> newFuncs;
+				newFuncs.push_back ( core::MemberFunction(old[0].getName(), irFunc, old[0].isVirtual(), old[0].isConst()) );
+				classInfo.setMemberFunctions(newFuncs);
+				core::setMetaInfo(classType, classInfo);
+
+				// clean map
+				lambdaMap.erase(method);
 			}
-
-			// update implementation
-			irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, false );
-			convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
-
-			// update the meta info of the class
-			core::TypePtr classType = thisExpr->getType().as<core::RefTypePtr>().getElementType();
-			core::ClassMetaInfo classInfo = core::getMetaInfo(classType);
-			const vector<core::MemberFunction>& old = classInfo.getMemberFunctions();
-			assert(old.size() ==1);
-			vector<core::MemberFunction> newFuncs;
-			newFuncs.push_back ( core::MemberFunction(old[0].getName(), irFunc, old[0].isVirtual(), old[0].isConst()) );
-			classInfo.setMemberFunctions(newFuncs);
-			core::setMetaInfo(classType, classInfo);
-
-			// clean map
-			lambdaMap.erase(method);
 		}
 	}
 	return nullptr;

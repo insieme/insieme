@@ -42,11 +42,16 @@
 #include "insieme/frontend/frontend.h"
 
 namespace insieme {
+
+namespace core {
+namespace pattern {
+class TreePattern;
+typedef std::shared_ptr<TreePattern> TreePatternPtr;
+}
+}
+
 namespace frontend {
 namespace ocl {
-
-namespace {
-}
 
 // enums corresponding to the flags in clCreateBuffer
 enum CreateBufferFlags {
@@ -61,14 +66,14 @@ enum CreateBufferFlags {
 
 
 struct ClMemMetaInfo {
-	ClMemMetaInfo() : size(), type(), flags(), hostPtr() {}
+	ClMemMetaInfo() : size(), type(), flags(), initExpr() {}
 	ClMemMetaInfo(core::ExpressionPtr& size, core::TypePtr& type, std::set<enum CreateBufferFlags> flags, core::ExpressionPtr& hostPtr)
-		: size(size), type(type), flags(flags), hostPtr(hostPtr) {}
+		: size(size), type(type), flags(flags), initExpr(hostPtr) {}
 
 	core::ExpressionPtr size;
 	core::TypePtr type;
 	std::set<enum CreateBufferFlags> flags;
-	core::ExpressionPtr hostPtr;
+	core::ExpressionPtr initExpr;
 };
 
 // definitions
@@ -88,20 +93,31 @@ class BufferMapper: public core::transform::CachedNodeMapping {
 class BufferReplacer {
 public:
 	BufferReplacer(core::NodePtr prog);
-private:
+	virtual ~BufferReplacer() {}
+protected:
 //	BufferMapper bufferMapper;
 	ClMemMetaMap clMemMeta;
 	insieme::utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> clMemReplacements;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> generalReplacements;
-	core::NodePtr& prog;
+	insieme::utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> declInitReplacements;
+	core::NodePtr prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
-	void collectInformation();
-	void generateReplacements();
+	void collectInformation(core::pattern::TreePatternPtr& clCreateBuffer);
+	void generateReplacements(core::TypePtr clMemTy);
+	void performReplacements();
 
 public:
-	core::NodePtr getTransformedProgram() {return prog;}
+	virtual core::NodePtr getTransformedProgram();
 };
+
+class IclBufferReplacer  : public BufferReplacer {
+public:
+	IclBufferReplacer(core::NodePtr prog);
+public:
+	virtual core::NodePtr getTransformedProgram();
+};
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

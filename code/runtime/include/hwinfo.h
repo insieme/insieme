@@ -140,10 +140,12 @@ uint32 irt_get_num_numa_nodes() {
 }
 
 uint32 irt_get_sibling_hyperthread(uint32 coreid) {
-	// should work for all sanely set up linux systems
-	if(irt_get_num_threads_per_core() > 1)
-		return coreid + irt_get_num_sockets() * irt_get_num_cores_per_socket();
-	else
+	// should work for Intel HyperThreading and sanely set up Linux systems
+	uint32 num_threads_per_core = irt_get_num_threads_per_core();
+	if(num_threads_per_core > 1) {
+		uint32 cores_total = irt_get_num_sockets() * irt_get_num_cores_per_socket();
+		return (coreid + cores_total)%(cores_total*num_threads_per_core);
+	} else
 		return coreid;
 }
 

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/cba/analysis/reaching_sync_points.h"
+#include "insieme/analysis/cba/utils/static_execution_check.h"
 
 namespace insieme {
 namespace analysis {
@@ -43,6 +44,18 @@ namespace cba {
 	const reaching_sync_points_in_analysis RSPin = registerAnalysis<reaching_sync_points_in_analysis>("RSPin");
 	const reaching_sync_points_tmp_analysis RSPtmp = registerAnalysis<reaching_sync_points_tmp_analysis>("RSPtmp");
 	const reaching_sync_points_out_analysis RSPout = registerAnalysis<reaching_sync_points_out_analysis>("RSPout");
+
+
+	namespace detail {
+
+		bool isSyncPointFree(const ExpressionPtr& expr) {
+			return !mayReachCallTo(expr, [](const NodePtr& cur) {
+				auto lit = cur.isa<ExpressionPtr>();
+				return lit && isSynchronizingFunction(lit);
+			});
+		}
+
+	}
 
 } // end namespace cba
 } // end namespace analysis

@@ -65,8 +65,8 @@
  * measurements (c.f. the cpu_time METRIC).
  */
  
-#include "instrumentation.h"
-#include "instrumentation_includes.h"
+#include "instrumentation_regions.h"
+#include "instrumentation_regions_includes.h"
 
 
 
@@ -75,13 +75,14 @@
 #endif
 
 #ifndef GROUP
-#define GROUP( NAME, VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
+#define GROUP( NAME, GLOBAL_VAR_DECLARATIONS, LOCAL_VAR_DECLARATIONS, INIT_CODE, FINALIZE_CODE, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
 #endif
 
 
 
-GROUP(cpu_time_group, , {}, {}, {}, {}, {}, {})
+GROUP(cpu_time_group, int ctg_dummy, , {}, {}, {}, {}, {}, {})
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_TIME)
 METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
 	{ wi->inst_region_data->last_cpu_time = irt_time_ticks(); }, \
 	{ wi->inst_region_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_region_data->last_cpu_time; }, \
@@ -89,7 +90,9 @@ METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGRE
 	{}, \
 	((double)1e9/irt_g_time_ticks_per_sec) \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_WALL_TIME)
 METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
 	{  }, \
 	{  }, \
@@ -97,40 +100,48 @@ METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AG
 	{ rg->aggregated_wall_time += irt_time_ticks() - rg->last_wall_time; }, \
 	((double)1e9/irt_g_time_ticks_per_sec) \
 )
+#endif
 
-GROUP(energy_group, rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
-	{ irt_get_energy_consumption(&(context->inst_region_metric_group_support_data.rapl_data)); }, \
+GROUP(energy_group, , rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, \
 	{}, \
-	{} \
+	{}, \
+	{ irt_get_energy_consumption(&(rapl_data)); }, \
+	{ irt_get_energy_consumption(&(rapl_data)); } \
 )
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_ENERGY)
 METRIC(cpu_energy,					100,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_cpu_energy = context->inst_region_metric_group_support_data.rapl_data.package; }, \
-	{ wi->inst_region_data->aggregated_cpu_energy = context->inst_region_metric_group_support_data.rapl_data.package - wi->inst_region_data->last_cpu_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_cpu_energy = rapl_data.package; }, \
+	{ rg->aggregated_cpu_energy += rapl_data.package - rg->last_cpu_energy; }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_CORES_ENERGY)
 METRIC(cores_energy,				101,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_cores_energy = context->inst_region_metric_group_support_data.rapl_data.cores; }, \
-	{ wi->inst_region_data->aggregated_cores_energy = context->inst_region_metric_group_support_data.rapl_data.cores - wi->inst_region_data->last_cores_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_cores_energy = rapl_data.cores; }, \
+	{ rg->aggregated_cores_energy += rapl_data.cores - rg->last_cores_energy; }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_MEMORY_CONTROLLER_ENERGY)
 METRIC(memory_controller_energy,	102,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
-	{ wi->inst_region_data->last_memory_controller_energy = context->inst_region_metric_group_support_data.rapl_data.mc; }, \
-	{ wi->inst_region_data->aggregated_memory_controller_energy = context->inst_region_metric_group_support_data.rapl_data.mc - wi->inst_region_data->last_memory_controller_energy; }, \
 	{}, \
 	{}, \
+	{ rg->last_memory_controller_energy = rapl_data.mc; }, \
+	{ rg->aggregated_memory_controller_energy += rapl_data.mc - rg->last_memory_controller_energy; }, \
 	1 \
 )
+#endif
 
-GROUP(socket_occupancy_group, , {}, {}, {}, {}, {}, {})
+GROUP(socket_occupancy_group, int sog_dummy, , {}, {}, {}, {}, {}, {})
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_SOCKET_OCCUPANCY)
 METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_AVG,	socket_occupancy_group,	\
 	{ wi->inst_region_data->last_socket_occupancy = 42; }, \
 	{ wi->inst_region_data->aggregated_socket_occupancy = 42; }, \
@@ -138,48 +149,75 @@ METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_
 	{}, \
 	1 \
 )
+#endif
 
-GROUP(papi_group, int32* papi_eventset; int64** papi_values, { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(); }, { irt_papi_start(); }, { irt_papi_stop(); }, {}, {})
+GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS], { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(context); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_TCM)
 METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name("PAPI_L1_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_DCM)
 METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_DCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name("PAPI_L1_DCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_DCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L2_TCM)
 METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L2_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name("PAPI_L2_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L3_TCM)
 METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L3_TCM = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name("PAPI_L3_TCM"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L3_TCM"); }, \
 	{  }, \
 	{  }, \
 	1 \
 )
+#endif
 
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_FP_OPS)
 METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_FP_OPS = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name("PAPI_FP_OPS"); }, \
+	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name(context, papi_values, "PAPI_FP_OPS"); }, \
 	{  }, \
 	{  }, \
 	1 \
 )
+#endif
+
+#undef ISOLATE_METRIC
+#undef ISOLATE_CPU_TIME
+#undef ISOLATE_WALL_TIME
+#undef ISOLATE_RAPMI_AVERAGE_POWER
+#undef ISOLATE_RAPMI_ENERGY
+#undef ISOLATE_RAPMI_TICKS
+#undef ISOLATE_CPU_ENERGY
+#undef ISOLATE_CORES_ENERGY
+#undef ISOLATE_MEMORY_CONTROLLER_ENERGY
+#undef ISOLATE_SOCKET_OCCUPANCY
+#undef ISOLATE_PAPI_L1_TCM
+#undef ISOLATE_PAPI_L1_DCM
+#undef ISOLATE_PAPI_L2_TCM
+#undef ISOLATE_PAPI_L3_TCM
+#undef ISOLATE_PAPI_FP_OPS
 
 #undef METRIC
 #undef GROUP

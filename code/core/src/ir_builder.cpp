@@ -521,6 +521,11 @@ ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }
 
+ExpressionPtr IRBuilder::zero(const TypePtr& type) const {
+	assert_true(type.isa<GenericTypePtr>()) << "Only supported for generic types - not for " << type << "\n";
+	return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
+}
+
 ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
@@ -619,12 +624,18 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// FIXME:: this might not be enough, ferdinando fix it!
 	if (type->getNodeType() == core::NT_RecType) {
-		return getZero (type.as<core::RecTypePtr>()->unroll());
+		auto tmp = getZero (type.as<core::RecTypePtr>()->unroll());
+		return core::transform::replaceNode(manager, ExpressionAddress(tmp)->getType(), type).as<ExpressionPtr>();
 	}
 
 	// FIXME: this might be a little dangerous, but at least right typed
 	if (type->getNodeType() == core::NT_ArrayType) {
 		return (undefined(type));
+	}
+
+	// for all other generic types we return a generic zero value
+	if (type.isa<GenericTypePtr>()) {
+		return zero(type);
 	}
 
 	// TODO: extend for more types
@@ -1553,14 +1564,18 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 
 
 
-StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
+ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const{
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
 	assert(staticVariable.getType().isa<RefTypePtr>());
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-	//assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
-	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, wrapLazy(initValue));
+	if (constant){
+		return callExpr(ext.getInitStaticConst(), staticVariable, initValue);
+	}
+	else{
+		return callExpr(ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+	}
 }
 
 StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
@@ -1568,14 +1583,6 @@ StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) c
 
 	return callExpr(ext.getCreateStatic(), staticVariable);
 }
-
-ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-	assert(staticVariable->getType().isa<RefTypePtr>());
-	assert(ext.isStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()));
-	return callExpr(refType(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType())), ext.getAccessStatic(), staticVariable);
-}
-
 
 
 ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {

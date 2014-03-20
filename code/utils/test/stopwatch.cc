@@ -36,7 +36,10 @@
 
 #include <gtest/gtest.h>
 
+#ifndef _GLIBCXX_USE_NANOSLEEP
 #define _GLIBCXX_USE_NANOSLEEP
+#endif
+
 #include <map>
 #include <thread>
 #include <chrono>

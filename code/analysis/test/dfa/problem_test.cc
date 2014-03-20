@@ -64,8 +64,6 @@ TEST(Problem, Variable) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	typedef std::set<VariablePtr> VarSet; 
-
     auto code = builder.parseStmt(
 		"for(int<4> i = 10 .. 50 : 1) { "
 		"	v[i+b]; "

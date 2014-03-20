@@ -21,6 +21,7 @@ endif()
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
+get_directory_property( insieme_root_dir DIRECTORY ${insieme_code_dir} PARENT_DIRECTORY )
 
 include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)
@@ -365,9 +366,9 @@ if (NOT MEMORY_CHECK_SETUP)
 	# add -all-valgrind target
 	add_custom_target(valgrind)
 
+	# mark as defined
+	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
-# mark as defined
-set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 
 

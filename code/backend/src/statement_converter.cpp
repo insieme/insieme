@@ -56,6 +56,7 @@
 #include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -290,28 +291,27 @@ namespace backend {
 		if (core::analysis::isRefType(ptr->getType())) {
 			// look up external variable declaration
 			auto fragmentManager = converter.getFragmentManager();
-			string fragmentName = "extLitDecl:" + ptr->getStringValue();
+			string fragmentName = "global:" + ptr->getStringValue();
 			auto fragment = fragmentManager->getFragment(fragmentName);
-
+				
 			// check fragment
 			if (!fragment) {
 
 				// create new declaration
 				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
+				// register fragment
+				fragmentManager->bindFragment(fragmentName, declaration);
 
 				// get type info
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
-				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Variable Declaration ----------"));
+				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Global Variable Declaration ----------"));
 				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
 
 				// add dependency to type declaration
 				declaration->addDependency(info.definition);
-
-				// register fragment
-				fragmentManager->bindFragment(fragmentName, declaration);
 
 				fragment = declaration;
 			}
@@ -376,15 +376,12 @@ namespace backend {
         // get type and create init expression
         c_ast::TypePtr type = typeInfo.rValueType;
 
-        std::cout << "\nMember is of type: " << ptr->getMember()->getNodeType() << "\n" << ptr->getMember() << "\n";
-
         auto cmgr = context.getConverter().getCNodeManager();
 
         // special handling for vector initialization (should not be turned into a struct)
         auto value = convertExpression(context, ptr->getMember());
         if (ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
         	assert(dynamic_pointer_cast<c_ast::Initializer>(value));
-        	std::cout << "Number of elements: " << static_pointer_cast<c_ast::Initializer>(value)->values.size() << "\n";
         	value = cmgr->create<c_ast::VectorInit>(
         			static_pointer_cast<c_ast::VectorInit>(
         					static_pointer_cast<c_ast::Initializer>(value)->values[0]
@@ -782,7 +779,37 @@ namespace backend {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
-		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
+		core::IRBuilder builder(ptr.getNodeManager());
+		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
+
+        // try to find refNarrow calls in the return statement
+        // those calls should be avoided because they create
+        // useless static_casts to base classes (should be done implicitly)
+		bool stopCond = true;
+		core::ExpressionPtr innerExpr = tmpRet;
+		while(stopCond) {
+            if(!innerExpr.isa<core::CallExprPtr>()) {
+                stopCond = false;
+            } else {
+                // we know that this we have a call expr
+                // but we only can handle it if it has an argument
+                if(!innerExpr.as<core::CallExprPtr>()->getArguments().size()) {
+                    stopCond = false;
+                } else {
+                    // ok, we have an argument. replace the innerExpr with the argument
+                    // to dig into the expression. Once we found the narrow, replace it
+                    // and stop the loop
+                    if(core::analysis::isCallOf(innerExpr, builder.getLangBasic().getRefNarrow())) {
+                        tmpRet = core::transform::replaceAll(ptr.getNodeManager(), tmpRet,
+                                                    innerExpr, innerExpr.as<core::CallExprPtr>()->getArgument(0)).as<core::ExpressionPtr>();
+                        stopCond = false;
+                    }
+                    innerExpr = innerExpr.as<core::CallExprPtr>()->getArgument(0);
+                }
+            }
+		}
+
+		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, tmpRet));
 	}
 
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {

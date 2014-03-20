@@ -1212,7 +1212,37 @@ namespace core {
  * compiler within gdb to print IR nodes.
  */
 
-void dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
-void dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout);
-void dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
-void dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+/**
+ * An object utilized for the printing of nodes within dump operations.
+ */
+struct IRDump : public insieme::utils::Printable {
+	// the type of the internal printing function
+	typedef std::function<std::ostream&(std::ostream&)> Printer;
+
+	IRDump(const Printer& printer, std::ostream& out)
+		: printed(false),out(out), printer(printer) {}
+
+	IRDump(IRDump&& other)
+		: printed(other.printed), out(other.out), printer(other.printer) {
+		other.printed = true;
+	}
+
+	virtual ~IRDump() {
+		// if it has not been printed so far it should be printed now
+		if (!printed) out << *this;
+	}
+	std::ostream& printTo(std::ostream& out) const {
+		printed = true;
+		return printer(out);
+	}
+private:
+	mutable bool printed;
+	std::ostream& out;
+	Printer printer;
+};
+
+IRDump dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpColor(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);

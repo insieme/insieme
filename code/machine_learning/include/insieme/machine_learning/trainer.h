@@ -235,7 +235,7 @@ public:
 		*/
 	}
 
-	~Trainer() {
+	virtual ~Trainer() {
 		delete pStmt;
 		pDatabase->Close();
 // FIXME find a way to avoid stack corruption in certain cases (-f2 -f1)

@@ -59,6 +59,7 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -325,7 +326,15 @@ namespace backend {
 
 						// add dependency to inner type
 						info->declaration->addDependency(curInfo->declaration);
-						info->definition->addRequirement(curInfo->definition);
+
+						// add dependency also to the definition if it is not closing a cycle
+						if (curInfo->definition) {
+							if (cur.isa<core::RecTypePtr>() || curInfo->definition->isDependingOn(info->definition)) {
+								info->definition->addRequirement(curInfo->definition);
+							} else {
+								info->definition->addDependency(curInfo->definition);
+							}
+						}
 
 						// add type to parameter list
 						cType->parameters.push_back(curInfo->rValueType);
@@ -560,6 +569,25 @@ namespace backend {
 				return res;
 			}
 
+			// handle const wrapper
+			auto& ext = converter.getNodeManager().getLangExtension<core::lang::ConstExtension>();
+			if (ext.isConstType(ptr)) {
+
+				// load information of nested type
+				const TypeInfo* subType = resolveInternal(ext.getWrappedConstType(ptr));
+
+				// build wrapped information for const type
+				TypeInfo* res = new TypeInfo();
+				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::CONST);
+				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::CONST);
+				res->externalType = res->rValueType;
+				res->externalize = subType->externalize;
+				res->internalize = subType->internalize;
+				res->declaration = subType->declaration;
+				res->definition = subType->definition;
+				return res;
+			}
+
 			if (ptr->getName()->getValue() == "__insieme_IntTempParam"){
 				if (core::ConcreteIntTypeParamPtr param =  ptr->getIntTypeParameter()[0].isa<core::ConcreteIntTypeParamPtr>()){
 					return type_info_utils::createInfo(manager, boost::lexical_cast<string>(param->getValue()) );
@@ -581,17 +609,19 @@ namespace backend {
 				//if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
 				switch(annotations::c::getDeclOnlyKind(ptr)) {
 					case annotations::c::DeclOnlyTag::Kind::Struct: 
-						return type_info_utils::createInfo(manager, "struct "+toString(*ptr));
-						break;
 					case annotations::c::DeclOnlyTag::Kind::Class: 
-						return type_info_utils::createInfo(manager, "class "+toString(*ptr));
-						break;
+					{
+						auto name = manager.create(toString(*ptr));
+						auto type = manager.create<c_ast::StructType>(name);
+						auto forwardDecl = manager.create<c_ast::TypeDeclaration>(type);
+						auto decl = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
+						decl->appendCode (forwardDecl);
+						return type_info_utils::createInfo(type, decl);
+					}
 					case annotations::c::DeclOnlyTag::Kind::Enum: 
 						return type_info_utils::createInfo(manager, "enum "+toString(*ptr));
-						break;
 					case annotations::c::DeclOnlyTag::Kind::Union: 
 						return type_info_utils::createInfo(manager, "union "+toString(*ptr));
-						break;
 				}
 			}
 
@@ -1051,9 +1081,24 @@ namespace backend {
 			} else if (basic.isAnyRef(elementType)) {
 				res->lValueType = subType->lValueType;
 			} else if (elementNodeType == core::NT_ArrayType) {
+
 				// if target is an array, indirection can be skipped (array is always implicitly a reference)
-				res->lValueType = subType->rValueType;
-				res->rValueType = subType->lValueType;
+				res->lValueType = subType->lValueType;
+				res->rValueType = subType->rValueType;
+
+				// special case: if ptr is a source than we have to make the element type of the array const
+				if (ptr->isSource()) {
+					assert_eq(res->lValueType, res->rValueType);		// we assume that those are equal (they should)
+					assert_true(res->lValueType.isa<c_ast::PointerTypePtr>());	// the type should also be a pointer
+
+					// get element type
+					auto elementType = res->lValueType.as<c_ast::PointerTypePtr>()->elementType;
+
+					// create new types
+					res->lValueType = c_ast::ptr(c_ast::makeConst(elementType));
+					res->rValueType = res->lValueType;
+				}
+
 			} else if (elementNodeType != core::NT_RefType) {
 				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
 				res->lValueType = subType->lValueType;
@@ -1068,7 +1113,6 @@ namespace backend {
 				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
 				res->lValueType = subType->lValueType;
 			}
-
 
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);

@@ -107,11 +107,41 @@ namespace c_ast {
 
 	// -- Code Fragments -------------------------------------------------------
 
+	CodeFragment::CodeFragment(const CodeFragment& other)
+		: dependencies(other.dependencies), requirements(other.requirements), includes(other.includes) {
+
+		// check for cyclic dependencies
+		assert_true(!any(dependencies, [&](const CodeFragmentPtr& cur)->bool { return cur->isDependingOn(this); } ))
+				<< "Cyclic dependency formed!";
+	}
+
+	CodeFragment& CodeFragment::operator=(const CodeFragment& other) {
+		dependencies = other.dependencies;
+		requirements = other.requirements;
+		includes = other.includes;
+
+		// check for cyclic dependencies
+		assert_true(!any(dependencies, [&](const CodeFragmentPtr& cur)->bool { return cur->isDependingOn(this); } ))
+				<< "Cyclic dependency formed!";
+
+		// done
+		return *this;
+	}
+
 	void CodeFragment::addDependency(const CodeFragmentPtr& fragment) {
-		// only add if it is not a null pointer and not self
-		if (fragment && this != &*fragment) {
-			dependencies.insert(fragment);
-		}
+
+		// ignore null-fragments
+		if (!fragment) return;
+
+		// also ignore self-references
+		if (this == &*fragment) return;
+
+		// check for cyclic dependencies
+		assert_false(fragment->isDependingOn(this))
+				<< "Adding dependency is closing dependency cycle!";
+
+		// add dependency
+		dependencies.insert(fragment);
 	}
 
 	bool CodeFragment::remDependency(const CodeFragmentPtr& fragment) {
@@ -123,6 +153,30 @@ namespace c_ast {
 		if (fragment && this != &*fragment) {
 			requirements.insert(fragment);
 		}
+	}
+
+	namespace {
+
+		bool isDependingOnInternal(const CodeFragment& cur, const CodeFragment& trg, std::set<const CodeFragment*>& visited) {
+
+			// if we have found it, we are done!
+			if (&cur == &trg) return true;
+
+			// check whether we have already been here
+			if (!visited.insert(&cur).second) return false;
+
+			// check if any of the 'children' is depending on the targeted fragment
+			return any(cur.getDependencies(), [&](const CodeFragmentPtr& dep)->bool {
+				return isDependingOnInternal(*dep.ptr, trg, visited);
+			});
+ 		}
+
+	}
+
+
+	bool CodeFragment::isDependingOn(const CodeFragmentPtr& fragment) {
+		std::set<const CodeFragment*> visited;
+		return isDependingOnInternal(*this, *fragment.ptr, visited);
 	}
 
 
@@ -191,21 +245,21 @@ namespace c_ast {
 		});
 
 		// test for cycles
-//		auto cycle = utils::graph::detectCycle(graph);
-//		if (!cycle.empty()) {
-//
-//			std::cout << "---------------- ERROR - CYCLIC DEPENDENCY DETECTED ------------------- \n";
-//
-//			for(const auto& cur : cycle) {
-//				std::cout << " - Begin - \n";
-//				std::cout << "Type: " << typeid(*cur).name() << "\n";
-//				std::cout << toString(*cur) << "\n";
-//				std::cout << "Includes: " << cur->getIncludes() << "\n";
-//				std::cout << " - End - \n";
-//			}
-//
-//			assert_fail();
-//		}
+		auto cycle = utils::graph::detectCycle(graph);
+		if (!cycle.empty()) {
+
+			std::cout << "---------------- ERROR - CYCLIC DEPENDENCY DETECTED ------------------- \n";
+
+			for(const auto& cur : cycle) {
+				std::cout << " - Begin - \n";
+				std::cout << "Type: " << typeid(*cur).name() << "\n";
+				std::cout << toString(*cur) << "\n";
+				std::cout << "Includes: " << cur->getIncludes() << "\n";
+				std::cout << " - End - \n";
+			}
+
+			assert_fail();
+		}
 
 		// TODO: remove this debug print
 //		std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);

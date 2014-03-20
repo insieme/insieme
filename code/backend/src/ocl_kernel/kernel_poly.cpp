@@ -77,7 +77,7 @@ namespace irg = insieme::core::pattern::generator::irg;
 ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
 	NodeMapping* cleaner;
 	NodeManager& mgr = basic.getNodeManager();
-	auto mapper = makeLambdaMapper([&builder, &mgr, &basic, &cleaner](unsigned index, const NodePtr& element)->NodePtr{
+	auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 		// stop recursion at type level
 		if (element->getNodeCategory() == NodeCategory::NC_Type) {
 			return element;

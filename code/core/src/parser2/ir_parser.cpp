@@ -1630,6 +1630,16 @@ namespace parser {
 
 			// --------------- add statement rules ---------------
 
+			// -- add Symbols --
+			g.addRule("S", rule(
+					seq(cap(id),";"),
+					[](Context& cur)->NodePtr {
+						// test whether it is a known symbol
+						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
+						return dynamic_pointer_cast<StatementPtr>(res);
+					}
+			));
+
 			// every expression is a statement (if terminated by ;)
 			g.addRule("S", rule(seq(E,";"), forward, -1));	// lower priority since less likely
 

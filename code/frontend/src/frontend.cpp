@@ -104,10 +104,14 @@ namespace frontend {
         }
 
         if(flags & OpenCL) {
-        	registerFrontendPlugin<extensions::OclHostPlugin>();
+        	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
 		}
        
-       	registerFrontendPlugin<FrontendCleanup>();
+        if(flags & icl_lib) {
+        	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
+		}
+
+      	registerFrontendPlugin<FrontendCleanup>();
 
 	    for(auto plugin : getPlugins()) {
             for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {

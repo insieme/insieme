@@ -36,64 +36,31 @@
 
 #pragma once
 
-#include "declarations.h"
+namespace insieme {
+namespace driver {
+namespace integration {
 
-#define IRT_INST_EVENT(event, group_label, event_label) event,
-typedef enum _irt_instrumentation_event {
-#include "performance_table.def"
-} irt_instrumentation_event;
-#undef IRT_INST_EVENT
+	class TestResult {
 
-#define IRT_INST_EVENT(event, group_label, event_label) event_label,
-const char* irt_g_instrumentation_event_names[] = {
-#include "performance_table.def"
-};
-#undef IRT_INST_EVENT
+		bool success;
 
-#define IRT_INST_EVENT(event, group_label, event_label) group_label,
-const char* irt_g_instrumentation_group_names[] = {
-#include "performance_table.def"
-};
-#undef IRT_INST_EVENT
+		// TODO: add time, resource usage, etc ...
 
-#define IRT_INST_EVENT(event, group_label, event_label) +1
-uint32 irt_g_inst_num_event_types = 0
-#include "performance_table.def"
-;
-#undef IRT_INST_EVENT
+	public:
 
-typedef struct _irt_instrumentation_event_data {
-	uint64 timestamp;
-	union {
-		struct {
-			uint16 event_id;
-			uint16 thread;
-			uint32 index;
-		};
-		uint64 identification;
+		TestResult(bool success = true)
+			: success(success) {}
+
+
+		bool wasSuccessfull() const {
+			return success;
+		}
+
+		operator bool() const {
+			return success;
+		}
 	};
-} irt_instrumentation_event_data;
 
-typedef struct _irt_instrumentation_event_data_table {
-	uint32 size;
-	uint32 number_of_elements;
-	irt_instrumentation_event_data* data;
-} irt_instrumentation_event_data_table;
-
-#ifdef USE_OPENCL
-
-typedef struct _irt_inst_ocl_performance_helper {
-	uint64 timestamp;
-	uint64 workitem_id;
-	uint64 event;
-	uint64 origin;
-} _irt_inst_ocl_performance_helper;
-
-typedef enum {
-	IRT_INST_OCL_QUEUED = 0,
-	IRT_INST_OCL_SUBMITTED = 1,
-	IRT_INST_OCL_STARTED = 2,
-	IRT_INST_OCL_FINISHED = 3,
-} _irt_inst_ocl_helper_events;
-
-#endif
+} // end namespace integration
+} // end namespace driver
+} // end namespace insieme

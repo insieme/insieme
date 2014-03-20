@@ -203,13 +203,11 @@ TEST(Annotation, ValueAnnotationPrint) {
 	struct unprintable {} s;
 
 	ptr->attachValue(12);
-	ptr->attachValue(string("X"));
 	ptr->attachValue(s);
 
 	EXPECT_EQ("12", toString(ptr->getAttachedValue<decltype(12)>()));
-	EXPECT_EQ("X", toString(ptr->getAttachedValue<string>()));
 
-	EXPECT_EQ("$[Value(ZN7insieme4core36Annotation_ValueAnnotationPrint_Test8TestBodyEvE11unprintable), 12, X: A]$", toString(core::printer::PrettyPrinter(ptr, core::printer::PrettyPrinter::PRINT_ANNOTATIONS)));
+	EXPECT_EQ("$[Value(ZN7insieme4core36Annotation_ValueAnnotationPrint_Test8TestBodyEvE11unprintable), 12: A]$", toString(core::printer::PrettyPrinter(ptr, core::printer::PrettyPrinter::PRINT_ANNOTATIONS)));
 }
 
 

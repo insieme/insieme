@@ -229,7 +229,7 @@ PiecewisePtr<> getCompulsoryMisses(CtxPtr<> ctx, const Scop& scop, size_t block_
 			PiecewisePtr<> comp_misses = range(map)->getCard();
 			pw += comp_misses;
 			
-		} catch (features::UndefinedSize&& ex) {
+		} catch (const features::UndefinedSize& ex) {
 			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
 				         << "' cannot be determined because of unknwon reference size";
 		}
@@ -335,7 +335,7 @@ PiecewisePtr<> getCapacityMisses(CtxPtr<> ctx, const Scop& scop, size_t block_si
 
 			pw += misses;
 			
-		} catch (features::UndefinedSize&& ex) {
+		} catch (const features::UndefinedSize& ex) {
 			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
 				         << "' cannot be determined because of unknwon reference size";
 		}
@@ -455,7 +455,7 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 
 			//avg_reuse_max += REUSE_DIST->upperBound();
 			//++num_refs;
-		//} catch (features::UndefinedSize&& ex) {
+		//} catch (const features::UndefinedSize& ex) {
 			//LOG(WARNING) << "Cache reuse distance for reference '" << *cur.first 
 						 //<< "' cannot be determined because of unknwon reference size";
 		//}

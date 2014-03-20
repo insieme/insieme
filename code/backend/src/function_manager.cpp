@@ -359,6 +359,7 @@ namespace backend {
 				// the argument needs to be wrapped into a bind
 				const core::TypePtr& retType = argType->getReturnType();
 				core::FunctionTypePtr newType = builder.functionType(argType->getParameterTypes(), retType, core::FK_CLOSURE);
+
 				newArgs[i] = builder.bindExpr(newType, bindParams, builder.callExpr(retType, newArgs[i], argList));
 
 				// note the change
@@ -468,7 +469,7 @@ namespace backend {
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj =  converter.getStmtConverter().convertExpression(context, call[0]);
 
-			// make a call to the member pointer executor binary operator 
+			// make a call to the member pointer executor binary operator
 			c_ast::ExpressionPtr funcExpr = c_ast::parenthese(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the binary operation al the n-1 tail arguments
@@ -570,7 +571,7 @@ namespace backend {
 		auto fun = bind->getCall()->getFunctionExpr();
 
 		// instantiate generic lambdas if necessary
-		if (operatorTable.find(fun) == operatorTable.end() && fun.isa<core::LambdaExprPtr>()) {
+		if (fun.isa<core::LambdaExprPtr>()) {
 
 			// extract node manager
 			auto& mgr = bind->getNodeManager();
@@ -904,6 +905,9 @@ namespace backend {
 			res->definitions->addDependency(nestedClosureInfo.definition);
 			res->definitions->addDependency(nestedClosureInfo.caller);
 
+			// finally - add a dependency to the return type definition since it is returned by value
+			res->definitions->addDependency(typeManager.getTypeInfo(call->getType()).definition);
+
 			// done
 			return res;
 		}
@@ -989,7 +993,13 @@ namespace backend {
 
 				// obtain current lambda and add lambda info
 				auto res = funInfos.insert(std::make_pair(lambda, info));
-				if(!res.second) assert(false && "Entry should not be already present!");
+
+				// if this info is new the same function has been handled while resolving the body
+				if (!res.second) {
+					// fun info was already there - delete local copy and be done
+					delete info;
+					return;
+				}
 
 				// add prototype ...
 				if (isMember) {
@@ -1097,7 +1107,7 @@ namespace backend {
 
 					// test whether argument is this (super-constructor call)
 					if (target == thisVar) {
-						return funType->getObjectType();
+ 						return funType->getObjectType();
 					}
 
 					// test whether argument is a member (member initializer)
@@ -1149,7 +1159,8 @@ namespace backend {
 
 					// check the variable
 					auto curVar = cur.as<core::VariablePtr>();
-					if (!contains(params, curVar)) {
+					//we want only parameters, but make an exception if the thisVar is used
+					if (!contains(params, curVar) && (curVar != thisVar)) {
 						parametersOnly = false;
 						return PRUNE;
 					}
@@ -1261,15 +1272,29 @@ namespace backend {
 			};
 
 			c_ast::IdentifierPtr getIdentifierFor(const Converter& converter, const core::NodePtr& node) {
-				auto mgr = converter.getCNodeManager();
 
+				auto mgr = converter.getCNodeManager();
 				switch(node->getNodeType()) {
 				case core::NT_StructType:
 				case core::NT_GenericType:
-				case core::NT_RecType:
+				case core::NT_RecType: {
+   				    auto type = converter.getTypeManager().getTypeInfo(node.as<core::TypePtr>());
+   				    if (auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
+                        return mgr->create(toString(*structType));
+                    } else if (auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
+                        return mgr->create(toString(*namedType));
+                    }
 					return mgr->create(converter.getNameManager().getName(node));
-				case core::NT_Parent:
+				}
+				case core::NT_Parent: {
+  					auto type = converter.getTypeManager().getTypeInfo(node.as<core::ParentPtr>()->getType());
+				    if (auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
+                        return mgr->create(toString(*structType));
+                    } else if (auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
+                        return mgr->create(toString(*namedType));
+                    }
 					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
+				}
 				case core::NT_NamedType:
 					return mgr->create(node.as<core::NamedTypePtr>()->getName()->getValue());
 				case core::NT_Literal:
@@ -1320,17 +1345,29 @@ namespace backend {
 				const auto& basic = thisVar->getNodeManager().getLangBasic();
 				for(const c_ast::IdentifierPtr& cur : all) {
 					for(const auto& write : firstWriteOps) {
-
 						// check whether write target is current identifier
 						core::CallExprPtr call = write.as<core::CallExprPtr>();
 						if (cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
 							// add filed assignment
 							if (core::analysis::isCallOf(call, basic.getRefAssign())) {
+
+								// avoid default inits, those will be done anyway
+								if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) ||
+									core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())){
+									continue;
+								}
+
 								c_ast::NodePtr value = converter.getStmtConverter().convertExpression(context, call[1]);
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, toVector(value)));
 							} else {
 								// otherwise it needs to be a constructor
 								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
+
+								// avoid default inits, those will be done anyway
+								if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero()) ||
+									core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getUndefined())){
+									continue;
+								}
 
 								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
 
@@ -1342,7 +1379,6 @@ namespace backend {
 								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
 								assert(initCall->getNodeType() == c_ast::NT_ConstructorCall);
 								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
-
 								// add constructor call to initializer list
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));
 							}

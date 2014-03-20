@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,7 +45,6 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-
 #include "insieme/annotations/c/include.h"
 
 #include "insieme/frontend/clang.h"
@@ -53,9 +52,11 @@
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/core/lang/enum_extension.h"
-		
+#include "insieme/core/lang/const_extension.h"
+#include "insieme/core/annotations/naming.h"
+
 namespace insieme {
-namespace frontend { 
+namespace frontend {
 namespace utils {
 
 namespace {
@@ -72,18 +73,23 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 	core::TypeList resList;
 	switch(arg->getKind()) {
 		case clang::TemplateArgument::ArgKind::Null:{
-				VLOG(2) << "ArgKind::Null not supported"; 
+				VLOG(2) << "ArgKind::Null not supported";
 				resList.insert(resList.end(),  builder.genericType("null"));
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Type:
 			{
-				const clang::Type* argType = arg->getAsType().getTypePtr();
-				resList.insert(resList.end(), convFact.convertType(argType));
+                auto type = convFact.convertType(arg->getAsType());
+                if(arg->getAsType().isConstQualified()) {
+                    if(core::GenericTypePtr ptr = type.isa<core::GenericTypePtr>()) {
+                        type = builder.getNodeManager().getLangExtension<core::lang::ConstExtension>().getConstType(type);
+                    }
+                }
+				resList.insert(resList.end(), type);
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Declaration: {
-				VLOG(2) << "ArgKind::Declaration not supported"; 
+				VLOG(2) << "ArgKind::Declaration not supported";
 				const clang::ValueDecl* decl = arg->getAsDecl ();
 				if (llvm::isa<clang::TypeDecl>(decl))
 					assert(false && "not implemented");
@@ -92,11 +98,11 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::NullPtr:{
-				VLOG(2) << "ArgKind::NullPtr not supported"; 
+				VLOG(2) << "ArgKind::NullPtr not supported";
 				resList.insert(resList.end(),  builder.genericType("nullptr"));
 				break;
 			}
-		case clang::TemplateArgument::ArgKind::Integral: 	
+		case clang::TemplateArgument::ArgKind::Integral:
 			{
 				// the idea is to generate a generic type with a intParamList where we store
 				// the value of the init expression
@@ -106,21 +112,21 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Template: {
-				VLOG(2) << "ArgKind::Template "; 
+				VLOG(2) << "ArgKind::Template ";
 				resList.insert(resList.end(), builder.genericType(arg->getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString()));
 				break;
 			 }
-				
-		case clang::TemplateArgument::ArgKind::TemplateExpansion: { 
-				VLOG(2) << "ArgKind::TemplateExpansion "; 
+
+		case clang::TemplateArgument::ArgKind::TemplateExpansion: {
+				VLOG(2) << "ArgKind::TemplateExpansion ";
 				arg->getAsTemplateOrTemplatePattern();
-				assert(false && "not implemented"); 
+				assert(false && "not implemented");
 				break;
 			}
-		case clang::TemplateArgument::ArgKind::Expression: { 	
-				VLOG(2) << "ArgKind::Expression not supported"; 
+		case clang::TemplateArgument::ArgKind::Expression: {
+				VLOG(2) << "ArgKind::Expression not supported";
 				assert ( arg->getAsExpr());
-				assert(false && "not implemented"); 
+				assert(false && "not implemented");
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Pack:
@@ -141,34 +147,32 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 
 } //end anonymous namespace
 
-insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) const{
+insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const{
 	auto builder = convFact.getIRBuilder();
 	core::TypePtr irType;
 
-	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr()) ) {
 		const clang::TagDecl* tagDecl = tagType->getDecl();
 
 		insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
 		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
 			VLOG(2) << " == intercepting template spetialization == ";
-			if (VLOG_IS_ON(2) ) type->dump();
 			const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
 			for(size_t i = 0; i<args.size(); i++) {
 				VLOG(2) << " template elem elem: " << i << " of " ;
-				if (VLOG_IS_ON(2) ) type->dump();
 
 				auto tmp = evaluateTemplatedType(&args[i], convFact);
 				typeList.insert(typeList.end(), tmp.begin(), tmp.end());
 			}
 		}
 		VLOG(2) << " ==  == ";
-		
+
 		// obtain type name
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
 
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
 			core::GenericTypePtr gt = builder.genericType(typeName);
-		
+
 			//tag the genericType used inside the enum to pass this to the backend
 			convFact.getHeaderTagger().addHeaderForDecl(gt, tagDecl, true);
 
@@ -181,17 +185,19 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 			irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
 
+        core::annotations::attachName(irType, typeName);
+
 		// add header file
 		convFact.getHeaderTagger().addHeaderForDecl(irType, tagDecl, true);
 
-	} else if( llvm::isa<clang::TypedefType>(type) ) {
+	} else if( llvm::isa<clang::TypedefType>(type.getTypePtr()) ) {
 		// don't intercept typedefs -> only sugar, we can use underlying type
 		assert(false && "typedef is sugar -- use underlying type");
 	}
 
 	//we should only call intercept if type has a typeDecl
 	assert(irType && "irType");
-		
+
 	VLOG(1) << "build interceptedType " << irType;
 	if(insieme::annotations::c::hasIncludeAttached(irType)) {
 		VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(irType);
@@ -204,15 +210,15 @@ bool Interceptor::isIntercepted(const string& name) const {
 	return regex_match(name, rx);
 }
 
-bool Interceptor::isIntercepted(const clang::Type* type) const {
+bool Interceptor::isIntercepted(const clang::QualType& type)const {
 	if(toIntercept.empty()) { return false; }
 
 	//not every clang type has a Decl
 	//cast Type and get decl
 	clang::TypeDecl* typeDecl = NULL;
-	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr()) ) {
 		typeDecl = tagType->getDecl();
-	} else if( llvm::isa<clang::TypedefType>(type) ) {
+	} else if( llvm::isa<clang::TypedefType>(type.getTypePtr()) ) {
 		// don't intercept typedefs -> only sugar, we can use underlying type
 		return false;
 	}
@@ -230,7 +236,7 @@ bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
 }
 
 insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) const {
-	
+
 	auto builder = convFact.getIRBuilder();
 	std::stringstream ss;
 	switch( decl->getTemplatedKind() ) {
@@ -264,8 +270,8 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 							std::string typeName = arg.getAsType().getAsString();
 							VLOG(2) << typeName;
 							//type has struct/class in name remove it
-							boost::replace_all(typeName, "class ", ""); 
-							boost::replace_all(typeName, "struct ", ""); 
+							boost::replace_all(typeName, "class ", "");
+							boost::replace_all(typeName, "struct ", "");
 							VLOG(2) << typeName;
 
 							templateParams.push_back(typeName);
@@ -332,7 +338,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	}
 
 
-	core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
+	core::FunctionTypePtr type = convFact.convertType( decl->getType() ).as<core::FunctionTypePtr>();
 
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
@@ -363,7 +369,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	return interceptExpr;
 }
 
-	
+
 insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const {
 	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
 	auto enumDecl = enumType->getDecl();
@@ -381,7 +387,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDec
 	VLOG(2) << fixedQualifiedName;
 
 	std::string enumConstantName = fixedQualifiedName;
-	core::TypePtr enumTy = convFact.convertType(enumType);
+	core::TypePtr enumTy = convFact.convertType(enumType->getCanonicalTypeInternal());
 	return convFact.getIRBuilder().literal(enumConstantName, enumTy);
 }
 

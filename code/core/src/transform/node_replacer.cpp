@@ -270,19 +270,20 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	IRBuilder builder;
-	const ExpressionMap& replacements;
+	ExpressionMap replacements;
 	bool limitScope;
 	const TypeRecoveryHandler& recoverTypes;
 	const TypeHandler& typeHandler;
+	const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements;
 
 	mutable NodePtr root;
 
 public:
 
-	RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope,
-			const TypeRecoveryHandler& recoverTypes, const TypeHandler& typeHandler)
+	RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope, const TypeRecoveryHandler& recoverTypes,
+			const TypeHandler& typeHandler, const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements)
 		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope),
-		  recoverTypes(recoverTypes), typeHandler(typeHandler) {}
+		  recoverTypes(recoverTypes), typeHandler(typeHandler), declInitReplacements(declInitReplacements) {}
 
 private:
 
@@ -310,6 +311,12 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+		// if one of the replaced variables has been used as init expression for another one the type may changed.
+		// In that case, update the type of the declared variable
+		DeclarationStmtPtr decl = newVarFromInit(ptr);
+		if(decl) return decl;
+
 		// check whether the element has been found
         if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(ptr)) {
 			auto pos = replacements.find(expr);
@@ -362,13 +369,55 @@ private:
 
 	NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
 		// check variable and value type
-		TypePtr varType = decl->getVariable()->getType();
-		TypePtr valType = decl->getInitialization()->getType();
+		VariablePtr var = decl->getVariable();
+		TypePtr varType = var->getType();
+		ExpressionPtr val = decl->getInitialization();
+		TypePtr valType = val->getType();
 
-		if (*varType != *valType) {
-			// if types are not matching, try to fix it using type handler
-			return typeHandler(decl);
+		// check if the new variable is in declInitReplacements
+		auto newInit = declInitReplacements.find(var);
+		if(newInit != declInitReplacements.end()) {
+			// use the provided init expression in declaration
+
+			return builder.declarationStmt(var, newInit->second);
 		}
+
+		// if type has not changed we can stop here
+		if(isSubTypeOf(valType, varType))
+			return decl;
+
+		// if types are not matching, try to fix it using type handler
+		StatementPtr handled = typeHandler(decl);
+		if(*handled != *decl)
+			return handled;
+
+		// if one of the replaced variables has been used as init expression for another one the type may changed.
+		// In that case, update the type of the declared variable
+/*		if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
+			if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
+				if(VariablePtr iVar = initCall->getArgument(0).isa<VariablePtr>()) {
+					VariablePtr replaced;
+					for_each(replacements, [&](std::pair<ExpressionPtr, ExpressionPtr> r) {
+						if(r.second == iVar) {
+							replaced = iVar;
+							return;
+						}
+					});
+
+					if(replaced) {
+						// create new variable with new type
+						VariablePtr newVar = builder.variable(initCall->getType());
+						DeclarationStmtPtr newDecl = builder.declarationStmt(newVar, val);
+						// add new variable to replacements
+						replacements[var] = newVar;
+		std::cout << "\nreplacint variable " << *var << " with " << *val << std::endl;
+						return newDecl;
+					}
+				}
+			}
+		}
+*/
+		// reaching this point, the IR will probably have semantic errors
 		return decl;
 	}
 
@@ -386,6 +435,40 @@ private:
 		return true;
 	}
 
+	DeclarationStmtPtr newVarFromInit(NodePtr ptr) {
+		DeclarationStmtPtr newDecl;
+
+		if(DeclarationStmtPtr decl = ptr.isa<DeclarationStmtPtr>()) {
+			// check variable and value type
+			ExpressionPtr val = decl->getInitialization();
+
+			if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
+				if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
+					if(VariablePtr iVar = initCall->getArgument(0).isa<VariablePtr>()) {
+						auto ding = replacements.find(iVar);
+						if(ding != replacements.end()) {
+							VariablePtr replaced = ding->second.isa<VariablePtr>();
+							ExpressionPtr newInit = builder.refVar(replaced);
+							TypePtr newType = newInit->getType();
+
+							VariablePtr var = decl->getVariable();
+							TypePtr varType = var->getType();
+							if(replaced && varType != newType) {
+								// create new variable with new type
+								VariablePtr newVar = builder.variable(newType);
+								newDecl = builder.declarationStmt(newVar, newInit);
+								// add new variable to replacements
+								replacements[var] = newVar;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return newDecl;
+	}
+
 	ExpressionPtr handleCallExpr(const CallExprPtr& call) {
 
 		// check whether it is a call to a literal
@@ -393,6 +476,37 @@ private:
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call);
 		}
+		if(manager.getLangBasic().isRefAssign(fun)) {
+			ExpressionPtr lhs = call.getArgument(0);
+			ExpressionPtr rhs = call.getArgument(1);
+
+			// some things (i.e. the OpenCL backend) replace variables with variables of the same type, wrapped in a generic wrapper type.
+			// The unwrap is inserted in a later step. To allow this procedure, this hack had to be inserted.
+			if(lhs->getType().isa<GenericTypePtr>())
+				return call;
+
+			assert(lhs->getType().isa<RefTypePtr>() && "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible");
+
+			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
+
+			if(!isSubTypeOf(rhs->getType(), lhsTy)) {
+
+				// if it's a ref.reinterpret or cast, fix type
+				if(CastExprPtr rCast = rhs.isa<CastExprPtr>())
+					return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rCast->getSubExpression()));
+				if(CallExprPtr rCall = rhs.isa<CallExprPtr>()) {
+					if(builder.getLangBasic().isRefReinterpret(rCall->getFunctionExpr())) {
+						assert(lhsTy.isa<RefTypePtr>() &&
+								"Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible");
+
+						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), lhsTy.as<RefTypePtr>()->getElementType()));
+					}
+				}
+				// else add cast
+				return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rhs));
+			}
+		}
+
 		return call;
 	}
 
@@ -597,9 +711,6 @@ private:
 
 		// test whether args contains something which changed
 		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
-/*if(call->getType()->toString().find("_cl_kernel") != string::npos)
-	std::cout << "\nARG " << call->getType() << " " << *call->getFunctionExpr() << "(" << *cur << " " << *cur->getType() << ")" << std::endl;
-*/
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
@@ -610,10 +721,7 @@ private:
 
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
-/*			if(call->getType() != newCall->getType()) {
-				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
-			}
-*/
+
 			return newCall;
 		}
 		// test whether there has been a change
@@ -664,6 +772,14 @@ private:
 
 		if(manager.getLangBasic().isRefAssign(fun)) {
 			return builder.assign(args.at(0), args.at(1));
+		}
+
+		if(manager.getLangBasic().isRefNew(fun)) {
+			return builder.refNew(args.at(0));
+		}
+
+		if(manager.getLangBasic().isRefVar(fun)) {
+			return builder.refVar(args.at(0));
 		}
 
 		// otherwise standard treatment
@@ -1188,7 +1304,7 @@ ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const Expression
 	return newExpr;
 }
 
-// functor which updates the type literal inside a call to undefined in a declareation
+// functor which updates the type literal inside a call to undefined in a declaration
 TypeHandler getVarInitUpdater(NodeManager& manager){
 	return [&](const StatementPtr& node)->StatementPtr {
 		IRBuilder builder(manager);
@@ -1235,14 +1351,15 @@ TypeHandler getVarInitUpdater(NodeManager& manager){
 
 
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const ExpressionMap& replacements,
-		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler) {
+		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler,
+		const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, recoveryHandler, typeHandler);
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, recoveryHandler, typeHandler, declInitReplacements);
 	return applyReplacer(mgr, root, mapper);
 }
 

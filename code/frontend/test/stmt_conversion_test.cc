@@ -125,7 +125,7 @@ TEST(StmtConversion, FileTest) {
 
 		} else {
 			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
-				TypePtr type = resolve(convFactory.convertType( td->getTypeForDecl() )).as<TypePtr>();
+				TypePtr type = resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )).as<TypePtr>();
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(type);

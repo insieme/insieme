@@ -355,9 +355,9 @@ private:
 
     core::ExpressionPtr resolveConvert(const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
-std::cout << "TRYing on " << name << std::endl;
+//std::cout << "TRYing on " << name << std::endl;
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
-std::cout << "Ftype: " << ftype << std::endl;
+//std::cout << "Ftype: " << ftype << std::endl;
         	if(core::VectorTypePtr retTy = dynamic_pointer_cast<const core::VectorType>(ftype->getReturnType())) {
 				// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
 				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
@@ -386,7 +386,7 @@ std::cout << "Ftype: " << ftype << std::endl;
 
 				return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
         	} else {
-std::cout << "\nCONVDERT: " << ftype->getReturnType() << " -" << builder.castExpr(ftype->getReturnType(), args.at(0)) << std::endl;
+//std::cout << "\nCONVDERT: " << ftype->getReturnType() << " -" << builder.castExpr(ftype->getReturnType(), args.at(0)) << std::endl;
         		// scalar converts are translated to a cast
         		return builder.castExpr(ftype->getReturnType(), args.at(0));
         	}
@@ -996,8 +996,8 @@ public:
                     args.push_back(kd.globalRange->getType());
                     args.push_back(kd.localRange->getType());
 
-                    // function now will return cl_int (CL_SUCCESS)
-                    newFuncType = builder.functionType(args, BASIC.getInt4());
+                    // function returns unit
+                    newFuncType = builder.functionType(args, BASIC.getUnit());
                 } else {
                     assert(funcType && "Function has unexpected type");
                 }
@@ -1140,9 +1140,6 @@ public:
                     newBodyStmts.push_back(globalPar);
                     newBodyStmts.push_back(merge);
 
-                    // always return 0 = CL_SUCCESS to meet the return value of clEnqueueNDRangeKernel
-                    newBodyStmts.push_back(builder.returnStmt(builder.intLit(0)));
-
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                     // get address spaces of variables in body
@@ -1151,8 +1148,9 @@ public:
                     // put opencl annotation to the new function for eventual future use
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
-                    if(!cName.empty())
+                    if(!cName.empty()) {
                         insieme::core::annotations::attachName(newFunc,cName);
+                    }
                     // put source location annotation to it if existent
 					if(sourceLoc) core::annotations::attachLocationGen(newFunc, sourceLoc.get());
                     // put the datarange annotation that was on the body before on the kernel function

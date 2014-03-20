@@ -224,29 +224,28 @@ int main(int argc, char** argv) {
 	// print library content
 	std::cout << "Contained Symbols:\n";
 	std::cout << "    Types:\n";
-	map<string,TypePtr> types;
 	for(auto cur : tu.getTypes()) {
-		types[cur.first->getFamilyName()] = cur.second;
-	}
-	for (auto cur : types) {
-		std::cout << "        " << cur.first;
+		std::cout << "        " << cur.first->getFamilyName();
 		if (options.printDefinitions) std::cout << " : " << *cur.second;
 		std::cout << "\n";
+
+		if (core::hasMetaInfo(cur.first)) {
+			std::cout << "        {" << cur.first->getFamilyName() << " hasMetaInfo: \n";
+			core::ClassMetaInfo info = core::getMetaInfo(cur.first);
+			std::cout << info;
+			std::cout << "}\n";
+		}
 	}
 
-//	std::cout << "    Globals:\n";
-//	for (auto cur : tu.getGlobals()) {
-//		std::cout << "        " << *cur.first << "\n";
-//	}
+	std::cout << "    Globals:\n";
+	for (auto cur : tu.getGlobals()) {
+		std::cout << "        " << *cur.first << "\n";
+	}
 
 	std::cout << "    Functions:\n";
-	map<string,LambdaExprPtr> funs;
 	for(auto cur : tu.getFunctions()) {
-		funs[cur.first->getStringValue()] = cur.second;
-	}
-	for (auto cur : funs) {
-		std::cout << "        " << cur.first;
-		if (options.printDefinitions) std::cout << " : " << *cur.second->getType();
+		std::cout << "        " << cur.first->getStringValue();
+		if (options.printDefinitions) std::cout << " : " << *cur.second;
 		std::cout << "\n";
 	}
 

@@ -89,7 +89,7 @@ namespace backend {
 			auto res = core::transform::evalLazy(manager, exprPtr);
 
 			// simplify evaluated lazy expression
-			return core::transform::simplify(manager, res);
+			return core::transform::simplify(manager, res, false);
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
@@ -409,17 +409,36 @@ namespace backend {
 		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
+		res[basic.getZero()] = OP_CONVERTER({
+			auto type = call->getType();
+			// special case: intercepted object 
+			if (type.isa<core::GenericTypePtr>()) {
+
+				// write a string witch is the whole type
+				auto cType = CONVERT_TYPE(type);
+				return c_ast::call(cType);
+			}
+			return nullptr;
+		});
 
 		res[basic.getUndefined()] = OP_CONVERTER({
 
-			// one special case: an empty struct
 			auto type = call->getType();
+
+			// 1) special case: an empty struct
 			if (const core::StructTypePtr& structType = type.isa<core::StructTypePtr>()) {
 				if (structType.empty() && structType->getParents().empty()) {
 					auto cType = CONVERT_TYPE(type);
 					auto zero = C_NODE_MANAGER->create("0");
 					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
 				}
+			}
+			// 2) special case: intercepted object 
+			if (type.isa<core::GenericTypePtr>()) {
+
+				// write a string witch is the whole type
+				auto cType = CONVERT_TYPE(type);
+				return c_ast::call(cType);
 			}
 
 			// the rest is handled like a *var(undefined(..))
@@ -436,6 +455,9 @@ namespace backend {
 
 		res[basic.getRefDeref()] = OP_CONVERTER({
 
+			// check type
+			assert_true(ARG(0)->getType().isa<core::RefTypePtr>()) << ARG(0)->getType();
+
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
 			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())) {
@@ -446,6 +468,7 @@ namespace backend {
 
 			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			assert_true(elementType) << "Unable to extract element type from: " << ARG(0)->getType();
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
 
@@ -540,7 +563,9 @@ namespace backend {
 				ADD_HEADER_FOR("malloc");
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
-				return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				auto cType = CONVERT_TYPE(resType);
+				auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+				return c_ast::cast(cType, mallocNode );
 			}
 
 			// special handling for arrays
@@ -826,6 +851,25 @@ namespace backend {
 			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
 		});
 
+		res[basic.getRefVectorToSrcArray()] = OP_CONVERTER({
+			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
+			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
+			context.getDependencies().insert(infoSrc.definition);
+
+			const TypeInfo& infoRes = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
+			context.getDependencies().insert(infoRes.definition);
+
+			// special handling for string literals
+			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					return CONVERT_ARG(0);
+				}
+			}
+
+			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
+		});
+
 		res[basic.getVectorReduction()] = OP_CONVERTER({
 			// type of the operation:
 			// (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
@@ -968,6 +1012,10 @@ namespace backend {
 
 		// -- others --
 
+		res[basic.getId()] = OP_CONVERTER({
+			return CONVERT_ARG(0);		// simply forward input argument
+		});
+
 		res[basic.getIfThenElse()] = OP_CONVERTER({
 			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1))), CONVERT_EXPR(inlineLazy(ARG(2))));
@@ -994,7 +1042,47 @@ namespace backend {
 
 		auto& ext = manager.getLangExtension<IRExtensions>();
 
-		res[ext.registerGlobal] = OP_CONVERTER({
+		res[ext.getInitGlobal()] = OP_CONVERTER({
+			static const c_ast::ExpressionPtr none;
+
+			auto global = call[0].as<core::LiteralPtr>();
+
+			// resolve the global
+			CONVERT_EXPR(global);
+
+			// now there should be a code fragment for the global
+			string fragmentName = "global:" + global->getStringValue();
+			auto fragment = dynamic_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(fragmentName));
+
+			// if there is no fragment defining it there is no point for initializing it
+			if (!fragment) {
+				return none;
+			}
+
+			// get the declaration code fragment
+			auto decl = fragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
+			assert_false(decl->external) << "Can not initialize external declaration!";
+
+			// avoid zero inits, those are implicit
+			if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) || 
+				core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())){
+				return none;
+			}
+
+			// convert init-value in fresh context, 
+			ConversionContext innerContext(context.getConverter());
+			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
+
+			// move dependencies to global var-decl fragment
+			fragment->addDependencies(innerContext.getDependencies());
+			fragment->addRequirements(innerContext.getRequirements());
+			fragment->addIncludes(innerContext.getIncludes());
+
+			// no actual code needs to be generated for this operator
+			return none;
+		});
+
+		res[ext.getRegisterGlobal()] = OP_CONVERTER({
 
 			// obtain access to global fragment
 			c_ast::CCodeFragmentPtr globals = static_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
@@ -1200,6 +1288,14 @@ namespace backend {
 					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);
 				}
+				
+				// cast needs full definition of target type to be done
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+				context.addDependency(info.definition);
+
+				// and the definition of the source type (to retrieve sub-type relations)
+				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+				context.addDependency(srcTypeInfo.definition);
 
 				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
 			});
@@ -1243,6 +1339,14 @@ namespace backend {
 					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);
 				}
+
+				// cast needs full definition of target type to be done
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+				context.addDependency(info.definition);
+
+				// and the definition of the source type (to retrieve sub-type relations)
+				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+				context.addDependency(srcTypeInfo.definition);
 
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});

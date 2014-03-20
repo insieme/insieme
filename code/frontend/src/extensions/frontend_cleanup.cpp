@@ -58,6 +58,8 @@
 
 #include <functional>
 
+#include <boost/algorithm/string/predicate.hpp>
+
  namespace insieme {
  namespace frontend {
 
@@ -201,29 +203,55 @@
 					});
 			return castRemover.map(prog);
 		}
-	} // anonymous namespace
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	//
-	void printErrors ( const core::TypePtr& obj, const core::checks::MessageList& ml , const char* msg, bool& flag){
-		if (!ml.empty()){
+		//////////////////////////////////////////////////////////////////////
+		// Superfluous code
+		// ================
+		//
+		// remove empty constructs from functions bodies, this prevents multiple implementations of the same
+		// equivalent code produced in different translation units with different macro expansions
+		// this removes empty compounds and nested compunds with single elements
+		insieme::core::NodePtr superfluousCode (const insieme::core::NodePtr& prog){
 
-			if (flag){
-				dumpPretty(obj);
-				flag = false;
-			}
+			core::IRBuilder builder (prog->getNodeManager());
+			auto noop = builder.getNoOp();
+			auto unitExpr = builder.getLangBasic().getUnitConstant();
 
-			for (unsigned i=0 ; i < ml.size(); i++){
-				std::cout << " == Sema error " << msg << "  ==== " << std::endl;
-				std::cout << " - " <<  ml[i].getErrorCode() << std::endl;
-			//	dumpPretty(ml[i].getOrigin());
+			auto clean = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+						if (core::CompoundStmtPtr cmpnd = node.isa<core::CompoundStmtPtr>()){
+							vector<core::StatementPtr> stmtList;
+							for (core::StatementPtr stmt : cmpnd->getStatements()){
+								// if not empty 
+								core::CompoundStmtPtr inCmpd = stmt.isa<core::CompoundStmtPtr>();
+								if (inCmpd && inCmpd.empty())
+									continue;
+								// if not NoOp
+								if (stmt == noop)
+									continue;
+								// no unit constant
+								if(unitExpr == stmt)
+									continue;
 
-				std::string msg = ml[i].getMessage();
-				std::cout << " msg: " << std::string(msg.begin(), (msg.length() > 80)? msg.begin()+80 : msg.end()) << std::endl;
-			}
+								// any other case, just add it to the new list
+								stmtList.push_back (stmt);
+							}
+
+							// once done, clean nested compounds with a single compound inside
+							std::function<core::CompoundStmtPtr(const std::vector<core::StatementPtr>&)> unNest =
+								[&builder, &unNest] 	(const std::vector<core::StatementPtr>& list) -> core::CompoundStmtPtr{
+									if (list.size() ==1 && list[0].isa<core::CompoundStmtPtr>())
+										return unNest(list[0].as<core::CompoundStmtPtr>()->getStatements());
+									return builder.compoundStmt(list);
+								};
+							return unNest(stmtList);
+						}
+						return node;
+					});
+			return clean.map(prog);
 		}
-	}
+
+
+	} // anonymous namespace
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -232,98 +260,96 @@
 		prog = applyCleanup(prog, longLongCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
+		prog = applyCleanup(prog, superfluousCode).as<core::ProgramPtr>();
 
-	//	core::NodeManager& nm (prog.getNodeManager());
-	//	core::IRBuilder builder (nm);
 
-	//	auto triangleThing = builder.genericType("Triangle_3");
-	//	if (core::hasMetaInfo(triangleThing)){
-	//		std::cout << "Hey: there is meta" << std::endl << std::flush;
-	//	}
-	//	else{
-	//		std::cout << " no meta at all" << std::endl << std::flush;
-	//	}
+		/////////////////////////////////////////////////////////////////////////////////////
+		//		DEBUG
+		//			some code to fish bugs
+//		core::visitDepthFirstOnce(prog, [&] (const core::NodePtr& node){
+//			if (core::StructTypePtr type = node.isa<core::StructTypePtr>()){
+//				if (boost::starts_with(toString( type), "AP(struct CGAL_Lazy_class_CGAL_Interval_nt_false_")){
+//					if (core::hasMetaInfo(type)){
+//						auto meta = core::getMetaInfo(type);
+//						std::cout << " ========= \n" << std::endl;
+//						std::cout << "CLASS: - " <<  toString(type ) << std::endl;
+//						for (auto ctor : meta.getConstructors()){
+//							dumpPretty(ctor);
+//							std::cout << "------------------" << std::endl;
+//						}
+//						std::cout << " ========= " << std::endl;
+//					}
+//				}
+//			}
+//
+//
+//			if (core::LambdaExprPtr expr = node.isa<core::LambdaExprPtr>()){
+//				core::FunctionTypePtr fty = expr->getType().as<core::FunctionTypePtr>();	
+//				if (fty->getParameterTypes().size() == 3){
+//					if (boost::starts_with(toString( fty->getParameterTypes()[0]), "AP(ref<struct CGAL_Lazy_class_struct")){
+//						dumpPretty(expr);
+//						std::cout << " ######## " << std::endl;
+//					}
+//				}
+//			}
+//		});
+//
+//	//	abort();
+//
 
-	//	if ( annotations::c::hasIncludeAttached(triangleThing) ){
-	//		std::cout << " there is an include" << std::endl << std::flush;
-	//	}
-	//	else{
-	//		std::cout << " no include at all" << std::endl << std::flush;
-	//	}
-
-	//  ///////////////////////////////////////////////////////////////
-	//  //   make independent semantic checks
-	//	core::visitDepthFirstOnce(prog, [&] (const core::TypePtr& type){
-	//			if (core::hasMetaInfo(type)){
-	//				bool dumpClass =true;
-	//				auto meta = core::getMetaInfo(type);
-
-	//				vector<core::LambdaExprPtr> ctors = meta.getConstructors();
-	//				for (auto& ctor : ctors){
-	//					auto semaErrors = core::checks::check(ctor);
-	//					printErrors (type, semaErrors, "ctor", dumpClass);
-	//				}
-
-	//				if (meta.hasDestructor()){
-	//					auto dtor = meta.getDestructor();
-	//					auto semaErrors = core::checks::check(dtor);
-	//					printErrors (type, semaErrors, "dtor", dumpClass);
-	//				}
-
-	//				vector<core::MemberFunction> members = meta.getMemberFunctions();
-	//				for (core::MemberFunction& member : members){
-	//					auto semaErrors = core::checks::check(member.getImplementation());
-	//					printErrors (type, semaErrors, "member", dumpClass);
-	//				}
-	//			}
-	//	});
 
 		return prog;
 	}
 
 
-    //used to replace all malloc and calloc calls with the correct IR expression
     insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
-        for (auto& pair : tu.getFunctions()) {
-            core::ExpressionPtr lit = pair.first;
-            core::LambdaExprPtr func = pair.second;
 
-            core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
-            assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
+		//////////////////////////////////////////////////////////////////////
+		// Malloc
+		// ==============
+    	// used to replace all malloc and calloc calls with the correct IR expression
+		{ 
+			for (auto& pair : tu.getFunctions()) {
+				core::ExpressionPtr lit = pair.first;
+				core::LambdaExprPtr func = pair.second;
 
-            core::IRBuilder builder(func->getNodeManager());
-            const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+				core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
+				assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
-            // filter to filter out the recursive transition to another called function
-            auto filter = [&func] (const core::NodePtr& node) ->bool{
-                if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()){
-                    if (call == func) return true;
-                    else return false;
-                }
-                return true;
-            };
+				core::IRBuilder builder(func->getNodeManager());
+				const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 
-            // fix all malloc and calloc calls
-			auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
-			    if(core::analysis::isCallOf(node,gen.getRefReinterpret())) {
-                    if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
-                        if (core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
-                            if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
-                                return frontend::utils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
-                            }
-                        }
-                    }
-                }
-				return node;
-			};
+				// filter to filter out the recursive transition to another called function
+				auto filter = [&func] (const core::NodePtr& node) ->bool{
+					if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()){
+						if (call == func) return true;
+						else return false;
+					}
+					return true;
+				};
 
-			// modify all returns at once!
-			auto memallocFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
-			func = memallocFixer.map(func);
+				// fix all malloc and calloc calls
+				auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
+					if(core::analysis::isCallOf(node,gen.getRefReinterpret())) {
+						if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
+							if (core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
+								if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
+									return frontend::utils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
+								}
+							}
+						}
+					}
+					return node;
+				};
 
-            //update function of translation unit
-            tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
-        }
+				// modify all returns at once!
+				auto memallocFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+				func = memallocFixer.map(func);
+
+				//update function of translation unit
+				tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
+			}
+		}
         return tu;
     }
 

@@ -37,8 +37,7 @@
 #pragma once
 
 #include "declarations.h"
-#include "performance_table.h"
-#include "instrumentation.h"
+#include "instrumentation_events.h"
 
 #include "irt_context.h"
 #include "utils/minlwt.h"

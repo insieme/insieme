@@ -37,6 +37,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
+#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -100,22 +101,6 @@ void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {
 			expr = cre->getArgument(0);
 		}
 	}
-}
-
-bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
-	// cast to void pointer
-	if (BASIC.isRefNull(expr))
-		return true;
-
-	// null literal
-	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr);
-	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : expr;
-	const LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
-	if(!!idx && idx->getValueAs<int>() == 0)
-		return true;
-
-
-	return false;
 }
 
 bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
@@ -301,7 +286,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	params.push_back(tuple);
 	StatementList body;
 
-	if(isNullPtr(arg, builder)) {
+	if(frontend::utils::isNullPtrExpression(arg)) {
 		// in this case arg is a local variable which has to be declared in host code
 		// need to read size parameter
 		ExpressionPtr size;
@@ -851,8 +836,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 
 						ExpressionPtr arg = *I;
 						// check for local memory argument
-//std::cout << "\nArg: " << arg << " " <<  isNullPtr(arg, builder) << std::endl;
-						if(isNullPtr(arg, builder)) {
+						if(frontend::utils::isNullPtrExpression(arg)) {
 							// in this case arg is a local variable which has to be declared in host code
 							// need to read size parameter
 							ExpressionPtr size;
@@ -931,6 +915,11 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 				}
 			}
 			return builder.compoundStmt(dels);
+	);
+
+	ADD_Handler(o2i, "clCreateProgram",
+			// return cl_success
+			return builder.refReinterpret(BASIC.getRefNull(), builder.arrayType(BASIC.getInt4()));
 	);
 
 	// release of kernel will be used to free the tuple holding the kernel arguments

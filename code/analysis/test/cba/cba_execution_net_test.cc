@@ -42,6 +42,7 @@
 #include "insieme/analysis/cba/framework/entities/execution_net.h"
 
 #include "insieme/utils/petri_net/petri_net_io.h"
+#include "insieme/core/ir_builder.h"
 
 #include "cba_test.inc.h"
 

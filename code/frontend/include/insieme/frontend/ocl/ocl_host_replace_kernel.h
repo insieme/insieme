@@ -81,9 +81,9 @@ class KernelCodeRetriver: public core::IRVisitor<bool> {
 	bool saveString(const core::CallExprPtr& call);
 public:
 	KernelCodeRetriver(const core::ExpressionPtr lookFor,
-			const core::NodePtr& stopAt, core::ProgramPtr prog, core::IRBuilder build) :
+			const core::NodePtr& stopAt, core::ProgramPtr prog) :
 		IRVisitor<bool> (false), pathToKernelFile(lookFor),
-				breakingStmt(stopAt), program(prog), builder(build), gen(build.getNodeManager().getLangBasic()) { }
+				breakingStmt(stopAt), program(prog), builder(prog->getNodeManager()), gen(prog->getNodeManager().getLangBasic()) { }
 	string getKernelFilePath() {
 		return path;
 	}
@@ -92,7 +92,9 @@ public:
 }
 
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > KernelTypes;
+typedef boost::unordered_map<core::ExpressionPtr, core::TypeList> KernelTypes;
+typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelFunctions;
+typedef boost::unordered_map<core::ExpressionPtr, std::set<unsigned int> > LocalMemArgs;
 
 /*
  * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
@@ -101,20 +103,36 @@ typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::TypePtr> > K
  */
 class KernelReplacer {
 public:
-	KernelReplacer(core::NodePtr prog);
-private:
+	KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs);
+	virtual ~KernelReplacer() {}
+protected:
 	core::NodePtr prog;
 	KernelNames kernelNames;
 	KernelTypes kernelTypes;
+	KernelFunctions kernelFunctions;
+	LocalMemArgs localMemArgs;
+	const std::vector<boost::filesystem::path>& includeDirs;
+	std::set<string> kernelFileCache;
 
-	void findKernelNames();
+	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
 	void collectArguments();
 	void replaceKernels();
-	void loadKernelCode();
-
+	virtual void loadKernelCode();
+	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
+	void inlineKernelCode();
+	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
+	std::vector<core::ExpressionPtr> lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 public:
-	core::NodePtr getTransformedProgram() {return prog;}
+	virtual core::NodePtr getTransformedProgram();
 };
+
+class IclKernelReplacer : public KernelReplacer {
+public:
+	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
+	virtual core::NodePtr getTransformedProgram();
+	virtual void loadKernelCode(std::vector<std::string> kernelPaths);
+};
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

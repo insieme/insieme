@@ -148,6 +148,14 @@ namespace backend {
 
 	};
 
+	/**
+	 * A generic factory function for pre-processor sequences.
+	 */
+	template<typename ... P>
+	PreProcessorPtr makePreProcessorSequence(const P& ... processors) {
+		return makePreProcessor<PreProcessingSequence>(processors...);
+	}
+
 
 	// ------- concrete pre-processing step implementations ---------
 
@@ -168,6 +176,16 @@ namespace backend {
 	public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+	/**
+	 * This pre-processor is capturing initial values for globals such that those are encoded as initial
+	 * values at the global definition instead of an assignment in the main. Initial assignments will be
+	 * dropped.
+	 */
+	class InitGlobals : public PreProcessor {
+	public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**

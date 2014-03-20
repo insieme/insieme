@@ -156,6 +156,12 @@ namespace cba {
 
 	};
 
+	namespace detail {
+
+		bool isAssignmentFree(const NodePtr& code);
+
+	}
+
 	template<typename Context>
 	class KilledDefsOutConstraintGenerator
 		: public BasicOutConstraintGenerator<
@@ -189,6 +195,14 @@ namespace cba {
 
 				auto KD_out = cba.getSet(KDout, loc.getAddress(), ctxt, loc);
 				constraints.add(elem(iset<Definition<Context>>::empty(), KD_out));
+				return;
+			}
+
+			// if the current expression is assignment free we can skip the inner part
+			if (detail::isAssignmentFree(addr)) {
+				auto KD_in  = cba.getSet( KDin, addr.as<StatementAddress>(), ctxt, loc);
+				auto KD_out = cba.getSet(KDout, addr.as<StatementAddress>(), ctxt, loc);
+				constraints.add(subset(KD_in, KD_out));
 				return;
 			}
 

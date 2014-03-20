@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,6 +71,11 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
 	return dyn_cast<const ExpectedTy>(expr);
 }
 
+/**
+ * this function is used when we want to use the REMOVE_SYMBOLS macro from
+ * external files. Used when inserting templated functions into the meta info.
+ */
+std::string removeSymbols(std::string& s);
 
 /**
  * we build a complete name for the class,
@@ -78,7 +83,7 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
  * the record provides que qualified name, the type the spetialization for the type
  * we merge both strings in a safe string for the output
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type);
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type);
 
 /**
  * build a string to identify a function
@@ -94,6 +99,10 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
  */
 std::string buildNameForVariable (const clang::VarDecl* varDecl);
 
+
+
+std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm);
+
 /**
  * build names for enumerations. anonymous enumerations need a special naming,
  * otherwise multiple anon. enumerations cannot be distinguished anymore.
@@ -103,7 +112,7 @@ std::string buildNameForVariable (const clang::VarDecl* varDecl);
 std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) ;
 
 /**
- * build names for enumeration constants. 
+ * build names for enumeration constants.
  * anonymous enumerationconstant will fail!
  * @param ecd enumConstantDecl pointer
  * @return name for enumeration

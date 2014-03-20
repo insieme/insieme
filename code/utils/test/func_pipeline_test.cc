@@ -216,7 +216,7 @@ TEST(FunctionPipeline2, Basic) {
 TEST(FunctionPipeline2, Reduction) {
 
 	typedef square<int> SQ;
-	typedef std::plus<int> SUM;
+	//typedef std::plus<int> SUM;
 	SQ g;
 	
 	auto p1 = pipeline::makeReduction( std::plus<int>(), g, g );

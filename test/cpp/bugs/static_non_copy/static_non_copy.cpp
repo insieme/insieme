@@ -4,13 +4,12 @@ class Obj{
 
 	int val;
 
-	Obj(const Obj& obj){
-	}
-	Obj operator=(const Obj& obj){
-	}
+	Obj(const Obj& obj) = delete;
+	Obj operator=(const Obj& obj) = delete;
 
 public:
-	Obj(): val(0){
+	Obj(): val(13){
+		std::cout << "ctor" << std::endl;
 	}
 
 	int getVal(){

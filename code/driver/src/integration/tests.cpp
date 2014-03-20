@@ -86,6 +86,41 @@ namespace integration {
 
 	namespace {
 
+		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
+
+			Properties res;
+
+			// if it is the root we are done
+			if (dir.empty()) return res;
+
+			// the directory should be absolute
+			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
+
+			// load configuration of parent directory
+			res = loadProperties(dir.parent_path(), configFileName);
+
+			// check whether there is a config file
+			auto file = dir / configFileName;
+
+			if (fs::exists(file)) {
+
+				// try loading file
+				fs::ifstream in(file);
+				if (in.is_open()) {
+					// load local configuration
+					res <<= Properties::load(in);
+				} else {
+					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
+				}
+
+			}
+
+			// done
+			return res;
+		}
+
+
+
 		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "") {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
@@ -115,15 +150,22 @@ namespace integration {
 			vector<string> testCases;
 
 			string testCase ;
-			while ( getline(configFile, testCase) ) {  
-				std::remove(testCase.begin(), testCase.end(), ' ');
-				if (!testCase.empty() && testCase[0] != '#' && fs::is_directory(testDir / testCase)) {
+			while ( getline(configFile, testCase) ) {
+				// remove any comments
+				testCase = testCase.substr(0,testCase.find("#",0));
+				// trim
+				testCase.erase(0, testCase.find_first_not_of(" "));
+				testCase.erase(testCase.find_last_not_of(" ")+1);
+
+				if (!testCase.empty() && fs::is_directory(testDir / testCase)) {
 
 					testCases.push_back(testCase);
 				}
 			}
 			configFile.close();
 
+			// load global properties (from current working directory)
+			Properties global = loadProperties(fs::current_path(), "integration_test_config");
 
 			// load individual test cases
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
@@ -134,7 +176,7 @@ namespace integration {
 				bool enableCXX11 = false;
 
 				// check test case directory
-				const fs::path testCaseDir = testDir / cur;
+				const fs::path testCaseDir = fs::canonical(fs::absolute(testDir / cur));
 				if (!fs::exists(testCaseDir)) {
 					LOG(WARNING) << "Directory for test case " + cur + " not found!";
 					continue;
@@ -275,9 +317,11 @@ namespace integration {
 					inputs.close();
 				}
 
+				// load properties
+				Properties prop = global << loadProperties(testCaseDir);
 
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags));
+				res.push_back(IntegrationTestCase(prefix + cur, testCaseDir, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags, prop));
 			}
 
 			return res;
@@ -315,6 +359,45 @@ namespace integration {
 		}
 		// no such test case present
 		return IntegrationTestCaseOpt();
+	}
+
+	namespace {
+
+		bool isParentOf(const fs::path& parent, const fs::path& child) {
+			assert(parent.is_absolute());
+			assert(child.is_absolute());
+
+			// if it is the same => done
+			if (parent == child) return true;
+
+			// if child is empty => terminate
+			if (child.empty()) return false;
+
+			// go one more step
+			return isParentOf(parent, child.parent_path());
+		}
+
+	}
+
+	vector<IntegrationTestCase> getTestSuite(const string& path) {
+
+		// load list of test cases
+		const vector<IntegrationTestCase>& cases = getAllCases();
+
+		// convert the path into an absolute path
+		frontend::path absolute_path = fs::canonical(fs::absolute(path));
+
+		// search for case with given name
+		vector<IntegrationTestCase> res;
+		for(const auto& cur : cases) {
+			// check the directory
+			if (isParentOf(absolute_path, cur.getDirectory())) {
+				res.push_back(cur);
+			}
+		}
+
+		// return list of results
+		return res;
 	}
 
 

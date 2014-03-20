@@ -240,6 +240,9 @@ namespace core {
 		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
 
+		// Build zero values
+		ExpressionPtr zero(const TypePtr& type) const;
+
 		/**
 		 * A factory method for intTypeParam literals.
 		 */
@@ -662,13 +665,9 @@ namespace core {
 		// --------------------- static variables ----------------------
 
 
-		StatementPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const;
+		ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant= false) const;
 
 		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
-
-		ExpressionPtr accessStatic(const LiteralPtr& staticVariable) const;
-
-
 
 		// --------------------------- C++ -----------------------------
 

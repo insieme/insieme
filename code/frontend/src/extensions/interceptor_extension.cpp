@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -43,6 +43,20 @@ namespace frontend {
 namespace extensions {
 
 	insieme::core::ExpressionPtr InterceptorPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+
+		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
+			auto ctorDecl = ctorExpr->getConstructor ();
+			if (getInterceptor().isIntercepted(ctorDecl)){
+				if (ctorDecl->isDefaultConstructor ()){
+					core::TypePtr classTy = convFact.convertType(ctorExpr->getType());
+					if(classTy->getNodeType() == core::NT_RefType) {
+						classTy = classTy.as<core::RefTypePtr>()->getElementType();
+					}
+					return	convFact.getIRBuilder().zero(classTy);
+				}
+			}
+		}
+
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
 
 			if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl()) ) {
@@ -55,7 +69,7 @@ namespace extensions {
 
 			if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl() ) ) {
 				const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-				if( getInterceptor().isIntercepted(enumType) ) {
+				if( getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal()) ) {
 					/*core::TypePtr enumTy = convFact.convertType(enumType);
 					auto enumDecl = enumType->getDecl();
 					std::string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
@@ -80,7 +94,7 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact) {
+    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         // check whether function should be intercected
         if( getInterceptor().isIntercepted(funcDecl) ) {
             auto irExpr = getInterceptor().intercept(funcDecl, convFact);
@@ -90,10 +104,9 @@ namespace extensions {
     	return nullptr;
 	}
 
-    core::TypePtr InterceptorPlugin::Visit(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
+    core::TypePtr InterceptorPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 		if(getInterceptor().isIntercepted(type)) {
 			VLOG(2) << "interceptorplugin\n";
-			VLOG(2) << type << " isIntercepted";
 			auto res = getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;
@@ -104,50 +117,51 @@ namespace extensions {
     core::ExpressionPtr InterceptorPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
 
-			//for Converter::lookUpVariable
-			if( varDecl->hasGlobalStorage()
-				&& getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			if (getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 
-				//we expect globals to be literals -- get the "standard IR"which we need to change
-				core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
-				assert(globalLit);
-				VLOG(2) << globalLit;
+				if( varDecl->hasGlobalStorage()){
 
-				auto globals = convFact.getIRTranslationUnit().getGlobals();
+					//we expect globals to be literals -- get the "standard IR"which we need to change
+					core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
+					assert(globalLit);
+					VLOG(2) << globalLit;
 
-				//varDecl in the cache has "name" we need "qualifiedName"
-				auto name = varDecl->getQualifiedNameAsString();
-				auto replacement = convFact.getIRBuilder().literal(name,globalLit->getType());
+					auto globals = convFact.getIRTranslationUnit().getGlobals();
 
-				//migrate possible annotations
-				core::transform::utils::migrateAnnotations(globalLit, replacement);
+					//varDecl in the cache has "name" we need "qualifiedName"
+					auto name = varDecl->getQualifiedNameAsString();
+					auto replacement = convFact.getIRBuilder().literal(name,globalLit->getType());
 
-				//standard way only add nonstaticlocal and nonexternal to the globals
-				if( !varDecl->isStaticLocal() && !varDecl->hasExternalStorage() ) {
-					auto git = std::find_if(globals.begin(), globals.end(),
-							[&](const insieme::frontend::tu::IRTranslationUnit::Global& cur)->bool {
-								return *globalLit == *cur.first;
-							});
-					assert(git != globals.end() && "only remove the intercepted globals which were added in the standard way");
-					if (varDecl->isStaticDataMember()) {
-						//remove varDecl from TU -- as they are declared by the intercepted party
-						if( git != globals.end() ) {
-							globals.erase(git);
-							VLOG(2) << "removed from TU.globals";
-						}
-					} else {
-						// replace in TU the "wrong" literal with the "simple" name with the qualified name
-						if( git != globals.end() ) {
-							git->first = replacement;
-							VLOG(2) << "replaced in TU.globals";
+					//migrate possible annotations
+					core::transform::utils::migrateAnnotations(globalLit, replacement);
+
+					//standard way only add nonstaticlocal and nonexternal to the globals
+					if( !varDecl->isStaticLocal() && !varDecl->hasExternalStorage() ) {
+						auto git = std::find_if(globals.begin(), globals.end(),
+								[&](const insieme::frontend::tu::IRTranslationUnit::Global& cur)->bool {
+									return *globalLit == *cur.first;
+								});
+						assert(git != globals.end() && "only remove the intercepted globals which were added in the standard way");
+						if (varDecl->isStaticDataMember()) {
+							//remove varDecl from TU -- as they are declared by the intercepted party
+							if( git != globals.end() ) {
+								globals.erase(git);
+								VLOG(2) << "removed from TU.globals";
+							}
+						} else {
+							// replace in TU the "wrong" literal with the "simple" name with the qualified name
+							if( git != globals.end() ) {
+								git->first = replacement;
+								VLOG(2) << "replaced in TU.globals";
+							}
 						}
 					}
-				}
 
-				//replace the current var with the changed one
-				convFact.addToVarDeclMap(varDecl,replacement);
-				VLOG(2) << "changed from " << globalLit << " to " << replacement;
-				VLOG(2) << convFact.lookUpVariable(varDecl);
+					//replace the current var with the changed one
+					convFact.addToVarDeclMap(varDecl,replacement);
+					VLOG(2) << "changed from " << globalLit << " to " << replacement;
+					VLOG(2) << convFact.lookUpVariable(varDecl);
+				}
 			}
 		}
         return nullptr;

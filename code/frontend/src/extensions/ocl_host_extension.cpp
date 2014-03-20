@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/utils/error_report.h"
@@ -54,7 +56,7 @@ namespace extensions {
 using namespace insieme::core;
 using namespace insieme::frontend::ocl;
 
-OclHostPlugin::OclHostPlugin() {
+OclHostPlugin::OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs)  : includeDirs(includeDirs) {
 
 }
 
@@ -62,21 +64,42 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
-	ocl::KernelReplacer kr(root);
+	ocl::KernelReplacer kr(root, includeDirs);
 	root = kr.getTransformedProgram();
 
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
-	ocl::TypeFixer otf;
-	root = otf.mapElement(0, root);
+	ocl::TypeFixer otf(root);
+	root = otf.getTransformedProg();
+
+	VariableMap nada;
+	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
 
 	core::IRBuilder builder(prog->getNodeManager());
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-//std::cout << printer::PrettyPrinter(root) << std::endl;
 
+//std::cout << printer::PrettyPrinter(root) << std::endl;
+	prog = builder.program(list);
+
+	return prog;
+}
+
+core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	ocl::IclBufferReplacer br(prog->getElement(0));
+	core::NodePtr root = br.getTransformedProgram();
+
+	ocl::IclKernelReplacer kr(root, includeDirs);
+	root = kr.getTransformedProgram();
+
+	core::IRBuilder builder(prog->getNodeManager());
+	core::ExpressionList list;
+	list.push_back(root.as<core::ExpressionPtr>());
+
+
+//std::cout << printer::PrettyPrinter(root) << std::endl;
 //	prog = builder.program(list);
 
 	return prog;

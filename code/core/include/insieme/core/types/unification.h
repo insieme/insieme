@@ -96,11 +96,6 @@ SubstitutionOpt unifyAll(NodeManager& manager, const ContainerA& listA, const Co
 	return unifyAll(manager, list);
 }
 
-template<typename Container>
-SubstitutionOpt unifyAll(NodeManager& manager, const Container& list) {
-	return unifyRange(manager, list.begin(), list.end());
-}
-
 template<typename Iterator>
 SubstitutionOpt unifyRange(NodeManager& manager, Iterator begin, Iterator end) {
 
@@ -124,6 +119,11 @@ SubstitutionOpt unifyRange(NodeManager& manager, Iterator begin, Iterator end) {
 
 	// return result
 	return res;
+}
+
+template<typename Container>
+SubstitutionOpt unifyAll(NodeManager& manager, const Container& list) {
+	return unifyRange(manager, list.begin(), list.end());
 }
 
 /**

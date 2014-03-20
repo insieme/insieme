@@ -46,6 +46,7 @@
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
 
@@ -128,7 +129,7 @@ namespace {
 		 */
 		bool test(const TypePtr& type) {
 			TypeVariableSet boundVars;
-			return visit(type, boundVars);
+			return this->visit(type, boundVars);
 		}
 
 	private:
@@ -141,20 +142,20 @@ namespace {
 		}
 
 		bool visitRefType(const RefTypePtr& type, TypeVariableSet& boundVars) {
-			return visit(type->getElementType(), boundVars);
+			return this->visit(type->getElementType(), boundVars);
 		}
 
 		bool visitFunctionType(const FunctionTypePtr& funType, TypeVariableSet& boundVars) {
-			return any(funType->getParameterTypes(), [&](const TypePtr& type) { return visit(type, boundVars); }) ||
-					visit(funType->getReturnType(), boundVars);
+			return any(funType->getParameterTypes(), [&](const TypePtr& type) { return this->visit(type, boundVars); }) ||
+					this->visit(funType->getReturnType(), boundVars);
 		}
 
 		bool visitNamedCompositeType(const NamedCompositeTypePtr& type, TypeVariableSet& boundVars) {
-			return any(type->getElements(), [&](const NamedTypePtr& element) { return visit(element->getType(), boundVars); });
+			return any(type->getElements(), [&](const NamedTypePtr& element) { return this->visit(element->getType(), boundVars); });
 		}
 
 		bool visitTupleType(const TupleTypePtr& tuple, TypeVariableSet& boundVars) {
-			return any(tuple->getElements(), [&](const TypePtr& type) { return visit(type, boundVars); });
+			return any(tuple->getElements(), [&](const TypePtr& type) { return this->visit(type, boundVars); });
 		}
 
 		bool visitGenericType(const GenericTypePtr& type, TypeVariableSet& boundVars) {
@@ -162,11 +163,11 @@ namespace {
 			return
 				any(
 					type->getTypeParameter()->getTypes(),
-					[&](const TypePtr& type) { return visit(type, boundVars); }
+					[&](const TypePtr& type) { return this->visit(type, boundVars); }
 				) ||
 				any(
 					type->getIntTypeParameter()->getParameters(),
-					[&](const IntTypeParamPtr& param) { return visit(param, boundVars); }
+					[&](const IntTypeParamPtr& param) { return this->visit(param, boundVars); }
 				);
 		}
 
@@ -177,11 +178,11 @@ namespace {
 			}
 
 			// check types within recursive bindings
-			return any(recType->getDefinition(), [&](const RecTypeBindingPtr& binding) { return visit(binding->getType(), local); });
+			return any(recType->getDefinition(), [&](const RecTypeBindingPtr& binding) { return this->visit(binding->getType(), local); });
 		}
 
 		bool visitType(const TypePtr& type, TypeVariableSet& boundVars) {
-			return any(type->getChildList(), [&](const NodePtr& node) { return visit(node, boundVars); });
+			return any(type->getChildList(), [&](const NodePtr& node) { return this->visit(node, boundVars); });
 		}
 
 
@@ -376,7 +377,7 @@ namespace {
 			ResultSet free;
 
 			// run visit
-			visit(root, bound, free);
+			this->visit(root, bound, free);
 
 			// return result set
 			return free;
@@ -389,7 +390,7 @@ namespace {
 			if (node->getNodeCategory() == NC_Type) return;
 
 			// visit all sub-nodes
-			visitAll(node->getChildList(), bound, free);
+			this->visitAll(node->getChildList(), bound, free);
 		}
 
 		void visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl, VariableSet& bound, ResultSet& free) {
@@ -397,7 +398,7 @@ namespace {
 			bound.insert(decl->getVariable());
 
 			// then visit the defining expression
-			visit(decl->getInitialization(), bound, free);
+			this->visit(decl->getInitialization(), bound, free);
 		}
 
 		void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
@@ -505,7 +506,7 @@ namespace {
 			} );
 
 			// add free variables encountered within call target
-			visit(bindExpr->getCall()->getFunctionExpr(), bound, free);
+			this->visit(bindExpr->getCall()->getFunctionExpr(), bound, free);
 		}
 	};
 

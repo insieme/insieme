@@ -94,18 +94,19 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	});
 
 	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size()) << errors;
+	EXPECT_EQ(0u, errors.size()) ;
+
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-		core::NodeAddress address = cur.getAddress();
-		core::NodePtr context = address.getParentNode(address.getDepth()-1);
-		std::cout << "\t Context: " <<
-		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
+		std::cout << cur << std::endl;
+//		core::NodeAddress address = cur.getAddress();
+//		core::NodePtr context = address.getParentNode(address.getDepth()-1);
+//		std::cout << "\t Context: " <<
+//		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
 	});
 
 	// check for the kernel's datarange pragma
-	size_t cnt = 0;
+/*	size_t cnt = 0;
 	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
 		if(node->hasAnnotation(annot::DataRangeAnnotation::KEY)) {
 			++cnt;
@@ -113,10 +114,10 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 		}
 	});
 
-//	visitDepthFirstOnce(program, lookForAnnot);
+	visitDepthFirstOnce(program, lookForAnnot);
 
-//	EXPECT_EQ(1u, cnt);
-
+	EXPECT_EQ(1u, cnt);
+*/
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
@@ -132,16 +133,13 @@ TEST(OclHostCompilerTest, VecAddTest) {
 //	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 //	job.addIncludeDirectory(CLANG_SRC_DIR "../../backend/test/ocl_kernel");
 //	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
+//	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
 //
-//	job.setOption(fe::ConversionJob::OpenCL);
+//	job.setOption(fe::ConversionJob::icl_lib);
 //
 //	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
 //	core::ProgramPtr program = job.execute(manager);
 //	LOG(INFO) << "Done.";
-//
-//	LOG(INFO) << "Starting OpenCL host code transformations";
-//	fe::ocl::HostCompiler hc(program, job);
-//	hc.compile();
 //
 //	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 //
@@ -155,7 +153,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 //	for (const core::checks::Message& cur : errors){
 //
 //		std::cout << cur << std::endl;
-//		core::NodeAddress address = cur.getAddress();
+///*		core::NodeAddress address = cur.getAddress();
 //		core::NodePtr context = address.getParentNode(address.getDepth()-1);
 //		std::cout << "\t Context: " <<
 //			insieme::core::printer::PrettyPrinter(context,
@@ -163,6 +161,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 //
 //		std::cout << "=============================" << std::endl;
 //		dumpPretty(context);
+//*/
 //	}
 
 }

@@ -144,7 +144,7 @@ struct check_compability<Last> {
  *
  * @ingroup g_util_tuple
  */
-template < uint S, uint N>
+template < unsigned S, unsigned N>
 struct apply_func
 {
   template < typename Func, typename... ArgsT, typename... Args >
@@ -167,8 +167,8 @@ struct apply_func
  *
  * @ingroup g_util_tuple
  */
-template <uint S>
-struct apply_func<S,0>
+template <unsigned S>
+struct apply_func<S,0u>
 {
   template < typename Func, typename... ArgsT, typename... Args >
   static typename lambda_traits<Func>::result_type applyTuple( const Func& f,
@@ -186,7 +186,7 @@ struct apply_func<S,0>
  */
 // Actual apply function
 template < unsigned Start, typename Func, typename... ArgsT>
- typename lambda_traits<Func>::result_type applyTuple( const Func& f, std::tuple<ArgsT...> const& t )
+ typename lambda_traits<Func>::result_type applyTuple( const Func& f, const std::tuple<ArgsT...>& t )
 {
    return apply_func<Start, 
 	   		size_of<typename lambda_traits<Func>::argument_types>::value
@@ -277,27 +277,32 @@ struct Reduction<Op,F1,F2,
 
 	typedef typename lambda_traits<F1>::argument_types f1_args;
 	typedef typename lambda_traits<F2>::argument_types f2_args;
+	typedef typename lambda_traits<F1>::result_type f1_res;
+	typedef typename lambda_traits<F2>::result_type f2_res;
 	typedef typename concat<f1_args,f2_args>::type argument_types;
 
 	Reduction(const Op& op, const F1& f1, const F2& f2) : tup( std::make_tuple(op,f1,f2) ) { }
 
 	template <class... Args>
-	result_type operator()(const Args&... args) const { 
-		auto tArg = std::tie(args...);
+	result_type operator()(const Args&... args) const {
 
-		auto lhsH = std::async([&](void) { return impl::applyTuple<0>( std::get<1>(tup), tArg ); });
-		auto rhsH = std::async([&](void) { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); });
-
-		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
+		return (*this)(std::tie(args...));
 	}
 
 	template <class... Args>
 	result_type operator()(const std::tuple<Args...>& tArg) const { 
 
-		auto lhsH = std::async([&](void) { return impl::applyTuple<0>( std::get<1>(tup), tArg ); });
-		auto rhsH = std::async([&](void) { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); });
+		// Note: this is the sequential version (working with GCC 4.7)
+		auto a = [&]()->f1_res { return impl::applyTuple<0>( std::get<1>(tup), tArg ); };
+		auto b = [&]()->f2_res { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); };
 
-		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
+		return std::get<0>(tup)(a(), b());
+
+		// the parallel version for other GCC versions - but parallelism isn't that important here
+//		auto lhsH = std::async([&](void)->f1_res { return impl::applyTuple<0>( std::get<1>(tup), tArg ); });
+//		auto rhsH = std::async([&](void)->f2_res { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); });
+//
+//		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
 	}
 
 private:

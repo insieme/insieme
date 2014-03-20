@@ -195,7 +195,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		// Try to convert the expression as a piecewise
 		return extractFrom(iterVec, arithmetic::toPiecewise(expr), trg, ct);
 
-	}catch( NotAPiecewiseException&& e ) {
+	}catch(const NotAPiecewiseException& e ) {
 
 		CallExprPtr callExpr;
 		int coeff;
@@ -389,9 +389,9 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 		IterationVector it;
 		expr->addAnnotation( std::make_shared<AccessFunction>( it, AffineFunction(it, expr)) );
 		return it;
-	} catch(NotAffineExpr&& e) { 
+	} catch(const NotAffineExpr& e) {
 		RETHROW_EXCEPTION(NotASCoP, e, "Array access expression is not affine", expr);
-	} catch(arithmetic::NotAFormulaException&& e) {
+	} catch(const arithmetic::NotAFormulaException& e) {
 		RETHROW_EXCEPTION(NotASCoP, e, "Array access expression is not a valid formula", e.getCause());
 	}	 
 }
@@ -465,7 +465,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VLOG(1) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
 				}
 
-			} catch (NotASCoP&& ex) {
+			} catch (const NotASCoP& ex) {
 				RETHROW_EXCEPTION(NotASCoP, ex, "", cur->getBaseExpression() ); 
 			}
 		});
@@ -623,7 +623,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the then body
 			saveThen = visitStmt(thenAddr);
-		} catch (NotASCoP&& e) { 
+		} catch (const NotASCoP& e) {
 			isThenSCOP = false; 
 			ex = std::make_shared<NotASCoP>(e);
 		}
@@ -635,7 +635,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the else body
 			saveElse = visitStmt(elseAddr);
-		} catch (NotASCoP&& e) { 
+		} catch (const NotASCoP& e) {
 			isElseSCOP = false; 
 			ex = std::make_shared<NotASCoP>(e);
 		}
@@ -726,9 +726,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		typedef std::vector<SwitchCasePtr> CaseList;
-		typedef std::vector<IterationVector> IterationVectorList;
-
 		IterationVector ret;
 		
 		bool isSCoP = true;
@@ -772,10 +769,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// Add this statement to the subScops
 				scops.push_back( SubScop(stmtAddr, caseCons) );
 
-			} catch (arithmetic::NotAFormulaException&& e) { 
+			} catch (const arithmetic::NotAFormulaException& e) {
 				isSCoP = false; 
 				ex = std::make_shared<const arithmetic::NotAFormulaException>(e);
-			} catch (NotASCoP&& e) { 
+			} catch (const NotASCoP& e) {
 				isSCoP = false; 
 				ex = std::make_shared<const NotASCoP>(e);
 			}
@@ -795,7 +792,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 				ret = merge(ret, iv);
 				scops.push_back( SubScop(defAddr, defaultCons) );
-			} catch (NotASCoP&& e) { 
+			} catch (const NotASCoP& e) {
 				isSCoP = false; 
 				ex = std::make_shared<const NotASCoP>(e);
 			}
@@ -905,12 +902,12 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// add this statement as a subscop
 				subScops.push_back(forStmt);
 			
-			} catch (NotAffineExpr&& e) { 
+			} catch (const NotAffineExpr& e) {
 				// one of the expressions are not affine constraints, therefore we set this loop to be a
 				// non ScopRegion
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
-			} catch(arithmetic::NotAFormulaException&& e) {
+			} catch(const arithmetic::NotAFormulaException& e) {
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode()); 
 			}	 
 			
@@ -975,7 +972,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				ret = merge(ret, visitStmt( nodeAddr ));
 				// copy the sub spawned scops 
 				std::copy(subScops.begin(), subScops.end(), std::back_inserter(scops));
-			} catch(NotASCoP&& e) { 
+			} catch(const NotASCoP& e) {
 				isSCOP = false; 
 				if (!cause) {
 					cause = std::make_shared<NotASCoP>(e);
@@ -1176,7 +1173,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				visit( addr ); 
 				assert( subScops.size() == 1 );
 				postProcessSCoP( subScops.front(), scopList );
-			} catch(NotASCoP&& e) { 
+			} catch(const NotASCoP& e) {
 				subScops.empty(); 
 				VLOG(1) << e.what(); 
 			}
@@ -1271,7 +1268,7 @@ bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		detectInvalidSCoPs(iterVec, scop);
 		scopList.push_back( scop );
 
-	} catch( DiscardSCoPException e ) { 
+	} catch(const DiscardSCoPException& e ) {
 		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
@@ -1407,10 +1404,10 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 						type
 					) );
 
-		} catch (arithmetic::NotAFormulaException&& e) { 
+		} catch (const arithmetic::NotAFormulaException& e) {
 			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", e.getCause()); 
 
-		} catch (NotAffineExpr&& e) { 
+		} catch (const NotAffineExpr& e) {
 			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", cond);
 		}
 	}
@@ -1775,7 +1772,7 @@ AddressList mark(const core::NodePtr& root) {
 		if (root->hasAnnotation(ScopRegion::KEY)) {
 			ret.push_back( NodeAddress(root) );
 		}
-	} catch (NotASCoP&& e) {
+	} catch (const NotASCoP& e) {
 		LOG(WARNING) << e.what();
 	}
 

@@ -203,14 +203,14 @@ namespace new_core {
 
 		// to selected output stream
 		{
-			dump(node);
+			//dump(node);
 			std::stringstream buf;
 			dump(node, buf);
-			EXPECT_EQ("\x1B[0mB\x1B[0m\x1B[0m<\x1B[0m\x1B[0mA\x1B[0m\x1B[0m>\x1B[0m\n", buf.str());
+			EXPECT_EQ("B<A>\n", buf.str());
 		}
 
 		{
-			dumpText(node);
+			//dumpText(node);
 			std::stringstream buf;
 			dumpText(node, buf);
 			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n", buf.str());
@@ -219,7 +219,7 @@ namespace new_core {
 		{
 			std::stringstream buf;
 			dumpDetail(node, buf);
-			EXPECT_EQ("\x1B[0mB\x1B[0m\x1B[0m<\x1B[0m\x1B[0mA\x1B[0m\x1B[0m>\x1B[0m\n", buf.str());
+			EXPECT_EQ("B<A>\n", buf.str());
 		}
 
 		// test literal printing
@@ -227,13 +227,94 @@ namespace new_core {
 		{
 			std::stringstream buf;
 			dump(E, buf);
-			EXPECT_EQ("\x1B[0mx\x1B[0m\n", buf.str());
+			EXPECT_EQ("x\n", buf.str());
 		}
 
 		{
 			std::stringstream buf;
 			dumpDetail(E, buf);
-			EXPECT_EQ("\x1B[0mx\x1B[0m\x1B[0m:\x1B[0m\x1B[0mB\x1B[0m\x1B[0m<\x1B[0m\x1B[0mA\x1B[0m\x1B[0m>\x1B[0m\n", buf.str());
+			EXPECT_EQ("x:B<A>\n", buf.str());
+		}
+	}
+
+	TEST(Node, DumpPlainTest) {
+
+		// just create some node and dump it
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+
+		std::stringstream buf;
+
+		dump(A,buf);
+		buf << "test\n";
+		dump(B,buf);
+		buf << "test\n";
+		buf << dump(C);
+
+		EXPECT_EQ("A\ntest\nB\ntest\nC\n", buf.str());
+
+	}
+
+	TEST(Node, DumpInStreamTest) {
+
+		// just create some node and dump it
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B", toVector(A));
+		auto node = B;
+
+		// to selected output stream
+		{
+			//dump(node);
+			std::stringstream buf;
+			buf << dump(node);
+			EXPECT_EQ("B<A>\n", buf.str());
+		}
+
+		{
+			//dumpText(node);
+			std::stringstream buf;
+			buf << dumpText(node);
+			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n", buf.str());
+		}
+
+		{
+			std::stringstream buf;
+			buf << dumpDetail(node);
+			EXPECT_EQ("B<A>\n", buf.str());
+		}
+
+		// test literal printing
+		ExpressionPtr E = builder.literal("x", B);
+		{
+			std::stringstream buf;
+			buf << dump(E);
+			EXPECT_EQ("x\n", buf.str());
+		}
+
+		{
+			std::stringstream buf;
+			buf << dumpDetail(E);
+			EXPECT_EQ("x:B<A>\n", buf.str());
+		}
+
+		// test re-using dump object
+		auto d = dump(E);
+		{
+			std::stringstream buf;
+			buf << d;
+			EXPECT_EQ("x\n", buf.str());
+		}
+		{
+			std::stringstream buf;
+			buf << d;
+			EXPECT_EQ("x\n", buf.str());
 		}
 	}
 

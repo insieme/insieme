@@ -40,9 +40,6 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 
-// FIXME: move this somewhere
-#include "insieme/core/lang/static_vars.h"
-
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -278,6 +275,17 @@ static inline IntTypeParamPtr getRepresentedTypeParam(const TypePtr& type) {
  */
 static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr) {
 	return getRepresentedTypeParam(expr->getType());
+}
+
+/**
+ * returns true if the given type models a C pointer type
+ * @param the type to test
+ * @return whenever is a pointer represented in IR
+ */
+static inline bool isPointerType(const TypePtr& ptr){
+	if (!ptr.isa<RefTypePtr>()) return false;
+	if (!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) return false;
+	return true;
 }
 
 

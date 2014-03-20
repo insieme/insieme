@@ -210,9 +210,19 @@ namespace c_ast {
 		CodeFragment(const FragmentSet& dependencies) : dependencies(dependencies) {}
 
 		/**
+		 * A copy constructor checking for cyclic dependencies.
+		 */
+		CodeFragment(const CodeFragment& other);
+
+		/**
 		 * A virtual destructor to support proper sub-type handling.
 		 */
 		virtual ~CodeFragment() {};
+
+		/**
+		 * A implementation of the assignment operator checking for cycles.
+		 */
+		CodeFragment& operator=(const CodeFragment& other);
 
 		/**
 		 * Adds a dependency to this fragment.
@@ -250,6 +260,12 @@ namespace c_ast {
 		 * @return a set of all fragments depending on.
 		 */
 		const FragmentSet& getDependencies() const { return dependencies; };
+
+		/**
+		 * Checks whether this code fragment is directly or indirectly depending on the given
+		 * code fragment.
+		 */
+		bool isDependingOn(const CodeFragmentPtr& fragment);
 
 		/**
 		 * Adds a requirement to this fragment.

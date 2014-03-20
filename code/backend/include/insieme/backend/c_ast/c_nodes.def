@@ -191,7 +191,6 @@ AST_TERMINAL(Return, Statement)
 AST_TERMINAL(Throw, Statement)
 AST_TERMINAL(Goto, Statement)
 AST_TERMINAL(Label, Statement)
-AST_TERMINAL(StaticVarDecl, Statement)
 
 //
 // --- Expressions ---
@@ -218,6 +217,8 @@ AST_TERMINAL(MemberCall, Expression)
 AST_TERMINAL(ConstructorCall, Expression)
 AST_TERMINAL(DestructorCall, Expression)
 AST_TERMINAL(OpaqueExpr, Expression)
+
+AST_TERMINAL(StmtExpr, Expression)
 
 //
 // --- Declarations ---

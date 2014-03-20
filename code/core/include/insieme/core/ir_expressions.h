@@ -1208,7 +1208,7 @@ namespace core {
 	/**
 	 * The accessor associated to a struct expression.
 	 */
-	IR_NODE_ACCESSOR(StructExpr, Expression, StructType, NamedValues)
+	IR_NODE_ACCESSOR(StructExpr, Expression, Type, NamedValues)
 		/**
 		 * Obtains a reference to the list of named values aggregated to a struct by
 		 * the represented node.

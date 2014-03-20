@@ -76,25 +76,29 @@ namespace lang {
 		);
 
 		/**
-		 * A function ..
+		 * An alternative version for a variable being initialized by a constant value.
 		 */
-		LANG_EXT_DERIVED(InitStatic,
+		LANG_EXT_DERIVED(InitStaticConst,
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
-				"(ref<type> var, ()=>'a value)->unit { "
-				"	if (*var->initialized) return;"
+				"(ref<type> var, 'a value)->ref<'a> { "
+				"	if (*var->initialized) return var->value;"
 				"	var->initialized = true;"
-				"	var->value = value();"
+				"	var->value = value;"
+				"	return var->value;"
 				"}"
 		);
 
 		/**
 		 * A function ..
 		 */
-		LANG_EXT_DERIVED(AccessStatic,
+		LANG_EXT_DERIVED(InitStaticLazy,
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
-				"(ref<type> var)->ref<'a> { "
+				"(ref<type> var, ()=>'a value)->ref<'a> { "
+				"	if (*var->initialized) return var->value;"
+				"	var->initialized = true;"
+				"	var->value = value();"
 				"	return var->value;"
 				"}"
 		);

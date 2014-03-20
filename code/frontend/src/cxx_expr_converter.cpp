@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -218,8 +218,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 
 	if (const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl() ) ) {
 		// this is the direct access to a member field in a generic way: something like Obj::a
-		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl());
-		core::TypePtr membType = convFact.convertType(declRef->getType().getTypePtr());
+		core::TypePtr classTy = convFact.convertType(field->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
+		core::TypePtr membType = convFact.convertType(declRef->getType());
     	return retIr = core::analysis::getMemberPointerValue(classTy, field->getNameAsString(), membType);
 	}
 
@@ -379,8 +379,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 // TODO:  array constructor with no default initialization (CXX11)
     const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
-	const clang::Type* classType= callExpr->getType().getTypePtr();
-	core::TypePtr&& irClassType = convFact.convertType(classType);
+	core::TypePtr&& irClassType = convFact.convertType(callExpr->getType());
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 
 	// it might be an array construction
@@ -435,15 +434,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 					return retIr;
 				}
 			} else {
-			    //if not POD we are forced to call the constructor, it might be that
-			    //we are dealing with an alias to the type. Therefore we need to
-			    //struct it from the TU
-                if (core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).isa<core::StructTypePtr>()){
-					core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(structType);
-					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
-					refToClassTy = builder.refType(structType);
-					return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
-				}
+				VLOG(2) << "HERE";
+			    //if not POD we are forced to call the constructor
+			    core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(irClassType);
+				//return (retIr = (builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy))));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
@@ -494,7 +488,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 	// spetialy double pointer
 	if (!callExpr->getConstructExpr() ){
 
-		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
+		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType());
 		core::ExpressionPtr placeHolder;
 		if(callExpr->hasInitializer()) {
             const clang::Expr * initializer = callExpr->getInitializer();
@@ -610,7 +604,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		if(dtor){
 
 			//FIXME: why mem_alloc dtor has being marked as virtual????
-			core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
+			core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType());
 			desTy = convFact.lookupTypeDetails(desTy);
 			frontend_assert(!core::getMetaInfo(desTy).isDestructorVirtual()) << "no virtual dtor allowed for array dtor\n";
 
@@ -648,7 +642,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 	//figure out the type of the expression
-	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
+	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl()->getCanonicalTypeInternal());
 	frontend_assert(irType.isa<core::GenericTypePtr>() ) << "for convention, all this operators deal with generic types\n";
 	irType = builder.refType(irType);
 
@@ -675,7 +669,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	core::TypePtr       targetTy;
 	if(throwExpr->getSubExpr()){
 		subExpr = Visit(throwExpr->getSubExpr());
-		targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
+		targetTy = convFact.convertType(throwExpr->getSubExpr()->getType());
 		core::TypePtr srcTy = subExpr->getType();
 		if(targetTy != srcTy) {
 			subExpr = convFact.tryDeref(subExpr);
@@ -722,7 +716,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBindTemporaryExpr(const
 	const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
 	const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
 
-	core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
+	core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl()->getCanonicalTypeInternal());
 
 	// create a new var for the temporary and initialize it with the inner expr IR
 	const clang::Expr * inner = bindTempExpr->getSubExpr();
@@ -807,7 +801,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		}
 	}
 
-	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType());
 
 	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
 		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
@@ -902,7 +896,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXScalarValueInitExpr(con
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(scalarValueInit, retIr);
 
-	core::TypePtr elemType =convFact.convertType ( scalarValueInit->getTypeSourceInfo()->getType().getTypePtr());
+	core::TypePtr elemType =convFact.convertType ( scalarValueInit->getTypeSourceInfo()->getType());
 	retIr = convFact.defaultInitVal(elemType);
 	return retIr;
 }
@@ -924,7 +918,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 		std::cout << "type: " << std::endl;
 		dumpPretty(retIr->getType());
 		std::cout << "expected: " << std::endl;
-		core::TypePtr t = convFact.convertType(materTempExpr->getType().getTypePtr());
+		core::TypePtr t = convFact.convertType(materTempExpr->getType());
 		dumpPretty(t);
 	}
 
@@ -958,7 +952,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 	//auto retTy = builder.refType(convFact.convertType(typeidExpr->getType().getTypePtr()));
 	core::ExpressionPtr expr;
 	if(typeidExpr->isTypeOperand()) {
-		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand(convFact.getCompiler().getASTContext()).getTypePtr()));
+		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand(convFact.getCompiler().getASTContext())));
 	} else {
 		expr = Visit(typeidExpr->getExprOperand());
 	}

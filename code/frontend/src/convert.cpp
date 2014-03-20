@@ -48,6 +48,7 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
@@ -136,7 +137,8 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
 		// initialization be out of class or something else, beware of dependent types
-		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
+		if ( outDecl->hasInit() &&
+			!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
 			!outDecl->getAnyInitializer()->isInstantiationDependent())
 			initValue = converter.convertExpr ( outDecl->getAnyInitializer() ) ;
 	}
@@ -397,7 +399,7 @@ tu::IRTranslationUnit Converter::convert() {
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
 	//frontend done
-	std::cout << std::endl;
+//	std::cout << std::endl;
 
 //	std::cout << " ==================================== " << std::endl;
 //	std::cout << getIRTranslationUnit() << std::endl;
@@ -413,6 +415,26 @@ const frontend::utils::HeaderTagger& Converter::getHeaderTagger() const{
 	return headerTagger;
 }
 
+
+namespace {
+
+	//if var is used to create a read-only variable
+bool isUsedToCreateConstRef(const core::StatementPtr& body, const core::VariablePtr& var){
+
+	auto& ext = body->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+	bool flag = false;
+	core::visitDepthFirstOnce (body, [&] (const core::CallExprPtr& call){
+		if (core::analysis::isCallOf(call, ext.getRefIRToConstCpp())){ 
+			if (call[0] == var ){
+				flag = true;
+			}
+		}
+	});
+	return flag;
+}
+
+}
+
 //////////////////////////////////////////////////////////////////
 ///
 core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params){
@@ -426,19 +448,27 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 
 			// if the variable is never written in the function body, avoid materialization
 			const core::VariablePtr& wrap = fit->second;
-			if (core::analysis::isReadOnly(body, wrap)){
-				// replace read uses
-				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
-				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
-				// this variables might apear in annotations inside:
-				core::visitDepthFirstOnce (newBody, [&] (const core::StatementPtr& node){
+			auto transferAnnotations = [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
 						assert(anno);
 						anno->replaceUsage (wrap, currParam);
 					}
-				});
+				};
+
+			if (isUsedToCreateConstRef(body, wrap)){
+				auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
+				core::visitDepthFirstOnce (newBody, transferAnnotations);
+				wrapRefMap.erase(currParam);
+			}
+			else if (core::analysis::isReadOnly(body, wrap)){
+				// replace read uses
+				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
+				// this variables might apear in annotations inside:
+				core::visitDepthFirstOnce (newBody, transferAnnotations);
 				//cleanup the wrap cache to avoid future uses, this var does not exist anymore
 				wrapRefMap.erase(currParam);
 			}
@@ -534,7 +564,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 		// Conversion of the variable type
 		QualType&& varTy = valDecl->getType();
-		core::TypePtr&& irType = convertType( varTy.getTypePtr() );
+		core::TypePtr&& irType = convertType( varTy );
 		assert(irType && "type conversion for variable failed");
 
 		VLOG(2)	<< "clang type: " << varTy.getAsString();
@@ -563,46 +593,28 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			}
 		}
 
+
 		// if is a global variable, a literal will be generated, with the qualified name
 		// (two qualified names can not coexist within the same TU)
 		const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
-		if (varDecl && varDecl->hasGlobalStorage()) {
+
+		// const static need an extra ref, we can not deal with pure value globals ;)
+		if (varDecl->isStaticLocal() && !irType.isa<core::RefTypePtr>()){
+			irType = builder.refType(irType);
+		}
+
+		if (varDecl && varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
 			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
 			// we could look for it in the cache, but is fast to create a new one, and we can not get
 			// rid if the qualified name function
 			std::string name = utils::buildNameForVariable(varDecl);
-
-			if(varDecl->isStaticLocal()) {
-				VLOG(2)	<< varDecl->getQualifiedNameAsString() << "         isStaticLocal";
-				if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
-					name = staticVarDeclMap.find(varDecl)->second;
-				} else {
-					std::stringstream ss;
-					//get source location and src file path
-					//hash this string to create unique variable names
-					clang::FullSourceLoc f(varDecl->getLocation(),getSourceManager());
-					std::hash<std::string> str_hash;
-					ss << name << str_hash(getSourceManager().getFileEntryForID(f.getFileID())->getName()) << staticVarCount++;
-					staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl,ss.str()));
-					name = ss.str();
-				}
-			}
 
 			// global/static variables are always leftsides (refType) -- solves problem with const
 			if(!irType.isa<core::RefTypePtr>() ) {
 				irType = builder.refType(irType);
 			}
 
-			if (varDecl->isStaticLocal()){
-				if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
-				irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
-			}
-
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
-
-			if (varDecl->isStaticLocal()){
-				globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
-			}
 
 			// OMP threadPrivate
 			if (insieme::utils::set::contains (thread_private, varDecl)){
@@ -794,36 +806,61 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// but the var remains in the global storage (is an assigment instead of decl)
 			//
 			assert(var);
-			assert(var.isa<core::CallExprPtr>());
+			assert(var.isa<core::VariablePtr>());
+			assert(var->getType().isa<core::RefTypePtr>() && " all static variables need to be ref<'a>");
 
-			// the variable is being unwrapped by default in lookupVariable
-			// we want the inner static object
-			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
+			// build global storage name
+			std::string name;
+			auto varType = var->getType().as<core::RefTypePtr>()->getElementType();
+			auto irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(varType));
 
+			// cache the name (this is fishy, needs explanation)
+			if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
+				name = staticVarDeclMap.find(varDecl)->second;
+			} else {
+				name = utils::buildNameForGlobal(varDecl, getSourceManager());
+				staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl, name));
+			}
+
+			// generate initialization
+			auto lit = builder.literal(name, irType);
+			core::ExpressionPtr initIr;
 			if (definition->getInit()) {
-				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
+				initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
 							var->getType().as<core::RefTypePtr>().getElementType(), false);
 
 				auto call = initIr.isa<core::CallExprPtr>();
 				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
 
-					// if this is a default constructor, there is no need to initialize. the global will have already this value
-					if (call->getArguments().size() == 1  && call->getType() ==  call[0]->getType()){
-					//if (core::analysis::isDefaultConstructor(call->getFunctionExpr().as<core::LambdaExprPtr>())){
-						retStmt = builder.getNoOp();
-					}
-					else{
-						//this can also be done by substituting the first param of ctor by the unwrapped static var
-						initIr = builder.deref(initIr);
-						retStmt = builder.initStaticVariable(lit, initIr);
-					}
+					initIr = builder.deref(initIr);
 				}
-				else{
-					retStmt = builder.initStaticVariable(lit, initIr);
-				}
-			} else {
-				retStmt = builder.getNoOp();
+
+				// beware of non const initializers, for C codes is required that statics are initialized
+				// with const expressions
+				// NOTE:: C++ codes do not need const init
+				bool isConst = definition->getInit()->isConstantInitializer(getCompiler().getASTContext(), false);
+
+				// if default constructed, avoid artifacts, use the default initializator
+			//	if( call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor() &&
+			//		call->getArguments().size() == 1 &&
+			//		call->getArgument(0)->getType() == var->getType()){
+
+			//		initIr = builder.getZero(var->getType().as<core::RefTypePtr>()->getElementType());
+			//		isConst = false;
+			//	}
+
+				initIr =  builder.initStaticVariable(lit, initIr, isConst);
+
 			}
+			else{
+				// build some default initializationA
+				assert(builder.getZero(varType) && "type needs to have a zero initializaiton" );
+				initIr = builder.getZero(varType);
+				//this one is always const initialization
+				initIr =  builder.initStaticVariable(lit, initIr, true);
+			}
+
+			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initIr);
 		}
 		else{
 			bool isConstant = false;
@@ -872,7 +909,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
 	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
 	assert(enumType);
-	core::TypePtr enumTy = convertType(enumType);
+	core::TypePtr enumTy = convertType(enumType->getCanonicalTypeInternal());
 
 	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
 	string enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
@@ -973,26 +1010,25 @@ core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 /////////////////////////////////////////////////////////////////
 //
 core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* funcDecl){
-	const clang::Type* type= GET_TYPE_PTR(funcDecl);
 	trackSourceLocation(funcDecl);
-	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
+	core::FunctionTypePtr funcType = convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
 
 	// check whether it is actually a member function
 	core::TypePtr ownerClassType;
 	core::FunctionKind funcKind;
 	if (const auto* decl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)) {
 		funcKind = core::FK_CONSTRUCTOR;
-		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 	} else if (const auto* decl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)) {
 		funcKind = core::FK_DESTRUCTOR;
-		ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+		ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 	} else if (const auto* decl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (decl->isStatic()){
 			return funcType;
 		}
 		else{
 			funcKind = core::FK_MEMBER_FUNCTION;
-			ownerClassType = convertType(decl->getParent()->getTypeForDecl());
+			ownerClassType = convertType(decl->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
 		}
 	} else {
 		// it is not a member function => just take the plain function
@@ -1044,7 +1080,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 	if(!res) {
 		// trigger the actual conversion
-		res = convertType(decl->getTypeForDecl());
+		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1065,8 +1101,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 //////////////////////////////////////////////////////////////////
 //
-core::TypePtr Converter::convertType(const clang::Type* type) {
-	assert(type && "Calling convertType with a NULL pointer");
+core::TypePtr Converter::convertType(const clang::QualType& type) {
 	return typeConvPtr->convert( type);
 }
 
@@ -1087,18 +1122,21 @@ namespace {
 
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
 
-			core::StringValuePtr ident;
-			core::ExpressionPtr expr;
-			core::ExpressionPtr init;
+			core::StringValuePtr ident;	// the identifier of the member to initialize
+			core::ExpressionPtr toInit;	// the access to the member to initialize
 
-			core::StatementPtr  initStmt;
+			core::ExpressionPtr expr = converter.convertExpr((*it)->getInit());		// convert the init expr
+			bool isCtor =  insieme::core::analysis::isConstructorCall(expr);		// check if the initExpr is a ctor
+
+			core::ExpressionPtr result;	// the resulting expr to be used to init the member accessed by "toInit" and initialized with "expr"
+			// for a ctor call will be : ctor(toInit, params...)
+			// for everything else:		 toInit := expr;
 
 			if((*it)->isBaseInitializer ()){
 
-				expr = converter.convertExpr((*it)->getInit());
-				init = thisVar;
+				toInit = thisVar;
 
-				if(!insieme::core::analysis::isConstructorCall(expr)) {
+				if(!isCtor) {
 					// base init is a non-userdefined-default-ctor call, drop it
 					continue;
 				}
@@ -1106,83 +1144,102 @@ namespace {
 				// if the expr is a constructor then we are initializing a member an object,
 				// we have to substitute first argument on constructor by the
 				core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
-				expr = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
-				initList.push_back (expr);
-			}
-			else if ((*it)->isMemberInitializer ()){
+				result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+			} else if ((*it)->isMemberInitializer ()){
 
 				// construct the member access based on the type and the init expression
-				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType().getTypePtr());
-				core::VariablePtr genThis = thisVar; 
+				core::TypePtr membTy = converter.convertType((*it)->getMember()->getType());
+				core::VariablePtr genThis = thisVar;
 
-				expr = converter.convertExpr((*it)->getInit());
+				bool isCtor =  insieme::core::analysis::isConstructorCall(expr);
+
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
-				init =  builder.callExpr (builder.refType(membTy),
+				toInit =  builder.callExpr (builder.refType(membTy),
 										  builder.getLangBasic().getCompositeRefElem(), genThis,
 										  builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membTy));
 
-				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-				if (!core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					core::analysis::isAnyCppRef(expr->getType())){
-					expr = builder.deref(builder.toIRRef(expr));
-				}
-				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
-				else if(core::analysis::isAnyCppRef(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					!core::analysis::isAnyCppRef(expr->getType())) {
+				if(isCtor) {
+					//TODO: the member to init is a reference? what do we do?
+					assert( !core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) && "memberinit with a cppref" );
 
-					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
-						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
-					} else if(core::analysis::isConstCppRef(init.getType().as<core::RefTypePtr>()->getElementType())){
-						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
-					} else { assert(false); }
-				}
-				else{
-					// magic tryDeref if not a pointer.... because!
-					// dont deref if we have a refref as init and an anyref as expr
-					// otherwise void* elements in init list will fail...
-					if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(init.getType()) &&
-                                                                 builder.getLangBasic().isAnyRef(expr->getType())))
-						expr = builder.tryDeref(expr);
-				}
+					VLOG(2) << expr;
+					// if the expr is a constructor then we are initializing a member an object,
+					// we have to substitute first argument on constructor by the
+					core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
+					result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+				} else {
+					// parameter is some kind of cpp ref, but we want to use the value, unwrap it
+					if (!core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) &&
+						core::analysis::isAnyCppRef(expr->getType())){
+						expr = builder.deref(builder.toIRRef(expr));
+					}
+					// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
+					else if(core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) &&
+						!core::analysis::isAnyCppRef(expr->getType())) {
 
-				initList.push_back(builder.assign( init, expr));
-			}
-			if ((*it)->isIndirectMemberInitializer ()){
+						if(core::analysis::isCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType())) {
+							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
+						} else if(core::analysis::isConstCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType())){
+							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
+						} else { assert(false); }
+					}
+					else{
+						// magic tryDeref if not a pointer.... because!
+						// dont deref if we have a refref as init and an anyref as expr
+						// otherwise void* elements in init list will fail...
+						if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(toInit.getType()) &&
+																	builder.getLangBasic().isAnyRef(expr->getType())))
+							expr = builder.tryDeref(expr);
+					}
 
+					// finally build the assigment
+					result = builder.assign( toInit, expr);
+				}
+			} else if ((*it)->isIndirectMemberInitializer ()){
 				// this supports indirect init of anonymous member structs/union
 				const clang::IndirectFieldDecl* ind = 	(*it)->getIndirectMember () ;
-				init = thisVar;
+				toInit = thisVar;
 
 				// build a chain of nested access
-					clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
+				clang::IndirectFieldDecl::chain_iterator ind_it = ind->chain_begin ();
 				clang::IndirectFieldDecl::chain_iterator end = ind->chain_end ();
 				for (; ind_it!= end; ++ind_it){
 					assert(llvm::isa<clang::FieldDecl>(*ind_it));
 					const clang::FieldDecl* field = llvm::cast<clang::FieldDecl>(*ind_it);
-					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType().getTypePtr());
+					core::TypePtr fieldTy = converter.convertType(llvm::cast<FieldDecl>(*ind_it)->getType());
 					if ((*ind_it)->getNameAsString().empty()){
 						ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
 					}
 					else{
 						ident = builder.stringValue(field->getNameAsString());
 					}
-					init = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(),
-											 init, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
+					toInit = builder.callExpr (builder.refType(fieldTy), builder.getLangBasic().getCompositeRefElem(),
+											 toInit, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(fieldTy));
 				}
 
-				// finally build the assigment
-				expr = converter.convertExpr((*it)->getInit());
-				initList.push_back(builder.assign( init, expr));
-			}
-			if ((*it)->isInClassMemberInitializer ()){
+				if(isCtor) {
+					//TODO: the member to init is a reference? what do we do?
+					assert( !core::analysis::isAnyCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType()) && "memberinit with a cppref" );
+
+					VLOG(2) << expr;
+					// if the expr is a constructor then we are initializing a member an object,
+					// we have to substitute first argument on constructor by the
+					core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
+					result = core::transform::replaceNode (mgr, addr->getArgument(0), toInit).as<core::CallExprPtr>();
+				} else {
+					// finally build the assigment
+					result = builder.assign( toInit, expr);
+				}
+			} else if ((*it)->isInClassMemberInitializer ()){
 				assert(false && "in class member not implemented");
-			}
-			if ((*it)->isDelegatingInitializer ()){
+			} else if ((*it)->isDelegatingInitializer ()){
 				assert(false && "delegating init not implemented");
-			}
-			if ((*it)->isPackExpansion () ){
+			} else  if ((*it)->isPackExpansion () ){
 				assert(false && "pack expansion not implemented");
 			}
+
+			VLOG(2) << result;
+			initList.push_back(result);
 		}
 
 		// check whether there is something to do
@@ -1216,11 +1273,11 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << "\tpure virtual function " << funcDecl;
 
 		std::string callName = funcDecl->getNameAsString();
-		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
+		core::ExpressionPtr symbol = builder.literal(callName, funcTy);
 
-		VLOG(2) << retExpr << " " << retExpr.getType();
-		lambdaExprCache[funcDecl] = retExpr;
-		return ;// retExpr;
+		VLOG(2) << symbol<< " " << symbol.getType();
+		lambdaExprCache[funcDecl] = symbol;
+		return ;
 	}
 
 	// handle external functions
@@ -1231,43 +1288,54 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			auto retExpr = builder.getLangBasic().getRefDelete();
 
 			// handle issue with typing of free when not including stdlib.h
-			core::FunctionTypePtr freeTy = typeCache[GET_TYPE_PTR(funcDecl)].as<core::FunctionTypePtr>();
-			typeCache[GET_TYPE_PTR(funcDecl)]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
+			core::FunctionTypePtr freeTy = typeCache[funcDecl->getType()].as<core::FunctionTypePtr>();
+			typeCache[funcDecl->getType()]=  builder.functionType(freeTy->getParameterTypeList(), builder.getLangBasic().getUnit());
 
 			lambdaExprCache[funcDecl] = retExpr;
-			return ; //retExpr;
+			return ;
 		}
 
 		//-----------------------------------------------------------------------------------------------------
 		//     						Handle of 'special' built-in functions
 		//-----------------------------------------------------------------------------------------------------
 		if (funcDecl->getNameAsString() == "__builtin_alloca") {
-			auto retExpr = builder.literal("alloca", funcTy);
-			lambdaExprCache[funcDecl] = retExpr;
+			auto symbol = builder.literal("alloca", funcTy);
+			lambdaExprCache[funcDecl] = symbol;
 			return;
 		}
 
 		// handle extern functions
-		auto retExpr = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
+		auto symbol = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
 		// TODO: check if we can optimize the usage of this, consumes too much time
-		getHeaderTagger().addHeaderForDecl(retExpr, funcDecl);
-		lambdaExprCache[funcDecl] = retExpr;
-		return ;// retExpr;
+		getHeaderTagger().addHeaderForDecl(symbol, funcDecl);
+		lambdaExprCache[funcDecl] = symbol;
+		return ;
 	}
 
 	// ---------------  check cases in wich this declaration should not be converted -------------------
 	//  checkout this stuff: http://stackoverflow.com/questions/6496545/trivial-vs-standard-layout-vs-pod
 	if (const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl)){
+		core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		lambdaExprCache[funcDecl] = symbol;
+
 		// non public constructors, or non user provided ones should not be converted
-		if (!ctorDecl->isUserProvided () )
-			return;
+		if (!ctorDecl->isUserProvided () ) {
+			if( ctorDecl->isDefaultConstructor() && !ctorDecl->getParent()->isPOD()) {
+				VLOG(2) << "HERE1";
+			} else {
+				return;
+			}
+		}
 		else if(ctorDecl->getParent()->isTrivial())
 			return;
 
 	}
 	if (const clang::CXXDestructorDecl* dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(funcDecl)){
+		core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		lambdaExprCache[funcDecl] = symbol;
+
 		if (!dtorDecl->isUserProvided () )
 			return;
 		else if(dtorDecl->getParent()->isTrivial())
@@ -1338,15 +1406,30 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo = core::getMetaInfo(classType);
 		}
 
-		if (funcTy->isConstructor())
-			classInfo.addConstructor(lambda);
+		if (funcTy->isConstructor()) {
+			//prevent multiple entries of ctors
+			if(!classInfo.containsConstructor(lambda))
+				classInfo.addConstructor(lambda);
+		}
 		else if (funcTy->isDestructor()){
 			classInfo.setDestructor(lambda);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
-		else
-			if (!classInfo.hasMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
-				classInfo.addMemberFunction(funcDecl->getNameAsString(), lambda,
+		else {
+            //Normally we use the function name of the member function.
+            //This can be dangerous when using templated member functions.
+            //In this case we have to add the return type information to
+            //the name, because it is not allowed to have overloaded functions
+            //that only differ by the return type.
+            //FIXME: Call to external functions might not work. What should we do with templated operators?!
+            std::string functionname = funcDecl->getNameAsString();
+            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
+                std::string returnType = funcDecl->getResultType().getAsString();
+                functionname.append(returnType);
+                utils::removeSymbols(functionname);
+            }
+            if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
+				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
@@ -1361,7 +1444,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 //
 				//abort();
 			}
-
+		}
 		core::setMetaInfo(classType, classInfo);
 	}
 
@@ -1378,7 +1461,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	getIRTranslationUnit().addFunction(symbol, lambda);
 }
 
-core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool symbolic) {
 
 	// switch to the declaration containing the body (if there is one)
 	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
@@ -1391,7 +1474,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	core::NodePtr result = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        result = plugin->Visit(funcDecl, *this);
+        result = plugin->Visit(funcDecl, *this, symbolic);
         if(core::ExpressionPtr res = result.isa<core::ExpressionPtr>()) {
             //if plugin does not return a symbol, create the symbol
             //and check if the plugin returned a lambda expr.
@@ -1410,13 +1493,22 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
     }
 
 	if(!result) {
-		convertFunctionDeclImpl(funcDecl);
+		if(symbolic) {
+			// produce only a symbol to be called
+			// the actual conversion happens when we encounter the funcDecl in the DeclContext
+			auto funcTy = convertFunctionType(funcDecl);
+			result = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+		} else {
+			convertFunctionDeclImpl(funcDecl);
+			result = lambdaExprCache[funcDecl];
+		}
     }
+    assert(result);
 
-    core::ExpressionPtr expr = getCallableExpression(funcDecl);
+    core::ExpressionPtr expr = result.as<core::ExpressionPtr>();
 
     for(auto plugin : this->getConversionSetup().getPlugins()) {
-        auto ret = plugin->PostVisit(funcDecl, expr, *this);
+        auto ret = plugin->PostVisit(funcDecl, expr, *this, symbolic);
         if(ret) {
             expr=ret.as<core::ExpressionPtr>();
         }
@@ -1427,20 +1519,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
-	assert(funcDecl);
-
-	// switch to the declaration containing the body (if there is one)
-	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
-
-	// check whether function has already been converted
-	auto pos = lambdaExprCache.find(funcDecl);
-	if (pos != lambdaExprCache.end()) {
-		return pos->second;		// done
-	}
-
-	// otherwise, build a litteral (with callable type)
-	auto funcTy = convertFunctionType(funcDecl);
-	return builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
+	return convertFunctionDecl(funcDecl,true);
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1479,11 +1558,18 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 		// if array or vector
 		if (  elementType.isa<core::VectorTypePtr>() || elementType.isa<core::ArrayTypePtr>()) {
+
 			auto membTy = elementType.as<core::SingleElementTypePtr>()->getElementType();
+
 			ExpressionList elements;
 			// get all values of the init expression
 			for (size_t i = 0; i < inits.size(); ++i) {
-				elements.push_back(getInitExpr(membTy, inits[i] ));
+
+				auto tmp = getInitExpr(membTy, inits[i] );
+				if (frontend::utils::isRefVector(tmp->getType()) && frontend::utils::isRefArray(membTy)){
+					tmp = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), tmp);
+				}
+				elements.push_back(tmp);
 			}
 			retIr = builder.vectorExpr(elements);
 
@@ -1557,7 +1643,9 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) return init;
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+		return init;
+	}
 
 	// long long types
 	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType))
@@ -1583,12 +1671,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
 
 	// init const ref with a ref, add constancy ( T& b...; const T& a = b; )
-	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
+	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType())) {
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
+	}
 
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>())
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
 								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init));
 
 	// from cpp ref to value or variable

@@ -67,6 +67,25 @@ namespace cba {
 			createDotDump(getCBA(node));
 		}
 
+		void createDotDumpRoots(const CBA& analysis) {
+			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
+			{
+				// open file
+				std::ofstream out("solution.dot", std::ios::out );
+
+				// write file
+				analysis.plotRoots(out);
+			}
+
+			// create pdf
+//			system("dot -Tpdf solution.dot -o solution.pdf");
+			system("dot -Tsvg solution.dot -o solution.svg");
+		}
+
+		void createDotDumpRoots(const NodeAddress& node) {
+			// extract context and dump it
+			createDotDumpRoots(getCBA(node));
+		}
 	}
 	
 } // end namespace cba

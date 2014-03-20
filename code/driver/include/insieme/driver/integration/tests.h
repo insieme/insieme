@@ -47,6 +47,8 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/driver/integration/properties.h"
+
 namespace insieme {
 namespace driver {
 namespace integration {
@@ -64,6 +66,11 @@ namespace integration {
 		 * The name of this test case.
 		 */
 		string name;
+
+		/**
+		 * The directory forming containing the test case.
+		 */
+		frontend::path dir;
 
 		/**
 		 * The input files of this test case.
@@ -100,23 +107,38 @@ namespace integration {
 		 */
 		vector<string> compilerArguments;
 
+		/**
+		 * The properties configured for this test case.
+		 */
+		Properties properties;
+
 	public:
 
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<frontend::path>& files, 
+		IntegrationTestCase(const string& name,
+							const frontend::path& dir,
+							const vector<frontend::path>& files,
 							const vector<frontend::path>& includeDirs, 
 							bool enableOpenMP, bool enableOpenCL, bool enableCXX11, 
-							const map<string,string>& definitions, const vector<string>& arguments)
-			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), 
-			  enableCXX11(enableCXX11), definitions(definitions), compilerArguments(arguments) {}
+							const map<string,string>& definitions, const vector<string>& arguments,
+							const Properties& properties)
+			: name(name), dir(dir), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
+			  enableCXX11(enableCXX11), definitions(definitions), compilerArguments(arguments), properties(properties) {}
 
 		/**
 		 * Obtains the name of this test case.
 		 */
 		const string& getName() const {
 			return name;
+		}
+
+		/**
+		 * Obtains the directory forming this test case.
+		 */
+		const frontend::path& getDirectory() const {
+			return dir;
 		}
 
 		/**
@@ -169,6 +191,21 @@ namespace integration {
 		}
 
 		/**
+		 * Get the properties configured for this test case.
+		 */
+		const Properties& getProperties() const {
+			return properties;
+		}
+
+		/**
+		 * Obtains a view on the internally maintained properties for the given
+		 * integration test step.
+		 */
+		PropertyView getPropertiesFor(const string& step) const {
+			return properties.getView(step);
+		}
+
+		/**
 		 * Allows to print this test case to some stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
@@ -218,6 +255,14 @@ namespace integration {
 	const IntegrationTestCaseOpt getCase(const string& name);
 
 	/**
+	 * Obtains a list of test cases in the given path or below.
+	 *
+	 * @param path the directory representing the integration test
+	 * @return the list of test cases within this directory or below
+	 */
+	vector<IntegrationTestCase> getTestSuite(const string& path);
+
+	/**
 	 * This function is loading the integration test with the given name.
 	 *
 	 * @param manager the manager to be used to load the specified test program
@@ -232,7 +277,7 @@ namespace integration {
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.
 	 */
-	std::ostream& operator<<(std::ostream& out, const IntegrationTestCase& test) {
+	inline std::ostream& operator<<(std::ostream& out, const IntegrationTestCase& test) {
 		return test.printTo(out);
 	}
 

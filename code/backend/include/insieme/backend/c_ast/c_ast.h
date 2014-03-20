@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -248,7 +248,7 @@ namespace c_ast {
     struct MemberFieldPointer : public Type {
 		TypePtr parentType;
 		TypePtr type;
-        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy) 
+        MemberFieldPointer(const TypePtr& parentTy, const TypePtr& fieldTy)
 			: Type(NT_MemberFieldPointer), parentType(parentTy), type(fieldTy) {}
         virtual bool equals(const Node& node) const;
     };
@@ -260,22 +260,13 @@ namespace c_ast {
 	};
 
 	struct VarDecl : public Statement {
+		bool isStatic;
 		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
 		VarDecl(VariablePtr var)
-			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
+			: Statement(NT_VarDecl), isStatic(false), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
 		VarDecl(VariablePtr var, ExpressionPtr init)
-			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, init))) {};
+			: Statement(NT_VarDecl), isStatic(false), varInit(toVector(std::make_pair(var, init))) {};
 		VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
-		virtual bool equals(const Node& node) const;
-	};
-
-	struct StaticVarDecl : public Statement {
-		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
-		StaticVarDecl(VariablePtr var)
-			: Statement(NT_StaticVarDecl), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
-		StaticVarDecl(VariablePtr var, ExpressionPtr init)
-			: Statement(NT_StaticVarDecl), varInit(toVector(std::make_pair(var, init))) {};
-		StaticVarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -509,7 +500,7 @@ namespace c_ast {
 			// C++ operators
 			StaticCast,
 			DynamicCast,
-			ScopeResolution,    //  the scope resolution operator is: "::" 
+			ScopeResolution,    //  the scope resolution operator is: "::"
 			PointerToMember		//	pointer to member operator. "->*"
 		};
 
@@ -597,6 +588,12 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct StmtExpr : public Expression {
+		StatementPtr stmt;
+		StmtExpr(const StatementPtr& stmt) : Expression(NT_StmtExpr), stmt(stmt) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- TopLevelElement -------------------------
 
 	struct TopLevelElement : public Node {
@@ -624,6 +621,7 @@ namespace c_ast {
 	struct GlobalVarDecl : public Declaration {
 		TypePtr type;
 		string name;
+		ExpressionPtr init;
 		bool external;
 		GlobalVarDecl(TypePtr type, const string& name, bool external)
 			: Declaration(NT_GlobalVarDecl), type(type), name(name), external(external) {}
@@ -777,3 +775,7 @@ namespace c_ast {
 } // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
+
+namespace std {
+   std::ostream& operator<< (std::ostream& o, const insieme::backend::c_ast::Node&);
+}

@@ -361,6 +361,13 @@ public:
 	}
 
 	/**
+	 * An overload of the call operator redirected to the visit entry point.
+	 */
+	typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type operator()(const Ptr<const Node>& element, P ... context) {
+		return visit(element, context...);
+	}
+
+	/**
 	 * Determines whether this visitor is visiting types or not.
 	 */
 	bool isVisitingTypes() const {

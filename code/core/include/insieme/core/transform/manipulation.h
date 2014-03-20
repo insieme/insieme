@@ -303,9 +303,10 @@ CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
  ** 
  ** @param manager the manager used to create new nodes
  ** @param lazy the target lazy expression
+ ** @param evalDerivedOps determines whether derived operators should be evaluated too
  ** @return the inlined expression equivalent to the lazy call (=inlineExpression(builder.call(lazy))
  ** */
-ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy);
+ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool evalDerivedOps = false);
 
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a bound expression.

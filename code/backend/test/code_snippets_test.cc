@@ -254,7 +254,7 @@ TEST(FunctionCall, RefNewCalls) {
 
     string code = toString(*converted);
     EXPECT_PRED2(notContainsSubString, code, "<?>");
-    EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = malloc(sizeof(int32_t))");
+    EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = (int32_t*)malloc(sizeof(int32_t))");
 
 }
 

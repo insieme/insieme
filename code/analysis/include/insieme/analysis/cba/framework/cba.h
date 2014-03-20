@@ -138,6 +138,7 @@ namespace cba {
 
 		std::map<ValueID, ConstraintGenerator*> value2generator;				// maps value IDs to their associated generator instances
 		std::map<std::type_index, ConstraintGenerator*> generatorIndex;			// to prevent the same type of generator being used multiple times
+		std::map<ValueID, AnalysisType> value2analysis;							// maps value IDs to their analysis type (added for stats)
 
 		// two caches for resolving labels and variables
 		int idCounter;
@@ -238,6 +239,7 @@ namespace cba {
 
 			// fix constraint generator
 			value2generator[res] = getGenerator<typename generator<A,Config>::type>();
+			value2analysis.insert(std::make_pair(res, AnalysisType(typeid(A))));
 
 			// done
 			return res;
@@ -443,54 +445,6 @@ namespace cba {
 			return getSurroundingContexts(in, levels);
 		}
 
-		// --- nested contexts ---
-
-		template<typename Context>
-		void addNestedContexts(const Context& ctxt, set<Context>& res) {
-
-			// special case for empty context
-			if (Context::call_context::empty) {
-				res.insert(ctxt);
-				return;
-			}
-
-			// extend call context by valid labels
-			auto last = ctxt.callContext.back();
-			for (auto l : getDynamicCallLabels()) {
-				if (contains(getAllStaticPredecessors(l), last)) {
-					Context cur = ctxt;
-					cur.callContext <<= l;
-					res.insert(cur);
-				}
-			}
-
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const set<Context>& ctxts) {
-			set<Context> res;
-			for (const auto& cur : ctxts) {
-				addNestedContexts(cur, res);
-			}
-			return res;
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const set<Context>& ctxts, unsigned levels = 1) {
-			set<Context> res;
-			for(unsigned i = 0; i<levels; i++) {
-				res = getNestedConexts(res);
-			}
-			return res;
-		}
-
-		template<typename Context>
-		set<Context> getNestedContexts(const Context& ctxt, unsigned levels = 1) {
-			set<Context> in; in.insert(ctxt);
-			return getNestedContexts(in, levels);
-		}
-
-
 		// ------------------------ data manager handling -----------------------------
 
 	private:
@@ -524,6 +478,8 @@ namespace cba {
 		void plot(std::ostream& out = std::cout) const;
 
 		void plotRoots(std::ostream& out = std::cout) const;
+
+		void plotStats(std::ostream& out = std::cout) const;
 
 		std::size_t getNumSets() const {
 			return value2generator.size();
