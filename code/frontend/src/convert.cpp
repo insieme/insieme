@@ -1643,7 +1643,9 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) return init;
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+		return init;
+	}
 
 	// long long types
 	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType))
@@ -1669,12 +1671,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
 
 	// init const ref with a ref, add constancy ( T& b...; const T& a = b; )
-	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType()))
+	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType())) {
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init);
+	}
 
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>())
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
 								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init));
 
 	// from cpp ref to value or variable
