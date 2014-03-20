@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -320,7 +320,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
 		// exceptions are OpenCL vectors and gcc-vectors
 		// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType()) 
+		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
 		{
 			retTy = builder.refType(retTy);
 		}
@@ -340,7 +340,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
 				// exceptions are OpenCL vectors and gcc-vectors
 				// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType()) 
+				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType())
 				{
 					argTy = builder.refType(argTy);
 				}
@@ -423,7 +423,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		// a new generic type will point to the previous translation unit decl
 		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
 			auto decl =  typedefType->getDecl();
-			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal());
+			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(decl));
 			core::GenericTypePtr gen = builder.genericType(name);
 
 			core::TypePtr impl = symb;
@@ -441,8 +441,8 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 				}
 			}
 
-			convFact.getIRTranslationUnit().addType(gen, impl);
-			return (retTy = gen);
+            convFact.getIRTranslationUnit().addType(gen, impl);
+            return (retTy = gen);
 		}
 	}
 
@@ -474,14 +474,14 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( tagType, retTy );
 
-	// test whether we can get a definiton 
+	// test whether we can get a definiton
 //	auto def = tagType->getDecl();
-	
+
 	auto def = findDefinition(tagType);
 	if (!def) {
 		//tag type isonly declared
 		auto decl = tagType->getDecl();
-		std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal());
+		std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(decl));
 
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( name );
@@ -489,15 +489,15 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		if (!decl->getNameAsString().empty()) {
 			core::annotations::attachName(retTy,decl->getNameAsString());
 		}
-		
-		//we mark the declaration only tagTypes to reconstruct them in the backend 
-		if(decl->isStruct()) 
+
+		//we mark the declaration only tagTypes to reconstruct them in the backend
+		if(decl->isStruct())
 			annotations::c::markDeclOnlyStruct(retTy.as<core::GenericTypePtr>());
-		else if(decl->isClass()) 
+		else if(decl->isClass())
 			annotations::c::markDeclOnlyClass(retTy.as<core::GenericTypePtr>());
-		else if(decl->isEnum()) 
+		else if(decl->isEnum())
 			annotations::c::markDeclOnlyEnum(retTy.as<core::GenericTypePtr>());
-		else if(decl->isUnion()) 
+		else if(decl->isUnion())
 			annotations::c::markDeclOnlyUnion(retTy.as<core::GenericTypePtr>());
 
 		return retTy;
@@ -629,7 +629,7 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 	if (subTy->getNodeType() == core::NT_FunctionType){
 		retTy = subTy;
 	}
-	else{	
+	else{
 		if(pointerTy->getPointeeType().isConstQualified ())
 			retTy = builder.refType(builder.arrayType( subTy ), core::RK_SOURCE );
 		else
@@ -681,7 +681,7 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal());
+		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(llvm::cast<clang::RecordDecl>(tagDecl)));
 		return builder.structType( builder.stringValue(name), structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
 		return builder.unionType( structElements );
@@ -710,7 +710,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 	// assume a recursive construct for record declarations
 	if (auto tagType = llvm::dyn_cast<clang::TagType>( type)) {
 		auto recDecl = tagType->getDecl();
-		std::string name = utils::getNameForRecord(recDecl, type);
+		std::string name = utils::getNameForRecord(recDecl, type, convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl));
 
 		// create a (temporary) type variable for this type
 		core::GenericTypePtr symbol = builder.genericType(name);
@@ -759,10 +759,10 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 			// register type within resulting translation unit
 			convFact.getIRTranslationUnit().addType(symbol, res);
 		}
-		
+
 		// is an enum, return it as it is
 		if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(res)){
-			typeCache[type] = res; 
+			typeCache[type] = res;
 			return res;
 		}
 
