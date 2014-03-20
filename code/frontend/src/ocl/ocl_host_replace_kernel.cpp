@@ -303,54 +303,43 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 }
 }
 
-KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){
-	findKernelNames();
-	collectArguments();
-	loadKernelCode();
-	replaceKernels();
+KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){ }
 
-//	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
-}
-
-void KernelReplacer::findKernelNames() {
+std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreateKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
 
-	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
-	TreePatternPtr mayEncapsulatedNameLiteral = irp::callExpr(pattern::any, pattern::any, *pattern::any << nameLiteral << *pattern::any) | nameLiteral;
-	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
-			nameLiteral << pattern::var("err", pattern::any) );
-	TreePatternPtr createKernelPattern = irp::callExpr(pattern::any, irp::atom(mgr.getLangBasic().getRefAssign()),
+	// vector to store filenames in case of icl_lib compilation
+	std::vector<std::string> kernelFileNames;
+
+	TreePatternPtr kernelDecl = irp::declarationStmt(pattern::var("kernel", pattern::any),
+			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateKernel)));
+	TreePatternPtr kernelAssign = irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
 			pattern::var("kernel", pattern::any) << clCreateKernel);
+	TreePatternPtr createKernelPattern = kernelDecl | kernelAssign;
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
 		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
 
-		std::string kernelName;
-
-		visitDepthFirst(kernelNameExpr, [&](const LiteralPtr& nameCandiate) {
-			std::string name = nameCandiate->getStringValue();
-			// check for " "
-			if(name.front() == '\"' && name.back() == '\"') {
-				assert(kernelName.empty() && "Kernel function name in clCreateKernel is ambiguous");
-				// remove " "
-				kernelName = name.substr(1, name.length()-2);
-			}
-		});
+		std::string kernelName = utils::extractQuotedString(kernelNameExpr);
 
 		ExpressionAddress kernelExpr = matchAddress >> createKernel["kernel"].getValue().as<ExpressionAddress>();
 		ExpressionAddress kernelVar = utils::extractVariable(kernelExpr).as<ExpressionAddress>();
 
 		kernelVar = utils::getRootVariable(kernelVar).as<ExpressionAddress>();
 
-//std::cout << "varAddr: " << kernelName << " - " << *kernelVar << std::endl;
 		kernelNames[kernelName] = kernelVar;
-		ExpressionPtr createKernelExpr = createKernel.getRoot().as<ExpressionPtr>();
+		NodePtr createKernelExpr = createKernel.getRoot();
 
 		// remove the clCreateKernel call including the assignment and its lhs
-		prog = transform::replaceAll(mgr, prog, createKernelExpr, builder.undefined(createKernelExpr->getType()), false);
+		prog = transform::replaceAll(mgr, prog, createKernelExpr, (builder.getNoOp()), false);
+
+		if(createKernel.isVarBound("file_name")) kernelFileNames.push_back(utils::extractQuotedString(createKernel["file_name"].getValue()));
 	});
+
+	return kernelFileNames;
 }
 
 
@@ -510,12 +499,27 @@ void KernelReplacer::replaceKernels() {
 	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements);
 }
 
+void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates) {
+			for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
+			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
+                assert(!cname.empty() && "cannot find the name of the kernel function");
+				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+				checkDuplicates[cname] = 1;
+
+				kernelFunctions[kernelNames[cname]] = lambdaEx;
+			}
+
+		});
+}
+
 void KernelReplacer::loadKernelCode() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
 
-	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(pattern::any, irp::literal("clCreateProgramWithSource"),	pattern::any <<
+	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(irp::atom(builder.refType(builder.arrayType(builder.genericType("_cl_program")))),
+			irp::literal("clCreateProgramWithSource"), pattern::any <<
 			pattern::any << var("kernelCodeString", pattern::any) << pattern::any << pattern::var("err", pattern::any) ));
 	TreePatternPtr kernelAssign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()),
 			var("kernelVar", pattern::any), (clCreateProgramWithSource));
@@ -528,18 +532,14 @@ void KernelReplacer::loadKernelCode() {
 		std::vector<ExpressionPtr> kernelEntries = lookForKernelFilePragma(createProgram["kernelVar"].getValue().as<ExpressionPtr>()->getType(),
 				createProgram["cpws"].getValue().as<ExpressionPtr>());
 
-		for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
-                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
-                assert(!cname.empty() && "cannot find the name of the kernel function");
-				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
-				checkDuplicates[cname] = 1;
-
-				kernelFunctions[kernelNames[cname]] = lambdaEx;
-			}
-
-		});
+		storeKernelLambdas(kernelEntries, checkDuplicates);
 	});
+}
+
+void KernelReplacer::inlineKernelCode() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	NodeAddress pA(prog);
 
 	NodeMap replacements;
 	// Replace clEnqueueNDRangeKernel calls with calls to the associated function
@@ -726,32 +726,76 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 
 	std::vector<ExpressionPtr> kernelEntries;
 
-	if(type == builder.refType(builder.refType(builder.arrayType((builder.genericType("_cl_program")))))) {
-		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
-			if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
-					(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
-				const string& path = kfa->getKernelPath();
-				if(cpwsCall->getFunctionExpr() == gen.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
-					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
-				if(const LiteralPtr clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
-					if(clCPWS->getStringValue() == "clCreateProgramWithSource") {
-						// check if file has already been added
-						if(kernelFileCache.find(path) == kernelFileCache.end()) {
-							kernelFileCache.insert(path);
-							const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
+	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
+		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
+				(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
+			const string& path = kfa->getKernelPath();
+
+			// check if file has already been added
+			if(kernelFileCache.find(path) == kernelFileCache.end()) {
+				kernelFileCache.insert(path);
+				const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
 
 //std::cout << "\nProgram: " << printer::PrettyPrinter(kernels) << std::endl;
 
-							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
-									kernelEntries.push_back(kernel);
-							});
-						}
-					}
-				}
+				for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+						kernelEntries.push_back(kernel);
+				});
 			}
 		}
 	}
 	return kernelEntries;
+}
+
+NodePtr KernelReplacer::getTransformedProgram() {
+	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
+	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
+			nameLiteral << pattern::var("err", pattern::any) );
+	findKernelNames(clCreateKernel);
+	collectArguments();
+	loadKernelCode();
+	inlineKernelCode();
+	replaceKernels();
+
+//	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
+
+	return prog;
+}
+
+NodePtr IclKernelReplacer::getTransformedProgram() {
+	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
+	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"),	pattern::any <<	pattern::var("file_name", pattern::any) <<
+			nameLiteral << pattern::any <<	pattern::any);
+	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
+	loadKernelCode(kernelPaths);
+	inlineKernelCode();
+	replaceKernels();
+
+//	std::cout << printer::PrettyPrinter(this->prog) << std::endl;
+
+	return prog;
+}
+
+void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	std::vector<ExpressionPtr> kernelEntries;
+
+	for_each(kernelPaths, [&](std::string path) {
+		// check if file has already been added
+		if(kernelFileCache.find(path) == kernelFileCache.end()) {
+			kernelFileCache.insert(path);
+			const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
+
+//std::cout << "\nProgram: " << printer::PrettyPrinter(kernels) << std::endl;
+
+			for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+					kernelEntries.push_back(kernel);
+			});
+		}
+
+	});
 }
 
 } //namespace ocl

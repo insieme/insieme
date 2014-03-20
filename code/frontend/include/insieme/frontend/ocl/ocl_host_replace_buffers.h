@@ -105,6 +105,7 @@ protected:
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
 	void collectInformation(core::pattern::TreePatternPtr& clCreateBuffer);
 	void generateReplacements(core::TypePtr clMemTy);
+	void performReplacements();
 
 public:
 	virtual core::NodePtr getTransformedProgram();

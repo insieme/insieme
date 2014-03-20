@@ -56,19 +56,47 @@ namespace cba {
 		// a simple test cases checking the handling of simple value structs
 		NodeManager mgr;
 		IRBuilder builder(mgr);
+		const lang::BasicGenerator& gen = mgr.getLangBasic();
+
+		DeclarationStmtPtr declA = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.intLit(1)));
+		VariablePtr varA = declA->getVariable();
+		DeclarationStmtPtr declB = builder.declarationStmt(gen.getInt4(), builder.deref(varA));
+		VariablePtr varB = declB->getVariable();
+		DeclarationStmtPtr declC = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.undefined(gen.getInt4())));
+		VariablePtr varC = declC->getVariable();
+		LiteralPtr globalVar = builder.literal("global", builder.refType(gen.getInt4()));
+		DeclarationStmtPtr declD = builder.declarationStmt(builder.refType(gen.getInt4()), globalVar);
+		VariablePtr varD = declD->getVariable();
+
+
+		std::map<string,NodePtr> symbols;
+		symbols["declA"] = declA;
+		symbols["declB"] = declB;
+		symbols["declC"] = declC;
+		symbols["declD"] = declD;
+		symbols["A"] = varA;
+		symbols["B"] = varB;
+		symbols["C"] = varC;
+		symbols["D"] = varD;
+		symbols["globalVar"] = globalVar;
+
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let sA = (int<4> arg1)->ref<int<4>> { ref<int<4>> local1 = var(arg1); return local1;};"
-				"	let sB = (ref<int<4>> arg2)->unit { ref<int<4>> local2; local2 = ref.deref(arg2); };"
+				"	let sA = (real<4> arg1)->ref<real<4>> { ref<real<4>> local1 = var(arg1); return local1;};"
+				"	let sB = (ref<uint<8>> arg2)->unit { ref<uint<8>> local2; local2 = ref.deref(arg2); };"
+				"	let sC = (int<4> arg3, ref<int<4>> arg4)->unit { arg4 = arg3;};"
+				"	globalVar = 7;"
 				"	"
-				"	ref<int<4>> a = var(1);"
-				"	int<4> b = ref.deref(a);"
-				"	ref<int<4>> c;"
-				"	c = ref.deref(a);"
-				"	ref<int<4>> d = var(3);"
+				"	declA;"
+				"	declB;"
+				"	declC;"
+				"	declD;"
 				"	"
-				"}"
+				"	sA((real<4>)(ref.deref(A)));"
+				"	sB(var(int.to.uint(ref.deref(D), param(8))));"
+				"	sC(ref.deref(A), C);"
+				"}", symbols
 		).as<CompoundStmtPtr>();
 
 		auto semantic = core::checks::check(in);
@@ -84,6 +112,40 @@ namespace cba {
 		for_each(errors, [](const core::checks::Message& cur) {
 			std::cout << cur << std::endl;
 		});
+
+//		dumpPretty(in);
+		VariablePtr arg1, arg2, arg3, arg4;
+		visitDepthFirst(in, [&](const ParametersPtr& params) {
+			if(params[0].getType() == gen.getReal4())
+				arg1 = params[0];
+			if(params[0].getType() == builder.refType(gen.getUInt8()))
+				arg2 = params[0];
+			if(params[0].getType() == gen.getInt4())
+				arg3 = params[0];
+			if(params[0].getType() == builder.refType(gen.getInt4()))
+				arg4 = params[0];
+		});
+		VariablePtr local1, local2;
+		visitDepthFirst(in, [&](const DeclarationStmtPtr& decl) {
+			if(decl->getVariable()->toString().compare("v10") == 0)
+				local1 = decl->getVariable();
+			if(decl->getVariable()->toString().compare("v13") == 0)
+				local2 = decl->getVariable();
+		});
+
+//		EXPECT_EQ(getRootVariable(varA), varA);
+//		EXPECT_EQ(getRootVariable(varB), varA);
+//		EXPECT_EQ(getRootVariable(varC), varA);
+//		EXPECT_EQ(getRootVariable(varB), varA);
+//		EXPECT_EQ(getRootVariable(local1), varA);
+//		EXPECT_EQ(getRootVariable(arg1), varA);
+//		EXPECT_EQ(getRootVariable(arg3), varA);
+//		EXPECT_EQ(getRootVariable(arg4), varA);
+//		EXPECT_EQ(getRootVariable(globalVar), globalVar);
+//		EXPECT_EQ(getRootVariable(varD), globalVar);
+//		EXPECT_EQ(getRootVariable(arg2), globalVar);
+//		EXPECT_EQ(getRootVariable(local2), globalVar);
+//		EXPECT_NE(getRootVariable(varA), globalVar);
 
 }
 
