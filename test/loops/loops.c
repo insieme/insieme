@@ -94,12 +94,20 @@ void func7() {
    int i = 14;
  
    for (; i >= 3; i -= 4) {
-           printf("%d\n", i);
+           printf("%d: %d\n",__LINE__, i);
    }
+   printf("%d: %d\n",__LINE__, i);
 
    for (; i >= 0; i--) {
-           printf("%d\n", i);
+           printf("%d: %d\n", __LINE__, i);
    }
+   printf("%d: %d\n",__LINE__, i);
+
+   i = 11;
+   for (; i >= 3; i -= 4) {
+           printf("%d: %d\n", __LINE__, i);
+   }
+   printf("%d: %d\n",__LINE__, i);
 }
 
 
