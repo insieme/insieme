@@ -764,10 +764,11 @@ NodePtr KernelReplacer::getTransformedProgram() {
 
 NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
-	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"),	pattern::any <<	pattern::var("file_name", pattern::any) <<
+	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
-	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
-	loadKernelCode(kernelPaths);
+//	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
+//	loadKernelCode(kernelPaths);
+	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -795,6 +796,44 @@ void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
 			});
 		}
 
+	});
+}
+
+//void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
+//	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
+void IclKernelReplacer::collectArguments() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+
+	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
+			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
+			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
+			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
+
+	NodeAddress pA(prog);
+	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
+		ExpressionPtr kernel = runKernel["kernel"].getValue().as<ExpressionPtr>();
+
+		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
+		ExpressionsPtr member = arguments->getExpressions();
+
+		CompoundStmtPtr tupleCreation;
+
+
+		for(unsigned i = 0; i < member.size(); ++i) {
+			// first look at the size of the argument
+			++i;
+			// then look at the value of the argument
+			kernelTypes[kernel].push_back(builder.refType(builder.arrayType(member[i]->getType())));
+			dumpPretty(builder.callExpr(gen.getScalarToArray(), builder.refVar(member[i]))->getType());
+		}
+
+//		std::cout << member.size() << std::endl << kernelTypes[kernel] << std::endl;;
+
+//		assert(false && "söldfkjasdflö");
 	});
 }
 

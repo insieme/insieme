@@ -115,7 +115,7 @@ protected:
 	std::set<string> kernelFileCache;
 
 	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
-	void collectArguments();
+	virtual void collectArguments();
 	void replaceKernels();
 	virtual void loadKernelCode();
 	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
@@ -131,6 +131,7 @@ public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
 	virtual core::NodePtr getTransformedProgram();
 	virtual void loadKernelCode(std::vector<std::string> kernelPaths);
+	virtual void collectArguments();
 };
 
 } //namespace ocl

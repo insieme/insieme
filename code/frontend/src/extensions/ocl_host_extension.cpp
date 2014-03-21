@@ -88,6 +88,7 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 }
 
 core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	return prog;
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
