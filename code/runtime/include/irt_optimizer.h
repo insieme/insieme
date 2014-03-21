@@ -67,7 +67,7 @@ typedef struct _irt_optimizer_resources {
 
 typedef struct _irt_optimizer_wi_data {
     int frequency;
-    int old_frequency;
+    int outer_frequency;
     int workers_count;
     int *param_values;  // the list of picked values (indexes) for the variables in a param clause
     irt_optimizer_resources resources;
@@ -87,8 +87,8 @@ typedef struct _irt_optimizer_objective {
 } irt_optimizer_objective;
 
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, bool is_task);
 void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant);
-void irt_optimizer_remove_optimizations(irt_wi_implementation_runtime_data* data, int pos, bool wi_finalized);
+void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, int pos, bool wi_finalized);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H
