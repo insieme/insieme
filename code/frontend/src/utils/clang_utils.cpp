@@ -52,6 +52,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <sstream>
+#include <iostream>
 
 namespace insieme {
 namespace frontend {
@@ -92,26 +93,22 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 		}
 	}
 
-    // hold on. if it is a cxxrecorddecl, the decl has no default name
+    // hold on. if it is a recorddecl, the decl has no default name
     // and we know the type, we return the name of the qualtype
+    // with exception of some special cases
     if(const clang::RecordDecl* rec = llvm::dyn_cast<clang::RecordDecl>(decl)) {
-        if(decl->getNameAsString().empty() && !rec->isAnonymousStructOrUnion())
-        if(!isDefinedInSystemHeader) {
-            //sometimes we have a cpp lambda, don't touch this things.
-            //If it is no cpp lambda or not even a cxxrec use the normal behaviour
-            if(const clang::CXXRecordDecl* cxxrec = llvm::dyn_cast<clang::CXXRecordDecl>(decl)) {
-                if(!cxxrec->isLambda()) {
-                    //filter out some special cases
-                    //FIXME: find a smarter way to check for non
-                    //anonymous structs or union that have an anonymous type
-                    if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
-                        return type.getUnqualifiedType().getAsString();
-                }
-            } else {
-                    //FIXME: find a smarter way to check for non
-                    //anonymous structs or union that have an anonymous type
-                    if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
-                        return type.getUnqualifiedType().getAsString();
+        // at first we check if it is a declaration that has no name
+        // but is not an anonymous struct or union.
+        // if defined in system header, don't touch it. will be
+        // handled by the type converter in the correct way.
+        if(decl->getNameAsString().empty() && !rec->isAnonymousStructOrUnion() && !isDefinedInSystemHeader) {
+            const clang::CXXRecordDecl* cxxrec = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+            // sometimes we have a cpp lambda, don't touch this things.
+            // we don't need a check for cxxrec!=nullptr because of short circuit eval.
+            if(!cxxrec || !(cxxrec->isLambda())) {
+                //FIXME: find a smarter way to check for non anonymous structs or union that have an anonymous type
+                if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
+                    return type.getUnqualifiedType().getAsString();
             }
         }
     }
