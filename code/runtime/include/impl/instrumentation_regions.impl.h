@@ -35,8 +35,8 @@
  */
 
 #pragma once
-#ifndef __GUARD_IMPL_INSTRUMENTATION_IMPL_H
-#define __GUARD_IMPL_INSTRUMENTATION_IMPL_H
+#ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
+#define __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
@@ -520,4 +520,4 @@ irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi) { r
 
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
 
-#endif // ifndef __GUARD_IMPL_INSTRUMENTATION_IMPL_H
+#endif // ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H

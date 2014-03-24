@@ -35,8 +35,8 @@
  */
 
 #pragma once
-#ifndef __GUARD_INSTRUMENTATION_H
-#define __GUARD_INSTRUMENTATION_H
+#ifndef __GUARD_INSTRUMENTATION_EVENTS_H
+#define __GUARD_INSTRUMENTATION_EVENTS_H
 
 #include <stdio.h>
 
@@ -200,4 +200,4 @@ void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event 
  * (note: the strings are written without the termination character '\0'!)
  */
 
-#endif // ifndef __GUARD_INSTRUMENTATION_H
+#endif // #ifndef __GUARD_INSTRUMENTATION_EVENTS_H
