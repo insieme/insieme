@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/lang/basic.h"
 
 namespace stmtutils {
 
