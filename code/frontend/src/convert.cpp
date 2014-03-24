@@ -516,6 +516,39 @@ void Converter::printDiagnosis(const clang::SourceLocation& loc) {
 
 //////////////////////////////////////////////////////////////////
 ///
+void Converter::trackSourceLocation (const clang::Decl* decl){
+	if (const clang::ClassTemplateSpecializationDecl* spet = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)){
+		lastTrackableLocation.push(spet->getPointOfInstantiation());
+	}
+	else{
+		lastTrackableLocation.push(decl->getLocation ());
+	}
+}
+
+//////////////////////////////////////////////////////////////////
+///
+void Converter::trackSourceLocation (const clang::Stmt* stmt){
+	lastTrackableLocation.push(stmt->getLocStart());
+}
+
+//////////////////////////////////////////////////////////////////
+///
+void Converter::untrackSourceLocation (){
+	assert(!lastTrackableLocation.empty());
+	lastTrackableLocation.pop();
+}
+	
+//////////////////////////////////////////////////////////////////
+///
+std::string Converter::getLastTrackableLocation() const{
+	if (!lastTrackableLocation.empty())
+		return utils::location(lastTrackableLocation.top(), getSourceManager());
+	else
+		return "ERROR: unable to identify last input code location ";
+}
+
+//////////////////////////////////////////////////////////////////
+///
 core::ExpressionPtr Converter::tryDeref(const core::ExpressionPtr& expr) const {
 	// core::ExpressionPtr retExpr = expr;
 	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {

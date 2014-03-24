@@ -41,6 +41,7 @@
 #include <functional>
 
 #include "insieme/frontend/frontend.h"
+
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/header_tagger.h"
@@ -52,17 +53,11 @@
 
 #include "insieme/utils/map_utils.h"
 
-// FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
-// Forward declarations
-namespace clang {
-class FunctionDecl;
-class InitListExpr;
-} // End clang namespace
+#include "insieme/frontend/clang_forward.h"
 
 namespace {
-
-typedef vector<insieme::core::StatementPtr> StatementList;
-typedef vector<insieme::core::ExpressionPtr> ExpressionList;
+	typedef vector<insieme::core::StatementPtr> StatementList;
+	typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 } // end anonymous namespace
 
@@ -550,37 +545,23 @@ public:
 	 *  Template spetialization might have 2 locations, template and instantiation location, both of those
 	 *  are not the location retrieved by the getLocation method in Decl
 	 */
-	void trackSourceLocation (const clang::Decl* decl){
-		if (const clang::ClassTemplateSpecializationDecl* spet = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)){
-			lastTrackableLocation.push(spet->getPointOfInstantiation());
-		}
-		else{
-			lastTrackableLocation.push(decl->getLocation ());
-		}
-	}
+	void trackSourceLocation (const clang::Decl* decl);
 
 	/**
 	 *  keeps track of the last point a source location to the Statement
 	 *  this might be different depending of what we are dealing with
 	 */
-	void trackSourceLocation (const clang::Stmt* stmt){
-		lastTrackableLocation.push(stmt->getLocStart());
-	}
+	void trackSourceLocation (const clang::Stmt* stmt);
 
-	void untrackSourceLocation (){
-		assert(!lastTrackableLocation.empty());
-		lastTrackableLocation.pop();
-	}
-
+	/**
+	 * unstacks last tracked location
+	 */
+	void untrackSourceLocation ();
+	
 	/**
 	 *  returns readable location of the last registered source location
 	 */
-	std::string getLastTrackableLocation() const{
-		if (!lastTrackableLocation.empty())
-			return utils::location(lastTrackableLocation.top(), getSourceManager());
-		else
-			return "ERROR: unable to identify last input code location ";
-	}
+	std::string getLastTrackableLocation() const;
 
     /**
      *  returns the filename and path of the translation unit

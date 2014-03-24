@@ -39,14 +39,8 @@
 #include <string>
 
 
-#include "insieme/frontend/clang.h"
+#include "insieme/frontend/clang_forward.h"
 #include "insieme/core/annotations/source_location.h"
-
-namespace clang {
-class SourceLocation;
-class SourceRange;
-class SourceManager;
-}
 
 namespace insieme {
 namespace frontend {

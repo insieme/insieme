@@ -36,16 +36,15 @@
 
 #pragma once
 
-#include "insieme/frontend/convert.h"
-
-#include <clang/AST/StmtVisitor.h>
-
-#include "insieme/core/forward_decls.h"
-
+#include "insieme/core/ir_statements.h"
 
 namespace stmtutils {
 
 using namespace insieme::core;
+
+namespace {
+typedef vector<insieme::core::StatementPtr> StatementList;
+}
 
 //-------------------------------------------- StmtWrapper ------------------------------------------------------------
 /*
@@ -75,4 +74,4 @@ StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& st
 ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, 
 							const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
 
-}
+} // namespace

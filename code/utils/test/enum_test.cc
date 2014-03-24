@@ -46,16 +46,16 @@ using std::vector;
 */
 
 //Normal, 'long' one
-ENUM(testCard, EINS, ZWEI, DREI, VIER, FUENF, SECHS, SIEBEN, ACHT, NEUN, ZEHN, BUBE, DAME, KOENIG, AS)
+MAKE_ENUM(testCard, EINS, ZWEI, DREI, VIER, FUENF, SECHS, SIEBEN, ACHT, NEUN, ZEHN, BUBE, DAME, KOENIG, AS)
 
 //Two elements
-ENUM(testInt, ZERO, ONE)
+MAKE_ENUM(testInt, ZERO, ONE)
 
 //One element
-//ENUM(testItalianInt, UNO)
+//MAKE_ENUM(testItalianInt, UNO)
 
 //Long word and underscore
-ENUM(testLongElement, VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
+MAKE_ENUM(testLongElement, VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
 
 
 

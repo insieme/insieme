@@ -33,40 +33,28 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/interceptor.h"
+/**
+ * This header file must be included only by .h files depending on clang.
+ * Within header files, forward declarations should be sufficient.
+ */
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+namespace clang {
+    class Expr;
+    class Stmt;
 
-class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
+    class QualType;
 
-	//Plugin Hooks
-	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+    class Decl;
+    class FunctionDecl;
+    class TypeDecl;
+    class ValueDecl;
 
-    virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
+	class CastExpr; 
 
-    virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) ;
-
-    virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
-
-	private:
-
-	insieme::frontend::utils::Interceptor interceptor;
-
-	const insieme::frontend::utils::Interceptor& getInterceptor() const { return interceptor; }
-
-	public:
-
-	InterceptorPlugin(const std::set<std::string>& interceptSet) : interceptor(interceptSet) {}
-
-};
-
-}
-}
+	class SourceLocation;
+	class SourceRange;
+	class SourceManager;
 }

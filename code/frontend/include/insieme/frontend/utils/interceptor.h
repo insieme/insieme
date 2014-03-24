@@ -44,13 +44,8 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/clang_forward.h"
 
-// Forward declarations
-namespace clang {
-class Type;
-class FunctionDecl;
-class EnumConstantDecl;
-} // End clang namespace
 
 namespace insieme {
 namespace frontend { 

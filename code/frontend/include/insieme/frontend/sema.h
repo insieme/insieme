@@ -36,7 +36,17 @@
 
 #pragma once
 
+
 #include "insieme/frontend/clang.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+	#include <clang/Sema/Sema.h>
+#pragma GCC diagnostic pop
+
 
 using clang::SourceLocation;
 
@@ -44,12 +54,12 @@ namespace insieme {
 namespace frontend {
 
 namespace pragma {
-// forward declarations for pragma
-class Pragma;
-typedef std::shared_ptr<Pragma> PragmaPtr;
-typedef std::vector<PragmaPtr> 	PragmaList;
+	// forward declarations for pragma
+	class Pragma;
+	typedef std::shared_ptr<Pragma> PragmaPtr;
+	typedef std::vector<PragmaPtr> 	PragmaList;
 
-class MatchMap;
+	class MatchMap;
 } // end pragma namespace
 
 // ------------------------------------ InsiemeSema ---------------------------
@@ -132,8 +142,6 @@ public:
     void ActOnFrontendPluginPragma(pragma::PragmaPtr p) {
         addPragma(p);
     }
-
-
 
 	/**
 	 * Write into the logger information about the pragmas and their associatioation to AST nodes.

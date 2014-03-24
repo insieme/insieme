@@ -43,15 +43,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_program.h"
 
-namespace clang {
-    class Expr;
-    class Stmt;
-    class Decl;
-    class QualType;
-    class FunctionDecl;
-    class TypeDecl;
-    class ValueDecl;
-}
+#include "insieme/frontend/clang_forward.h"
+
 
 namespace stmtutils {
     class StmtWrapper;

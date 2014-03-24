@@ -42,10 +42,10 @@
 
 //
 //Declaration:
-//  #define ENUM(enumname, first, ...);
+//  #define MAKE_ENUM(enumname, first, ...);
 //
 //Using:
-//  ENUM(testColor, RED, GREEN, YELLOW)
+//  MAKE_ENUM(testColor, RED, GREEN, YELLOW)
 //  testColor tc = fromName<testColor>("RED");
 //  for(testColor c = min(c); c < max(c); c++ )
 //      std::cout << c << ord(c) << name(c);
@@ -71,7 +71,7 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
  * at least one item.
  *
  * Examples:
- *  ENUM(testColor, RED, GREEN, YELLOW)
+ *  MAKE_ENUM(testColor, RED, GREEN, YELLOW)
  *  testColor tc = fromName<testColor>("RED");
  *  for(testColor c = min(c); c < max(c); c++ )
  *      std::cout << c << ord(c) << name(c);
@@ -81,7 +81,7 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
  * @param ... The tail elements
  */
 
-#define ENUM(enumname, first, ...) \
+#define MAKE_ENUM(enumname, first, ...) \
 		enum enumname {enumname ## MIN, first = enumname ## MIN, __VA_ARGS__ , enumname ## MAX}; \
 		const std::vector<std::string> enumname ## Strings \
 			= getListOutOfCommaSeperated( "" #first "," #__VA_ARGS__ "", enumname ## MAX ); \

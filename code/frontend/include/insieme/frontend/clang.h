@@ -47,7 +47,6 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 	#include <clang/AST/TemplateBase.h>
-	#include <clang/AST/Decl.h>
 	#include <clang/AST/Expr.h>
 	#include <clang/AST/CXXInheritance.h>
 	#include <clang/AST/StmtVisitor.h>
@@ -57,4 +56,6 @@
 	#include <clang/AST/TypeVisitor.h>
 	#include <clang/Sema/Sema.h>
 	#include <clang/Sema/Ownership.h>
+	#include "clang/AST/ASTConsumer.h"
+	#include <clang/AST/Decl.h>
 #pragma GCC diagnostic pop

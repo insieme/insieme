@@ -82,6 +82,7 @@ namespace utils {
 	 * (usually those are wrapped on a cast)
 	 */
 	bool isNullPtrExpression(const core::ExpressionPtr& expr);
+
 } // end utils namespace 
 } // end frontend namespace
 } // end insisme namespace

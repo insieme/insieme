@@ -36,7 +36,16 @@
 
 #pragma once
 
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 #include <clang/AST/Expr.h>
+#pragma GCC diagnostic pop
+
+
 #include <llvm/Support/Casting.h>
 
 namespace insieme {
