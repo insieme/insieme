@@ -559,6 +559,14 @@ namespace backend {
 		// check if anything has been found
 		if (inits.empty()) return code;
 
+		// prepare a utility to check whether some expression is depending on globals
+		auto isDependingOnGlobals = [&](const core::ExpressionPtr& expr) {
+			return core::visitDepthFirstOnceInterruptible(expr, [&](const core::LiteralPtr& lit)->bool {
+				// every global variable is a literal of a ref-type ... that's how we identify those
+				return lit->getType().isa<core::RefTypePtr>();
+			});
+		};
+
 		// build up replacement map
 		const auto& ext = mgr.getLangExtension<IRExtensions>();
 		core::IRBuilder builder(mgr);
@@ -568,6 +576,12 @@ namespace backend {
 			if (core::analysis::hasFreeVariables(cur.second[1])) {
 				continue;
 			}
+
+			// skip initialization expressions if they are depending on globals
+			if (isDependingOnGlobals(cur.second[1])) {
+				continue;
+			}
+
 			// if it is initializing a vector
 			if (cur.second[1].isa<core::VectorExprPtr>()) {
 				continue;
