@@ -94,8 +94,7 @@ namespace backend {
 	 */
 	enum BasicPreprocessorFlags {
 		NONE 									= 0,
-		SKIP_POINTWISE_EXPANSION 				= 1,
-		SKIP_RESTORE_GLOBALS 					= 2
+		SKIP_POINTWISE_EXPANSION 				= 1
 	};
 
 	/**
@@ -166,16 +165,6 @@ namespace backend {
 	class NoPreProcessing : public PreProcessor {
 	public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
-	/**
-	 * This pre-processor is restoring global variables by identifying the global struct and replacing it
-	 * with a literal substitution.
-	 */
-	class RestoreGlobals : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
 	/**
