@@ -932,7 +932,9 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExpr = builder.tryDeref(initExpr);
 			}
 			
-			assert( *var->getType() ==  *initExpr->getType() && "type mismatch in targetType of LHS of init and type of initExpr");
+			assert_true( core::types::isSubTypeOf(getIRTranslationUnit().resolve(initExpr->getType()).as<core::TypePtr>(), getIRTranslationUnit().resolve(var->getType()).as<core::TypePtr>()))
+					<< "LHS: " << initExpr->getType() << " = " << getIRTranslationUnit().resolve(initExpr->getType()) << " of type " << initExpr->getType()->getNodeType() << "\n"
+					<< "RHS: " << var->getType() << " = " << getIRTranslationUnit().resolve(var->getType()) <<  " of type " << var->getType()->getNodeType() << "\n";
 
 			// finally create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
