@@ -120,6 +120,103 @@ namespace utils {
 namespace constraint {
 
 
+	// ----------------------------- Assignment ------------------------------
+
+	class Assignment : public Printable {
+
+		struct Container : public VirtualPrintable {
+			virtual ~Container() {};
+			virtual void append(std::map<ValueID,string>& res) const =0;
+			virtual Container* copy() const =0;
+			virtual void clear(const ValueID& value) =0;
+		};
+
+		template<typename L>
+		struct TypedContainer : public Container, public std::map<TypedValueID<L>, typename L::value_type> {
+			typedef std::map<TypedValueID<L>, typename L::value_type> map_type;
+			typedef typename map_type::value_type value_type;
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << join(",",*this, [](std::ostream& out, const value_type& cur) {
+					out << cur.first << "=" << cur.second;
+				});
+			}
+			virtual void append(std::map<ValueID,string>& res) const {
+				for(auto& cur : *this) {
+					res.insert({cur.first, toString(cur.second)});
+				}
+			}
+			virtual Container* copy() const {
+				return new TypedContainer<L>(*this);
+			}
+			virtual void clear(const ValueID& value) {
+				this->erase(value);
+			}
+		};
+
+		typedef TypedMap<TypedContainer, Container, SetLattice<int>> container_index_type;
+
+		container_index_type data;
+
+	public:
+
+		Assignment() {};
+
+		Assignment(Assignment&& other) = default;
+
+		Assignment(const Assignment& other) : data(other.data) { }
+
+		template<typename L>
+		typename L::value_type& get(const TypedValueID<L>& value) {
+			return data.get<L>()[value];
+		}
+
+		template<typename L>
+		const typename L::value_type& get(const TypedValueID<L>& value) const {
+			static const typename L::value_type empty;
+			auto& map = data.get<L>();
+			auto pos = map.find(value);
+			if (pos != map.end()) { return pos->second; }
+			return empty;
+		}
+
+		template<typename L>
+		typename L::value_type& operator[](const TypedValueID<L>& value) {
+			return get(value);
+		}
+
+		template<typename L>
+		const typename L::value_type& operator[](const TypedValueID<L>& value) const {
+			return get(value);
+		}
+
+		Assignment& operator=(const Assignment& other) = default;
+
+		bool operator==(const Assignment& other) const {
+			return data == other.data;
+		}
+
+		void clear(const ValueID& value) {
+			for(auto& cur : data) {
+				cur.second->clear(value);
+			}
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << data;
+		}
+
+		std::map<ValueID,string> toStringMap() const {
+			std::map<ValueID,string> res;
+			for(auto& cur : data) {
+				cur.second->append(res);
+			}
+			return res;
+		}
+
+	};
+
+
 	// ----------------------------- Constraints ------------------------------
 
 	// a common base type for all kind of constraints
@@ -206,14 +303,38 @@ namespace constraint {
 			Executor executor;
 
 			mutable std::vector<ValueID> usedInputs;
+			mutable bool satisfied;			// a flag remembering whether the filter used to be satisfied the last time
 
 		public:
 
 			ComposedConstraint(const Filter& filter, const Executor& executor)
-				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs(), !Filter::is_true), filter(filter), executor(executor) {}
+				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs(), !Filter::is_true),
+				  filter(filter), executor(executor), satisfied(false) {}
 
 			virtual UpdateResult update(Assignment& ass) const {
-				return (filter(ass) && executor.update(ass)) ? Incremented : Unchanged;
+				bool fit = filter(ass);
+
+				// if no longer fitting
+				if (satisfied && !fit) {
+
+					// reset satisfaction state
+					satisfied = false;
+
+					// reset output values
+					for(const auto& cur : executor.getOutputs()) {
+						ass.clear(cur);
+					}
+
+					// return info that value has been completely altered
+					return Altered;
+				}
+
+				// if the filter is not matching => no change necessary
+				if (!fit) return Unchanged;
+
+				// filter is matching
+				satisfied = true;
+				return executor.update(ass) ? Incremented : Unchanged;
 			}
 
 			virtual bool check(const Assignment& ass) const {
@@ -291,6 +412,85 @@ namespace constraint {
 			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
 				a.addUsedInputs(ass, used);
 				if (a(ass)) b.addUsedInputs(ass, used);
+			}
+		};
+
+		template<typename A, typename B>
+		struct OrFilter : public Filter<> {
+			A a; B b;
+			OrFilter(const A& a, const B& b)
+				: a(a), b(b) {}
+			bool operator()(const Assignment& ass) const {
+				return a(ass) || b(ass);
+			}
+			void print(std::ostream& out) const {
+				a.print(out); out << " or "; b.print(out);
+			}
+			ValueIDs getInputs() const {
+				return combine(a.getInputs(), b.getInputs());
+			}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				a.addUsedInputs(ass, used);
+				if (a(ass)) b.addUsedInputs(ass, used);
+			}
+		};
+
+		template<typename A>
+		struct NegFilter : public Filter<> {
+			A a;
+			NegFilter(const A& a) : a(a) {}
+			bool operator()(const Assignment& ass) const {
+				return !a(ass);
+			}
+			void print(std::ostream& out) const {
+				out << "!("; a.print(out); out << ")";
+			}
+			ValueIDs getInputs() const {
+				return a.getInputs();
+			}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				a.addUsedInputs(ass, used);
+			}
+		};
+
+		template<typename F, typename A, typename B>
+		struct BinaryOpFilter : public Filter<> {
+			F f; TypedValueID<A> a; TypedValueID<B> b;
+			BinaryOpFilter(const F& f, const TypedValueID<A>& a, const TypedValueID<B>& b)
+				: f(f), a(a), b(b) {}
+			bool operator()(const Assignment& ass) const {
+				return f(ass[a], ass[b]);
+			}
+			void print(std::ostream& out) const {
+				out << "f(" << a << "," << b << ")";
+			}
+			ValueIDs getInputs() const {
+				return toVector<ValueID>(a,b);
+			}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
+				used.push_back(b);
+			}
+		};
+
+		template<typename F, typename A, typename B, typename C>
+		struct TrinaryOpFilter : public Filter<> {
+			F f; TypedValueID<A> a; TypedValueID<B> b; TypedValueID<C> c;
+			TrinaryOpFilter(const F& f, const TypedValueID<A>& a, const TypedValueID<B>& b, const TypedValueID<C>& c)
+				: f(f), a(a), b(b), c(c) {}
+			bool operator()(const Assignment& ass) const {
+				return f(ass[a], ass[b], ass[c]);
+			}
+			void print(std::ostream& out) const {
+				out << "f(" << a << "," << b << "," << c << ")";
+			}
+			ValueIDs getInputs() const {
+				return toVector<ValueID>(a,b,c);
+			}
+			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+				used.push_back(a);
+				used.push_back(b);
+				used.push_back(c);
 			}
 		};
 
@@ -551,12 +751,33 @@ namespace constraint {
 		return detail::ElementOfFilter<E,L>(e,set);
 	}
 
+	template<typename F1>
+	typename std::enable_if<std::is_base_of<detail::Filter<false>, F1>::value, detail::NegFilter<F1>>::type
+	operator!(const F1& f1) {
+		return detail::NegFilter<F1>(f1);
+	}
+
 	template<typename F1, typename F2>
 	typename std::enable_if<std::is_base_of<detail::Filter<false>, F1>::value && std::is_base_of<detail::Filter<false>, F2>::value, detail::AndFilter<F1, F2>>::type
 	operator&&(const F1& f1, const F2& f2) {
 		return detail::AndFilter<F1,F2>(f1,f2);
 	}
 
+	template<typename F1, typename F2>
+	typename std::enable_if<std::is_base_of<detail::Filter<false>, F1>::value && std::is_base_of<detail::Filter<false>, F2>::value, detail::OrFilter<F1, F2>>::type
+	operator||(const F1& f1, const F2& f2) {
+		return detail::OrFilter<F1,F2>(f1,f2);
+	}
+
+	template<typename F, typename A, typename B>
+	detail::BinaryOpFilter<F,A,B> f_binary(const F& filter, const TypedValueID<A>& a, const TypedValueID<B>& b) {
+		return detail::BinaryOpFilter<F,A,B>(filter,a,b);
+	}
+
+	template<typename F, typename A, typename B, typename C>
+	detail::TrinaryOpFilter<F,A,B,C> f_trinary(const F& filter, const TypedValueID<A>& a, const TypedValueID<B>& b, const TypedValueID<C>& c) {
+		return detail::TrinaryOpFilter<F,A,B,C>(filter,a,b,c);
+	}
 
 	// ----------------------------- Executor Factory Functions ------------------------------
 
@@ -681,101 +902,6 @@ namespace constraint {
 
 
 
-	// ----------------------------- Assignment ------------------------------
-
-	class Assignment : public Printable {
-
-		struct Container : public VirtualPrintable {
-			virtual ~Container() {};
-			virtual void append(std::map<ValueID,string>& res) const =0;
-			virtual Container* copy() const =0;
-			virtual void clear(const ValueID& value) =0;
-		};
-
-		template<typename L>
-		struct TypedContainer : public Container, public std::map<TypedValueID<L>, typename L::value_type> {
-			typedef std::map<TypedValueID<L>, typename L::value_type> map_type;
-			typedef typename map_type::value_type value_type;
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << join(",",*this, [](std::ostream& out, const value_type& cur) {
-					out << cur.first << "=" << cur.second;
-				});
-			}
-			virtual void append(std::map<ValueID,string>& res) const {
-				for(auto& cur : *this) {
-					res.insert({cur.first, toString(cur.second)});
-				}
-			}
-			virtual Container* copy() const {
-				return new TypedContainer<L>(*this);
-			}
-			virtual void clear(const ValueID& value) {
-				this->erase(value);
-			}
-		};
-
-		typedef TypedMap<TypedContainer, Container, SetLattice<int>> container_index_type;
-
-		container_index_type data;
-
-	public:
-
-		Assignment() {};
-
-		Assignment(Assignment&& other) = default;
-
-		Assignment(const Assignment& other) : data(other.data) { }
-
-		template<typename L>
-		typename L::value_type& get(const TypedValueID<L>& value) {
-			return data.get<L>()[value];
-		}
-
-		template<typename L>
-		const typename L::value_type& get(const TypedValueID<L>& value) const {
-			static const typename L::value_type empty;
-			auto& map = data.get<L>();
-			auto pos = map.find(value);
-			if (pos != map.end()) { return pos->second; }
-			return empty;
-		}
-
-		template<typename L>
-		typename L::value_type& operator[](const TypedValueID<L>& value) {
-			return get(value);
-		}
-
-		template<typename L>
-		const typename L::value_type& operator[](const TypedValueID<L>& value) const {
-			return get(value);
-		}
-
-		Assignment& operator=(const Assignment& other) = default;
-
-		bool operator==(const Assignment& other) const {
-			return data == other.data;
-		}
-
-		void clear(const ValueID& value) {
-			for(auto& cur : data) {
-				cur.second->clear(value);
-			}
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			return out << data;
-		}
-
-		std::map<ValueID,string> toStringMap() const {
-			std::map<ValueID,string> res;
-			for(auto& cur : data) {
-				cur.second->append(res);
-			}
-			return res;
-		}
-
-	};
 
 
 	// ----------------------------- Solver ------------------------------
