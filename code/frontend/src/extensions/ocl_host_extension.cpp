@@ -35,6 +35,7 @@
  */
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -87,8 +88,21 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
+ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                               insieme::frontend::conversion::Converter& convFact) {
+	NodeManager& mgr = irExpr->getNodeManager();
+	IRBuilder builder(mgr);
+
+	if(CallExprPtr call = irExpr.isa<CallExprPtr>()) {
+		if(core::analysis::isCallOf(call, builder.literal("icl_run_kernel", call->getFunctionExpr()->getType()))) {
+			// remove deref on icl_buffers to fake non const behavior
+dumpPretty(call);
+		}
+	}
+	return irExpr;
+}
+
 core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-	return prog;
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
