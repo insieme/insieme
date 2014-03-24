@@ -420,7 +420,7 @@ namespace backend {
 			default:
 				// this should not happen ...
 				LOG(FATAL) << "Unsupported IR Type encountered: " << type;
-				assert(false && "Unsupported IR type encountered!");
+				assert_fail() << "Unsupported IR type encountered!" << std::endl << type->getNodeType();
 				info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager()); break;
 			}
 

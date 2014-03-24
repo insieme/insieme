@@ -65,7 +65,7 @@ namespace backend {
 			steps.push_back(makePreProcessor<InlinePointwise>());
 		}
 		if (!(options & SKIP_RESTORE_GLOBALS)) {
-			steps.push_back(makePreProcessor<RestoreGlobals>());
+		//	steps.push_back(makePreProcessor<RestoreGlobals>());
 		}
 		steps.push_back(makePreProcessor<InitGlobals>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());

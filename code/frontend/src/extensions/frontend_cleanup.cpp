@@ -372,6 +372,7 @@
 				return true;
 			};
 
+			core::ExpressionPtr lastExpr;
 			// substitute usage by left side
 			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
@@ -386,31 +387,15 @@
 
 							// Cpp by ref, C by value
 							if (convFact.getCompiler().isCXX())
-								return call[0];
+								lastExpr = call[0];
 							else
-								return builder.deref(call[0]);
+								lastExpr = builder.deref(call[0]);
+
+							return lastExpr;
 						}
 					}
 					return node;
 			},doNotCheckInBodies);
-
-			std::function<bool (const core::ExpressionPtr)> isJustRead = 
-				[&](const core::ExpressionPtr& stmt) -> bool{
-				if (stmt.isa<core::VariablePtr>())
-					return true;
-				if (stmt.isa<core::LiteralPtr>())
-					return true;
-
-				if (core::CallExprPtr call = stmt.isa<core::CallExprPtr>()){
-					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefDeref()))
-						return isJustRead(call[0]);
-					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getCompositeRefElem()))
-						return isJustRead(call[0]);
-					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getCompositeMemberAccess()))
-						return isJustRead(call[0]);
-				}
-				return false;
-			};
 
 			for (auto stmt : irStmts){
 
@@ -439,10 +424,11 @@
 
 						for (auto bodyStmt : bodyList){
 							auto whileline = assignMapper.map(bodyStmt);
-							if (! (whileline.isa<core::ExpressionPtr>() && isJustRead(whileline.as<core::ExpressionPtr>())))
+							if (res != lastExpr)
 								newStmts.push_back( whileline);
 						}
 
+						newStmts.insert(newStmts.end(), toAdd.begin(), toAdd.end());
 						res = builder.whileStmt( res.as<core::WhileStmtPtr>()->getCondition(), stmtutils::tryAggregateStmts(builder,newStmts));
 						newStmts.clear();
 						newStmts = stashBody;
@@ -455,8 +441,8 @@
 				else{
 					auto res = assignMapper.map(stmt);
 
-					// if the assignment is used as expression, a read operation needs to be added
-					if (! (res.isa<core::ExpressionPtr>() && isJustRead(res.as<core::ExpressionPtr>())))
+					// if the assignment is used as expression, well have a remainng tail which is not needed
+					if (res != lastExpr)
 						newStmts.push_back( res);
 				}
 			}

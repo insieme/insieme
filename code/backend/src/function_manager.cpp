@@ -631,6 +631,7 @@ namespace backend {
 			core::ExpressionPtr expression = expr;
 			core::FunctionTypePtr funType = expr->getType().as<core::FunctionTypePtr>();
 			if (funType->isMember()) {
+
 				// normalize member
 				expression = core::analysis::normalize(expression);
 

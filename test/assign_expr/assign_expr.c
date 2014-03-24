@@ -18,7 +18,10 @@ int main (){
 
 	{
 		int a;
+		int b;
 		while ((a = f() ) < 6){
+			int c;
+			c = b = a;
 			printf("%d\n", a);
 		}
 	}
