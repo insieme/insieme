@@ -497,7 +497,10 @@ TEST(TypeConversion, FileTest) {
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
 
-	fe::conversion::Converter convFactory( mgr, tu );
+
+	fe::ConversionSetup setup;
+	setup.frontendPluginInit();
+	fe::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const core::NodePtr& cur) {

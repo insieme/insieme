@@ -841,7 +841,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
-//							teakes care of C nodes
+//							takes care of C nodes
 //							C nodes implemented in base: StmtConverter
 //---------------------------------------------------------------------------------------------------------------------
 

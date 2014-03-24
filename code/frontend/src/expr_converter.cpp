@@ -45,6 +45,7 @@
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/memalloc.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -742,12 +743,15 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 		core::TypePtr retType;
 		// the return type of this lambda is the type of the last expression (according to the C standard)
-		std::vector<core::StatementPtr> stmts { lhs };
+		stmtutils::StmtWrapper stmts;
+		stmts.push_back(lhs);
 		stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
 		retType = rhs->getType();
 
-		core::StatementPtr body =  builder.compoundStmt(stmts);
-		return (retIr = builder.createCallExprFromBody(body, retType));
+
+
+		//core::StatementPtr body =  builder.compoundStmt(stmts);
+		return (retIr = convFact.createCallExprFromBody(stmts, retType));
 	}
 
 
@@ -958,9 +962,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			}
 
 			isAssignment = true;
-			opFunc = gen.getRefAssign();
-			exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
-			VLOG(2) << exprTy;
+			opFunc = convFact.getFrontendIR().getRefAssign();
+			if (convFact.getCompiler().isCXX())
+				exprTy = lhs.getType();
+			else
+				exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
 			break;
 		}
 		default:
@@ -975,7 +981,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		// lazy evaluation of RHS
 		// generate a bind call
 		exprTy = gen.getBool();
-		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
+		stmtutils::StmtWrapper body;
+		body.push_back(builder.returnStmt(rhs));
+		rhs = convFact.createCallExprFromBody(body, gen.getBool(), true);
 	}
 
 	core::TypePtr&& lhsTy = lhs->getType();
@@ -1371,10 +1379,10 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	return (retIr =
 			builder.callExpr(retTy, gen.getIfThenElse(),
 					condExpr, // Condition
-					builder.createCallExprFromBody(
+					convFact.createCallExprFromBody(
 							builder.returnStmt(trueExpr), trueExpr->getType(), true
 					),// True
-					builder.createCallExprFromBody(
+					convFact.createCallExprFromBody(
 							builder.returnStmt(falseExpr), falseExpr->getType(), true
 					)// False
 			)

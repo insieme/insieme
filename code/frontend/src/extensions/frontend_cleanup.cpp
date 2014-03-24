@@ -51,14 +51,17 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/utils/memalloc.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/assert.h"
 
 #include <functional>
 
-#include <boost/algorithm/string/predicate.hpp>
+//#include <boost/algorithm/string/predicate.hpp>
+
 
  namespace insieme {
  namespace frontend {
@@ -353,6 +356,114 @@
         return tu;
     }
 
+    stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
+		stmtutils::StmtWrapper newStmts;
+
+		//////////////////////////////////////////////////////////////
+		// remove frontend assignments and extract them into different statements
+		{
+			const auto& feExt = convFact.getFrontendIR();
+			core::IRBuilder builder (convFact.getNodeManager());
+
+			// the maper should never leave the first nested scope
+			auto doNotCheckInBodies = [&] (const core::NodePtr& node){
+				if (node.isa<core::CompoundStmtPtr>())
+					return false;
+				return true;
+			};
+
+			// substitute usage by left side
+			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+						if (core::analysis::isCallOf(call, feExt.getRefAssign())){
+
+							// build a new operator with the final shape
+							auto assign = builder.assign(call[0], call[1]);
+							core::transform::utils::migrateAnnotations(call, assign);
+
+							// extract the operation
+							newStmts.push_back(assign);
+
+							// Cpp by ref, C by value
+							if (convFact.getCompiler().isCXX())
+								return call[0];
+							else
+								return builder.deref(call[0]);
+						}
+					}
+					return node;
+			},doNotCheckInBodies);
+
+			std::function<bool (const core::ExpressionPtr)> isJustRead = 
+				[&](const core::ExpressionPtr& stmt) -> bool{
+				if (stmt.isa<core::VariablePtr>())
+					return true;
+				if (stmt.isa<core::LiteralPtr>())
+					return true;
+
+				if (core::CallExprPtr call = stmt.isa<core::CallExprPtr>()){
+					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefDeref()))
+						return isJustRead(call[0]);
+					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getCompositeRefElem()))
+						return isJustRead(call[0]);
+					if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getCompositeMemberAccess()))
+						return isJustRead(call[0]);
+				}
+				return false;
+			};
+
+			for (auto stmt : irStmts){
+
+				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || stmt.isa<core::ForStmtPtr>())
+					newStmts.push_back( stmt);
+				else if (core::WhileStmtPtr whilestmt = stmt.isa<core::WhileStmtPtr>()){
+
+					// any assignment extracted from the condition expression of a while stmt needs to be replicated
+					// at the end of the loop body
+					stmtutils::StmtWrapper  stashStmts = newStmts;
+					newStmts.clear();
+					core::StatementList toAdd;
+
+					auto res = assignMapper.map(stmt);
+
+					for (core::StatementPtr stmt : newStmts){
+						toAdd.push_back(stmt);
+					}
+
+					// rebuild the statement with the added elements
+					core::StatementList bodyList = res.as<core::WhileStmtPtr>()->getBody()->getStatements();
+					{
+						// clean inner scope
+						stmtutils::StmtWrapper  stashBody = newStmts;
+						newStmts.clear();
+
+						for (auto bodyStmt : bodyList){
+							auto whileline = assignMapper.map(bodyStmt);
+							if (! (whileline.isa<core::ExpressionPtr>() && isJustRead(whileline.as<core::ExpressionPtr>())))
+								newStmts.push_back( whileline);
+						}
+
+						res = builder.whileStmt( res.as<core::WhileStmtPtr>()->getCondition(), stmtutils::tryAggregateStmts(builder,newStmts));
+						newStmts.clear();
+						newStmts = stashBody;
+					}
+
+
+					newStmts.insert(newStmts.begin(), stashStmts.begin(), stashStmts.end());
+					newStmts.push_back(res);
+				}
+				else{
+					auto res = assignMapper.map(stmt);
+
+					// if the assignment is used as expression, a read operation needs to be added
+					if (! (res.isa<core::ExpressionPtr>() && isJustRead(res.as<core::ExpressionPtr>())))
+						newStmts.push_back( res);
+				}
+			}
+		}
+
+		return newStmts;
+	}
 
 } // frontend
 } // insieme

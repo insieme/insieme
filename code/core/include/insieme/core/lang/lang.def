@@ -398,7 +398,7 @@ LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
 LITERAL(RefNull,        "ref.null",             "ref<any>")
 LITERAL(NullFunc,       "func.null",            "(type<'a>)->'a")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(RefAssign, 		"ref.assign", 			"(sink<'a>,'a) -> 'a")
+LITERAL(RefAssign, 		"ref.assign", 			"(sink<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(src<'a>) -> 'a")
 
 LITERAL(SrcToRef,		"src.to.ref",			"(src<'a>) -> ref<'a>")

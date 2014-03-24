@@ -29,31 +29,38 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
-
- namespace insieme {
- namespace frontend {
-
-/**
- *
- * This is the frontend cleanup tool.
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
- * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code
- */
-class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
-		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
-};
+#include "insieme/core/lang/extension.h"
 
 
-} // frontend
-} // insieme
+namespace insieme {
+namespace frontend {
+namespace ir{
+
+		class FrontendIr : public core::lang::Extension {
+
+			bool isCXX;
+
+
+		public:
+			/**
+			 * Creates a new instance based on the given node manager.
+			 */
+			FrontendIr(core::NodeManager& manager, bool cxx)
+					: core::lang::Extension(manager), isCXX(cxx) {}
+	
+			/**
+			 * 	frontend assignment operator
+			 */
+			LANG_EXT_LITERAL(RefAssign, "FE.RefAssign", isCXX? "(ref<'a>, 'a)->ref<'a>":"(ref<'a>, 'a)->'a");
+		};
+
+
+} // namespace ir
+} // namespace frontend
+} // namespace insieme

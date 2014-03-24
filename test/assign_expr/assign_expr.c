@@ -22,7 +22,6 @@ int main (){
 			printf("%d\n", a);
 		}
 	}
-
 	{
 		int x=0;
 		int y=10;
@@ -37,7 +36,6 @@ int main (){
 		a.val=g(a.val = 6);
 		printf("%d\n", a.val);
 	}
-
 
 	return 0;
 }
