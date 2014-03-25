@@ -1041,16 +1041,13 @@ bool isZero(const core::ExpressionPtr& value) {
 
 	// ... or a zero literal ..
 	if (value->getNodeType() == core::NT_Literal) {
-		// the flags to be passed to the regex construction
-#define FLAGS (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript)
-
-		boost::regex zeroRegex (R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", FLAGS);
+		boost::regex zeroRegex (R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript));
 
 		const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
 
 		if(boost::regex_match(strValue, zeroRegex))
 			return true;
-#undef FLAGS
+
 	}
 
 	// ... or the ref.null literal
