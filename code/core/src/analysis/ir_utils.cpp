@@ -38,6 +38,7 @@
 
 #include <set>
 #include <map>
+#include <boost/regex.hpp>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -1040,11 +1041,13 @@ bool isZero(const core::ExpressionPtr& value) {
 
 	// ... or a zero literal ..
 	if (value->getNodeType() == core::NT_Literal) {
+		boost::regex zeroRegex (R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript));
+
 		const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
-		if (strValue == "0" || strValue == "0l" || strValue == "0ll" || strValue == "0u" || strValue == "0ul" || strValue == "0ull" ||
-				strValue == "0.0" || strValue == "0.0f" || strValue == "0.0000000000000000") {
+
+		if(boost::regex_match(strValue, zeroRegex))
 			return true;
-		}
+
 	}
 
 	// ... or the ref.null literal

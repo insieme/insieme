@@ -810,7 +810,7 @@ void IclKernelReplacer::collectArguments() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-
+	NodeAddressMap replacements;
 
 	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
 			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
@@ -825,7 +825,7 @@ void IclKernelReplacer::collectArguments() {
 		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
 		ExpressionsPtr member = arguments->getExpressions();
 
-		CompoundStmtPtr tupleCreation;
+		StatementList tupleCreation;
 
 
 		for(unsigned i = 0; i < member.size(); ++i) {
@@ -836,13 +836,30 @@ void IclKernelReplacer::collectArguments() {
 			// then look at the value of the argument
 			ExpressionPtr storedArg =  isIcl_buffer ? builder.callExpr(gen.getScalarToArray(),  member[i]) : member[i];
 
-			kernelTypes[kernel].push_back(storedArg->getType());
+			ExpressionPtr addToTuple;
+			if(analysis::isZero(storedArg)) { // local memory argument
+				kernelTypes[kernel].push_back(gen.getUInt8());
+				// store the information that this is a local memory argument
+//				localMemArgs[kernel].insert(member[i-1]);
+				addToTuple = member[i-1];
+			} else {
+				kernelTypes[kernel].push_back(storedArg->getType());
+				addToTuple = storedArg;
+			}
+
+			tupleCreation.push_back(builder.assign(builder.callExpr(addToTuple->getType(), gen.getTupleRefElem(), kernel, builder.intLit(i/2),
+					builder.getTypeLiteral(addToTuple->getType())), addToTuple));
 		}
 
-		std::cout << member.size() << std::endl << kernelTypes[kernel] << std::endl;;
+		// add kernel call to compound expression
+		tupleCreation.push_back(runKernel.getRoot().as<ExpressionPtr>());
 
-//		assert(false && "söldfkjasdflö");
+		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
+		replacements[runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
+dumpPretty(replacements[runKernel.getRoot()]);
 	});
+
+	prog = transform::replaceAll(mgr, replacements);
 }
 
 } //namespace ocl
