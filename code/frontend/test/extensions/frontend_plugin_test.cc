@@ -56,14 +56,14 @@
 
 using namespace insieme;
 
-bool typeVisited = false;
-bool exprVisited = false;
-bool stmtVisited = false;
+bool typeVisited 	 = false;
+bool exprVisited 	 = false;
+bool stmtVisited 	 = false;
 bool postTypeVisited = false;
 bool postExprVisited = false;
 bool postStmtVisited = false;
-bool tuVisited = false;
-bool progVisited = false;
+bool tuVisited 		 = false;
+bool progVisited 	 = false;
 
 insieme::core::NodeManager manager;
 

@@ -58,6 +58,9 @@
 
 #include "insieme/utils/assert.h"
 
+
+#include "insieme/frontend/omp/omp_annotation.h"
+
 #include <functional>
 
 //#include <boost/algorithm/string/predicate.hpp>
@@ -390,17 +393,31 @@
 								lastExpr = call[0];
 							else
 								lastExpr = builder.deref(call[0]);
-
 							return lastExpr;
 						}
 					}
 					return node;
 			},doNotCheckInBodies);
 
+			auto justRemove = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+						if (core::analysis::isCallOf(call, feExt.getRefAssign())){
+							// build a new operator with the final shape
+							auto assign = builder.assign(call[0], call[1]);
+							core::transform::utils::migrateAnnotations(call, assign);
+							return assign;
+						}
+					}
+					return node;
+			});
+
 			for (auto stmt : irStmts){
 
-				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || stmt.isa<core::ForStmtPtr>())
+				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
+					stmt.isa<core::ForStmtPtr>())
 					newStmts.push_back( stmt);
+				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>())
+					newStmts.push_back( justRemove.map(stmt));
 				else if (core::WhileStmtPtr whilestmt = stmt.isa<core::WhileStmtPtr>()){
 
 					// any assignment extracted from the condition expression of a while stmt needs to be replicated
@@ -442,8 +459,9 @@
 					auto res = assignMapper.map(stmt);
 
 					// if the assignment is used as expression, well have a remainng tail which is not needed
-					if (res != lastExpr)
+					if (res != lastExpr){
 						newStmts.push_back( res);
+					}
 				}
 			}
 		}
