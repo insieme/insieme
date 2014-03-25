@@ -36,7 +36,11 @@ int main (){
 	{
 		int x;
 		f(x=3);
-
+	}
+	{
+		int x;
+		int y;
+		f(y=x++);
 	}
 	
 

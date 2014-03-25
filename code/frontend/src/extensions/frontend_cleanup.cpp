@@ -359,6 +359,63 @@
         return tu;
     }
 
+namespace {
+
+	core::StatementPtr collectAssignments (const core::StatementPtr& stmt, const core::NodePtr& feAssign, core::StatementPtr& lastExpr, core::StatementList& preProcess, bool isCXX){
+
+			assert(stmt && "no stmt, no fun");
+			core::IRBuilder builder (stmt->getNodeManager());
+
+			// the maper should never leave the first nested scope
+			auto doNotCheckInBodies = [&] (const core::NodePtr& node){
+				if (node.isa<core::CompoundStmtPtr>())
+					return false;
+				return true;
+			};
+
+			// substitute usage by left side
+			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+
+					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+
+						if(core::analysis::isCallOf(call, builder.getLangBasic().getGenPostDec()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getGenPostInc()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostDec()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostInc())){
+							
+								auto var = builder.variable(call->getType());
+								auto decl = builder.declarationStmt(var,call);
+								preProcess.push_back(decl);
+								return var;
+						}
+
+						if (core::analysis::isCallOf(call, feAssign)){
+
+							// build a new operator with the final shape
+							auto assign = builder.assign(call[0], call[1]);
+							core::transform::utils::migrateAnnotations(call, assign);
+
+							// extract the operation
+							preProcess.push_back(assign);
+
+							// Cpp by ref, C by value
+							if (isCXX)
+								lastExpr = call[0];
+							else
+								lastExpr = builder.deref(call[0]);
+							return lastExpr;
+						}
+					}
+					return node;
+			},doNotCheckInBodies);
+
+			return assignMapper.map(stmt);
+
+	}
+
+
+} // annonymous namespace
+
     stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
 		stmtutils::StmtWrapper newStmts;
 
@@ -368,36 +425,10 @@
 			const auto& feExt = convFact.getFrontendIR();
 			core::IRBuilder builder (convFact.getNodeManager());
 
-			// the maper should never leave the first nested scope
-			auto doNotCheckInBodies = [&] (const core::NodePtr& node){
-				if (node.isa<core::CompoundStmtPtr>())
-					return false;
-				return true;
-			};
-
-			core::ExpressionPtr lastExpr;
-			// substitute usage by left side
-			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
-					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
-						if (core::analysis::isCallOf(call, feExt.getRefAssign())){
-
-							// build a new operator with the final shape
-							auto assign = builder.assign(call[0], call[1]);
-							core::transform::utils::migrateAnnotations(call, assign);
-
-							// extract the operation
-							newStmts.push_back(assign);
-
-							// Cpp by ref, C by value
-							if (convFact.getCompiler().isCXX())
-								lastExpr = call[0];
-							else
-								lastExpr = builder.deref(call[0]);
-							return lastExpr;
-						}
-					}
-					return node;
-			},doNotCheckInBodies);
+			// stores the last expression returned to avoid writting a dead read
+			core::StatementPtr lastExpr;	
+			// the extracted statements, only if this list is not empty the transformation is done
+			core::StatementList preProcess;
 
 			auto justRemove = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
@@ -422,47 +453,64 @@
 
 					// any assignment extracted from the condition expression of a while stmt needs to be replicated
 					// at the end of the loop body
-					stmtutils::StmtWrapper  stashStmts = newStmts;
-					newStmts.clear();
-					core::StatementList toAdd;
+					core::StatementList conditionBody;
+					core::ExpressionPtr conditionExpr;
 
-					auto res = assignMapper.map(stmt);
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, conditionBody, convFact.getCompiler().isCXX());
+					conditionBody.push_back(builder.returnStmt(res.as<core::WhileStmtPtr>().getCondition()));
 
-					for (core::StatementPtr stmt : newStmts){
-						toAdd.push_back(stmt);
+					// reconstrucy the conditional expression, if this became more than one statements we'll capture it in a lambda
+					// whenever free variable will be captured by ref and therefore modified in the outer scope
+					if (conditionBody.size() ==1 ){
+						conditionExpr = res.as<core::WhileStmtPtr>().getCondition();
+					}
+					else{
+						conditionExpr = builder.createCallExprFromBody(builder.compoundStmt(conditionBody), builder.getLangBasic().getBool());
 					}
 
 					// rebuild the statement with the added elements
 					core::StatementList bodyList = res.as<core::WhileStmtPtr>()->getBody()->getStatements();
 					{
-						// clean inner scope
-						stmtutils::StmtWrapper  stashBody = newStmts;
-						newStmts.clear();
-
+						core::StatementList newBody;
+						core::StatementPtr lastBodyExpr;	
+						core::StatementList preBodyProcess;
 						for (auto bodyStmt : bodyList){
-							auto whileline = assignMapper.map(bodyStmt);
-							if (res != lastExpr)
-								newStmts.push_back( whileline);
+							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, 
+															  convFact.getCompiler().isCXX());
+
+							if (preBodyProcess.empty())
+								newBody.push_back(bodyRes);
+							else{
+								newBody.insert(newBody.end(), preBodyProcess.begin(), preBodyProcess.end());
+								if (res != lastExpr){
+									newBody.push_back( bodyRes);
+								}
+							}
+							preBodyProcess.clear();
 						}
 
-						newStmts.insert(newStmts.end(), toAdd.begin(), toAdd.end());
-						res = builder.whileStmt( res.as<core::WhileStmtPtr>()->getCondition(), stmtutils::tryAggregateStmts(builder,newStmts));
-						newStmts.clear();
-						newStmts = stashBody;
+			//			newBody.insert(newBody.end(), toAdd.begin(), toAdd.end());
+						res = builder.whileStmt( conditionExpr, stmtutils::tryAggregateStmts(builder,newBody));
 					}
 
-
-					newStmts.insert(newStmts.begin(), stashStmts.begin(), stashStmts.end());
+				//	newStmts.insert(newStmts.begin(), preProcess.begin(), preProcess.end());
 					newStmts.push_back(res);
 				}
 				else{
-					auto res = assignMapper.map(stmt);
 
-					// if the assignment is used as expression, well have a remainng tail which is not needed
-					if (res != lastExpr){
-						newStmts.push_back( res);
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, preProcess, convFact.getCompiler().isCXX());
+					if (preProcess.empty())
+						newStmts.push_back(stmt);
+					else{
+						newStmts.insert(newStmts.end(), preProcess.begin(), preProcess.end());
+						// if the assignment is used as expression, well have a remainng tail which is not needed
+						if (res != lastExpr){
+							newStmts.push_back( res);
+						}
 					}
 				}
+				preProcess.clear();
+				lastExpr = core::StatementPtr();
 			}
 		}
 
