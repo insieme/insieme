@@ -35,6 +35,8 @@
  */
 #include <fstream>
 
+
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/ir_visitor.h"
@@ -490,6 +492,7 @@ void KernelReplacer::replaceKernels() {
 	for_each(kernelTypes, [&](std::pair<ExpressionPtr, std::vector<TypePtr> > kT) {
 		ExpressionPtr k = kT.first;
 		TupleTypePtr tt = builder.tupleType(kT.second);
+
 		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(builder.refType(tt)).as<ExpressionPtr>()
 				: builder.literal(builder.refType(tt), k.as<LiteralPtr>()->getStringValue());
 
@@ -799,6 +802,8 @@ void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
 	});
 }
 
+
+
 //void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
 //	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
 void IclKernelReplacer::collectArguments() {
@@ -815,7 +820,7 @@ void IclKernelReplacer::collectArguments() {
 
 	NodeAddress pA(prog);
 	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
-		ExpressionPtr kernel = runKernel["kernel"].getValue().as<ExpressionPtr>();
+		ExpressionPtr kernel = utils::tryRemove(gen.getRefDeref(), runKernel["kernel"].getValue().as<ExpressionPtr>());
 
 		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
 		ExpressionsPtr member = arguments->getExpressions();
@@ -825,13 +830,16 @@ void IclKernelReplacer::collectArguments() {
 
 		for(unsigned i = 0; i < member.size(); ++i) {
 			// first look at the size of the argument
+			bool isIcl_buffer = analysis::isZero(member[i]);
+//std::cout << member[i] << " is zero: " << isIcl_buffer << std::endl;
 			++i;
 			// then look at the value of the argument
-			kernelTypes[kernel].push_back(builder.refType(builder.arrayType(member[i]->getType())));
-			dumpPretty(builder.callExpr(gen.getScalarToArray(), builder.refVar(member[i]))->getType());
+			ExpressionPtr storedArg =  isIcl_buffer ? builder.callExpr(gen.getScalarToArray(),  member[i]) : member[i];
+
+			kernelTypes[kernel].push_back(storedArg->getType());
 		}
 
-//		std::cout << member.size() << std::endl << kernelTypes[kernel] << std::endl;;
+		std::cout << member.size() << std::endl << kernelTypes[kernel] << std::endl;;
 
 //		assert(false && "söldfkjasdflö");
 	});
