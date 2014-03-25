@@ -92,17 +92,6 @@ TEST(Preprocessor, GlobalElimination) {
 	auto errors = core::checks::check(program);
 	EXPECT_EQ(core::checks::MessageList(), errors);
 
-
-	// run preprocessor
-	auto res = makePreProcessor<RestoreGlobals>()->process(manager, program);
-
-//	std::cout << "Processed: " << core::printer::PrettyPrinter(res) << "\n";
-
-	errors = core::checks::check(res);
-	EXPECT_EQ(core::checks::MessageList(), errors);
-
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1;");
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1 := X;");
 }
 
 

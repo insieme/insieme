@@ -97,7 +97,10 @@ int main (){
 	{
 		//FIXME expects const_cpp_ref gets refstruct	
 		//NO EXPR WITH CLEANUP
-		//const C &rc1 = C();
+		const C &rc(0);
+		rc.m;
+		const C &rc1 = C();
+		rc1.m;
 	}
 	{
 		S s;

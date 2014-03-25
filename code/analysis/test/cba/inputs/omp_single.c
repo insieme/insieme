@@ -29,45 +29,48 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <boost/filesystem/path.hpp>
+#include "cba.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+int main(int argc, char** argv) {
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+	int x = 1;
 
-// extension for OpenCl host files
+	cba_expect_eq_int(x, 1);
 
-class OclHostPlugin : public FrontendPlugin {
-	const std::vector<boost::filesystem::path>& includeDirs;
-public:
-	OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
-private:
-    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
-};
+	// if a loop is known to be entered the original value should be eliminated
+	for(int i=0; i<1; i++) {
+		x = 2;
+	}
+	cba_expect_eq_int(x, 2);
 
-// extension for icl host files
+	// if the loop body is not known to be processed the original value should be preserved
+	for(int i=0; i<argc; i++) {
+		x = 3;
+	}
 
-class IclHostPlugin : public FrontendPlugin {
-	const std::vector<boost::filesystem::path>& includeDirs;
-public:
-	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {}
-private:
-    virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-                                                   insieme::frontend::conversion::Converter& convFact);
+	cba_expect_may_eq_int(x, 2);
+	cba_expect_may_eq_int(x, 3);
 
+	// a omp single is a parallel loop with static range 0..1:1 => should also work
+	#pragma omp parallel
+	{
+		#pragma omp single
+		x = 4;
+	}
 
-    virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
-};
+	// x should be 3 now
+	cba_expect_eq_int(x, 4);
 
-} //namespace plugin
-} //namespace frontend
-} //namespace extensions
+//	cba_dump_equations();
+//	cba_print_code();
+
+}

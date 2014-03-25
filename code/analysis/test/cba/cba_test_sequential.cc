@@ -952,6 +952,81 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, ForStmt_6) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		std::map<string,NodePtr> symbols;
+		symbols["c"] = builder.literal("c", builder.parseType("int<4>"));
+
+		auto in = builder.normalize(builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(0);"
+				"	*x;"		// should be 0
+				"	for (int<4> i = 0 .. 10 : 1) {"
+				"		x = 1;"
+				"	}"
+				"	*x;"		// should be 1
+				"	for (int<4> i = 10 .. 0 : 1) {"
+				"		x = 2;"
+				"	}"
+				"	*x;"		// should still be 1
+				"	for (int<4> i = 0 .. 10 : -1) {"
+				"		x = 3;"
+				"	}"
+				"	*x;"		// should still be 1
+				"	for (int<4> i = 10 .. 0 : -1) {"
+				"		x = 4;"
+				"	}"
+				"	*x;"		// should be 4 now
+				"	for (int<4> i = 10 .. 0 : c) {"
+				"		x = 5;"
+				"	}"
+				"	*x;"		// should be 4 or 5
+				"	for (int<4> i = c .. 0 : 1) {"
+				"		x = 6;"
+				"	}"
+				"	*x;"		// should be 4, 5 or 6
+				"	for (int<4> i = c .. c : 1) {"
+				"		x = 7;"
+				"	}"
+				"	*x;"		// should be 7
+				"	for (int<4> i = c .. c+1 : 1) {"
+				"		x = 8;"
+				"	}"
+				"	*x;"		// should be 8
+				"	for (int<4> i = c .. c-1 : 1) {"
+				"		x = 9;"
+				"	}"
+				"	*x;"		// should be 8
+				"	for (int<4> i = c .. c-1 : c) {"
+				"		x = 10;"
+				"	}"
+				"	*x;"		// should be 8 or 10
+				"}", symbols
+		)).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// within the loop
+		EXPECT_EQ("{0}",    toString(analysis.getValuesOf(code[ 1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", 	toString(analysis.getValuesOf(code[ 3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", 	toString(analysis.getValuesOf(code[ 5].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", 	toString(analysis.getValuesOf(code[ 7].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", 	toString(analysis.getValuesOf(code[ 9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5,4}", 	toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6,5,4}",toString(analysis.getValuesOf(code[13].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{7}", 	toString(analysis.getValuesOf(code[15].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{8}", 	toString(analysis.getValuesOf(code[17].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{8}", 	toString(analysis.getValuesOf(code[19].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{10,8}", toString(analysis.getValuesOf(code[21].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
 	TEST(CBA, Arithmetic_101) {
 
 		NodeManager mgr;
