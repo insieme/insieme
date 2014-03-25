@@ -46,6 +46,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/utils/frontend_ir.h"
 
 
 #include "insieme/core/ir_program.h"
@@ -161,19 +162,12 @@ class Converter :  boost::noncopyable {
 	TemporaryInitMap tempInitMap;
 
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 						Diagnosis system
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 	/**
 	 * list of warnings up to this point
 	 */
 	std::set<std::string> warnings;
 
 
-	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
-	core::NodeManager& mgr;
-	const core::IRBuilder builder;
 
 	/**
 	 * Converts a Clang statements into an IR statements.
@@ -209,7 +203,17 @@ class Converter :  boost::noncopyable {
 
 	tu::IRTranslationUnit irTranslationUnit;
 
+	/**
+	 * 	signle used flag to avoid duplicated instantiation
+	 * 	this is wrong...
+	 */
 	bool used;
+
+	//////////////////////////////////////////////////
+	// IR building and managing tools
+	core::NodeManager& mgr;
+	const core::IRBuilder builder;
+	const frontend::ir::FrontendIr feIR;
 
 	/**
 	 * Attach annotations to a C function of the input translation unit.
@@ -244,6 +248,9 @@ public:
 	}
 	const TranslationUnit& getTranslationUnit() const {
 		return translationUnit;
+	}
+	const frontend::ir::FrontendIr& getFrontendIR() const {
+		return feIR;
 	}
 
 	const ClangCompiler& getCompiler() const {
@@ -471,6 +478,22 @@ public:
 	core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 												const core::TypePtr& type, const bool zeroInit) ;
 
+	/** 
+	 * extracts a list of statements and converts the scope into an function call
+	 * @param a statement to be extracted
+	 * @param the type the whole thing should return
+	 * @param whenever the evaluation needs to be lazy
+	 * @return a call expression to the generated labda
+	 */
+core::ExpressionPtr createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy = false);
+	/** 
+	 * extracts a list of statements and converts the scope into an function call
+	 * @param the list of statements to be converted
+	 * @param the type the whole thing should return
+	 * @param whenever the evaluation needs to be lazy
+	 * @return a call expression to the generated labda
+	 */
+	core::ExpressionPtr createCallExprFromBody(const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy = false);
 
 
 	/**

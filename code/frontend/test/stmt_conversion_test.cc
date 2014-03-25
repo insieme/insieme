@@ -108,7 +108,9 @@ TEST(StmtConversion, FileTest) {
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
-	fe::conversion::Converter convFactory( mgr, tu );
+	fe::ConversionSetup setup;
+	setup.frontendPluginInit();
+	fe::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };

@@ -244,11 +244,12 @@ namespace conversion {
 //////////////////////////////////////////////////////////////////
 ///
 Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup) :
-		staticVarCount(0), mgr(mgr), builder(mgr),
+		staticVarCount(0),
 		translationUnit(tu),
 		convSetup(setup),
 		pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		irTranslationUnit(mgr), used(false),
+		mgr(mgr), builder(mgr), feIR(mgr, getCompiler().isCXX()),
 		lastTrackableLocation(),
 		headerTagger(setup.getSystemHeadersDirectories(),setup.getInterceptedHeaderDirs(), setup.getIncludeDirectories(), getCompiler().getSourceManager())
 {
@@ -1044,6 +1045,22 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
  	VLOG(2) << "initExpr (adjusted)	: " << retIr;
 
  	return retIr;
+}
+
+core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy){
+	stmtutils::StmtWrapper irStmts;
+	irStmts.push_back(stmt);
+	return createCallExprFromBody(irStmts, retType, lazy);
+}
+//////////////////////////////////////////////////////////////////
+///
+core::ExpressionPtr Converter::createCallExprFromBody(const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy){
+
+	stmtutils::StmtWrapper retStmts = irStmts;
+    for(auto plugin : getConversionSetup().getPlugins()) 
+        retStmts = plugin->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, *this);
+
+	return builder.createCallExprFromBody(stmtutils::tryAggregateStmts(builder, retStmts), retType, lazy);
 }
 
 //////////////////////////////////////////////////////////////////

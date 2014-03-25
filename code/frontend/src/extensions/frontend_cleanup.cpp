@@ -51,14 +51,20 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/utils/memalloc.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/assert.h"
 
+
+#include "insieme/frontend/omp/omp_annotation.h"
+
 #include <functional>
 
-#include <boost/algorithm/string/predicate.hpp>
+//#include <boost/algorithm/string/predicate.hpp>
+
 
  namespace insieme {
  namespace frontend {
@@ -353,6 +359,169 @@
         return tu;
     }
 
+namespace {
+
+	core::StatementPtr collectAssignments (const core::StatementPtr& stmt, const core::NodePtr& feAssign, core::StatementPtr& lastExpr, core::StatementList& preProcess, bool isCXX){
+
+			assert(stmt && "no stmt, no fun");
+			core::IRBuilder builder (stmt->getNodeManager());
+
+			// the maper should never leave the first nested scope
+			auto doNotCheckInBodies = [&] (const core::NodePtr& node){
+				if (node.isa<core::CompoundStmtPtr>())
+					return false;
+				return true;
+			};
+
+			// substitute usage by left side
+			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+
+					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+
+						if(core::analysis::isCallOf(call, builder.getLangBasic().getGenPostDec()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getGenPostInc()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostDec()) ||
+						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostInc())){
+							
+								auto var = builder.variable(call->getType());
+								auto decl = builder.declarationStmt(var,call);
+								preProcess.push_back(decl);
+								return var;
+						}
+
+						if (core::analysis::isCallOf(call, feAssign)){
+
+							// build a new operator with the final shape
+							auto assign = builder.assign(call[0], call[1]);
+							core::transform::utils::migrateAnnotations(call, assign);
+
+							// extract the operation
+							preProcess.push_back(assign);
+
+							// Cpp by ref, C by value
+							if (isCXX)
+								lastExpr = call[0];
+							else
+								lastExpr = builder.deref(call[0]);
+							return lastExpr;
+						}
+					}
+					return node;
+			},doNotCheckInBodies);
+
+			return assignMapper.map(stmt);
+
+	}
+
+
+} // annonymous namespace
+
+    stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
+		stmtutils::StmtWrapper newStmts;
+
+		//////////////////////////////////////////////////////////////
+		// remove frontend assignments and extract them into different statements
+		{
+			const auto& feExt = convFact.getFrontendIR();
+			core::IRBuilder builder (convFact.getNodeManager());
+
+			// stores the last expression returned to avoid writting a dead read
+			core::StatementPtr lastExpr;	
+			// the extracted statements, only if this list is not empty the transformation is done
+			core::StatementList preProcess;
+
+			auto justRemove = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+						if (core::analysis::isCallOf(call, feExt.getRefAssign())){
+							// build a new operator with the final shape
+							auto assign = builder.assign(call[0], call[1]);
+							core::transform::utils::migrateAnnotations(call, assign);
+							return assign;
+						}
+					}
+					return node;
+			});
+
+			// this is not necesary, but makes code prettier
+			auto allPostOps = [&] (const core::StatementList& list) -> bool{
+				for (auto stmt : list)
+					if (!stmt.isa<core::DeclarationStmtPtr>())
+						return false;
+				return true;
+			};
+
+			for (auto stmt : irStmts){
+
+				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
+					stmt.isa<core::ForStmtPtr>())
+					newStmts.push_back( stmt);
+				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>())
+					newStmts.push_back( justRemove.map(stmt));
+				else if (core::WhileStmtPtr whilestmt = stmt.isa<core::WhileStmtPtr>()){
+
+					// any assignment extracted from the condition expression of a while stmt needs to be replicated
+					// at the end of the loop body
+					core::StatementList conditionBody;
+					core::ExpressionPtr conditionExpr;
+
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, conditionBody, convFact.getCompiler().isCXX());
+					conditionBody.push_back(builder.returnStmt(res.as<core::WhileStmtPtr>().getCondition()));
+
+					// reconstrucy the conditional expression, if this became more than one statements we'll capture it in a lambda
+					// whenever free variable will be captured by ref and therefore modified in the outer scope
+					if (conditionBody.size() ==1 ){
+						conditionExpr = res.as<core::WhileStmtPtr>().getCondition();
+					}
+					else{
+						conditionExpr = builder.createCallExprFromBody(builder.compoundStmt(conditionBody), builder.getLangBasic().getBool());
+					}
+
+					// rebuild the statement with the added elements
+					core::StatementList bodyList = res.as<core::WhileStmtPtr>()->getBody()->getStatements();
+					{
+						core::StatementList newBody;
+						core::StatementPtr lastBodyExpr;	
+						core::StatementList preBodyProcess;
+						for (auto bodyStmt : bodyList){
+							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, 
+															  convFact.getCompiler().isCXX());
+							if (preBodyProcess.empty() || allPostOps(preBodyProcess)){
+								if (res != lastBodyExpr)
+									newBody.push_back(bodyStmt);
+							}
+							else{
+								newBody.insert(newBody.end(), preBodyProcess.begin(), preBodyProcess.end());
+								if (bodyRes != lastBodyExpr)
+									newBody.push_back( bodyRes);
+							}
+							preBodyProcess.clear();
+						}
+
+						res = builder.whileStmt( conditionExpr, stmtutils::tryAggregateStmts(builder,newBody));
+					}
+
+					newStmts.push_back(res);
+				}
+				else{
+
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, preProcess, convFact.getCompiler().isCXX());
+					if (preProcess.empty() || allPostOps(preProcess))
+						newStmts.push_back(stmt);
+					else{
+						newStmts.insert(newStmts.end(), preProcess.begin(), preProcess.end());
+						// if the assignment is used as expression, well have a remainng tail which is not needed
+						if (res != lastExpr){
+							newStmts.push_back( res);
+						}
+					}
+				}
+				preProcess.clear();
+				lastExpr = core::StatementPtr();
+			}
+		}
+
+		return newStmts;
+	}
 
 } // frontend
 } // insieme

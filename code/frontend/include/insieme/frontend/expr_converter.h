@@ -50,6 +50,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/frontend_ir.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"

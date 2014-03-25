@@ -33,28 +33,34 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+#pragma once
+
+#include "insieme/core/lang/extension.h"
 
 
-// builtin types
-void basic_type_test() {
+namespace insieme {
+namespace frontend {
+namespace ir{
 
-	#pragma test "decl ref<int<4>> v0 =  var(1)"
-	int i = 1;
+		class FrontendIr : public core::lang::Extension {
 
-	#pragma test "decl ref<uint<4>> v0 =  var(1u)"
-	unsigned int ui = 1;
+			bool isCXX;
 
-	#pragma test "decl ref<real<4>> v0 =  var(1.0f)"
-	float f = 1;
 
-	// NOTE; this test is ran without cleanps or plugins, therefore we only see a frontend representation
-	#pragma test "{decl ref<real<4>> v0 =  var(undefined(type<real<4>>));decl ref<int<4>> v1 =  var(-1);FE.RefAssign(v0, int.to.real(v1, 4));gen.pre.inc(v0);FE.RefAssign(v1, real.to.int(v0, 4));}"
-	{
-		float x;
-		int y = -1;
+		public:
+			/**
+			 * Creates a new instance based on the given node manager.
+			 */
+			FrontendIr(core::NodeManager& manager, bool cxx)
+					: core::lang::Extension(manager), isCXX(cxx) {}
+	
+			/**
+			 * 	frontend assignment operator
+			 */
+			LANG_EXT_LITERAL(RefAssign, "FE.RefAssign", isCXX? "(ref<'a>, 'a)->ref<'a>":"(ref<'a>, 'a)->'a");
+		};
 
-		x = y;
-		++x;
-		y = (int) x;
-	}
-}
+
+} // namespace ir
+} // namespace frontend
+} // namespace insieme

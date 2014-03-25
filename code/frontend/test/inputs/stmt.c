@@ -220,7 +220,7 @@ void for_stmt_test() {
 	// divission is not supported as for loop increment
 	int mq, nq;
 	#pragma test \
-	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); return (v2 := (( *v2)/2)); }(v100, v101); };}"
+	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); (v2 := (( *v2)/2)); return ( *v2); }(v100, v101); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 

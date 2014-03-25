@@ -489,14 +489,15 @@ namespace tu {
 		private:
 
 			bool hasFreeTypeVariables(const NodePtr& node) {
-				return analysis::hasFreeTypeVariables(node.isa<TypePtr>());
+				return core::analysis::hasFreeTypeVariables(node.isa<TypePtr>());
 			}
 
 			bool hasFreeTypeVariables(const TypePtr& type) {
-				return analysis::hasFreeTypeVariables(type);
+				return core::analysis::hasFreeTypeVariables(type);
 			}
 
 			TypePtr fixRecursion(const TypePtr type, const TypeVariablePtr var) {
+
 				// if it is a direct recursion, be done
 				NodeManager& mgr = type.getNodeManager();
 				IRBuilder builder(mgr);
@@ -505,7 +506,9 @@ namespace tu {
 				if(!type.isa<StructTypePtr>() && !type.isa<UnionTypePtr>())return type;
 
 				auto containsRecVar = [&](const TypePtr& type)->bool {
-					return visitDepthFirstOnceInterruptible(type, [&](const TypePtr& type)->bool { return type == var; }, true, true);
+					return visitDepthFirstOnceInterruptible(type, [&](const TypePtr& type)->bool {
+						return type == var;
+					}, true, true);
 				};
 
 				// see whether the recursive variable is present
@@ -536,7 +539,7 @@ namespace tu {
 				visitDepthFirstOncePrunable(type, [&](const TypePtr& cur) {
 					//if (containsVarFree(cur)) ;
 					if (cur.isa<RecTypePtr>()) return !hasFreeTypeVariables(cur);
-					if (cur.isa<NamedCompositeTypePtr>() && containsRecVar(cur)) {
+					if (cur.isa<NamedCompositeTypePtr>() && !allRecVarsBound(cur)) {
 						structs.push_back(cur.as<TypePtr>());
 					}
 					return false;

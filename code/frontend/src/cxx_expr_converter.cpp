@@ -682,7 +682,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 		subExpr = builder.literal("__insieme__rethrow", targetTy);
 	}
 
-	return retIr = builder.createCallExprFromBody(builder.throwStmt(subExpr), gen.getUnit());
+	return retIr = convFact.createCallExprFromBody(builder.throwStmt(subExpr), gen.getUnit());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

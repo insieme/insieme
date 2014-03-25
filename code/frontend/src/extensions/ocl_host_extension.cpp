@@ -93,7 +93,6 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                insieme::frontend::conversion::Converter& convFact) {
-return irExpr;
 	NodeManager& mgr = irExpr->getNodeManager();
 	IRBuilder builder(mgr);
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
@@ -118,15 +117,27 @@ assert(false);
 		}
 	}
 	*/
-
+	NodeMap replacements;
 	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
-			pattern::any << pattern::any << pattern::any << pattern::any <<	pattern::any << pattern::any << pattern::any <<
-			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
-					//irp::tupleExpr(*var("args", pattern::any)) ));
+			*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
+					pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchAddress, const NodeMatch& runKernel) {
-		std::cout << runKernel["args"].getFlattened() << std::endl;
+	TreePatternPtr derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
+			pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
+
+	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
+		dumpPretty(runKernel.getRoot());
+
+		for(NodePtr arg : runKernel["args"].getFlattened()) {
+			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
+			if(match) {
+				replacements[match.get().getRoot()] = match.get()["buffer"].getValue();
+			}
+		}
 	});
+
+//	if(!replacements.empty())
+//		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
 	return irExpr;
 }
