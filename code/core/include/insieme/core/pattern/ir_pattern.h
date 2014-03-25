@@ -160,6 +160,10 @@ namespace irp {
 		return node(core::NT_VectorExpr, expressions);
 	}
 
+	inline TreePatternPtr expressions(const ListPatternPtr& expressions) {
+		return node(core::NT_Expressions, expressions);
+	}
+
 	inline TreePatternPtr structExpr(const ListPatternPtr& members) {
 		return node(core::NT_StructExpr, members);
 	}
