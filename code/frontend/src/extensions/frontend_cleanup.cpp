@@ -442,6 +442,14 @@ namespace {
 					return node;
 			});
 
+			// this is not necesary, but makes code prettier
+			auto allPostOps = [&] (const core::StatementList& list) -> bool{
+				for (auto stmt : list)
+					if (!stmt.isa<core::DeclarationStmtPtr>())
+						return false;
+				return true;
+			};
+
 			for (auto stmt : irStmts){
 
 				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
@@ -477,29 +485,27 @@ namespace {
 						for (auto bodyStmt : bodyList){
 							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, 
 															  convFact.getCompiler().isCXX());
-
-							if (preBodyProcess.empty())
-								newBody.push_back(bodyRes);
+							if (preBodyProcess.empty() || allPostOps(preBodyProcess)){
+								if (res != lastBodyExpr)
+									newBody.push_back(bodyStmt);
+							}
 							else{
 								newBody.insert(newBody.end(), preBodyProcess.begin(), preBodyProcess.end());
-								if (res != lastExpr){
+								if (bodyRes != lastBodyExpr)
 									newBody.push_back( bodyRes);
-								}
 							}
 							preBodyProcess.clear();
 						}
 
-			//			newBody.insert(newBody.end(), toAdd.begin(), toAdd.end());
 						res = builder.whileStmt( conditionExpr, stmtutils::tryAggregateStmts(builder,newBody));
 					}
 
-				//	newStmts.insert(newStmts.begin(), preProcess.begin(), preProcess.end());
 					newStmts.push_back(res);
 				}
 				else{
 
 					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, preProcess, convFact.getCompiler().isCXX());
-					if (preProcess.empty())
+					if (preProcess.empty() || allPostOps(preProcess))
 						newStmts.push_back(stmt);
 					else{
 						newStmts.insert(newStmts.end(), preProcess.begin(), preProcess.end());
