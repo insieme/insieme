@@ -157,18 +157,17 @@ TEST(Cilk, Sema) {
 
 	// check proper encoding of cilk primitives
 	auto code = builder.normalize(job.execute(manager));
-	dump(code);
 
 	auto str = toString(printer::PrettyPrinter(code));
 
 	EXPECT_PRED2(containsSubString, str, "v5 := v0(v4-1);");
-	EXPECT_PRED2(containsSubString, str, "v6 := v0(v1-2);");
-	EXPECT_PRED2(containsSubString, str, "v0(v8-3);");
+	EXPECT_PRED2(containsSubString, str, "v8 := v0(v7-2);");
+	EXPECT_PRED2(containsSubString, str, "v0(v10-3);");
 
 	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 =  var(undefined(type<int<4>>));");
 
 	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v1, v2)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v6)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v1, v6)}");
 	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v1)}");
 
 	EXPECT_PRED2(containsSubString, str, "mergeAll()");
