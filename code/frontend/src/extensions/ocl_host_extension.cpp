@@ -36,6 +36,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -49,6 +51,7 @@
 namespace fe = insieme::frontend;
 
 using namespace insieme::frontend;
+using namespace insieme::core::pattern;
 
 namespace insieme {
 namespace frontend {
@@ -90,15 +93,41 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                insieme::frontend::conversion::Converter& convFact) {
+return irExpr;
 	NodeManager& mgr = irExpr->getNodeManager();
 	IRBuilder builder(mgr);
-
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+/*
 	if(CallExprPtr call = irExpr.isa<CallExprPtr>()) {
 		if(core::analysis::isCallOf(call, builder.literal("icl_run_kernel", call->getFunctionExpr()->getType()))) {
 			// remove deref on icl_buffers to fake non const behavior
-dumpPretty(call);
+			// get kernel arguments
+dumpPretty(call->getArgument(7));
+			TupleExprPtr kernelArgs = call->getArgument(7).as<CallExprPtr>().getArgument(0).as<TupleExprPtr>();
+			for(auto arg : kernelArgs->getExpressions()) {
+				if(CallExprPtr deref = arg.isa<CallExprPtr>()) {
+					if(core::analysis::isCallOf(deref, builder.getLangBasic().getRefDeref())) {
+
+dumpPretty(arg->getType());
+
+					}
+				}
+
+			}
+assert(false);
 		}
 	}
+	*/
+
+	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+			pattern::any << pattern::any << pattern::any << pattern::any <<	pattern::any << pattern::any << pattern::any <<
+			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
+					//irp::tupleExpr(*var("args", pattern::any)) ));
+
+	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchAddress, const NodeMatch& runKernel) {
+		std::cout << runKernel["args"].getFlattened() << std::endl;
+	});
+
 	return irExpr;
 }
 
