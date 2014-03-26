@@ -41,6 +41,14 @@
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
+
+namespace core {
+namespace pattern {
+class TreePattern;
+typedef std::shared_ptr<TreePattern> TreePatternPtr;
+}
+}
+
 namespace frontend {
 namespace extensions {
 
@@ -58,8 +66,11 @@ private:
 
 class IclHostPlugin : public FrontendPlugin {
 	const std::vector<boost::filesystem::path>& includeDirs;
+	core::pattern::TreePatternPtr iclRunKernel;
+	core::pattern::TreePatternPtr derefOfIclBuffer;
+
 public:
-	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {}
+	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
 private:
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                    insieme::frontend::conversion::Converter& convFact);

@@ -91,11 +91,25 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
+IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
+	iclRunKernel = NULL;
+	derefOfIclBuffer = NULL;
+}
+
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                insieme::frontend::conversion::Converter& convFact) {
 	NodeManager& mgr = irExpr->getNodeManager();
 	IRBuilder builder(mgr);
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	if(iclRunKernel == NULL)
+		iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
+				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
+
+	if(derefOfIclBuffer == NULL)
+		derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
+				pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
 
 //	if(CallExprPtr call = irExpr.isa<CallExprPtr>()) {
 //		if(core::analysis::isCallOf(call, builder.literal("icl_run_kernel", call->getFunctionExpr()->getType()))) {
@@ -105,12 +119,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 //	}
 
 	NodeMap replacements;
-	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
-			*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
-					pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
-
-	TreePatternPtr derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
-			pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
