@@ -1571,10 +1571,10 @@ ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, co
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
 
 	if (constant){
-		return callExpr(ext.getInitStaticConst(), staticVariable, initValue);
+		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
 	}
 	else{
-		return callExpr(ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
 	}
 }
 

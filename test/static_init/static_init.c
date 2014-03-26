@@ -1,15 +1,19 @@
+typedef struct {
 
-int func() {
-    typedef struct {
-    	char *str;
-    } ts;
+	int id;
 
-    static ts s[] = { { "help" } };
+} ms;
 
-    return s[0].str[0];
+ms *func()
+{
+	static ms static_s = {-1};
+	
+	return &static_s;
 }
 
-int main() 
-{
-    return func();
+int main() {
+
+    func();
+
+    return 0;
 }
