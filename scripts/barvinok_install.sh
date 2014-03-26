@@ -16,8 +16,9 @@ fi
 
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
-git clone --branch barvinok-$VERSION git://repo.or.cz/barvinok.git barvinok-$VERSION
+git clone git://repo.or.cz/barvinok.git barvinok-$VERSION
 cd barvinok-$VERSION
+git checkout tags/barvinok-$VERSION
 git submodule init
 git submodule update
 ./autogen.sh
