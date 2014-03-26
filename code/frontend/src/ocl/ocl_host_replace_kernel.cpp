@@ -307,6 +307,124 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 
 KernelReplacer::KernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : prog(prog), includeDirs(includeDirs){ }
 
+ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr& memberTy, const ExpressionPtr& tupleMemberAccess, StatementList& body) {
+	NodeManager& mgr = argTy->getNodeManager();
+	IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	ExpressionPtr argument;
+	// check for local memory arguments
+	if(*memberTy == *gen.getUInt8()) {
+		VariablePtr localMemArg = builder.variable(argTy);
+		TypePtr elemTy = argTy.as<RefTypePtr>()->getElementType().as<ArrayTypePtr>()->getElementType();
+		ExpressionPtr lmSize = builder.div(tupleMemberAccess, builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(elemTy)));
+		DeclarationStmtPtr localMemDecl = builder.declarationStmt(localMemArg, builder.refVar(builder.callExpr(gen.getArrayCreate1D(),
+				builder.getTypeLiteral(elemTy), lmSize)));
+		body.push_back(localMemDecl);
+
+		argument = localMemArg;
+	} else {
+		argument = builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0)));
+
+		if(utils::tryDeref(argument)->getType() != argTy) {// e.g. argument of kernel is an ocl vector type
+
+			argument = builder.callExpr(argTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
+		}
+		argument = utils::tryDeref(argument);
+	}
+
+	return argument;
+}
+
+ExpressionPtr KernelReplacer::createKernelCallLambda(const ExpressionAddress localKernel,
+		const ExpressionPtr work_dim, const ExpressionPtr local_work_size, const ExpressionPtr global_work_size) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	ExpressionPtr k = utils::getRootVariable(localKernel).as<ExpressionPtr>();
+
+	// try to find coresponding kernel function
+	assert(kernelFunctions.find(k) != kernelFunctions.end() && "Cannot find OpenCL Kernel");
+	const ExpressionPtr local = anythingToVec3(work_dim, local_work_size);
+	const ExpressionPtr global = anythingToVec3(work_dim, global_work_size);
+
+//	const ExpressionPtr kernelFun = kernelFunctions[k];
+
+//		dumpPretty(kernelFun);
+//for_each(kernelTypes[k], [&](TypePtr ty) {
+//	std::cout << "->\t" << *ty << std::endl;
+//});
+
+	LambdaExprPtr lambda = kernelFunctions[k].as<LambdaExprPtr>();
+
+	/*    assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
+	const VariablePtr& args = kernelArgs[k];
+	const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
+	const VariableList& interface = lambda->getParameterList()->getElements();
+
+	vector<ExpressionPtr> innerArgs;
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	// construct call to kernel function
+//		if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
+//std::cout << "lmd " << localMemDecls[k] << std::endl;
+	TypeList kernelType = kernelTypes[k];
+
+	/* body of a newly created function which replaces clNDRangeKernel. It contains
+	 *  Declarations of the local memory arguments
+	 *  the kernel call
+	 *  return 0;
+	 */
+	StatementList body;
+
+	// Kernel variable to be used inside the newly created function
+	VariablePtr innerKernel = builder.variable(builder.tupleType(kernelType));
+	for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
+//??			TypePtr argTy = utils::vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
+		TypePtr argTy = interface.at(i)->getType();
+		TypePtr memberTy = kernelType.at(i);
+		ExpressionPtr tupleMemberAccess = builder.callExpr(memberTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(innerKernel),
+				builder.literal(gen.getUInt8(), toString(i)), builder.getTypeLiteral(memberTy));
+
+		ExpressionPtr argument = handleArgument(argTy, memberTy, tupleMemberAccess, body);
+
+		innerArgs.push_back(argument);
+	}
+
+	const TypePtr vecTy = builder.vectorType(gen.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+
+	// local and global size to be used inside the newly created function
+	VariablePtr innerGlobal = builder.variable(vecTy);
+	VariablePtr innerLocal = builder.variable(vecTy);
+
+	// add global and local size to arguments
+	innerArgs.push_back(innerGlobal);
+	innerArgs.push_back(innerLocal);
+
+	ExpressionPtr kernelCall = builder.callExpr(gen.getInt4(), lambda, innerArgs);
+	body.push_back(kernelCall);							   // calling the kernel function
+	body.push_back(builder.returnStmt(builder.intLit(0))); // return CL_SUCCESS
+
+	// create function type for inner function: kernel tuple, global size, local size
+	TypeList innerFctInterface;
+	innerFctInterface.push_back(innerKernel->getType());
+	innerFctInterface.push_back(vecTy);
+	innerFctInterface.push_back(vecTy);
+
+	FunctionTypePtr innerFctTy = builder.functionType(innerFctInterface, gen.getInt4());
+
+	// collect inner function parameters
+	VariableList innerFctParams;
+	innerFctParams.push_back(innerKernel);
+	innerFctParams.push_back(innerGlobal);
+	innerFctParams.push_back(innerLocal);
+
+	// create lambda for inner function
+	LambdaExprPtr innerLambda = builder.lambdaExpr(innerFctTy, builder.parameters(innerFctParams), builder.compoundStmt(body));
+
+	return builder.callExpr(gen.getInt4(), innerLambda, localKernel, global, local);
+}
+
 std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreateKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
@@ -516,10 +634,12 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
 		});
 }
 
-void KernelReplacer::loadKernelCode() {
+void KernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
+
+	findKernelNames(createKernel);
 
 	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(irp::atom(builder.refType(builder.arrayType(builder.genericType("_cl_program")))),
 			irp::literal("clCreateProgramWithSource"), pattern::any <<
@@ -554,112 +674,14 @@ void KernelReplacer::inlineKernelCode() {
 	irp::matchAllPairs(clEnqueueNDRangeKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& ndrangeKernel) {
 
 		ExpressionAddress localKernel = (matchAddress >> ndrangeKernel["kernel"].getValue()).as<ExpressionAddress>();
-		ExpressionPtr k = utils::getRootVariable(localKernel).as<ExpressionPtr>();
-		// try to find coresponding kernel function
-		assert(kernelFunctions.find(k) != kernelFunctions.end() && "Cannot find OpenCL Kernel");
 
-		const ExpressionPtr kernelFun = kernelFunctions[k];
-		const ExpressionPtr local = anythingToVec3(ndrangeKernel["work_dim"].getValue().as<ExpressionPtr>(),
-				ndrangeKernel["local_work_size"].getValue().as<ExpressionPtr>());
-		const ExpressionPtr global = anythingToVec3(ndrangeKernel["work_dim"].getValue().as<ExpressionPtr>(),
-				ndrangeKernel["global_work_size"].getValue().as<ExpressionPtr>());
+		ExpressionPtr newKernelCall = createKernelCallLambda(localKernel, ndrangeKernel["work_dim"].getValue().as<ExpressionPtr>(),
+				ndrangeKernel["local_work_size"].getValue().as<ExpressionPtr>(), ndrangeKernel["global_work_size"].getValue().as<ExpressionPtr>());
 
-//		dumpPretty(kernelFun);
-//for_each(kernelTypes[k], [&](TypePtr ty) {
-//	std::cout << "->\t" << *ty << std::endl;
-//});
 
-		LambdaExprPtr lambda = kernelFunctions[k].as<LambdaExprPtr>();
+		transform::utils::migrateAnnotations(ndrangeKernel["enrk"].getValue().as<NodePtr>(), newKernelCall.as<NodePtr>());
 
-		/*    assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
-		const VariablePtr& args = kernelArgs[k];
-		const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
-		const VariableList& interface = lambda->getParameterList()->getElements();
-
-		vector<ExpressionPtr> innerArgs;
-		const core::lang::BasicGenerator& gen = builder.getLangBasic();
-
-		// construct call to kernel function
-//		if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
-	//std::cout << "lmd " << localMemDecls[k] << std::endl;
-		TypeList kernelType = kernelTypes[k];
-
-		/* body of a newly created function which replaces clNDRangeKernel. It contains
-		 *  Declarations of the local memory arguments
-		 *  the kernel call
-		 *  return 0;
-		 */
-		StatementList body;
-
-		const TypePtr vecTy = builder.vectorType(gen.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
-
-		// Kernel variable to be used inside the newly creaded function
-		VariablePtr innerKernel = builder.variable(builder.tupleType(kernelType));
-		// local and global size to be used inside the newly created function
-		VariablePtr innerGlobal = builder.variable(vecTy);
-		VariablePtr innerLocal = builder.variable(vecTy);
-
-		for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
-//??			TypePtr argTy = utils::vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
-			TypePtr argTy = interface.at(i)->getType();
-			TypePtr memberTy = kernelType.at(i);
-			ExpressionPtr tupleMemberAccess = builder.callExpr(memberTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(innerKernel),
-					builder.literal(gen.getUInt8(), toString(i)), builder.getTypeLiteral(memberTy));
-
-			ExpressionPtr argument;
-
-			// check for local memory arguments
-			if(*memberTy == *gen.getUInt8()) {
-				VariablePtr localMemArg = builder.variable(argTy);
-				TypePtr elemTy = argTy.as<RefTypePtr>()->getElementType().as<ArrayTypePtr>()->getElementType();
-				ExpressionPtr lmSize = builder.div(tupleMemberAccess, builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(elemTy)));
-				DeclarationStmtPtr localMemDecl = builder.declarationStmt(localMemArg, builder.refVar(builder.callExpr(gen.getArrayCreate1D(),
-						builder.getTypeLiteral(elemTy), lmSize)));
-				body.push_back(localMemDecl);
-
-				argument = localMemArg;
-			} else {
-				argument = builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0)));
-
-				if(utils::tryDeref(argument)->getType() != argTy) {// e.g. argument of kernel is an ocl vector type
-
-					argument = builder.callExpr(interface.at(i)->getType(), gen.getRefReinterpret(),
-							argument, builder.getTypeLiteral(argTy));
-				}
-				argument = utils::tryDeref(argument);
-			}
-			innerArgs.push_back(argument);
-		}
-
-		// add global and local size to arguments
-		innerArgs.push_back(innerGlobal);
-		innerArgs.push_back(innerLocal);
-
-		ExpressionPtr kernelCall = builder.callExpr(gen.getInt4(), lambda, innerArgs);
-		body.push_back(kernelCall);							   // calling the kernel function
-		body.push_back(builder.returnStmt(builder.intLit(0))); // return CL_SUCCESS
-
-		// create function type for inner function: kernel tuple, global size, local size
-		TypeList innerFctInterface;
-		innerFctInterface.push_back(innerKernel->getType());
-		innerFctInterface.push_back(vecTy);
-		innerFctInterface.push_back(vecTy);
-
-		FunctionTypePtr innerFctTy = builder.functionType(innerFctInterface, gen.getInt4());
-
-		// collect inner function parameters
-		VariableList innerFctParams;
-		innerFctParams.push_back(innerKernel);
-		innerFctParams.push_back(innerGlobal);
-		innerFctParams.push_back(innerLocal);
-
-		// creeate lambda for inner function
-		LambdaExprPtr innerLambda = builder.lambdaExpr(innerFctTy, builder.parameters(innerFctParams), builder.compoundStmt(body));
-
-		transform::utils::migrateAnnotations(ndrangeKernel["enrk"].getValue().as<NodePtr>(), innerLambda.as<NodePtr>());
-
-		// TODO add kernel call here
-		replacements[ndrangeKernel["enrk"].getValue()] = builder.callExpr(gen.getInt4(), innerLambda, localKernel, global, local);
+		replacements[ndrangeKernel["enrk"].getValue()] = newKernelCall;
 
 
 //	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(kernelCall);
@@ -673,7 +695,7 @@ ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path,
 	std::set<string> kernelFileCache;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
-	lang::BasicGenerator gen(mgr);
+	const lang::BasicGenerator& gen(mgr);
 	ConversionJob job;
 	ProgramPtr kernels;
 
@@ -754,9 +776,8 @@ NodePtr KernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
 	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
 			nameLiteral << pattern::var("err", pattern::any) );
-	findKernelNames(clCreateKernel);
+	loadKernelCode(clCreateKernel);
 	collectArguments();
-	loadKernelCode();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -769,9 +790,8 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
 	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
-//	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
-//	loadKernelCode(kernelPaths);
-	collectArguments();
+	loadKernelCode(icl_create_kernel);
+//	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -780,11 +800,14 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	return prog;
 }
 
-void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
+void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
+	std::vector<std::string> kernelPaths = findKernelNames(createKernel);
+
 	std::vector<ExpressionPtr> kernelEntries;
+	std::map<string, int> checkDuplicates;
 
 	for_each(kernelPaths, [&](std::string path) {
 		// check if file has already been added
@@ -800,10 +823,14 @@ void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
 		}
 
 	});
+
+	storeKernelLambdas(kernelEntries, checkDuplicates);
 }
 
 
-
+ExpressionPtr IclKernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr& memberTy, const ExpressionPtr& tupleMemberAccess, StatementList& body) {
+	return tupleMemberAccess;
+}
 //void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
 //	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
 void IclKernelReplacer::collectArguments() {
@@ -813,14 +840,14 @@ void IclKernelReplacer::collectArguments() {
 	NodeAddressMap replacements;
 
 	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
-			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
+			aT(var("kernel", irp::variable())) << var("work_dim", pattern::any) <<
 			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
 			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
 			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
 
 	NodeAddress pA(prog);
 	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
-		ExpressionPtr kernel = utils::tryRemove(gen.getRefDeref(), runKernel["kernel"].getValue().as<ExpressionPtr>());
+		ExpressionAddress kernel = /*utils::tryRemove(gen.getRefDeref(), */runKernel["kernel"].getValue().as<ExpressionAddress>();
 
 		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
 		ExpressionsPtr member = arguments->getExpressions();
@@ -838,12 +865,12 @@ void IclKernelReplacer::collectArguments() {
 
 			ExpressionPtr addToTuple;
 			if(analysis::isZero(storedArg)) { // local memory argument
-				kernelTypes[kernel].push_back(gen.getUInt8());
+				kernelTypes[utils::getRootVariable(matchAddress >> kernel).as<ExpressionPtr>()].push_back(gen.getUInt8());
 				// store the information that this is a local memory argument
 //				localMemArgs[kernel].insert(member[i-1]);
 				addToTuple = member[i-1];
 			} else {
-				kernelTypes[kernel].push_back(storedArg->getType());
+				kernelTypes[utils::getRootVariable(matchAddress >> kernel).as<ExpressionPtr>()].push_back(storedArg->getType());
 				addToTuple = storedArg;
 			}
 
@@ -851,15 +878,38 @@ void IclKernelReplacer::collectArguments() {
 					builder.getTypeLiteral(addToTuple->getType())), addToTuple));
 		}
 
+		// add kernel call function
+		ExpressionPtr newKernelCall = createKernelCallLambda(kernel, runKernel["work_dim"].getValue().as<ExpressionPtr>(),
+				runKernel["local_work_size"].getValue().as<ExpressionPtr>(), runKernel["global_work_size"].getValue().as<ExpressionPtr>());
+
+
+		transform::utils::migrateAnnotations(runKernel.getRoot().as<NodePtr>(), newKernelCall.as<NodePtr>());
+
 		// add kernel call to compound expression
 		tupleCreation.push_back(runKernel.getRoot().as<ExpressionPtr>());
 
 		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
 		replacements[runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
-dumpPretty(replacements[runKernel.getRoot()]);
 	});
 
 	prog = transform::replaceAll(mgr, replacements);
+
+}
+
+void IclKernelReplacer::inlineKernelCode() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
+			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
+			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
+			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
+
+	NodeAddress pA(prog);
+	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
+	});
 }
 
 } //namespace ocl

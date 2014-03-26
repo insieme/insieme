@@ -16,8 +16,9 @@ fi
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-git clone --branch isl-$VERSION git://repo.or.cz/isl.git isl-$VERSION
+git clone git://repo.or.cz/isl.git isl-$VERSION
 cd isl-$VERSION
+git checkout tags/isl-$VERSION
 ./autogen.sh
 
 echo "#### Building isl library ####"
