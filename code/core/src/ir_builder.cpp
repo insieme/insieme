@@ -685,12 +685,12 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 			});
 
 			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
-			return callExpr(target.getType().as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefAssign(), target,
+			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
 					accessMember(value, pos->getName()));
 		}
 	}
 
-	return callExpr(target.getType().as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefAssign(), target, value);
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
 ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
@@ -1571,10 +1571,10 @@ ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, co
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
 
 	if (constant){
-		return callExpr(ext.getInitStaticConst(), staticVariable, initValue);
+		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
 	}
 	else{
-		return callExpr(ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
 	}
 }
 

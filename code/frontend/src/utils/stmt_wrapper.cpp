@@ -37,6 +37,8 @@
 
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_builder.h"
+
 
 
 namespace stmtutils {

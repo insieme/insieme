@@ -36,8 +36,7 @@
 
 #pragma once
 
-// forwared declaration
-namespace clang { class CastExpr; }
+#include "insieme/frontend/clang_forward.h"
 
 namespace insieme {
 namespace frontend {

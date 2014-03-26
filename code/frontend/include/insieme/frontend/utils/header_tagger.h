@@ -52,6 +52,7 @@
 #include <clang/AST/ASTContext.h>
 #pragma GCC diagnostic pop
 
+
 namespace clang { 
 	class Decl; 
 }

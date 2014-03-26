@@ -58,7 +58,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
-	Logger::get(std::cerr, ERROR, 0);
+	Logger::get(std::cerr, INFO, 0);
 
 	core::NodeManager manager;
 
@@ -124,44 +124,45 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	// this test was disabled during the restructuring of the frontend since
 	// fixing it would have suspended the actual task
 
-//	Logger::get(std::cerr, ERROR);
-//
-//	core::NodeManager manager;
-//
-//	// create and customize conversion job
-//	fe::ConversionJob job(CLANG_SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
-//	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-//	job.addIncludeDirectory(CLANG_SRC_DIR "../../backend/test/ocl_kernel");
-//	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
-//	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
-//
-//	job.setOption(fe::ConversionJob::icl_lib);
-//
-//	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
-//	core::ProgramPtr program = job.execute(manager);
-//	LOG(INFO) << "Done.";
-//
-//	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//
-//	LOG(INFO) << "Printing the IR: " << pp;
-//	//    LOG(INFO) << pp;
-//
-//	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
-//	EXPECT_EQ(0u, errors.size());
-//	std::sort(errors.begin(), errors.end());
-//
-//	for (const core::checks::Message& cur : errors){
-//
-//		std::cout << cur << std::endl;
-///*		core::NodeAddress address = cur.getAddress();
-//		core::NodePtr context = address.getParentNode(address.getDepth()-1);
-//		std::cout << "\t Context: " <<
-//			insieme::core::printer::PrettyPrinter(context,
-//												insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
-//
-//		std::cout << "=============================" << std::endl;
-//		dumpPretty(context);
-//*/
-//	}
+	Logger::get(std::cerr, INFO);
+
+	core::NodeManager manager;
+
+	// create and customize conversion job
+	fe::ConversionJob job(CLANG_SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../backend/test/ocl_kernel");
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
+	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
+
+	job.setOption(fe::ConversionJob::icl_lib);
+	job.setDefinition("INSIEME", "");
+
+	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
+	core::ProgramPtr program = job.execute(manager);
+	LOG(INFO) << "Done.";
+
+	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	LOG(INFO) << "Printing the IR: " << pp;
+	//    LOG(INFO) << pp;
+
+	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
+	EXPECT_EQ(0u, errors.size());
+	std::sort(errors.begin(), errors.end());
+
+	for (const core::checks::Message& cur : errors){
+
+		std::cout << cur << std::endl;
+/*		core::NodeAddress address = cur.getAddress();
+		core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		std::cout << "\t Context: " <<
+			insieme::core::printer::PrettyPrinter(context,
+												insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+
+		std::cout << "=============================" << std::endl;
+		dumpPretty(context);
+*/
+	}
 
 }

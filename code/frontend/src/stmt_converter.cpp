@@ -841,7 +841,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
-//							teakes care of C nodes
+//							takes care of C nodes
 //							C nodes implemented in base: StmtConverter
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -865,6 +865,10 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 		convFact.untrackSourceLocation();
 	}
 
+    // call frontend plugin post visitors
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    }
 
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
@@ -885,11 +889,6 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
         else
             retStmt = stmtutils::StmtWrapper(irStmt);
 	}
-
-    // call frontend plugin post visitors
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
-    }
 	return retStmt;
 }
 

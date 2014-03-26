@@ -624,7 +624,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		//Vector coercions are bitcasts.
 		{
 			// char* -> const char* is a bitcast in clang, and not a Noop, but we drop qualifiers
-			if (*targetTy == *exprTy) return expr;
+			if (core::types::isSubTypeOf(exprTy, targetTy)) return expr;
 
 			// cast to void*
 			if (gen.isAnyRef(targetTy)) {
@@ -649,14 +649,14 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 										expr, builder.getTypeLiteral(elementType));
 			}
 
-			// otherwhise, we just reinterpret
+			// otherwise, we just reinterpret
 			core::ExpressionPtr innerExpr = expr;
 			if (gen.isRefDeref(expr)){
 				//clang does LtoR always, but we want refs in the cast. if there is a deref in the inner expression remove it
 				innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
 			}
 			return builder.callExpr(targetTy, gen.getRefReinterpret(),
-									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+										innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////

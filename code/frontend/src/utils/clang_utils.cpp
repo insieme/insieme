@@ -52,6 +52,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <sstream>
+#include <iostream>
 
 namespace insieme {
 namespace frontend {
@@ -80,17 +81,37 @@ std::string removeSymbols(std::string& s) {
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, bool isDefinedInSystemHeader=false){
 
 	// beware of aliasing types, if we find a typedef, better to use the inner type
 	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
 		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
 			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
-			if (!recTy->getDecl()->getNameAsString().empty() ){
-				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal());
+			if (!recTy->getDecl()->getNameAsString().empty()){
+				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal(), isDefinedInSystemHeader);
 			}
 		}
 	}
+
+    // hold on. if it is a recorddecl, the decl has no default name
+    // and we know the type, we return the name of the qualtype
+    // with exception of some special cases
+    if(const clang::RecordDecl* rec = llvm::dyn_cast<clang::RecordDecl>(decl)) {
+        // at first we check if it is a declaration that has no name
+        // but is not an anonymous struct or union.
+        // if defined in system header, don't touch it. will be
+        // handled by the type converter in the correct way.
+        if(decl->getNameAsString().empty() && !rec->isAnonymousStructOrUnion() && !isDefinedInSystemHeader) {
+            const clang::CXXRecordDecl* cxxrec = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+            // sometimes we have a cpp lambda, don't touch this things.
+            // we don't need a check for cxxrec!=nullptr because of short circuit eval.
+            if(!cxxrec || !(cxxrec->isLambda())) {
+                //FIXME: find a smarter way to check for non anonymous structs or union that have an anonymous type
+                if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
+                    return type.getUnqualifiedType().getAsString();
+            }
+        }
+    }
 
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
@@ -247,8 +268,8 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 
 	std::string name =  ss.str();
 	REMOVE_SYMBOLS(name);
-	boost::replace_all(name, ".", "_");  // names have full path, remove symbols 
-	boost::replace_all(name, "/", "_"); 
+	boost::replace_all(name, ".", "_");  // names have full path, remove symbols
+	boost::replace_all(name, "/", "_");
     boost::replace_all(name, "-", "_");
 
 	return name;

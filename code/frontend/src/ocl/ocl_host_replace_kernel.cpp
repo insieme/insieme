@@ -35,6 +35,8 @@
  */
 #include <fstream>
 
+
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/ir_visitor.h"
@@ -490,6 +492,7 @@ void KernelReplacer::replaceKernels() {
 	for_each(kernelTypes, [&](std::pair<ExpressionPtr, std::vector<TypePtr> > kT) {
 		ExpressionPtr k = kT.first;
 		TupleTypePtr tt = builder.tupleType(kT.second);
+
 		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(builder.refType(tt)).as<ExpressionPtr>()
 				: builder.literal(builder.refType(tt), k.as<LiteralPtr>()->getStringValue());
 
@@ -764,10 +767,11 @@ NodePtr KernelReplacer::getTransformedProgram() {
 
 NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
-	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"),	pattern::any <<	pattern::var("file_name", pattern::any) <<
+	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
-	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
-	loadKernelCode(kernelPaths);
+//	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
+//	loadKernelCode(kernelPaths);
+	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -796,6 +800,66 @@ void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
 		}
 
 	});
+}
+
+
+
+//void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
+//	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
+void IclKernelReplacer::collectArguments() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	NodeAddressMap replacements;
+
+	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
+			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
+			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
+			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
+
+	NodeAddress pA(prog);
+	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
+		ExpressionPtr kernel = utils::tryRemove(gen.getRefDeref(), runKernel["kernel"].getValue().as<ExpressionPtr>());
+
+		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
+		ExpressionsPtr member = arguments->getExpressions();
+
+		StatementList tupleCreation;
+
+
+		for(unsigned i = 0; i < member.size(); ++i) {
+			// first look at the size of the argument
+			bool isIcl_buffer = analysis::isZero(member[i]);
+//std::cout << member[i] << " is zero: " << isIcl_buffer << std::endl;
+			++i;
+			// then look at the value of the argument
+			ExpressionPtr storedArg =  isIcl_buffer ? builder.callExpr(gen.getScalarToArray(),  member[i]) : member[i];
+
+			ExpressionPtr addToTuple;
+			if(analysis::isZero(storedArg)) { // local memory argument
+				kernelTypes[kernel].push_back(gen.getUInt8());
+				// store the information that this is a local memory argument
+//				localMemArgs[kernel].insert(member[i-1]);
+				addToTuple = member[i-1];
+			} else {
+				kernelTypes[kernel].push_back(storedArg->getType());
+				addToTuple = storedArg;
+			}
+
+			tupleCreation.push_back(builder.assign(builder.callExpr(addToTuple->getType(), gen.getTupleRefElem(), kernel, builder.intLit(i/2),
+					builder.getTypeLiteral(addToTuple->getType())), addToTuple));
+		}
+
+		// add kernel call to compound expression
+		tupleCreation.push_back(runKernel.getRoot().as<ExpressionPtr>());
+
+		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
+		replacements[runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
+dumpPretty(replacements[runKernel.getRoot()]);
+	});
+
+	prog = transform::replaceAll(mgr, replacements);
 }
 
 } //namespace ocl

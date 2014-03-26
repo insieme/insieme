@@ -38,6 +38,7 @@
 
 #include <set>
 #include <map>
+#include <boost/regex.hpp>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -1025,6 +1026,51 @@ bool isTask(const JobExprPtr& job) {
 
 	core::IRBuilder builder(job->getNodeManager());
 	return job->getThreadNumRange() == builder.getThreadNumRange(1,1);
+}
+
+bool isZero(const core::ExpressionPtr& value) {
+
+	const core::lang::BasicGenerator& basic = value->getNodeManager().getLangBasic();
+	core::IRBuilder builder(value->getNodeManager());
+
+	// if initialization is zero ...
+	if (value == builder.getZero(value->getType())) {
+		// no initialization required
+		return true;
+	}
+
+	// ... or a zero literal ..
+	if (value->getNodeType() == core::NT_Literal) {
+		boost::regex zeroRegex (R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript));
+
+		const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
+
+		if(boost::regex_match(strValue, zeroRegex))
+			return true;
+
+	}
+
+	// ... or the ref.null literal
+	if (basic.isRefNull(value)) {
+		return true;
+	}
+
+	// ... or a vector initialization with a zero value
+	if (core::analysis::isCallOf(value, basic.getVectorInitUniform())) {
+		return isZero(core::analysis::getArgument(value, 0));
+	}
+
+	// TODO: remove this when frontend is fixed!!
+	// => compensate for silly stuff like var(*getNull())
+	if (core::analysis::isCallOf(value, basic.getRefVar())) {
+		core::ExpressionPtr arg = core::analysis::getArgument(value, 0);
+		if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
+			return isZero(core::analysis::getArgument(arg, 0));
+		}
+	}
+
+	// otherwise, it is not zero
+	return false;
 }
 
 

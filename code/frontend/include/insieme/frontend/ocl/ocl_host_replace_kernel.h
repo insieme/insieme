@@ -95,6 +95,7 @@ typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > 
 typedef boost::unordered_map<core::ExpressionPtr, core::TypeList> KernelTypes;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelFunctions;
 typedef boost::unordered_map<core::ExpressionPtr, std::set<unsigned int> > LocalMemArgs;
+typedef std::map<core::NodeAddress, core::NodePtr> NodeAddressMap;
 
 /*
  * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
@@ -115,7 +116,7 @@ protected:
 	std::set<string> kernelFileCache;
 
 	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
-	void collectArguments();
+	virtual void collectArguments();
 	void replaceKernels();
 	virtual void loadKernelCode();
 	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
@@ -131,6 +132,7 @@ public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
 	virtual core::NodePtr getTransformedProgram();
 	virtual void loadKernelCode(std::vector<std::string> kernelPaths);
+	virtual void collectArguments();
 };
 
 } //namespace ocl

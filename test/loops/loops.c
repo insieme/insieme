@@ -90,6 +90,26 @@ void func6() {
 	}
 }
 
+void func7() {
+   int i = 14;
+ 
+   for (; i >= 3; i -= 4) {
+           printf("%d: %d\n",__LINE__, i);
+   }
+   printf("%d: %d\n",__LINE__, i);
+
+   for (; i >= 0; i--) {
+           printf("%d: %d\n", __LINE__, i);
+   }
+   printf("%d: %d\n",__LINE__, i);
+
+   i = 11;
+   for (; i >= 3; i -= 4) {
+           printf("%d: %d\n", __LINE__, i);
+   }
+   printf("%d: %d\n",__LINE__, i);
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -162,4 +182,5 @@ int main(int argc, char* argv[]) {
 	func4();
 	func5(a);
 	func6();
+    func7();
 }

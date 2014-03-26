@@ -157,7 +157,6 @@ TEST(Cilk, Sema) {
 
 	// check proper encoding of cilk primitives
 	auto code = builder.normalize(job.execute(manager));
-	dump(code);
 
 	auto str = toString(printer::PrettyPrinter(code));
 

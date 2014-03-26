@@ -61,6 +61,10 @@ class IclHostPlugin : public FrontendPlugin {
 public:
 	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {}
 private:
+    virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+                                                   insieme::frontend::conversion::Converter& convFact);
+
+
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 

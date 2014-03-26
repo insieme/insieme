@@ -185,28 +185,8 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 		newInductionExpr = inductionVar.as<insieme::core::ExpressionPtr>();  // philgs uncomment
 
-		// if the variable is declared outside, we must give it a final value after all iterations
-		if(restoreValue) {
-			core::ExpressionPtr tmpEndValue;
-			if(loopToBoundary) {
-				if(invertComparisonOp)
-					tmpEndValue = builder.sub(endValue, one);
-				else
-					tmpEndValue = builder.add(endValue, one);
-			} else
-				tmpEndValue = endValue;
-
-			core::StatementPtr assign = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], tmpEndValue);
-			// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
-			// update this variable so the inner loop side effects have access to it
-			postStmts.push_back(assign);
-			if ( initValue != originalInductionExpr) {
-				assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], (invertComparisonOp) ? convFact.getIRBuilder().invertSign(newInductionExpr) : inductionVar);
-				firstStmts.push_back(assign);
-			}
-		}
-
 		// if the comparison operator was not < or <=, we need to invert to comply with IR loops that have an implicit <
+        core::ExpressionPtr oldInitValue = initValue;
 		if(invertComparisonOp) {
 			newInductionExpr = convFact.getIRBuilder().invertSign(newInductionExpr);
 			stepExpr = convFact.getIRBuilder().invertSign( stepExpr);
@@ -217,6 +197,37 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 		// if the loop iterations include the boundary case, extend range + 1 to comply with IR loops
 		if(loopToBoundary)
 			endValue = convFact.getIRBuilder().add(endValue, convFact.getIRBuilder().literal("1", inductionVar->getType()));
+
+		// if the variable is declared outside, we must give it a final value after all iterations
+		if(restoreValue) {
+            // Let's compute the value of the iterator variable at the end of the loop :
+            //      if( (end - beg) % step == 0 )
+            //          tmpEndValue = end;
+            //      else
+            //          tmpEndValue = end + (step - (end-beg) % step)
+
+			core::ExpressionPtr tmpEndValue;
+            auto range = builder.sub(endValue, initValue);
+            auto zero = convFact.getIRBuilder().zero(inductionVar->getType());
+            auto remainder = builder.sub(range, builder.mul(builder.div(range, stepExpr), stepExpr));
+            tmpEndValue = builder.add( endValue, builder.sub(stepExpr, remainder));
+            auto ifBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], endValue);
+            auto elseBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], tmpEndValue);
+            if(invertComparisonOp){
+                ifBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], builder.invertSign(endValue));
+                elseBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], builder.invertSign(tmpEndValue));
+            }
+
+            auto ifStmt = builder.ifStmt(builder.eq(remainder, zero), ifBranch, elseBranch);
+			postStmts.push_back(ifStmt);
+
+			// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
+			// update this variable so the inner loop side effects have access to it
+			if ( oldInitValue != originalInductionExpr) {
+				auto assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], newInductionExpr);
+				firstStmts.push_back(assign);
+			}
+		}
 	}
 }
 
@@ -297,6 +308,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 
 	if (!initStmt){  // there is no init statement, therefore the initial value is the value of the induction expression at the begining of the loop
 		initValue = originalInductionExpr;
+        restoreValue = true;
 	}
 	else{
 		// could be a declaration or could be an assignment

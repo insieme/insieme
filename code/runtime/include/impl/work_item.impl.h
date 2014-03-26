@@ -335,12 +335,12 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	lwt_recycle(worker->id.thread, wi);
 	// check for parent, if there, notify
 	if(wi->parent_num_active_children) {
-		irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
+		//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
 		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
 		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
-			irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
+			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
 			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
-			irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
+			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
 		}
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);

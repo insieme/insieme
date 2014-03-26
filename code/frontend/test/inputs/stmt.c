@@ -202,15 +202,15 @@ void for_stmt_test() {
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); (v101 := v0); }; (v100 := 100);}"
+	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); (v101 := v0); }; if((((100-0)-(((100-0)/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-0)-(((100-0)/1)*1))))); };}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v101 := v0); (v100 := v0); }; (v101 := 100);}"
+	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v101 := v0); (v100 := v0); }; if((((100-( *v100))-(((100-( *v100))/6)*6))==0)) { (v101 := 100); } else { (v101 := (100+(6-((100-( *v100))-(((100-( *v100))/6)*6))))); };}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
-	"for(decl int<4> v0 = ( *v100) .. 100 : 1) { { };}"
+    "{ for(decl int<4> v0 = ( *v100) .. 100 : 1) { { }; }; if((((100-( *v100))-(((100-( *v100))/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-( *v100))-(((100-( *v100))/1)*1))))); };}"
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
@@ -220,7 +220,7 @@ void for_stmt_test() {
 	// divission is not supported as for loop increment
 	int mq, nq;
 	#pragma test \
-	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); return (v2 := (( *v2)/2)); }(v100, v101); };}"
+	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); (v2 := (( *v2)/2)); return ( *v2); }(v100, v101); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 

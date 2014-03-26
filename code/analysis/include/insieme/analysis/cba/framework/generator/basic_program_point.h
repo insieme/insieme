@@ -42,6 +42,8 @@
 #include "insieme/analysis/cba/framework/analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
 
+#include "insieme/analysis/cba/framework/entities/formula.h"
+
 #include "insieme/analysis/cba/analysis/boolean.h"
 #include "insieme/analysis/cba/analysis/reachability.h"
 #include "insieme/analysis/cba/analysis/jobs.h"
@@ -110,6 +112,13 @@ namespace cba {
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
 		}
 
+		template<typename F, typename SetTypeA, typename SetTypeB>
+		void connectSetsIf(const F& filter, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+			// filter out invalid contexts
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
+			connectStateSetsIfFilter(filter, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
+		}
+
 		template<typename SetTypeA, typename SetTypeB>
 		void connectStateSets(const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
@@ -122,6 +131,13 @@ namespace cba {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			static_cast<Derived*>(this)->template connectStateSetsIfImpl(value,set,a,al,ac,b,bl,bc,args...,constraints);
+		}
+
+		template<typename F, typename SetTypeA, typename SetTypeB>
+		void connectStateSetsIfFilter(const F& filter, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+			// filter out invalid contexts
+			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
+			static_cast<Derived*>(this)->template connectStateSetsIfFilterImpl(filter,a,al,ac,b,bl,bc,args...,constraints);
 		}
 
 
@@ -153,6 +169,21 @@ namespace cba {
 			auto A = cba.getSet(a, al, ac, params...);
 			auto B = cba.getSet(b, bl, bc, params...);
 			constraints.add(subsetIf(value, set, A, B));
+		}
+
+		template<typename Filter, typename SetTypeA, typename SetTypeB>
+		void connectStateSetsIfFilterImpl (
+					const Filter& filter,
+					const SetTypeA& a, Label al, const Context& ac,
+					const SetTypeB& b, Label bl, const Context& bc,
+					const ExtraParams& ... params,
+					Constraints& constraints
+				) const {
+
+			// simple version (no check of contexts)
+			auto A = cba.getSet(a, al, ac, params...);
+			auto B = cba.getSet(b, bl, bc, params...);
+			constraints.add(combine(filter, e_sub(A, B)));
 		}
 
 	};
@@ -816,6 +847,20 @@ namespace cba {
 
 	}
 
+	namespace detail {
+
+		// checks whether there is an element within the first set that is <= an element in the second set
+		bool le(const std::set<Formula>& sa, const std::set<Formula>& sb);
+
+		// create a filter determining whether loop is entered
+		bool loop_entered(const std::set<Formula>& l, const std::set<Formula>& u, const std::set<Formula>& s);
+
+		// create a filter determining whether loop is not entered
+		bool loop_not_entered(const std::set<Formula>& l, const std::set<Formula>& u, const std::set<Formula>& s);
+
+	}
+
+
 
 	template<
 		typename InSetIDType,
@@ -1019,10 +1064,20 @@ namespace cba {
 		}
 
 		void visitForStmt(const ForStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+			typedef std::function<bool(const std::set<Formula>&,const std::set<Formula>&,const std::set<Formula>&)> filter;
+			// TODO: consider continues and breaks!
+
+			// get values defining range
+			auto Al = cba.getSet(A, stmt->getStart(), ctxt);
+			auto Au = cba.getSet(A, stmt->getEnd(), ctxt);
+			auto As = cba.getSet(A, stmt->getStep(), ctxt);
+
 			// link out of body with out of for stmt
 			auto body = stmt->getBody();
-			// TODO: consider continues and breaks!
-			this->connectSets(this->Aout, body, ctxt, this->Aout, stmt, ctxt, params..., constraints);
+			this->connectSetsIf(f_trinary(filter(detail::loop_entered), Al, Au, As), this->Aout, body, ctxt, this->Aout, stmt, ctxt, params..., constraints);
+
+			// link in-state with out-state of step expression (last parameter to be evaluated)
+			this->connectSetsIf(f_trinary(filter(detail::loop_not_entered), Al, Au, As), this->Aout, stmt->getStep(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
 		void visitMarkerStmt(const MarkerStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {

@@ -51,6 +51,7 @@
 class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
 		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
         insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
 };
 
 

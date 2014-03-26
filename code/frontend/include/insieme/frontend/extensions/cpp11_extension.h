@@ -33,6 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+#pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
