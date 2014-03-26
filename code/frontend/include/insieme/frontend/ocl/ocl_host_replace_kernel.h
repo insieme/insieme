@@ -116,13 +116,17 @@ protected:
 	std::set<string> kernelFileCache;
 
 	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
+	virtual core::ExpressionPtr handleArgument(const core::TypePtr& argTy, const core::TypePtr& memberTy, const core::ExpressionPtr& tupleMemberAccess,
+			core::StatementList& body);
 	virtual void collectArguments();
 	void replaceKernels();
 	virtual void loadKernelCode(core::pattern::TreePatternPtr);
 	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
-	void inlineKernelCode();
+	virtual void inlineKernelCode();
 	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
 	std::vector<core::ExpressionPtr> lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
+	core::ExpressionPtr createKernelCallLambda(const core::ExpressionAddress localKernel,
+			const core::ExpressionPtr work_dim, const core::ExpressionPtr local_work_size, const core::ExpressionPtr global_work_size);
 public:
 	virtual core::NodePtr getTransformedProgram();
 };
@@ -130,9 +134,12 @@ public:
 class IclKernelReplacer : public KernelReplacer {
 public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
+	virtual core::ExpressionPtr handleArgument(const core::TypePtr& argTy, const core::TypePtr& memberTy, const core::ExpressionPtr& tupleMemberAccess,
+			core::StatementList& body);
 	virtual core::NodePtr getTransformedProgram();
 	virtual void loadKernelCode(core::pattern::TreePatternPtr);
 	virtual void collectArguments();
+	virtual void inlineKernelCode();
 };
 
 } //namespace ocl
