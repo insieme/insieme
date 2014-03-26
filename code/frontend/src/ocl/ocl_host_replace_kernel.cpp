@@ -516,10 +516,12 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
 		});
 }
 
-void KernelReplacer::loadKernelCode() {
+void KernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
+
+	findKernelNames(createKernel);
 
 	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(irp::atom(builder.refType(builder.arrayType(builder.genericType("_cl_program")))),
 			irp::literal("clCreateProgramWithSource"), pattern::any <<
@@ -754,9 +756,8 @@ NodePtr KernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
 	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
 			nameLiteral << pattern::var("err", pattern::any) );
-	findKernelNames(clCreateKernel);
+	loadKernelCode(clCreateKernel);
 	collectArguments();
-	loadKernelCode();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -769,8 +770,7 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
 	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
-//	std::vector<std::string> kernelPaths = findKernelNames(icl_create_kernel);
-//	loadKernelCode(kernelPaths);
+	loadKernelCode(icl_create_kernel);
 	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
@@ -780,11 +780,14 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	return prog;
 }
 
-void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
+void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
+	std::vector<std::string> kernelPaths = findKernelNames(createKernel);
+
 	std::vector<ExpressionPtr> kernelEntries;
+	std::map<string, int> checkDuplicates;
 
 	for_each(kernelPaths, [&](std::string path) {
 		// check if file has already been added
@@ -800,6 +803,8 @@ void IclKernelReplacer::loadKernelCode(std::vector<std::string> kernelPaths) {
 		}
 
 	});
+
+	storeKernelLambdas(kernelEntries, checkDuplicates);
 }
 
 
@@ -856,10 +861,10 @@ void IclKernelReplacer::collectArguments() {
 
 		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
 		replacements[runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
-dumpPretty(replacements[runKernel.getRoot()]);
 	});
 
 	prog = transform::replaceAll(mgr, replacements);
+
 }
 
 } //namespace ocl

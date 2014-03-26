@@ -113,8 +113,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 			pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
-		dumpPretty(runKernel.getRoot());
-
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
 			if(match) {
@@ -123,8 +121,8 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 		}
 	});
 
-//	if(!replacements.empty())
-//		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
+	if(!replacements.empty())
+		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
 	return irExpr;
 }

@@ -118,7 +118,7 @@ protected:
 	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
 	virtual void collectArguments();
 	void replaceKernels();
-	virtual void loadKernelCode();
+	virtual void loadKernelCode(core::pattern::TreePatternPtr);
 	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
 	void inlineKernelCode();
 	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
@@ -131,7 +131,7 @@ class IclKernelReplacer : public KernelReplacer {
 public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
 	virtual core::NodePtr getTransformedProgram();
-	virtual void loadKernelCode(std::vector<std::string> kernelPaths);
+	virtual void loadKernelCode(core::pattern::TreePatternPtr);
 	virtual void collectArguments();
 };
 
