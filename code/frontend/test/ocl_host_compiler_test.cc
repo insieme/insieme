@@ -121,9 +121,6 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
-	// this test was disabled during the restructuring of the frontend since
-	// fixing it would have suspended the actual task
-
 	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;

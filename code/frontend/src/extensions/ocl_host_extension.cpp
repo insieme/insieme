@@ -65,6 +65,9 @@ OclHostPlugin::OclHostPlugin(const std::vector<boost::filesystem::path>& include
 }
 
 core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
 	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
@@ -74,13 +77,13 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
-	ocl::TypeFixer otf(root);
+	std::vector<TypePtr> typesToFix = {builder.genericType("_cl_kernel"), builder.genericType("_cl_mem")};
+	ocl::TypeFixer otf(root, typesToFix);
 	root = otf.getTransformedProg();
 
 	VariableMap nada;
 	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
 
-	core::IRBuilder builder(prog->getNodeManager());
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
@@ -136,16 +139,29 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 }
 
 core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
 	ocl::IclKernelReplacer kr(root, includeDirs);
 	root = kr.getTransformedProgram();
 
-	core::IRBuilder builder(prog->getNodeManager());
+	TypePtr iclKernelTy = builder.structType(builder.stringValue("_icl_kernel"), toVector(
+			builder.namedType("kernel", builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))),
+			builder.namedType("dev", builder.refType(builder.arrayType(br.getIclDeviceType())))));
+
+/*
+	std::vector<TypePtr> typesToFix = {iclKernelTy, br.getIclBufferType()};
+	ocl::TypeFixer otf(root, typesToFix);
+	root = otf.getTransformedProg();
+
+	VariableMap nada;
+	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
+*/
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
-
 
 //std::cout << printer::PrettyPrinter(root) << std::endl;
 //	prog = builder.program(list);
