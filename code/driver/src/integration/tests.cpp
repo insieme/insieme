@@ -201,11 +201,8 @@ namespace integration {
 				//get files
 				vector<frontend::path> files;
 
-				boost::tokenizer<boost::char_separator<char>> tokens(prop["files"], sep);
-				for (const auto& t : tokens) {
-					string file = t;
-					if(!file.empty())
-						files.push_back((testCaseDir / file).string());
+				for (const auto& file : prop.get<vector<string>>("files")) {
+					files.push_back((testCaseDir / file).string());
 				}
 
 				//no files specified, use default names TODO ENABLE IF ALL TEST_DATA IS CONVERTED
@@ -226,46 +223,35 @@ namespace integration {
 				//get includes
 				vector<frontend::path> includeDirs;
 
-				tokens=boost::tokenizer<boost::char_separator<char>>(prop["includes"], sep);
-				for (const auto& t : tokens) {
-					string path = t;
-					if(!path.empty()){
-						if(path.at(0) == '/')
-							includeDirs.push_back(path);
-						else
-							includeDirs.push_back((testCaseDir / path).string());
+				for(const auto& path : prop.get<vector<string>>("includes")) {
+					if(path.at(0) == '/') {
+						includeDirs.push_back(path);
+					} else {
+						includeDirs.push_back((testCaseDir / path).string());
 					}
 				}
 
 				// get libs paths
 				vector<frontend::path> libPaths;
 
-				tokens=boost::tokenizer<boost::char_separator<char>>(prop["libPaths"], sep);
-				for (const auto& t : tokens) {
-					string path = t;
-					if(!path.empty()){
-						if(path.at(0) == '/')
-							libPaths.push_back(path);
-						else
-							libPaths.push_back((testCaseDir / path).string());
+				for(const auto& path : prop.get<vector<string>>("libPaths")) {
+					if(path.at(0) == '/') {
+						libPaths.push_back(path);
+					} else {
+						libPaths.push_back((testCaseDir / path).string());
 					}
 				}
 
 				// get lib names
 				vector<std::string> libNames;
 
-				tokens=boost::tokenizer<boost::char_separator<char>>(prop["libNames"], sep);
-				for (const auto& t : tokens) {
-					string name = t;
-					if(!name.empty()){
-						libNames.push_back(name);
-					}
+				for (const auto& name : prop.get<vector<string>>("libNames")) {
+					libNames.push_back(name);
 				}
 
-				enableCXX11=prop["use_cpp11"].compare("1")==0;
-				enableOpenMP=prop["use_omp"].compare("1")==0;
-				enableOpenCL=prop["use_opencl"].compare("1")==0;
-
+				enableCXX11  = prop.get<bool>("use_cpp11");
+				enableOpenMP = prop.get<bool>("use_omp");
+				enableOpenCL = prop.get<bool>("use_opencl");
 
 				// read inputs.data (if present)
 				//vector<frontend::path> files;
