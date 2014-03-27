@@ -95,7 +95,7 @@ namespace integration {
 
 		Properties& operator<<=(const Properties& other);
 
-		Properties operator<<(const Properties& other) const {
+		Properties operator<<(const Properties& other) {
 			return Properties(*this) <<= other;
 		}
 
@@ -132,6 +132,7 @@ namespace integration {
 		}
 
 		std::ostream& printTo(std::ostream& out) const;
+
 	};
 
 

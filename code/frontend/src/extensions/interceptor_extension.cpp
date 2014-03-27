@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/core/transform/manipulation_utils.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 
 namespace insieme {
 namespace frontend {

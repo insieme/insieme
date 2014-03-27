@@ -1,0 +1,6 @@
+files="../bots_common.c","../bots_main.c"
+includes="../","./"
+outputAwk="/^Verification/{ print $3 }"
+use_libmath=1
+excludeSteps="main_cxx_sema","main_run_c++_convert","main_run_c++_compile","main_run_c++_execute","ref_c++_compile","ref_c++_execute","main_run_c++_check","main_seq_c++_convert","main_seq_c++_compile","main_seq_c++_execute","main_seq_c++_check"
+

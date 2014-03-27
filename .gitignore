@@ -1,6 +1,8 @@
 # Ignore all generated files
 build*/
 *.inl
+*.run
+*.seq
 *.bin
 *~
 *.match

@@ -1,0 +1,2 @@
+files="../../n_body/n_body.c"
+use_libmath=1

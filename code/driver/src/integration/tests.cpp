@@ -39,6 +39,7 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/tokenizer.hpp>
 
 #include <boost/optional.hpp>
 
@@ -61,10 +62,14 @@ namespace integration {
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 
-			if (testCase.isCXX11()) job.setStandard(frontend::ConversionSetup::Cxx11);
+			std::string step="main_run_convert";
+			if (testCase.isCXX11()){
+				job.setStandard(frontend::ConversionSetup::Cxx11);
+				step="main_run_c++_convert";
+			}
 
 			// add pre-processor definitions
-			for_each(testCase.getDefinitions(), [&](const std::pair<string,string>& def) {
+			for_each(testCase.getDefinitions(step), [&](const std::pair<string,string>& def) {
 				job.setDefinition(def.first, def.second);
 			});
 
@@ -87,7 +92,6 @@ namespace integration {
 	namespace {
 
 		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
-
 			Properties res;
 
 			// if it is the root we are done
@@ -103,7 +107,6 @@ namespace integration {
 			auto file = dir / configFileName;
 
 			if (fs::exists(file)) {
-
 				// try loading file
 				fs::ifstream in(file);
 				if (in.is_open()) {
@@ -165,7 +168,7 @@ namespace integration {
 			configFile.close();
 
 			// load global properties (from current working directory)
-			Properties global = loadProperties(fs::current_path(), "integration_test_config");
+			Properties global = loadProperties(BINARY_ROOT_DIR, "integration_test_config");
 
 			// load individual test cases
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
@@ -190,47 +193,25 @@ namespace integration {
 					continue;
 				}
 
+				// load properties
+				Properties prop = global << loadProperties(testCaseDir);
 
-				// read inputs.data (if present)
+				boost::char_separator<char> sep("\",");
+
+				//get files
 				vector<frontend::path> files;
-				vector<frontend::path> includeDirs;
-				auto inputFile = testCaseDir / "inputs.data";
-				if (fs::exists(inputFile)) {
-					// read file list from inputs.data
-					fs::ifstream inputs;
-					inputs.open(inputFile);
-					if (!inputs.is_open()) {
-						LOG(WARNING) << "Unable to open input file " << inputFile.string();
-						continue;
-					}
 
-					// read entry by entry
-					while (!inputs.eof()) {
-						string file;
-						inputs >> file;
-						std::remove(file.begin(), file.end(), ' ');
-						if (!file.empty()) {
-							if (file[0] != '-') {
-								// it's an input file
-								files.push_back((testCaseDir / file).string());
-							} else if (file.length() > 2){
-								// it's an include directory
-								string path = file.substr(2);
-								// if it starts with /, assume absolute path
-								if(path.at(0) == '/')
-									includeDirs.push_back(path);
-								// if not, assume path to be relative to testCaseDir
-								else
-									includeDirs.push_back((testCaseDir / path).string());
-							}
-						}
-					}
-					inputs.close();
+				boost::tokenizer<boost::char_separator<char>> tokens(prop["files"], sep);
+				for (const auto& t : tokens) {
+					string file = t;
+					if(!file.empty())
+						files.push_back((testCaseDir / file).string());
+				}
 
-				} else {
-					// use default file name
+				//no files specified, use default names TODO ENABLE IF ALL TEST_DATA IS CONVERTED
+				if(files.size()==0){
 					if (fs::exists(testCaseDir / (cur + ".c")))
-						// This is a C test case 
+						// This is a C test case
 						files.push_back((testCaseDir / (cur + ".c")).string());
 					else {
 						// this must be a c++ test case
@@ -238,13 +219,110 @@ namespace integration {
 						files.push_back((testCaseDir / (cur + ".cpp")).string());
 
 						// if test is located in apropiate folder, activate CXX11 standard
-						std::size_t found = testCaseDir.string().find("cpp11");
-						enableCXX11 = (found!=std::string::npos);
+						//std::size_t found = testCaseDir.string().find("cpp11");
 					}
 				}
 
+				//get includes
+				vector<frontend::path> includeDirs;
+
+				tokens=boost::tokenizer<boost::char_separator<char>>(prop["includes"], sep);
+				for (const auto& t : tokens) {
+					string path = t;
+					if(!path.empty()){
+						if(path.at(0) == '/')
+							includeDirs.push_back(path);
+						else
+							includeDirs.push_back((testCaseDir / path).string());
+					}
+				}
+
+				// get libs paths
+				vector<frontend::path> libPaths;
+
+				tokens=boost::tokenizer<boost::char_separator<char>>(prop["libPaths"], sep);
+				for (const auto& t : tokens) {
+					string path = t;
+					if(!path.empty()){
+						if(path.at(0) == '/')
+							libPaths.push_back(path);
+						else
+							libPaths.push_back((testCaseDir / path).string());
+					}
+				}
+
+				// get lib names
+				vector<std::string> libNames;
+
+				tokens=boost::tokenizer<boost::char_separator<char>>(prop["libNames"], sep);
+				for (const auto& t : tokens) {
+					string name = t;
+					if(!name.empty()){
+						libNames.push_back(name);
+					}
+				}
+
+				enableCXX11=prop["use_cpp11"].compare("1")==0;
+				enableOpenMP=prop["use_omp"].compare("1")==0;
+				enableOpenCL=prop["use_opencl"].compare("1")==0;
+
+
+				// read inputs.data (if present)
+				//vector<frontend::path> files;
+				//vector<frontend::path> includeDirs;
+				/*if(files.size()==0){		//only for old test data
+					auto inputFile = testCaseDir / "inputs.data";
+					if (fs::exists(inputFile)) {
+						// read file list from inputs.data
+						fs::ifstream inputs;
+						inputs.open(inputFile);
+						if (!inputs.is_open()) {
+							LOG(WARNING) << "Unable to open input file " << inputFile.string();
+							continue;
+						}
+
+						// read entry by entry
+						while (!inputs.eof()) {
+							string file;
+							inputs >> file;
+							std::remove(file.begin(), file.end(), ' ');
+							if (!file.empty()) {
+								if (file[0] != '-') {
+									// it's an input file
+									files.push_back((testCaseDir / file).string());
+								} else if (file.length() > 2){
+									// it's an include directory
+									string path = file.substr(2);
+									// if it starts with /, assume absolute path
+									if(path.at(0) == '/')
+										includeDirs.push_back(path);
+									// if not, assume path to be relative to testCaseDir
+									else
+										includeDirs.push_back((testCaseDir / path).string());
+								}
+							}
+						}
+						inputs.close();
+
+					} else {
+						// use default file name
+						if (fs::exists(testCaseDir / (cur + ".c")))
+							// This is a C test case
+							files.push_back((testCaseDir / (cur + ".c")).string());
+						else {
+							// this must be a c++ test case
+							assert(fs::exists(testCaseDir / (cur + ".cpp")));
+							files.push_back((testCaseDir / (cur + ".cpp")).string());
+
+							// if test is located in apropiate folder, activate CXX11 standard
+							std::size_t found = testCaseDir.string().find("cpp11");
+							enableCXX11 = (found!=std::string::npos);
+						}
+					}
+				}*/
+
 				// collect flags
-				map<string,string> definitions;
+				/*map<string,string> definitions;
 				auto flagsFile = testCaseDir / "insieme.flags";
 				if (fs::exists(flagsFile)) {
 					// just check for special flags
@@ -284,10 +362,10 @@ namespace integration {
 						}
 					}
 					inputs.close();
-				}
+				}*/
 
 				// collect compiler arguments
-				vector<string> compilerFlags;
+				/*vector<string> compilerFlags;
 				auto compilerFlagsFile = testCaseDir / "test-gcc.flags";
 				if (fs::exists(compilerFlagsFile)) {
 					// just check for special flags
@@ -315,13 +393,66 @@ namespace integration {
 						}
 					}
 					inputs.close();
-				}
+				}*/
 
-				// load properties
-				Properties prop = global << loadProperties(testCaseDir);
+				// collect compiler arguments for ref-gcc file
+				/*compilerFlagsFile = testCaseDir / "ref-gcc.flags";
+				if (fs::exists(compilerFlagsFile)) {
+					// just check for special flags
+					fs::ifstream inputs;
+					inputs.open(compilerFlagsFile);
+					if (!inputs.is_open()) {
+						LOG(WARNING) << "Unable to open flag file " << compilerFlagsFile.string();
+						continue;
+					}
+
+					// read entry by entry
+					while (!inputs.eof()) {
+						string flag;
+						inputs >> flag;
+						std::remove(flag.begin(), flag.end(), ' ');
+						if (flag.empty()) continue;
+
+						// process flag
+						if (fs::exists(testCaseDir / flag)) {
+							// it is an extra file to be compiled => use absolute path
+							compilerFlags.push_back((testCaseDir / flag).string());
+						} else {
+							// accept as ordinary flag
+							compilerFlags.push_back(flag);
+						}
+					}
+					inputs.close();
+				}*/
+
+				// collect runtime arguments
+				/*vector<string> runtimeArguments;
+				auto runtimeArgumentsFile = testCaseDir / "prog.input";
+				if (fs::exists(runtimeArgumentsFile)) {
+					fs::ifstream inputs;
+					inputs.open(runtimeArgumentsFile);
+					if (!inputs.is_open()) {
+						LOG(WARNING) << "Unable to open runtime arguments file " << runtimeArgumentsFile.string();
+						continue;
+					}
+					while (!inputs.eof()) {
+						string flag;
+						inputs >> flag;
+						std::remove(flag.begin(), flag.end(), ' ');
+						if (flag.empty()) continue;
+						// process flag
+
+						//ignore {PATH}/{EXEC} flags
+						if(flag.find("{PATH}")<flag.size())
+							continue;
+						runtimeArguments.push_back(flag);
+					}
+
+					inputs.close();
+				}*/
 
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, testCaseDir, files, includeDirs, enableOpenMP, enableOpenCL, enableCXX11, definitions, compilerFlags, prop));
+				res.push_back(IntegrationTestCase(prefix + cur, testCaseDir, files, includeDirs,libPaths,libNames, enableOpenMP, enableOpenCL, enableCXX11, prop));
 			}
 
 			return res;
@@ -338,6 +469,25 @@ namespace integration {
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
+	}
+
+	const vector<IntegrationTestCase> getAllCasesAt(const string& path){
+		const fs::path testDir(path);
+		const fs::path testConfig = testDir / "test.cfg";
+		vector<IntegrationTestCase> ret;
+		IntegrationTestCaseOpt testCase;
+
+		// parse subfolders if test.cfg is present
+		if (fs::exists(testConfig))
+			return vector<IntegrationTestCase>(loadAllCases(path));
+		else
+			testCase=getCase(path);
+			if(testCase)
+				std::cout<<"case"<<std::endl;
+				ret.push_back(*testCase);
+			return ret;
+
+		return vector<IntegrationTestCase>();
 	}
 
 	const IntegrationTestCaseOpt getCase(const string& name) {
@@ -365,7 +515,8 @@ namespace integration {
 
 		bool isParentOf(const fs::path& parent, const fs::path& child) {
 			assert(parent.is_absolute());
-			assert(child.is_absolute());
+			//assertion fails if child is empty
+			//assert(child.is_absolute());
 
 			// if it is the same => done
 			if (parent == child) return true;
@@ -414,9 +565,9 @@ namespace integration {
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
 
 		// add pre-processor definitions
-		for_each(definitions, [&](const std::pair<string,string>& def) {
-			job.setDefinition(def.first, def.second);
-		});
+		//for_each(definitions, [&](const std::pair<string,string>& def) {
+			//job.setDefinition(def.first, def.second);
+		//});
 
 		return job.execute(manager);
 

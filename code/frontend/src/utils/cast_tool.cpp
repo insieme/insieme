@@ -486,16 +486,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 	core::TypePtr&& exprTy = expr->getType();
 
-	//	if (VLOG_IS_ON(2)){
-	//		VLOG(2) << "####### Expr: #######" ;
-	//		VLOG(2) << (expr);
-	//		VLOG(2) << "####### Expr Type: #######" ;
-	//		VLOG(2) << (exprTy);
-	//		VLOG(2) << "####### cast Type: #######" ;
-	//		VLOG(2) << (targetTy);
-	//		VLOG(2)  << "####### clang: #######" << std::endl;
-	//		castExpr->dump();
-	//	}
+	if (VLOG_IS_ON(2)){
+		VLOG(2) << "####### Expr: #######" ;
+		VLOG(2) << (expr);
+		VLOG(2) << "####### Expr Type: #######" ;
+		VLOG(2) << (exprTy);
+		VLOG(2) << "####### cast Type: #######" ;
+		VLOG(2) << (targetTy);
+		VLOG(2)  << "####### clang: #######" << std::endl;
+		castExpr->dump();
+	}
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>

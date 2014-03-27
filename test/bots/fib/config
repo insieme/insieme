@@ -1,0 +1,2 @@
+files=$files"fib.c"
+executionFlags=-c -t

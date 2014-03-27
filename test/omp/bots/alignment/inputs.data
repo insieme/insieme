@@ -1,1 +1,0 @@
--I../ -I../../../bots/ -I../../../bots/alignment/ ../../../bots/bots_common.c ../../../bots/bots_main.c ../../../bots/alignment/alignment.c ../../../bots/alignment/sequence.c 
