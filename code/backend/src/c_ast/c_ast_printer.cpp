@@ -66,11 +66,12 @@ namespace c_ast {
 
 			string indentStep;
 			int indent;
+            bool makeTypesImplicit;
 
 		public:
 
 			CPrinter(const string& indentStep = "    ")
-				: indentStep(indentStep), indent(0) {}
+				: indentStep(indentStep), indent(0), makeTypesImplicit(false) {}
 
 			std::ostream& print(NodePtr node, std::ostream& out) {
 				if (!node) return out;
@@ -224,6 +225,11 @@ namespace c_ast {
 				// a utility function printing the init part
 				auto printInit = [&](const c_ast::ExpressionPtr& expr) {
 					if (!expr) return;
+
+				    if (node->isStatic) {
+                        makeTypesImplicit = true;
+                    }
+
 					// special handling of initializer expressions
 					if (auto init = expr.isa<InitializerPtr>()) {
 						bool backup = init->explicitType;
@@ -233,6 +239,10 @@ namespace c_ast {
 					} else {
 						out << " = " << print(expr);
 					}
+				    
+                    if (node->isStatic) {
+                        makeTypesImplicit = false;
+                    }
 				};
 
 				// handle single-variable declaration ...
@@ -420,7 +430,7 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				if (node->explicitType) out << "(" << print(node->type) << ")";
+				if (!makeTypesImplicit && node->explicitType) out << "(" << print(node->type) << ")";
 				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
