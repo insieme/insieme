@@ -297,8 +297,6 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
 
-				std::cout << "convert Record: " << typeDecl << " [" << typeDecl->getNameAsString() << "]" << std::endl;
-
 				// we do not convert templates or partial spetialized classes/functions, the full
 				// type will be found and converted once the instantaion is found
 				converter.trackSourceLocation (typeDecl);
@@ -311,8 +309,6 @@ tu::IRTranslationUnit Converter::convert() {
 		// typedefs and typealias
 		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
-
-			std::cout << "convert typedef: " << typedefDecl << " [" << typedefDecl->getNameAsString() << "]" << std::endl;
 
 			// get contained type
 			converter.trackSourceLocation (typedefDecl);
@@ -1406,13 +1402,11 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
     }
 
 	if(!res) {
-		auto x = decl->getTypeForDecl()->getLocallyUnqualifiedSingleStepDesugaredType ();
-		std::cout << "  Convert type: " << x.getAsString() << " {" <<  x.getAsOpaquePtr() << "}" << std::endl;
-
 
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
+		// NOTE:
 		// it might be that a the typedef encloses an anonymous struct declaration, in that case
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
 		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
@@ -1422,8 +1416,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
 
 					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
-					std::cout << "  typedef type: " << typedefType.getAsString() << " {" <<  typedefType.getAsOpaquePtr() << "}" << std::endl;
-				//	auto innerType   = typedefType.getTypePtr()->getDecl()->getUnderlyingType();
 
 					// build a name for the thing
 					std::string name = utils::getNameForRecord(typedefDecl, typedefType, getSourceManager());
@@ -1444,7 +1436,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
 						}
-				///		typeCache[innerType] = gen;
 					}
 
 					getIRTranslationUnit().addType(gen, impl);
@@ -1454,7 +1445,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			}
 		}
 	}
-	std::cout << "  res: " << res << "\n" << std::endl;
 
     // frequently structs and their type definitions have the same name
 	// in this case symbol == res and should be ignored
