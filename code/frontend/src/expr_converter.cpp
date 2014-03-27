@@ -197,7 +197,8 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 				break;
 			}
 		}
-		frontend_assert(membType) << "queried field not found while building member access\n";
+		frontend_assert(membType) << "queried field not found while building member access\n"
+					<< "\tlooking for: " << ident << "\n\tin type: " << baseTy;
 	}
 
 	core::TypePtr returnType =  membType;
