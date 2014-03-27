@@ -1,0 +1,2 @@
+files="ompscrCommon.c","wtime.c","c_loopB.pipelineSolution.c"
+executionFlags=-test

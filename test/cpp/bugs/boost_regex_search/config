@@ -1,0 +1,6 @@
+compFlags[main_cxx_sema]=--intercept boost::.*
+compFlags[main_seq_cxx_compile]=--intercept boost::.*
+libPaths="/software-local/insieme-libs/boost-latest/lib"
+libNames="boost_regex"
+includes="/software-local/insieme-libs/boost-latest/include","./"
+files="main.cpp","impl.cpp"

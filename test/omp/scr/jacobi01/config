@@ -1,0 +1,3 @@
+files="ompscrCommon.c","wtime.c","c_jacobi01.c"
+executionFlags=-test
+use_libmath=1

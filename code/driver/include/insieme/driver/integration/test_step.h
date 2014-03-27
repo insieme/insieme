@@ -52,6 +52,9 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
+	//command for time measuring, default /usr/bin/time
+	#define TIME_COMMAND "/software-local/time/bin/time"
+
 	// a forward declaration of the step class
 	struct TestStep;
 
@@ -64,12 +67,22 @@ namespace integration {
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps);
 
+	//reads out a given file and returns the contents
+	std::string readFile(std::string filename);
 
 	// ------------------------------------------------------------------------
 
 	struct TestSetup {
 		bool mockRun;
+		bool enableStatistics;
+		bool enablePerf;
+		bool clean;
+		std::string stdOutFile;
+		std::string stdErrFile;
+		std::string outputFile;
 	};
+
+	enum StepType {COMPILE,RUN,CHECK,UNDEFINED};
 
 	struct TestStep :
 			public boost::less_than_comparable<TestStep>,
@@ -87,12 +100,14 @@ namespace integration {
 
 		std::set<std::string> dependencies;
 
+		StepType type;
 	public:
 
 		TestStep() {};
 
-		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>())
-			: name(name), step(op), dependencies(dependencies) {}
+		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>(),
+				StepType type=UNDEFINED)
+			: name(name), step(op), dependencies(dependencies),type(type) {}
 
 		const std::string& getName() const {
 			return name;

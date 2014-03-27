@@ -1,0 +1,1 @@
+files=$files"../ua.c","../convect.c","../diffuse.c","../adapt.c","../move.c","../mason.c","../precond.c","../utils.c","../verify.c","../setup.c","../transfer.c"

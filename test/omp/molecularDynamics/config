@@ -1,0 +1,2 @@
+outputAwk="/^       / { print substr($4,1,2) }"
+use_libmath=1

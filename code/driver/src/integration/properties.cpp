@@ -37,6 +37,7 @@
 #include "insieme/driver/integration/properties.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem.hpp>
 #include "insieme/utils/string_utils.h"
 
 namespace insieme {
@@ -164,6 +165,7 @@ namespace integration {
 
 			// register value
 			res.set(key, cat, value);
+
 		}
 
 		// done
@@ -200,7 +202,6 @@ namespace integration {
 
 		return out;
 	}
-
 
 } // end namespace integration
 } // end namespace driver

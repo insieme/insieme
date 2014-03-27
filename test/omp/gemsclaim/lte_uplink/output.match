@@ -1,1 +1,0 @@
-awk '/^Completed/{ print }'

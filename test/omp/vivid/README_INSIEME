@@ -1,2 +1,2 @@
 This is only a test skeleton, the sources are in test/vivid.
-To execute this test OpenCV and OpenCL are needed.
+To execute this test OpenCV and OpenCL are needed and need to be set in the config file.

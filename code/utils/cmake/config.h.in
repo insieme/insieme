@@ -50,6 +50,7 @@
 #define CLANG_SRC_DIR "${insieme_code_dir}/frontend/test/"
 //code/frontend/include/insieme/frontend/gemsclaim_config.h:
 #define GEM_SYSTEM_HEADER_REPLACEMENTS_DIR "${insieme_code_dir}/frontend/include/insieme/frontend/gemsclaim/"
+#define BINARY_ROOT_DIR "${CMAKE_BINARY_DIR}/"
 
 //code/analysis/include/insieme/analysis/cmake_config.h:
 //#define SRC_DIR "${insieme_code_dir}/analysis/test/"
