@@ -184,6 +184,8 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	ConversionJob kernelJob(path, includeDirs);
 	kernelJob.registerFrontendPlugin<extensions::OclKernelPlugin>();
+	kernelJob.setDefinition("INSIEME", "");
+
 //	kernelJob.setFiles(toVector<frontend::path>(path));
 	return kernelJob.execute(builder.getNodeManager(), false);
 }
@@ -627,7 +629,6 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
                 assert(!cname.empty() && "cannot find the name of the kernel function");
 				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname] = 1;
-
 				kernelFunctions[kernelNames[cname]] = lambdaEx;
 			}
 
@@ -791,7 +792,7 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
 	loadKernelCode(icl_create_kernel);
-//	collectArguments();
+	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -815,8 +816,6 @@ void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKerne
 			kernelFileCache.insert(path);
 			const ProgramPtr kernels = loadKernelsFromFile(path, builder, includeDirs);
 
-//std::cout << "\nProgram: " << printer::PrettyPrinter(kernels) << std::endl;
-
 			for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 					kernelEntries.push_back(kernel);
 			});
@@ -828,9 +827,6 @@ void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKerne
 }
 
 
-ExpressionPtr IclKernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr& memberTy, const ExpressionPtr& tupleMemberAccess, StatementList& body) {
-	return tupleMemberAccess;
-}
 //void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
 //	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
 void IclKernelReplacer::collectArguments() {
@@ -840,7 +836,7 @@ void IclKernelReplacer::collectArguments() {
 	NodeAddressMap replacements;
 
 	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
-			aT(var("kernel", irp::variable())) << var("work_dim", pattern::any) <<
+			(var("kernel", pattern::any)) << var("work_dim", pattern::any) <<
 			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
 			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
 			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
@@ -854,7 +850,6 @@ void IclKernelReplacer::collectArguments() {
 
 		StatementList tupleCreation;
 
-
 		for(unsigned i = 0; i < member.size(); ++i) {
 			// first look at the size of the argument
 			bool isIcl_buffer = analysis::isZero(member[i]);
@@ -864,6 +859,7 @@ void IclKernelReplacer::collectArguments() {
 			ExpressionPtr storedArg =  isIcl_buffer ? builder.callExpr(gen.getScalarToArray(),  member[i]) : member[i];
 
 			ExpressionPtr addToTuple;
+//std::cout << utils::getRootVariable(matchAddress >> kernel) << std::endl << *utils::getRootVariable(matchAddress >> kernel) << std::endl;
 			if(analysis::isZero(storedArg)) { // local memory argument
 				kernelTypes[utils::getRootVariable(matchAddress >> kernel).as<ExpressionPtr>()].push_back(gen.getUInt8());
 				// store the information that this is a local memory argument
@@ -886,11 +882,15 @@ void IclKernelReplacer::collectArguments() {
 		transform::utils::migrateAnnotations(runKernel.getRoot().as<NodePtr>(), newKernelCall.as<NodePtr>());
 
 		// add kernel call to compound expression
-		tupleCreation.push_back(runKernel.getRoot().as<ExpressionPtr>());
+		tupleCreation.push_back(newKernelCall);
 
 		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
-		replacements[runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
+		replacements[matchAddress >> runKernel.getRoot()] = builder.getNoOp();// builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
 	});
+
+//for(std::pair<NodePtr, NodePtr> cur : replacements) {
+//	dumpPretty(cur.second);
+//}
 
 	prog = transform::replaceAll(mgr, replacements);
 
