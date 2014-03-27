@@ -349,15 +349,10 @@ void BufferReplacer::performReplacements() {
 
 IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) { }
 
-core::NodePtr IclBufferReplacer::getTransformedProgram() {
+TypePtr IclBufferReplacer::getIclDeviceType() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
-
-	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
-			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
-
-	collectInformation(clCreateBuffer);
 
 	std::vector<NamedTypePtr> iclDeviceMembers;
 	iclDeviceMembers.push_back(builder.namedType("device", builder.refType(builder.arrayType( builder.genericType("_cl_device_id")))));
@@ -389,12 +384,29 @@ core::NodePtr IclBufferReplacer::getTransformedProgram() {
 	iclDeviceMembers.push_back(builder.namedType("local_mem_size", gen.getUInt8()));
 	TypePtr iclDeviceTy = builder.structType(builder.stringValue("_icl_device"), iclDeviceMembers);
 
+	return iclDeviceTy;
+}
+
+TypePtr IclBufferReplacer::getIclBufferType() {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
+
 	TypePtr iclBufferTy = builder.structType(builder.stringValue("_icl_buffer"), toVector(
 			builder.namedType("mem", builder.refType(builder.arrayType(builder.genericType("_cl_mem")))),
 			builder.namedType("size", gen.getUInt8()),
-			builder.namedType("dev", builder.refType(builder.arrayType(iclDeviceTy)))));
+			builder.namedType("dev", builder.refType(builder.arrayType(getIclDeviceType())))));
 
-	generateReplacements(iclBufferTy);
+	return iclBufferTy;
+}
+core::NodePtr IclBufferReplacer::getTransformedProgram() {
+	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
+			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
+
+	collectInformation(clCreateBuffer);
+
+
+	generateReplacements(getIclBufferType());
 
 	performReplacements();
 
