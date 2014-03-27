@@ -1,0 +1,2 @@
+files="stream_omp.c"
+definitions="_GNU_SOURCE"

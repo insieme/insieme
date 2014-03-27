@@ -1,0 +1,2 @@
+files="cmdLineParser.c","CoMD.c","decomposition.c","eam.c","haloExchange.c","initAtoms.c","linkCells.c","ljForce.c","mycommand.c","parallel.c","performanceTimers.c","random.c","timestep.c","yamlOutput.c"
+use_libmath=1

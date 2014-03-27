@@ -1,1 +1,0 @@
--I$OPENCV_ROOT/include -fopenmp -L/software-local/insieme-libs-temp/opencv-latest/lib/ -lopencv_core -lopencv_highgui

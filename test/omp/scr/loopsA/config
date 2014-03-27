@@ -1,0 +1,2 @@
+files="ompscrCommon.c","wtime.c","c_loopA.solution1.c"
+executionFlags=-test

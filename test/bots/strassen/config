@@ -1,0 +1,2 @@
+files=$files"strassen.c"
+executionFlags=-c

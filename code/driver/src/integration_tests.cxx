@@ -50,6 +50,7 @@
 #include <omp.h>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
@@ -57,6 +58,9 @@
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
+
+#include "insieme/utils/config.h"
+
 
 using std::pair;
 using std::string;
@@ -78,15 +82,17 @@ namespace {
 		bool print_configs;
 		bool panic_mode;
 		bool list_only;
+		bool clean;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
 			  num_threads(1), print_configs(false),
-			  panic_mode(false), list_only(false) {}
+			  panic_mode(false), list_only(false), clean(false) {}
 	};
 
+	namespace fs = boost::filesystem;
 
 	Options parseCommandLine(int argc, char** argv);
 
@@ -95,8 +101,21 @@ namespace {
 	vector<TestStep> getTestSteps(const Options& options);
 }
 
+std::string getGitVersion(){
+	string getGitVersionCmd=string("cd ")+SRC_ROOT_DIR+"; git describe --dirty";
+	FILE* pipe=popen(getGitVersionCmd.c_str(),"r");
+	char buff [50];
+	fgets(buff,50,pipe);
+	pclose(pipe);
+
+	//remove line break
+	buff[strlen(buff)-1]='\0';
+	return string(buff);
+}
 
 int main(int argc, char** argv) {
+	//TODO custom root config file
+
 	Logger::setLevel(ERROR);
 
 	// parse parameters
@@ -108,12 +127,11 @@ int main(int argc, char** argv) {
 	// get list of test cases
 	auto cases = loadCases(options);
 
-	std::cout <<        "--------------------------------------------------------------------------------\n";
-	std::cout << format("|                 Insieme version: %-43s |\n", "- TODO: get git description -");
-	std::cout <<        "|------------------------------------------------------------------------------|\n";
-	std::cout << format("|                           Running %3d benchmark(s)                           |\n", cases.size());
-	std::cout <<        "|------------------------------------------------------------------------------|\n";
-
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+	std::cout << format("#                 Insieme version: %-43s #\n", getGitVersion());
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+	std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 	// check whether only the configurations are requested
 	if (options.print_configs) {
@@ -137,7 +155,7 @@ int main(int argc, char** argv) {
 		for(const auto& cur : cases) {
 			std::cout << format("| %4d/%4d - %-65s|\n", ++counter, cases.size(), cur.getName());
 		}
-		std::cout <<        "|------------------------------------------------------------------------------|\n";
+		std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 		return 0;
 	}
@@ -146,11 +164,12 @@ int main(int argc, char** argv) {
 
 	// load list of test steps
 	auto steps = getTestSteps(options);
-	std::cout << "Steps: \n\t" << ::join("\n\t", steps) << "\n";
+	std::cout << "Steps: \n" << ::join(",", steps) << "\n";
 
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
+	setup.clean=options.clean;
 
 	// run test cases in parallel
 	vector<TestCase> ok;
@@ -158,8 +177,10 @@ int main(int argc, char** argv) {
 	omp_set_num_threads(options.num_threads);
 
 	bool panic = false;
+	int totalTests=cases.size();
+	int act=0;
 
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(dynamic)
 	for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
 		const auto& cur = *it;
 
@@ -187,28 +208,63 @@ int main(int argc, char** argv) {
 		#pragma omp critical
 		{
 			// print test info
-			std::cout << "------------------------------------------\n";
-			std::cout << "Test Case: " << cur << "\n";
-			std::cout << "Results:\n";
+			std::cout << "#------------------------------------------------------------------------------#\n";
+			std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getBaseName()) << "#\n";
+			std::cout << "#------------------------------------------------------------------------------#\n";
 
 			for(const auto& curRes : results) {
-				std::cout << "\t" << curRes.first << " - " <<
-						((curRes.second.wasSuccessfull())?"OK":"ERR")
-						<< "\n";
-				success = success && curRes.second.wasSuccessfull();
-			}
-			std::cout << "------------------------------------------\n";
-			std::cout << "\n";
-			if (success) {
-				ok.push_back(cur);
-			} else {
-				failed.push_back(cur);
+				if(options.mockrun){
+					std::cout<<"\033[0;30m"<<curRes.first<<std::endl;
+					std::cout<<"\033[0;32m"<<curRes.second.getCmd()<<std::endl;
+				}
+				else{
+					string colOffset;
+					colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
+					std::stringstream line;
+					line << "# " << curRes.first <<format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(),
+							curRes.second.getMemory()/1024/1024)) << "\n";
 
-				// trigger panic mode and graceful shutdown
-				if (options.panic_mode) {
-					panic = true;
+					if(curRes.second.wasSuccessfull()){
+						std::cout << line.str();
+					}
+					else{
+						std::cout<<"\033[0;31m"<<line.str();
+						std::cout << "#------------------------------------------------------------------------------#\n\033[0m";
+						std::cout<<"Command: \033[0;32m"<<curRes.second.getCmd()<<"\033[0m"<<std::endl<<std::endl;
+						std::cout<<curRes.second.getFullOutput();
+					}
+
+					success = success && curRes.second.wasSuccessfull();
+				}
+				if(options.clean)
+					curRes.second.clean();
+			}
+			if(!options.mockrun){
+				if(success)
+					std::cout<<"\033[0;32m";
+				else
+					std::cout<<"\033[0;31m";
+
+				std::cout << "#------------------------------------------------------------------------------#\n";
+				if(success)
+					std::cout<<"#\tSUCCESS -- "<<format("%-60s",cur.getBaseName())<<"#\n";
+				else
+					std::cout<<"#\tFAILED -- "<<format("%-61s",cur.getBaseName())<<"#\n";
+				std::cout << "#------------------------------------------------------------------------------#\n";
+
+				if (success) {
+					ok.push_back(cur);
+				} else {
+					failed.push_back(cur);
+
+					// trigger panic mode and graceful shutdown
+					if (options.panic_mode) {
+						panic = true;
+					}
 				}
 			}
+			//reset color to default value
+			std::cout<<"\033[0m";
 		}
 
 	}
@@ -216,10 +272,10 @@ int main(int argc, char** argv) {
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size());
-	std::cout << format("# PASSED:         %60d #\n", ok.size());
-	std::cout << format("# FAILED:         %60d #\n", failed.size());
+	std::cout << format("# PASSED:         \033[0;32m%60d\033[0m #\n", ok.size());
+	std::cout << format("# FAILED:         \033[0;31m%60d\033[0m #\n", failed.size());
 	for(const auto& cur : failed) {
-		std::cout << format("#   - %-63s          #\n", cur.getName());
+		std::cout << format("#\033[0;31m   - %-63s          \033[0m#\n", cur.getName());
 	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
@@ -248,7 +304,7 @@ namespace {
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-
+				("remove,r",			"remove all output files")
 		;
 
 		// define positional options (all options not being named)
@@ -280,6 +336,7 @@ namespace {
 		}
 
 		res.mockrun = map.count("mock");
+		res.clean=map.count("remove");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 
