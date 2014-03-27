@@ -414,37 +414,42 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
 
+	auto  x =  typedefType->getDecl()->getUnderlyingType();
+	std::cout << "\ttypedef to: " << x.getAsString() << " {" <<  x.getAsOpaquePtr() << "}" << std::endl;
+	std::cout << "\ttypedef to (IR): " << retTy << std::endl;
 
 	// typedefs take ownership of the inner type, this way, same anonimous types along translation units will
 	// be named as the typdef if any
-	if (core::GenericTypePtr symb = retTy.isa<core::GenericTypePtr>()){
-		core::TypePtr trgTy =  convFact.lookupTypeDetails(symb);
-
-		// a new generic type will point to the previous translation unit decl
-		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
-			auto decl =  typedefType->getDecl();
-			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal(), convFact.getSourceManager());
-			core::GenericTypePtr gen = builder.genericType(name);
-
-			core::TypePtr impl = symb;
-			// if target is an annonymous type, we create a new type with the name of the typedef
-			if (structTy->getName()->getValue().substr(0,5) == "_anon"){
-				impl = builder.structType ( builder.stringValue( name), structTy->getParents(), structTy->getEntries());
-
-				core::annotations::attachName(impl,name);
-
-				if( decl && convFact.getHeaderTagger().isDefinedInSystemHeader(decl) ) {
-					//if the typeDef oft the anonymous type was done in a system header we need to
-					//annotate to enable the backend to avoid re-declaring the type
-					VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
-					convFact.getHeaderTagger().addHeaderForDecl(impl, decl);
-				}
-			}
-
-            convFact.getIRTranslationUnit().addType(gen, impl);
-            return (retTy = gen);
-		}
-	}
+//	if (core::GenericTypePtr symb = retTy.isa<core::GenericTypePtr>()){
+//		core::TypePtr trgTy =  convFact.lookupTypeDetails(symb);
+//
+//		std::cout << "\t-with struct inside: " << symb << " : " << trgTy << std::endl;
+//
+//		// a new generic type will point to the previous translation unit decl
+//		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
+//			auto decl =  typedefType->getDecl();
+//			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal(), convFact.getSourceManager());
+//			core::GenericTypePtr gen = builder.genericType(name);
+//
+//			core::TypePtr impl = symb;
+//			// if target is an annonymous type, we create a new type with the name of the typedef
+//			if (structTy->getName()->getValue().substr(0,5) == "_anon"){
+//				impl = builder.structType ( builder.stringValue( name), structTy->getParents(), structTy->getEntries());
+//
+//				core::annotations::attachName(impl,name);
+//
+//				if( decl && convFact.getHeaderTagger().isDefinedInSystemHeader(decl) ) {
+//					//if the typeDef oft the anonymous type was done in a system header we need to
+//					//annotate to enable the backend to avoid re-declaring the type
+//					VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
+//					convFact.getHeaderTagger().addHeaderForDecl(impl, decl);
+//				}
+//			}
+//
+//            convFact.getIRTranslationUnit().addType(gen, impl);
+//            return (retTy = gen);
+//		}
+//	}
 
     return  retTy;
 }
@@ -795,6 +800,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
         if(irType) break;
 	}
 
+	std::cout << "\tTYPE: " << type.getUnqualifiedType().getAsString() << std::endl;
     if(!irType)
         irType = convertImpl(type);
 

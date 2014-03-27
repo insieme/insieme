@@ -137,8 +137,10 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 	//std::cout << " =================== " << std::endl;
 
 	if(decl->getNameAsString().empty()){
+		auto name = createNameForAnnon("_anonRecord", decl, sm);
+		std::cout << "\t\tcreate name for: " << decl << " : " << name << std::endl;
 		// empty name, build an annonymous name for this fella
-		return createNameForAnnon("_anonRecord", decl, sm);
+		return name;
 	}
 	std::string fullName = decl->getQualifiedNameAsString();
 
@@ -161,6 +163,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 	}
 
 	REMOVE_SYMBOLS(fullName);
+	std::cout << "\t\tcreate name for: " << decl << " : " << fullName << std::endl;
 	return fullName;
 }
 
