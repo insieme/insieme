@@ -105,7 +105,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 //		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
 //			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
 //			if (!recTy->getDecl()->getNameAsString().empty()){
-//				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal());
+//				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal(), sm);
 //			}
 //		}
 //	}
@@ -130,6 +130,11 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
  //       }
  //   }
  //
+ //
+
+	//std::cout << " ======= Create name for: " << decl << " ============= " << std::endl;
+	//decl->dump();
+	//std::cout << " =================== " << std::endl;
 
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
