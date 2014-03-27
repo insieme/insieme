@@ -1436,10 +1436,11 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
 						}
+
+						typeCache[typedefType] = gen;
 					}
 
 					getIRTranslationUnit().addType(gen, impl);
-					typeCache[typedefType] = gen;
 					res = gen;
 				}
 			}
