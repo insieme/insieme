@@ -92,7 +92,7 @@ std::string removeSymbols(std::string& s);
  * the record provides que qualified name, the type the spetialization for the type
  * we merge both strings in a safe string for the output
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, bool isDefinedInSystemHeader=false);
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm);
 
 /**
  * build a string to identify a function

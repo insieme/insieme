@@ -71,54 +71,69 @@ using namespace llvm;
 		boost::replace_all(str, ",", "_"); \
 		boost::replace_all(str, "*", "_"); \
 }
+namespace {
+	std::string createNameForAnnon (const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm){
+		std::stringstream ss;
+		ss << prefix;
+
+		ss << sm.getFilename(decl->getLocStart()).str();   //.getHashValue();
+		ss << sm.getExpansionLineNumber (decl->getLocStart());
+		ss << sm.getExpansionColumnNumber(decl->getLocStart());
+
+		std::string name =  ss.str();
+		REMOVE_SYMBOLS(name);
+		boost::replace_all(name, ".", "_");  // names have full path, remove symbols
+		boost::replace_all(name, "/", "_");
+        boost::replace_all(name, "-", "_");
+
+		return name;
+	}
+}
 
 std::string removeSymbols(std::string& s) {
-    REMOVE_SYMBOLS(s);
-    boost::replace_all(s, "&", "_");
-    return s;
+	REMOVE_SYMBOLS(s);
+	boost::replace_all(s, "&", "_");
+	return s;
 }
 
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, bool isDefinedInSystemHeader=false){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm){
+//	// beware of aliasing types, if we find a typedef, better to use the inner type
+//	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
+//		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
+//			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
+//			if (!recTy->getDecl()->getNameAsString().empty()){
+//				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal());
+//			}
+//		}
+//	}
 
-	// beware of aliasing types, if we find a typedef, better to use the inner type
-	if (llvm::dyn_cast<clang::TypedefNameDecl>(decl)){
-		if (const clang::RecordType* recTy = llvm::dyn_cast<clang::RecordType>(type->getCanonicalTypeInternal().getTypePtr())){
-			// unleast is anonymous.. then there is no way to use anywhere else without the typedef name
-			if (!recTy->getDecl()->getNameAsString().empty()){
-				return getNameForRecord(recTy->getDecl(), type->getCanonicalTypeInternal(), isDefinedInSystemHeader);
-			}
-		}
-	}
-
-    // hold on. if it is a recorddecl, the decl has no default name
-    // and we know the type, we return the name of the qualtype
-    // with exception of some special cases
-    if(const clang::RecordDecl* rec = llvm::dyn_cast<clang::RecordDecl>(decl)) {
-        // at first we check if it is a declaration that has no name
-        // but is not an anonymous struct or union.
-        // if defined in system header, don't touch it. will be
-        // handled by the type converter in the correct way.
-        if(decl->getNameAsString().empty() && !rec->isAnonymousStructOrUnion() && !isDefinedInSystemHeader) {
-            const clang::CXXRecordDecl* cxxrec = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-            // sometimes we have a cpp lambda, don't touch this things.
-            // we don't need a check for cxxrec!=nullptr because of short circuit eval.
-            if(!cxxrec || !(cxxrec->isLambda())) {
-                //FIXME: find a smarter way to check for non anonymous structs or union that have an anonymous type
-                if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
-                    return type.getUnqualifiedType().getAsString();
-            }
-        }
-    }
+ //   // hold on. if it is a recorddecl, the decl has no default name
+ //   // and we know the type, we return the name of the qualtype
+ //   // with exception of some special cases
+ //   if(const clang::RecordDecl* rec = llvm::dyn_cast<clang::RecordDecl>(decl)) {
+ //       // at first we check if it is a declaration that has no name
+ //       // but is not an anonymous struct or union.
+ //       // if defined in system header, don't touch it. will be
+ //       // handled by the type converter in the correct way.
+ //       if(decl->getNameAsString().empty() && !rec->isAnonymousStructOrUnion() && !isDefinedInSystemHeader) {
+ //           const clang::CXXRecordDecl* cxxrec = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+ //           // sometimes we have a cpp lambda, don't touch this things.
+ //           // we don't need a check for cxxrec!=nullptr because of short circuit eval.
+ //           if(!cxxrec || !(cxxrec->isLambda())) {
+ //               //FIXME: find a smarter way to check for non anonymous structs or union that have an anonymous type
+ //               if( type.getUnqualifiedType().getAsString().find("<anonymous at") == std::string::npos )
+ //                   return type.getUnqualifiedType().getAsString();
+ //           }
+ //       }
+ //   }
+ //
 
 	if(decl->getNameAsString().empty()){
 		// empty name, build an annonymous name for this fella
-		std::stringstream ss;
-		ss << "_anon";
-		ss << (unsigned long long) decl;
-		return ss.str();
+		return createNameForAnnon("_anonRecord", decl, sm);
 	}
 	std::string fullName = decl->getQualifiedNameAsString();
 
@@ -141,7 +156,6 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 	}
 
 	REMOVE_SYMBOLS(fullName);
-
 	return fullName;
 }
 
@@ -281,18 +295,7 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
     //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
     if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
-		std::stringstream ss;
-		ss << "_anonEnum";
-
-		ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
-		ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
-		ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
-
-		name =  ss.str();
-		REMOVE_SYMBOLS(name);
-		boost::replace_all(name, ".", "_");  // names have full path, remove symbols
-		boost::replace_all(name, "/", "_");
-        boost::replace_all(name, "-", "_");
+		name = createNameForAnnon( "_anonEnum", enumDecl, sm);
     }
     return name;
 }
@@ -300,7 +303,7 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd) {
     std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
-    assert(!name.empty() && "what kind of enumconstant has no name?");
+    assert(!ecd->getQualifiedNameAsString().empty() && "what kind of enumconstant has no name?");
     return name;
 }
 

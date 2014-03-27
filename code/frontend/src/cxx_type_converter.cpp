@@ -37,7 +37,7 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/numeric_cast.h"

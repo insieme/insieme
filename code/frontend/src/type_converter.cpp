@@ -38,7 +38,7 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
 
@@ -423,7 +423,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 		// a new generic type will point to the previous translation unit decl
 		if (auto structTy = trgTy.isa<core::StructTypePtr>()){
 			auto decl =  typedefType->getDecl();
-			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(decl));
+			std::string name = utils::getNameForRecord(typedefType->getDecl(), typedefType->getCanonicalTypeInternal(), convFact.getSourceManager());
 			core::GenericTypePtr gen = builder.genericType(name);
 
 			core::TypePtr impl = symb;
@@ -481,7 +481,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if (!def) {
 		//tag type isonly declared
 		auto decl = tagType->getDecl();
-		std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(decl));
+		std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal(), convFact.getSourceManager());
 
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( name );
@@ -681,7 +681,7 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), convFact.getHeaderTagger().isDefinedInSystemHeader(llvm::cast<clang::RecordDecl>(tagDecl)));
+		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), convFact.getSourceManager());
 		return builder.structType( builder.stringValue(name), structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
 		return builder.unionType( structElements );
@@ -710,7 +710,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 	// assume a recursive construct for record declarations
 	if (auto tagType = llvm::dyn_cast<clang::TagType>( type)) {
 		auto recDecl = tagType->getDecl();
-		std::string name = utils::getNameForRecord(recDecl, type, convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl));
+		std::string name = utils::getNameForRecord(recDecl, type, convFact.getSourceManager());
 
 		// create a (temporary) type variable for this type
 		core::GenericTypePtr symbol = builder.genericType(name);

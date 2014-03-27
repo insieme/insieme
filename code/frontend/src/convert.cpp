@@ -48,9 +48,8 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -593,8 +592,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
     if(!result) {
 		if (VLOG_IS_ON(1)) valDecl->dump();
 
-		// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
-		// to the map for successive lookups
+		// The variable has not been converted into IR variable yet, therefore we create the IR variable and 
+		// insert it to the map for successive lookups
 
 		// Conversion of the variable type
 		QualType&& varTy = valDecl->getType();
@@ -884,7 +883,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			//	}
 
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
-
 			}
 			else{
 				// build some default initializationA

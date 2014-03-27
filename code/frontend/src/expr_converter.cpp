@@ -39,7 +39,7 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
