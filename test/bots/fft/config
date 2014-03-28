@@ -1,2 +1,2 @@
 executionFlags=-n 10 -c -t
-files=$files"fft.c"
+files=${files},"fft.c"

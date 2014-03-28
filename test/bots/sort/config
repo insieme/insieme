@@ -1,2 +1,2 @@
-files=$files"sort.c"
+files=${files},"sort.c"
 executionFlags=-c

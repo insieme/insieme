@@ -1,2 +1,2 @@
 use_libmath=1
-executionFlags={PATH}/problems/chr12a.dat
+executionFlags=${PATH}/problems/chr12a.dat

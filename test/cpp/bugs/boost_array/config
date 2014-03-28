@@ -1,1 +1,1 @@
-includes="$boost_include"
+includes="${boost_include}"

@@ -1,2 +1,2 @@
-files=$files"strassen.c"
+files=${files},"strassen.c"
 executionFlags=-c
