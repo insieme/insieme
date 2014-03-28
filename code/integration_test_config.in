@@ -55,6 +55,9 @@ boost_lib=@Boost_LIBRARY_DIRS@
 # result comparison script
 sortdiff=@insieme_root_dir@/test/sortdiff
 
+# time utility
+time_executable=@TIME_EXECUTABLE@
+
 # setup insieme runtime compiler flags
 includes[main_run_compile]={@insieme_code_dir@/runtime/include}
 use_libmath[main_run_compile]=1
