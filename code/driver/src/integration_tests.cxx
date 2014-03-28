@@ -164,8 +164,6 @@ int main(int argc, char** argv) {
 
 	// load list of test steps
 	auto steps = getTestSteps(options);
-	std::cout << "Steps: \n" << ::join(",", steps) << "\n";
-
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;

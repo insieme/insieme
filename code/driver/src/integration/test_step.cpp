@@ -204,15 +204,7 @@ namespace integration {
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".ref";
 
 					// add arguments
-					string exFlags=props["executionFlags"];
-
-					// replace {threads} with number of required threads
-					// TODO change number to a good value (statistics)
-					while(exFlags.find("{THREADS}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{THREADS}"),9,"12");
-					}
-
-					cmd <<" "<< exFlags;
+					cmd << " " << props["executionFlags"];
 
 					// set output files
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.out";
@@ -381,16 +373,7 @@ namespace integration {
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
 
 					// add arguments
-					string exFlags=props["executionFlags"];
-
-					// replace {threads} with number of required threads
-					// TODO change number to a good value (statistics)
-					while(exFlags.find("{THREADS}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{THREADS}"),9,"12");
-					}
-
-
-					cmd <<" "<< exFlags;
+					cmd << " " << props["executionFlags"];
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".err.out";
