@@ -171,6 +171,15 @@ int main(int argc, char** argv) {
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
 
+	// setup highlighted tests:
+	std::set<std::string> highlight;
+	highlight.insert("main_seq_execute");
+	highlight.insert("main_seq_c++_execute");
+	highlight.insert("main_run_execute");
+	highlight.insert("main_run_c++_execute");
+	highlight.insert("ref_c_execute");
+	highlight.insert("ref_c++_execute");
+
 	// run test cases in parallel
 	vector<TestCase> ok;
 	vector<TestCase> failed;
@@ -221,8 +230,13 @@ int main(int argc, char** argv) {
 					string colOffset;
 					colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
 					std::stringstream line;
-					line << "# " << curRes.first <<format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(),
-							curRes.second.getMemory()/1024/1024)) << "\n";
+					
+					// color certain passes:
+					if (highlight.find (curRes.first) != highlight.end())
+						line <<  "\033[1;94m";
+
+					line << "# " << curRes.first <<
+							format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) <<  "\033[0m\n";
 
 					if(curRes.second.wasSuccessfull()){
 						std::cout << line.str();

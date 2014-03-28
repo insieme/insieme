@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+using namespace std;
+
 namespace insieme {
 namespace driver {
 namespace integration {
@@ -87,7 +91,6 @@ namespace integration {
 		float getMemory() const{
 			return memory;
 		}
-
 	};
 
 } // end namespace integration

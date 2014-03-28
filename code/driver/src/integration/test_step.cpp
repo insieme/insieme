@@ -110,7 +110,6 @@ namespace integration {
 						stdErr+=token+"\n";
 				}
 
-
 				if(retVal>0)
 					return TestResult(false,time,mem,output,stdErr,cmd,producedFiles);
 
@@ -491,7 +490,6 @@ namespace integration {
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_seq_c++_check", Sequential, C, { "main_seq_c++_execute", "ref_c++_execute" }));
 
-
 			return list;
 		}
 
@@ -525,6 +523,7 @@ namespace integration {
 			if(excludes.find(step.getName()) == std::string::npos)
 				filteredSteps.push_back(step);
 		}
+
 		return filteredSteps;
 	}
 
