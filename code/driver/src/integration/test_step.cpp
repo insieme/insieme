@@ -60,8 +60,9 @@ namespace integration {
 				producedFiles.push_back(setup.stdOutFile);
 				producedFiles.push_back(setup.stdErrFile);
 
-				if(!producedFile.empty())
+				if(!producedFile.empty()) {
 					producedFiles.push_back(producedFile);
+				}
 
 				string outfile="";
 				if(!setup.outputFile.empty()){
@@ -82,16 +83,6 @@ namespace integration {
 				//get return value, stdOut and stdErr
 				int retVal=system(realCmd.c_str());
 
-				//TODO change this to handle SIGINT signal
-				if(retVal==512)
-					exit(0);
-
-				std::cout<<WIFSIGNALED(retVal)<<WTERMSIG(retVal)<<WTERMSIG(retVal)<<std::endl;
-
-			   if (WIFSIGNALED(retVal) &&
-				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
-				   	   std::cout<<"killed"<<std::endl;
-
 				string output=readFile(setup.stdOutFile);
 				string error=readFile(setup.stdErrFile);
 
@@ -103,20 +94,22 @@ namespace integration {
 				boost::char_separator<char> sep("\n");
 				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
 				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
-					string token(*beg);
-					if(token.find("TIME")==0)
-						time=atof(token.substr(4).c_str());
-					else if (token.find("MEM")==0)
-						mem=atof(token.substr(3).c_str());
-					else
-						stdErr+=token+"\n";
+				string token(*beg);
+				if(token.find("TIME")==0)
+					time=atof(token.substr(4).c_str());
+				else if (token.find("MEM")==0)
+					mem=atof(token.substr(3).c_str());
+				else
+					stdErr+=token+"\n";
 				}
 
+				// check whether execution has been aborted by the user
+				if (WIFSIGNALED(retVal) && (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT)) {
+					return TestResult::userAborted(time, mem, output, stdErr, cmd);
+				}
 
-				if(retVal>0)
-					return TestResult(false,time,mem,output,stdErr,cmd,producedFiles);
-
-				return TestResult(true,time,mem,output,stdErr,cmd,producedFiles);
+				// produce regular result
+				return TestResult(retVal==0,time,mem,output,stdErr,cmd,producedFiles);
 			}
 
 			namespace fs = boost::filesystem;
@@ -250,7 +243,7 @@ namespace integration {
 					cmd << " -S";
 
 					// also dump IR
-					std::string irFile=test.getDirectory().string() + "/" + test.getName() + ".ir";
+					std::string irFile=test.getDirectory().string() + "/" + test.getBaseName() + ".ir";
 					cmd << " --dump-ir " << irFile;
 
 					// add include directories
