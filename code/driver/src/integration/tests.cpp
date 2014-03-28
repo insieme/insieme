@@ -168,7 +168,7 @@ namespace integration {
 			configFile.close();
 
 			// load global properties (from current working directory)
-			Properties global = loadProperties(BINARY_ROOT_DIR, "integration_test_config");
+			Properties global = loadProperties(fs::current_path(), "integration_test_config");
 
 			// load individual test cases
 			for(auto it=testCases.begin(); it != testCases.end(); ++it) {
@@ -194,7 +194,13 @@ namespace integration {
 				}
 
 				// load properties
-				Properties prop = global << loadProperties(testCaseDir);
+				Properties prop;
+
+				// define environment variables for the current test case
+				prop.set("PATH", testCaseDir.string());
+
+				// combine the various parts of the configuration (in the proper order)
+				prop = prop << global << loadProperties(testCaseDir);
 
 				boost::char_separator<char> sep("\",");
 

@@ -206,11 +206,6 @@ namespace integration {
 					// add arguments
 					string exFlags=props["executionFlags"];
 
-					// replace {path} with actual path
-					while(exFlags.find("{PATH}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{PATH}"),6,test.getDirectory().string());
-					}
-
 					// replace {threads} with number of required threads
 					// TODO change number to a good value (statistics)
 					while(exFlags.find("{THREADS}")!=std::string::npos){
@@ -387,11 +382,6 @@ namespace integration {
 
 					// add arguments
 					string exFlags=props["executionFlags"];
-
-					// replace {path} with actual path
-					while(exFlags.find("{PATH}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{PATH}"),6,test.getDirectory().string());
-					}
 
 					// replace {threads} with number of required threads
 					// TODO change number to a good value (statistics)
