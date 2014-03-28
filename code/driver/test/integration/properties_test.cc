@@ -119,9 +119,9 @@ namespace integration {
 		p.set("b", "y");
 
 		EXPECT_EQ("test", p.mapVars("test"));
-		EXPECT_EQ("testx", p.mapVars("test$a"));
-		EXPECT_EQ("testy", p.mapVars("test$b"));
-		EXPECT_EQ("testxsdydsxdf", p.mapVars("test$asd$bds$adf"));
+		EXPECT_EQ("testx", p.mapVars("test${a}"));
+		EXPECT_EQ("testy", p.mapVars("test${b}"));
+		EXPECT_EQ("testxsdydsxdf", p.mapVars("test${a}sd${b}ds${a}df"));
 
 	}
 
@@ -171,7 +171,7 @@ namespace integration {
 			p1.set("a", "c", "v2");
 
 			Properties p2;
-			p2.set("a", "x $a $a[c]");
+			p2.set("a", "x ${a} ${a[c]}");
 
 			auto r = p1 << p2;
 			EXPECT_EQ(1, r.size());

@@ -102,14 +102,14 @@ namespace integration {
 		for(const auto& o : data) {
 			for(const auto& i : o.second) {
 				if (i.first.empty()) continue;		// skip those for now
-				auto key = "$" + o.first + "[" + i.first + "]";
+				auto key = "${" + o.first + "[" + i.first + "]}";
 
 				// replace key with value
 				boost::replace_all(res, key, i.second);
 			}
 
 			// and the potential empty one
-			auto key = "$" + o.first;
+			auto key = "${" + o.first + "}";
 			boost::replace_all(res, key, get(o.first));
 		}
 

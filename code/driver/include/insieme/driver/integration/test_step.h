@@ -52,9 +52,6 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	//command for time measuring, default /usr/bin/time
-	#define TIME_COMMAND "time "
-
 	// a forward declaration of the step class
 	struct TestStep;
 

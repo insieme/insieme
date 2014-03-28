@@ -1,4 +1,4 @@
 files="src/bzip2smp.c","src/note.c","src/detectht.c","src/bzlib.c","src/compress.c","src/dummy_decompress.c","src/crctable.c","src/blocksort.c","src/huffman.c","src/randtable.c"
 use_libmath=1
-executionFlags=-p8 -i {PATH}/../../../gemsclaim/wow_320.pnm
+executionFlags=-p8 -i ${PATH}/../../../gemsclaim/wow_320.pnm
 excludeSteps=$excludeSteps,"main_seq_convert","main_seq_compile","main_seq_execute","main_seq_check"

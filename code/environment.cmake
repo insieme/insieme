@@ -64,6 +64,13 @@ else()
 endif()
 
 
+# -------------------------------------------------------------- find location of utilities
+
+find_program(TIME_EXECUTABLE time)
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND") 
+	message(FATAL_ERROR "Unable to locate time utility!")
+endif()
+
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
 

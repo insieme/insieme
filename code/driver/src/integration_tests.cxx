@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
 		for(const auto& step : list) {
 			auto res = step.run(setup, cur);
 			results.push_back(std::make_pair(step.getName(), res));
-			if (!res) {
+			if (!res || res.hasBeenAborted()) {
 				success = false;
 				break;
 			}
@@ -218,15 +218,14 @@ int main(int argc, char** argv) {
 		{
 			// print test info
 			std::cout << "#------------------------------------------------------------------------------#\n";
-			std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getBaseName()) << "#\n";
+			std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getName()) << "#\n";
 			std::cout << "#------------------------------------------------------------------------------#\n";
 
 			for(const auto& curRes : results) {
 				if(options.mockrun){
 					std::cout<<"\033[0;30m"<<curRes.first<<std::endl;
 					std::cout<<"\033[0;32m"<<curRes.second.getCmd()<<std::endl;
-				}
-				else{
+				} else{
 					string colOffset;
 					colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
 					std::stringstream line;
@@ -250,14 +249,21 @@ int main(int argc, char** argv) {
 
 					success = success && curRes.second.wasSuccessfull();
 				}
-				if(options.clean)
+				if(options.clean) {
 					curRes.second.clean();
+				}
+
+				if (curRes.second.hasBeenAborted()) {
+					panic = true;
+				}
 			}
+
 			if(!options.mockrun){
-				if(success)
+				if(success) {
 					std::cout<<"\033[0;32m";
-				else
+				} else {
 					std::cout<<"\033[0;31m";
+				}
 
 				std::cout << "#------------------------------------------------------------------------------#\n";
 				if(success)

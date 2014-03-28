@@ -54,12 +54,19 @@ namespace integration {
 		string cmd;
 		std::vector<std::string> producedFiles;
 
+		bool userabort;
+
 	public:
 
 		TestResult(bool success = true, float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd=""
 				,std::vector<std::string> producedFiles=std::vector<std::string>())
-			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles) {}
+			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles), userabort(false) {}
 
+		static TestResult userAborted(float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd="") {
+			TestResult res(false, runtime, memory, output, errorOut, cmd);
+			res.userabort = true;
+			return res;
+		}
 
 		bool wasSuccessfull() const {
 			return success;
@@ -90,6 +97,10 @@ namespace integration {
 
 		float getMemory() const{
 			return memory;
+		}
+
+		bool hasBeenAborted() const {
+			return userabort;
 		}
 	};
 

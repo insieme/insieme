@@ -1,1 +1,1 @@
-includes="/software-local/insieme-libs/boost-latest/include"
+includes="${boost_include}"
