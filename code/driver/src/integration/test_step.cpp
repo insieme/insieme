@@ -54,7 +54,7 @@ namespace integration {
 
 		namespace {
 
-			TestResult runCommand(const TestSetup& setup, const string& cmd, const string& producedFile="") {
+			TestResult runCommand(const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
 
 				vector<string> producedFiles;
 				producedFiles.push_back(setup.stdOutFile);
@@ -75,7 +75,7 @@ namespace integration {
 					return TestResult(true,0,0,"","",cmd + outfile);
 				}
 
-				string realCmd=string("/usr/bin/time")+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				string realCmd=string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//TODO enable perf support
 				//if(setup.enablePerf)
@@ -190,7 +190,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				},std::set<std::string>(),COMPILE);
 			}
 
@@ -224,7 +224,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -271,7 +271,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str(),irFile);
+					return runCommand(set, props, cmd.str(),irFile);
 				}, deps,COMPILE);
 			}
 
@@ -316,7 +316,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".conv.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -369,7 +369,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -406,7 +406,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -436,7 +436,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,CHECK);
 			}
 
