@@ -43,6 +43,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -68,6 +69,7 @@ namespace backend {
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
+		steps.push_back(makePreProcessor<ReturnOnCtor>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -463,6 +465,62 @@ namespace backend {
 			return core::transform::correctRecursiveLambdaVariableUsage(manager, code.as<core::LambdaExprPtr>());
 		}).map(code);
 	}
+
+	core::NodePtr ReturnOnCtor::process(const Converter& converter, const core::NodePtr& node){
+
+		core::IRBuilder builder(node->getNodeManager());
+
+		std::vector<core::ReturnStmtPtr> returns;
+		auto emptyRet = builder.returnStmt(builder.getLangBasic().getUnitConstant());
+
+		auto res = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)->core::NodePtr {
+
+			if (auto retStmt = node.isa<core::ReturnStmtPtr>()){
+				returns.push_back(retStmt);
+			}
+			else if (core::LambdaExprPtr funExpr = node.isa<core::LambdaExprPtr>()){
+				auto funTy = funExpr->getType().as<core::FunctionTypePtr>();
+				
+				if (funTy->isConstructor()){
+
+					core::NodeMap toRemove;
+					auto thisVar = funExpr->getLambda()->getParameters()[0];
+					// remove all returns within this scope that fit the requirement
+					for (core::ReturnStmtPtr stmt : returns){
+						if (stmt->getReturnExpr() == thisVar){
+							toRemove[stmt] = emptyRet;
+						}
+					}
+					funExpr = core::transform::replaceAllGen (node->getNodeManager(), funExpr, toRemove, false);
+
+
+					// fix it in the meta info so it is not duplicated
+					auto meta = core::getMetaInfo(thisVar->getType().as<core::RefTypePtr>()->getElementType());
+					std::vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+					std::vector<core::LambdaExprPtr>::iterator it;
+					for (it = ctors.begin(); it != ctors.end(); ++it){
+						if (*it == node){
+							break;
+						}
+					}
+					ctors.erase(it);
+					ctors.push_back(funExpr);
+					meta.setConstructors(ctors);
+					core::setMetaInfo(thisVar->getType().as<core::RefTypePtr>()->getElementType(), meta);
+				}
+
+				returns.clear();
+				return funExpr;
+			}
+
+			return node;
+
+		}).map(node);
+
+		return res;
+	}
+
+
 
 } // end namespace backend
 } // end namespace insieme

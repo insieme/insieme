@@ -83,6 +83,14 @@ namespace integration {
 				//get return value, stdOut and stdErr
 				int retVal=system(realCmd.c_str());
 
+				//TODO change this to handle SIGINT signal
+				if(retVal==512)
+					exit(0);
+
+			   if (WIFSIGNALED(retVal) &&
+				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
+				   	   std::cout<<"killed"<<std::endl;
+
 				string output=readFile(setup.stdOutFile);
 				string error=readFile(setup.stdErrFile);
 
@@ -459,7 +467,6 @@ namespace integration {
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_seq_c++_check", Sequential, C, { "main_seq_c++_execute", "ref_c++_execute" }));
 
-
 			return list;
 		}
 
@@ -493,6 +500,7 @@ namespace integration {
 			if(excludes.find(step.getName()) == std::string::npos)
 				filteredSteps.push_back(step);
 		}
+
 		return filteredSteps;
 	}
 

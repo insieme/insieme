@@ -1157,7 +1157,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							curr->getName(),
 							getInitExpr (curr->getType(), inits[i])));
 			}
-			retIr = builder.structExpr(structTy, members);
+			if (members.empty())
+				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
+			else
+				retIr = builder.structExpr(structTy, members);
 			return retIr;
 		}
 
@@ -1751,6 +1754,13 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 			// handle this references in body,
 			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
+
+			// in constructors, replace all empty returns by a return of this:
+			if (funcTy->isConstructor()) {
+				auto emptyReturn = builder.returnStmt(builder.getLangBasic().getUnitConstant());
+				auto newReturn   = builder.returnStmt(thisVar);
+				body = core::transform::replaceAllGen (mgr, body, emptyReturn, newReturn);
+			}
 		}
 
 		// build the resulting lambda

@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+using namespace std;
+
 namespace insieme {
 namespace driver {
 namespace integration {
@@ -98,7 +102,6 @@ namespace integration {
 		bool hasBeenAborted() const {
 			return userabort;
 		}
-
 	};
 
 } // end namespace integration
