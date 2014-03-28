@@ -1751,6 +1751,13 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 			// handle this references in body,
 			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
+
+			// in constructors, replace all empty returns by a return of this:
+			if (funcTy->isConstructor()) {
+				auto emptyReturn = builder.returnStmt(builder.getLangBasic().getUnitConstant());
+				auto newReturn   = builder.returnStmt(thisVar);
+				body = core::transform::replaceAllGen (mgr, body, emptyReturn, newReturn);
+			}
 		}
 
 		// build the resulting lambda
