@@ -86,8 +86,6 @@ namespace integration {
 				if(retVal==512)
 					exit(0);
 
-				std::cout<<WIFSIGNALED(retVal)<<WTERMSIG(retVal)<<WTERMSIG(retVal)<<std::endl;
-
 			   if (WIFSIGNALED(retVal) &&
 				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
 				   	   std::cout<<"killed"<<std::endl;

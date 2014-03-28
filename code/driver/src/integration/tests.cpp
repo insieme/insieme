@@ -469,7 +469,6 @@ namespace integration {
 		else
 			testCase=getCase(path);
 			if(testCase)
-				std::cout<<"case"<<std::endl;
 				ret.push_back(*testCase);
 			return ret;
 

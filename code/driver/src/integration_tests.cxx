@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
 				if(success)
 					std::cout<<"#\tSUCCESS -- "<<format("%-60s",cur.getBaseName())<<"#\n";
 				else
-					std::cout<<"#\tFAILED -- "<<format("%-61s",cur.getBaseName())<<"#\n";
+					std::cout<<"#\tFAILED  -- "<<format("%-61s",cur.getBaseName())<<"#\n";
 				std::cout << "#------------------------------------------------------------------------------#\n";
 
 				if (success) {
