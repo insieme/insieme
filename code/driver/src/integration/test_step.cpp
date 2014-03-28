@@ -74,7 +74,7 @@ namespace integration {
 					return TestResult(true,0,0,"","",cmd + outfile);
 				}
 
-				string realCmd=string(TIME_COMMAND)+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				string realCmd=string("/usr/bin/time")+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//TODO enable perf support
 				//if(setup.enablePerf)

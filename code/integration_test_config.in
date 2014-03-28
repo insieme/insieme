@@ -48,6 +48,9 @@ compiler[main_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_seq_compile]=gcc
 compiler[main_seq_c++_compile]=g++
 
+# boost environment
+boost_include=@Boost_INCLUDE_DIRS@
+boost_lib=@Boost_LIBRARY_DIRS@
 
 # result comparison script
 sortdiff=@insieme_root_dir@/test/sortdiff
