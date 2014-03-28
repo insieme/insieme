@@ -1,0 +1,5 @@
+compFlags[main_cxx_sema]=--intercept boost::.* --intercept-include /software-local/insieme-libs/boost-latest/include
+compFlags[main_seq_cxx_compile]=--intercept boost::.* --intercept-include /software-local/insieme-libs/boost-latest/include
+libPaths="/software-local/insieme-libs/boost-latest/lib"
+libNames="boost_thread","boost_system"
+includes="/software-local/insieme-libs/boost-latest/include"

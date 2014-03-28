@@ -1,9 +1,0 @@
--I. -I.. -I../../common 
-../is.c
-../../common/c_print_results.c  
-../../common/c_timers.c 
-../../common/wtime.c
-
-
-
-

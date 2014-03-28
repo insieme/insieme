@@ -1,0 +1,3 @@
+files="ompscrCommon.c","wtime.c","c_mandel.c"
+executionFlags=1000
+use_libmath=1

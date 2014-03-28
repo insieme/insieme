@@ -1,0 +1,3 @@
+files=$files"health.c"
+definitions="_GNU_SOURCE"
+executionFlags=-f {PATH}/small.input -c

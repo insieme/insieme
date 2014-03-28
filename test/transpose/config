@@ -1,0 +1,1 @@
+outputAwk="/^CHECK\s\w+$/{ print $2 }"

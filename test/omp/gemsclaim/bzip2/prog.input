@@ -1,1 +1,0 @@
-{PATH}/{EXEC} -p8 -i {PATH}/../../../gemsclaim/wow_320.pnm -o {PATH}/{EXEC}.out 
