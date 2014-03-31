@@ -1790,18 +1790,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
-            //Normally we use the function name of the member function.
-            //This can be dangerous when using templated member functions.
-            //In this case we have to add the return type information to
-            //the name, because it is not allowed to have overloaded functions
-            //that only differ by the return type.
-            //FIXME: Call to external functions might not work. What should we do with templated operators?!
-            std::string functionname = funcDecl->getNameAsString();
-            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-                std::string returnType = funcDecl->getResultType().getAsString();
-                functionname.append(returnType);
-                utils::removeSymbols(functionname);
-            }
+            std::string functionname = symbol->getStringValue();
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
