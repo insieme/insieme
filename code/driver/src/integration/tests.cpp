@@ -129,8 +129,8 @@ namespace integration {
 			bool enableOpenCL = false;
 			bool enableCXX11 = false;
 
-			// get the test directory
-			auto testDir = fs::path(TEST_ROOT_DIR) / testName;
+			// get the test directory -- if the testName is a existingPath skip appending rootDir
+			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(TEST_ROOT_DIR) / testName;
 
 			// check test case directory
 			const fs::path testCaseDir = fs::canonical(fs::absolute(testDir));
@@ -162,7 +162,7 @@ namespace integration {
 			if(files.size()==0){
 
 				// extract the case name from the test directory
-				string caseName = boost::filesystem::path(testDir).filename().string();
+				string caseName = boost::filesystem::path(testCaseDir).filename().string();
 
 				// add default file name
 				if (fs::exists(testCaseDir / (caseName + ".c")))
@@ -381,9 +381,14 @@ namespace integration {
 
 		// if still not found => it is a individual test case
 		if (res.empty()) {
-			auto testCase = loadTestCase(path);
-			if (testCase) {
-				return toVector(*testCase);
+
+			const fs::path testConfig = absolute_path / "test.cfg";
+			if (!fs::exists(testConfig)) { 
+				//individual test cases have no "test.cfg"
+				auto testCase = loadTestCase(path);
+				if (testCase) {
+					return toVector(*testCase);
+				}
 			}
 		}
 
