@@ -376,7 +376,12 @@ namespace integration {
 
 		// if not included in ALL test cases since not covered by the configuration => load rest
 		if (res.empty()) {
-			res = loadAllCases(path);
+            string prefix;
+            if(absolute_path.string().size() > fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size()) {
+                prefix = absolute_path.string().substr(fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size());
+                if(prefix.back() != '/') prefix.push_back('/');
+            }
+			res = loadAllCases(path, prefix );
 		}
 
 		// if still not found => it is a individual test case
