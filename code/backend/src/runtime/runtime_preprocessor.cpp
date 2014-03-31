@@ -479,7 +479,7 @@ namespace runtime {
 
 						// build runtime call
                         if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
-						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
+						    return wrapWithInstrumentationRegion(ptr.as<core::CallExprPtr>()->getArgument(0), builder.callExpr(builder.refType(ext.workItemType), ext.task, job));
 
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 					}
@@ -489,11 +489,11 @@ namespace runtime {
 						const auto& arg = core::analysis::getArgument(res, 0);
  
                         // OMP+ instrumentation
-					    const auto& mergeArg = ptr.as<core::CallExprPtr>()->getArguments()[0];
+					    const auto& mergeArg = ptr.as<core::CallExprPtr>()->getArgument(0);
 				        if (mergeArg->getNodeType() == core::NT_CallExpr) {
                             const auto& parCall = mergeArg.as<core::CallExprPtr>();
                             if(basic.isParallel(parCall->getFunctionExpr())) {
-                                const auto& parArg = parCall->getArguments()[0];
+                                const auto& parArg = parCall->getArgument(0);
                                 if(basic.isJob(parArg->getType())) {
                                     const auto& job = parArg.as<core::JobExprPtr>();
                                     return wrapWithInstrumentationRegion(job, builder.callExpr(basic.getUnit(), ext.merge, arg));
