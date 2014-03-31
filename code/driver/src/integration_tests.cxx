@@ -265,9 +265,9 @@ int main(int argc, char** argv) {
 
 				std::cout << "#------------------------------------------------------------------------------#\n";
 				if(success)
-					std::cout<<"#\tSUCCESS -- "<<format("%-60s",cur.getBaseName())<<"#\n";
+					std::cout<<"#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
 				else
-					std::cout<<"#\tFAILED  -- "<<format("%-61s",cur.getBaseName())<<"#\n";
+					std::cout<<"#\tFAILED  -- "<<format("%-61s",cur.getName())<<"#\n";
 				std::cout << "#------------------------------------------------------------------------------#\n";
 
 				if (success) {
