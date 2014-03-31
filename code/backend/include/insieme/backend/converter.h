@@ -267,6 +267,11 @@ namespace backend {
 		const Converter& converter;
 
 		/**
+		 * The entry point currently processed - might be null if not within a lambda.
+		 */
+		const core::LambdaPtr entryPoint;
+
+		/**
 		 * A reference to a set of dependencies aggregated during the conversion.
 		 * Dependencies are defining the set of code fragments to be necessarily placed
 		 * before the current code fragment within the resulting output code.
@@ -299,11 +304,15 @@ namespace backend {
 		 *
 		 * @param converter the converter which will be using the resulting context.
 		 */
-		ConversionContext(const Converter& converter)
-			: converter(converter), dependencies(), requirements(), variableManager(), includes() {}
+		ConversionContext(const Converter& converter, const core::LambdaPtr& entryPoint)
+			: converter(converter), entryPoint(entryPoint), dependencies(), requirements(), variableManager(), includes() {}
 
 		const Converter& getConverter() const {
 			return converter;
+		}
+
+		const core::LambdaPtr& getEntryPoint() const {
+			return entryPoint;
 		}
 
 		void addDependency(const c_ast::CodeFragmentPtr& fragment) {

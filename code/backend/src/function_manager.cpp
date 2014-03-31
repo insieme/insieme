@@ -1462,7 +1462,7 @@ namespace backend {
 			if (lambda) {
 
 				// set up variable manager
-				ConversionContext context(converter);
+				ConversionContext context(converter, lambda);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
 					context.getVariableManager().addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
 				});

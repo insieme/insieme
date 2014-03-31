@@ -86,7 +86,7 @@ namespace backend {
 		timer = insieme::utils::Timer(getConverterName() + " Conversions");
 
 		// create a context
-		ConversionContext context(*this);
+		ConversionContext context(*this, core::LambdaPtr());
 
 		// register global names
 		getNameManager().registerGlobalNames(processed);
