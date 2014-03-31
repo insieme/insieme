@@ -459,7 +459,7 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool containsConstructor(const LambdaExprPtr& constructor) const {
-			return contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
+			return ::contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
 				// just check the type - no two constructors with the same type are supported
 				return *a->getType() == *b->getType();
 			});
