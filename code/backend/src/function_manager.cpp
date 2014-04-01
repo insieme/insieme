@@ -54,7 +54,9 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -376,7 +378,121 @@ namespace backend {
 
 	}
 
+	namespace detail{
+		bool isExpressionWithCleanups(const core::ExpressionPtr& expr){
+			
+			// check that is a lambda
+			auto fun = expr.isa<core::LambdaExprPtr>();
+			if (!fun) return false;
 
+			// can not inline recursions
+			if (fun->isRecursive()) return false;
+
+			// can not inline members
+			if (fun->getFunctionType()->isConstructor() || fun->getFunctionType()->isDestructor() || fun->getFunctionType()->isMemberFunction() ){
+				return false;
+			}
+
+			// can not inline a void return function
+			if (fun->getFunctionType()->getReturnType() ==  expr.getNodeManager().getLangBasic().getUnit())
+				return false;
+
+			// is not an empty func (it must have 2 or more stmts)
+			// 	- at least one cleanup declaration + the actual expression
+			auto body = fun->getBody();
+			if (body.size() < 2) {
+				return false;
+			}
+
+			// last stmt can be a return or another expression (the actual cleanp), and previous to last could be an expression in cases with returned value
+			auto lastStmt =body[body.size()-1];
+			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
+			if (!lastStmt.isa<core::ExpressionPtr>() && !lastStmt.isa<core::ReturnStmtPtr>()){
+				return false;
+			}
+
+			// this two are to check that we do not use static vars inside of the function to inline
+			const auto& staticLazy  = expr.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>().getInitStaticLazy();
+			const auto& staticConst = expr.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>().getInitStaticConst();
+
+			// only declarations except for the (2) last 
+			for (auto stmt : body){
+				if (stmt == lastStmt) break;
+				if (stmt == preLastStmt && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAssign()) ){
+					if(auto retStmt =  lastStmt.isa<core::ReturnStmtPtr>()){
+						
+						if (core::analysis::isCallOf(retStmt->getReturnExpr(), retStmt->getNodeManager().getLangBasic().getRefDeref())){
+			//std::cout << " ============== To inline =====================" << std::endl;
+			//dumpPretty (expr);
+							return retStmt->getReturnExpr().as<core::CallExprPtr>()[0].isa<core::VariablePtr>();
+						}
+						else return false;
+
+					}
+				}
+
+				core::DeclarationStmtPtr decl = stmt.isa<core::DeclarationStmtPtr>();
+				if(!decl){
+					return false;
+				}
+				else{
+					auto varType = decl->getVariable()->getType().isa<core::RefTypePtr>();
+
+					// make sure no static variables are used here: otherwhise we can not inline
+					if(core::analysis::isCallOf(decl->getInitialization(), staticLazy) || core::analysis::isCallOf(decl->getInitialization(), staticConst)){
+						return false;
+					}
+					// declare variable can not be a cppref or a pointer, it has to be an actual value with the need to be cleaned up
+					else if (!(varType) || expr.getNodeManager().getLangBasic().isBuiltIn(varType->getElementType())){
+						return false;
+					}
+				}
+			}
+
+			//std::cout << " ============== To inline =====================" << std::endl;
+			//dumpPretty (expr);
+			//std::cout << " ==========" << std::endl;
+
+			
+			// any other case, is suitable for inlining
+			return true;
+		}
+
+		core::ExpressionPtr inlineExpressionWithCleanups(const core::ExpressionPtr& expr){
+		//	assert_true(isExpressionWithCleanups(expr)) << "not supposed to use with this: \n" << dumpPretty(expr);
+
+			// check that is a lambda
+			auto fun = expr.as<core::LambdaExprPtr>();
+			auto body = fun->getBody();
+
+
+			core::ExpressionPtr res;
+			auto lastStmt = body[body.size()-1];
+			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
+			if (preLastStmt && core::analysis::isCallOf(preLastStmt, preLastStmt->getNodeManager().getLangBasic().getRefAssign())){
+				res = preLastStmt.as<core::ExpressionPtr>();
+			}
+			else if (auto returnStmt = lastStmt.isa<core::ReturnStmtPtr>()){
+				res = returnStmt->getReturnExpr();
+			}
+			else{
+				res = lastStmt.as<core::ExpressionPtr>();
+			}
+
+			core::StatementList list = body->getStatements();
+
+			auto it = list.rbegin()+1;
+			auto end = list.rend();
+			for (; it != end; ++it){
+				// skip the assignment in case of assignment cleanups
+				if (*it == res) continue;
+				auto decl = (*it).as<core::DeclarationStmtPtr>();
+				res =core::transform::replaceAllGen(res->getNodeManager(), res, decl->getVariable(), decl->getInitialization());
+			}
+			
+			return res;
+		}
+	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
 
@@ -430,7 +546,25 @@ namespace backend {
 			return getCall(res, context);
 		}
 
-		// 4) test whether target is a lambda => call lambda directly, without creating a closure
+		// 4) check for inlineable expression with cleanups
+		if (detail::isExpressionWithCleanups(fun)){
+
+			auto res =  detail::inlineExpressionWithCleanups(fun);
+			core::IRBuilder builder(fun->getNodeManager());
+
+			// inline the new expression 
+			core::LambdaExprAddress root(fun.as<core::LambdaExprPtr>());
+			auto bodyAddress = root->getBody();
+			auto newFun = core::transform::replaceNode (res->getNodeManager(), bodyAddress, builder.compoundStmt(builder.returnStmt(res)));
+			res = builder.callExpr(call->getType(), newFun.as<core::ExpressionPtr>(), call->getArguments());
+			res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>());
+
+			//dumpPretty (res);
+			//std::cout << "=================================" << std::endl;
+			return context.getConverter().getStmtConverter().convert(context, res);
+		}
+
+		// 5) test whether target is a lambda => call lambda directly, without creating a closure
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			// obtain lambda information
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
@@ -454,7 +588,7 @@ namespace backend {
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
-		// 5) test whether target is a plane function pointer => call function pointer, no closure
+		// 6) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));
@@ -462,7 +596,7 @@ namespace backend {
 			return res;
 		}
 
-		// 6) if is a member function pointer
+		// 7) if is a member function pointer
 		if (funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
@@ -1265,8 +1399,8 @@ namespace backend {
 				}
 
 				void visitNode(const core::NodeAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
-					std::cout << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-					std::cout << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
+					std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
+					std::cerr << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
 					assert(false && "Must not be reached!");
 				}
 
@@ -1304,8 +1438,8 @@ namespace backend {
 				default: {}
 				}
 
-				std::cout << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-				std::cout << "Node of type " << node->getNodeType() << " should not be reachable!\n";
+				std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
+				std::cerr << "Node of type " << node->getNodeType() << " should not be reachable!\n";
 				assert(false && "Must not be reached!");
 				return c_ast::IdentifierPtr();
 			}
@@ -1503,7 +1637,7 @@ namespace backend {
 				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {
 					return namedType->name;
 				}
-				std::cout << "Unable to determine class-name for member function: " << funType << "\n";
+				std::cerr << "Unable to determine class-name for member function: " << funType << "\n";
 				assert(false && "Unsupported case!");
 				return c_ast::IdentifierPtr();
 			};

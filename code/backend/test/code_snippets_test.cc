@@ -123,7 +123,7 @@ TEST(FunctionCall, VectorReduction) {
     EXPECT_FALSE(code.find("<?>") != string::npos);
 
     // test contracted form
-    EXPECT_PRED2(containsSubString, code, "return 0 + 1 + 2 + 3 + 4;");
+    EXPECT_PRED2(containsSubString, code, "0 + 1 + 2 + 3 + 4;");
 
     // try compiling the code fragment
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();

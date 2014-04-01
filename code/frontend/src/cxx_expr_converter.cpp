@@ -68,6 +68,7 @@
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 
 #include "insieme/utils/container_utils.h"
@@ -725,12 +726,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBindTemporaryExpr(const
 		body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
 
 	core::DeclarationStmtPtr declStmt;
-
 	declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
 
 	// store temporary and declaration stmt in Map
 	convFact.tempInitMap.insert(std::make_pair(temp,declStmt));
-
 	return retIr = declStmt.getVariable();
 }
 
@@ -762,42 +761,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 
 			VLOG(2) << " expr: " << innerIr;
 			VLOG(2) << " cleanup: " << var << " (type: " << var->getType() << ")  init: " << init << std::endl;
-
-			core::ExpressionPtr newIr;
-			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
-				// it might happen that we try to materialize an object just to use it by reference,
-				// we can use inplace the materializarion
-				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, true);
-				// OR: we dont, therefore the materialization in the declaration must be transform into a refvar
-				decl = builder.declarationStmt(var, builder.refVar(init.as<core::CallExprPtr>()[0]));
-			}
-			else{
-				// is is used as const reference, we can use the temporary in the place where used
-				//      decl ref<'a> vX = ctor( var(undef('a)))
-				//      return exprWithTemps ( RefIRToConstCpp(vX) )
-				//      --------------------------------------------
-				//      return exprWithTemps ( RefIRToConstCpp(ctor( var(undef('a))) ))
-				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
-				core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
-				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
-
-				if (*newIr == *innerIr){
-					if(insieme::core::analysis::isConstructorCall(init)) {
-						core::ExpressionPtr trg = builder.deref(var);
-						core::ExpressionPtr subst = builder.deref(init);
-						newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
-					}
-				}
-			}
-
-			if (*newIr == *innerIr){
-				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order
-				VLOG(2) << "	cleanup is a temp";
-			}
-			else{
-				innerIr = newIr;
-				VLOG(2) << "	cleanup is replaced";
-			}
+			stmtList.insert(stmtList.begin(),decl);  // insert with reverse order
 		}
 	}
 
@@ -817,7 +781,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	if (stmtList.empty()){
 		// we avoided all expressions to be cleanup, no extra lambda needed
 		VLOG(2) << "	cleanup expression is simplyfied and avoided";
-		return innerIr;
+		return retIr = innerIr;
 	}
 
 	// if the expression does not return anything, do not add return stmt
@@ -838,55 +802,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
-	//build the lambda and its parameters
-	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
-	vector<core::VariablePtr> usedVars = core::analysis::getFreeVariables(lambdaBody);
-
-	// check for readonly variables and perform same transformation on parameters as with regular funtions
-	// TODO: refactorize this with the code in convertFunction Decl, and create single signature
-	vector<core::VariablePtr> params;
-	for (core::VariablePtr var : usedVars){
-		if (var->getType().isa<core::RefTypePtr>()){
-			core::VariablePtr newParam = builder.variable(var->getType().as<core::RefTypePtr>()->getElementType());
-			// we might need to do some fix on array variables
-			if (core::analysis::isReadOnly(lambdaBody, var)){
-
-				// replace read uses
-				lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, builder.deref(var), newParam, true);
-				lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, var, builder.refVar(newParam), true);
-				// this variables might apear in annotations inside:
-				core::visitDepthFirstOnce (lambdaBody, [&] (const core::StatementPtr& node){
-					//if we have a OMP annotation
-					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-						const auto& anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						frontend_assert(anno);
-						anno->replaceUsage (var, newParam);
-					}
-				});
-
-				params.push_back(newParam);
-			}
-			else
-				params.push_back(var);
-		}
-		else
-			params.push_back(var);
-	}
-
-	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
-
-	//build the lambda call and its arguments
-	// NOTE: if the parameter has being marked read only and, therefore, substituted, we need to
-	// deref the variable so the types do not collide
-	vector<core::ExpressionPtr> packedArgs;
-	for (core::VariablePtr varPtr : usedVars){
-		if (std::find(params.begin(), params.end(), varPtr) != params.end())
-			packedArgs.push_back(varPtr);
-		else
-			packedArgs.push_back(builder.deref(varPtr));
-	}
-
-	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
+	return retIr =  convFact.createCallExprFromBody(stmtutils::StmtWrapper(stmtList), lambdaRetType);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
