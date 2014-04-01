@@ -1790,7 +1790,16 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
-            std::string functionname = symbol->getStringValue();
+			std::string functionname;
+            if(funcDecl->isOverloadedOperator()) {
+				//set name of the overloadop -- use the plain simple one from the funcdecl for the BE only
+				//the symbol is the rich one (with templates, const yadayadayada)
+            	functionname = funcDecl->getNameAsString(); 
+			} else {
+				//for everything else use the rich name
+				functionname = symbol->getStringValue();
+			}
+
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),

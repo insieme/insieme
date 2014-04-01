@@ -246,12 +246,13 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 			std::string returnType = funcDecl->getResultType().getAsString();
 			name.append(returnType);
 		}
-
-		if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {
-			name.append("_c");
-		}
+	
 	}
 	
+	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {
+		name.append("_c");
+	}
+
 	REMOVE_SYMBOLS(name);
 
     //check for dummyss or dummygg and replace it with the original name
