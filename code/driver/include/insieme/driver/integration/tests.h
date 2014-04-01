@@ -142,7 +142,7 @@ namespace integration {
 		 * Get Basename of this test case
 		 */
 		string getBaseName() const{
-			return boost::filesystem::path(name).filename().string();
+			return boost::filesystem::path(dir).filename().string();
 		}
 
 		/**

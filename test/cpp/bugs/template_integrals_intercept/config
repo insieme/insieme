@@ -1,3 +1,4 @@
-compFlags[main_cxx_sema]=--intercept NS::.*
-compFlags[main_seq_cxx_compile]=--intercept NS::.* 
+compFlags[main_c++_sema]=--intercept NS::.*
+compFlags[main_seq_c++_convert]=--intercept NS::.* 
+compFlags[main_run_c++_convert]=--intercept NS::.* 
 includes="./"

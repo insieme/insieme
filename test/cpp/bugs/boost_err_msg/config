@@ -1,3 +1,4 @@
-compFlags[main_cxx_sema]=--intercept boost::.*
-compFlags[main_seq_compile]=--intercept boost::.*
-includes="/software-local/insieme-libs/boost-latest/include"
+compFlags[main_c++_sema]=--intercept boost::.*
+compFlags[main_seq_c++_convert]=--intercept boost::.*
+compFlags[main_run_c++_convert]=--intercept boost::.*
+includes="${boost_include}"
