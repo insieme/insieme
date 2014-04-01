@@ -446,6 +446,12 @@ namespace backend {
 					else if (!(varType) || expr.getNodeManager().getLangBasic().isBuiltIn(varType->getElementType())){
 						return false;
 					}
+					// no pointer or array can be a cleanup
+					else if (varType && (varType->getElementType().isa<core::RefTypePtr>() || 
+										 varType->getElementType().isa<core::ArrayTypePtr>() ||  
+										 varType->getElementType().isa<core::VectorTypePtr>() )){
+						return false;
+					}
 				}
 			}
 
@@ -559,8 +565,8 @@ namespace backend {
 			res = builder.callExpr(call->getType(), newFun.as<core::ExpressionPtr>(), call->getArguments());
 			res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>());
 
-			//dumpPretty (res);
-			//std::cout << "=================================" << std::endl;
+		//	dumpPretty (res);
+		//	std::cout << "=================================" << std::endl;
 			return context.getConverter().getStmtConverter().convert(context, res);
 		}
 
