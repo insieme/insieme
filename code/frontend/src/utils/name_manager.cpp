@@ -148,6 +148,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
     //that only differ by the return type.
     //FIXME: Call to external functions might not work. What should we do with templated operators?!
     //TODO clenaup early exit
+    /*
     if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
 		std::string functionname = funcDecl->getNameAsString();
         std::string returnType = funcDecl->getResultType().getAsString();
@@ -160,6 +161,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 
         return functionname;
 	} 
+	*/
 
     //if we have non type template specialization args,
     //we have to modify the name (e.g. template <bool VAR>)
@@ -238,6 +240,11 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 					}
 				}
 			}
+		}
+
+		if(funcDecl->isTemplateInstantiation()) {
+			std::string returnType = funcDecl->getResultType().getAsString();
+			name.append(returnType);
 		}
 
 		if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {
