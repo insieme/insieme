@@ -460,7 +460,8 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				};
 
 			if (isUsedToCreateConstRef(body, wrap)){
-				auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				//auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				auto access = builder.refVar(currParam);
 				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
 				core::visitDepthFirstOnce (newBody, transferAnnotations);
 				wrapRefMap.erase(currParam);
@@ -1238,7 +1239,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>()) {
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
-								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
+								builder.refVar (init)));
+								//builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
 	}
 
 	// from cpp ref to value or variable
@@ -1400,12 +1402,12 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
         core::NodePtr result = plugin->Visit(decl, *this);
         if(result) {
             res = result.as<core::TypePtr>();
+			typeCache[decl->getTypeForDecl()->getCanonicalTypeInternal ()] = res;
             break;
         }
     }
 
 	if(!res) {
-
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
@@ -1414,6 +1416,10 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
 		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
 			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
+
+				VLOG(2) << "typedef of an anonymous type, forward the name: ";
+				VLOG(2) << "    -" << res;
+
 				core::TypePtr trgTy =  lookupTypeDetails(symb);
 				// a new generic type will point to the previous translation unit decl
 				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
@@ -1440,6 +1446,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
 						}
 
+						VLOG(2) << "    -" << gen;
 						typeCache[typedefType] = gen;
 					}
 

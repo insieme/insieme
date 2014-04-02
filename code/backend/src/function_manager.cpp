@@ -381,26 +381,39 @@ namespace backend {
 	namespace detail{
 		bool isExpressionWithCleanups(const core::ExpressionPtr& expr){
 			
+			//std::cout << " ============== check inline =====================" << std::endl;
+			//dumpPretty(expr);
+
 			// check that is a lambda
 			auto fun = expr.isa<core::LambdaExprPtr>();
-			if (!fun) return false;
+			if (!fun) {
+				std::cout << "not a function " <<  std::endl;
+				return false;
+			}
 
 			// can not inline recursions
-			if (fun->isRecursive()) return false;
+			if (fun->isRecursive()) {
+				//std::cout << "recursive function " <<  std::endl;
+				return false;
+			}
 
 			// can not inline members
 			if (fun->getFunctionType()->isConstructor() || fun->getFunctionType()->isDestructor() || fun->getFunctionType()->isMemberFunction() ){
+				//std::cout << "member function " <<  std::endl;
 				return false;
 			}
 
 			// can not inline a void return function
-			if (fun->getFunctionType()->getReturnType() ==  expr.getNodeManager().getLangBasic().getUnit())
+			if (fun->getFunctionType()->getReturnType() ==  expr.getNodeManager().getLangBasic().getUnit()){
+				//std::cout << "unit function " <<  std::endl;
 				return false;
+			}
 
 			// is not an empty func (it must have 2 or more stmts)
 			// 	- at least one cleanup declaration + the actual expression
 			auto body = fun->getBody();
 			if (body.size() < 2) {
+				//std::cout << "wrong size " << body << std::endl;
 				return false;
 			}
 
@@ -408,6 +421,7 @@ namespace backend {
 			auto lastStmt =body[body.size()-1];
 			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
 			if (!lastStmt.isa<core::ExpressionPtr>() && !lastStmt.isa<core::ReturnStmtPtr>()){
+				//std::cout << "wrong last " << lastStmt << std::endl;
 				return false;
 			}
 
@@ -424,32 +438,45 @@ namespace backend {
 						if (core::analysis::isCallOf(retStmt->getReturnExpr(), retStmt->getNodeManager().getLangBasic().getRefDeref())){
 			//std::cout << " ============== To inline =====================" << std::endl;
 			//dumpPretty (expr);
+			//std::cout << " ==========" << std::endl;
 							return retStmt->getReturnExpr().as<core::CallExprPtr>()[0].isa<core::VariablePtr>();
 						}
-						else return false;
+						else{
+							//std::cout << "wrong last " << stmt << std::endl;
+							return false;
+						}
 
 					}
 				}
 
 				core::DeclarationStmtPtr decl = stmt.isa<core::DeclarationStmtPtr>();
 				if(!decl){
+						//std::cout << "not a decl " << stmt << std::endl;
 					return false;
 				}
 				else{
-					auto varType = decl->getVariable()->getType().isa<core::RefTypePtr>();
+					auto varType = decl->getVariable()->getType();
 
 					// make sure no static variables are used here: otherwhise we can not inline
 					if(core::analysis::isCallOf(decl->getInitialization(), staticLazy) || core::analysis::isCallOf(decl->getInitialization(), staticConst)){
+						//std::cout << "is static " << decl << std::endl;
+						return false;
+					}
+					// no builtin is a cleanup
+					else if (expr.getNodeManager().getLangBasic().isBuiltIn(varType)){
+						//std::cout << "is builtin " << decl << std::endl;
 						return false;
 					}
 					// declare variable can not be a cppref or a pointer, it has to be an actual value with the need to be cleaned up
-					else if (!(varType) || expr.getNodeManager().getLangBasic().isBuiltIn(varType->getElementType())){
+					else if (varType.isa<core::RefTypePtr>() && expr.getNodeManager().getLangBasic().isBuiltIn(varType.as<core::RefTypePtr>()->getElementType())){
+						//std::cout << "is ref to builtin: " << decl << std::endl;
 						return false;
 					}
 					// no pointer or array can be a cleanup
-					else if (varType && (varType->getElementType().isa<core::RefTypePtr>() || 
-										 varType->getElementType().isa<core::ArrayTypePtr>() ||  
-										 varType->getElementType().isa<core::VectorTypePtr>() )){
+					else if (varType.isa<core::RefTypePtr>() && (varType.as<core::RefTypePtr>()->getElementType().isa<core::RefTypePtr>() || 
+																 varType.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>() ||  
+																 varType.as<core::RefTypePtr>()->getElementType().isa<core::VectorTypePtr>() )){
+						//std::cout << "is ptr or array: " << decl << std::endl;
 						return false;
 					}
 				}
@@ -565,8 +592,8 @@ namespace backend {
 			res = builder.callExpr(call->getType(), newFun.as<core::ExpressionPtr>(), call->getArguments());
 			res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>());
 
-		//	dumpPretty (res);
-		//	std::cout << "=================================" << std::endl;
+			//dumpPretty (res);
+			//std::cout << "=================================" << std::endl;
 			return context.getConverter().getStmtConverter().convert(context, res);
 		}
 

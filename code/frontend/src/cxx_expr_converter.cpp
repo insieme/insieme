@@ -284,7 +284,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 		// being identified as temporary expression, because in IR classes are always a left side
 		// we have to materialize
 		if(!ownerObj.getType().isa<core::RefTypePtr>()){
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+			//ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+			ownerObj =  builder.refVar (ownerObj);
 		}
 
 		// reconstruct Arguments list, fist one is a scope location for the object
@@ -345,7 +346,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		//  no used defined dtor.
 		// some constructions might return an instance, incorporate a materialize
 		if (!ownerObj->getType().isa<core::RefTypePtr>()){
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+			//ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+			ownerObj =  builder.refVar (ownerObj);
 		}
 
 		// incorporate this to the begining of the args list
@@ -722,8 +724,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBindTemporaryExpr(const
 	// create a new var for the temporary and initialize it with the inner expr IR
 	const clang::Expr * inner = bindTempExpr->getSubExpr();
 	core::ExpressionPtr body = convFact.convertExpr(inner);
-	if (!gen.isRef(body->getType()))
-		body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
+	if (!gen.isRef(body->getType())){
+		//body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
+		body = builder.refVar(body);
+	}
 
 	core::DeclarationStmtPtr declStmt;
 	declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
@@ -768,7 +772,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType());
 
 	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
-		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
+		//if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
+		if (core::analysis::isCallOf(innerIr, mgr.getLangBasic().getRefVar()))
 			innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
 		else {
             if(core::analysis::isAnyCppRef(innerIr->getType()))
@@ -845,18 +850,21 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	if (llvm::isa<clang::CXXBindTemporaryExpr>(materTempExpr->GetTemporaryExpr()))
 		return retIr;
 	if (llvm::isa<clang::CXXNewExpr>(materTempExpr->GetTemporaryExpr()))
-		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
+		return (retIr = builder.refVar(retIr));
+		//return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
 	// inner type is a pointer? materialize
 	if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType))
-		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
+		return (retIr = builder.refVar(retIr));
+		//return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 
 
 
 	if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
 	else
-		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
+		return (retIr = builder.refVar(retIr));
+		//return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

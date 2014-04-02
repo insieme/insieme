@@ -56,6 +56,8 @@
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/annotations/data_annotations.h"
+
 #include "insieme/utils/assert.h"
 
 
@@ -245,8 +247,19 @@
 							// once done, clean nested compounds with a single compound inside
 							std::function<core::CompoundStmtPtr(const std::vector<core::StatementPtr>&)> unNest =
 								[&builder, &unNest] 	(const std::vector<core::StatementPtr>& list) -> core::CompoundStmtPtr{
-									if (list.size() ==1 && list[0].isa<core::CompoundStmtPtr>())
+									if (list.size() ==1 && list[0].isa<core::CompoundStmtPtr>() &&
+										 		!list[0]->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
 										return unNest(list[0].as<core::CompoundStmtPtr>()->getStatements());
+									}
+									// any last stmt being a compound can be inlined since cleanups will be made anyway at the end of the function
+									// any aliased variable declared in the body will be renamed anyway
+									else if (list.size()>0 &&  list[list.size()-1].isa<core::CompoundStmtPtr>() &&
+										 		!list[list.size()-1]->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+										core::CompoundStmtPtr tmp = unNest(list[list.size()-1].as<core::CompoundStmtPtr>()->getStatements());
+										std::vector<core::StatementPtr> newList(list.begin(), list.end()-1);
+										newList.insert(newList.end(), tmp.getStatements().begin(), tmp.getStatements().end());
+										return builder.compoundStmt(newList);
+									}
 									return builder.compoundStmt(list);
 								};
 							return unNest(stmtList);
