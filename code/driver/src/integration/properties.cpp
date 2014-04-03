@@ -37,6 +37,7 @@
 #include "insieme/driver/integration/properties.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem.hpp>
 #include "insieme/utils/string_utils.h"
 
 namespace insieme {
@@ -101,14 +102,14 @@ namespace integration {
 		for(const auto& o : data) {
 			for(const auto& i : o.second) {
 				if (i.first.empty()) continue;		// skip those for now
-				auto key = "$" + o.first + "[" + i.first + "]";
+				auto key = "${" + o.first + "[" + i.first + "]}";
 
 				// replace key with value
 				boost::replace_all(res, key, i.second);
 			}
 
 			// and the potential empty one
-			auto key = "$" + o.first;
+			auto key = "${" + o.first + "}";
 			boost::replace_all(res, key, get(o.first));
 		}
 
@@ -164,6 +165,7 @@ namespace integration {
 
 			// register value
 			res.set(key, cat, value);
+
 		}
 
 		// done
@@ -200,7 +202,6 @@ namespace integration {
 
 		return out;
 	}
-
 
 } // end namespace integration
 } // end namespace driver

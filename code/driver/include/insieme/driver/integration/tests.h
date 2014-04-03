@@ -40,6 +40,9 @@
 #include <map>
 #include <vector>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/tokenizer.hpp>
+
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
@@ -83,6 +86,16 @@ namespace integration {
 		vector<frontend::path> includeDirs;
 
 		/**
+		 * A list of external libraries, paths
+		 */
+		vector<frontend::path> libDirs;
+
+		/**
+		 * A list of external libraries, names
+		 */
+		vector<string> libNames;
+
+		/**
 		 * A flag indicating whether OpenMP should be enabled within the frontend or not.
 		 */
 		bool enableOpenMP;
@@ -93,19 +106,9 @@ namespace integration {
 		bool enableOpenCL;
 
 		/**
-		 * A flag indicating whether OpenCL should be enabled within the frontend or not.
+		 * A flag indicating whether C++11 should be enabled within the frontend or not.
 		 */
 		bool enableCXX11;
-
-		/**
-		 * A list of macro definitions to be forwarded to the frontend.
-		 */
-		map<string, string> definitions;
-
-		/**
-		 * A list of arguments to be passed on to the compiler when building this test case.
-		 */
-		vector<string> compilerArguments;
 
 		/**
 		 * The properties configured for this test case.
@@ -121,17 +124,25 @@ namespace integration {
 							const frontend::path& dir,
 							const vector<frontend::path>& files,
 							const vector<frontend::path>& includeDirs, 
+							const vector<frontend::path>& libDirs,
+							const vector<string>& libNames,
 							bool enableOpenMP, bool enableOpenCL, bool enableCXX11, 
-							const map<string,string>& definitions, const vector<string>& arguments,
 							const Properties& properties)
-			: name(name), dir(dir), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-			  enableCXX11(enableCXX11), definitions(definitions), compilerArguments(arguments), properties(properties) {}
+			: name(name), dir(dir), files(files), includeDirs(includeDirs),libDirs(libDirs),libNames(libNames), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
+			  enableCXX11(enableCXX11), properties(properties) {}
 
 		/**
 		 * Obtains the name of this test case.
 		 */
 		const string& getName() const {
 			return name;
+		}
+
+		/**
+		 * Get Basename of this test case
+		 */
+		string getBaseName() const{
+			return boost::filesystem::path(dir).filename().string();
 		}
 
 		/**
@@ -156,6 +167,20 @@ namespace integration {
 		}
 
 		/**
+		 * Obtains the list of external library directories.
+		 */
+		const vector<frontend::path>& getLibDirs() const {
+			return libDirs;
+		}
+
+		/**
+		 * Obtains the list of external libs.
+		 */
+		const vector<string>& getLibNames() const {
+			return libNames;
+		}
+
+		/**
 		 * Determines whether the OpenMP conversion should be enabled within the frontend or not.
 		 */
 		bool isEnableOpenMP() const {
@@ -174,20 +199,6 @@ namespace integration {
 		 */
 		bool isCXX11() const {
 			return enableCXX11;
-		}
-
-		/**
-		 * Obtains the list of macro definitions to be passed on the the frontend.
-		 */
-		const map<string, string>& getDefinitions() const {
-			return definitions;
-		}
-
-		/**
-		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
-		 */
-		const vector<string>& getCompilerArguments() const {
-			return compilerArguments;
 		}
 
 		/**
@@ -236,6 +247,93 @@ namespace integration {
 		 */
 		frontend::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
 
+		/**
+		 * Obtains the list of macro definitions to be passed on the the frontend.
+		*/
+		const map<string, string> getDefinitions(std::string step) const {
+			std::map<string,string> defs;
+			boost::char_separator<char> sep("\",");
+			std::string defStr=properties.get("definitions",step);
+
+			boost::tokenizer<boost::char_separator<char>> tokens=boost::tokenizer<boost::char_separator<char>>(defStr, sep);
+			for (const auto& t : tokens) {
+				std::string name = t;
+				if(!name.empty()){
+					if(name.find("=")!=std::string::npos){
+						defs[name.substr(0,name.find("="))]=name.substr(name.find("=")+1);
+					}
+					else
+						defs[name]="1";
+
+				}
+			}
+			return defs;
+		}
+
+
+        /**
+         * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
+         */
+        const vector<string> getCompilerArguments(std::string step) const {
+        	//TODO move this to the right place
+			//TODO implement properties which exclude each other e.g. use_cpp and use_cpp11
+			std::map<string,string> gccFlags;
+			gccFlags["use_libmath"]="-lm";
+			gccFlags["use_libpthread"]="-lpthread";
+			gccFlags["use_omp"]="-fopenmp";
+			gccFlags["standardFlags"]="-fshow-column -Wall -lrt -Wl,--no-as-needed -pipe";
+			gccFlags["use_o3"]="-O3";
+			gccFlags["use_c"]="--std=c99";
+			gccFlags["use_cpp"]="--std=c++03";
+			gccFlags["use_cpp11"]="--std=c++0x";
+			gccFlags["use_gnu99"]="--std=gnu99";
+			gccFlags["use_gnu90"]="--std=gnu90";
+
+			std::map<string,string> mainFlags;
+			mainFlags["use_libmath"]="";
+			mainFlags["use_libpthread"]="";
+			mainFlags["use_omp"]="--omp-sema";
+			mainFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
+			mainFlags["use_o3"]="";
+			mainFlags["use_c"]="";
+			mainFlags["use_gnu99"]="";
+			mainFlags["use_gnu90"]="";
+			mainFlags["use_cpp"]="--std=c++03";
+			mainFlags["use_cpp11"]="--std=c++11";
+
+			std::map<string,map<string,string>>propFlags;
+			propFlags["gcc"]=gccFlags;
+
+			gccFlags["standardFlags"]+=" -fpermissive";
+
+			propFlags["g++"]=gccFlags;
+			propFlags["main"]=mainFlags;
+
+			boost::filesystem::path comp(properties.get("compiler",step));
+			std::string cmd=" ";
+			map<std::string,std::string> flagMap=propFlags[comp.filename().string()];
+
+			vector<string> compArgs;
+			compArgs.push_back(flagMap["standardFlags"]);
+
+			for(const auto& key : properties.getKeys()){
+
+				string propVal=properties.get(key,step);
+				//check if property is switched on
+				if(propVal.compare("1")==0){
+
+					//check if property is supported
+					if(flagMap.count(key)==1)
+						compArgs.push_back(flagMap[key]);
+					else
+						std::cout<<"WARNING: Property "<<key<<" not supported!"<<std::endl;
+				}
+				if(propVal.compare("0")==0 and flagMap.count(key)!=1)
+					std::cout<<"WARNING: Property "<<key<<" ignored!"<<std::endl;
+			}
+			compArgs.push_back(properties.get("compFlags",step));
+			return compArgs;
+        }
 	};
 
 	// an optional type wrapping a test case
@@ -245,6 +343,11 @@ namespace integration {
 	 * Obtains a full list of all test cases available within the system.
 	 */
 	const vector<IntegrationTestCase>& getAllCases();
+
+	/**
+	 * Obtains a list of all test cases within a directory.
+	 */
+	const vector<IntegrationTestCase> getAllCasesAt(const string& path);
 
 	/**
 	 * Obtains the test case matching the given name.

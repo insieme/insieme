@@ -278,13 +278,13 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 		}
 		*/
 
-		if(child.getDepth() >= 4) {
+		if(child.getDepth() > 4) {
 			if(LambdaAddress lambda = child.isa<LambdaAddress>()) {
 	//std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
 				// if var is a parameter, continue search for declaration of corresponding argument in outer scope
 
-	//for(int i = 1; i < 5; ++i)
-	//	std::cout << "\nlp: " << lambda << " - " << printer::PrettyPrinter(lambda) << std::endl;
+//	for(int i = 1; i <= 4; ++i)
+//		std::cout << "\nlp: " << utils::whatIs(lambda.getParentNode(i)) << std::endl;
 
 				CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
 				NodeAddress nextScope, nextVar;

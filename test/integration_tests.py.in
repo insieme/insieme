@@ -1,9 +1,3 @@
-#TODO
-# OVERVIEW DIFFERENT CATEGORIES, split table, ocl, omp, mpi, default DONE
-# EVTL. MEM/COMP BOUND
-# FIX TABLE WIDTH OVERVIEW
-# seqruntime not in overview if 0
-
 ###################################################################################################
 ## Insieme Integration Test Script [v 2.0]
 ###################################################################################################
@@ -11,7 +5,7 @@
 """:"
 exec python3 $0 ${1+"$@"}
 """
-import optparse, collections, sys, os, re, math, time, subprocess, shlex, copy, configparser, pickle
+import optparse, collections, sys, os, re, math, time, subprocess, shlex, copy, configparser, pickle, hashlib
 from multiprocessing import Pool, Process, Queue
 from collections import defaultdict
 from decimal import Decimal
@@ -161,33 +155,49 @@ class Commands:
 def read_test_cfg( path, cfg_file_name ):
 	assert os.path.exists( path )
 
-	return [path + '/' + x.strip().replace("#","",1) \
-			  for x in re.split('\n|\s',open(path+'/'+cfg_file_name).read()) \
-					if len(x) > 0 and ((not x.startswith('#') or force_tests ) ) and not x.strip().replace("#","",1)==""]
-	
+	return [path + '/' + x.strip() \
+			  for x in re.split('\n',open(path+'/'+cfg_file_name).read()) \
+					if len(x) > 0 and ((not x.startswith('#') or force_tests) ) and not x.strip().replace("#","",1)==""]
+
+#printer to pretty output dicts	
+def pretty(d, indent=0):
+   for key, value in d.items():
+      print ("\t" * indent + str(key))
+      if isinstance(value, dict):
+         pretty(value, indent+1)
+      else:
+         print ('\t' * (indent+1) + str(value))
+
 
 def shortPath(path):
 	basename=os.path.basename(path)
 	if(len(basename)<10):
 		basename=os.path.join(os.path.basename(os.path.dirname(path)),basename)
-	elif(len(basename)>20):
-		basename="..."+basename[len(basename)-20:]
+	if(len(basename)>20):
+		basename="..."+basename[abs(len(basename)-17):]
+	assert(len(basename)<=20)
 	return basename
 
 def expand(tests,benchSuite="IT"):
-	#print(tests)
-	#time.sleep(0.2)
-	
 	if isinstance(tests, list):
 		ret = []
 		for test in tests:
 			ret.extend(expand(test,benchSuite))
 		return ret
 
+	if(" #$" in tests):
+		indexofSuite=tests.find(" #$")
+		endofSuite=indexofSuite+len(tests[indexofSuite+3:].split(' ')[0])+3
+		return expand(tests[:indexofSuite],tests[indexofSuite+3:endofSuite])
+	elif(" $" in tests):
+		return expand(tests[:tests.find(" $")],tests[tests.find(" $")+2:])		
+	elif(force_tests and "#" in tests):
+		return expand(tests[:tests.find("#")]+tests[tests.find("#")+1:len(tests.split(' ')[0])])	#remove first #
+	elif("#" in tests):
+		return expand(tests[:tests.find("#")-1])
+
 	# Handle the cases where we need to recur and resolve
 	if not os.path.isdir( tests ):
-		if("$" in tests):
-			return expand(tests[:tests.find("$")],tests[tests.find("$")+1:])		
 		return [ ]
 
 	# If the directoy has a test.cfg file it means we have to run all the
@@ -201,7 +211,7 @@ def expand(tests,benchSuite="IT"):
 # Class used to store the data gathered during the execution of a benchmark 
 class CmdExecReport:
 
-	def __init__(self, type, cmd, desc, ret_code, output, memory, time, threads=-1, failState=""):
+	def __init__(self, type, cmd, desc, ret_code, output, memory, time, threads=-1, failState="",perfEvents=dict()):
 		self.type = type
 		self.cmd =  cmd
 		self.desc = desc
@@ -212,6 +222,7 @@ class CmdExecReport:
 		self.stdev = 0.0
 		self.threads = threads
 		self.failState=failState
+		self.perfEvents=perfEvents
 
 	def __repr__(self):
 		return "{0} {1} {2} {3} {4}".format(self.type, self.cmd, self.ret_code, self.memory, self.time)
@@ -309,14 +320,206 @@ class SafeDict(dict):
 	def __missing__(self, key):
 		return '{' + key + '}'
 
+def calcRefPoint(rep):
+	jobTimes=dict()
+	
+	#flops
+	if(rep.perfEvents["FLOPS"]=="<not counted>"):
+		jobTimes["f"]="NA"
+	else:
+		flops=int(rep.perfEvents["FLOPS"])/1000000000
+		jobTimes["f"]=Decimal(flops).quantize(Decimal(10) ** -4)
+		
+	#memoryAmount
+	if (rep.perfEvents["LL_PREFETCH_MISS"]=="<not counted>") or (rep.perfEvents["LL_CACHE_READ_MISS"]=="<not counted>") \
+		or (rep.perfEvents["LL_CACHE_WRITE_MISS"]=="<not counted>"):
+		jobTimes["mt"]="NA"
+	else:					
+		rep.perfEvents["LL_CACHE_LINE_SIZE"]=64
+		memT=((int(rep.perfEvents["LL_PREFETCH_MISS"])+int(rep.perfEvents["LL_CACHE_READ_MISS"])+int(rep.perfEvents["LL_CACHE_WRITE_MISS"]))*int(rep.perfEvents["LL_CACHE_LINE_SIZE"]))/1000000000
+		jobTimes["mt"]=Decimal(memT).quantize(Decimal(10) ** -4)
+
+	#cacheHitRate
+	if (rep.perfEvents["LL_CACHE_READ_MISS"]=="<not counted>" or rep.perfEvents["LL_CACHE_READ_ACCESS"]=="<not counted>" \
+		or int(rep.perfEvents["LL_CACHE_READ_MISS"])==0 or int(rep.perfEvents["LL_CACHE_READ_ACCESS"])==0):
+		jobTimes["cr"]="NA"
+	else:
+		jobTimes["cr"]=Decimal(int(rep.perfEvents["LL_CACHE_READ_MISS"])/int(rep.perfEvents["LL_CACHE_READ_ACCESS"])).quantize(Decimal(10) ** -2)	
+
+	#refpoint
+	if(jobTimes["mt"]=="NA") or (jobTimes["f"]=="NA") or (flops==0) or (memT==0):
+		jobTimes["rp"]="NA"
+	else:
+		jobTimes["rp"]=Decimal(flops/memT).quantize(Decimal(10) ** -4)
+		
+	return jobTimes		
+
 def reporter( report_queue ):
 	success_count = 0
 	failedTests = []
 	num = 1
 	latexCode=""
 	txtHeaderDecl="{name}"		
+	sqlHeaderDecl=""
 	txtHeader="name\t\t\t"	#header for txtdocument
 	suites=dict()
+	
+	#various static definitions
+	testEnv=("\\section{HEADER}\\label{LABEL}\n"
+			"\\subsection{{Runtime results}}\n"
+			"{RUNTIME_TABLE}\n"
+			"\\subsection{{Code statistics}}\n"
+			"{STATISTICS}")
+	
+	tableEnv=(
+		"\\begin{{table}}[H] \n"
+		"\\centering\n"
+		"\t\\begin{{tabular}}{COLUMN_SPEC}\n"
+		"\t\t\\hline\n"
+		"\t\t {COLUMN_HEADERS}\\\\\hline\n"
+		"\t\t{ROWS}\n"
+		"\t\\end{{tabular}}\n"
+		"\\caption{CAPTION}\n"
+		"\\end{{table}}\n")
+	
+	longTableEnv=(
+		"\t\\begin{{longtable}}{COLUMN_SPEC}\n"
+		"\\caption{CAPTION}\\\\\n"
+		"\\hline\n"
+		"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
+		"\\endfirsthead\n"
+		"\\caption[]{{(continued)}}	\\\\\n"
+		"\t\t\\hline\n"
+		"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
+		"\endhead"
+		"\t\t{ROWS}\n"
+		"\t\\end{{longtable}}\n")
+
+	usedPrefixes=("\\begin{table}[H] \n"
+		"\centering\n"
+		"\\begin{tabular}{|l|l|l|}\\hline \n"
+		"Prefix & Description & Reference \\\\\\hline \n"
+		"AP & ApexMap & \\url{http://crd.lbl.gov/groups-depts/ftg/projects/previous-projects/apex/} \\\\ \\hline \n"
+		"BOT & Barcelona OpenMP Task Suite & \\url{https://pm.bsc.es/projects/bots} \\\\ \\hline \n"
+		"COR & Coral Benchmarks & \\url{https://asc.llnl.gov/CORAL-benchmarks/} \\\\ \\hline \n"
+		"EX & ExMatEx Benchmarks & \\url{http://codesign.lanl.gov/projects/exmatex/} \\\\ \\hline \n"
+		"GAL & Excerpts of the GALPROP Code & \\\\ \\hline \n"				
+		"HMPI & HOMB-MPI & \\url{http://homb.sourceforge.net/} \\\\ \\hline \n"
+		"IT & Insieme Test Case &  \\\\ \\hline \n"
+		"KIN & KineControl &  \\\\ \\hline \n"				
+		"NAS & NAS Parallel Benchmarks & \\url{http://www.nas.nasa.gov/publications/npb.html} \\\\\\hline \n" 				
+		"NPB & SNU-NPB Suite & \\url{http://aces.snu.ac.kr/Center_for_Manycore_Programming/SNU_NPB_Suite.html} \\\\ \\hline \n"
+		"OEX & Common OpenMP Example Codes &  \\\\ \\hline \n"				
+		"OS & OpenMP Source Code Repository & \\url{http://llc.pcg.ull.es/node/28} \\\\ \\hline \n"
+		"OTBS & OpenMP Task Microbenchmark Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
+		"OVS & OpenMP Validation Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
+		"PAR & PARSEC Benchmarks & \\url{http://parsec.cs.princeton.edu/} \\\\ \\hline \n"
+		"ROD & Rodinia Benchmarks & \\url{https://www.cs.virginia.edu/~skadron/wiki/rodinia/index.php/Main_Page}\\\\ \\hline\n"				
+		"S2 & Splash2 & \\url{http://liuyix.org/splash2-benchmark/} \\\\ \\hline \n"
+		"SEQ & Sequoia Benchmark Suite & \\url{https://asc.llnl.gov/sequoia/benchmarks/} \\\\ \\hline \n"
+		"SMG & SMG2000 & \\url{https://asc.llnl.gov/computing_resources/purple/archive/benchmarks/smg/} \\\\ \\hline \n"				
+		"SSC & SSCA2 (HPC Graph Analysis) & \\url{http://www.graphanalysis.org/benchmark/} \\\\ \\hline \n"
+		"STR & STREAM Memory Benchmark & \\url{http://www.cs.virginia.edu/stream/} \\\\ \\hline \n"
+		"VEL & Velvet & \\url{http://www.ebi.ac.uk/~zerbino/velvet/} \\\\ \\hline \n"
+		"VIV & Vivid OpenCL Benchmarks & \\url{https://github.com/mertdikmen/ViVid} \\\\\\hline \n"
+		"\\end{tabular} \n"
+		"\\caption{Used Prefixes} \n"
+		"\\end{table} \n"
+	)
+	
+	notationTable=("\\begin{table}[H] \n"
+		"\centering\n"
+		"\\begin{tabular}{|l|l|}\\hline \n"
+		"Shortcut & Explanation\\\\\\hline \n"
+		"LOC & Lines of sourcecode \\\\\\hline \n"
+		"size & Size of sourcecode \\\\\\hline \n"
+		"parType & Type of parallelization approach: \\\\ & either number of openmp pragmas, OPENCL, MPI or sequential\\\\\\hline \n"		
+		"GFLOPS & Gigaflops per second \\\\\\hline \n"
+		"memTrans & Amount of transferred gigagbytes to main memory (after cache)\\\\\\hline \n"
+		"boundness & Factor showing if the test is memory or compute bound: \\\\& negative value depicts memory boundness, positive value compute boundness. \\\\\\hline \n"
+		"CMR & Cache miss rate of the last level cache \\\\\\hline \n"
+		"failsAt & If the test fails here the station of the fail is written\\\\\\hline \n"
+		"seqRun & Sequential runtime using insieme seq backend\\\\\\hline \n"
+		"effGcc & Efficiencies of the application using GCC. \\\\ & The efficiencies are calculated using the runs specified as command line arg. \\\\\\hline \n"
+		"effIns & Efficiencies of the application using Insieme\\\\\\hline \n"
+		"memGcc & Main memory consumption of the application using GCC.\\\\\\hline \n"
+		"memIns & Main memory consumption of the application using Insieme.\\\\\\hline \n"
+		"\\end{tabular} \n"
+		"\\caption{Notations} \n"
+		"\\end{table} \n"						
+	)
+	
+	sqlCreate=("\n"
+		"PRAGMA foreign_keys = ON;\n"		#enable foreign keys (for sqlite)
+		"CREATE TABLE IF NOT EXISTS Test (\n"
+		"	id varchar(20) PRIMARY KEY,\n"
+		"	name varchar(50),\n"
+		"	path varchar(200),\n"
+		"	repository varchar(3),\n"
+		"	codeType varchar(3),\n"
+		"	loc int,\n"
+		"	size int,\n"
+		"	ompPragmas int,\n"
+		"	parType varchar(10),\n"
+		"	failState varchar(30)\n"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS RunConfiguration(\n"
+		"	id varchar(20) PRIMARY KEY,\n"
+		"	testID varchar(20) REFERENCES Test(id) ON DELETE CASCADE,\n"
+		"	type varchar(10),\n"
+		"	numThreads int,\n"
+		"	insiemeVersion varchar(20) REFERENCES InsiemeVersion(name) ON DELETE CASCADE,\n"
+		"	backendCompiler varchar(20) REFERENCES BackendCompiler(id) ON DELETE CASCADE,\n"
+		"	host varchar(20) REFERENCES Host(name) ON DELETE CASCADE,\n"
+		"	UNIQUE(testID,type,numThreads)"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS Metric(\n"
+		"	name varchar(20) PRIMARY KEY\n"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS Result(\n"
+		"	id varchar(20) PRIMARY KEY,"
+		"	metricID varchar(20) REFERENCES Metric(name) ON DELETE SET NULL,\n"
+		"	runID varchar(20) REFERENCES RunConfiguration(id) ON DELETE CASCADE,\n"
+		"	value FLOAT\n,"
+		"	executionDate timestamp DEFAULT CURRENT_TIMESTAMP\n"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS InsiemeVersion(\n"
+		"	name varchar(20) PRIMARY KEY,\n"
+		"	firstSeen timestamp DEFAULT CURRENT_TIMESTAMP\n"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS BackendCompiler(\n"
+		"	id varchar(20) PRIMARY KEY,\n"
+		"	name varchar(20),\n"
+		"	version varchar(20)"
+		");\n"
+		"CREATE TABLE IF NOT EXISTS Host(\n"
+		"	name varchar(20) PRIMARY KEY,\n"
+		"	kernelVersion varchar(20),\n"
+		"	rooflinePoint float\n"
+		");\n"
+	)
+	
+	sqlInsertTest=("\n"
+		"INSERT OR IGNORE INTO Test (id,name,path,repository,codeType,loc,size,ompPragmas,parType,failState) "
+		"VALUES(\"{ID}\",\"{NAME}\",\"{PATH}\",\"{REPOSITORY}\",\"{CODETYPE}\",{LOC},{SIZE},{OMPPRAGMAS},\"{PARTYPE}\",\"{FAILSTATE}\");\n"
+	)
+	
+	sqlInsertRunConfiguration=("\n"
+		"INSERT OR IGNORE INTO RunConfiguration(id,testID,type,numThreads,insiemeVersion,backendCompiler,host) "
+		"VALUES(\"{ID}\",\"{TESTID}\",\"{TYPE}\",{NUMTHREADS},\"{INSIEMEVERSION}\",\"{BACKENDCOMPILER}\",\"{HOST}\");\n"
+	)
+
+	sqlInsertMetric=("INSERT OR IGNORE INTO Metric(name) VALUES(\"{NAME}\");\n")
+	sqlInsertResult=("INSERT INTO Result(id,metricID,runID,value,executionDate) "
+		"VALUES(\"{ID}\",\"{METRICID}\",\"{RUNID}\",{VALUE},\"{EXECUTIONDATE}\");\n")
+	sqlInsertInsiemeVersion=("INSERT OR IGNORE INTO InsiemeVersion(name) "
+		"VALUES(\"{NAME}\");\n")
+	sqlInsertBackendCompiler=("INSERT OR IGNORE INTO BackendCompiler(id,name,version) "
+		"VALUES(\"{ID}\",\"{NAME}\",\"{VERSION}\");\n")
+	sqlInsertHost=("INSERT OR IGNORE INTO Host(name,kernelVersion,rooflinePoint) "
+		"VALUES(\"{NAME}\",\"{KERNELVERSION}\",{ROOFLINEPOINT});\n")	
+	
+	sqlDeleteTest=("DELETE FROM Test where id=\"{ID}\";\n")
 	
 	headerWritten=False
 	if(enable_stat and 'txt' in stat_output and not mock_run):
@@ -327,6 +530,34 @@ def reporter( report_queue ):
 		if(os.path.exists("statistics.csv")):
 			os.remove("statistics.csv")
 		fileCsv=open("statistics.csv","w")
+			
+	if(enable_stat and 'sql' in stat_output and not mock_run):
+		if(os.path.exists("statistics.sql")):
+			os.remove("statistics.sql")
+		fileSql=open("statistics.sql","w")
+		
+		#INSERT INSIEME VERSION
+		#insVersion=insVersion
+		insertVersion=sqlInsertInsiemeVersion.format(**({
+			'NAME':INSIEME_VERSION
+		}))
+		
+		#INSERT HOST
+		(retcode, output) = exec_shell_cmd("hostname")
+		host=output[:-1]
+		(retcode, output) = exec_shell_cmd("uname -r")
+		kernelV=output[:-1]
+		insertHost=sqlInsertHost.format(**({
+			'NAME':host,
+			'KERNELVERSION':kernelV,
+			'ROOFLINEPOINT':perf_metrics['REFPOINT']
+		}))
+		
+		fileSql.write(sqlCreate+insertVersion+insertHost)
+		fileSql.flush()	
+		
+		#stores all metrics present in the db
+		knownMetrics=list()
 			
 	if(enable_stat and 'bin' in stat_output and not mock_run):
 		if(os.path.exists("statistics.bin")):
@@ -365,7 +596,7 @@ def reporter( report_queue ):
 		#determine why test fails
 		if not success:
 			failState= job.data.reports[-1].failState
-			print("fs:"+failState)
+			#print("fs:"+failState)
 		
 		# Store the result data for future evaluations 
 		benchmarks_data.append( job )
@@ -376,6 +607,7 @@ def reporter( report_queue ):
 			if rep.type[0] > 4:
 				continue
 		
+			print(rep)
 			omp=True
 			if rep.threads==-1:
 				omp=False
@@ -383,18 +615,28 @@ def reporter( report_queue ):
 			#cached file has more thread runs than needed, skipping
 			if omp and cached and int(str(rep.threads).split(";")[-1])>max(threadRuns):
 				continue
-			
+
 			#log times of different omp threads
 			if omp and rep.type==Commands.RUN:
 				if not (jobName==rep.desc):
 					if(len(jobTimes)>0):
-						
 						totalTimes[jobName]=jobTimes.copy()
+
 					jobName=rep.desc
 					jobTimes.clear()
 				
+				if("FLOPS" in rep.perfEvents.keys()):
+					 help=calcRefPoint(rep)
+					 jobTimes["f"+str(rep.threads).split(";")[-1]]=help["f"]
+					 jobTimes["mt"+str(rep.threads).split(";")[-1]]=help["mt"]
+					 jobTimes["rp"+str(rep.threads).split(";")[-1]]=help["rp"]
+					 jobTimes["cr"+str(rep.threads).split(";")[-1]]=help["cr"]
+					 
 				jobTimes["r"+str(rep.threads).split(";")[-1]]=Decimal(rep.time).quantize(Decimal(10) ** -2)
 				jobTimes["m"+str(rep.threads).split(";")[-1]]=Decimal(rep.memory/1024,2).quantize(Decimal(10) ** -2)
+				
+				for key,val in rep.perfEvents.items():
+					jobTimes[key+str(rep.threads)]=val
 				#calculate speedup/efficiency
 				if not(str(rep.threads).startswith(("dyn","stat","guid"))):	#no efficiency/speedup for schedule runs
 					if(rep.threads>1):
@@ -410,6 +652,17 @@ def reporter( report_queue ):
 				jobName=rep.desc
 				jobTimes["r1"]=Decimal(rep.time).quantize(Decimal(10) ** -2)
 				jobTimes["m1"]=Decimal(round(rep.memory/1024,2)).quantize(Decimal(10) ** -2)
+				
+				#perf performance statistics and comp/mem bound refPoint
+				if("FLOPS" in rep.perfEvents.keys()):
+					 help=calcRefPoint(rep)			
+					 jobTimes["f1"]=help["f"]
+					 jobTimes["mt1"]=help["mt"]
+					 jobTimes["rp1"]=help["rp"]					
+					 jobTimes["cr1"]=help["cr"]					
+
+				for key,val in rep.perfEvents.items():
+					jobTimes[key+"1"]=val
 
 			rep.desc_omp=rep.desc
 			if omp:
@@ -450,65 +703,8 @@ def reporter( report_queue ):
 		sys.stderr.flush()
 		num += 1			
 			
-		#build latex table
+		
 		if(enable_stat and not mock_run):
-			testEnv=("\\section{HEADER}\\label{LABEL}\n"
-					"\\subsection{{Runtime results}}\n"
-					"{RUNTIME_TABLE}\n"
-					"\\subsection{{Code statistics}}\n"
-					"{STATISTICS}")
-			
-			tableEnv=(
-				"\\begin{{table}}[H] \n"
-				"\\centering\n"
-				"\t\\begin{{tabular}}{COLUMN_SPEC}\n"
-				"\t\t\\hline\n"
-				"\t\t {COLUMN_HEADERS}\\\\\hline\n"
-				"\t\t{ROWS}\n"
-				"\t\\end{{tabular}}\n"
-				"\\caption{CAPTION}\n"
-				"\\end{{table}}\n")
-			
-			longTableEnv=(
-				"\t\\begin{{longtable}}{COLUMN_SPEC}\n"
-				"\\caption{CAPTION}\\\\\n"
-				"\\hline\n"
-				"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
-				"\\endfirsthead\n"
-				"\\caption[]{{(continued)}}	\\\\\n"
-				"\t\t\\hline\n"
-				"\t\t {COLUMN_HEADERS}\\\\\hline\hline\n"
-				"\endhead"
-				"\t\t{ROWS}\n"
-				"\t\\end{{longtable}}\n")
-	
-			usedPrefixes=("\\begin{table} \n"
-				"\\begin{tabular}{|l|l|l|}\\hline \n"
-				"Prefix & Description & Reference \\\\\\hline \n"
-				"IT & Insieme Test Case &  \\\\ \\hline \n"
-				"OS & OpenMP Source Code Repository & \\url{http://llc.pcg.ull.es/node/28} \\\\ \\hline \n"
-				"OTBS & OpenMP Task Microbenchmark Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
-				"OVS & OpenMP Validation Suite & \\url{http://web.cs.uh.edu/~hpctools/home} \\\\ \\hline \n"
-				"HMPI & HOMB-MPI & \\url{http://homb.sourceforge.net/} \\\\ \\hline \n"
-				"S2 & Splash2 & \\url{http://liuyix.org/splash2-benchmark/} \\\\ \\hline \n"
-				"NPB & SNU-NPB Suite & \\url{http://aces.snu.ac.kr/Center_for_Manycore_Programming/SNU_NPB_Suite.html} \\\\ \\hline \n"
-				"SSC & SSCA2 (HPC Graph Analysis) & \\url{http://www.graphanalysis.org/benchmark/} \\\\ \\hline \n"
-				"SEQ & Sequoia Benchmark Suite & \\url{https://asc.llnl.gov/sequoia/benchmarks/} \\\\ \\hline \n"
-				"EX & ExMatEx Benchmarks & \\url{http://codesign.lanl.gov/projects/exmatex/} \\\\ \\hline \n"
-				"AP & ApexMap & \\url{http://crd.lbl.gov/groups-depts/ftg/projects/previous-projects/apex/} \\\\ \\hline \n"
-				"COR & Coral Benchmarks & \\url{https://asc.llnl.gov/CORAL-benchmarks/} \\\\ \\hline \n"
-				"BOT & Barcelona OpenMP Task Suite & \\url{https://pm.bsc.es/projects/bots} \\\\ \\hline \n"
-				"OEX & Common OpenMP Example Codes &  \\\\ \\hline \n"
-				"PAR & PARSEC Benchmarks & \\url{http://parsec.cs.princeton.edu/} \\\\ \\hline \n"
-				"VEL & Velvet & \\url{http://www.ebi.ac.uk/~zerbino/velvet/} \\\\ \\hline \n"
-				"STR & STREAM Memory Benchmark & \\url{http://www.cs.virginia.edu/stream/} \\\\ \\hline \n"
-				"VIV & Vivid OpenCL Benchmarks & \\url{https://github.com/mertdikmen/ViVid} \\\\\\hline \n"
-				"NAS & NAS Parallel Benchmarks & \\url{http://www.nas.nasa.gov/publications/npb.html} \\\\\\hline \n" 
-				"\\end{tabular} \n"
-				"\\caption{Used Prefixes} \n"
-				"\\end{table} \n"
-			)
-	
 			if not len(jobTimes)==0:
 				totalTimes[jobName]=jobTimes.copy()
 			
@@ -536,6 +732,11 @@ def reporter( report_queue ):
 			suites[suite][job.data.path]["Guid/Stat"]=""
 			suites[suite][job.data.path]["Stat/Stat"]=""
 			suites[suite][job.data.path]["CodeStyle"]=""
+			suites[suite][job.data.path]["flops"]=""
+			suites[suite][job.data.path]["memTrans"]=""
+			suites[suite][job.data.path]["boundness"]=""
+			suites[suite][job.data.path]["cacheRate"]=""
+			
 			header=job.data.path
 						
 			#transform keys to better readable stuff
@@ -569,6 +770,8 @@ def reporter( report_queue ):
 				guid=totalTimes.pop("Run c_run_guid")
 				if(enable_sched):
 					totalTimes["Guid"]=guid
+			if("Run insiemecc" in totalTimes):
+				totalTimes["ICC"]=totalTimes.pop("Run insiemecc")					
 
 			#set code style, assume that mpi code is c++
 			if("G++" in totalTimes or "MPI" in totalTimes or failState=="G++"):
@@ -576,27 +779,6 @@ def reporter( report_queue ):
 			if("GCC" in totalTimes or failState=="GCC"):
 				suites[suite][job.data.path]["CodeStyle"]="C"			
 			
-			#for more readable failStates								
-			#if not success:
-			#	failState=failState.replace("Run c_run","Run Insieme")
-			#	failState=failState.replace("Run gcc","Run GCC")
-			#	failState=failState.replace("Run G++","Run GCC")
-			#	failState=failState.replace("Run cxx_seq","Run Sequential")
-			#	failState=failState.replace("Run cxx_run","Run Insieme")
-			#	failState=failState.replace("Run cxx11_run","Run Insieme")
-			#	failState=failState.replace("Run c_seq","Run Sequential")
-			#	failState=failState.replace("Run c_run_dyn","Run Dynamic")
-			#	failState=failState.replace("Run c_run_stat","Run Static")
-			#	failState=failState.replace("Run c_run_guid","Run Guided")
-			#	failState=failState.replace("Comparing output c_run","Run Insieme")
-			#	failState=failState.replace("Comparing output cxx_run","Run Insieme")
-			#	failState=failState.replace("Comparing output cxx11_run","Run Insieme")
-			#	failState=failState.replace("Comparing output gcc","Run GCC")
-			#	failState=failState.replace("Comparing output g++","Run GCC")
-			#	failState=failState.replace("Comparing output c_seq","Run Sequential")
-			#	failState=failState.replace("Comparing output cxx_seq","Run Sequential")
-			#	failState=failState.replace("_","\_")
-
 			suites[suite][job.data.path]["failState"]=failState
 			
 			rows=""		#row for latex table
@@ -627,14 +809,63 @@ def reporter( report_queue ):
 
 			#create headers for txt/csv
 			if not headerWritten:
-				for k,v in totalTimes.items():
-					for key,value in v.items():
-						txtHeaderDecl=txtHeaderDecl+"{"+k[:3].upper()+str(key)+"}\t"	
-						txtHeader=txtHeader+k[:3].upper()+str(key)+"\t"
-	
+				for k in threadRuns:
+					txtHeaderDecl=txtHeaderDecl+"{INSr"+str(k)+"}\t"
+					txtHeaderDecl=txtHeaderDecl+"{INSm"+str(k)+"}\t"
+					txtHeaderDecl=txtHeaderDecl+"{ICCr"+str(k)+"}\t"
+					txtHeaderDecl=txtHeaderDecl+"{ICCm"+str(k)+"}\t"
+					txtHeaderDecl=txtHeaderDecl+"{GCCr"+str(k)+"}\t"
+					txtHeaderDecl=txtHeaderDecl+"{GCCm"+str(k)+"}\t"
+					
+					txtHeader=txtHeader+"RUNr"+str(k)+"\t"
+					txtHeader=txtHeader+"RUNm"+str(k)+"\t"
+					txtHeader=txtHeader+"ICCr"+str(k)+"\t"
+					txtHeader=txtHeader+"ICCm"+str(k)+"\t"
+					txtHeader=txtHeader+"GCCr"+str(k)+"\t"
+					txtHeader=txtHeader+"GCCm"+str(k)+"\t"
+								
+				maxThread=str(max(threadRuns))
+				if("insieme" in totalTimes):
+					if(("r"+maxThread) in totalTimes["Insieme"]):
+						if not (totalTimes["Insieme"]["r"+maxThread]==0) and enable_sched:
+							if("Dyn" in totalTimes):
+								txtHeader=txtHeader+"DYNr"+maxThread+"\t"
+								txtHeader=txtHeader+"DYNm"+maxThread+"\t"
+								txtHeaderDecl=txtHeaderDecl+"{DYNr"+maxThread+"}\t"	
+								txtHeaderDecl=txtHeaderDecl+"{DYNm"+maxThread+"}\t"	
+							if("Guid" in totalTimes):
+								txtHeader=txtHeader+"GUIr"+maxThread+"\t"
+								txtHeader=txtHeader+"GUIm"+maxThread+"\t"
+								txtHeaderDecl=txtHeaderDecl+"{GUIr"+maxThread+"}\t"									
+								txtHeaderDecl=txtHeaderDecl+"{GUIm"+maxThread+"}\t"			
+							if("Stat" in totalTimes):
+								txtHeader=txtHeader+"STAr"+maxThread+"\t"
+								txtHeader=txtHeader+"STAm"+maxThread+"\t"
+								txtHeaderDecl=txtHeaderDecl+"{STAr"+maxThread+"}\t"									
+								txtHeaderDecl=txtHeaderDecl+"{STAm"+maxThread+"}\t"			
+				
+				txtHeader=txtHeader+"SEQr1\t"
+				txtHeader=txtHeader+"SEQm1\t"
+				
+				if(enable_perf):
+					txtHeader=txtHeader+"GFLOPS\t"
+					txtHeader=txtHeader+"mem(GB)\t"
+					txtHeader=txtHeader+"refP\t"
+					txtHeader=txtHeader+"caRate\t"
+				
+				txtHeaderDecl=txtHeaderDecl+"{SEQr1}\t"
+				txtHeaderDecl=txtHeaderDecl+"{SEQm1}\t"
+				
+				if(enable_perf):
+					txtHeaderDecl=txtHeaderDecl+"{GCCf1}\t"
+					txtHeaderDecl=txtHeaderDecl+"{GCCmt1}\t"
+					txtHeaderDecl=txtHeaderDecl+"{GCCrp1}\t"
+					txtHeaderDecl=txtHeaderDecl+"{GCCcr1}\t"
+				
 			colspec=colspec+"||r|r|}"								
 			colheaders=colheaders+" & "
 			txtRow=txtHeaderDecl
+		#	sqlRow=sqlHeaderDecl
 			rows="\\hline "
 			
 			for k,v in totalTimes.items():
@@ -644,9 +875,11 @@ def reporter( report_queue ):
 				
 				for key,value in v.items():
 					if key.startswith("e"):		#collect efficiencies for median calculation
-						effs.append(value)	
-					elif key.startswith("m"):
-						mems.append(value)	
+						if not value=="NA":
+							effs.append(value)	
+					elif key.startswith("m") and not key.startswith("mt"):
+						if not value=="NA":
+							mems.append(value)	
 
 				totalTimes[k]["maxEff"]=""
 				totalTimes[k]["minEff"]=""
@@ -672,7 +905,7 @@ def reporter( report_queue ):
 				rows=rows+" & "+str(medMem)
 				totalTimes[k]["medMem"]=medMem
 				rows=rows+"\\\\\\hline\n\t\t"
-				txtRow=txtRow.format_map(SafeDict(dict((k[:3].upper()+str(key),val) for key,val in v.items())))
+				txtRow=txtRow.format_map(SafeDict(dict((k[:3].upper()+str(key),str(val)[:7]) for key,val in v.items())))
 
 			suites[suite][job.data.path]["Type"]="ompOrSeq"		#i don't know yet if seq or omp	
 
@@ -684,10 +917,7 @@ def reporter( report_queue ):
 					if(tmp[0]=='mpi'):
 						suites[suite][job.data.path]["Type"]="MPI"
 						break
-			if(omp):
-				suites[suite][job.data.path]["Type"]="OMP"						
 
-			#compVal=""
 			gccVariant=""
 			if("GCC" in totalTimes):	
 				gccVariant="GCC"
@@ -701,6 +931,22 @@ def reporter( report_queue ):
 				gccVariant="MPI"
 			
 			if not gccVariant=="":
+				if "f1" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["flops"]=totalTimes[gccVariant]["f1"]							
+				if "mt1" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["memTrans"]=str(totalTimes[gccVariant]["mt1"])+" GB"
+				if "rp1" in totalTimes[gccVariant].keys():
+					if(totalTimes[gccVariant]["rp1"]!="NA"):
+						boundness=Decimal(float(totalTimes[gccVariant]["rp1"])-float(perf_metrics["REFPOINT"])).quantize(Decimal(10)**-3)
+						if (boundness<0):
+							suites[suite][job.data.path]["boundness"]=str(boundness)+" (MEM)"
+						elif (boundness>0):
+							suites[suite][job.data.path]["boundness"]=str(boundness)+" (COMP)"						
+						else:
+							suites[suite][job.data.path]["boundness"]=str(boundness)
+										
+				if "cr1" in totalTimes[gccVariant].keys():
+					suites[suite][job.data.path]["cacheRate"]=totalTimes[gccVariant]["cr1"]					
 				if "medEff" in totalTimes[gccVariant].keys():
 					suites[suite][job.data.path]["GCCMedEff"]=totalTimes[gccVariant]["medEff"]
 				if "medMem" in totalTimes[gccVariant].keys():
@@ -730,39 +976,24 @@ def reporter( report_queue ):
 				if "maxMem" in totalTimes["Insieme"].keys():
 					suites[suite][job.data.path]["InsMaxMem"]=totalTimes["Insieme"]["maxMem"]					
 					
-				if not (totalTimes["Insieme"][maxThread]==0) and enable_sched:
-					if("Dyn" in totalTimes):
-						suites[suite][job.data.path]["Dyn/Stat"]=Decimal(totalTimes["Dyn"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
-					if("Guid" in totalTimes):
-						suites[suite][job.data.path]["Guid/Stat"]=Decimal(totalTimes["Guid"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
-					if("Stat" in totalTimes):
-						suites[suite][job.data.path]["Stat/Stat"]=Decimal(totalTimes["Stat"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
-								
-			#COMPARISON REMOVED	
-			#	rows=rows+"\\textbf{Comparison}"
-			#	for key,value in totalTimes["Insieme"].items():
-			#		if key.startswith(("e","medEff")):
-			#			if key in totalTimes["GCC"].keys():
-			#				gccTime=totalTimes["GCC"][key]
-			#			else:
-			#				gccTime=0
-			#			if not gccTime==0 and not gccTime=="undefined" and not value=="undefined":
-			#				compVal=round(value/gccTime,4)
-			#				compTex="\\textbf{"+str(compVal)+"}";
-			#		else:
-			#			compTex=""
-			#		rows=rows+" & "+compTex
-			#	rows=rows+"\\\\\\hline\n"
-			#	overviewStatistics[job.data.path]["CompEff"]=compVal			
+				if(maxThread in totalTimes["Insieme"]):
+					if not (totalTimes["Insieme"][maxThread]==0) and enable_sched:
+						if("Dyn" in totalTimes):
+							suites[suite][job.data.path]["Dyn/Stat"]=Decimal(totalTimes["Dyn"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
+						if("Guid" in totalTimes):
+							suites[suite][job.data.path]["Guid/Stat"]=Decimal(totalTimes["Guid"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)
+						if("Stat" in totalTimes):
+							suites[suite][job.data.path]["Stat/Stat"]=Decimal(totalTimes["Stat"][maxThread]/totalTimes["Insieme"][maxThread]).quantize(Decimal(10)**-3)	
 								
 			if("Insieme" in totalTimes.keys()):
 				suites[suite][job.data.path]["seqRun"]=totalTimes["Insieme"]["r1"]
 			
 			caption="{ Runtime results for "+os.path.abspath(header).replace("_","\_")+"}"
 
-			tableRuntime=tableEnv.format(**({'COLUMN_SPEC':colspec,'COLUMN_HEADERS':colheaders,'ROWS':rows,'CAPTION':caption}))
-			#else:
-			#	tableRuntime="No times available!"
+			if(not rows=="\\hline "):
+				tableRuntime=tableEnv.format(**({'COLUMN_SPEC':colspec,'COLUMN_HEADERS':colheaders,'ROWS':rows,'CAPTION':caption}))
+			else:
+				tableRuntime="No times available!"
 			
 			if not cached:
 				statLOC=LOCStatistics("",job,"LOC")
@@ -833,11 +1064,132 @@ def reporter( report_queue ):
 			label=header
 			# Mark in doc that test failed
 			if not success:
-				shortHeader=shortPath(header)+"-FAILED"[:22]
+				shortHeader=shortPath(header+"-FAIL")
 				header=header+" --- TEST FAILED"
 				#overviewStatistics[job.data.path + " -- FAILED"] = overviewStatistics.pop(job.data.path)
 			
-			if('tex' in stat_output):
+			if(suites[suite][job.data.path]["Type"]=="ompOrSeq"):          #check if omp or seq
+				if(int(suites[suite][job.data.path]["NumOMP"])>0):
+					suites[suite][job.data.path]["Type"]="OMP"
+				else:
+					suites[suite][job.data.path]["Type"]="sequential"				
+			
+			if('sql' in stat_output):
+				sqlStatement=""
+
+				testHash=str(hashlib.md5(str(job.data.path).encode('utf-8')).hexdigest())
+				
+				failStateRef=""
+				failStateVal=""
+				
+				if not (suites[suite][job.data.path]["failState"]==""):
+					failStateRef=",failState"
+					failStateVal="\",\""+suites[suite][job.data.path]["failState"]
+				
+				absPath=os.path.abspath(job.data.path)
+				#get repo and path based on absolute path
+				repo=""
+				path=""
+				
+				#delete test data
+				if overwriteSQL:
+					deleteTest=sqlDeleteTest.format(**({
+						'ID':testHash													
+					}))
+					sqlStatement+=deleteTest
+				
+				insertTest=sqlInsertTest.format(**({
+					'ID':testHash,
+					'NAME':shortPath(job.data.path),
+					'PATH':path,
+					'REPOSITORY':repo,
+					'CODETYPE':suites[suite][job.data.path]["CodeStyle"],
+					'LOC':suites[suite][job.data.path]["LOC"],
+					'SIZE':suites[suite][job.data.path]["size"][:-1],
+					'OMPPRAGMAS':suites[suite][job.data.path]["NumOMP"],
+					'PARTYPE':suites[suite][job.data.path]["Type"],
+					'FAILSTATE':suites[suite][job.data.path]["failState"]
+				}))
+
+				backendCompiler=job.backendCompiler
+				
+				backendHash=str(hashlib.md5((str(backendCompiler['Name'])+str(backendCompiler['Version'])).encode('utf-8')).hexdigest())
+				insertBackend=sqlInsertBackendCompiler.format(**({
+					'ID':backendHash,
+					'NAME':backendCompiler['Name'],
+					'VERSION':backendCompiler['Version']
+				}))
+				sqlStatement+=insertBackend+insertTest
+				
+				for key,val in totalTimes.items():
+					
+					#to prevent multiple insert metric statements save already inserted metrics 
+					for k in threadRuns:
+						if not "r"+str(k) in val:
+							break;
+						type=key
+						numThreads=k
+						runHash=str(hashlib.md5((testHash+str(type)+str(numThreads)).encode('utf-8')).hexdigest())
+						
+						insertRunConf=sqlInsertRunConfiguration.format(**({
+							'ID':runHash,
+							'TESTID':testHash,
+							'TYPE':type,
+							'NUMTHREADS':numThreads,
+							'INSIEMEVERSION':INSIEME_VERSION,
+							'BACKENDCOMPILER':backendHash,
+							'HOST':host
+						}))
+						timeStamp=time.strftime("%Y-%m-%d %H:%M:%S")
+						sqlStatement+=insertRunConf
+						
+						for metricKey,metricVal in val.items():
+							if str(metricKey).endswith(str(k)):
+								metricName=metricKey[:-1]							
+																
+								#remove short names 
+								if(metricName=="mt"):
+									metricName="MEMORY_TRANSFER"
+								elif(metricName=="cr"):
+									metricName="CACHE_RATE"
+								elif(metricName=="r"):
+									metricName="RUNTIME"
+								elif(metricName=="m"):
+									metricName="MEMORY_CONSUMPTION"
+								#reference point, speedup, efficiency, cacheLineSize are not saved into db, flops are already here in perf metric								
+								elif (metricName=="rp" or metricName=="s" or metricName=="e" or metricName=="LL_CACHE_LINE_SIZE" or metricName=="f"):	
+									metricName=""
+							else:
+								#do not save statistics in db (medEff, maxEff, etc.)		
+								metricName=""
+
+							if(not metricName==""):
+								if (not metricName in knownMetrics):
+									knownMetrics.append(metricName)
+									insertMetric=sqlInsertMetric.format(**({
+										'NAME':metricName
+									}))
+									sqlStatement+=insertMetric
+								
+								
+								#TODO COLLISIONS IN RESULTHASH!!!
+								resultHash=str(hashlib.md5((metricName+runHash+timeStamp).encode('utf-8')).hexdigest())
+								insertResult=sqlInsertResult.format(**({
+									'ID':resultHash,
+									'METRICID':metricName,
+									'RUNID':runHash,
+									'VALUE':metricVal,
+									'EXECUTIONDATE':timeStamp
+								}))
+								sqlStatement+=insertResult
+				
+				print(sqlStatement)
+				fileSql.write(sqlStatement)
+				fileSql.flush()
+				
+				
+			
+			if('tex' in stat_output) or ('pdf' in stat_output):
 				tableStatistics=tableEnv.format(**({'COLUMN_SPEC':'{|l|l|}','COLUMN_HEADERS':'\\textbf{Name} & \\textbf{Value}','ROWS':rows,'CAPTION':caption}))
 				latexCode=latexCode+testEnv.format(**({'HEADER':"{"+header.replace("_","\_")+"}",'LABEL':"{"+label+"}",'RUNTIME_TABLE':tableRuntime,'STATISTICS':tableStatistics}))
 			if('txt' in stat_output):
@@ -847,11 +1199,13 @@ def reporter( report_queue ):
 				txtName=""
 				
 				leng=(len(suite)+len(shortHeader))
-				if(leng>14) and not (leng>21):
+				if(leng>22):
+					txtName=(suite+":"+shortHeader)[:21]
+				elif(leng>14):
 					txtName=suite+":"+shortHeader+"\t"
 				elif(leng>6):
 					txtName=suite+":"+shortHeader+"\t\t"
-				else:
+				elif(leng<=6):
 					txtName=suite+":"+shortHeader+"\t\t\t"
 				txtRow=txtRow.format_map( defaultdict(lambda: 'NA',{'name':txtName}))
 				fileTxt.write(txtRow+"\n")
@@ -866,8 +1220,6 @@ def reporter( report_queue ):
 				job.statistics=statistics
 				pickle.dump(job,fileBin)
 				fileBin.flush()
-				#fileBin.close
-				#fileBin=open("statistics.bin","ab")
 			headerWritten=True
 
 	if not mock_run:
@@ -893,7 +1245,7 @@ def reporter( report_queue ):
 	#build latex document
 	if(enable_stat and not mock_run and ('tex' in stat_output or 'pdf' in stat_output)):
 		docEnv=("\\documentclass[12pt]{{article}}\n"
-			"\\usepackage[margin=0.8in,landscape,a4paper]{{geometry}}\n"
+			"\\usepackage[margin=0.2in,landscape,a4paper]{{geometry}}\n"
 			"\\usepackage{{hyperref}}\n"
 			"\\usepackage{{float}}\n"
 			"\\usepackage{{longtable}}\n"
@@ -914,11 +1266,10 @@ def reporter( report_queue ):
 		rowsUnknownDynamic=""
 		rowsCDynamic=""
 		rowsCPPDynamic=""
-		colspecSummary="{|l|r|r|r|r|r|r|r|}"			#name loc numPragmas effGcc effIns comp
 		colheadersSummary="Name & seqRun & LOC & parType & effGCC & effInsieme & memGCC & memIns"
 		
-		colspecStatic="{|l|r|r|r|r|}"
-		colheadersStatic="Name & LOC & size & parType & failsAt"
+		colspecStatic="{|l|r|r|r|r|r|r|r|r|}"
+		colheadersStatic="Name & LOC & size & parType & GFLOPS & memTrans & boundness & CMR & failsAt"
 		
 		colspecDynamic="{|l|r||r|r|r||r|r|r||r|r|r||r|r|r|}"
 		colheadersDynamic="Name & seqRun & \\multicolumn{3}{|c||}{effGcc} & \\multicolumn{3}{|c||}{effIns} & \\multicolumn{3}{|c||}{memGcc} & \\multicolumn{3}{|c|}{memIns}"
@@ -928,9 +1279,8 @@ def reporter( report_queue ):
 		addRowsDyn=""	#help variable for the 1st row
 		if(enable_sched):
 			colheadersSummary=colheadersSummary+" & Dyn/Ins & Guid/Ins & Stat/Ins"
-			colspecSummary=colspecSummary[:-1]+"r|r|r|}"
 			
-			colspecDynamic=colSpecDynamic[:-1]+"r|r|r|}"
+			colspecDynamic=colspecDynamic[:-1]+"r|r|r|}"
 			colheadersDynamic=colheadersDynamic+" & Dyn/Ins & Guid/Ins & Stat/Ins"
 			addRowsDyn="&&&"		#help variable for the 1st row
 		colheadersDynamic=colheadersDynamic+"\\\\\\hline\n&&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX&MIN&MED&MAX"+addRowsDyn
@@ -939,18 +1289,9 @@ def reporter( report_queue ):
 			for key,value in stat.items():
 				rowsDynamic=""
 				rowsStatic="\n"
-				#rowsSummary=rowsSummary+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
-				rowsStatic=rowsStatic+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
-	
-				#rowsSummary=rowsSummary+" & "+str(value["seqRun"]).replace("\n","")			
-				#rowsSummary=rowsSummary+" & "+str(value["LOC"]).replace("\n","")
-				#rowsSummary=rowsSummary+" & "+str(value["NumOMP"]).replace("\n","")
-				#rowsSummary=rowsSummary+" & "+str(value["GCCMedEff"]).replace("\n","")
-				#rowsSummary=rowsSummary+" & "+str(value["InsMedEff"]).replace("\n","")
-				#rowsSummary=rowsSummary+" & "+str(value["GCCMedMem"]).replace("\n","")
-				#rowsSummary=rowsSummary+" & "+str(value["InsMedMem"]).replace("\n","")
-				
-				if(value["Type"]=="OMP"):
+				rowsStatic=rowsStatic+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"				
+					
+				if value["Type"]=="OMP" and not str(value["GCCMinEff"])=="":   #only include runs with multiple threads
 					rowsDynamic="\n"+suite+" : "+"\\hyperref["+os.path.abspath(key)+"]{"+shortPath(key).replace("_","\_")+"}"
 					rowsDynamic=rowsDynamic+" & "+str(value["seqRun"]).replace("\n","")			
 					rowsDynamic=rowsDynamic+" & "+str(value["GCCMinEff"]).replace("\n","")
@@ -966,47 +1307,38 @@ def reporter( report_queue ):
 					rowsDynamic=rowsDynamic+" & "+str(value["InsMedMem"]).replace("\n","")
 					rowsDynamic=rowsDynamic+" & "+str(value["InsMaxMem"]).replace("\n","")
 					if(enable_sched):
-						#rowsSummary=rowsSummary+" & "+str(value["Dyn/Stat"]).replace("\n","")
-						#rowsSummary=rowsSummary+" & "+str(value["Guid/Stat"]).replace("\n","")
-						#rowsSummary=rowsSummary+" & "+str(value["Stat/Stat"]).replace("\n","")
-						
 						rowsDynamic=rowsDynamic+" & "+str(value["Dyn/Stat"]).replace("\n","")
 						rowsDynamic=rowsDynamic+" & "+str(value["Guid/Stat"]).replace("\n","")
 						rowsDynamic=rowsDynamic+" & "+str(value["Stat/Stat"]).replace("\n","")
 					rowsDynamic=rowsDynamic+"\\\\\\hline"
 	
+				
 				rowsStatic=rowsStatic+" & "+str(value["LOC"]).replace("\n","")
 				rowsStatic=rowsStatic+" & "+str(value["size"]).replace("\n","")
 				
 				if(value["Type"]=="OMP"):
 					rowsStatic=rowsStatic+" & "+str(value["NumOMP"])+" ompPragmas"
-				elif(value["Type"]=="ompOrSeq"):
-					if(int(value["NumOMP"])>0):
-						rowsStatic=rowsStatic+" & "+str(value["NumOMP"])+" ompPragmas"
-					else:
-						rowsStatic=rowsStatic+" & sequential"
 				else:
 					rowsStatic=rowsStatic+" & "+value["Type"].replace("\n","")
 					
+				rowsStatic=rowsStatic+" & "+str(value["flops"])
+				rowsStatic=rowsStatic+" & "+str(value["memTrans"])
+				rowsStatic=rowsStatic+" & "+str(value["boundness"])
+				rowsStatic=rowsStatic+" & "+str(value["cacheRate"])
 				rowsStatic=rowsStatic+" & \\verb|"+value["failState"]+"|"				
 
 				rowsStatic=rowsStatic+"\\\\\\hline"
-				#rowsSummary=rowsSummary+"\\\\\\hline"
 				
 				if(value["CodeStyle"]=="C"):
-					#rowsC=rowsC+rowsSummary
 					rowsCStatic=rowsCStatic+rowsStatic		
 					rowsCDynamic=rowsCDynamic+rowsDynamic	
 				elif (value["CodeStyle"]=="C++"):
-					#rowsCPP=rowsCPP+rowsSummary
 					rowsCPPStatic=rowsCPPStatic+rowsStatic
 					rowsCPPDynamic=rowsCPPDynamic+rowsDynamic
 				else:
-					#rowsUnknown=rowsUnknown+rowsSummary
 					rowsUnknownStatic=rowsUnknownStatic+rowsStatic
 					rowsUnknownDynamic=rowsUnknownDynamic+rowsDynamic
 					
-				#rowsSummary=""
 				rowsStatic=""
 
 		tableStaticC=longTableEnv.format(**({'COLUMN_SPEC':colspecStatic,'COLUMN_HEADERS':colheadersStatic,'ROWS':rowsCStatic,'CAPTION':"{Static characteristics of C codes}"}))
@@ -1017,27 +1349,24 @@ def reporter( report_queue ):
 		tableDynamicCPP=""
 		tableDynamicUnkn=""
 		if(len(rowsCDynamic)>0):
-			tableDynamicC="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCDynamic,'CAPTION':"{OpenMP characteristics of C codes}"}))
-		if(len(tableDynamicCPP)>0):
-			tableDynamicCPP="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCPPDynamic,'CAPTION':"{OpenMP characteristics of CPP codes}"}))
-		if(len(tableDynamicUnkn)>0):
-			tableDynamicUnkn="\\subsubsection{{OpenMP characteristics}}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsUnknownDynamic,'CAPTION':"{OpenMP characteristics}"}))
+			tableDynamicC="\\subsubsection{OpenMP characteristics}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCDynamic,'CAPTION':"{OpenMP characteristics of C codes}"}))
+		if(len(rowsCPPDynamic)>0):
+			tableDynamicCPP="\\subsubsection{OpenMP characteristics}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsCPPDynamic,'CAPTION':"{OpenMP characteristics of CPP codes}"}))
+		if(len(rowsUnknownDynamic)>0):
+			tableDynamicUnkn="\\subsubsection{OpenMP characteristics}\n"+longTableEnv.format(**({'COLUMN_SPEC':colspecDynamic,'COLUMN_HEADERS':colheadersDynamic,'ROWS':rowsUnknownDynamic,'CAPTION':"{OpenMP characteristics}"}))
 
-		#tableSummaryC=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsC,'CAPTION':"{Summary of all C Codes}"}))
-		#tableSummaryCPP=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsCPP,'CAPTION':"{Summary of all C++ Codes}"}))
-		#tableSummaryUnkn=longTableEnv.format(**({'COLUMN_SPEC':colspecSummary,'COLUMN_HEADERS':colheadersSummary,'ROWS':rowsUnknown,'CAPTION':"{Summary of all unclassified codes}"}))		
-		
 		cTable=""
 		cppTable=""
 		unknTable=""
 		if not rowsCStatic=="":
-			cTable="\\subsection{C Codes}\n\\subsubsection{{Static characteristics}}\n"+tableStaticC+tableDynamicC
+			cTable="\\subsection{C Codes}\n\\subsubsection{Static characteristics}\n"+tableStaticC+tableDynamicC
 		if not rowsCPPStatic=="":
-			cppTable="\\subsection{CPP Codes}\n\\subsubsection{{Static characteristics}}\n"+tableStaticCPP+tableDynamicCPP
+			cppTable="\\subsection{CPP Codes}\n\\subsubsection{Static characteristics}\n"+tableStaticCPP+tableDynamicCPP
 		if not rowsUnknownStatic=="":
-			unknTable="\\subsection{Unclassifieable (C or C++)}\n\\subsubsection{{Static characteristics}}\n"+tableStaticUnkn+tableDynamicUnkn
+			unknTable="\\subsection{Unclassifieable (C or C++)}\n\\subsubsection{Static characteristics}\n"+tableStaticUnkn+tableDynamicUnkn
 		
-		latexCode="\\section{{Overall statistics}}\n"+cTable+cppTable+unknTable+latexCode+usedPrefixes
+		notations="\\section{Notations}"+notationTable+usedPrefixes
+		latexCode="\\section{Overall statistics}\n"+cTable+cppTable+unknTable+notations+latexCode
 		
 		#put the whole stuff into latex document
 		file = open("statistics.tex", "w")
@@ -1060,6 +1389,8 @@ def reporter( report_queue ):
 					command=subprocess.Popen(["pdflatex","-halt-on-error","-file-line-error","statistics.tex"],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 					(output, error) =command.communicate()    				
 		
+		if(enable_stat and 'sql' in stat_output and not mock_run):
+			fileSql.close()
 		if(enable_stat and 'csv' in stat_output and not mock_run):
 			fileCsv.close()
 		if(enable_stat and 'txt' in stat_output and not mock_run):
@@ -1069,7 +1400,7 @@ def reporter( report_queue ):
 			if(os.path.exists("statistics_bak.bin")):
 				os.remove("statistics_bak.bin")
 
-def exec_shell_cmd(cmd, env):
+def exec_shell_cmd(cmd, env=dict()):
 	
 	save_env = { }
 	# set env
@@ -1108,8 +1439,17 @@ def runner( job):
 			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 0, "", 0, 0.0) )
 			break
 
+		perf_cmd=""
+		
+		#set up perf command in this order: flops, readMiss, readAcc, preMiss, preAcc, writeMiss, writeAcc
+		if(cmd.type==Commands.RUN and enable_perf):
+			perf_cmd="perf stat -x ,"
+			for (key,value) in perf_metrics.items():
+				if not (key=="REFPOINT" or key=="LL_CACHE_LINE_SIZE"):
+					perf_cmd += " -e r"+value[2:]
+	
 		# Add time/and memory measurements
-		real_cmd = "/usr/bin/time -f \"\nTIME(%e):MEM(%M)\" {0}".format(cmd.cmd)
+		real_cmd = ("/software-local/time/bin/time -f \"TIME(%e):MEM(%M)\" "+perf_cmd+"{0}").format(cmd.cmd)
 
 		if cmd.out_file:
 			file=open(cmd.out_file,"w")
@@ -1119,11 +1459,9 @@ def runner( job):
 			retcode = 1
 			print("{0}".format(e))
 			break
-
-
-		time_spec = output.split('\n')[-2]
-		#print(time_spec)
 		
+		time_spec = output.split('\n')[-2]
+
 		m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
 
 		elapsed = -1
@@ -1133,17 +1471,39 @@ def runner( job):
 			elapsed = float(m.group('time'))
 			tot_mem = int(m.group('mem'))
 
-		output = "\n".join(output.split('\n')[:-2])
+		perfEvents=dict();
+		outputBack=output;
+		if(cmd.type==Commands.RUN and enable_perf):
+			lineNum=0
+			for (key,value) in perf_metrics.items():
+				if not (key=="REFPOINT" or key=="LL_CACHE_LINE_SIZE"):
+					perfEvents[key]=output.split('\n')[-len(perf_metrics)+lineNum].split(',')[0]
+					lineNum+=1
+			output = "\n".join(output.split('\n')[:-len(perf_metrics)])
+		else:
+			output = "\n".join(output.split('\n')[:-2])			
+			
+		perfCode=0
+		for (key,value) in perfEvents.items():
+			if not (value.isdigit() or (value=="<not counted>")):
+				retcode=1
+				perfCode=1
+				output=outputBack		#get whole output for user 
+				cmd.cmd=perf_cmd+"\n"+cmd.cmd
+				value=0
+				break
+		if(perfCode==1):
+			perfEvents.clear()
 
 		if cmd.out_file:
 			file.write(output)
 			file.close()
 
 		# Create a report and append it to the result
-		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, tot_mem, elapsed,cmd.threads) )
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, tot_mem, elapsed,cmd.threads,perfEvents=perfEvents) )
 
 		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0, 0.0,cmd.threads,cmd.desc) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0, 0.0,cmd.threads,cmd.desc,perfEvents) )
 			# there was an error during compilation or running of the program, we mark the
 			# test case as failed
 			break
@@ -1272,6 +1632,7 @@ class LOCStatistics(Statistic):
 
 		command=subprocess.Popen(commandStr.format(files),shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 		(output, error) =command.communicate()
+		loc="0"
 		if not (output.decode('utf8')==""):		
 			loc=self.extractLOC("\n".join((output.decode('utf8').split("\n")[1:])))		#remove blank line at the beginning
 
@@ -1287,16 +1648,17 @@ class LOCStatistics(Statistic):
 			return -1	
 		else:
 			print("ERROR in executing LOC statistic:")
-			return -1			
+			return "-1"			
 
 class Cmd:
-	def __init__(self, type, desc, cmd, out_file=None, env=dict(),threads=-1):
+	def __init__(self, type, desc, cmd, out_file=None, env=dict(),threads=-1,backendCompiler=dict()):
 		self.type = type
 		self.desc = desc
 		self.cmd  = cmd
 		self.out_file = out_file
 		self.env = env
 		self.threads=threads
+		self.backendCompiler=backendCompiler
 
 
 def load_from_file(file, path="./", default=''):
@@ -1445,10 +1807,12 @@ class TestJob:
 	#	env_vars["IRT_LOOP_SCHED_POLICY"]="IRT_DYNAMIC"
 					
 		omp=False
+		self.backendCompiler=0
 		# Compile for selected backends (without rerunning semantic checks)
 		for id, P in cur_passes:
 			threadRunsLoc=threadRuns
 			env_vars = dict()
+			env_vars["GOMP_CPU_AFFINITY"]="0-1000"
 			env_vars["OMP_NUM_THREADS"]="1"		#default nr of threads is 1
 			env_vars["IRT_NUM_WORKERS"]="1"			
 			
@@ -1537,6 +1901,15 @@ class TestJob:
 								'CASE_NAME': self.__data.name,
 								'PATH': path
 							})
+				
+				#set backendCompiler
+				if self.backendCompiler==0:
+					backComp=dict()
+					backComp["Name"]= os.path.basename(str(P.backend).split(' ')[0])
+					(retcode, output) = exec_shell_cmd(str(P.backend).split(' ')[0]+" -dumpversion")
+					backComp["Version"]=output[:-1]					
+					self.backendCompiler=backComp
+				
 				self.__cmds.append(
 					Cmd(Commands.COMPILE, P.backend.desc,
 					"{BACKEND} {FILE} {LDFLAGS} {GCCFLAGS}".format(
@@ -1672,7 +2045,7 @@ class TestJob:
 		)
 		os.chdir(save_path)
 		self.ref=ref
-		self.omp=omp
+		self.omp=(("fopenmp" in gccFlagsRef) and ("omp-sema" in insiemeFlags))
 
 	def __str__(self):
 		return "\n\n".join( map(lambda x: "# {0} -> {1}\n{2}".format(x.type, x.desc, x.cmd), self.__cmds) )
@@ -1743,7 +2116,7 @@ def main(argv=None):
 	config = configparser.ConfigParser()
 	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
 	
-	supportedOutputFormats=('pdf','tex','txt','csv','bin')
+	supportedOutputFormats=('pdf','tex','txt','csv','bin','sql')
 
 	# Global variable which stores the list of backends to be used
 	global passes
@@ -1756,7 +2129,7 @@ def main(argv=None):
 
 	parser = optparse.OptionParser()
 	parser.add_option("-b", "--backends", dest="backends", type="string",
-							help=("The list of backends/passes that should be uses: "
+							help=("The list of backends/passes that should be used: "
 								"options are {0},'all', default: '%default'.".
 								format(", ".join(list(map(lambda x: "\'"+x+"\'", passes_str))))),
 							default="all")
@@ -1775,13 +2148,18 @@ def main(argv=None):
 							"me waste time explaining it :), default= %default"),
 							default=False)
 
+	parser.add_option("-s","--statistics",action="store_true", dest="stat_enabled",
+							help=("Execute the statistics mode, saves code statistics into specified output formats."
+								" Uses by default perf to measure cpu counters, define experiments in perf_counters.dat! Default= %default"),
+							default=False)
+
 	parser.add_option("-r", "--runs", dest="runs", type="int",
 							help=("Execute the binary multiple times and produce a report on"
 							" median execution time and standard deviation , default= %default"),
 							default=1)
-
-	parser.add_option("-s","--statistics",action="store_true", dest="stat_enabled",
-							help=("Execute the statistics mode, saves code statistics into specified output formats, default= %default"),
+	
+	parser.add_option("", "--no-perf", action="store_true", dest="perf_disabled",
+							help=("Disable perf statistics even if statistics are enabled"),
 							default=False)
 	
 	parser.add_option("-S","--scheduling",action="store_true", dest="sched_enabled",
@@ -1791,6 +2169,10 @@ def main(argv=None):
 	parser.add_option("-o","--output-format",dest="outputFiles",type="string",
 							help=("Set the output formats of the statistics module seperated by ',', supported formats: "+",".join(supportedOutputFormats)+". default=%default"),
 							default=("tex,pdf"))
+	
+	parser.add_option("","--no-overwrite",action="store_false",dest="overWriteSQL",
+							help=("If generating sql output overwrite old results. default=%default"),
+							default=True)
 	
 	parser.add_option("-t","--max-threads",dest="max_threads", type="int",
 							help=("Execute each test case multiple times with a different number of threads (increased by ^2) until max threads is reached. Saves time measurements in specified output formats if statistics are enabled. default= %default"),
@@ -1826,8 +2208,10 @@ def main(argv=None):
 	save_path = os.getcwd()
 	# Retrieve the insieme version 
 	os.chdir('@CMAKE_SOURCE_DIR@')
-	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty', dict())
+	global INSIEME_VERSION
+	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty')
 	INSIEME_VERSION = INSIEME_VERSION.strip()
+	
 	msg_str = "Insieme version: {0}".format( INSIEME_VERSION )
 	print("-"*COLUMNS)
 	print("|{0:^{1}}|".format(msg_str, COLUMNS-2))
@@ -1859,7 +2243,6 @@ def main(argv=None):
 		else:
 			test_cases.append(k)
 	assert(len(test_cases)==len(test_cases_orig))
-
 	if options.show_cases:
 		print (" ".join(test_cases))
 	
@@ -1869,6 +2252,35 @@ def main(argv=None):
 	global enable_stat
 	enable_stat=options.stat_enabled	
 	
+	global enable_perf
+	enable_perf=False
+	if(enable_stat and not options.perf_disabled):
+		enable_perf=True
+
+	if enable_perf:
+		global perf_metrics
+		perf_metrics=collections.OrderedDict()	
+		#read file
+		filePerf = open('perf_counters.dat','r')
+		lines = filePerf.readlines()
+		filePerf.close()
+		
+		for line in lines:
+			if not line.startswith("#") and not line=="\n":
+				splits=line.split("\t")
+				name=splits[0]
+				val=splits[len(splits)-1][:-1]
+				perf_metrics[name]=val
+		
+		#check if all required values here
+		allVals= "FLOPS" in perf_metrics and "LL_CACHE_READ_MISS" in perf_metrics and "LL_PREFETCH_MISS" in perf_metrics and \
+			"LL_CACHE_READ_ACCESS" in perf_metrics and "LL_PREFETCH_ACCESS" in perf_metrics and "LL_CACHE_WRITE_MISS" in perf_metrics and \
+			"LL_CACHE_WRITE_ACCESS" in perf_metrics and "LL_CACHE_LINE_SIZE" in perf_metrics and "REFPOINT" in perf_metrics
+		
+		if not allVals:
+			print ("Not all required perf metrics defined! Check perf_counters.dat!")
+			exit()
+		
 	global enable_sched
 	enable_sched=options.sched_enabled	
 
@@ -1919,10 +2331,16 @@ def main(argv=None):
 					if not "stat;"+str(threadRuns[-1]) in  (node.threads for node in job.data.reports):
 						dataSufficient=False
 					if not "guid;"+str(threadRuns[-1]) in  (node.threads for node in job.data.reports):
-						dataSufficient=False					
+						dataSufficient=False
 			
-			if(not dataSufficient):	
+			if(not dataSufficient and os.path.abspath(job.data.path) in test_cases_abs):	
 				print("WARNING: Cached job "+job.data.name+" contains insufficient data, executing again!")
+				if(os.path.abspath(job.data.path) in test_cases_abs):
+					ind = test_cases_abs.index(os.path.abspath(job.data.path))
+					del test_cases[ind]
+					del test_cases_abs[ind]
+					del test_cases_orig[ind]
+					completed.put(job)				
 			else:		
 				if(os.path.abspath(job.data.path) in test_cases_abs):
 					ind = test_cases_abs.index(os.path.abspath(job.data.path))
@@ -1986,6 +2404,9 @@ def main(argv=None):
 	
 	global stat_output
 	stat_output=options.outputFiles.split(',')
+
+	global overwriteSQL
+	overwriteSQL=options.overWriteSQL
 	
 	#print warning if outputFormat not supported
 	for out in stat_output:
@@ -2012,7 +2433,7 @@ def main(argv=None):
 
 		# instantiate the pool of threads which are used to run test cases
 		pool = Pool(processes=num_cores)
-		pool.map(runner, test_jobs, 1)
+		pool.map(runner, test_jobs,1)
 		pool.close()
 		pool.join()
 

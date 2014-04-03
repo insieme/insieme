@@ -39,7 +39,6 @@
 #include <iostream>
 #include <set>
 #include <exception>
-//#include <stdexcept>
 
 #include "insieme/core/ir_expressions.h"
 

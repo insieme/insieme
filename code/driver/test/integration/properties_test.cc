@@ -40,6 +40,7 @@
 
 #include "insieme/driver/integration/properties.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -86,6 +87,31 @@ namespace integration {
 
 	}
 
+	TEST(Properties, Getter) {
+
+		Properties p;
+		p.set("a", "5");
+		p.set("b", "1,2,3,2,1");
+		p.set("c", "1,2,3,,2,1");
+
+		EXPECT_EQ("5", p.get("a"));
+		EXPECT_EQ("1,2,3,2,1", p.get("b"));
+		EXPECT_EQ("1,2,3,,2,1", p.get("c"));
+
+		EXPECT_EQ(5, p.get<int>("a"));
+		EXPECT_THROW(p.get<int>("b"), boost::bad_lexical_cast);
+
+		EXPECT_EQ(toVector(5), p.get<vector<int>>("a"));
+		EXPECT_EQ(std::set<int>({5}), p.get<set<int>>("a"));
+
+		EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("b"));
+		EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("b"));
+
+		EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("c"));
+		EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("c"));
+
+	}
+
 	TEST(Properties, VarSubstitute) {
 
 		Properties p;
@@ -93,9 +119,9 @@ namespace integration {
 		p.set("b", "y");
 
 		EXPECT_EQ("test", p.mapVars("test"));
-		EXPECT_EQ("testx", p.mapVars("test$a"));
-		EXPECT_EQ("testy", p.mapVars("test$b"));
-		EXPECT_EQ("testxsdydsxdf", p.mapVars("test$asd$bds$adf"));
+		EXPECT_EQ("testx", p.mapVars("test${a}"));
+		EXPECT_EQ("testy", p.mapVars("test${b}"));
+		EXPECT_EQ("testxsdydsxdf", p.mapVars("test${a}sd${b}ds${a}df"));
 
 	}
 
@@ -145,7 +171,7 @@ namespace integration {
 			p1.set("a", "c", "v2");
 
 			Properties p2;
-			p2.set("a", "x $a $a[c]");
+			p2.set("a", "x ${a} ${a[c]}");
 
 			auto r = p1 << p2;
 			EXPECT_EQ(1, r.size());

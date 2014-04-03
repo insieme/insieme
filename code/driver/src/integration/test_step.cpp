@@ -35,11 +35,16 @@
  */
 
 #include "insieme/driver/integration/test_step.h"
+#include <csignal>
 
 #include <sstream>
+#include <regex>
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/config.h"
+
+#include<boost/tokenizer.hpp>
+
 
 namespace insieme {
 namespace driver {
@@ -49,27 +54,85 @@ namespace integration {
 
 		namespace {
 
-			TestResult runCommand(const TestSetup& setup, const string& cmd) {
-				// if it is a mock-run do nothing
-				if (setup.mockRun) {
-					std::cout << cmd << "\n";
-					return TestResult();
+			TestResult runCommand(const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
+
+				vector<string> producedFiles;
+				producedFiles.push_back(setup.stdOutFile);
+				producedFiles.push_back(setup.stdErrFile);
+
+				if(!producedFile.empty()) {
+					producedFiles.push_back(producedFile);
 				}
 
-				// run command - //TODO: measure time
-				auto res = system(cmd.c_str());		// TODO: record output of executable and store it in the result
+				string outfile="";
+				if(!setup.outputFile.empty()){
+					producedFiles.push_back(setup.outputFile);
+					outfile= " -o "+setup.outputFile;
+				}
 
-				/**
-				 * TODO:
-				 * 	- add string-streams for std-out and std-err to the TestResult class
-				 * 	- collect outputs of command execution
-				 * 	- also record actual command within test result
-				 * 	- measure execution time => record in result
-				 * 	- measure memory usage => record in result
-				 * 	- if it is a mockRun => fill command filed only
-				 */
-				return TestResult(res == 0);
+				//setup possible environment vars
+				std::stringstream env;
+				{
+					//set LD_LIBRARY_PATH
+					env << "LD_LIBRARY_PATH=";
+					for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+						env << ldPath << ":";
+					}
+					env<< "${LD_LIBRARY_PATH} ";
+				}
+
+				// if it is a mock-run do nothing
+				if (setup.mockRun) {
+					return TestResult(true,0,0,"","",env.str() + cmd + outfile);
+				}
+
+				//environment must be set BEFORE executables!
+				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+
+				//TODO enable perf support
+				//if(setup.enablePerf)
+
+				//get return value, stdOut and stdErr
+				int retVal=system(realCmd.c_str());
+
+				//TODO change this to handle SIGINT signal
+				if(retVal==512)
+					exit(0);
+
+			   if (WIFSIGNALED(retVal) &&
+				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
+				   	   std::cout<<"killed"<<std::endl;
+
+				string output=readFile(setup.stdOutFile);
+				string error=readFile(setup.stdErrFile);
+
+				float mem=0.0;
+				float time=0.0;
+
+				//get time and memory values and remove them from stdError
+				string stdErr;
+				boost::char_separator<char> sep("\n");
+				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
+				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
+				string token(*beg);
+				if(token.find("TIME")==0)
+					time=atof(token.substr(4).c_str());
+				else if (token.find("MEM")==0)
+					mem=atof(token.substr(3).c_str());
+				else
+					stdErr+=token+"\n";
+				}
+
+				// check whether execution has been aborted by the user
+				if (WIFSIGNALED(retVal) && (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT)) {
+					return TestResult::userAborted(time, mem, output, stdErr, cmd);
+				}
+
+				// produce regular result
+				return TestResult(retVal==0,time,mem,output,stdErr,cmd,producedFiles);
 			}
+
+			namespace fs = boost::filesystem;
 
 			typedef std::set<std::string> Dependencies;
 
@@ -98,63 +161,78 @@ namespace integration {
 			}
 
 
+			//TODO MAKE FLAGS STEP SPECIFIC
+
 			TestStep createRefCompStep(const string& name, Language l) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
 					auto props = test.getPropertiesFor(name);
 
 					std::stringstream cmd;
+					TestSetup set=setup;
 
 					// start with executable
-					switch(l) {
-					case C:   cmd << props["global.ref.cc"];  break;
-					case CPP: cmd << props["global.ref.cxx"]; break;
-					}
-
-					// standard flags
-					cmd << " -O3";
-					cmd << " -fshow-column";
-					cmd << " -Wall";
-					cmd << " -Wl,--no-as-needed";
-					cmd << " -pipe";
-
-					// add language flag
-					switch(l) {
-					case C:   cmd << " --std=c99"; break;
-					case CPP: cmd << " --std=c++03"; break;
-					}
-
+					cmd<<props["compiler"];
 
 					// add include directories
-					if (!test.getIncludeDirs().empty()) cmd << " -I " << join(":",test.getIncludeDirs());
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
+
+					// add external lib dirs
+					for(const auto& cur : test.getLibDirs()) {
+						cmd <<" -L"<<cur.string();
+					}
+
+					// add external libs
+					for(const auto& cur : test.getLibNames()) {
+						cmd <<" -l"<<cur;
+					}
 
 					// add input files
 					for(const auto& cur : test.getFiles()) {
 						cmd << " " << cur.string();
 					}
 
-					// add output file
-					cmd << " -o " << test.getDirectory().string() << "/" << test.getName() << ".ref";
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					}
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+					});
+
+					// set output file, stdOutFile and stdErrFile
+					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref";
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.comp.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.comp.err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				});
+					return runCommand(set, props, cmd.str());
+				},std::set<std::string>(),COMPILE);
 			}
 
 			TestStep createRefRunStep(const string& name, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
 					std::stringstream cmd;
+					TestSetup set=setup;
+					auto props = test.getPropertiesFor(name);
 
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getName() << ".ref";
+					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".ref";
 
-					// TODO: add arguments
+					// add arguments
+					cmd << " " << props["executionFlags"];
 
-					// pipe result to output file
-					cmd << " > " << test.getDirectory().string() << "/" << test.getName() << ".ref.out";
+					// set output files
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str());
+				}, deps,RUN);
 			}
 
 
@@ -163,38 +241,45 @@ namespace integration {
 					auto props = test.getPropertiesFor(name);
 
 					std::stringstream cmd;
+					TestSetup set=setup;
 
 					// start with executable
-					cmd << props["global.insieme.main"];
-
-					// add language flag
-					switch(l) {
-					case C:   cmd << " --std=c99"; break;
-					case CPP: cmd << " --std=c++03"; break;
-					}
-
-					// add always-on flags
-					cmd << " --col-wrap=120";
-					cmd << " --show-line-no";
-					cmd << " --log-level=INFO";		// TODO: this could be a config issue
+					cmd << props["compiler"];
 
 					// enable semantic tests
 					cmd << " -S";
 
 					// also dump IR
-					cmd << " --dump-ir " << test.getDirectory().string() << "/" << test.getName() << ".ir";
+					std::string irFile=test.getDirectory().string() + "/" + test.getBaseName() + ".ir";
+					cmd << " --dump-ir " << irFile;
 
 					// add include directories
-					if (!test.getIncludeDirs().empty()) cmd << " -I " << join(":",test.getIncludeDirs());
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
 
 					// add input files
 					for(const auto& cur : test.getFiles()) {
 						cmd << " " << cur.string();
 					}
 
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					}
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+					});
+
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.err.out";
+
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str(),irFile);
+				}, deps,COMPILE);
 			}
 
 			TestStep createMainConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
@@ -202,39 +287,44 @@ namespace integration {
 					auto props = test.getPropertiesFor(name);
 
 					std::stringstream cmd;
+					TestSetup set=setup;
 
 					// start with executable
-					cmd << props["global.insieme.main"];
-
-					// add language flag
-					switch(l) {
-					case C:   cmd << " --std=c99"; break;
-					case CPP: cmd << " --std=c++03"; break;
-					}
-
-					// add always-on flags
-					cmd << " --col-wrap=120";
-					cmd << " --show-line-no";
-					cmd << " --log-level=INFO";		// TODO: this could be a config issue
+					cmd << props["compiler"];
 
 					// determine backend
 					string be = getBackendKey(backend);
 					cmd << " -b " << be;
 
 					// add include directories
-					if (!test.getIncludeDirs().empty()) cmd << " -I " << join(":",test.getIncludeDirs());
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
 
 					// add input files
 					for(const auto& cur : test.getFiles()) {
 						cmd << " " << cur.string();
 					}
 
-					// add output file
-					cmd << " -o " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << "." << getExtension(l);
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					}
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+					});
+
+					// set output file, stdOut file and stdErr file
+					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".conv.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".conv.err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str());
+				}, deps,COMPILE);
 			}
 
 			TestStep createMainCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
@@ -242,66 +332,76 @@ namespace integration {
 					auto props = test.getPropertiesFor(name);
 
 					std::stringstream cmd;
+					TestSetup set=setup;
 
 					// start with executable
-					switch(l) {
-					case C:   cmd << props["global.ref.cc"];  break;
-					case CPP: cmd << props["global.ref.cxx"]; break;
-					}
-
-					// standard flags
-					cmd << " -O3";
-					cmd << " -fshow-column";
-					cmd << " -Wall";
-					cmd << " -Wl,--no-as-needed";
-					cmd << " -pipe";
-
-					// add language flag
-					switch(l) {
-					case C:   cmd << " --std=c99"; break;
-					case CPP: cmd << " --std=c++03"; break;
-					}
+					cmd << props["compiler"];
 
 					// determine backend
 					string be = getBackendKey(backend);
 
-					// add flags for the runtime code
-					if (backend == Runtime) {
-						cmd << " " << props["global.run.comp.flags"] << " ";
+					// add include directories
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
+					cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
+
+					// add external lib dirs
+					for(const auto& cur : test.getLibDirs()) {
+						cmd <<" -L"<<cur.string();
 					}
 
-					// add include directories
-					if (!test.getIncludeDirs().empty()) cmd << " -I " << join(":",test.getIncludeDirs());
+					// add external libs
+					for(const auto& cur : test.getLibNames()) {
+						cmd <<" -l"<<cur;
+					}
 
 					// add input file
-					cmd << " " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << "." << getExtension(l);
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
-					// add output file
-					cmd << " -o " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << ".test";
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					};
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+					});
+
+					// set output file, stdOut file and stdErr file
+					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be;
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".comp.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".comp.err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str());
+				}, deps,COMPILE);
 			}
 
 			TestStep createMainExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
 					std::stringstream cmd;
+					TestSetup set=setup;
+					auto props = test.getPropertiesFor(name);
 
 					// determine backend
 					string be = getBackendKey(backend);
 
+
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << ".test";
+					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
 
-					// TODO: add arguments
+					// add arguments
+					cmd << " " << props["executionFlags"];
 
-					// pipe result to output file
-					cmd << " > " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << ".test.out";
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str());
+				}, deps,RUN);
 			}
 
 			TestStep createMainCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
@@ -309,27 +409,33 @@ namespace integration {
 					auto props = test.getPropertiesFor(name);
 
 					std::stringstream cmd;
+					TestSetup set=setup;
 
 					// define comparison script
-					cmd << props["global.sortdiff"];
+					cmd << props["sortdiff"];
 
 					// determine backend
 					string be = getBackendKey(backend);
 
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getName() << ".ref.out";
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref.out";
 
 					// pipe result to output file
-					cmd << " " << test.getDirectory().string() << "/" << test.getName() << ".insieme." << be << ".test.out";
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be << ".out";
+
+					// add awk pattern
+					cmd << " "<< props["outputAwk"];
+
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
 
 					// run it
-					return runCommand(setup, cmd.str());
-				}, deps);
+					return runCommand(set, props, cmd.str());
+				}, deps,CHECK);
 			}
 
 
 		}
-
 
 		std::map<std::string,TestStep> createFullStepList() {
 
@@ -348,19 +454,31 @@ namespace integration {
 			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
 			add(createMainSemaStep("main_c_sema", C));
-			add(createMainSemaStep("main_cxx_sema", C));
+			add(createMainSemaStep("main_c++_sema", CPP));
 
 			add(createMainConversionStep("main_seq_convert", Sequential, C));
 			add(createMainConversionStep("main_run_convert", Runtime, C));
 
+			add(createMainConversionStep("main_seq_c++_convert", Sequential, CPP));
+			add(createMainConversionStep("main_run_c++_convert", Runtime, CPP));
+
 			add(createMainCompilationStep("main_seq_compile", Sequential, C, { "main_seq_convert" }));
 			add(createMainCompilationStep("main_run_compile", Runtime, C, { "main_run_convert" }));
+
+			add(createMainCompilationStep("main_seq_c++_compile", Sequential, CPP, { "main_seq_c++_convert" }));
+			add(createMainCompilationStep("main_run_c++_compile", Runtime, CPP, { "main_run_c++_convert" }));
 
 			add(createMainExecuteStep("main_seq_execute", Sequential, { "main_seq_compile" }));
 			add(createMainExecuteStep("main_run_execute", Runtime, { "main_run_compile" }));
 
+			add(createMainExecuteStep("main_seq_c++_execute", Sequential, { "main_seq_c++_compile" }));
+			add(createMainExecuteStep("main_run_c++_execute", Runtime, { "main_run_c++_compile" }));
+
 			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
 			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
+
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
+			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
 
 			return list;
 		}
@@ -387,7 +505,16 @@ namespace integration {
 	}
 
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
-		return steps;
+		auto props = test.getProperties();
+		vector<TestStep> filteredSteps;
+
+		for(const TestStep step:steps){
+			string excludes=props["excludeSteps"];
+			if(excludes.find(step.getName()) == std::string::npos)
+				filteredSteps.push_back(step);
+		}
+
+		return filteredSteps;
 	}
 
 	namespace {
@@ -417,6 +544,23 @@ namespace integration {
 		return res;
 	}
 
+	string readFile(string fileName){
+					FILE* file=fopen(fileName.c_str(),"r");
+
+					if(file==NULL)
+						return string("");
+
+					char buffer[1024];
+					string output;
+
+					while(!feof(file)){
+						if(fgets(buffer,1024,file)!=NULL){
+							output+=string(buffer);
+						}
+					}
+					fclose(file);
+					return output;
+				}
 
 } // end namespace integration
 } // end namespace driver

@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/annotations/c/include.h"
 
 

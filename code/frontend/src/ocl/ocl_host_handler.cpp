@@ -993,7 +993,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 	ADD_Handler(o2i, "icl_stop_energy_measurement", return node;);
 
 
-	// handlers for insieme opencl runtime stuff
+	// handlers for lib_icl runtime stuff
 	ADD_Handler(o2i, "icl_",
 		return builder.literal(node->getType(), "0"); // default handling, remove it
 	);

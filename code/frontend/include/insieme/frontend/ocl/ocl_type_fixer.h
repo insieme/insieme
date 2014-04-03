@@ -50,9 +50,9 @@ class TypeFixer {
 	core::NodeMap a;
 
 	void removeClVars();
-	void fixDecls(core::NodeAddress pA, std::string typeString);
+	void fixDecls(core::NodeAddress pA, core::TypePtr type);
 public:
-	TypeFixer(core::NodePtr toTransform);
+	TypeFixer(core::NodePtr toTransform, std::vector<core::TypePtr> typeStrings);
 	core::NodePtr getTransformedProg() { return prog; };
 };
 

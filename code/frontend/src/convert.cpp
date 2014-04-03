@@ -48,9 +48,8 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -84,9 +83,11 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/ir_class_info.h"
+
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
@@ -593,8 +594,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
     if(!result) {
 		if (VLOG_IS_ON(1)) valDecl->dump();
 
-		// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
-		// to the map for successive lookups
+		// The variable has not been converted into IR variable yet, therefore we create the IR variable and 
+		// insert it to the map for successive lookups
 
 		// Conversion of the variable type
 		QualType&& varTy = valDecl->getType();
@@ -884,7 +885,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			//	}
 
 				initIr =  builder.initStaticVariable(lit, initIr, isConst);
-
 			}
 			else{
 				// build some default initializationA
@@ -1157,7 +1157,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							curr->getName(),
 							getInitExpr (curr->getType(), inits[i])));
 			}
-			retIr = builder.structExpr(structTy, members);
+			if (members.empty())
+				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
+			else
+				retIr = builder.structExpr(structTy, members);
 			return retIr;
 		}
 
@@ -1402,8 +1405,49 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
     }
 
 	if(!res) {
+
 		// trigger the actual conversion
-		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
+		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
+
+		// NOTE:
+		// it might be that a the typedef encloses an anonymous struct declaration, in that case
+		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
+		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
+			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
+				core::TypePtr trgTy =  lookupTypeDetails(symb);
+				// a new generic type will point to the previous translation unit decl
+				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
+
+					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
+
+					// build a name for the thing
+					std::string name = utils::getNameForRecord(typedefDecl, typedefType, getSourceManager());
+					core::GenericTypePtr gen = builder.genericType(name);
+
+					core::TypePtr impl = symb;
+					// if target is an annonymous type, we create a new type with the name of the typedef
+					if (structTy->getName()->getValue().substr(0,5) == "_anon"){
+						impl = builder.structType ( builder.stringValue( name), 
+											structTy->getParents(), structTy->getEntries());
+
+						core::transform::utils::migrateAnnotations(structTy.as<core::TypePtr>(), impl);
+						core::annotations::attachName(impl,name);
+
+						if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
+							//if the typeDef oft the anonymous type was done in a system header we need to
+							//annotate to enable the backend to avoid re-declaring the type
+							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
+							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
+						}
+
+						typeCache[typedefType] = gen;
+					}
+
+					getIRTranslationUnit().addType(gen, impl);
+					res = gen;
+				}
+			}
+		}
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1710,6 +1754,13 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 			// handle this references in body,
 			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
+
+			// in constructors, replace all empty returns by a return of this:
+			if (funcTy->isConstructor() || funcTy->isDestructor()) {
+				auto emptyReturn = builder.returnStmt(builder.getLangBasic().getUnitConstant());
+				auto newReturn   = builder.returnStmt(thisVar);
+				body = core::transform::replaceAllGen (mgr, body, emptyReturn, newReturn);
+			}
 		}
 
 		// build the resulting lambda
@@ -1739,18 +1790,16 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
-            //Normally we use the function name of the member function.
-            //This can be dangerous when using templated member functions.
-            //In this case we have to add the return type information to
-            //the name, because it is not allowed to have overloaded functions
-            //that only differ by the return type.
-            //FIXME: Call to external functions might not work. What should we do with templated operators?!
-            std::string functionname = funcDecl->getNameAsString();
-            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-                std::string returnType = funcDecl->getResultType().getAsString();
-                functionname.append(returnType);
-                utils::removeSymbols(functionname);
-            }
+			std::string functionname;
+            if(funcDecl->isOverloadedOperator()) {
+				//set name of the overloadop -- use the plain simple one from the funcdecl for the BE only
+				//the symbol is the rich one (with templates, const yadayadayada)
+            	functionname = funcDecl->getNameAsString(); 
+			} else {
+				//for everything else use the rich name
+				functionname = symbol->getStringValue();
+			}
+
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),

@@ -50,7 +50,7 @@
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/header_tagger.h"
-#include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/const_extension.h"
 #include "insieme/core/annotations/naming.h"

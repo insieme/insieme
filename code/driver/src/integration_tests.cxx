@@ -50,6 +50,7 @@
 #include <omp.h>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
@@ -57,6 +58,9 @@
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
+
+#include "insieme/utils/config.h"
+
 
 using std::pair;
 using std::string;
@@ -75,28 +79,72 @@ namespace {
 		bool valid;
 		bool mockrun;
 		int num_threads;
+		int num_repeditions;
 		bool print_configs;
 		bool panic_mode;
 		bool list_only;
+		bool clean;
+		bool color;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
-			  num_threads(1), print_configs(false),
-			  panic_mode(false), list_only(false) {}
+			  num_threads(1), num_repeditions(1), print_configs(false),
+			  panic_mode(false), list_only(false), clean(false), color(true) {}
 	};
 
+	namespace fs = boost::filesystem;
 
 	Options parseCommandLine(int argc, char** argv);
 
 	vector<TestCase> loadCases(const Options& options);
 
 	vector<TestStep> getTestSteps(const Options& options);
+
+	struct Colorize{ 
+		enum Color { RED, GREEN, BLUE, BLACK, BOLD, RESET};
+		bool color;
+		Colorize(bool color) : color(color) {}
+		string getColor(Color c) {
+			if(color) {
+				switch(c) {
+					case RED: return "\033[31m";
+					case GREEN: return "\033[32m";
+					case BLUE: return "\033[34m";
+					case BLACK: return "\033[30m";
+					case RESET: return "\033[0m";
+					case BOLD: return "\033[1m";
+				}
+			}
+
+			return "";
+		}
+
+		string red() {return getColor(RED); }
+		string green() {return getColor(GREEN); }
+		string blue() {return getColor(BLUE); }
+		string black() {return getColor(BLACK); }
+		string reset() {return getColor(RESET); }
+		string bold() {return getColor(BOLD); }
+	};
 }
 
+std::string getGitVersion(){
+	string getGitVersionCmd=string("cd ")+SRC_ROOT_DIR+"; git describe --dirty";
+	FILE* pipe=popen(getGitVersionCmd.c_str(),"r");
+	char buff [50];
+	fgets(buff,50,pipe);
+	pclose(pipe);
+
+	//remove line break
+	buff[strlen(buff)-1]='\0';
+	return string(buff);
+}
 
 int main(int argc, char** argv) {
+	//TODO custom root config file
+
 	Logger::setLevel(ERROR);
 
 	// parse parameters
@@ -108,12 +156,11 @@ int main(int argc, char** argv) {
 	// get list of test cases
 	auto cases = loadCases(options);
 
-	std::cout <<        "--------------------------------------------------------------------------------\n";
-	std::cout << format("|                 Insieme version: %-43s |\n", "- TODO: get git description -");
-	std::cout <<        "|------------------------------------------------------------------------------|\n";
-	std::cout << format("|                           Running %3d benchmark(s)                           |\n", cases.size());
-	std::cout <<        "|------------------------------------------------------------------------------|\n";
-
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+	std::cout << format("#                 Insieme version: %-43s #\n", getGitVersion());
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+	std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 	// check whether only the configurations are requested
 	if (options.print_configs) {
@@ -137,7 +184,7 @@ int main(int argc, char** argv) {
 		for(const auto& cur : cases) {
 			std::cout << format("| %4d/%4d - %-65s|\n", ++counter, cases.size(), cur.getName());
 		}
-		std::cout <<        "|------------------------------------------------------------------------------|\n";
+		std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 		return 0;
 	}
@@ -146,11 +193,21 @@ int main(int argc, char** argv) {
 
 	// load list of test steps
 	auto steps = getTestSteps(options);
-	std::cout << "Steps: \n\t" << ::join("\n\t", steps) << "\n";
-
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
+	setup.clean=options.clean;
+
+	Colorize colorize(options.color);
+
+	// setup highlighted tests:
+	std::set<std::string> highlight;
+	highlight.insert("main_seq_execute");
+	highlight.insert("main_seq_c++_execute");
+	highlight.insert("main_run_execute");
+	highlight.insert("main_run_c++_execute");
+	highlight.insert("ref_c_execute");
+	highlight.insert("ref_c++_execute");
 
 	// run test cases in parallel
 	vector<TestCase> ok;
@@ -158,68 +215,122 @@ int main(int argc, char** argv) {
 	omp_set_num_threads(options.num_threads);
 
 	bool panic = false;
+	int totalTests=cases.size() * options.num_repeditions;
+	int act=0;
 
-	#pragma omp parallel for
-	for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
-		const auto& cur = *it;
+	for(int i=0; i<options.num_repeditions; i++) {
 
-		if (panic) continue;
+		#pragma omp parallel for schedule(dynamic)
+		for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
+			const auto& cur = *it;
 
-		// filter applicable steps based on test case
-		vector<TestStep> list = itc::filterSteps(steps, cur);
+			if (panic) continue;
 
-		// schedule resulting steps
-		list = itc::scheduleSteps(list);
+			// filter applicable steps based on test case
+			vector<TestStep> list = itc::filterSteps(steps, cur);
 
-		// run steps
-		vector<pair<string, TestResult>> results;
-		bool success = true;
-		for(const auto& step : list) {
-			auto res = step.run(setup, cur);
-			results.push_back(std::make_pair(step.getName(), res));
-			if (!res) {
-				success = false;
-				break;
-			}
-		}
+			// schedule resulting steps
+			list = itc::scheduleSteps(list);
 
-		// all steps done - print summary
-		#pragma omp critical
-		{
-			// print test info
-			std::cout << "------------------------------------------\n";
-			std::cout << "Test Case: " << cur << "\n";
-			std::cout << "Results:\n";
-
-			for(const auto& curRes : results) {
-				std::cout << "\t" << curRes.first << " - " <<
-						((curRes.second.wasSuccessfull())?"OK":"ERR")
-						<< "\n";
-				success = success && curRes.second.wasSuccessfull();
-			}
-			std::cout << "------------------------------------------\n";
-			std::cout << "\n";
-			if (success) {
-				ok.push_back(cur);
-			} else {
-				failed.push_back(cur);
-
-				// trigger panic mode and graceful shutdown
-				if (options.panic_mode) {
-					panic = true;
+			// run steps
+			vector<pair<string, TestResult>> results;
+			bool success = true;
+			for(const auto& step : list) {
+				auto res = step.run(setup, cur);
+				results.push_back(std::make_pair(step.getName(), res));
+				if (!res || res.hasBeenAborted()) {
+					success = false;
+					break;
 				}
 			}
-		}
 
-	}
-	// run test cases
+			// all steps done - print summary
+			#pragma omp critical
+			{
+				// print test info
+				std::cout << "#------------------------------------------------------------------------------#\n";
+				std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getName()) << "#\n";
+				std::cout << "#------------------------------------------------------------------------------#\n";
+
+				for(const auto& curRes : results) {
+					if(options.mockrun){
+						std::cout << colorize.black() << curRes.first<< std::endl;
+						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
+					} else {
+						string colOffset;
+						colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
+						std::stringstream line;
+					
+						// color certain passes:
+						if (highlight.find (curRes.first) != highlight.end()) {
+							line <<  colorize.bold() << colorize.blue();
+						}
+
+						line << "# " << curRes.first <<
+							format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
+
+						if(curRes.second.wasSuccessfull()){
+							std::cout << line.str();
+						} else {
+							std::cout << colorize.red() <<line.str();
+							std::cout << "#------------------------------------------------------------------------------#" << colorize.reset();
+							std::cout<<"Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
+							std::cout<<curRes.second.getFullOutput();
+						}
+
+						success = success && curRes.second.wasSuccessfull();
+					}
+					if(options.clean) {
+						curRes.second.clean();
+					}
+
+					if (curRes.second.hasBeenAborted()) {
+						panic = true;
+					}
+				}
+
+				if(!options.mockrun){
+
+					if(success) 
+						std::cout << colorize.green();
+					else 
+						std::cout << colorize.red();
+
+						std::cout << "#------------------------------------------------------------------------------#\n";
+					if(success)
+						std::cout << "#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
+					else
+						std::cout << "#\tFAILED  -- "<<format("%-60s",cur.getName())<<"#\n";
+
+					std::cout << "#------------------------------------------------------------------------------#\n";
+
+					if (success) {
+						ok.push_back(cur);
+					} else {
+						failed.push_back(cur);
+
+						// trigger panic mode and graceful shutdown
+						if (options.panic_mode) {
+							panic = true;
+						}
+					}
+					std::cout << colorize.reset();
+				}
+
+				//reset color to default value
+				std::cout << colorize.reset();
+			}
+
+		} // end test case loop
+
+	} // end repetition loop
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
-	std::cout << format("# TOTAL:          %60d #\n", cases.size());
-	std::cout << format("# PASSED:         %60d #\n", ok.size());
-	std::cout << format("# FAILED:         %60d #\n", failed.size());
+	std::cout << format("# TOTAL:          %60d #\n", cases.size()*options.num_repeditions);
+	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
+	std::cout << "# FAILED:         " << colorize.red() << format("%60d", failed.size()) << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
-		std::cout << format("#   - %-63s          #\n", cur.getName());
+	std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
 	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
@@ -248,7 +359,9 @@ namespace {
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-
+				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+				("clean",				"remove all output files")
+				("nocolor",				"no highlighting of output")
 		;
 
 		// define positional options (all options not being named)
@@ -280,8 +393,11 @@ namespace {
 		}
 
 		res.mockrun = map.count("mock");
+		res.clean=map.count("clean");
+		res.color=!map.count("nocolor");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
+		res.num_repeditions = map["repeat"].as<int>();
 
 		res.list_only = map.count("list");
 

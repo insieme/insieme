@@ -89,9 +89,11 @@ namespace insieme {
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
+		std::string step="main_run_compile";
 		// switch to C++ compiler if necessary
 		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
+			step="main_run_c++_compile";
 		}
 
 //		// add OCL specific compiler flags
@@ -103,7 +105,7 @@ namespace insieme {
 //		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
 
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments()) {
+		for(const auto& flag : testCase.getCompilerArguments(step)) {
 			compiler.addFlag(flag);
 		}
 

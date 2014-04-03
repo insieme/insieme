@@ -1,0 +1,7 @@
+compFlags[main_c++_sema]=--intercept boost::.*
+compFlags[main_seq_c++_convert]=--intercept boost::.*
+compFlags[main_run_c++_convert]=--intercept boost::.*
+libPaths="${boost_lib}"
+libNames="boost_regex"
+includes="${boost_include}","./"
+files="main.cpp","impl.cpp"

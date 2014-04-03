@@ -51,5 +51,14 @@
 //code/frontend/include/insieme/frontend/gemsclaim_config.h:
 #define GEM_SYSTEM_HEADER_REPLACEMENTS_DIR "${insieme_code_dir}/frontend/include/insieme/frontend/gemsclaim/"
 
+/**
+ *                          !!!!!!  ------ W A R N I N G -------- !!!!!
+ *
+ *  NEVER EVER ADD A MACRO DEFINTION FOR SOMETHING DEPENDING ON THE LOCATION OF THE BUILD DIRECTORY!
+ *
+ *                          !!!!!!  ------ W A R N I N G -------- !!!!!
+ */
+
+
 //code/analysis/include/insieme/analysis/cmake_config.h:
 //#define SRC_DIR "${insieme_code_dir}/analysis/test/"

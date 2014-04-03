@@ -1,0 +1,3 @@
+files="ompscrCommon.c","wtime.c","c_fft6.c"
+executionFlags=32 10
+use_libmath=1

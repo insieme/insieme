@@ -1,0 +1,4 @@
+compFlags[main_c_sema]=--cilk
+compFlags[main_c++_sema]=--cilk
+compFlags[main_run_convert]=--cilk
+compFlags[main_seq_convert]=--cilk

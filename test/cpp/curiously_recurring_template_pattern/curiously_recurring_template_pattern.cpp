@@ -44,6 +44,7 @@ int main() {
 	d.doSomething(1,2);
 	d.f();
 	d.g();
+	cout << endl;
 }
 
 

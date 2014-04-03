@@ -36,6 +36,10 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+using namespace std;
+
 namespace insieme {
 namespace driver {
 namespace integration {
@@ -43,21 +47,60 @@ namespace integration {
 	class TestResult {
 
 		bool success;
+		float runtime;
+		float memory;
+		string output;
+		string errorOut;
+		string cmd;
+		std::vector<std::string> producedFiles;
 
-		// TODO: add time, resource usage, etc ...
+		bool userabort;
 
 	public:
 
-		TestResult(bool success = true)
-			: success(success) {}
+		TestResult(bool success = true, float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd=""
+				,std::vector<std::string> producedFiles=std::vector<std::string>())
+			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles), userabort(false) {}
 
+		static TestResult userAborted(float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd="") {
+			TestResult res(false, runtime, memory, output, errorOut, cmd);
+			res.userabort = true;
+			return res;
+		}
 
 		bool wasSuccessfull() const {
 			return success;
 		}
 
+		// deletes all produced files
+		void clean() const{
+			for(const auto& cur : producedFiles) {
+				remove(cur.c_str());
+			}
+		}
+
 		operator bool() const {
 			return success;
+		}
+
+		float getRuntime() const{
+			return runtime;
+		}
+
+		string getCmd() const{
+			return cmd;
+		}
+
+		string getFullOutput() const{
+			return output+errorOut;
+		}
+
+		float getMemory() const{
+			return memory;
+		}
+
+		bool hasBeenAborted() const {
+			return userabort;
 		}
 	};
 

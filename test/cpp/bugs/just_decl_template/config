@@ -1,0 +1,4 @@
+compFlags[main_c++_sema]=--intercept toIntercept::.* 
+compFlags[main_seq_c++_convert]=--intercept toIntercept::.* 
+compFlags[main_run_c++_convert]=--intercept toIntercept::.* 
+includes="./"
