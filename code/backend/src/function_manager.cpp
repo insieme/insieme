@@ -54,7 +54,6 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -378,154 +377,6 @@ namespace backend {
 
 	}
 
-	namespace detail{
-		bool isExpressionWithCleanups(const core::ExpressionPtr& expr){
-			
-			//std::cout << " ============== check inline =====================" << std::endl;
-			//dumpPretty(expr);
-
-			// check that is a lambda
-			auto fun = expr.isa<core::LambdaExprPtr>();
-			if (!fun) {
-				std::cout << "not a function " <<  std::endl;
-				return false;
-			}
-
-			// can not inline recursions
-			if (fun->isRecursive()) {
-				//std::cout << "recursive function " <<  std::endl;
-				return false;
-			}
-
-			// can not inline members
-			if (fun->getFunctionType()->isConstructor() || fun->getFunctionType()->isDestructor() || fun->getFunctionType()->isMemberFunction() ){
-				//std::cout << "member function " <<  std::endl;
-				return false;
-			}
-
-			// can not inline a void return function
-			if (fun->getFunctionType()->getReturnType() ==  expr.getNodeManager().getLangBasic().getUnit()){
-				//std::cout << "unit function " <<  std::endl;
-				return false;
-			}
-
-			// is not an empty func (it must have 2 or more stmts)
-			// 	- at least one cleanup declaration + the actual expression
-			auto body = fun->getBody();
-			if (body.size() < 2) {
-				//std::cout << "wrong size " << body << std::endl;
-				return false;
-			}
-
-			// last stmt can be a return or another expression (the actual cleanp), and previous to last could be an expression in cases with returned value
-			auto lastStmt =body[body.size()-1];
-			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
-			if (!lastStmt.isa<core::ExpressionPtr>() && !lastStmt.isa<core::ReturnStmtPtr>()){
-				//std::cout << "wrong last " << lastStmt << std::endl;
-				return false;
-			}
-
-			// this two are to check that we do not use static vars inside of the function to inline
-			const auto& staticLazy  = expr.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>().getInitStaticLazy();
-			const auto& staticConst = expr.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>().getInitStaticConst();
-
-			// only declarations except for the (2) last 
-			for (auto stmt : body){
-				if (stmt == lastStmt) break;
-				if (stmt == preLastStmt && core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAssign()) ){
-					if(auto retStmt =  lastStmt.isa<core::ReturnStmtPtr>()){
-						
-						if (core::analysis::isCallOf(retStmt->getReturnExpr(), retStmt->getNodeManager().getLangBasic().getRefDeref())){
-			//std::cout << " ============== To inline =====================" << std::endl;
-			//dumpPretty (expr);
-			//std::cout << " ==========" << std::endl;
-							return retStmt->getReturnExpr().as<core::CallExprPtr>()[0].isa<core::VariablePtr>();
-						}
-						else{
-							//std::cout << "wrong last " << stmt << std::endl;
-							return false;
-						}
-
-					}
-				}
-
-				core::DeclarationStmtPtr decl = stmt.isa<core::DeclarationStmtPtr>();
-				if(!decl){
-						//std::cout << "not a decl " << stmt << std::endl;
-					return false;
-				}
-				else{
-					auto varType = decl->getVariable()->getType();
-
-					// make sure no static variables are used here: otherwhise we can not inline
-					if(core::analysis::isCallOf(decl->getInitialization(), staticLazy) || core::analysis::isCallOf(decl->getInitialization(), staticConst)){
-						//std::cout << "is static " << decl << std::endl;
-						return false;
-					}
-					// no builtin is a cleanup
-					else if (expr.getNodeManager().getLangBasic().isBuiltIn(varType)){
-						//std::cout << "is builtin " << decl << std::endl;
-						return false;
-					}
-					// declare variable can not be a cppref or a pointer, it has to be an actual value with the need to be cleaned up
-					else if (varType.isa<core::RefTypePtr>() && expr.getNodeManager().getLangBasic().isBuiltIn(varType.as<core::RefTypePtr>()->getElementType())){
-						//std::cout << "is ref to builtin: " << decl << std::endl;
-						return false;
-					}
-					// no pointer or array can be a cleanup
-					else if (varType.isa<core::RefTypePtr>() && (varType.as<core::RefTypePtr>()->getElementType().isa<core::RefTypePtr>() || 
-																 varType.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>() ||  
-																 varType.as<core::RefTypePtr>()->getElementType().isa<core::VectorTypePtr>() )){
-						//std::cout << "is ptr or array: " << decl << std::endl;
-						return false;
-					}
-				}
-			}
-
-			//std::cout << " ============== To inline =====================" << std::endl;
-			//dumpPretty (expr);
-			//std::cout << " ==========" << std::endl;
-
-			
-			// any other case, is suitable for inlining
-			return true;
-		}
-
-		core::ExpressionPtr inlineExpressionWithCleanups(const core::ExpressionPtr& expr){
-		//	assert_true(isExpressionWithCleanups(expr)) << "not supposed to use with this: \n" << dumpPretty(expr);
-
-			// check that is a lambda
-			auto fun = expr.as<core::LambdaExprPtr>();
-			auto body = fun->getBody();
-
-
-			core::ExpressionPtr res;
-			auto lastStmt = body[body.size()-1];
-			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
-			if (preLastStmt && core::analysis::isCallOf(preLastStmt, preLastStmt->getNodeManager().getLangBasic().getRefAssign())){
-				res = preLastStmt.as<core::ExpressionPtr>();
-			}
-			else if (auto returnStmt = lastStmt.isa<core::ReturnStmtPtr>()){
-				res = returnStmt->getReturnExpr();
-			}
-			else{
-				res = lastStmt.as<core::ExpressionPtr>();
-			}
-
-			core::StatementList list = body->getStatements();
-
-			auto it = list.rbegin()+1;
-			auto end = list.rend();
-			for (; it != end; ++it){
-				// skip the assignment in case of assignment cleanups
-				if (*it == res) continue;
-				auto decl = (*it).as<core::DeclarationStmtPtr>();
-				res =core::transform::replaceAllGen(res->getNodeManager(), res, decl->getVariable(), decl->getInitialization());
-			}
-			
-			return res;
-		}
-	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
 
@@ -579,25 +430,7 @@ namespace backend {
 			return getCall(res, context);
 		}
 
-		// 4) check for inlineable expression with cleanups
-		if (detail::isExpressionWithCleanups(fun)){
-
-			auto res =  detail::inlineExpressionWithCleanups(fun);
-			core::IRBuilder builder(fun->getNodeManager());
-
-			// inline the new expression 
-			core::LambdaExprAddress root(fun.as<core::LambdaExprPtr>());
-			auto bodyAddress = root->getBody();
-			auto newFun = core::transform::replaceNode (res->getNodeManager(), bodyAddress, builder.compoundStmt(builder.returnStmt(res)));
-			res = builder.callExpr(call->getType(), newFun.as<core::ExpressionPtr>(), call->getArguments());
-			res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>());
-
-			//dumpPretty (res);
-			//std::cout << "=================================" << std::endl;
-			return context.getConverter().getStmtConverter().convert(context, res);
-		}
-
-		// 5) test whether target is a lambda => call lambda directly, without creating a closure
+		// 4) test whether target is a lambda => call lambda directly, without creating a closure
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			// obtain lambda information
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
@@ -621,7 +454,7 @@ namespace backend {
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
-		// 6) test whether target is a plane function pointer => call function pointer, no closure
+		// 5) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));
@@ -629,7 +462,7 @@ namespace backend {
 			return res;
 		}
 
-		// 7) if is a member function pointer
+		// 6) if is a member function pointer
 		if (funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
