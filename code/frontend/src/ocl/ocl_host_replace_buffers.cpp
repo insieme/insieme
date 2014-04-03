@@ -222,7 +222,8 @@ void BufferReplacer::collectInformation(TreePatternPtr& clCreateBuffer) {
 
 // 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
-		ExpressionPtr errRet = createBuffer.isVarBound("err") ? createBuffer["err"].getValue().as<ExpressionPtr>() : builder.getLangBasic().getRefNull();
+		ExpressionPtr errRet = createBuffer.isVarBound("err") ? createBuffer["err"].getValue().as<ExpressionPtr>() :
+				builder.callExpr(builder.refType(builder.arrayType(gen.getInt4())), gen.getScalarToArray(), builder.undefinedVar(builder.refType(gen.getInt4())));
 
 		ExpressionPtr deviceMemAlloc = usePtr ? hostPtr :
 				getCreateBuffer(type, size, copyPtr, hostPtr, errRet);
@@ -400,10 +401,10 @@ TypePtr IclBufferReplacer::getIclBufferType() {
 	return iclBufferTy;
 }
 core::NodePtr IclBufferReplacer::getTransformedProgram() {
-	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
+	TreePatternPtr iclCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
 			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
 
-	collectInformation(clCreateBuffer);
+	collectInformation(iclCreateBuffer);
 
 
 	generateReplacements(getIclBufferType());
