@@ -1,1 +1,1 @@
-executionFlags={PATH}/file.txt
+executionFlags=${PATH}/file.txt

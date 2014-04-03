@@ -42,6 +42,7 @@
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -342,73 +343,16 @@ namespace core {
 
 		typedef core::value_node_annotation<ClassMetaInfo>::type annotation_type;
 
-		typedef std::tuple<string, ExpressionPtr, bool, bool> encoded_member_fun_type;
-		typedef std::tuple<vector<LambdaExprPtr>, LambdaExprPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
-
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
 			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only Class-Info annotations are supported!");
-			return toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
-		}
-
-		ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) const {
-
-			// convert member functions
-			auto encodedMemberFuns = ::transform(info.getMemberFunctions(), [](const MemberFunction& cur)->encoded_member_fun_type {
-				return encoded_member_fun_type(
-						cur.getName(),
-						cur.getImplementation(),
-						cur.isVirtual(),
-						cur.isConst()
-				);
-			});
-
-			// encode class meta-info object
-			return encoder::toIR(
-				manager,
-				encoded_class_info_type (
-						info.getConstructors(),
-						info.getDestructor(),
-						info.isDestructorVirtual(),
-						encodedMemberFuns
-				)
-			);
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
 			// wrap result into annotation pointer
-			return std::make_shared<annotation_type>(fromIR(node));
-		}
-
-		ClassMetaInfo fromIR(const ExpressionPtr& node) const {
-			assert(encoder::isEncodingOf<encoded_class_info_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-
-			// decode the class object
-			auto tuple = encoder::toValue<encoded_class_info_type>(node);
-
-			// restore info
-			ClassMetaInfo res;
-
-			res.setConstructors(std::get<0>(tuple));
-			res.setDestructor(std::get<1>(tuple));
-			res.setDestructorVirtual(std::get<2>(tuple));
-			res.setMemberFunctions(::transform(std::get<3>(tuple), [](const encoded_member_fun_type& cur) {
-				return MemberFunction(std::get<0>(cur), std::get<1>(cur), std::get<2>(cur), std::get<3>(cur));
-			}));
-
-			// done
-			return res;
+			return std::make_shared<annotation_type>(encoder::toValue<ClassMetaInfo>(node));
 		}
 	};
-
-	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) {
-		ClassMetaInfoAnnotationConverter converter;
-		return converter.toIR(manager, info);
-	}
-
-	ClassMetaInfo fromIR(const ExpressionPtr& expr) {
-		ClassMetaInfoAnnotationConverter converter;
-		return converter.fromIR(expr);
-	}
 
 	// --------- Class Meta-Info Utilities --------------------
 

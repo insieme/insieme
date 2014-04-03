@@ -56,14 +56,17 @@ namespace core {
 		 */
 		template<
 			typename T,
-			template<typename D, template <typename P> class P> class Accessor
+			template<typename D, template <typename P> class P> class A
 		>
 		struct node_type_helper {
 			typedef T type;
 			typedef Pointer<const T> ptr_type;
 			typedef Address<const T> adr_type;
-			typedef Accessor<Pointer<const T>, Pointer> ptr_accessor_type;
-			typedef Accessor<Address<const T>, Address> adr_accessor_type;
+
+			template<template <typename P> class P> struct accessor { typedef A<P<const T>, P> type; };
+
+			typedef typename accessor<Pointer>::type ptr_accessor_type;
+			typedef typename accessor<Address>::type adr_accessor_type;
 		};
 
 		template<

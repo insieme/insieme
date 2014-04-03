@@ -205,6 +205,18 @@ namespace addons {
 				c_ast::ExpressionPtr init;
 
 				if (call[0] != builder.getZero(A)) {
+                    auto initValue = ARG(0);
+
+                    // Let's avoid a cast in static variable initializations when dealing with string literals
+                    // Char vectors are wrapped into structs by Insieme
+		            if(initValue->getType().isa<core::VectorTypePtr>() && mgr.getLangBasic().isChar(initValue->getType().as<core::VectorTypePtr>()->getElementType())) {
+		                const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(initValue->getType());
+		                c_ast::InitializerPtr structInit = c_ast::init(C_NODE_MANAGER->create<c_ast::StructType>(static_pointer_cast<c_ast::NamedType>(info.lValueType)->name));
+		                assert(core::analysis::isCallOf(initValue, mgr.getLangBasic().getRefDeref()));
+                        structInit->values.push_back(CONVERT_EXPR(core::analysis::getArgument(initValue, 0)));
+                        return structInit;
+                    }
+
 					// convert the init expression
 					init = CONVERT_EXPR(call[0]);
 				}

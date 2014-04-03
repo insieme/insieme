@@ -38,7 +38,7 @@
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
 compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_cxx_sema]=@PROJECT_BINARY_DIR@/driver/main
+compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_compile]=gcc
@@ -48,9 +48,15 @@ compiler[main_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_seq_compile]=gcc
 compiler[main_seq_c++_compile]=g++
 
+# boost environment
+boost_include=@Boost_INCLUDE_DIRS@
+boost_lib=@Boost_LIBRARY_DIRS@
 
 # result comparison script
 sortdiff=@insieme_root_dir@/test/sortdiff
+
+# time utility
+time_executable=@TIME_EXECUTABLE@
 
 # setup insieme runtime compiler flags
 includes[main_run_compile]={@insieme_code_dir@/runtime/include}

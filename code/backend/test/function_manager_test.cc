@@ -114,7 +114,7 @@ TEST(FunctionManager, Literals) {
 	EXPECT_EQ("int32_t myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 	// check get value (value to be used when passing function as an argument)
-	ConversionContext context(converter);
+	ConversionContext context(converter, core::LambdaPtr());
 	EXPECT_EQ("&myFun", toC(funManager.getValue(literal, context)));
 
 	// TODO: check the call creation
@@ -173,7 +173,7 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_EQ(info.prototype, info.definition);
 
 	// check get value (value to be used when passing function as an argument)
-	ConversionContext context(converter);
+	ConversionContext context(converter, core::LambdaPtr());
 	EXPECT_EQ("&name", toC(funManager.getValue(lambda, context)));
 
 	// TODO: check for call
@@ -307,7 +307,7 @@ TEST(FunctionManager, Bind) {
 	toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
-	ConversionContext context(converter);
+	ConversionContext context(converter, core::LambdaPtr());
 
 	EXPECT_EQ(
 			"name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3)",
@@ -396,7 +396,7 @@ TEST(FunctionManager, NestedBind) {
 	toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
-	ConversionContext context(converter);
+	ConversionContext context(converter, core::LambdaPtr());
 
 	EXPECT_EQ(
 			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3), 0.8f)",

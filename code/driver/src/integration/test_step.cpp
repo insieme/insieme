@@ -54,14 +54,15 @@ namespace integration {
 
 		namespace {
 
-			TestResult runCommand(const TestSetup& setup, const string& cmd, const string& producedFile="") {
+			TestResult runCommand(const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
 
 				vector<string> producedFiles;
 				producedFiles.push_back(setup.stdOutFile);
 				producedFiles.push_back(setup.stdErrFile);
 
-				if(!producedFile.empty())
+				if(!producedFile.empty()) {
 					producedFiles.push_back(producedFile);
+				}
 
 				string outfile="";
 				if(!setup.outputFile.empty()){
@@ -69,12 +70,24 @@ namespace integration {
 					outfile= " -o "+setup.outputFile;
 				}
 
-				// if it is a mock-run do nothing
-				if (setup.mockRun) {
-					return TestResult(true,0,0,"","",cmd + outfile);
+				//setup possible environment vars
+				std::stringstream env;
+				{
+					//set LD_LIBRARY_PATH
+					env << "LD_LIBRARY_PATH=";
+					for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+						env << ldPath << ":";
+					}
+					env<< "${LD_LIBRARY_PATH} ";
 				}
 
-				string realCmd=string(TIME_COMMAND)+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				// if it is a mock-run do nothing
+				if (setup.mockRun) {
+					return TestResult(true,0,0,"","",env.str() + cmd + outfile);
+				}
+
+				//environment must be set BEFORE executables!
+				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//TODO enable perf support
 				//if(setup.enablePerf)
@@ -85,8 +98,6 @@ namespace integration {
 				//TODO change this to handle SIGINT signal
 				if(retVal==512)
 					exit(0);
-
-				std::cout<<WIFSIGNALED(retVal)<<WTERMSIG(retVal)<<WTERMSIG(retVal)<<std::endl;
 
 			   if (WIFSIGNALED(retVal) &&
 				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
@@ -103,20 +114,22 @@ namespace integration {
 				boost::char_separator<char> sep("\n");
 				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
 				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
-					string token(*beg);
-					if(token.find("TIME")==0)
-						time=atof(token.substr(4).c_str());
-					else if (token.find("MEM")==0)
-						mem=atof(token.substr(3).c_str());
-					else
-						stdErr+=token+"\n";
+				string token(*beg);
+				if(token.find("TIME")==0)
+					time=atof(token.substr(4).c_str());
+				else if (token.find("MEM")==0)
+					mem=atof(token.substr(3).c_str());
+				else
+					stdErr+=token+"\n";
 				}
 
+				// check whether execution has been aborted by the user
+				if (WIFSIGNALED(retVal) && (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT)) {
+					return TestResult::userAborted(time, mem, output, stdErr, cmd);
+				}
 
-				if(retVal>0)
-					return TestResult(false,time,mem,output,stdErr,cmd,producedFiles);
-
-				return TestResult(true,time,mem,output,stdErr,cmd,producedFiles);
+				// produce regular result
+				return TestResult(retVal==0,time,mem,output,stdErr,cmd,producedFiles);
 			}
 
 			namespace fs = boost::filesystem;
@@ -197,7 +210,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				},std::set<std::string>(),COMPILE);
 			}
 
@@ -211,27 +224,14 @@ namespace integration {
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".ref";
 
 					// add arguments
-					string exFlags=props["executionFlags"];
-
-					// replace {path} with actual path
-					while(exFlags.find("{PATH}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{PATH}"),6,test.getDirectory().string());
-					}
-
-					// replace {threads} with number of required threads
-					// TODO change number to a good value (statistics)
-					while(exFlags.find("{THREADS}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{THREADS}"),9,"12");
-					}
-
-					cmd <<" "<< exFlags;
+					cmd << " " << props["executionFlags"];
 
 					// set output files
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -250,7 +250,7 @@ namespace integration {
 					cmd << " -S";
 
 					// also dump IR
-					std::string irFile=test.getDirectory().string() + "/" + test.getName() + ".ir";
+					std::string irFile=test.getDirectory().string() + "/" + test.getBaseName() + ".ir";
 					cmd << " --dump-ir " << irFile;
 
 					// add include directories
@@ -278,7 +278,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str(),irFile);
+					return runCommand(set, props, cmd.str(),irFile);
 				}, deps,COMPILE);
 			}
 
@@ -323,7 +323,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".conv.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -376,7 +376,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".comp.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -389,31 +389,18 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+
 					// start with executable
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
 
 					// add arguments
-					string exFlags=props["executionFlags"];
-
-					// replace {path} with actual path
-					while(exFlags.find("{PATH}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{PATH}"),6,test.getDirectory().string());
-					}
-
-					// replace {threads} with number of required threads
-					// TODO change number to a good value (statistics)
-					while(exFlags.find("{THREADS}")!=std::string::npos){
-						exFlags.replace(exFlags.find("{THREADS}"),9,"12");
-					}
-
-
-					cmd <<" "<< exFlags;
+					cmd << " " << props["executionFlags"];
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+".err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -443,7 +430,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
 
 					// run it
-					return runCommand(set, cmd.str());
+					return runCommand(set, props, cmd.str());
 				}, deps,CHECK);
 			}
 
@@ -467,7 +454,7 @@ namespace integration {
 			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
 			add(createMainSemaStep("main_c_sema", C));
-			add(createMainSemaStep("main_cxx_sema", CPP));
+			add(createMainSemaStep("main_c++_sema", CPP));
 
 			add(createMainConversionStep("main_seq_convert", Sequential, C));
 			add(createMainConversionStep("main_run_convert", Runtime, C));
@@ -490,9 +477,8 @@ namespace integration {
 			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
 			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
 
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
-			add(createMainCheckStep("main_seq_c++_check", Sequential, C, { "main_seq_c++_execute", "ref_c++_execute" }));
-
 
 			return list;
 		}
@@ -527,6 +513,7 @@ namespace integration {
 			if(excludes.find(step.getName()) == std::string::npos)
 				filteredSteps.push_back(step);
 		}
+
 		return filteredSteps;
 	}
 

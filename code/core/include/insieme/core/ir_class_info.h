@@ -459,7 +459,7 @@ namespace core {
 		 * @return true if so, false otherwise
 		 */
 		bool containsConstructor(const LambdaExprPtr& constructor) const {
-			return contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
+			return ::contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
 				// just check the type - no two constructors with the same type are supported
 				return *a->getType() == *b->getType();
 			});
@@ -504,16 +504,6 @@ namespace core {
 	 * Removes any meta information potentially attached to the given type.
 	 */
 	void removeMetaInfo(const TypePtr& type);
-
-	/**
-	 * A utility function converting a class-meta-info object into an IR expression using the encoding framework.
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info);
-
-	/**
-	 * A utility function converting an IR expression into a class-meta-info object using the encoding framework.
-	 */
-	ClassMetaInfo fromIR(const ExpressionPtr& expr);
 
 	/**
 	 * A utility merging together two meta infos for the same class.

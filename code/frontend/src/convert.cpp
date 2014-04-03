@@ -1157,7 +1157,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							curr->getName(),
 							getInitExpr (curr->getType(), inits[i])));
 			}
-			retIr = builder.structExpr(structTy, members);
+			if (members.empty())
+				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
+			else
+				retIr = builder.structExpr(structTy, members);
 			return retIr;
 		}
 
@@ -1751,6 +1754,13 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 			// handle this references in body,
 			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
+
+			// in constructors, replace all empty returns by a return of this:
+			if (funcTy->isConstructor() || funcTy->isDestructor()) {
+				auto emptyReturn = builder.returnStmt(builder.getLangBasic().getUnitConstant());
+				auto newReturn   = builder.returnStmt(thisVar);
+				body = core::transform::replaceAllGen (mgr, body, emptyReturn, newReturn);
+			}
 		}
 
 		// build the resulting lambda
@@ -1780,18 +1790,16 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
-            //Normally we use the function name of the member function.
-            //This can be dangerous when using templated member functions.
-            //In this case we have to add the return type information to
-            //the name, because it is not allowed to have overloaded functions
-            //that only differ by the return type.
-            //FIXME: Call to external functions might not work. What should we do with templated operators?!
-            std::string functionname = funcDecl->getNameAsString();
-            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-                std::string returnType = funcDecl->getResultType().getAsString();
-                functionname.append(returnType);
-                utils::removeSymbols(functionname);
-            }
+			std::string functionname;
+            if(funcDecl->isOverloadedOperator()) {
+				//set name of the overloadop -- use the plain simple one from the funcdecl for the BE only
+				//the symbol is the rich one (with templates, const yadayadayada)
+            	functionname = funcDecl->getNameAsString(); 
+			} else {
+				//for everything else use the rich name
+				functionname = symbol->getStringValue();
+			}
+
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
 				classInfo.addMemberFunction(functionname, lambda,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
