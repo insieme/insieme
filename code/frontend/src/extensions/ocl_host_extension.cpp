@@ -148,15 +148,18 @@ core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::IclKernelReplacer kr(root, includeDirs);
 	root = kr.getTransformedProgram();
 
+	ocl::OclSimpleFunHandler osfh;
+	root = osfh.mapElement(0, root);
+
 	TypePtr iclKernelTy = builder.structType(builder.stringValue("_icl_kernel"), toVector(
 			builder.namedType("kernel", builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))),
 			builder.namedType("dev", builder.refType(builder.arrayType(br.getIclDeviceType())))));
 
-/*
+
 	std::vector<TypePtr> typesToFix = {iclKernelTy, br.getIclBufferType()};
 	ocl::TypeFixer otf(root, typesToFix);
 	root = otf.getTransformedProg();
-
+/*
 	VariableMap nada;
 	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
 */
@@ -164,7 +167,7 @@ core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	list.push_back(root.as<core::ExpressionPtr>());
 
 //std::cout << printer::PrettyPrinter(root) << std::endl;
-//	prog = builder.program(list);
+	prog = builder.program(list);
 
 	return prog;
 }
