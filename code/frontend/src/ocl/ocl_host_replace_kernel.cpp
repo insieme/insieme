@@ -438,8 +438,8 @@ std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreate
 
 	TreePatternPtr kernelDecl = irp::declarationStmt(pattern::var("kernel", pattern::any),
 			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateKernel)));
-	TreePatternPtr kernelAssign = irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
-			pattern::var("kernel", pattern::any) << clCreateKernel);
+	TreePatternPtr kernelAssign = var("assignment", irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
+			pattern::var("kernel", pattern::any) << clCreateKernel));
 	TreePatternPtr createKernelPattern = kernelDecl | kernelAssign;
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
@@ -455,8 +455,8 @@ std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreate
 		kernelNames[kernelName] = kernelVar;
 		NodePtr createKernelExpr = createKernel.getRoot();
 
-		// remove the clCreateKernel call including the assignment and its lhs
-		prog = transform::replaceAll(mgr, prog, createKernelExpr, (builder.getNoOp()), false);
+		// remove the clCreateKernel call including the assignment and its lhs, not the declaration
+		if(createKernel.isVarBound("assignment")) prog = transform::replaceAll(mgr, prog, createKernelExpr, (builder.getNoOp()), false);
 
 		if(createKernel.isVarBound("file_name")) kernelFileNames.push_back(utils::extractQuotedString(createKernel["file_name"].getValue()));
 	});
@@ -843,7 +843,7 @@ void IclKernelReplacer::collectArguments() {
 
 	NodeAddress pA(prog);
 	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
-		ExpressionAddress kernel = /*utils::tryRemove(gen.getRefDeref(), */runKernel["kernel"].getValue().as<ExpressionAddress>();
+		ExpressionAddress kernel = matchAddress >> runKernel["kernel"].getValue().as<ExpressionAddress>();
 
 		TupleExprPtr arguments = runKernel["args"].getValue().as<TupleExprPtr>();
 		ExpressionsPtr member = arguments->getExpressions();
@@ -860,13 +860,14 @@ void IclKernelReplacer::collectArguments() {
 
 			ExpressionPtr addToTuple;
 //std::cout << utils::getRootVariable(matchAddress >> kernel) << std::endl << *utils::getRootVariable(matchAddress >> kernel) << std::endl;
+
 			if(analysis::isZero(storedArg)) { // local memory argument
-				kernelTypes[utils::getRootVariable(matchAddress >> kernel).as<ExpressionPtr>()].push_back(gen.getUInt8());
+				kernelTypes[utils::getRootVariable(kernel).as<ExpressionPtr>()].push_back(gen.getUInt8());
 				// store the information that this is a local memory argument
 //				localMemArgs[kernel].insert(member[i-1]);
 				addToTuple = member[i-1];
 			} else {
-				kernelTypes[utils::getRootVariable(matchAddress >> kernel).as<ExpressionPtr>()].push_back(storedArg->getType());
+				kernelTypes[utils::getRootVariable(kernel).as<ExpressionPtr>()].push_back(storedArg->getType());
 				addToTuple = storedArg;
 			}
 
