@@ -472,37 +472,29 @@ namespace backend {
 	namespace detail{
 		bool isExpressionWithCleanups(const core::ExpressionPtr& expr){
 			
-			//std::cout << " ============== check inline =====================" << std::endl;
-			//dumpPretty(expr);
-
 			// check that is a lambda
 			auto fun = expr.isa<core::LambdaExprPtr>();
 			if (!fun) {
-				//std::cout << "not a function " <<  std::endl;
 				return false;
 			}
 
 			// can not inline recursions
 			if (fun->isRecursive()) {
-				//std::cout << "recursive function " <<  std::endl;
 				return false;
 			}
 
 			// can not inline members
 			if (fun->getFunctionType()->isConstructor() || fun->getFunctionType()->isDestructor() || fun->getFunctionType()->isMemberFunction() ){
-				//std::cout << "member function " <<  std::endl;
 				return false;
 			}
 
 			// can not inline a void return function
 			if (fun->getFunctionType()->getReturnType() ==  expr.getNodeManager().getLangBasic().getUnit()){
-				//std::cout << "unit function " <<  std::endl;
 				return false;
 			}
 
 			// an inlineable function returns by value
 			if (fun->getFunctionType()->getReturnType().isa<core::RefTypePtr>()){
-				//std::cout << "ref return function " <<  std::endl;
 				return false;
 			}
 
@@ -510,7 +502,6 @@ namespace backend {
 			// 	- at least one cleanup declaration + the actual expression
 			auto body = fun->getBody();
 			if (body.size() < 2) {
-				//std::cout << "wrong size " << body << std::endl;
 				return false;
 			}
 
@@ -518,7 +509,6 @@ namespace backend {
 			auto lastStmt =body[body.size()-1];
 			auto preLastStmt = body.size() > 2? body[body.size()-2]: core::StatementPtr();
 			if (!lastStmt.isa<core::ExpressionPtr>() && !lastStmt.isa<core::ReturnStmtPtr>()){
-				//std::cout << "wrong last " << lastStmt << std::endl;
 				return false;
 			}
 
@@ -533,13 +523,9 @@ namespace backend {
 					if(auto retStmt =  lastStmt.isa<core::ReturnStmtPtr>()){
 						
 						if (core::analysis::isCallOf(retStmt->getReturnExpr(), retStmt->getNodeManager().getLangBasic().getRefDeref())){
-			std::cout << " ============== To inline =====================" << std::endl;
-			dumpPretty (expr);
-			std::cout << " ==========" << std::endl;
 							return retStmt->getReturnExpr().as<core::CallExprPtr>()[0].isa<core::VariablePtr>();
 						}
 						else{
-							//std::cout << "wrong last " << stmt << std::endl;
 							return false;
 						}
 
@@ -548,7 +534,6 @@ namespace backend {
 
 				core::DeclarationStmtPtr decl = stmt.isa<core::DeclarationStmtPtr>();
 				if(!decl){
-						//std::cout << "not a decl " << stmt << std::endl;
 					return false;
 				}
 				else{
@@ -556,40 +541,31 @@ namespace backend {
 
 					// make sure no static variables are used here: otherwhise we can not inline
 					if(core::analysis::isCallOf(decl->getInitialization(), staticLazy) || core::analysis::isCallOf(decl->getInitialization(), staticConst)){
-						//std::cout << "is static " << decl << std::endl;
 						return false;
 					}
 					// no builtin is a cleanup
 					else if (expr.getNodeManager().getLangBasic().isBuiltIn(varType)){
-						//std::cout << "is builtin " << decl << std::endl;
 						return false;
 					}
 					// declare variable can not be a cppref or a pointer, it has to be an actual value with the need to be cleaned up
 					else if (varType.isa<core::RefTypePtr>() && expr.getNodeManager().getLangBasic().isBuiltIn(varType.as<core::RefTypePtr>()->getElementType())){
-						//std::cout << "is ref to builtin: " << decl << std::endl;
 						return false;
 					}
 					// no pointer or array can be a cleanup
 					else if (varType.isa<core::RefTypePtr>() && (varType.as<core::RefTypePtr>()->getElementType().isa<core::RefTypePtr>() || 
 																 varType.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>() ||  
 																 varType.as<core::RefTypePtr>()->getElementType().isa<core::VectorTypePtr>() )){
-						//std::cout << "is ptr or array: " << decl << std::endl;
 						return false;
 					}
 				}
 			}
-
-			std::cout << " ============== To inline =====================" << std::endl;
-			dumpPretty (expr);
-			std::cout << " ==========" << std::endl;
-
 			
 			// any other case, is suitable for inlining
 			return true;
 		}
 
 		core::ExpressionPtr inlineExpressionWithCleanups(const core::ExpressionPtr& expr){
-		//	assert_true(isExpressionWithCleanups(expr)) << "not supposed to use with this: \n" << dumpPretty(expr);
+			assert_true(isExpressionWithCleanups(expr)) << "not supposed to use with this: \n" << dumpPretty(expr);
 
 			// check that is a lambda
 			auto fun = expr.as<core::LambdaExprPtr>();

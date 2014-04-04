@@ -298,7 +298,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 
 	}
 	if(VLOG_IS_ON(2)){
-		dumpPretty(&(*ret));
+		dumpPretty(ret);
 	}
 	return ret;
 }

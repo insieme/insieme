@@ -418,8 +418,6 @@ TEST(FunctionCall, GenericFunctionsWithLazy) {
     // check for semantic errors
     EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
-    dumpPretty(program);
-
     LOG(INFO) << "Converting IR to C...";
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
     LOG(INFO) << "Printing converted code: " << *converted;
@@ -457,8 +455,6 @@ TEST(FunctionCall, PassLabmdaToBind) {
 
     // check for semantic errors
     EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-
-    dumpPretty(program);
 
     LOG(INFO) << "Converting IR to C...";
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
