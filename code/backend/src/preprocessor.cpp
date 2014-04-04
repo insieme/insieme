@@ -626,7 +626,7 @@ namespace backend {
 
 	core::NodePtr InlineCleanups::process(const Converter& converter, const core::NodePtr& code) {
 		// this pass has been implemented as part of the core manipulation utils
-		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)->core::NodePtr {
+		auto inliner = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)->core::NodePtr {
 			if(auto call = node.isa<core::CallExprPtr>()){
 				core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 				if (detail::isExpressionWithCleanups(fun)){
@@ -644,7 +644,40 @@ namespace backend {
 				}	
 			}
 			return node;
-		}).map(code);
+		});
+
+		auto res = inliner.map(code);
+
+		// this thing modifies the objects, it might be that then we create a new function, 
+		// but meta infos will still have a pointer to the original function, ending up into two implementations 
+		core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
+			if (core::hasMetaInfo(type)){
+				auto meta = core::getMetaInfo(type);
+
+				vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+				for (auto& ctor : ctors){
+					ctor = inliner.map(ctor).as<core::LambdaExprPtr>();
+				}
+				if (!ctors.empty()) meta.setConstructors(ctors);
+
+				if (meta.hasDestructor()){
+					auto dtor = meta.getDestructor();
+					dtor = inliner.map(dtor).as<core::LambdaExprPtr>();
+					meta.setDestructor(dtor);
+				}
+
+				vector<core::MemberFunction> members = meta.getMemberFunctions();
+				for (core::MemberFunction& member : members){
+					auto m = inliner.map(member.getImplementation().as<core::LambdaExprPtr>());
+					member = core::MemberFunction(member.getName(), m.as<core::ExpressionPtr>(),
+												  member.isVirtual(), member.isConst());
+				}
+				if(!members.empty()) meta.setMemberFunctions(members);
+				core::setMetaInfo(type, meta);
+
+			}
+		});
+		return res;
 	};
 
 } // end namespace backend
