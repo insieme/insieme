@@ -128,6 +128,7 @@ public:
 	const ClangCompiler& getCompiler() const { return mClang; }
 
 	const path& getFileName() const { return mFileName; }
+	const string getJustFileName() const { return mFileName.filename().string(); }
 	
 	bool isCxx() const { return getCompiler().isCXX(); }
 

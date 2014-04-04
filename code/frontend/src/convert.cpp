@@ -204,22 +204,29 @@ inline unsigned countFunctions(const clang::DeclContext* declCtx){
 	return count;
 }
 
+
+inline string  createPrefix(const std::string& name, unsigned pass, unsigned of){
+	std::stringstream out;
+	out << name << " " << pass << "/" << of;
+	return out.str();
+}
+
 /**
  * some tool to print a progress bar, some day would be cool to have an infrastructure to do so
  */
-inline void printProgress (unsigned pass, unsigned cur, unsigned max){
+inline void printProgress (const std::string& prefix, unsigned cur, unsigned max){
 	std::stringstream out;
 	static unsigned last = 0;
-	unsigned a = ((float)cur*100.0f) / (float)max;
+	unsigned a = ((float)cur/ (float)max) * 60.0f;
 	if (a != last){
 		unsigned i;
 		for (i = 0; i< a; i++)
 			out << "=";
 		out  << ">";
 		i++;
-		for (; i< 100; i++)
+		for (; i< 60; i++)
 			out << " ";
-		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
+		std::cout << "\r" << prefix << " [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
 		last = a;
 	}
 }
@@ -309,7 +316,10 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.convertTypeDecl(typeDecl);
 			converter.untrackSourceLocation ();
 
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),1,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 		// typedefs and typealias
 		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
@@ -320,7 +330,10 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
 			
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),1,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 	} typeVisitor(*this, count);
 	typeVisitor.traverseDeclCtx (declContext);
@@ -348,7 +361,10 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.lookUpVariable(var);
 			converter.untrackSourceLocation();
 
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (2, ++processed, count);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),2,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 	} varVisitor(*this, count);
 	varVisitor.traverseDeclCtx(declContext);
@@ -382,7 +398,10 @@ tu::IRTranslationUnit Converter::convert() {
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
 			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (3, ++processed, count);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),3,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 	} funVisitor(*this, false, count);
 	funVisitor.traverseDeclCtx(declContext);
