@@ -61,6 +61,7 @@ namespace integration {
 			auto job = frontend::ConversionJob(testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
+			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
 			std::string step="main_run_convert";
 			if (testCase.isCXX11()){

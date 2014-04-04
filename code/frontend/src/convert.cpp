@@ -178,9 +178,15 @@ inline unsigned countTypes(const clang::DeclContext* declCtx){
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
 		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
-		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { count ++; }
-		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
-			if (typedefDecl->getTypeForDecl()) count++;
+		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { 
+			if (!typeDecl->isCompleteDefinition() ) return;
+			if (typeDecl->isDependentType() )      return;
+			count++;
+		}
+				
+		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
+			if (!typedefDecl->getTypeForDecl()) return;
+			count++;
 		}
 
 	} counter(count);
@@ -278,7 +284,6 @@ tu::IRTranslationUnit Converter::convert() {
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
-
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
@@ -295,14 +300,14 @@ tu::IRTranslationUnit Converter::convert() {
         }
 
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
-			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
+			if (!typeDecl->isCompleteDefinition() ) return;
+			if (typeDecl->isDependentType() )      return;
 
-				// we do not convert templates or partial spetialized classes/functions, the full
-				// type will be found and converted once the instantaion is found
-				converter.trackSourceLocation (typeDecl);
-				converter.convertTypeDecl(typeDecl);
-				converter.untrackSourceLocation ();
-			}
+			// we do not convert templates or partial spetialized classes/functions, the full
+			// type will be found and converted once the instantaion is found
+			converter.trackSourceLocation (typeDecl);
+			converter.convertTypeDecl(typeDecl);
+			converter.untrackSourceLocation ();
 
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
@@ -314,13 +319,10 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (typedefDecl);
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
-
+			
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
 	} typeVisitor(*this, count);
-
-
-	//typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 	typeVisitor.traverseDeclCtx (declContext);
 
 	// collect all global declarations
@@ -349,7 +351,6 @@ tu::IRTranslationUnit Converter::convert() {
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (2, ++processed, count);
 		}
 	} varVisitor(*this, count);
-
 	varVisitor.traverseDeclCtx(declContext);
 
 	// collect all global declarations
@@ -382,10 +383,8 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.untrackSourceLocation ();
 			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (3, ++processed, count);
-			return;
 		}
 	} funVisitor(*this, false, count);
-
 	funVisitor.traverseDeclCtx(declContext);
 
 	// handle entry points (marked using insieme pragmas)
@@ -400,8 +399,9 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+
 	//frontend done
-//	std::cout << std::endl;
+	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;
 
 //	std::cout << " ==================================== " << std::endl;
 //	std::cout << getIRTranslationUnit() << std::endl;
