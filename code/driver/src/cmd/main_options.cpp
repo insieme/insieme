@@ -148,9 +148,8 @@ namespace cmd {
 		frontend::ConversionJob job(InputFiles, IncludePaths);
 
 		// add intercepts
-		for (auto i : Interceptions) job.setInterception(i);
-		
-		for (auto i : InterceptionHeaderDirs) job.addInterceptedHeaderDir(i);
+		job.addInterceptedNameSpacePatterns(Interceptions);
+		job.setInterceptedHeaderDirs(InterceptionHeaderDirs);
 
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);

@@ -1,4 +1,3 @@
-compFlags[main_c++_sema]=--intercept boost::.*
-compFlags[main_seq_c++_convert]=--intercept boost::.*
-compFlags[main_run_c++_convert]=--intercept boost::.*
 includes="${boost_include}"
+intercepted_name_spaces=${intercepted_name_spaces},boost::.*
+intercepted_header_file_dirs=${intercepted_header_file_dirs},${boost_include}

@@ -63,7 +63,7 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 	public:
 
-	InterceptorPlugin(const std::set<std::string>& interceptSet) : interceptor(interceptSet) {}
+	InterceptorPlugin(const std::set<std::string>& patterns) : interceptor(patterns) {}
 
 };
 
