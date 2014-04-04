@@ -668,7 +668,8 @@ namespace backend {
 
 				vector<core::MemberFunction> members = meta.getMemberFunctions();
 				for (core::MemberFunction& member : members){
-					auto m = inliner.map(member.getImplementation().as<core::LambdaExprPtr>());
+					
+					auto m = inliner.map(member.getImplementation());
 					member = core::MemberFunction(member.getName(), m.as<core::ExpressionPtr>(),
 												  member.isVirtual(), member.isConst());
 				}
