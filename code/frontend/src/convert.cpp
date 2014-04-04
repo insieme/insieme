@@ -1417,6 +1417,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
 			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
 
+
 				VLOG(2) << "typedef of an anonymous type, forward the name: ";
 				VLOG(2) << "    -" << res;
 
@@ -1433,8 +1434,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 					core::TypePtr impl = symb;
 					// if target is an annonymous type, we create a new type with the name of the typedef
 					if (structTy->getName()->getValue().substr(0,5) == "_anon"){
-						impl = builder.structType ( builder.stringValue( name), 
-											structTy->getParents(), structTy->getEntries());
+						impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
 
 						core::transform::utils::migrateAnnotations(structTy.as<core::TypePtr>(), impl);
 						core::annotations::attachName(impl,name);
@@ -1445,7 +1445,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
 						}
-
 						VLOG(2) << "    -" << gen;
 						typeCache[typedefType] = gen;
 					}
@@ -1471,6 +1470,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);
     }
+
 }
 
 //////////////////////////////////////////////////////////////////
