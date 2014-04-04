@@ -198,6 +198,10 @@ inline unsigned countFunctions(const clang::DeclContext* declCtx){
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
 		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
+		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
+			Counter vis(count);
+			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
+		}
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) { count++; }
 	} counter(count);
 	counter.traverseDeclCtx(declCtx);
