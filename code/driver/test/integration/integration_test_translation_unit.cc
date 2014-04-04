@@ -106,17 +106,24 @@ namespace insieme {
 			step="main_run_c++_compile";
 		}
 
-//		// add OCL specific compiler flags
-//		compiler.addFlag("-lOpenCL");
-//		compiler.addFlag("-lm");
-//		compiler.addFlag("-I$OPENCL_ROOT/include");
-//		compiler.addFlag("-L$OPENCL_ROOT/lib/x86_64");
-//		compiler.addFlag("-DUSE_OPENCL=ON");
-//		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
-
 		// add extra compiler flags from test case
 		for(const auto& flag : testCase.getCompilerArguments(step)) {
 			compiler.addFlag(flag);
+		}
+
+		// add includes
+		for(const auto& cur : testCase.getIncludeDirs()) {
+			compiler.addIncludeDir(cur.string());
+		}
+
+		// add library directories
+		for(const auto& cur : testCase.getLibDirs()) {
+			compiler.addFlag("-L" + cur.string());
+		}
+
+		// add libraries
+		for(const auto& cur : testCase.getLibNames()) {
+			compiler.addFlag("-l" + cur);
 		}
 
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;

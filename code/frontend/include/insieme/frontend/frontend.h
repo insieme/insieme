@@ -131,7 +131,7 @@ namespace frontend {
 		 * A list of string representing the regular expression to be intercepted
 		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted
 		 */
-		set<string> interceptions;
+		set<string> interceptedNameSpacePatterns;
 
 		/**
 		 * A list of include directories containing intercepted headers.
@@ -259,24 +259,27 @@ namespace frontend {
 		}
 
 		/**
-		 * Updates the list of strings to be intercepted
+		 * Adds a single regular expression string to the intercetion set
 		 */
-		void setInterceptions(const vector<string>& toIntercept) {
-			this->interceptions.insert(toIntercept.begin(), toIntercept.end());
+		void addInterceptedNameSpacePattern(const string& pattern) {
+			this->interceptedNameSpacePatterns.insert(pattern);
 		}
 
 		/**
 		 * Adds a single regular expression string to the intercetion set
 		 */
-		void setInterception(const string& toIntercept) {
-			this->interceptions.insert(toIntercept);
+		template<typename List>
+		void addInterceptedNameSpacePatterns(const List& patterns) {
+			for(const auto& cur : patterns) {
+				addInterceptedNameSpacePattern(cur);
+			}
 		}
 
 		/**
 		 * Obtains a reference to the currently defined interceptions.
 		 */
-		const set<string>& getInterceptions() const {
-			return interceptions;
+		const set<string>& getInterceptedNameSpacePatterns() const {
+			return interceptedNameSpacePatterns;
 		}
 
 		/**

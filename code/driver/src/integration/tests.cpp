@@ -74,6 +74,11 @@ namespace integration {
 				job.setDefinition(def.first, def.second);
 			});
 
+			// add interceptor configuration
+			job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
+			job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
+
+			// done
 			return job;
 		}
 
@@ -212,8 +217,14 @@ namespace integration {
 			enableOpenMP = prop.get<bool>("use_omp");
 			enableOpenCL = prop.get<bool>("use_opencl");
 
+			// extract interception configuration
+			auto interceptionNameSpacePatterns = prop.get<vector<string>>("intercepted_name_spaces");
+			auto interceptedHeaderFileDirectories = prop.get<vector<frontend::path>>("intercepted_header_file_dirs");
+
 			// add test case
-			return IntegrationTestCase(testName, testCaseDir, files, includeDirs,libPaths,libNames, enableOpenMP, enableOpenCL, enableCXX11, prop);
+			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,
+					interceptionNameSpacePatterns, interceptedHeaderFileDirectories,
+					enableOpenMP, enableOpenCL, enableCXX11, prop);
 		}
 
 
