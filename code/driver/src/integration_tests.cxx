@@ -84,13 +84,14 @@ namespace {
 		bool panic_mode;
 		bool list_only;
 		bool clean;
+		bool color;
 		vector<string> cases;
 		vector<string> steps;
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
 			  num_threads(1), num_repeditions(1), print_configs(false),
-			  panic_mode(false), list_only(false), clean(false) {}
+			  panic_mode(false), list_only(false), clean(false), color(true) {}
 	};
 
 	namespace fs = boost::filesystem;
@@ -100,6 +101,33 @@ namespace {
 	vector<TestCase> loadCases(const Options& options);
 
 	vector<TestStep> getTestSteps(const Options& options);
+
+	struct Colorize{ 
+		enum Color { RED, GREEN, BLUE, BLACK, BOLD, RESET};
+		bool color;
+		Colorize(bool color) : color(color) {}
+		string getColor(Color c) {
+			if(color) {
+				switch(c) {
+					case RED: return "\033[31m";
+					case GREEN: return "\033[32m";
+					case BLUE: return "\033[34m";
+					case BLACK: return "\033[30m";
+					case RESET: return "\033[0m";
+					case BOLD: return "\033[1m";
+				}
+			}
+
+			return "";
+		}
+
+		string red() {return getColor(RED); }
+		string green() {return getColor(GREEN); }
+		string blue() {return getColor(BLUE); }
+		string black() {return getColor(BLACK); }
+		string reset() {return getColor(RESET); }
+		string bold() {return getColor(BOLD); }
+	};
 }
 
 std::string getGitVersion(){
@@ -170,6 +198,8 @@ int main(int argc, char** argv) {
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
 
+	Colorize colorize(options.color);
+
 	// setup highlighted tests:
 	std::set<std::string> highlight;
 	highlight.insert("main_seq_execute");
@@ -224,8 +254,8 @@ int main(int argc, char** argv) {
 
 				for(const auto& curRes : results) {
 					if(options.mockrun){
-						std::cout<<"\033[0;30m"<<curRes.first<<std::endl;
-						std::cout<<"\033[0;32m"<<curRes.second.getCmd()<<std::endl;
+						std::cout << colorize.black() << curRes.first<< std::endl;
+						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
 					} else {
 						string colOffset;
 						colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
@@ -233,18 +263,18 @@ int main(int argc, char** argv) {
 					
 						// color certain passes:
 						if (highlight.find (curRes.first) != highlight.end()) {
-							line <<  "\033[1;94m";
+							line <<  colorize.bold() << colorize.blue();
 						}
 
 						line << "# " << curRes.first <<
-							format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) <<  "\033[0m\n";
+							format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
 
 						if(curRes.second.wasSuccessfull()){
 							std::cout << line.str();
 						} else {
-							std::cout<<"\033[0;31m"<<line.str();
-							std::cout << "#------------------------------------------------------------------------------#\n\033[0m";
-							std::cout<<"Command: \033[0;32m"<<curRes.second.getCmd()<<"\033[0m"<<std::endl<<std::endl;
+							std::cout << colorize.red() <<line.str();
+							std::cout << "#------------------------------------------------------------------------------#" << colorize.reset();
+							std::cout<<"Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
 							std::cout<<curRes.second.getFullOutput();
 						}
 
@@ -260,17 +290,18 @@ int main(int argc, char** argv) {
 				}
 
 				if(!options.mockrun){
-					if(success) {
-						std::cout<<"\033[0;32m";
-					} else {
-						std::cout<<"\033[0;31m";
-					}
 
-					std::cout << "#------------------------------------------------------------------------------#\n";
+					if(success) 
+						std::cout << colorize.green();
+					else 
+						std::cout << colorize.red();
+
+						std::cout << "#------------------------------------------------------------------------------#\n";
 					if(success)
-						std::cout<<"#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
+						std::cout << "#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
 					else
-						std::cout<<"#\tFAILED  -- "<<format("%-61s",cur.getName())<<"#\n";
+						std::cout << "#\tFAILED  -- "<<format("%-60s",cur.getName())<<"#\n";
+
 					std::cout << "#------------------------------------------------------------------------------#\n";
 
 					if (success) {
@@ -283,9 +314,11 @@ int main(int argc, char** argv) {
 							panic = true;
 						}
 					}
+					std::cout << colorize.reset();
 				}
+
 				//reset color to default value
-				std::cout<<"\033[0m";
+				std::cout << colorize.reset();
 			}
 
 		} // end test case loop
@@ -294,10 +327,10 @@ int main(int argc, char** argv) {
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size()*options.num_repeditions);
-	std::cout << format("# PASSED:         \033[0;32m%60d\033[0m #\n", ok.size());
-	std::cout << format("# FAILED:         \033[0;31m%60d\033[0m #\n", failed.size());
+	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
+	std::cout << "# FAILED:         " << colorize.red() << format("%60d", failed.size()) << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
-		std::cout << format("#\033[0;31m   - %-63s          \033[0m#\n", cur.getName());
+	std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
 	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
@@ -328,6 +361,7 @@ namespace {
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
 				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 				("clean",				"remove all output files")
+				("nocolor",				"no highlighting of output")
 		;
 
 		// define positional options (all options not being named)
@@ -360,6 +394,7 @@ namespace {
 
 		res.mockrun = map.count("mock");
 		res.clean=map.count("clean");
+		res.color=!map.count("nocolor");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 		res.num_repeditions = map["repeat"].as<int>();

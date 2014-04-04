@@ -70,12 +70,24 @@ namespace integration {
 					outfile= " -o "+setup.outputFile;
 				}
 
-				// if it is a mock-run do nothing
-				if (setup.mockRun) {
-					return TestResult(true,0,0,"","",cmd + outfile);
+				//setup possible environment vars
+				std::stringstream env;
+				{
+					//set LD_LIBRARY_PATH
+					env << "LD_LIBRARY_PATH=";
+					for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+						env << ldPath << ":";
+					}
+					env<< "${LD_LIBRARY_PATH} ";
 				}
 
-				string realCmd=string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				// if it is a mock-run do nothing
+				if (setup.mockRun) {
+					return TestResult(true,0,0,"","",env.str() + cmd + outfile);
+				}
+
+				//environment must be set BEFORE executables!
+				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//TODO enable perf support
 				//if(setup.enablePerf)
@@ -377,6 +389,7 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+
 					// start with executable
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
 
@@ -441,7 +454,7 @@ namespace integration {
 			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
 			add(createMainSemaStep("main_c_sema", C));
-			add(createMainSemaStep("main_cxx_sema", CPP));
+			add(createMainSemaStep("main_c++_sema", CPP));
 
 			add(createMainConversionStep("main_seq_convert", Sequential, C));
 			add(createMainConversionStep("main_run_convert", Runtime, C));
@@ -464,8 +477,8 @@ namespace integration {
 			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
 			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
 
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
-			add(createMainCheckStep("main_seq_c++_check", Sequential, C, { "main_seq_c++_execute", "ref_c++_execute" }));
 
 			return list;
 		}

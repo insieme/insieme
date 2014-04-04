@@ -38,7 +38,7 @@
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
 compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_cxx_sema]=@PROJECT_BINARY_DIR@/driver/main
+compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_compile]=gcc

@@ -114,6 +114,8 @@ public:
 class IclBufferReplacer  : public BufferReplacer {
 public:
 	IclBufferReplacer(core::NodePtr prog);
+	core::TypePtr getIclDeviceType();
+	core::TypePtr getIclBufferType();
 public:
 	virtual core::NodePtr getTransformedProgram();
 };

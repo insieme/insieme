@@ -60,6 +60,33 @@ using std::function;
 using boost::is_convertible;
 using boost::enable_if;
 
+/** Checks whether a condition is true for any element of the supplied iteration range.
+ *
+ *  @param first iterator designating the start of the iteration range
+ *  @param last iterator designating the end of the iteration range
+ *  @param predicate function to be called for each element, returns bool
+ */
+template<class InputIterator, class Function>
+bool any(InputIterator first, InputIterator last, const Function& predicate)
+{
+	while (first != last) {
+		if (predicate(*first)) {
+			return true;
+		}
+		++first;
+	}
+	return false;
+}
+
+/** Checks whether a condition is true for any element of the supplied container.
+ *
+ *  @param list container that is forward iteratable
+ *  @param predicate function to be called for each element, returns bool
+ */
+template<class ContainerType, class Function>
+bool any(const ContainerType& list, const Function& predicate) {
+	return ::any(list.begin(), list.end(), predicate);
+}
 /**
  * Convenience function for std::for_each.
  */
@@ -251,7 +278,7 @@ inline bool equals(const ListA& a, const ListB& b) {
  */
 template<class Container, typename Comparator>
 inline bool contains(const Container& container, const typename Container::value_type& value, const Comparator& comparator) {
-	return any(container, [&value, &comparator](const typename Container::value_type& cur){
+	return ::any(container, [&value, &comparator](const typename Container::value_type& cur){
 		return comparator(cur, value);
 	});
 }
@@ -359,33 +386,7 @@ bool all(const ContainerType& list, const Function& predicate) {
 	return all(list.begin(), list.end(), predicate);
 }
 
-/** Checks whether a condition is true for any element of the supplied iteration range.
- *
- *  @param first iterator designating the start of the iteration range
- *  @param last iterator designating the end of the iteration range
- *  @param predicate function to be called for each element, returns bool
- */
-template<class InputIterator, class Function>
-bool any(InputIterator first, InputIterator last, const Function& predicate)
-{
-	while (first != last) {
-		if (predicate(*first)) {
-			return true;
-		}
-		++first;
-	}
-	return false;
-}
 
-/** Checks whether a condition is true for any element of the supplied container.
- *
- *  @param list container that is forward iteratable
- *  @param predicate function to be called for each element, returns bool
- */
-template<class ContainerType, class Function>
-bool any(const ContainerType& list, const Function& predicate) {
-	return any(list.begin(), list.end(), predicate);
-}
 
 /** Combines the hash value of each value element in the supplied range of pointers with seed.
  *
@@ -430,7 +431,7 @@ bool hasDuplicates(InputIterator first, InputIterator last) {
 	// NOTE: uses the boost hasher instead of the default hasher!
 	// see: http://stackoverflow.com/questions/647967/how-to-extend-stdtr1hash-for-custom-types
 	std::unordered_set<Element, boost::hash<Element>> set(std::distance(first,last));
-	return any(first, last, [&set](const Element& cur) {
+	return ::any(first, last, [&set](const Element& cur) {
 		// check whether the current element is a new element
 		//  - if it is new, insert will return true => fine
 		//  - if it is not, insert will return false => duplicate found
