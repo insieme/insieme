@@ -1772,7 +1772,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 		// build the resulting lambda
 		lambda = builder.lambdaExpr(funcTy, params, body);
-		VLOG(2) << lambda << " + function declaration: " << funcDecl;
+		VLOG(2) << " DONE: function declaration: " << funcDecl->getQualifiedNameAsString();
 	}
 
 	// FIXME: this might have some performance impact

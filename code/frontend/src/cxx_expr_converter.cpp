@@ -297,9 +297,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 		ret = builder.callExpr(retTy, func, args);
 
 	}
-	if(VLOG_IS_ON(2)){
-		dumpPretty(ret);
-	}
 	return ret;
 }
 
@@ -471,9 +468,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		retIr = builder.callExpr (funcTy.getReturnType(), ctorFunc, args);
 	}
 
-	if (VLOG_IS_ON(2)){
-		dumpPretty(retIr);
-	}
 
     frontend_assert(retIr) << "ConstructExpr could not be translated\n";
 	return retIr;

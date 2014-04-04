@@ -71,6 +71,13 @@ struct StmtWrapper: public StatementList {
 	bool isSingleStmt() const {
 		return size() == 1;
 	}
+
+	std::ostream& operator<<(std::ostream& out){
+		for(auto s : *this){
+			out << "-" << dumpOneLine(s) << "\n";
+		}
+		return out;
+	}
 };
 
 StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
