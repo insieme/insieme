@@ -189,17 +189,6 @@ namespace lang {
 
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// temporaries
-	
-		/**
-		 * materialize a value, this operation provides a memory address to a pure right value
-		 * it might be used whenever a const ref extends a value livetime.
-		 * most probably, is ignored by the backend
-		 */
-		LANG_EXT_LITERAL(Materialize, "materialize", "('a)->ref<'a>");
-
-	
-	//////////////////////////////////////////////////////////////////////////////////////////
 	//	explicit C++ casts
 
 		/**

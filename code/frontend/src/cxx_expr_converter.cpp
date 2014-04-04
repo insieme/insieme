@@ -396,8 +396,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		retIr = (Visit(callExpr->getArg (0)));
-		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
-			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
 
 		// a constructor returns a reference of the class type, but we might need to fix types
 		// do a ref reinterpret to the target type
