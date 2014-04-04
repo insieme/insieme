@@ -1,3 +1,4 @@
+#include <iostream>
 class Testable {
 private:
 	bool * ptr_;
@@ -16,7 +17,9 @@ public:
 
 int main() {
 	Testable a;
-	if(a) 
-		return 1;
+	if(a) {
+		std::cout << " hello " << std::endl;
+	}
+	std::cout << " bye " << std::endl;
 	return 0;
 }
