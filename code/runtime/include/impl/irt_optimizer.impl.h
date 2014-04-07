@@ -199,10 +199,10 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             
             if(variant->objective.weights.energy) {
                     printf("task %d ener\n", is_task);
-                variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = irt_g_available_freqs_count -1;
+                variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = 10;// irt_g_available_freqs_count -1;
             }
             else {
-                    printf("task %d ener\n", is_task);
+                    printf("task %d time\n", is_task);
                 variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = 0;
             }
 

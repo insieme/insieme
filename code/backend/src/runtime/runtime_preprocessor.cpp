@@ -315,7 +315,22 @@ namespace runtime {
             return objective;
         }
 
-		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
+        core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
+            if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
+			    core::IRBuilder builder(manager);
+			    const Extensions& extensions = manager.getLangExtension<Extensions>();
+		        core::StatementList stmtList;
+                unsigned region_id = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
+                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
+                stmtList.push_back(stmt);
+                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
+                return builder.compoundStmt(stmtList);
+            }
+            else
+                return stmt;
+        }
+
+		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job, bool isTask = false) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
@@ -385,7 +400,13 @@ namespace runtime {
 				assert(!impls.empty() && "There must be at least one implementation!");
 
 				for(const auto& cur : impls) {
-					auto impl = builder.lambdaExpr(unit, fixBranch(cur), params);
+                    core::StatementPtr instrumentedBody;
+                    if(isTask)
+                        instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
+                    else
+                        instrumentedBody = fixBranch(cur);
+
+					auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
 					annotations::migrateMetaInfos(job, impl);
 					variants.push_back(WorkItemVariant(impl));
 				}
@@ -407,8 +428,14 @@ namespace runtime {
 				// add default branch
 				body.push_back(fixBranch(job->getDefaultExpr()));
 
+                core::StatementPtr instrumentedBody;
+                if(isTask)
+                    instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
+                else
+                    instrumentedBody = builder.compoundStmt(body);
+
 				// build implementation
-				auto impl = builder.lambdaExpr(unit, builder.compoundStmt(body), params);
+				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
 
 				// move meta-infos
 				annotations::migrateMetaInfos(job, impl);
@@ -496,7 +523,7 @@ namespace runtime {
                                 const auto& parArg = parCall->getArgument(0);
                                 if(basic.isJob(parArg->getType())) {
                                     const auto& job = parArg.as<core::JobExprPtr>();
-                                    return wrapWithInstrumentationRegion(job, builder.callExpr(basic.getUnit(), ext.merge, arg));
+                                    return wrapWithInstrumentationRegion(manager,job, builder.callExpr(basic.getUnit(), ext.merge, arg));
                                 }
                             }
                         }
@@ -507,7 +534,7 @@ namespace runtime {
 					// handle pfor calls
 					if (basic.isPFor(fun)) {
 						auto pFor = convertPfor(call).as<core::CallExprPtr>();
-                        return wrapWithInstrumentationRegion(call, pFor);
+                        return wrapWithInstrumentationRegion(manager, call, pFor);
 					}
 				}
 
@@ -525,20 +552,6 @@ namespace runtime {
 
 		private:
 
-            core::NodePtr wrapWithInstrumentationRegion(const core::ExpressionPtr& expr, const core::CallExprPtr& call) {
-                if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
-		    	    const Extensions& extensions = manager.getLangExtension<Extensions>();
-		            core::StatementList stmtList;
-                    unsigned region_id = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
-                    stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
-                    stmtList.push_back(call);
-                    stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
-                    return builder.compoundStmt(stmtList);
-                }
-                else
-                    return call;
-            }
-
 			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
 
 				// extract range
@@ -549,8 +562,12 @@ namespace runtime {
 				core::ExpressionPtr max = range.max;
 				core::ExpressionPtr mod = range.mod;
 
+                bool isTask = false;
+                if(max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u)
+                    isTask = true;
+
 				// creates a list of work-item implementations and the work item data record to be passed along
-				auto info = wrapJob(manager, job);
+				auto info = wrapJob(manager, job, isTask);
 				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
 				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 
