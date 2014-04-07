@@ -132,7 +132,7 @@ namespace addons {
 					const core::TypePtr type = call->getType();
 					const TypeInfo& info = GET_TYPE_INFO(type);
 
-					auto values = insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>>(ARG(0));
+					auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>,core::encoder::DirectExprListConverter>(ARG(0)));
 					auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
 
 					return c_ast::init(info.rValueType , converted);

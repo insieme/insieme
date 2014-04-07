@@ -109,7 +109,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 	lambdaMap.insert({lambdaExpr->getCallOperator(), lambdaExpr});
 
 
-	insieme::core::ExpressionPtr init = insieme::core::encoder::toIR(mgr, captures);
+	insieme::core::ExpressionPtr init = insieme::core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, captures);
 	return retIr = convFact.getInitExpr (lambdaClassIR, init);
 ;
 }

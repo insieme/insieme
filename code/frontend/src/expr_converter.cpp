@@ -1525,7 +1525,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::Ini
 		inits.push_back (Visit(subExpr));
 	}
 
-	return retIr = core::encoder::toIR(mgr, inits);
+	return retIr = core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, inits);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
