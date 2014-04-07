@@ -103,8 +103,8 @@ int main ( int argc, char *argv[] )
     Local, double W[M][N], the solution computed at the latest iteration.
 */
 {
-# define M 500
-# define N 500
+# define M 20
+# define N 20
 
   double diff;
   double epsilon = 0.001;
