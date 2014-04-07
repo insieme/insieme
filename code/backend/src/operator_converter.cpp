@@ -824,7 +824,7 @@ namespace backend {
 			context.getDependencies().insert(info.definition);
 
 			// create data vector to fill struct
-			auto values = core::encoder::toValue<vector<core::ExpressionPtr>>(ARG(0));
+			auto values = (core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(ARG(0)));
 			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
 			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
 

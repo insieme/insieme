@@ -55,6 +55,8 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
     virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
 
+    virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+
 	private:
 
 	insieme::frontend::utils::Interceptor interceptor;
@@ -63,7 +65,7 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 	public:
 
-	InterceptorPlugin(const std::set<std::string>& interceptSet) : interceptor(interceptSet) {}
+	InterceptorPlugin(const std::set<std::string>& patterns) : interceptor(patterns) {}
 
 };
 

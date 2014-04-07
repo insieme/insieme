@@ -56,6 +56,8 @@
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/annotations/data_annotations.h"
+
 #include "insieme/utils/assert.h"
 
 
@@ -82,15 +84,15 @@
 				if (core::hasMetaInfo(type)){
 					auto meta = core::getMetaInfo(type);
 
-					vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+					vector<core::ExpressionPtr> ctors = meta.getConstructors();
 					for (auto& ctor : ctors){
-						ctor = pass(ctor).as<core::LambdaExprPtr>();
+						ctor = pass(ctor).as<core::ExpressionPtr>();
 					}
 					if (!ctors.empty()) meta.setConstructors(ctors);
 
 					if (meta.hasDestructor()){
 						auto dtor = meta.getDestructor();
-						dtor = pass(dtor).as<core::LambdaExprPtr>();
+						dtor = pass(dtor).as<core::ExpressionPtr>();
 						meta.setDestructor(dtor);
 					}
 
@@ -245,8 +247,19 @@
 							// once done, clean nested compounds with a single compound inside
 							std::function<core::CompoundStmtPtr(const std::vector<core::StatementPtr>&)> unNest =
 								[&builder, &unNest] 	(const std::vector<core::StatementPtr>& list) -> core::CompoundStmtPtr{
-									if (list.size() ==1 && list[0].isa<core::CompoundStmtPtr>())
+									if (list.size() ==1 && list[0].isa<core::CompoundStmtPtr>() &&
+										 		!list[0]->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
 										return unNest(list[0].as<core::CompoundStmtPtr>()->getStatements());
+									}
+									// any last stmt being a compound can be inlined since cleanups will be made anyway at the end of the function
+									// any aliased variable declared in the body will be renamed anyway
+									else if (list.size()>0 &&  list[list.size()-1].isa<core::CompoundStmtPtr>() &&
+										 		!list[list.size()-1]->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+										core::CompoundStmtPtr tmp = unNest(list[list.size()-1].as<core::CompoundStmtPtr>()->getStatements());
+										std::vector<core::StatementPtr> newList(list.begin(), list.end()-1);
+										newList.insert(newList.end(), tmp.getStatements().begin(), tmp.getStatements().end());
+										return builder.compoundStmt(newList);
+									}
 									return builder.compoundStmt(list);
 								};
 							return unNest(stmtList);
@@ -428,7 +441,7 @@ namespace {
 			// stores the last expression returned to avoid writting a dead read
 			core::StatementPtr lastExpr;	
 			// the extracted statements, only if this list is not empty the transformation is done
-			core::StatementList preProcess;
+			core::StatementList prependStmts;
 
 			auto justRemove = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
@@ -452,11 +465,15 @@ namespace {
 
 			for (auto stmt : irStmts){
 
+				// do nothing on declarations
 				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
-					stmt.isa<core::ForStmtPtr>())
+					stmt.isa<core::ForStmtPtr>()){
 					newStmts.push_back( stmt);
-				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>())
+				}
+				// marked stmts?  just remove the Frontend node and write a good assign call
+				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>()){
 					newStmts.push_back( justRemove.map(stmt));
+				}
 				else if (core::WhileStmtPtr whilestmt = stmt.isa<core::WhileStmtPtr>()){
 
 					// any assignment extracted from the condition expression of a while stmt needs to be replicated
@@ -504,18 +521,19 @@ namespace {
 				}
 				else{
 
-					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, preProcess, convFact.getCompiler().isCXX());
-					if (preProcess.empty() || allPostOps(preProcess))
+
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, prependStmts, convFact.getCompiler().isCXX());
+					if (prependStmts.empty() || allPostOps(prependStmts))
 						newStmts.push_back(stmt);
 					else{
-						newStmts.insert(newStmts.end(), preProcess.begin(), preProcess.end());
+						newStmts.insert(newStmts.end(), prependStmts.begin(), prependStmts.end());
 						// if the assignment is used as expression, well have a remainng tail which is not needed
 						if (res != lastExpr){
 							newStmts.push_back( res);
 						}
 					}
 				}
-				preProcess.clear();
+				prependStmts.clear();
 				lastExpr = core::StatementPtr();
 			}
 		}

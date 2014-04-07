@@ -269,6 +269,15 @@ IRDump dumpColor (const insieme::core::NodePtr& node, std::ostream& out) {
 		return out << print << std::endl;
 	}, out);
 }
+IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out){
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node);
+		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		print.setOption(insieme::core::printer::PrettyPrinter::NO_EXPAND_LAMBDAS);
+		print.setOption(insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
+		return out << print;
+	}, out);
+}
 
 IRDump dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out)->std::ostream& {

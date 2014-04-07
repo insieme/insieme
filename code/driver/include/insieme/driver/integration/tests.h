@@ -96,6 +96,16 @@ namespace integration {
 		vector<string> libNames;
 
 		/**
+		 * A list of name spaces to be intercepted by the frontend.
+		 */
+		vector<string> interceptedNameSpaces;
+
+		/**
+		 * A list of directories containing header filed to be intercepted.
+		 */
+		vector<frontend::path> interceptedHeaderFileDirectories;
+
+		/**
 		 * A flag indicating whether OpenMP should be enabled within the frontend or not.
 		 */
 		bool enableOpenMP;
@@ -126,9 +136,13 @@ namespace integration {
 							const vector<frontend::path>& includeDirs, 
 							const vector<frontend::path>& libDirs,
 							const vector<string>& libNames,
+							const vector<string>& interceptedNameSpaces,
+							const vector<frontend::path>& interceptedHeaderFileDirectories,
 							bool enableOpenMP, bool enableOpenCL, bool enableCXX11, 
 							const Properties& properties)
-			: name(name), dir(dir), files(files), includeDirs(includeDirs),libDirs(libDirs),libNames(libNames), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
+			: name(name), dir(dir), files(files), includeDirs(includeDirs),libDirs(libDirs),libNames(libNames),
+			  interceptedNameSpaces(interceptedNameSpaces), interceptedHeaderFileDirectories(interceptedHeaderFileDirectories),
+			  enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
 			  enableCXX11(enableCXX11), properties(properties) {}
 
 		/**
@@ -178,6 +192,20 @@ namespace integration {
 		 */
 		const vector<string>& getLibNames() const {
 			return libNames;
+		}
+
+		/**
+		 * Contains the list of namespaces patterns to be intercepted.
+		 */
+		const vector<string>& getInterceptedNameSpaces() const {
+			return interceptedNameSpaces;
+		}
+
+		/**
+		 * Obtains the list of directories containing header filed to be intercepted.
+		 */
+		const vector<frontend::path>& getInterceptedHeaderFileDirectories() const {
+			return interceptedHeaderFileDirectories;
 		}
 
 		/**
@@ -301,7 +329,7 @@ namespace integration {
 			mainFlags["use_cpp"]="--std=c++03";
 			mainFlags["use_cpp11"]="--std=c++11";
 
-			std::map<string,map<string,string>>propFlags;
+			std::map<string,map<string,string>> propFlags;
 			propFlags["gcc"]=gccFlags;
 
 			gccFlags["standardFlags"]+=" -fpermissive";
@@ -331,7 +359,16 @@ namespace integration {
 				if(propVal.compare("0")==0 and flagMap.count(key)!=1)
 					std::cout<<"WARNING: Property "<<key<<" ignored!"<<std::endl;
 			}
+
+			// interception configuration
+			if (comp.filename().string()=="main") {
+				compArgs.push_back("--intercept " + toString(join(" ", properties.get<vector<string>>("intercepted_name_spaces"))));
+				compArgs.push_back("--intercept-include " + toString(join(" ", properties.get<vector<string>>("intercepted_header_file_dirs"))));
+			}
+
+			// add remaining flags
 			compArgs.push_back(properties.get("compFlags",step));
+
 			return compArgs;
         }
 	};

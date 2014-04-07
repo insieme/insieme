@@ -1,21 +1,22 @@
 #include <iostream>
 #include <string>
-
-class B {
-private:
-	B(const B& a) {}
-public:
-	B(std::string s) {}
-	std::string s;
-};
+//
+//class B {
+//private:
+//	B(const B& a) {}
+//public:
+//	B(std::string s) {}
+//	std::string s;
+//};
 
 class A {
 private:
-	B mem;
+//	B mem;
+	std::string mem;
 public:
 	A(std::string s) : mem(s) { }
 	void print() const {
-		std::cout << "member: " << mem.s << std::endl;
+		std::cout << "member: " << mem << std::endl;
 	}
 };
 

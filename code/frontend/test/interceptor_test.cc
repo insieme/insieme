@@ -132,8 +132,8 @@ TEST(Interception, SimpleInterception) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.setInterception( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptions());
+	job.addInterceptedNameSpacePattern( "ns::.*" );
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 

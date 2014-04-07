@@ -792,13 +792,13 @@ namespace backend {
 			auto& funMgr = converter.getFunctionManager();
 
 			// add constructors
-			for(const core::LambdaExprPtr& cur : info.getConstructors()) {
+			for(const core::ExpressionPtr& cur : info.getConstructors()) {
 				// let function manager handle it
-				funMgr.getInfo(cur);
+				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
 			}
 
 			// add destructor
-			if (auto dtor = info.getDestructor()) {
+			if (auto dtor = info.getDestructor().as<core::LambdaExprPtr>()) {
 				// let function manager handle it
 				funMgr.getInfo(dtor, false, info.isDestructorVirtual());
 			}

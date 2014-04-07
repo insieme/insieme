@@ -130,10 +130,6 @@ namespace addons {
 			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
 			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
 
-			// FIXME: find the right place for this
-			res[ext.getMaterialize()]	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0));});
-
-
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;
 		}

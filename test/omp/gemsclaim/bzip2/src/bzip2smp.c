@@ -80,7 +80,7 @@ void threadFunction(bz_stream * strm, int pos)
   #pragma omp critical
   {
 
-	if( pos >= outChunksCount )
+	while( pos >= outChunksCount )
 	{
   		outChunks = ( bz_stream ** ) realloc( outChunks, sizeof( bz_stream * ) *
                                          outChunksCount * 2 );

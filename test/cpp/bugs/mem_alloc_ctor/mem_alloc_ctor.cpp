@@ -1,8 +1,9 @@
 #include <iostream>
 struct C {
-	C() { std::cout << "C()" << std::endl; }
-	C(const C& r) {  std::cout << "C(const C&)" << std::endl;}
-	~C() { std::cout << "~C()" << std::endl; };
+	int value;
+	C() : value(123456) {}
+	C(const C& o) : value(o.value) {}
+	~C() {};
 
 };
 
@@ -14,5 +15,6 @@ int main() {
 
 	D d;
 	d.makeC1();
+	std::cout << " d.pc = " << d.pc->value << std::endl;
 	return 0;
 }

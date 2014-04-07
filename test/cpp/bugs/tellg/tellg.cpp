@@ -3,6 +3,7 @@
 #include <fstream>      // std::ifstream
 
 int main () {
+
 	std::ifstream is ("text.txt", std::ifstream::binary);
 	if (is) {
 		// get length of file:

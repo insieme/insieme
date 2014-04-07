@@ -49,18 +49,21 @@ void testValue(A * a) {
 
 
 int main() {
+{
 	//test with ptr false
 	testRef(NULL);
 	testConstRef(NULL);
 	testValue(NULL);
+}
 
-	//test with ptr true
 	A* x = new A();
-	x->x=2;
-	testRef(x);
-	testConstRef(x);
-	testValue(x);
-
+	{
+		//test with ptr true
+		x->x=2;
+		testRef(x);
+		testConstRef(x);
+		testValue(x);
+	}
 	delete x;
 	return 0;
 }

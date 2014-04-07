@@ -224,9 +224,7 @@ namespace cmd {
 
             // interceptions
             if (map.count("intercept")) {
-				for(auto i : map["intercept"].as<vector<string>>()) {
-					res.job.setInterception(i);
-				}
+            	res.job.addInterceptedNameSpacePatterns(map["intercept"].as<vector<string>>());
             }
             
             if (map.count("intercept-include")) {
