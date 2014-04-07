@@ -222,7 +222,7 @@ inline void printProgress (const std::string& prefix, unsigned cur, unsigned max
 	std::stringstream out;
 	static unsigned last = 0;
 	unsigned a = ((float)cur/ (float)max) * 60.0f;
-	if (a != last){
+	if (a > last){
 		unsigned i;
 		for (i = 0; i< a; i++)
 			out << "=";
@@ -233,6 +233,8 @@ inline void printProgress (const std::string& prefix, unsigned cur, unsigned max
 		std::cout << "\r" << prefix << " [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
 		last = a;
 	}
+	if (cur == max)
+		last =0;
 }
 
 } // End empty namespace
@@ -375,13 +377,14 @@ tu::IRTranslationUnit Converter::convert() {
 
 	// collect all global declarations
 	count = countFunctions(declContext);
+	unsigned processed = 0;
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
 
 		Converter& converter;
 		bool externC;
 		unsigned count;
-		unsigned processed;
-		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned processed=0)
+		unsigned& processed;
+		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned& processed)
 		: converter(converter), externC(Ccode), count(count), processed(processed)
 		{}
 
@@ -391,11 +394,12 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
 			bool isC =  link->getLanguage () == clang::LinkageSpecDecl::lang_c;
-			FunctionVisitor vis(converter, isC, count);
+			FunctionVisitor vis(converter, isC, count,processed);
 			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
 		}
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+			processed++;
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
 
 			converter.trackSourceLocation (funcDecl);
@@ -404,10 +408,10 @@ tu::IRTranslationUnit Converter::convert() {
 			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
 				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),3,3);
-				printProgress (str, ++processed, count);
+				printProgress (str, processed, count);
 			}
 		}
-	} funVisitor(*this, false, count);
+	} funVisitor(*this, false, count,processed);
 	funVisitor.traverseDeclCtx(declContext);
 
 	// handle entry points (marked using insieme pragmas)
@@ -1001,14 +1005,16 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
 // check for overloaded operator "function" (normal function has kind OO_None)
-	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
-	if (operatorKind != OO_None) {
+	if (funcDecl->isOverloadedOperator()) {
+		clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
 		core::annotations::attachName(node,("operator" + operatorAsString));
 	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
-		core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		//core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		core::annotations::attachName(node,(utils::buildNameForFunction(funcDecl)));
 	}
+	if(core::annotations::hasNameAttached(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node);}
 
 // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
 	/*
@@ -1118,7 +1124,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	//if it is a listtype we take care recursivle of the listelements
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
-		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(init);
 
 		// if recursive
 		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
@@ -1137,7 +1143,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			return builder.callExpr(
 					elementType,
 					initOp,
-					core::encoder::toIR(targetType->getNodeManager(), elements),
+					core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(targetType->getNodeManager(), elements),
 					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
@@ -1165,7 +1171,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 				*elementType.isa<core::VectorTypePtr>()->getSize())
 				return builder.callExpr(
 						builder.getLangBasic().getVectorInitPartial(),
-						core::encoder::toIR(targetType->getNodeManager(), elements),
+						core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(targetType->getNodeManager(), elements),
 						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
 					);
 
@@ -1199,7 +1205,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 
 			if (core::encoder::isListType(inits[0]->getType())){
-				vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
+				vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(inits[0]);
 				return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
 			}
 			else{
@@ -1921,7 +1927,9 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
-	return convertFunctionDecl(funcDecl,true);
+	auto retIr = convertFunctionDecl(funcDecl,true);
+	VLOG(2) << "callableExpression: " << retIr;
+	return retIr;
 }
 
 } // End conversion namespace

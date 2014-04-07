@@ -1,0 +1,5 @@
+libPaths="${boost_lib}"
+libNames="boost_thread","boost_system"
+includes="${boost_include}"
+intercepted_name_spaces=${intercepted_name_spaces},boost::.*
+intercepted_header_file_dirs=${intercepted_header_file_dirs},${boost_include}

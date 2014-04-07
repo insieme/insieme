@@ -214,7 +214,7 @@ namespace backend {
 	 * 	inline cleanups functions that produce return by value of objects, if this can be inlined
 	 * 	may copy constructructor calls can be avoided, which might not be allowed and makes me happy.
 	 */
-	class InlineCleanups : public PreProcessor {
+	class InlineExprWithCleanups : public PreProcessor {
 	public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};

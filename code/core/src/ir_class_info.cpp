@@ -66,10 +66,10 @@ namespace core {
 
 	// --------- Class Meta-Info --------------------
 
-	void ClassMetaInfo::setConstructors(const vector<LambdaExprPtr>& constructors) {
+	void ClassMetaInfo::setConstructors(const vector<ExpressionPtr>& constructors) {
 		// check new constructors
-		assert(all(constructors, [&](const LambdaExprPtr& cur) { return cur->getFunctionType()->isConstructor(); }));
-		assert(all(constructors, [&](const LambdaExprPtr& cur) { return checkObjectType(cur); }));
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getType().isa<FunctionTypePtr>() && cur->getType().as<FunctionTypePtr>()->isConstructor(); }));
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return checkObjectType(cur); }));
 
 		// exchange the list of constructors
 		this->constructors = constructors;
@@ -83,9 +83,9 @@ namespace core {
 		childList.reset();
 	}
 
-	void ClassMetaInfo::addConstructor(const LambdaExprPtr& constructor) {
+	void ClassMetaInfo::addConstructor(const ExpressionPtr& constructor) {
 		// check constructor type
-		assert(constructor->getFunctionType()->isConstructor());
+		assert(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
 		assert(checkObjectType(constructor));
 
 		// add new constructor
@@ -95,13 +95,13 @@ namespace core {
 		childList.reset();
 	}
 
-	void ClassMetaInfo::setDestructor(const LambdaExprPtr& destructor) {
+	void ClassMetaInfo::setDestructor(const ExpressionPtr& destructor) {
 		// check destructor type
-		assert(!destructor || destructor->getFunctionType()->isDestructor());
+		assert(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
 		assert(!destructor || checkObjectType(destructor));
 
 		// update destructor
-		this->destructor = (destructor)?core::analysis::normalize(destructor):LambdaExprPtr();
+		this->destructor = (destructor)?core::analysis::normalize(destructor):ExpressionPtr();
 
 		// invalidate child list
 		childList.reset();
@@ -148,10 +148,14 @@ namespace core {
 	TypePtr ClassMetaInfo::getClassType() const {
 
 		// try destructor
-		if (destructor) return destructor->getLambda()->getType()->getObjectType();
+		if (auto fun = destructor.isa<LambdaExprPtr>()) {
+			return fun->getLambda()->getType()->getObjectType();
+		}
 
 		// try constructors
-		if (!constructors.empty()) return constructors.front()->getLambda()->getType()->getObjectType();
+		if (!constructors.empty()) {
+			return constructors.front()->getType().as<FunctionTypePtr>()->getObjectType();
+		}
 
 		// try member functions
 		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getType().as<FunctionTypePtr>()->getObjectType();
@@ -183,7 +187,7 @@ namespace core {
 
 		// add ctor code
 		if (!constructors.empty()) {
-			out << " -- Constructors --\n" << join("\n", constructors, [](std::ostream& out, const LambdaExprPtr& cur) {
+			out << " -- Constructors --\n" << join("\n", constructors, [](std::ostream& out, const ExpressionPtr& cur) {
 				out << PrettyPrinter(cur, PrettyPrinter::NO_LET_BINDINGS);
 			}) << "\n\n";
 		}
@@ -226,14 +230,31 @@ namespace core {
 		VariablePtr newParam = builder.variable(builder.refType(newClassType));
 
 		// create helper for updating functions
-		auto alter = [&](const LambdaExprPtr& in)->LambdaExprPtr {
-			assert(!in->getParameterList().empty());
+		auto alter = [&](const ExpressionPtr& in)->ExpressionPtr {
 
-			VariableMap replacement;
-			replacement[in->getParameterList()->getElement(0)] = newParam;
+			// update the object type of functions
+			if (auto fun = in.isa<LambdaExprPtr>()) {
+				assert(!fun->getParameterList().empty());
 
-			// update first parameter => switch to new variable
-			return core::transform::replaceVarsRecursiveGen(mgr, in, replacement);
+				VariableMap replacement;
+				replacement[fun->getParameterList()->getElement(0)] = newParam;
+
+				// update first parameter => switch to new variable
+				return core::transform::replaceVarsRecursiveGen(mgr, fun, replacement);
+			}
+
+			// update the type of literals
+			if (auto lit = in.isa<LiteralPtr>()) {
+
+				// get address to class type node
+				auto classType = LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getObjectType();
+
+				// replace it by new class type
+				return core::transform::replaceNode(mgr, classType, newClassType).as<LiteralPtr>();
+			}
+
+			assert_fail() << "Unsupported Function node type: " << in->getNodeType() << "\n";
+			return in;
 		};
 
 		// create a copy of this class meta info and replace parameters

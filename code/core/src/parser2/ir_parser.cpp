@@ -1944,7 +1944,7 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("[",E,loop(seq(",",E)),"]"),
 					[](Context& cur)->NodePtr {
-						return encoder::toIR<ExpressionList>(cur.manager, convertList<ExpressionPtr>(cur.getTerms()));
+						return encoder::toIR<ExpressionList,encoder::DirectExprListConverter>(cur.manager, convertList<ExpressionPtr>(cur.getTerms()));
 					}
 			));
 
