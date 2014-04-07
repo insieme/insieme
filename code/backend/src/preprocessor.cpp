@@ -68,7 +68,7 @@ namespace backend {
 			steps.push_back(makePreProcessor<InlinePointwise>());
 		}
 		steps.push_back(makePreProcessor<InitGlobals>());
-		steps.push_back(makePreProcessor<InlineCleanups>());
+		steps.push_back(makePreProcessor<InlineExprWithCleanups>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
@@ -600,8 +600,8 @@ namespace backend {
 		}
 	}// detail namespace
 
-	core::NodePtr InlineCleanups::process(const Converter& converter, const core::NodePtr& code) {
-		// this pass has been implemented as part of the core manipulation utils
+	core::NodePtr InlineExprWithCleanups::process(const Converter& converter, const core::NodePtr& code) {
+
 		auto inliner = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)->core::NodePtr {
 			if(auto call = node.isa<core::CallExprPtr>()){
 				core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
@@ -630,15 +630,15 @@ namespace backend {
 			if (core::hasMetaInfo(type)){
 				auto meta = core::getMetaInfo(type);
 
-				vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+				vector<core::ExpressionPtr> ctors = meta.getConstructors();
 				for (auto& ctor : ctors){
-					ctor = inliner.map(ctor).as<core::LambdaExprPtr>();
+					ctor = inliner.map(ctor).as<core::ExpressionPtr>();
 				}
 				if (!ctors.empty()) meta.setConstructors(ctors);
 
 				if (meta.hasDestructor()){
 					auto dtor = meta.getDestructor();
-					dtor = inliner.map(dtor).as<core::LambdaExprPtr>();
+					dtor = inliner.map(dtor).as<core::ExpressionPtr>();
 					meta.setDestructor(dtor);
 				}
 

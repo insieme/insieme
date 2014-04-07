@@ -70,7 +70,13 @@ using namespace llvm;
 		boost::replace_all(str, ")", "_"); \
 		boost::replace_all(str, ",", "_"); \
 		boost::replace_all(str, "*", "_"); \
+		boost::replace_all(str, "&", "_"); \
+		boost::replace_all(str, ".", "_"); \
+		boost::replace_all(str, "+", "_"); \
+		boost::replace_all(str, "/", "_"); \
+		boost::replace_all(str, "-", "_"); \
 }
+
 namespace {
 	std::string createNameForAnnon (const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm){
 		std::stringstream ss;
@@ -137,7 +143,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 			name = funcDecl->getNameAsString();
 		}
 		else if(method->isOverloadedOperator()) {
-			name = funcDecl->getNameAsString();
+		//	name = funcDecl->getNameAsString();
 		}
 	}
 
@@ -187,20 +193,21 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator,","COMdummy");
 	boost::algorithm::replace_last(name, "operator()","PARENdummy");
 
-	if(!funcDecl->isOverloadedOperator()) {
+	//if(!funcDecl->isOverloadedOperator()) 
+	{
 		// beware of spetialized functions, the type does not show off
 		// check if we have template spec args otherwise seg faults may occur
 		if (funcDecl->isFunctionTemplateSpecialization () && funcDecl->getTemplateSpecializationArgs()){
 			for(unsigned i =0; i<funcDecl->getTemplateSpecializationArgs()->size(); ++i){
 				//only add something if we have a type
-				switch(funcDecl->getTemplateSpecializationArgs()->get(i).getKind()) {
+				auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
+				switch(arg.getKind()) {
 					case clang::TemplateArgument::Expression: {
-						name.append ("_" +
-							funcDecl->getTemplateSpecializationArgs()->get(i).getAsExpr()->getType().getAsString());
+						name.append ("_"+arg.getAsExpr()->getType().getAsString());
 						break;
 					}
 					case clang::TemplateArgument::Type: {
-						name.append ("_" + funcDecl->getTemplateSpecializationArgs()->get(i).getAsType().getAsString());
+						name.append ("_"+arg.getAsType().getAsString());
 						break;
 					}
 					case clang::TemplateArgument::Null: {
@@ -208,33 +215,29 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 						break;
 					}
 					case clang::TemplateArgument::Declaration: {
-						name.append ("_" +
-							funcDecl->getTemplateSpecializationArgs()->get(i).getAsDecl()->getType().getAsString());
-							break;
+						name.append ("_"+arg.getAsDecl()->getType().getAsString());
+						break;
 					}
 					case clang::TemplateArgument::NullPtr: {
 						name.append ("_nullptr");
 						break;
 					}
 					case clang::TemplateArgument::Integral:  {
-						name.append ("_" + funcDecl->getTemplateSpecializationArgs()->get(i).getAsIntegral().toString(10));
+						name.append ("_"+arg.getAsIntegral().toString(10));
 						break;
 					}
 					case clang::TemplateArgument::Template: {
-						name.append ("_" +
-							funcDecl->getTemplateSpecializationArgs()->get(i).getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+						name.append ("_"+arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+						break;
 					}
 					case clang::TemplateArgument::TemplateExpansion: {
 						//I don't know what to do here
 						break;
 					}
 					case clang::TemplateArgument::Pack: {
-
-						for(clang::TemplateArgument::pack_iterator it = funcDecl->getTemplateSpecializationArgs()->get(i).pack_begin(), end = funcDecl->getTemplateSpecializationArgs()->get(i).pack_end();it!=end;it++) {
+						for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end();it!=end;it++) {
 							const clang::QualType& argType = (*it).getAsType();
-						name.append ("_" +
-							argType.getAsString());
-							//(*it).getAsExpr()->getType().getAsString());
+							name.append ("_" + argType.getAsString());
 						}
 						break;
 					}
@@ -246,7 +249,6 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 			std::string returnType = funcDecl->getResultType().getAsString();
 			name.append(returnType);
 		}
-	
 	}
 	
 	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {

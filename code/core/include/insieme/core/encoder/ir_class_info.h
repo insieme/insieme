@@ -67,7 +67,7 @@ namespace encoder {
 		/**
 		 * The tuple type utilized for encoding a complete meta info object.
 		 */
-		typedef std::tuple<vector<LambdaExprPtr>, LambdaExprPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
+		typedef std::tuple<vector<ExpressionPtr>, ExpressionPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
 
 		/**
 		 * A generic functor creating the IR type of an encoded meta info.
