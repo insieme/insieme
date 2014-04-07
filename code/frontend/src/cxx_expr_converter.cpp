@@ -787,9 +787,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	}
 	else{
 		if (core::encoder::isListType(innerIr->getType())) {
-			vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>>(innerIr);
+			vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(innerIr);
 			if (core::encoder::isListType(retList[0]->getType())) 
-				retList = core::encoder::toValue<vector<core::ExpressionPtr>>(retList[0]);
+				retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(retList[0]);
 			for (core::ExpressionPtr& expr : retList){
 				expr = builder.deref(expr);
 			}

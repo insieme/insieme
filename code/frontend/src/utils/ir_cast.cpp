@@ -478,11 +478,11 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 				}
 				// put '\0' terminators on the remaining elements
 				vals[it - escapes_count] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
-				initList = core::encoder::toIR(plainExpr->getNodeManager(), vals); 
+				initList = core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(plainExpr->getNodeManager(), vals);
 			} else {
 				// we assume that the expr is an initializer for a vector, a vector expr
 				auto vecExpr = plainExpr.as<core::VectorExprPtr>()->getExpressions();
-				initList = core::encoder::toIR(plainExpr->getNodeManager(), 
+				initList = core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(plainExpr->getNodeManager(),
 					   std::vector<core::ExpressionPtr>(vecExpr.begin(), vecExpr.end())
 					);
 			}
