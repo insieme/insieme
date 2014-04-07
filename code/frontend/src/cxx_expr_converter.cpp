@@ -799,7 +799,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
-	return retIr =  convFact.createCallExprFromBody(stmtutils::StmtWrapper(stmtList), lambdaRetType);
+	return retIr =  convFact.createCallExprFromBody(stmtutils::StmtWrapper(stmtList), innerIr->getType());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

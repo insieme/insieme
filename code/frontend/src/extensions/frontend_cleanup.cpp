@@ -441,7 +441,7 @@ namespace {
 			// stores the last expression returned to avoid writting a dead read
 			core::StatementPtr lastExpr;	
 			// the extracted statements, only if this list is not empty the transformation is done
-			core::StatementList preProcess;
+			core::StatementList prependStmts;
 
 			auto justRemove = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 					if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
@@ -465,11 +465,15 @@ namespace {
 
 			for (auto stmt : irStmts){
 
+				// do nothing on declarations
 				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
-					stmt.isa<core::ForStmtPtr>())
+					stmt.isa<core::ForStmtPtr>()){
 					newStmts.push_back( stmt);
-				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>())
+				}
+				// marked stmts?  just remove the Frontend node and write a good assign call
+				else if (stmt.isa<core::MarkerExprPtr>() || stmt.isa<core::MarkerStmtPtr>()){
 					newStmts.push_back( justRemove.map(stmt));
+				}
 				else if (core::WhileStmtPtr whilestmt = stmt.isa<core::WhileStmtPtr>()){
 
 					// any assignment extracted from the condition expression of a while stmt needs to be replicated
@@ -517,18 +521,19 @@ namespace {
 				}
 				else{
 
-					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, preProcess, convFact.getCompiler().isCXX());
-					if (preProcess.empty() || allPostOps(preProcess))
+
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, prependStmts, convFact.getCompiler().isCXX());
+					if (prependStmts.empty() || allPostOps(prependStmts))
 						newStmts.push_back(stmt);
 					else{
-						newStmts.insert(newStmts.end(), preProcess.begin(), preProcess.end());
+						newStmts.insert(newStmts.end(), prependStmts.begin(), prependStmts.end());
 						// if the assignment is used as expression, well have a remainng tail which is not needed
 						if (res != lastExpr){
 							newStmts.push_back( res);
 						}
 					}
 				}
-				preProcess.clear();
+				prependStmts.clear();
 				lastExpr = core::StatementPtr();
 			}
 		}
