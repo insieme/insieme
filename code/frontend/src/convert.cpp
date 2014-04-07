@@ -222,7 +222,7 @@ inline void printProgress (const std::string& prefix, unsigned cur, unsigned max
 	std::stringstream out;
 	static unsigned last = 0;
 	unsigned a = ((float)cur/ (float)max) * 60.0f;
-	if (a != last){
+	if (a > last){
 		unsigned i;
 		for (i = 0; i< a; i++)
 			out << "=";
@@ -233,6 +233,8 @@ inline void printProgress (const std::string& prefix, unsigned cur, unsigned max
 		std::cout << "\r" << prefix << " [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
 		last = a;
 	}
+	if (cur == max)
+		last =0;
 }
 
 } // End empty namespace
