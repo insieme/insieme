@@ -84,15 +84,15 @@
 				if (core::hasMetaInfo(type)){
 					auto meta = core::getMetaInfo(type);
 
-					vector<core::LambdaExprPtr> ctors = meta.getConstructors();
+					vector<core::ExpressionPtr> ctors = meta.getConstructors();
 					for (auto& ctor : ctors){
-						ctor = pass(ctor).as<core::LambdaExprPtr>();
+						ctor = pass(ctor).as<core::ExpressionPtr>();
 					}
 					if (!ctors.empty()) meta.setConstructors(ctors);
 
 					if (meta.hasDestructor()){
 						auto dtor = meta.getDestructor();
-						dtor = pass(dtor).as<core::LambdaExprPtr>();
+						dtor = pass(dtor).as<core::ExpressionPtr>();
 						meta.setDestructor(dtor);
 					}
 
