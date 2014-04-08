@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-#define N 1000
+#define N 200
 
 using namespace std;
 
