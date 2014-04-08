@@ -7,20 +7,16 @@ public:
 
 	// ctor + init
 	C(int a=0) : mA(a) {
-		printf("C()");
-		printf("mA 0 == %d\n", mA);
 	}
 
 	// copy ctor
 	C(const C& c) {
 		mA = c.mA;
-		printf("C(cont C& c)");
-		printf("mA==c.mA -- %d == %d\n", mA, c.mA);
 	}
 
-	~C() { printf("~C()\n"); }
+	~C() { }
 
-	void mF() { printf("mF() v: %d \n",mA); }
+	void mf() { printf("mf() v: %d \n",mA); }
 };
 
 C f(void) {
@@ -46,18 +42,20 @@ int main() {
 	// cpy ctor with temporary
 	{
 		C c = f();
+		c.mf();
 	}
 
-	// envolving functionm
+	// envolving function
 	{
-		f().mF();
+		f().mf();
 		printf("f().mA 2 == %d\n", f().mA);
 	}
 
 	// return value of inner copy
 	{
 		C c(2);
-		g(c).mF();
+		c.mf();
+		g(c).mf();
 	}
 	
 	return 0;

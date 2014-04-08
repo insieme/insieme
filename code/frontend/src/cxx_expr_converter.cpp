@@ -389,31 +389,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		irClassType	= irClassType.as<core::VectorTypePtr>()->getElementType();
 	}
 
-	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
-	// back end compiler, unleast there are more than one parameter, this case we have no way to express the
-	// sematincs in IR. the constructor will unify those expressions into one
-	if (callExpr->isElidable () && (callExpr->getNumArgs() == 1)){
-
-		// if is an elidable constructor, we should return a refvar, not what the parameters say
-		retIr = (Visit(callExpr->getArg (0)));
-
-		// a constructor returns a reference of the class type, but we might need to fix types
-		// do a ref reinterpret to the target type
-		if (gen.isRef(retIr->getType()) ) {
-			if( retIr->getType() != refToClassTy) {
-				retIr = builder.deref(builder.callExpr(refToClassTy, gen.getRefReinterpret(), retIr, builder.getTypeLiteral(irClassType)));
-			}
-		} else {
-			//carefull we have to handle const variable
-			if( retIr->getType() != irClassType) {
-				//carefull we have to handle const variable
-				retIr = utils::cast(retIr, irClassType);
-			}
-		}
-
-		return retIr;
-	}
-
 	if( !ctorDecl->isUserProvided() ) {
 		if(	ctorDecl->isDefaultConstructor() ) {
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
@@ -507,23 +482,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		}
 	}
 	else{
-		//assert(callExpr->getConstructExpr() && "class need to have Constructor of any kind");
-		// is a class, handle construction
+
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
-		if(ctorCall.isa<core::VariablePtr>()) {
-			//we know that the constructor call delivered a variable
-			//lets check if we can find it in the tempInit map
-			if (llvm::isa<clang::MaterializeTemporaryExpr>(callExpr->getConstructExpr()->getArg(0))) {
-				const clang::MaterializeTemporaryExpr * exp = llvm::cast<clang::MaterializeTemporaryExpr>(callExpr->getConstructExpr()->getArg(0));
-				if(llvm::isa<clang::CXXBindTemporaryExpr>(exp->GetTemporaryExpr()->IgnoreImpCasts())) {
-					clang::CXXTemporary * tmp = llvm::cast<clang::CXXBindTemporaryExpr>(exp->GetTemporaryExpr()->IgnoreImpCasts())->getTemporary();
-					Converter::TemporaryInitMap::const_iterator fit = convFact.tempInitMap.find(tmp);
-					if(fit != convFact.tempInitMap.end())
-						ctorCall = (fit->second.getInitialization());
-				}
-			}
-		}
-		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint no constructor call in here, no way to translate NEW\n";
+		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
 		core::TypePtr type = ctorCall->getType();
 		core::ExpressionPtr newCall = builder.undefinedNew(type);

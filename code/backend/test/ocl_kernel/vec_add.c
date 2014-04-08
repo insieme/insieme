@@ -39,10 +39,8 @@
 #include "lib_icl.h"
 
 void subfunction(icl_kernel* kernel, size_t szGlobalWorkSize, size_t szLocalWorkSize, icl_event* wb_all, icl_event* rk,
-		icl_buffer* buf_input1, icl_buffer* buf_input2, icl_buffer* buf_output, cl_int size, struct int2 si2) {
+		icl_buffer* buf_input1, icl_buffer* buf_input2, icl_buffer* buf_output, cl_int size) {
 
-	szGlobalWorkSize = si2.a;
-	si2.b = szLocalWorkSize;
 	icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, wb_all, rk, 4,
 										(size_t)0, (void *)buf_input1,
 										(size_t)0, (void *)buf_input2,
