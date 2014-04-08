@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "insieme/core/ir_node.h"
 
 namespace insieme {
@@ -50,8 +52,8 @@ public:
 	 * A type definition for the information stored per node type.
 	 */
 	typedef struct {
-		unsigned numShared;
-		unsigned numAddressable;
+		std::uint64_t numShared;
+		std::uint64_t numAddressable;
 	} NodeTypeInfo;
 
 private:
