@@ -129,6 +129,8 @@ namespace analysis {
 
 	namespace {
 
+		const string CppRefStringMember = "_cpp_ref";
+		const string CppConstRefStringMember = "_const_cpp_ref";
 		bool isRef(const TypePtr& type, const string& memberName) {
 
 			// filter out null-pointer
@@ -147,16 +149,6 @@ namespace analysis {
 					&& !isCppRef(element->getType()) && !isConstCppRef(element->getType())
 					&& element->getName().getValue() == memberName;
 		}
-
-		TypePtr getRef(const TypePtr& elementType, const string& memberName) {
-			IRBuilder builder(elementType->getNodeManager());
-			return builder.structType(toVector(
-					builder.namedType(memberName, builder.refType(elementType))
-			));
-		}
-
-		const string CppRefStringMember = "_cpp_ref";
-		const string CppConstRefStringMember = "_const_cpp_ref";
 	}
 
 	bool isCppRef(const TypePtr& type) {
@@ -164,7 +156,10 @@ namespace analysis {
 	}
 
 	TypePtr getCppRef(const TypePtr& elementType) {
-		return getRef(elementType, CppRefStringMember);
+		IRBuilder builder(elementType->getNodeManager());
+		return builder.structType(toVector(
+				builder.namedType(CppRefStringMember, builder.refType(elementType))
+		));
 	}
 
 	bool isConstCppRef(const TypePtr& type) {
@@ -172,7 +167,10 @@ namespace analysis {
 	}
 
 	TypePtr getConstCppRef(const TypePtr& elementType) {
-		return getRef(elementType, CppConstRefStringMember);
+		IRBuilder builder(elementType->getNodeManager());
+		return builder.structType(toVector(
+				builder.namedType(CppConstRefStringMember, builder.refType(elementType, RK_SOURCE))
+		));
 	}
 
 	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
@@ -197,7 +195,7 @@ namespace analysis {
 			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefCppToIR(), expr);
 		}
 		else if (isConstCppRef(expr->getType())){
-			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE), manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
 		}
 
 		// error fallthrow

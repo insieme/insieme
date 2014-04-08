@@ -107,6 +107,7 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 
 	if(iclRunKernel == NULL)
 		iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+				var("derefKernel", irp::callExpr(pattern::any, pattern::atom(gen.getRefDeref()), pattern::single(var("kernel", pattern::any)))) <<
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
@@ -124,6 +125,9 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 	NodeMap replacements;
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
+		// remove deref from kernel
+		replacements[runKernel["derefKernel"].getValue()] = runKernel["kernel"].getValue();
+		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
 			if(match) {
@@ -131,7 +135,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 			}
 		}
 	});
-
 	if(!replacements.empty())
 		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
