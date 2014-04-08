@@ -90,6 +90,8 @@ namespace tu {
 				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " : " << *cur.first->getType() << " => " << print(cur.second); })
 				<< ",\n\tEntry Points:\t{"
 				<< join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; })
+				<< "},\n\tMetaInfos:\t{"
+				<< join(", ", metaInfos, [&](std::ostream& out, const std::pair<core::TypePtr, std::vector<core::ClassMetaInfo>>& cur) { out << *cur.first << " : " << cur.second; })
 				<< "}\n)";
 	}
 
@@ -120,6 +122,11 @@ namespace tu {
 		// entry points
 		for(auto cur : getEntryPoints()) {
 			res.addEntryPoints(cur);
+		}
+
+		// copy meta infos 
+		for(auto cur : getMetaInfos()) {
+			res.addMetaInfo(cur.first, cur.second);
 		}
 
 		// done
@@ -154,29 +161,34 @@ namespace tu {
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
 		}
-
-		// migrate all meta information
-		if (&b.getNodeManager() != &mgr) {
-			auto& mgrB = b.getNodeManager();
-
-			// built a visitor searching all meta-info entries and merge them
-			auto visitor = core::makeLambdaVisitor([&](const core::TypePtr& type) {
-
-				// check whether there is a meta-info annotation at the original type
-				auto other = mgrB.get(type);
-
-				// if there is some meta-info
-				if (core::hasMetaInfo(other)) {
-					// merge it
-					core::setMetaInfo(type, core::merge(core::getMetaInfo(type), core::getMetaInfo(other)));
-				}
-
-			});
-			auto cachedVisitor = core::makeDepthFirstOnceVisitor(visitor);
-
-			// apply visitor
-			res.visitAll(cachedVisitor);
+		
+		// copy meta infos 
+		for(auto cur : b.getMetaInfos()) {
+			res.addMetaInfo(cur.first, cur.second);
 		}
+
+	//	// migrate all meta information
+	//	if (&b.getNodeManager() != &mgr) {
+	//		auto& mgrB = b.getNodeManager();
+
+	//		// built a visitor searching all meta-info entries and merge them
+	//		auto visitor = core::makeLambdaVisitor([&](const core::TypePtr& type) {
+
+	//			// check whether there is a meta-info annotation at the original type
+	//			auto other = mgrB.get(type);
+
+	//			// if there is some meta-info
+	//			if (core::hasMetaInfo(other)) {
+	//				// merge it
+	//				core::setMetaInfo(type, core::merge(core::getMetaInfo(type), core::getMetaInfo(other)));
+	//			}
+
+	//		});
+	//		auto cachedVisitor = core::makeDepthFirstOnceVisitor(visitor);
+
+	//		// apply visitor
+	//		res.visitAll(cachedVisitor);
+	//	}
 
 		// done
 		return res;
@@ -255,6 +267,7 @@ namespace tu {
 
 				// clear the meta-info list
 				while(!list.empty()) {
+					assert(false);
 
 					// clear meta-info collected in last round
 					metaInfos.clear();
@@ -292,6 +305,7 @@ namespace tu {
 					}
 				}
 
+				/*
 				// strip off class-meta-information
 				if (auto type = ptr.isa<TypePtr>()) {
 					if (hasMetaInfo(type)) {
@@ -299,6 +313,7 @@ namespace tu {
 						removeMetaInfo(type);
 					}
 				}
+				*/
 
 				// init result
 				NodePtr res = ptr;
@@ -881,7 +896,45 @@ namespace tu {
 		return Resolver(getNodeManager(), *this).apply(node);
 	}
 
+	void IRTranslationUnit::extractMetaInfos() const {
+		for(auto m : metaInfos) {
+			auto classType = m.first;
+			auto metaInfoList = m.second;  //metaInfos per classType
+			
+			//merge metaInfos into one 
+			core::ClassMetaInfo metaInfo;
+			for(auto m : metaInfoList) {
+				metaInfo = core::merge(metaInfo, m);
+			}
+
+			//std::cout << classType << " : " << metaInfo <<  std::endl;
+			auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();	
+
+			// encode meta info into pure IR
+			auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
+			
+			// resolve meta info
+			auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
+
+			// attach metainfo to type
+			core::setMetaInfo(resolvedClassType, resolved);
+		}
+	}
+	
+	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, core::ClassMetaInfo metaInfo) {
+		metaInfos[classType].push_back(metaInfo);
+	}
+
+	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, std::vector<core::ClassMetaInfo> metaInfoList) {
+		for(auto m : metaInfoList) {
+			metaInfos[classType].push_back(m);
+		}
+	}
+
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
+		
+		//before leaving the realm of the irtu take care of metainfos...
+		a.extractMetaInfos();
 
 		// search for entry point
 		core::IRBuilder builder(mgr);
@@ -914,6 +967,10 @@ namespace tu {
 
 
 	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a) {
+
+		//before leaving the realm of the irtu take care of metainfos...
+		a.extractMetaInfos();
+
 		// convert entry points stored within TU int a program
 		core::ExpressionList entryPoints;
 		Resolver creator(mgr, a);

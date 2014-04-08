@@ -133,10 +133,13 @@ namespace tu {
 				"let A = struct { int<4> a; } in "
 				"A::(int<4> a) {}"
 		).as<core::LambdaExprPtr>());
-		core::setMetaInfo(defA, infoA);
+		
+		// add classinfo for type 
+		unitA.addMetaInfo(defA, infoA);
 
 		// add type to unit A
 		unitA.addType(symbolA, defA);
+		EXPECT_FALSE(core::hasMetaInfo(defA));
 
 
 		// -----------------------------------
@@ -161,10 +164,13 @@ namespace tu {
 				"let A = struct { int<4> a; } in "
 				"A::(int<4> a, int<4> b) {}"
 		).as<core::LambdaExprPtr>());
-		core::setMetaInfo(defB, infoB);
+
+		// add classinfo for type 
+		unitB.addMetaInfo(defB, infoB);
 
 		// add type to unit A
 		unitB.addType(symbolB, defB);
+		EXPECT_FALSE(core::hasMetaInfo(defB));
 
 
 		// -----------------------------------
@@ -174,18 +180,34 @@ namespace tu {
 		IRTranslationUnit unitC = merge(mgrC, unitA, unitB);
 
 		// -----------------------------------
-
 		// now test the properties
+	
+		//explicitly extractMetaInfos and attach them to the types 
+		// for testing
+		auto resA1 = unitA.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(resA1));
+		unitA.extractMetaInfos();
 		auto resA = unitA.resolve(symbol).as<core::TypePtr>();
+		EXPECT_TRUE(core::hasMetaInfo(resA));
 		ASSERT_TRUE(core::hasMetaInfo(resA));
 		EXPECT_EQ(*resA, *def);
 		EXPECT_EQ(2, core::getMetaInfo(resA).getConstructors().size()) << core::getMetaInfo(resA);
 
+		//explicitly extractMetaInfos and attach them to the types
+		// for testing
+		auto resB1 = unitB.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(resB1));
+		unitB.extractMetaInfos();
 		auto resB = unitB.resolve(symbol).as<core::TypePtr>();
+		EXPECT_TRUE(core::hasMetaInfo(resA));
 		ASSERT_TRUE(core::hasMetaInfo(resB));
 		EXPECT_EQ(*resB, *def);
 		EXPECT_EQ(2, core::getMetaInfo(resB).getConstructors().size()) << core::getMetaInfo(resB);
 
+		//explicitly extractMetaInfos and attach them to the types
+		auto resC1 = unitC.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(resC1));
+		unitC.extractMetaInfos();
 		auto resC = unitC.resolve(symbol).as<core::TypePtr>();
 		ASSERT_TRUE(core::hasMetaInfo(resC));
 		EXPECT_EQ(*resC, *def);
@@ -227,19 +249,25 @@ namespace tu {
 					"let A = struct { int<4> a; } in "
 					"A::(int<4> a) {}"
 			).as<core::LambdaExprPtr>());
-			core::setMetaInfo(defA, infoA);
+			unitA.addMetaInfo(defA, infoA);
 
 			// add type to unit A
 			unitA.addType(symbolA, defA);
 
+			// dump it
+			dump(bufferA, unitA);
+
+			auto resA1 = unitA.resolve(symbol).as<core::TypePtr>();
+			EXPECT_FALSE(core::hasMetaInfo(resA1));
+
 			// test the properties
+			// for testing
+			unitA.extractMetaInfos();
 			auto resA = unitA.resolve(symbol).as<core::TypePtr>();
 			ASSERT_TRUE(core::hasMetaInfo(resA));
 			EXPECT_EQ(*resA, *def);
 			EXPECT_EQ(2, core::getMetaInfo(resA).getConstructors().size()) << core::getMetaInfo(resA);
 
-			// dump it
-			dump(bufferA, unitA);
 
 		}
 
@@ -265,20 +293,21 @@ namespace tu {
 					"let A = struct { int<4> a; } in "
 					"A::(int<4> a, int<4> b) {}"
 			).as<core::LambdaExprPtr>());
-			core::setMetaInfo(defB, infoB);
+			unitB.addMetaInfo(defB, infoB);
 
 			// add type to unit A
 			unitB.addType(symbolB, defB);
 
+			// dump it
+			dump(bufferB, unitB);
+
 			// test the properties
+			// for testing
+			unitB.extractMetaInfos();
 			auto resB = unitB.resolve(symbol).as<core::TypePtr>();
 			ASSERT_TRUE(core::hasMetaInfo(resB));
 			EXPECT_EQ(*resB, *def);
 			EXPECT_EQ(2, core::getMetaInfo(resB).getConstructors().size()) << core::getMetaInfo(resB);
-
-			// dump it
-			dump(bufferB, unitB);
-
 		}
 
 		// -----------------------------------
@@ -292,6 +321,9 @@ namespace tu {
 
 		// -----------------------------------
 
+
+		// for testing
+		unitC.extractMetaInfos();
 		auto resC = unitC.resolve(symbol).as<core::TypePtr>();
 		ASSERT_TRUE(core::hasMetaInfo(resC));
 		EXPECT_EQ(*resC, *def);
@@ -300,79 +332,128 @@ namespace tu {
 	}
 
 	TEST(TranslationUnit, TypeMerge) {
-		core::NodeManager mgrA;
-		core::NodeManager mgrB;
 		
+		core::NodeManager mgrA;
 		IRTranslationUnit unitA(mgrA);
-		{
-			core::IRBuilder builderA(mgrA);
+		core::IRBuilder builderA(mgrA);
+
+		auto symbol = builderA.parseType("A").as<core::GenericTypePtr>();
+		auto type   = builderA.parseType("struct A { int<4> x; }");
+
+		unitA.addType(symbol, type);
 			
-			auto symbol = builderA.parseType("A").as<core::GenericTypePtr>();
-			auto type   = builderA.parseType("struct A { int<4> x; }");
-
-			unitA.addType(symbol, type);
-		}
-
-
+		core::NodeManager mgrB;
+		IRTranslationUnit unitB(mgrB);
+		core::IRBuilder builderB(mgrB);
 		{
-			IRTranslationUnit unitB(mgrB);
-			core::IRBuilder builderB(mgrB);
-
 			auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
 			auto type   = builderB.parseType("struct A { int<4> x; }");
+			unitB.addType(symbol, type);
 
 			auto member = builderB.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
-
-	//	std::cout << symbol << std::endl;
-	//	std::cout << type << std::endl;
-	//	std::cout << member << std::endl;
 
 			core::ClassMetaInfo classInfo;
 			classInfo.addMemberFunction("method", member, false, false);
-			core::setMetaInfo(type, classInfo);
+			unitB.addMetaInfo(type, classInfo);
+			
 			EXPECT_EQ(1, classInfo.getMemberFunctions().size());
-
-			unitB.addType(symbol, type);
-
-			merge(mgrA, unitA, unitB);
-			EXPECT_TRUE(core::hasMetaInfo(type));
-		}
+			EXPECT_FALSE(core::hasMetaInfo(type));
 
 
-		core::IRBuilder builder(mgrA);
-		core::GenericTypePtr symbol = builder.parseType("A").as<core::GenericTypePtr>();
+			core::NodeManager mgr;
+			IRTranslationUnit unit(mgr);
+			unit =  merge(mgr, unitA, unitB);
 
-		core::TypePtr type = unitA[symbol];
+			auto res1 = unit.resolve(symbol).as<core::TypePtr>();
+			EXPECT_FALSE(core::hasMetaInfo(res1));
+			EXPECT_FALSE(core::hasMetaInfo(type));
+			unit.extractMetaInfos();
 
-		EXPECT_TRUE(core::hasMetaInfo(type));
-		{
-			IRTranslationUnit unitB(mgrB);
-			core::IRBuilder builderB(mgrB);
-
-			auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
-			auto type   = builderB.parseType("struct A { int<4> x; }");
-
-			auto member = builderB.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
-			core::ClassMetaInfo classInfo;
-			classInfo.addMemberFunction("method2", member, false, false);
-			core::setMetaInfo(type, classInfo);
-
-			unitB.addType(symbol, type);
-
-			merge(mgrA, unitA, unitB);
-			EXPECT_TRUE(core::hasMetaInfo(type));
-			auto meta = core::getMetaInfo(type);
+			EXPECT_FALSE(core::hasMetaInfo(type));
+			auto res = unit.resolve(symbol).as<core::TypePtr>();
+			EXPECT_TRUE(core::hasMetaInfo(res));
+			auto meta = core::getMetaInfo(res);
 			EXPECT_EQ(1, meta.getMemberFunctions().size());
 		}
 
-		auto meta = core::getMetaInfo(type);
-		EXPECT_EQ(2, meta.getMemberFunctions().size());
+		//check if meta info traveld somehow
+		{
+			EXPECT_FALSE(core::hasMetaInfo(symbol));
+
+			auto res = unitA.resolve(symbol).as<core::TypePtr>();
+			EXPECT_FALSE(core::hasMetaInfo(res));
+
+			core::TypePtr type = unitA[symbol];
+			EXPECT_FALSE(core::hasMetaInfo(type));
+		}
+
+		core::NodeManager mgrC;
+		IRTranslationUnit unitC(mgrC);
+		core::IRBuilder builderC(mgrC);
+		{
+			auto symbol = builderC.parseType("A").as<core::GenericTypePtr>();
+			auto type   = builderC.parseType("struct A { int<4> x; }");
+
+			auto member = builderC.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
+			core::ClassMetaInfo classInfo;
+			classInfo.addMemberFunction("method2", member, false, false);
+			unitC.addMetaInfo(type, classInfo);
+			EXPECT_FALSE(core::hasMetaInfo(type));
+			EXPECT_FALSE(core::hasMetaInfo(symbol));
+
+			unitC.addType(symbol, type);
+
+			core::NodeManager mgr;
+			IRTranslationUnit unit(mgr);
+			unit = merge(mgrC, unitA, unitC);
+
+			EXPECT_FALSE(core::hasMetaInfo(type));
+			unit.extractMetaInfos();
+
+			EXPECT_TRUE(core::hasMetaInfo(type));
+			auto res = unit.resolve(symbol).as<core::TypePtr>();
+			EXPECT_TRUE(core::hasMetaInfo(res));
+			auto meta = core::getMetaInfo(res);
+			EXPECT_EQ(1, meta.getMemberFunctions().size());
+		}
+	
+		core::NodeManager mgr;
+		IRTranslationUnit unit(mgr);
+		unit = merge(mgr,{unitA, unitB, unitC});
+
+		{
+			core::IRBuilder builder(mgr);
+			core::GenericTypePtr symbol = builder.parseType("A").as<core::GenericTypePtr>();
+			EXPECT_FALSE(core::hasMetaInfo(symbol));
+
+			core::TypePtr type = unit[symbol];
+			EXPECT_FALSE(core::hasMetaInfo(type));
+
+			auto res = unit.resolve(symbol).as<core::TypePtr>();
+			EXPECT_FALSE(core::hasMetaInfo(res));
+
+			{
+				unit.extractMetaInfos();
+				core::TypePtr type = unit[symbol];
+				EXPECT_TRUE(core::hasMetaInfo(type));
+
+				auto res = unit.resolve(symbol).as<core::TypePtr>();
+				EXPECT_TRUE(core::hasMetaInfo(res));
+
+				auto meta = core::getMetaInfo(type);
+				EXPECT_EQ(2, meta.getMemberFunctions().size());
+			}
+		}
 
 		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+		stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
+		stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
+		stringstream bufferC(ios_base::out | ios_base::in | ios_base::binary);
 
 		// dump unit
-		dump(buffer, unitA);
+		dump(bufferA, unitA);
+		dump(bufferB, unitB);
+		dump(bufferC, unitC);
 
 		
 		{
@@ -380,13 +461,19 @@ namespace tu {
 			core::NodeManager manager;
 			core::IRBuilder builder(manager);
 
-			IRTranslationUnit unitB = load(buffer, manager);
+			IRTranslationUnit unitA = load(bufferA, manager);
+			IRTranslationUnit unitB = load(bufferB, manager);
+			IRTranslationUnit unitC = load(bufferC, manager);
+			
+			IRTranslationUnit unit = merge(manager, {unitA, unitB, unitC});
 
 			auto symbol = builder.parseType("A").as<core::GenericTypePtr>();
-			EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unitB[symbol]));
+			EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unit[symbol]));
 
-			EXPECT_TRUE(core::hasMetaInfo(unitB[symbol]));
-			auto meta = core::getMetaInfo(unitB[symbol]);
+			unit.extractMetaInfos();
+
+			EXPECT_TRUE(core::hasMetaInfo(unit[symbol]));
+			auto meta = core::getMetaInfo(unit[symbol]);
 			EXPECT_EQ(2, meta.getMemberFunctions().size());
 		}
 	}
