@@ -242,7 +242,7 @@ Pointer<T> fixVariable(NodeManager& manager, const Pointer<T>& node, const Varia
  * @param inlineDerivedBuiltIns to decide whether derived literals should also be inlined
  * @return the inlined expression
  */
-ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false);
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false, bool sigleStep = false);
 
 /**
  * Inlines the given call expression into a statement if possible. The target of the call has to

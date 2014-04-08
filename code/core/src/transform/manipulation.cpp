@@ -437,7 +437,7 @@ namespace {
 }
 
 
-ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns, bool sigleStep) {
 
 	bool successful = true;
 	ExpressionPtr res = call;
@@ -445,6 +445,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, boo
 		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>(), inlineDerivedBuiltIns);
 		successful = (*tmp != *res);
 		res = tmp;
+		if (sigleStep) return res;
 	}
 	return res;
 }

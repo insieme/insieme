@@ -1005,14 +1005,16 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
 // check for overloaded operator "function" (normal function has kind OO_None)
-	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
-	if (operatorKind != OO_None) {
+	if (funcDecl->isOverloadedOperator()) {
+		clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
 		core::annotations::attachName(node,("operator" + operatorAsString));
 	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
-		core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		//core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		core::annotations::attachName(node,(utils::buildNameForFunction(funcDecl)));
 	}
+	if(core::annotations::hasNameAttached(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node);}
 
 // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
 	/*
@@ -1072,8 +1074,8 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
  	retIr = getInitExpr ( type, initExpr);
 
- 	VLOG(2) << "initExpr			: " << initExpr;
- 	VLOG(2) << "initExpr (adjusted)	: " << retIr;
+ 	VLOG(2) << "initExpr			: \n" << dumpPretty(initExpr);
+ 	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(retIr);
 
  	return retIr;
 }
@@ -1925,7 +1927,9 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
-	return convertFunctionDecl(funcDecl,true);
+	auto retIr = convertFunctionDecl(funcDecl,true);
+	VLOG(2) << "callableExpression: " << retIr;
+	return retIr;
 }
 
 } // End conversion namespace

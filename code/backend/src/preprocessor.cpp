@@ -493,10 +493,10 @@ namespace backend {
 				return false;
 			}
 
-			// an inlineable function returns by value
-			if (fun->getFunctionType()->getReturnType().isa<core::RefTypePtr>()){
-				return false;
-			}
+			//// an inlineable function returns by value
+			//if (fun->getFunctionType()->getReturnType().isa<core::RefTypePtr>()){
+			//	return false;
+			//}
 
 			// is not an empty func (it must have 2 or more stmts)
 			// 	- at least one cleanup declaration + the actual expression
@@ -615,7 +615,7 @@ namespace backend {
 					auto bodyAddress = root->getBody();
 					auto newFun = core::transform::replaceNode (res->getNodeManager(), bodyAddress, builder.compoundStmt(builder.returnStmt(res)));
 					res = builder.callExpr(call->getType(), newFun.as<core::ExpressionPtr>(), call->getArguments());
-					res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>());
+					res = core::transform::tryInlineToExpr (res->getNodeManager(), res.as<core::CallExprPtr>(), false, true);
 					return res;
 				}	
 			}
