@@ -663,6 +663,12 @@ namespace backend {
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
+		res[basic.getRefToSrc()] = OP_CONVERTER({
+				std::cerr << " WARNING: this is an unchecked feature" << std::endl;
+			return CONVERT_ARG(0);
+		});
+
+
 		res[basic.getRefToInt()] = OP_CONVERTER({
 				return CONVERT_ARG(0);
 		}

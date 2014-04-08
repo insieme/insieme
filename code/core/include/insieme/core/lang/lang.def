@@ -417,6 +417,12 @@ LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>"
 LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 
+LITERAL(SrcReinterpret, "src.reinterpret",      "(src<'a>, type<'b>) -> src<'b>")
+LITERAL(SrcNarrow, 		"src.narrow",			"(src<'a>, datapath, type<'b>) -> src<'b>")
+LITERAL(SrcExpand,		"src.expand",			"(src<'a>, datapath, type<'b>) -> src<'b>")
+
+LITERAL(RefToSrc, "ref.src.cast",      "(ref<'a>) -> src<'a>")
+
 // Operators for references
 OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'b>) -> bool")
 OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'b>) -> bool")

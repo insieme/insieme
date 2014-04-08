@@ -689,7 +689,34 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBindTemporaryExpr(const
 	convFact.tempInitMap.insert(std::make_pair(temp,declStmt));
 	return retIr = declStmt.getVariable();
 }
+namespace detail{
+		core::ExpressionPtr inlineExpressionWithCleanups(const core::StatementList& stmtList){
 
+			core::ExpressionPtr res;
+			auto lastStmt = stmtList[stmtList.size()-1];
+			auto preLastStmt = stmtList.size() > 2? stmtList[stmtList.size()-2]: core::StatementPtr();
+			if (preLastStmt && core::analysis::isCallOf(preLastStmt, preLastStmt->getNodeManager().getLangBasic().getRefAssign())){
+				res = preLastStmt.as<core::ExpressionPtr>();
+			}
+			else if (auto returnStmt = lastStmt.isa<core::ReturnStmtPtr>()){
+				res = returnStmt->getReturnExpr();
+			}
+			else{
+				res = lastStmt.as<core::ExpressionPtr>();
+			}
+
+			auto it = stmtList.rbegin()+1;
+			auto end = stmtList.rend();
+			for (; it != end; ++it){
+				// skip the assignment in case of assignment cleanups
+				if (*it == res) continue;
+				auto decl = (*it).as<core::DeclarationStmtPtr>();
+				res =core::transform::replaceAllGen(res->getNodeManager(), res, decl->getVariable(), decl->getInitialization());
+			}
+			
+			return res;
+		}
+} // detail namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					CXX Expression with cleanups
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -760,7 +787,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
-	return retIr =  convFact.createCallExprFromBody(stmtutils::StmtWrapper(stmtList), innerIr->getType());
+	// inline the list, 
+	return retIr =  detail::inlineExpressionWithCleanups(stmtList);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
