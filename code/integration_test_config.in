@@ -37,6 +37,8 @@
 # some configuration options 
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
+compiler[insiemecc_c_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_c++_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
