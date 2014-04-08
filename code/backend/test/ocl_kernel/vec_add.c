@@ -38,6 +38,19 @@
 #include <stdio.h>
 #include "lib_icl.h"
 
+void subfunction(icl_kernel* kernel, size_t szGlobalWorkSize, size_t szLocalWorkSize, icl_event* wb_all, icl_event* rk,
+		icl_buffer* buf_input1, icl_buffer* buf_input2, icl_buffer* buf_output, cl_int size, struct int2 si2) {
+
+	szGlobalWorkSize = si2.a;
+	si2.b = szLocalWorkSize;
+	icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, wb_all, rk, 4,
+										(size_t)0, (void *)buf_input1,
+										(size_t)0, (void *)buf_input2,
+										(size_t)0, (void *)buf_output,
+										sizeof(cl_int), (void *)&size);
+
+}
+
 int main(int argc, char* argv[]) {
 	int size = 1000;
 
@@ -89,7 +102,13 @@ int main(int argc, char* argv[]) {
 											(size_t)0, (void *)buf_input2,
 											(size_t)0, (void *)buf_output,
 											sizeof(cl_int), (void *)&size);
-		
+
+//		subfunction(kernel, szGlobalWorkSize, szLocalWorkSize, wb_all, rk,
+//											buf_input1,
+//											buf_input2,
+//											buf_output,
+//											size, si2);
+
 		icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], rk, rb);
 		
 		printf("Time wb1 %f\n", icl_profile_event(wb1, ICL_STARTED, ICL_FINISHED, ICL_SEC));		
