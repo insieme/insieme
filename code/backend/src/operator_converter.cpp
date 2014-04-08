@@ -785,9 +785,7 @@ namespace backend {
 
 		res[basic.getArrayRefDistance()] = OP_CONVERTER({
 
-			// add dependency to full type for both operators
-			// NOTE: it seems that gcc needs the full type declaration to be able to perform the distance between pointers,
-			// this makes no much sense, but is the way it is
+			// add dependency to full type for both operators, need to know the offset for the pointer arithmetics
 			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType()); 
 			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
 			const TypeInfo& info = GET_TYPE_INFO(elementType); 
