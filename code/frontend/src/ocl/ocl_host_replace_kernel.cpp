@@ -424,7 +424,7 @@ ExpressionPtr KernelReplacer::createKernelCallLambda(const ExpressionAddress loc
 	// create lambda for inner function
 	LambdaExprPtr innerLambda = builder.lambdaExpr(innerFctTy, builder.parameters(innerFctParams), builder.compoundStmt(body));
 
-	return builder.callExpr(gen.getInt4(), innerLambda, localKernel, global, local);
+	return builder.callExpr(gen.getInt4(), innerLambda, builder.deref(localKernel), global, local);
 }
 
 std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreateKernel) {
@@ -515,11 +515,6 @@ void KernelReplacer::collectArguments() {
 			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 not needed since we store the entire sizeArg to avoid confusions with different types
 +*/
-			// add ref<array< >> to type
-//+			TypePtr arrType = builder.refType(builder.arrayType(type));
-
-			//collect types of the arguments
-//+			kernelTypes[kernel].at(argIdx) = (arrType);
 			// only store size of local mem arrays, therefore it's always uint8
 			kernelTypes[kernel].at(argIdx) = gen.getUInt8();
 			// store the information that this is a local memory argument
@@ -528,14 +523,10 @@ not needed since we store the entire sizeArg to avoid confusions with different 
 
 			// refresh variables used in the generation of the local variable
 			VariableMap varMapping;
-//+			utils::refreshVariables(size, varMapping, builder);
 			utils::refreshVariables(sizeArg, varMapping, builder);
 
-//+			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(arrType));
 			ExpressionPtr tupleAccess = builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(gen.getUInt8()));
-//+			ExpressionPtr allocMemory = builder.refVar(builder.callExpr(arrType, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size));
 
-//+			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, allocMemory));
 			body.push_back(builder.callExpr(gen.getUnit(), gen.getRefAssign(), tupleAccess, sizeArg));
 			body.push_back(builder.returnStmt(builder.intLit(0)));
 
@@ -563,22 +554,12 @@ not needed since we store the entire sizeArg to avoid confusions with different 
 			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 			replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, args);
 
-			// initialize local memory place with undefined
-	/*		return builder.callExpr(gen.getUnit(), gen.getRefAssign(), builder.callExpr(builder.refType(type), gen.getTupleRefElem(), kernel,
-					(gen.isUInt8(idx) ? idx :	builder.castExpr(gen.getUInt8(), idx)),
-					builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, gen.getArrayCreate1D(), builder.getTypeLiteral(type), size)));
-	*/
 			return;
 		}
 
 //	std::cout << "ARGUMENT: \t" << *arg->getType() << "  " << *arg << std::endl;
 		//collect types of the arguments
 		kernelTypes[kernel].at(argIdx) = (arg->getType());
-
-//		arg = utils::getVarOutOfCrazyInspireConstruct(arg);
-
-	//	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
-	//ßßß	kernelArgs[kernel].push_back(arg);
 
 		FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType().as<TypePtr>(), (arg)->getType()), gen.getInt4());
 		params.push_back(src);
@@ -871,27 +852,28 @@ void IclKernelReplacer::collectArguments() {
 				addToTuple = storedArg;
 			}
 
-			tupleCreation.push_back(builder.assign(builder.callExpr(addToTuple->getType(), gen.getTupleRefElem(), kernel, builder.intLit(i/2),
+			tupleCreation.push_back(builder.assign(builder.callExpr(gen.getTupleRefElem(), kernel, builder.uintLit(i/2),
 					builder.getTypeLiteral(addToTuple->getType())), addToTuple));
+
 		}
 
 		// add kernel call function
 		ExpressionPtr newKernelCall = createKernelCallLambda(kernel, runKernel["work_dim"].getValue().as<ExpressionPtr>(),
 				runKernel["local_work_size"].getValue().as<ExpressionPtr>(), runKernel["global_work_size"].getValue().as<ExpressionPtr>());
 
-
 		transform::utils::migrateAnnotations(runKernel.getRoot().as<NodePtr>(), newKernelCall.as<NodePtr>());
 
 		// add kernel call to compound expression
 		tupleCreation.push_back(newKernelCall);
 
-		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
-		replacements[matchAddress >> runKernel.getRoot()] = builder.getNoOp();// builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
-	});
+		// TODO fix bug in createCallExprFromBody and remove work around
+		tupleCreation.push_back(runKernel["local_work_size"].getValue().as<ExpressionPtr>());
+		tupleCreation.push_back(runKernel["global_work_size"].getValue().as<ExpressionPtr>());
 
-//for(std::pair<NodePtr, NodePtr> cur : replacements) {
-//	dumpPretty(cur.second);
-//}
+
+		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
+		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
+	});
 
 	prog = transform::replaceAll(mgr, replacements);
 
