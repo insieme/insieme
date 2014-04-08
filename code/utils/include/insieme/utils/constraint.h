@@ -52,13 +52,13 @@ namespace insieme {
 namespace utils {
 
 
-// Generic function which returns the constant value of a generic formula (either Formula or 
-// AffineFunctions). If func is not constant than an exception is expected to be thrown 
+/// Generic function which returns the constant value of a generic formula (either Formula or
+/// AffineFunctions). If func is not constant than an exception is expected to be thrown
 template <class FuncTy>
 int asConstant(const FuncTy& func);
 
 
-/**************************************************************************************************
+/**
  * Define the possible type of expressions: 
  * 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
  * 		LT -> f(x)  < 0, GE -> f(x) >= 0, LE -> f(x) <= 0
@@ -67,7 +67,7 @@ int asConstant(const FuncTy& func);
  * 		>= 0, but newer libraries like ISL allows for representation of more complex relationships,
  * 		therefore we keep at this stage the constraints in this form and let the backend deal with
  * 		the representation in the chosen library. 
- *************************************************************************************************/
+ */
 enum ConstraintType { GT, LT, EQ, NE, GE, LE };	
 
 // Returns the constrait type which correspond to the logic negation of a given constraint type
@@ -88,12 +88,12 @@ inline ConstraintType getLogicNegation(const ConstraintType& c) {
 	return ConstraintType::GT;	// some return is required!
 }
 
-/******************************************************************************************************
+/**
  * A Constraint is a linear affine expression limiting the polyhedron. A set of constraints will
  * define an iteration domain which is our polyhedron. A constraint is usually represented as an
  * inequality, i.e. f(x) <= 0, however we allow here for a more general representation allowing any
  * sort of constraint (==, !=, <, >, <= and >=) to be represented. 
- *****************************************************************************************************/
+ */
 template <typename FuncTy>
 struct Constraint : 
 	public utils::Printable, 
@@ -177,13 +177,6 @@ inline bool Constraint<int>::isEvaluable() const { return true; }
 
 
 
-/******************************************************************************************************
- * Combiner: The constraint combiner has the task to combine multiple constraints into 
- * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of 
- * negated. Because arbitrary nested structures are possible, we built a binary tree containing 
- * constraints. 
- *****************************************************************************************************/
- 
 // Forward declaration for the Constraint combiner and its subclasses 
 template <typename FuncTy>
 class Combiner;
@@ -221,22 +214,23 @@ struct CombinerPtr : public std::shared_ptr<Combiner<FuncTy>> {
 };
 
 
-/**************************************************************************************************
- * This class has the purpose to create conjunctions and/or disjunctions of constraints. This allows
- * to represent the domain spawned by control operations with a composed conditional expression
- *************************************************************************************************/
-template <typename FuncTy>
-struct Combiner: public utils::Printable {
+/**
+ * Combiner: The constraint combiner has the task to combine multiple constraints into
+ * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of
+ * negated. Because arbitrary nested structures are possible, we built a binary tree containing
+ * constraints.
+ */
+template <typename FuncTy> struct Combiner: public utils::Printable {
 	
 	std::ostream& printTo(std::ostream& out) const;
 
-	// Check whether 2 constraints are the same 
+	/// Check whether 2 constraints are the same
 	virtual bool operator==(const Combiner<FuncTy>& other) const = 0;
 
-	// Check whether this combination of constraints is evaluatable
+	/// Check whether this combination of constraints is evaluatable
 	virtual bool isEvaluable() const = 0;
 
-	// Return true whether this combination of constraints is evaluatable to true
+	/// Return true whether this combination of constraints is evaluatable to true
 	virtual bool isTrue() const = 0;
 
 	inline operator bool() const { return isTrue(); }
@@ -247,10 +241,10 @@ struct Combiner: public utils::Printable {
 
 
 
-/**************************************************************************************************
- * This class is a wrapper for a plain Constraint. Utilized to combine constraints in a composite
+/**
+ * The RawConstraint class is a wrapper for a plain Constraint. Utilized to combine constraints in a composite
  * like structure.
- *************************************************************************************************/
+ */
 template <typename FuncTy>
 class RawConstraint : public Combiner<FuncTy> {
 	Constraint<FuncTy> constraint; 
@@ -268,7 +262,7 @@ public:
 	RawConstraint(const Constraint<FuncTy>& constraint) : 
 		constraint(constraint) { }
 
-	// Returns the constraint embodied in this wrapper class
+	/// Returns the constraint embodied in this wrapper class
 	inline const Constraint<FuncTy>& getConstraint() const { return constraint; }
 	
 	virtual bool operator==(const Combiner<FuncTy>& other) const {
@@ -295,9 +289,9 @@ public:
 template <>
 inline bool RawConstraint<int>::isEvaluable() const { return true; }
 
-/**************************************************************************************************
+/**
  * This class represents the negation of a constraint. 
- *************************************************************************************************/
+ */
 template <typename FuncTy>
 class NegConstraint : public Combiner<FuncTy> {
 	CombinerPtr<FuncTy> subComb;
@@ -331,10 +325,10 @@ public:
 };
 
 
-/**************************************************************************************************
+/**
  * This class represent the combination of two constraints which can be either a combined through a
  * AND or a OR operator. 
- *************************************************************************************************/
+ */
 template <class FuncTy>
 struct BinConstraint : public Combiner<FuncTy> {
 	
@@ -383,23 +377,23 @@ private:
 
 
 
-/**************************************************************************************************
+/**
  * Visitor class used to visit a combination of constraints. Because constraints are combined
  * together in a composite (tree like) structure, it is therefore easier to visit the structure by
  * means of a visitor. 
  *
  * The implementation of the visitor is based on double-dispatch. 
- *************************************************************************************************/
+ */
 template <class FuncTy, class RetTy = void>
 struct ConstraintVisitor {
 
-	// Visits a raw node (which contains a raw constraint)
+	/// Visits a raw node (which contains a raw constraint)
 	virtual RetTy visitRawConstraint(const RawConstraint<FuncTy>& rcc) = 0;
 
-	// Visits a negated constraints 
+	/// Visits a negated constraints
 	virtual RetTy visitNegConstraint(const NegConstraint<FuncTy>& ucc) = 0;
 
-	// Visits a combination of constraints which can either be a conjunction or a disjunction 
+	/// Visits a combination of constraints which can either be a conjunction or a disjunction
 	virtual RetTy visitBinConstraint(const BinConstraint<FuncTy>& bcc) = 0;
 
 	virtual RetTy visit(const Combiner<FuncTy>& cur) {
