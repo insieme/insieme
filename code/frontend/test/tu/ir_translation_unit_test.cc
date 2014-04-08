@@ -391,7 +391,27 @@ namespace tu {
 		}
 	}
 
+	TEST(TranslationUnit, SimpleTypeExtraction) {
 
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		IRTranslationUnit tu(mgr);
+
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
+
+		std::cout << tu << "\n";
+
+		// resolve the recursive type
+		auto res = tu.resolve(builder.genericType("a")).as<core::TypePtr>();
+
+		// there should not be any free type variables left
+		EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
+
+		// and it should be a recursive type!
+		EXPECT_TRUE(res.isa<core::StructTypePtr>()) << res;
+
+	}
 
 	TEST(TranslationUnit, RecursiveTypeExtraction) {
 
@@ -401,8 +421,10 @@ namespace tu {
 		IRTranslationUnit tu(mgr);
 		tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }"));
 		tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }"));
-		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y;}"));
-		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; }"));
+		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }"));
+		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }"));
+
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
 
 		std::cout << tu << "\n";
 
