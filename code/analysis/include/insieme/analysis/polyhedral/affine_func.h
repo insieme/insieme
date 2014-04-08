@@ -76,7 +76,7 @@ struct VariableNotFound : public std::logic_error {
 	~VariableNotFound() throw () { }
 };
 
-/**************************************************************************************************
+/** ***********************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
  *
@@ -98,16 +98,15 @@ class AffineFunction :
 		public utils::Printable, 
 		public boost::equality_comparable<AffineFunction> 
 { 
-	// Iteration Vector to which this function refers to 
+	/// Iteration Vector to which this function refers to
 	const IterationVector& iterVec;
 
-	// List of integer coefficients (the polyhedral model does not allow to represent non integer
-	// coefficients)
+	/// List of integer coefficients (the polyhedral model does not allow to represent non integer coefficients)
 	std::vector<int> coeffs;
 
-	// Keeps the information of the number of iterators the iteration vector had when this affine
-	// function was created. This will allow us to produce the updated coefficient matrix in the
-	// case new parameters or iterators are added to the iterVec. 
+	/// Keeps the information of the number of iterators the iteration vector had when this affine
+	/// function was created. This will allow us to produce the updated coefficient matrix in the
+	/// case new parameters or iterators are added to the iterVec.
  	size_t sep;
 
 	/**
@@ -172,6 +171,13 @@ public:
 	 */
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
+	/**
+	 * @brief AffineFunction builds an affine function using the iteration vector and a matrix of coefficients.
+	 * @param iterVec contains the iteration vector $c_n, ..., c_0$
+	 * @param coeffs the coefficients
+	 * AffineFunction builds an affine function $f(x)=c_n*x_n+c_{n-1}*x_{n-1}+...+c_1*x_1+c_0$ with the iteration vector
+	 * iterVec $c_n, ..., c_0$ and the coefficient matrix coeffs.
+	 */
 	AffineFunction(const IterationVector& iterVec, const utils::Matrix<int>::Row& coeffs ) : 
 		iterVec(iterVec), 
 		coeffs(coeffs.begin(), coeffs.end()), 
@@ -180,6 +186,13 @@ public:
 		assert(coeffs.size() == iterVec.size());
 	}
 
+	/**
+	 * @brief AffineFunction builds an affine function using the iteration vector and a vector of coefficients.
+	 * @param iterVec contains the iteration vector $c_n, ..., c_0$
+	 * @param coeffs containts the coefficient vector.
+	 * AffineFunction builds an affine function $f(x)=c_n*x_n+c_{n-1}*x_{n-1}+...+c_1*x_1+c_0$ with the iteration vector
+	 * iterVec $c_n, ..., c_0$ and the coefficient vector coeffs.
+	 */
 	AffineFunction(const IterationVector& iterVec, const std::vector<int>& coeffs) : 
 		iterVec(iterVec), 
 		coeffs(coeffs.begin(), coeffs.end()), 

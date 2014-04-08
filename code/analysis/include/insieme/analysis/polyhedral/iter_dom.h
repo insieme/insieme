@@ -44,12 +44,12 @@ namespace insieme { namespace analysis { namespace polyhedral {
 
 class Scop;
 
-/** ***********************************************************************************************
+/**
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
  * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the
  * iteration domain also allows the creation of empty and universe sets which are used to represent
  * statement which are not bound by any constraint
- **************************************************************************************************/
+ */
 class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
