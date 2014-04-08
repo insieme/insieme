@@ -1074,8 +1074,8 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
  	retIr = getInitExpr ( type, initExpr);
 
- 	VLOG(2) << "initExpr			: " << initExpr;
- 	VLOG(2) << "initExpr (adjusted)	: " << retIr;
+ 	VLOG(2) << "initExpr			: \n" << dumpPretty(initExpr);
+ 	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(retIr);
 
  	return retIr;
 }
