@@ -96,9 +96,10 @@ namespace insieme {
 		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
 
 		// add extra compiler flags
-		for(const auto& flag : testCase.getCompilerArguments()) {
-			compiler.addFlag(flag);
-		}
+		// todo set opencl step
+		//for(const auto& flag : testCase.getCompilerArguments()) {
+			//compiler.addFlag(flag);
+		//}
 
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
 	}

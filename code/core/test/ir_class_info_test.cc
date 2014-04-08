@@ -43,6 +43,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/dump/binary_dump.h"
 
@@ -411,6 +413,36 @@ namespace core {
 		// annotation should be restored correctly
 		EXPECT_EQ(info, getMetaInfo(restored)) << "Original:\n" << info << "\nRestored:\n" << getMetaInfo(restored);
 
+	}
+
+	TEST(ClassInfo, DirectIREncoding) {
+
+		// create a code fragment using manager A
+		NodeManager mgrA;
+		IRBuilder builderA(mgrA);
+
+		StructTypePtr typeA = builderA.parse("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
+		EXPECT_TRUE(typeA);
+
+		// create a class info
+		std::map<string, NodePtr> symbols;
+		symbols["T"] = typeA;
+
+		ClassMetaInfo info;
+		info.addConstructor(builderA.parse("T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parse("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parse("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parse("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+
+
+		// encode Meta-Info into IR
+		auto encoded = encoder::toIR(mgrA, info);
+		EXPECT_TRUE(checks::check(encoded).empty()) << checks::check(encoded);
+
+		// restore meta-info
+		auto info2 = encoder::toValue<ClassMetaInfo>(encoded);
+		EXPECT_NE(&info, &info2);
+		EXPECT_EQ(info, info2);
 	}
 
 	TEST(ClassInfo, SemanticChecks) {

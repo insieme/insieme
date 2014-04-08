@@ -131,7 +131,7 @@ namespace backend {
 			}
 
 			// create a new context
-			ConversionContext entryContext(converter);
+			ConversionContext entryContext(converter, core::LambdaPtr());
 
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
@@ -779,6 +779,13 @@ namespace backend {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
+
+		// special handling for returns in ctors / dtors
+		auto funType = context.getEntryPoint()->getType();
+		if (funType->isConstructor() || funType->isDestructor()) {
+			return converter.getCNodeManager()->create<c_ast::Return>();
+		}
+
 		core::IRBuilder builder(ptr.getNodeManager());
 		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
 

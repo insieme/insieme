@@ -54,6 +54,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -262,10 +263,10 @@ namespace tu {
 					for(const auto& cur : list) {
 
 						// encode meta info into pure IR
-						auto encoded = core::toIR(mgr, cur.second);
+						auto encoded = core::encoder::toIR(mgr, cur.second);
 
 						// resolve meta info
-						auto resolved = core::fromIR(map(encoded));
+						auto resolved = core::encoder::toValue<ClassMetaInfo>(map(encoded));
 
 						// restore resolved meta info for resolved type
 						setMetaInfo(map(cur.first), resolved);

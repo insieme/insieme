@@ -1,0 +1,2 @@
+files="ompscrCommon.c","wtime.c","tg.c","AStack.c","graphsearch.c"
+executionFlags=0 1000 ${PATH}/exampleGraph_02.gph

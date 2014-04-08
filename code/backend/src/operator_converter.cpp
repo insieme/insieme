@@ -1070,7 +1070,7 @@ namespace backend {
 			}
 
 			// convert init-value in fresh context, 
-			ConversionContext innerContext(context.getConverter());
+			ConversionContext innerContext(context.getConverter(), context.getEntryPoint());
 			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
 
 			// move dependencies to global var-decl fragment

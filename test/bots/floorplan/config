@@ -1,0 +1,2 @@
+executionFlags=-f ${PATH}/input.20 -c
+files=${files}"floorplan.c"

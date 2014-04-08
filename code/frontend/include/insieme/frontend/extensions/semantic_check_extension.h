@@ -37,7 +37,6 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include <map>
 #include <set>

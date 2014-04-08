@@ -210,6 +210,5 @@ namespace backend {
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
-
 } // end namespace backend
 } // end namespace insieme

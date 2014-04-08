@@ -1,0 +1,5 @@
+compFlags[main_cxx_sema]=--intercept boost::.* --intercept-include ${boost_include}
+compFlags[main_seq_cxx_compile]=--intercept boost::.* --intercept-include ${boost_include}
+libPaths="${boost_lib}"
+libNames="boost_thread","boost_system"
+includes="${boost_include}","./"

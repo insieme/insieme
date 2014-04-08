@@ -1,0 +1,2 @@
+files=${files},"sort.c"
+executionFlags=-c
