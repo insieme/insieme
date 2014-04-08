@@ -83,7 +83,7 @@ namespace insieme {
 		if (!errors.empty()) {
 			for_each(errors, [](const core::checks::Message& cur) {
 				LOG(INFO) << cur;
-				NodeAddress address = cur.getAddress();
+				NodeAddress address = cur.getOrigin();
 				std::stringstream ss;
 				unsigned contextSize = 1;
 				do {

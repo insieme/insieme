@@ -99,8 +99,8 @@ namespace {
 		EXPECT_EQ(EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, msgs[0].getErrorCode());
 		res = res && msgs[0].getErrorCode() == EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE;
 
-		EXPECT_EQ(*target, *msgs[0].getAddress());
-		res = res && *msgs[0].getAddress() == *target;
+		EXPECT_EQ(*target, *msgs[0].getOrigin());
+		res = res && *msgs[0].getOrigin() == *target;
 		return res;
 	}
 
