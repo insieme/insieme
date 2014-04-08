@@ -44,12 +44,12 @@ namespace insieme { namespace analysis { namespace polyhedral {
 
 class Scop;
 
-/**************************************************************************************************
+/**
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
  * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the
  * iteration domain also allows the creation of empty and universe sets which are used to represent
  * statement which are not bound by any constraint
- **************************************************************************************************/
+ */
 class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
@@ -69,7 +69,7 @@ public:
 		is_empty(!static_cast<bool>(constraint)) { }
 
 	/**
-	 * Constructs an iteration domain from a simple constraint
+	 * Constructs an iteration domain from a single AffineConstraint.
 	 */
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
@@ -86,7 +86,7 @@ public:
 		is_empty(otherDom.is_empty) { }
 	
 	/**
-	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
+	 * Builds an iteration domain starting from an iteration vector and a coefficient vector.
 	 */
 	template <template <class> class Cont=std::initializer_list>
 	IterationDomain( const IterationVector& iv, const Cont<int>& coeffs ) : 
@@ -104,7 +104,7 @@ public:
 	}
 
 	/**
-	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
+	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix.
 	 */
 	template <template <class> class Cont=std::initializer_list>
 	IterationDomain( const IterationVector& iv, const Cont<Cont<int>>& coeffs ) : 
@@ -133,14 +133,14 @@ public:
 		return is_empty || (!is_empty && constraint && constraint->isEvaluable() && !constraint->isTrue()); 
 	}
 
-	// Intersect two iteration domains and return assign the result to this iteration domain
+	/// Intersect two iteration domains; the result will be returned and assigned to this iteration domain instance.
 	inline IterationDomain& operator&=(const IterationDomain& other) {
 		assert(iterVec == other.iterVec && "Cannot intersect two iteration domains with non-compatible base");
 		constraint = constraint and other.constraint;
 		return *this;
 	}
 
-	// Intersect two iteration domains and return assign the result to this iteration domain
+	/// Creates a union of two iteration domains; the result will be returned as well as assigned to this iteration domain instance.
 	inline IterationDomain& operator|=(const IterationDomain& other) {
 		assert(iterVec == other.iterVec && "Cannot union two iteration domains with non-compatible base");
 		constraint = constraint or other.constraint;
