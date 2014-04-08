@@ -61,12 +61,12 @@ private:
 	/**
 	 * The number of nodes within an IR.
 	 */
-	unsigned numSharedNodes;
+	std::uint64_t numSharedNodes;
 
 	/**
 	 * The number of addressable nodes within an IR.
 	 */
-	unsigned numAddressableNodes;
+	std::uint64_t numAddressableNodes;
 
 	/**
 	 * The height of the IR, hence, the maximum length of a path
@@ -99,7 +99,7 @@ public:
 	 *
 	 * @return the total number of shared nodes within the IR
 	 */
-	unsigned getNumSharedNodes() const {
+	std::uint64_t getNumSharedNodes() const {
 		return numSharedNodes;
 	}
 
@@ -108,7 +108,7 @@ public:
 	 *
 	 * @return the total number of addressable nodes within the IR
 	 */
-	unsigned getNumAddressableNodes() const {
+	std::uint64_t getNumAddressableNodes() const {
 		return numAddressableNodes;
 	}
 
