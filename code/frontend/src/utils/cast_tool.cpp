@@ -864,7 +864,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.callExpr(gen.getScalarToArray(), expr);
 			}
 
-			VLOG(2) << expr;
+			VLOG(2) << "cast resoult: \n" << dumpPretty(expr) << " \n of type: " << expr->getType() ;
 			return expr;
 		}
 

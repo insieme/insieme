@@ -108,6 +108,14 @@ namespace irp {
 		return node(core::NT_TupleType, pattern);
 	}
 
+	inline TreePatternPtr structType(const ListPatternPtr& pattern) {
+		return node(core::NT_StructType, pattern);
+	}
+
+	inline TreePatternPtr arrayType(const TreePatternPtr& pattern) {
+		return node(core::NT_ArrayType, single(pattern));
+	}
+
 	inline TreePatternPtr refType(const TreePatternPtr& pattern) {
 		return node(core::NT_RefType, single(pattern));
 	}
