@@ -784,6 +784,20 @@ namespace backend {
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
 
 		res[basic.getArrayRefDistance()] = OP_CONVERTER({
+
+			// add dependency to full type for both operators
+			// NOTE: it seems that gcc needs the full type declaration to be able to perform the distance between pointers,
+			// this makes no much sense, but is the way it is
+			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType()); 
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
+			const TypeInfo& info = GET_TYPE_INFO(elementType); 
+			context.getDependencies().insert(info.definition);
+
+			elementType = core::analysis::getReferencedType(call[1]->getType()); 
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
+			const TypeInfo& info2 = GET_TYPE_INFO(elementType); 
+			context.getDependencies().insert(info2.definition);
+
 			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
 		});
 
