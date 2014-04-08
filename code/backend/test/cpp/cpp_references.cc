@@ -136,7 +136,7 @@ namespace backend {
 		auto fragments = builder.parseAddresses(
 				"let int = int<4>;"
 				""
-				"let intRef = struct { ref<int> _const_cpp_ref };"
+				"let intRef = struct { src<int> _const_cpp_ref };"
 				""
 				"let f = (intRef x)->unit { };"
 				"let g = (ref<int> x)->unit { };"
@@ -145,7 +145,7 @@ namespace backend {
 				"	"
 				"	ref<int> a = var(12);"
 				"	intRef b = ir2cpp(a);"
-				"	ref<int> c = cpp2ir($b$);"
+				"	src<int> c = cpp2ir($b$);"
 				"	"
 				"	f(ir2cpp(a));"
 				"	f(b);"
