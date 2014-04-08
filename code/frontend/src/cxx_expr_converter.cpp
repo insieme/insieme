@@ -600,7 +600,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc
 		if(dtor){
 			//FIXME: why mem_alloc dtor has being marked as virtual????
-			frontend_assert(dtorDecl && dtorDecl->isVirtual()) << "no virtual dtor allowed for array dtor\n";
+			frontend_assert(dtorDecl && !dtorDecl->isVirtual()) << "no virtual dtor allowed for array dtor\n";
 
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);
