@@ -478,11 +478,11 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	classDecl->setCompleteDefinition (true);
 
 	CHECK_TYPE		(classTy, "RecClass",
-							  "rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:src<'RecClass>>}");
+							  "rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
 	CHECK_POINTER	(classTy, "ref<array<RecClass,1>>",
-							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:src<'RecClass>>},1>>");
+							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
 	CHECK_REFERENCE	(classTy, "struct<_cpp_ref:ref<RecClass>>",
-							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:src<'RecClass>>}>>");
+							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
 }
 
 
