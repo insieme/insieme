@@ -98,7 +98,7 @@ void unary_op_test() {
 	#pragma test "( *v100)"
 	+a;
 
-	#pragma test "(0-( *v100))"
+	#pragma test "(CAST<int<4>>(0)-( *v100))"
 	-a;
 
 	#pragma test "decl ref<ref<array<int<4>,1>>> v0 = ( var(scalar.to.array(v100)))"
@@ -229,7 +229,7 @@ void switch_stmt_test() {
 	int a=0;
 
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { break; } default: { } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 1: { break; } default: { } };}"
 	switch(a) {
 	case 1:
 		break;
@@ -243,7 +243,7 @@ void switch_stmt_test() {
 
 	// EVIL CODE: are we sure the +1 is not ignored??
 	//#pragma test  "{ decl int<4> v0 = (( *v100)+8); (v100 := (( *v100)+1)); switch(v0) { case 1: { } default: { } };}"
-	#pragma test  "{ decl int<4> v0 = (( *v100)+8); switch(v0) { case 1: { break; } default: { } };}"
+	#pragma test  "{ decl int<4> v0 = CAST<int<4>>((( *v100)+8)); switch(v0) { case 1: { break; } default: { } };}"
 	switch(a+8) {
 	a += 1;
 	case 1:
@@ -251,7 +251,7 @@ void switch_stmt_test() {
 	}
 
 	#pragma test  \
-	"{ decl int<4> v0 = (( *v100)+8); decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); switch(v0) { case 1: { (v1 := 1); break; } default: { } };}"
+	"{ decl int<4> v0 = CAST<int<4>>((( *v100)+8)); decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); switch(v0) { case 1: { (v1 := 1); break; } default: { } };}"
 	switch(a+8) {
 		int x;
 	case 1:
@@ -260,7 +260,7 @@ void switch_stmt_test() {
 	}
 
 	#pragma test  \
-	"{ decl int<4> v0 = (( *v100)+8); decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); switch(v0) { case 1: { (v1 := 1); break; } default: { } };}"
+	"{ decl int<4> v0 = CAST<int<4>>((( *v100)+8)); decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); switch(v0) { case 1: { (v1 := 1); break; } default: { } };}"
 	switch(a+8) {
 		int x = 0;
 	case 1:
@@ -269,7 +269,7 @@ void switch_stmt_test() {
 	}
 
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 0: { break; gen.post.inc(v100); } default: { gen.post.inc(v100); } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 0: { break; gen.post.inc(v100); } default: { gen.post.inc(v100); } };}"
 	switch(a) {
 	case 0:
 		break;
@@ -278,7 +278,7 @@ void switch_stmt_test() {
 	}
 
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { (v100 := (( *v100)+1)); break; { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (( *v1)+1); }; (( *v100)-1); break; } case 2: { { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (( *v1)+1); }; (( *v100)-1); break; } default: { (( *v100)-1); break; } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 1: { (v100 := (( *v100)+1)); break; { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (( *v1)+1); }; (( *v100)-1); break; } case 2: { { decl ref<int<4>> v1 = ( var(undefined(type<int<4>>))); (( *v1)+1); }; (( *v100)-1); break; } default: { (( *v100)-1); break; } };}"
 	switch(a) {
 	case 1:
 		a+=1;
@@ -292,7 +292,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 10: { break; (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 2: { (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 3: { gen.post.inc(v100); return unit; break; } case 8: { (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } default: { break; } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 10: { break; (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 2: { (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 3: { gen.post.inc(v100); return unit; break; } case 8: { (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } default: { break; } };}"
 	switch(a) {
 		case 10:
 			break;
@@ -311,14 +311,14 @@ void switch_stmt_test() {
 	}
 
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 1: { break; } default: { } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 1: { break; } default: { } };}"
 	switch(a) {
 		case 0+1:
 			break;
 	}
 
 	#pragma test \
-	"{ decl int<4> v0 = ( *v100); switch(v0) { case 0: { { (v100 := 10); break; }; (v100 := 100); break; } case 1: { (v100 := 100); break; } default: { } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 0: { { (v100 := 10); break; }; (v100 := 100); break; } case 1: { (v100 := 100); break; } default: { } };}"
 	switch(a) {
 		case 0: 
 			{
