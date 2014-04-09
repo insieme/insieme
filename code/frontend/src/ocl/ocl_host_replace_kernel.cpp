@@ -226,45 +226,26 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 	// check if there is a x to array called
 	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
 		if(toArray->getFunctionExpr() == gen.getScalarToArray()) {
-			// check consitency with workDim, should be 1
+			// check consistency with workDim, should be 1
 			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
 
-			argTy = toArray->getArgument(0)->getType();
-			param = builder.variable(argTy);
 			arg = toArray->getArgument(0);
 		} else if(isPtrDecay(toArray->getFunctionExpr())) {
 			arg = toArray->getArgument(0);
-			argTy = arg->getType();
-			param = builder.variable(argTy);
-
 		} else if(gen.isRefReinterpret(toArray->getFunctionExpr())){
-
-			arg   = toArray[0];
-			argTy = arg->getType();
-			param = builder.variable(argTy);
-
-// LUIS: all this code is dead and dangerous
-//		} else if(toArray->getFunctionExpr() == gen.getRefVar() ) {
-//			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
-//	// throw away ref.var
-//	// TODO only a dirty fix, check it
-//	// this will no longer happen, vector-to-array is gone
-////				if(vta->getFunctionExpr() == gen.getVectorToArray()) {
-////					arg = vta->getArgument(0);
-////					argTy = arg->getType();
-////					param = builder.variable(argTy);
-////				}
-//			}
+			arg = toArray[0];
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
 			assert(false && "Unexpected function in OpenCL size argument");
 		}
+		argTy = arg->getType();
+		param = builder.variable(argTy);
 	} else { // the argument is an array
 		size = utils::removeDoubleRef(size);
-		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
-		argTy = size->getType();
-		param = builder.variable(argTy);
+//		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
 		arg = size;
+		argTy = arg->getType();
+		param = builder.variable(argTy);
 	}
 
 	ExpressionPtr init = utils::removeDoubleRef(param);
@@ -279,7 +260,8 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 		if(isArray)
 			init = builder.arrayAccess(init, builder.literal(gen.getUInt8(), "0"));
 		if(init->getType() != gen.getUInt8()) {
-			init = builder.castExpr(gen.getUInt8(), utils::tryDeref(init));
+
+			init = builder.castExpr(gen.getUInt8(), init);
 		}
 		vDecl = builder.declarationStmt(vecTy,
 				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(gen.getUInt8(), "1"), builder.literal(gen.getUInt8(), "1"))));
@@ -865,11 +847,6 @@ void IclKernelReplacer::collectArguments() {
 
 		// add kernel call to compound expression
 		tupleCreation.push_back(newKernelCall);
-
-		// TODO fix bug in createCallExprFromBody and remove work around
-		tupleCreation.push_back(runKernel["local_work_size"].getValue().as<ExpressionPtr>());
-		tupleCreation.push_back(runKernel["global_work_size"].getValue().as<ExpressionPtr>());
-
 
 		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
 		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
