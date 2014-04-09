@@ -326,6 +326,9 @@ namespace c_ast {
 		return manager->create<DummyFragment>(dependencies);
 	}
 
+	CodeFragmentPtr IncludeFragment::createNew(const SharedCodeFragmentManager& manager, const string& include) {
+		return manager->create<IncludeFragment>(include);
+	}
 
 } // end namespace c_ast
 } // end namespace backend

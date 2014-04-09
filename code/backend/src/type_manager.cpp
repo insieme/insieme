@@ -329,7 +329,7 @@ namespace backend {
 
 						// add dependency also to the definition if it is not closing a cycle
 						if (curInfo->definition) {
-							if (cur.isa<core::RecTypePtr>() || curInfo->definition->isDependingOn(info->definition)) {
+							if (curInfo->definition.isa<c_ast::IncludeFragmentPtr>() || cur.isa<core::RecTypePtr>() || curInfo->definition->isDependingOn(info->definition)) {
 								info->definition->addRequirement(curInfo->definition);
 							} else {
 								info->definition->addDependency(curInfo->definition);
@@ -476,8 +476,7 @@ namespace backend {
 
 				// create primitive type + include dependency
 				c_ast::TypePtr intType = manager.create<c_ast::PrimitiveType>(type);
-				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-				definition->addInclude("stdint.h");
+				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdint.h");
 
 				return type_info_utils::createInfo(intType, definition);
 			}
@@ -522,8 +521,7 @@ namespace backend {
 				c_ast::TypePtr boolType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Bool);
 
 				// add dependency to header
-				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-				definition->addInclude("stdbool.h");
+				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdbool.h");
 
 				return type_info_utils::createInfo(boolType, definition);
 			}
@@ -597,8 +595,7 @@ namespace backend {
 			if (ptr->getName()->getValue() == "va_list")
             {
 				auto res = type_info_utils::createInfo(manager, "va_list");
-                c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-                decl->addInclude("stdarg.h");
+                c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdarg.h");
                 res->declaration = decl;
                 res->definition = decl;
 
@@ -1243,7 +1240,6 @@ namespace backend {
 			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
 
 			// construct a dummy fragment combining all dependencies
-			//res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 			res->declaration->addDependencies(declDependencies);
 			res->definition = res->declaration;
 

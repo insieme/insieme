@@ -79,6 +79,12 @@ namespace c_ast {
 	class CCodeFragment;
 	typedef Ptr<CCodeFragment> CCodeFragmentPtr;
 
+	class DummyFragment;
+	typedef Ptr<DummyFragment> DummyFragmentPtr;
+
+	class IncludeFragment;
+	typedef Ptr<IncludeFragment> IncludeFragmentPtr;
+
 	typedef std::set<CodeFragmentPtr> FragmentSet;
 
 } // end namespace c_ast
