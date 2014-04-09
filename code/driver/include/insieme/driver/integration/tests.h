@@ -335,7 +335,7 @@ namespace integration {
 			//insiemeccFlags["use_omp"]="--omp-sema";
 			insiemeccFlags["use_omp"]="-fopenmp";
 			insiemeccFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
-			insiemeccFlags["use_o3"]="";
+			insiemeccFlags["use_o3"]="-O3";
 			insiemeccFlags["use_c"]="";
 			insiemeccFlags["use_gnu99"]="";
 			insiemeccFlags["use_gnu90"]="";
