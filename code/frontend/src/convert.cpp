@@ -430,9 +430,9 @@ tu::IRTranslationUnit Converter::convert() {
 	//frontend done
 	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;
 
-//	std::cout << " ==================================== " << std::endl;
-//	std::cout << getIRTranslationUnit() << std::endl;
-//	std::cout << " ==================================== " << std::endl;
+	//std::cout << " ==================================== " << std::endl;
+	//std::cout << getIRTranslationUnit() << std::endl;
+	//std::cout << " ==================================== " << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -1808,25 +1808,22 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << " DONE: function declaration: " << funcDecl->getQualifiedNameAsString();
 	}
 
-	// FIXME: this might have some performance impact
-	// if we are dealing with a memberFunction, retrieve meta-info and update it
 	if (funcTy->isMember()) {
-		//FIXME create map from classType to vector<metainfo> in TU
-		//FIXME merge that map, and at programm generation merge the metainfo together
-		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
+		// if we are dealing with a memberFunction, we create a meta-info and store it in the IRTU
+		// all meta-infos are merged together when leaving the realm of the TU (when turning into
+		// IRProgram) and attacthed to the according type -- this is handeled in the IRTU
 
+		//the class thype of the current member
+		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
 		core::ClassMetaInfo classInfo;
-		if (core::hasMetaInfo(classType)){
-			classInfo = core::getMetaInfo(classType);
-		}
 
 		if (funcTy->isConstructor()) {
 			//prevent multiple entries of ctors
-			if(!classInfo.containsConstructor(lambda))
-				classInfo.addConstructor(lambda);
+			if(!classInfo.containsConstructor(symbol))
+				classInfo.addConstructor(symbol);
 		}
 		else if (funcTy->isDestructor()){
-			classInfo.setDestructor(lambda);
+			classInfo.setDestructor(symbol);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
@@ -1839,9 +1836,12 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 				//for everything else use the rich name
 				functionname = symbol->getStringValue();
 			}
+			VLOG(2) << "funcName used: " << functionname;
+			VLOG(2) << "qualName: " << funcDecl->getQualifiedNameAsString();
+			VLOG(2) << "symbol "<< symbol;
 
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
-				classInfo.addMemberFunction(functionname, lambda,
+				classInfo.addMemberFunction(functionname, symbol,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
@@ -1857,7 +1857,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 				//abort();
 			}
 		}
-		core::setMetaInfo(classType, classInfo);
+		getIRTranslationUnit().addMetaInfo(classType, classInfo);
 	}
 
 	// update cache

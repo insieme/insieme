@@ -545,24 +545,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 
 	core::ExpressionPtr dtor;
+	clang::CXXDestructorDecl* dtorDecl;
 	// since destructor might be defined in a different translation unit or even in this one but after the usage
 	// we should retrieve a callable symbol and delay the conversion
 	if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(deleteExpr->getDestroyedType().getTypePtr())){
 		if (const clang::CXXRecordDecl* classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl())){
-			if ( classDecl->getDestructor())
-				dtor = convFact.getCallableExpression(classDecl->getDestructor());
+			dtorDecl = classDecl->getDestructor();
+			if(dtorDecl) {
+				dtor = convFact.getCallableExpression(dtorDecl);
+			}
 		}
 	}
 
 	if (deleteExpr->isArrayForm () ){
-
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc
 		if(dtor){
-
 			//FIXME: why mem_alloc dtor has being marked as virtual????
-			core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType());
-			desTy = convFact.lookupTypeDetails(desTy);
-			frontend_assert(!core::getMetaInfo(desTy).isDestructorVirtual()) << "no virtual dtor allowed for array dtor\n";
+			frontend_assert(dtorDecl && !dtorDecl->isVirtual()) << "no virtual dtor allowed for array dtor\n";
 
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);
@@ -572,7 +571,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 		}
 		else{
 			exprToDelete = getCArrayElemRef(builder, exprToDelete);
-			VLOG(2) << exprToDelete->getType();
 
 			// this is a built in type, we need to build a empty dtor with the right type
 			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
@@ -580,7 +578,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 	}
 	else{
 		exprToDelete = getCArrayElemRef(builder, exprToDelete);
-		VLOG(2) << exprToDelete->getType();
 
 		if(dtor){
 			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), builder.callExpr(dtor, toVector(exprToDelete)));

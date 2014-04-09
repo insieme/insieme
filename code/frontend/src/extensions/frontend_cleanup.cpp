@@ -80,6 +80,8 @@
 			if (!node.isa<core::TypePtr>())
 				res = pass(node);
 
+			//NOTE: careful! 
+			//metainfo is only added to the Types after generating the IRProgram out of the //IRTu
 			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
 				if (core::hasMetaInfo(type)){
 					auto meta = core::getMetaInfo(type);

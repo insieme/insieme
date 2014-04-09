@@ -329,6 +329,19 @@ namespace integration {
 			mainFlags["use_cpp"]="--std=c++03";
 			mainFlags["use_cpp11"]="--std=c++11";
 
+			std::map<string,string> insiemeccFlags;
+			insiemeccFlags["use_libmath"]="";
+			insiemeccFlags["use_libpthread"]="";
+			//insiemeccFlags["use_omp"]="--omp-sema";
+			insiemeccFlags["use_omp"]="-fopenmp";
+			insiemeccFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
+			insiemeccFlags["use_o3"]="";
+			insiemeccFlags["use_c"]="";
+			insiemeccFlags["use_gnu99"]="";
+			insiemeccFlags["use_gnu90"]="";
+			insiemeccFlags["use_cpp"]="--std=c++03";
+			insiemeccFlags["use_cpp11"]="--std=c++11";
+
 			std::map<string,map<string,string>> propFlags;
 			propFlags["gcc"]=gccFlags;
 
@@ -336,6 +349,7 @@ namespace integration {
 
 			propFlags["g++"]=gccFlags;
 			propFlags["main"]=mainFlags;
+			propFlags["insiemecc"]=insiemeccFlags;
 
 			boost::filesystem::path comp(properties.get("compiler",step));
 			std::string cmd=" ";
@@ -361,10 +375,11 @@ namespace integration {
 			}
 
 			// interception configuration
-			if (comp.filename().string()=="main") {
-				compArgs.push_back("--intercept " + toString(join(" ", properties.get<vector<string>>("intercepted_name_spaces"))));
-				compArgs.push_back("--intercept-include " + toString(join(" ", properties.get<vector<string>>("intercepted_header_file_dirs"))));
-			}
+			//if (comp.filename().string()=="main" || 
+			//	comp.filename().string()=="insiemecc") {
+			//	compArgs.push_back("--intercept " + toString(join(" ", properties.get<vector<string>>("intercepted_name_spaces"))));
+			//	compArgs.push_back("--intercept-include " + toString(join(" ", properties.get<vector<string>>("intercepted_header_file_dirs"))));
+//			}
 
 			// add remaining flags
 			compArgs.push_back(properties.get("compFlags",step));

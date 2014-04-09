@@ -793,14 +793,16 @@ namespace backend {
 
 			// add constructors
 			for(const core::ExpressionPtr& cur : info.getConstructors()) {
+				assert(cur.isa<core::LambdaExprPtr>() && "metaInfo should only contain ctors which are lambdaExprs at this point");
 				// let function manager handle it
 				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
 			}
 
 			// add destructor
-			if (auto dtor = info.getDestructor().as<core::LambdaExprPtr>()) {
+			if (auto dtor = info.getDestructor()) {
+				assert(dtor.isa<core::LambdaExprPtr>() && "metaInfo should only contain dtor which is a lambdaExprs at this point");
 				// let function manager handle it
-				funMgr.getInfo(dtor, false, info.isDestructorVirtual());
+				funMgr.getInfo(dtor.as<core::LambdaExprPtr>(), false, info.isDestructorVirtual());
 			}
 
 			// add member functions

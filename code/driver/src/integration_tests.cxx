@@ -145,7 +145,7 @@ std::string getGitVersion(){
 int main(int argc, char** argv) {
 	//TODO custom root config file
 
-	Logger::setLevel(ERROR);
+	Logger::setLevel(WARNING);
 
 	// parse parameters
 	Options options = parseCommandLine(argc, argv);
@@ -208,6 +208,8 @@ int main(int argc, char** argv) {
 	highlight.insert("main_run_c++_execute");
 	highlight.insert("ref_c_execute");
 	highlight.insert("ref_c++_execute");
+	highlight.insert("insiemecc_c_execute");
+	highlight.insert("insiemecc_c++_execute");
 
 	// run test cases in parallel
 	vector<TestCase> ok;
@@ -230,7 +232,7 @@ int main(int argc, char** argv) {
 			vector<TestStep> list = itc::filterSteps(steps, cur);
 
 			// schedule resulting steps
-			list = itc::scheduleSteps(list);
+			list = itc::scheduleSteps(list,cur);
 
 			// run steps
 			vector<pair<string, TestResult>> results;
@@ -273,9 +275,9 @@ int main(int argc, char** argv) {
 							std::cout << line.str();
 						} else {
 							std::cout << colorize.red() <<line.str();
-							std::cout << "#------------------------------------------------------------------------------#" << colorize.reset();
-							std::cout<<"Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
-							std::cout<<curRes.second.getFullOutput();
+							std::cout << "#------------------------------------------------------------------------------#" << colorize.reset() << std::endl;
+							std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
+							std::cout << curRes.second.getFullOutput();
 						}
 
 						success = success && curRes.second.wasSuccessfull();
@@ -296,12 +298,11 @@ int main(int argc, char** argv) {
 					else 
 						std::cout << colorize.red();
 
-						std::cout << "#------------------------------------------------------------------------------#\n";
+					std::cout << "#------------------------------------------------------------------------------#\n";
 					if(success)
 						std::cout << "#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
 					else
 						std::cout << "#\tFAILED  -- "<<format("%-60s",cur.getName())<<"#\n";
-
 					std::cout << "#------------------------------------------------------------------------------#\n";
 
 					if (success) {
