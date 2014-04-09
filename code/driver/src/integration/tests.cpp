@@ -219,7 +219,15 @@ namespace integration {
 
 			// extract interception configuration
 			auto interceptionNameSpacePatterns = prop.get<vector<string>>("intercepted_name_spaces");
-			auto interceptedHeaderFileDirectories = prop.get<vector<frontend::path>>("intercepted_header_file_dirs");
+			vector<frontend::path> interceptedHeaderFileDirectories;
+
+			for(const auto& path : prop.get<vector<string>>("intercepted_header_file_dirs")) {
+				if(path.at(0) == '/') {
+					interceptedHeaderFileDirectories.push_back(path);
+				} else {
+					interceptedHeaderFileDirectories.push_back((testCaseDir / path).string());
+				}
+			}
 
 			// add test case
 			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,

@@ -188,16 +188,6 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 				irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, false );
 				convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
 
-				// update the meta info of the class
-				core::TypePtr classType = thisExpr->getType().as<core::RefTypePtr>().getElementType();
-				core::ClassMetaInfo classInfo = core::getMetaInfo(classType);
-				const vector<core::MemberFunction>& old = classInfo.getMemberFunctions();
-				assert(old.size() ==1);
-				vector<core::MemberFunction> newFuncs;
-				newFuncs.push_back ( core::MemberFunction(old[0].getName(), irFunc, old[0].isVirtual(), old[0].isConst()) );
-				classInfo.setMemberFunctions(newFuncs);
-				core::setMetaInfo(classType, classInfo);
-
 				// clean map
 				lambdaMap.erase(method);
 			}

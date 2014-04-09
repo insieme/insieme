@@ -67,6 +67,7 @@ namespace core {
 	// --------- Class Meta-Info --------------------
 
 	void ClassMetaInfo::setConstructors(const vector<ExpressionPtr>& constructors) {
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getNodeType() == NT_Literal || cur->getNodeType() == NT_LambdaExpr; }));
 		// check new constructors
 		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getType().isa<FunctionTypePtr>() && cur->getType().as<FunctionTypePtr>()->isConstructor(); }));
 		assert(all(constructors, [&](const ExpressionPtr& cur) { return checkObjectType(cur); }));
@@ -84,6 +85,8 @@ namespace core {
 	}
 
 	void ClassMetaInfo::addConstructor(const ExpressionPtr& constructor) {
+		assert(constructor->getNodeType() == NT_Literal || constructor->getNodeType() == NT_LambdaExpr);
+
 		// check constructor type
 		assert(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
 		assert(checkObjectType(constructor));
@@ -96,6 +99,8 @@ namespace core {
 	}
 
 	void ClassMetaInfo::setDestructor(const ExpressionPtr& destructor) {
+		assert(!destructor || destructor->getNodeType() == NT_Literal || destructor->getNodeType() == NT_LambdaExpr);
+
 		// check destructor type
 		assert(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
 		assert(!destructor || checkObjectType(destructor));
@@ -148,14 +153,10 @@ namespace core {
 	TypePtr ClassMetaInfo::getClassType() const {
 
 		// try destructor
-		if (auto fun = destructor.isa<LambdaExprPtr>()) {
-			return fun->getLambda()->getType()->getObjectType();
-		}
+		if (destructor) return destructor->getType().as<FunctionTypePtr>()->getObjectType();
 
 		// try constructors
-		if (!constructors.empty()) {
-			return constructors.front()->getType().as<FunctionTypePtr>()->getObjectType();
-		}
+		if (!constructors.empty()) return constructors.front()->getType().as<FunctionTypePtr>()->getObjectType();
 
 		// try member functions
 		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getType().as<FunctionTypePtr>()->getObjectType();
@@ -262,12 +263,37 @@ namespace core {
 
 		// move constructors
 		for(auto cur : constructors) {
-			newInfo.addConstructor(alter(cur));
+			
+			if (auto lit = cur.isa<LiteralPtr>()) {
+
+				// update function type
+				newInfo.addConstructor(core::transform::replaceNode(
+						mgr,
+						LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+						builder.refType(newClassType)
+				).as<LiteralPtr>());
+
+			} else {
+				// handle as all other implementations
+				assert(cur.isa<LambdaExprPtr>());
+				newInfo.addConstructor(alter(cur.as<LambdaExprPtr>()));
+			}
 		}
 
 		// move destructor
 		if (destructor) {
-			newInfo.setDestructor(alter(destructor));
+			if (auto lit = destructor.isa<LiteralPtr>()) {
+				// update function type
+				newInfo.setDestructor(core::transform::replaceNode(
+						mgr,
+						LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+						builder.refType(newClassType)
+				).as<LiteralPtr>());
+			} else {
+				// handle as all other implementations
+				assert(destructor.isa<LambdaExprPtr>());
+				newInfo.setDestructor(alter(destructor.as<LambdaExprPtr>()));
+			}
 		}
 
 		// update virtual destructor field
@@ -457,7 +483,7 @@ namespace core {
 		if (res.hasDestructor() && b.hasDestructor()) {
 			assert_eq(*analysis::normalize(res.getDestructor()), *analysis::normalize(b.getDestructor()))
 					<< "Unable to merge distinct destructors!";
-		} else if (!res.hasDestructor()) {
+		} else if (!res.hasDestructor() && b.getDestructor()) {
 			res.setDestructor(b.getDestructor());
 		}
 

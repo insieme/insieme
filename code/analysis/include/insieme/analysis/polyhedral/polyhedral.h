@@ -71,12 +71,12 @@ class Formula;
 
 namespace analysis { namespace polyhedral {
 
-/********************************************************************************************** 
+/**
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
  * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
  * type of access (DEF or USE). The iteration domain which defines the domain on which this
  * access is defined and the access functions for each dimensions.
- *********************************************************************************************/
+ */
 class AccessInfo : public utils::Printable {
 
 	core::ExpressionAddress	  expr;
@@ -104,7 +104,7 @@ public:
 		access( std::make_shared<AffineSystem>(*other.access) ),
 		domain( other.domain ) { }
 
-	// Copy constructor with base (iterator vector) change 
+	/// Copy constructor with base (iterator vector) change
 	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
 		access( std::make_shared<AffineSystem>(iterVec, *other.access) ),
@@ -130,7 +130,7 @@ public:
 typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
 typedef std::vector<AccessInfoPtr> 	AccessList;
 
-/**************************************************************************************************
+/**
  * Stmt: this class assembles together the informations which are utilized to represent a
  * statement in the polyhedral mdoel. 
  *
@@ -139,14 +139,16 @@ typedef std::vector<AccessInfoPtr> 	AccessList;
  * 	- A *scheduling* (or scattering) matrix (which defines the logical dates when the statment is
  * 	  executed)
  *  - a set of *access functions* which identifies the read/writes happening inside the statement
- *************************************************************************************************/
+ */
 class Stmt : public utils::Printable {
 
 	size_t	 				id;
-	core::StatementAddress 	addr;
-	IterationDomain 		dom;
-	AffineSystem 			schedule;
-	AccessList				access;
+	core::StatementAddress 	addr;		///< the root of the address is the entry point of the SCoP
+	IterationDomain 		dom;		///< according to the literature
+	AffineSystem 			schedule;	///< according to the literature
+	AccessList				access;		///< list of access functions in matrix form, additionally with
+										///< reference address, type of usage (USE/DEF/UNKNOWN) -
+										///< also cf class AccessInfo
 
 	typedef AccessList::iterator AccessIterator;
 	typedef AccessList::const_iterator ConstAccessIterator;
@@ -211,18 +213,18 @@ public:
  */
 boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
 
-//*************************************************************************************************
-// Scop: This class is the entry point for any polyhedral model analysis / transformations. The
-// purpose is to fully represent all the information of a polyhedral static control region (SCOP).
-// Copies of this class can be created so that transformations to the model can be applied without
-// changing other instances of this SCop. 
-//
-// By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
-// When a transformation needs to be performed a deep copy of the Scop object is created and
-// transformations are applied to it. 
-//*************************************************************************************************
 typedef std::shared_ptr<Stmt> StmtPtr;
 
+/**
+ * Scop: This class is the entry point for any polyhedral model analysis / transformations. The
+ * purpose is to fully represent all the information of a polyhedral static control region (SCOP).
+ * Copies of this class can be created so that transformations to the model can be applied without
+ * changing other instances of this SCop.
+ *
+ * By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
+ * When a transformation needs to be performed a deep copy of the Scop object is created and
+ * transformations are applied to it.
+ */
 struct Scop : public utils::Printable {
 
 	typedef std::vector<StmtPtr> StmtVect;
@@ -238,7 +240,7 @@ struct Scop : public utils::Printable {
 			});
 	}
 
-	// Copy constructor builds a deep copy of this SCoP. 
+	/// Copy constructor builds a deep copy of this SCoP.
 	explicit Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
 		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
@@ -254,7 +256,7 @@ struct Scop : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	// Adds a stmt to this scop. 
+	/// push_back adds a stmt to this SCoP
 	void push_back( const Stmt& stmt );
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
