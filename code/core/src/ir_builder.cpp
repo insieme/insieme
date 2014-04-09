@@ -761,7 +761,9 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 
 
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
-	assert(!dynamic_pointer_cast<const ArrayType>(array->getType()) && "Accessing array by value is not allowed!");
+	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
+	if(aType)
+		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArraySubscript1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
@@ -770,7 +772,8 @@ CallExprPtr IRBuilder::arrayRefElem(const ExpressionPtr& array, const Expression
 	assert(analysis::isRefType(array->getType()) && "Tried vector ref elem operation on non-ref expression");
 
 	auto aType = dynamic_pointer_cast<const ArrayType>(analysis::getReferencedType(array->getType()));
-	if(aType) return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArrayRefElem1D(), array, index);
+	if(aType)
+		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArrayRefElem1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(array->getType()));
 	assert(vType && "Tried array ref elem operation on non-array-ref expression");
 	return callExpr(refType(vType->getElementType()), manager.getLangBasic().getVectorRefElem(), array, index);

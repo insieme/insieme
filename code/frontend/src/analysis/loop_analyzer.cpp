@@ -447,7 +447,10 @@ insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementP
 	tmp.push_back(newBody);
 	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
 
-	return convFact.getIRBuilder().forStmt(inductionVar, initValue, endValue, stepExpr, finalBody);
+	// make sure we initialize the thing with the right type
+	auto startVal = frontend::utils::castScalar(inductionVar->getType(), initValue);
+
+	return convFact.getIRBuilder().forStmt(inductionVar, startVal, endValue, stepExpr, finalBody);
 }
 
 } // End analysis namespace
