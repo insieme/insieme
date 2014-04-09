@@ -282,12 +282,6 @@ namespace tu {
 		core::ClassMetaInfo getMetaInfo(const core::TypePtr& classType, bool symbolic=true);
 
 		/**
-		 * takes all memberfunctions/ctor/dtors of a type, builds a metainfo and attaches it to the
-		 * type
-		 */
-		void extractMetaInfos() const;
-
-		/**
 		 * Adds the given metainfo to the vector associated with classType
 		 * @param classType a TypePtr with the type the meta-info should be associated with
 		 * @param metaInfo a core::ClassMetaInfor for the given classType

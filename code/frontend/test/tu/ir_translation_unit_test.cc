@@ -188,44 +188,7 @@ namespace tu {
 		//after merge
 		auto metaInfoC = unitC.getMetaInfo(def);
 		EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
-
-		// -----------------------------------
-		
-		// now test the also the extracting
-	
-		//explicitly extractMetaInfos and attach them to the types 
-		// for testing
-		auto resA1 = unitA.resolve(symbol).as<core::TypePtr>();
-		EXPECT_FALSE(core::hasMetaInfo(resA1));
-		unitA.extractMetaInfos();
-		auto resA = unitA.resolve(symbol).as<core::TypePtr>();
-		EXPECT_TRUE(core::hasMetaInfo(resA));
-		ASSERT_TRUE(core::hasMetaInfo(resA));
-		EXPECT_EQ(*resA, *def);
-		EXPECT_EQ(2, core::getMetaInfo(resA).getConstructors().size()) << core::getMetaInfo(resA);
-
-		//explicitly extractMetaInfos and attach them to the types
-		// for testing
-		auto resB1 = unitB.resolve(symbol).as<core::TypePtr>();
-		EXPECT_FALSE(core::hasMetaInfo(resB1));
-		unitB.extractMetaInfos();
-		auto resB = unitB.resolve(symbol).as<core::TypePtr>();
-		EXPECT_TRUE(core::hasMetaInfo(resA));
-		ASSERT_TRUE(core::hasMetaInfo(resB));
-		EXPECT_EQ(*resB, *def);
-		EXPECT_EQ(2, core::getMetaInfo(resB).getConstructors().size()) << core::getMetaInfo(resB);
-
-		//explicitly extractMetaInfos and attach them to the types
-		auto resC1 = unitC.resolve(symbol).as<core::TypePtr>();
-		EXPECT_FALSE(core::hasMetaInfo(resC1));
-		unitC.extractMetaInfos();
-		auto resC = unitC.resolve(symbol).as<core::TypePtr>();
-		ASSERT_TRUE(core::hasMetaInfo(resC));
-		EXPECT_EQ(*resC, *def);
-		EXPECT_EQ(3, core::getMetaInfo(resC).getConstructors().size()) << core::getMetaInfo(resC);
-
 	}
-
 
 	TEST(TranslationUnit, MetaClassInfoDumpMerge) {
 
@@ -274,16 +237,6 @@ namespace tu {
 		
 			auto metaInfoA = unitA.getMetaInfo(def);
 			EXPECT_EQ(2, metaInfoA.getConstructors().size()) << metaInfoA;
-
-			// test the properties
-			// for testing also do the extraction
-			unitA.extractMetaInfos();
-			auto resA = unitA.resolve(symbol).as<core::TypePtr>();
-			ASSERT_TRUE(core::hasMetaInfo(resA));
-			EXPECT_EQ(*resA, *def);
-			EXPECT_EQ(2, core::getMetaInfo(resA).getConstructors().size()) << core::getMetaInfo(resA);
-
-
 		}
 
 		// -----------------------------------
@@ -318,14 +271,6 @@ namespace tu {
 
 			auto metaInfoB = unitB.getMetaInfo(def);
 			EXPECT_EQ(2, metaInfoB.getConstructors().size()) << metaInfoB;
-
-			// test the properties
-			// for testing also do the extraction
-			unitB.extractMetaInfos();
-			auto resB = unitB.resolve(symbol).as<core::TypePtr>();
-			ASSERT_TRUE(core::hasMetaInfo(resB));
-			EXPECT_EQ(*resB, *def);
-			EXPECT_EQ(2, core::getMetaInfo(resB).getConstructors().size()) << core::getMetaInfo(resB);
 		}
 
 		// -----------------------------------
@@ -341,14 +286,6 @@ namespace tu {
 
 		auto metaInfoC = unitC.getMetaInfo(def);
 		EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
-
-		// for testing
-		unitC.extractMetaInfos();
-		auto resC = unitC.resolve(symbol).as<core::TypePtr>();
-		ASSERT_TRUE(core::hasMetaInfo(resC));
-		EXPECT_EQ(*resC, *def);
-		EXPECT_EQ(3, core::getMetaInfo(resC).getConstructors().size()) << core::getMetaInfo(resC);
-
 	}
 
 	TEST(TranslationUnit, TypeMerge) {
@@ -388,19 +325,8 @@ namespace tu {
 			EXPECT_FALSE(core::hasMetaInfo(res1));
 			EXPECT_FALSE(core::hasMetaInfo(type));
 			
-			{
-				auto meta = unit.getMetaInfo(type);
-				EXPECT_EQ(1, meta.getMemberFunctions().size());
-			}
-
-			{
-				unit.extractMetaInfos();
-				EXPECT_FALSE(core::hasMetaInfo(type));
-				auto res = unit.resolve(symbol).as<core::TypePtr>();
-				EXPECT_TRUE(core::hasMetaInfo(res));
-				auto meta = core::getMetaInfo(res);
-				EXPECT_EQ(1, meta.getMemberFunctions().size());
-			}
+			auto meta = unit.getMetaInfo(type);
+			EXPECT_EQ(1, meta.getMemberFunctions().size());
 		}
 
 		//check if meta info traveld somehow
@@ -436,18 +362,8 @@ namespace tu {
 
 			EXPECT_FALSE(core::hasMetaInfo(type));
 
-			{
-				auto meta = unit.getMetaInfo(type);
-				EXPECT_EQ(1, meta.getMemberFunctions().size());
-			}
-			{
-				unit.extractMetaInfos();
-				EXPECT_TRUE(core::hasMetaInfo(type));
-				auto res = unit.resolve(symbol).as<core::TypePtr>();
-				EXPECT_TRUE(core::hasMetaInfo(res));
-				auto meta = core::getMetaInfo(res);
-				EXPECT_EQ(1, meta.getMemberFunctions().size());
-			}
+			auto meta = unit.getMetaInfo(type);
+			EXPECT_EQ(1, meta.getMemberFunctions().size());
 		}
 	
 		core::NodeManager mgr;
@@ -465,21 +381,8 @@ namespace tu {
 			auto res = unit.resolve(symbol).as<core::TypePtr>();
 			EXPECT_FALSE(core::hasMetaInfo(res));
 
-			{
-				auto meta = unit.getMetaInfo(type);
-				EXPECT_EQ(2, meta.getMemberFunctions().size());
-			}
-			{
-				unit.extractMetaInfos();
-				core::TypePtr type = unit[symbol];
-				EXPECT_TRUE(core::hasMetaInfo(type));
-
-				auto res = unit.resolve(symbol).as<core::TypePtr>();
-				EXPECT_TRUE(core::hasMetaInfo(res));
-
-				auto meta = core::getMetaInfo(type);
-				EXPECT_EQ(2, meta.getMemberFunctions().size());
-			}
+			auto meta = unit.getMetaInfo(type);
+			EXPECT_EQ(2, meta.getMemberFunctions().size());
 		}
 
 		// create a in-memory stream
@@ -507,16 +410,8 @@ namespace tu {
 			auto symbol = builder.parseType("A").as<core::GenericTypePtr>();
 			EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unit[symbol]));
 
-			{
-				auto meta = unit.getMetaInfo(type);
-				EXPECT_EQ(2, meta.getMemberFunctions().size());
-			}
-			{
-				unit.extractMetaInfos();
-				EXPECT_TRUE(core::hasMetaInfo(unit[symbol]));
-				auto meta = core::getMetaInfo(unit[symbol]);
-				EXPECT_EQ(2, meta.getMemberFunctions().size());
-			}
+			auto meta = unit.getMetaInfo(type);
+			EXPECT_EQ(2, meta.getMemberFunctions().size());
 		}
 	}
 
