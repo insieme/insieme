@@ -69,6 +69,8 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/utils/progress_bar.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -218,23 +220,16 @@ inline string  createPrefix(const std::string& name, unsigned pass, unsigned of)
 /**
  * some tool to print a progress bar, some day would be cool to have an infrastructure to do so
  */
-inline void printProgress (const std::string& prefix, unsigned cur, unsigned max){
-	std::stringstream out;
-	static unsigned last = 0;
+inline void printProgress (const std::string& prefix, unsigned cur, unsigned max) {
+	static unsigned lastPos = 0;
 	unsigned a = ((float)cur/ (float)max) * 60.0f;
-	if (a > last){
-		unsigned i;
-		for (i = 0; i< a; i++)
-			out << "=";
-		out  << ">";
-		i++;
-		for (; i< 60; i++)
-			out << " ";
-		std::cout << "\r" << prefix << " [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
-		last = a;
+	if (a > lastPos) {
+		lastPos = a;
+		std::cout << "\r" << utils::ProgressBar(prefix, max, cur, 60, std::cout, false);
 	}
-	if (cur == max)
-		last =0;
+	if (cur == max) {
+		lastPos = 0;
+	}
 }
 
 } // End empty namespace
