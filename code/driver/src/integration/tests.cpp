@@ -176,7 +176,7 @@ namespace integration {
 					files.push_back((testCaseDir / (caseName + ".c")).string());
 				else {
 					// this must be a c++ test case
-					assert(fs::exists(testCaseDir / (caseName + ".cpp")));
+					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file dosen't exist: " << testCaseDir << "/" << caseName << ".cpp";
 					files.push_back((testCaseDir / (caseName + ".cpp")).string());
 
 					// if test is located in apropiate folder, activate CXX11 standard
