@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
 	char4* vector = (char4*)malloc(sizeof(char4) * 2);
 
 	for(int i = 0; i < 8; i+=4) {
-		vector[i] = (char4){(char)i, (char)(i+1), (char)(i+2), (char)(i+3)};
+//		vector[i] = (char4){(char)i, (char)(i+1), (char)(i+2), (char)(i+3)};
 	}
 
 	return 0;
