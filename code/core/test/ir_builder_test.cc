@@ -68,6 +68,7 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 		"	let fun = (int<4> arg)->int<4> { return arg + 1; };"
 		"	let lfun = lit(\"lfun\":(ref<int<4>>)->int<4>);"
 		"	let rfun = (ref<int<4>> arg)->int<4> { return *arg;};"
+		""
 		"	ref<int<4>> a;"
 		"	ref<int<4>> b;"
 		"	ref<int<4>> c;"
@@ -96,10 +97,15 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 		return false;
 	});
 
+//	std::cout << " ***************************** " << std::endl;
+//	dumpPretty(body);
+//	std::cout << " ***************************** " << std::endl;
+
 	NodePtr call = builder.createCallExprFromBody(body, gen.getUnit());
 	NodePtr embeddedCall = transform::replaceAll(mgr, stmt, body, call);
 
-	dumpPretty(embeddedCall);
+//	dumpPretty(embeddedCall);
+//	std::cout << " ***************************** " << std::endl;
 
 	auto semantic = core::checks::check(embeddedCall);
 	auto warnings = semantic.getWarnings();
@@ -109,7 +115,7 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 	});
 
 	auto errors = semantic.getErrors();
-//	EXPECT_EQ(0u, errors.size()) ;
+	EXPECT_EQ(0u, errors.size()) ;
 
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
