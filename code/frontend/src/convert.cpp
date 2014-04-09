@@ -1183,7 +1183,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							getInitExpr (curr->getType(), inits[i])));
 			}
 			if (members.empty())
-				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
+				retIr = builder.getZero(structTy);
 			else {
 				retIr = builder.structExpr(structTy, members);
 

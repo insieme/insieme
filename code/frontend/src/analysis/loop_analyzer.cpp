@@ -207,7 +207,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 			core::ExpressionPtr tmpEndValue;
             auto range = builder.sub(endValue, initValue);
-            auto zero = convFact.getIRBuilder().zero(inductionVar->getType());
+            auto zero = convFact.getIRBuilder().getZero(inductionVar->getType());
             auto remainder = builder.sub(range, builder.mul(builder.div(range, stepExpr), stepExpr));
             tmpEndValue = builder.add( endValue, builder.sub(stepExpr, remainder));
             auto ifBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], endValue);

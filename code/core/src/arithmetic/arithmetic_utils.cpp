@@ -51,13 +51,8 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
-NotAFormulaException::NotAFormulaException(const ExpressionPtr& expr) :expr(expr) {
-	if (!expr) { return; }
-
-	std::ostringstream ss;
-	ss << "Cannot convert expression '" << *expr << "'" << " of type " << *expr->getType() << " - it is not a formula!";
-	msg = ss.str();
-}
+NotAFormulaException::NotAFormulaException(const ExpressionPtr& expr)
+	: expr(expr), msg("Unable to convert expression - it is not a formula!") { }
 
 const char* NotAFormulaException::what() const throw() {	
 	return msg.c_str(); 

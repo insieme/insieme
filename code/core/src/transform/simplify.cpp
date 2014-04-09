@@ -65,6 +65,8 @@ namespace transform {
 
 			NodeManager& manager;
 
+			NodePtr root;
+
 			bool simplifyDerivedOps;
 
 		public:
@@ -72,8 +74,8 @@ namespace transform {
 			/**
 			 * Default constructor for the simplification.
 			 */
-			Simplifier(NodeManager& manager, bool simplifyDerivedOps)
-				: manager(manager), simplifyDerivedOps(simplifyDerivedOps) {}
+			Simplifier(NodeManager& manager, const NodePtr& root, bool simplifyDerivedOps)
+				: manager(manager), root(root), simplifyDerivedOps(simplifyDerivedOps) {}
 
 
 			NodePtr simplifyCall(const NodePtr& ptr) {
@@ -310,7 +312,7 @@ namespace transform {
 
 				} else {
 					// for all other nodes run simplifier recursively bottom up
-					res = ptr->substitute(manager, *this);
+					res = (ptr == root) ? ptr->substitute(manager, *this) : simplify(manager, ptr, simplifyDerivedOps);
 				}
 
 				// investigate current node
@@ -334,14 +336,61 @@ namespace transform {
 
 		};
 
+		/**
+		 * An annotation utilied to cache the results of simplification processes
+		 */
+		template<bool derivedOps>
+		struct SimplifiedCodeAnnotation : public value_annotation::cloneable {
 
+			/**
+			 * The simplified version to be annotated
+			 */
+			NodePtr simplified;
+
+			/**
+			 * A simple constructor for annotations of this type.
+			 */
+			SimplifiedCodeAnnotation(const NodePtr& simplified) : simplified(simplified) {}
+
+			/**
+			 * A function supporting the cloning of this instance to another node manager.
+			 */
+			void cloneTo(const NodePtr& target) const {
+				target->attachValue<SimplifiedCodeAnnotation>(target->getNodeManager().get(simplified));
+			}
+
+			/**
+			 * A equality operator required for all value annoations.
+			 */
+			bool operator==(const SimplifiedCodeAnnotation& other) const {
+				return simplified == other.simplified;
+			}
+		};
+
+		template<bool derivedOps>
+		NodePtr simplify(NodeManager& manager, const NodePtr& code) {
+
+			// check annotations
+			if (code->hasAttachedValue<SimplifiedCodeAnnotation<derivedOps>>()) {
+				return code->getAttachedValue<SimplifiedCodeAnnotation<derivedOps>>().simplified;
+			}
+
+			// use the simplify-mapper for the actual operation operation
+			auto res = Simplifier(manager, code, derivedOps).map(code);
+
+			// attach annotations
+			code->attachValue<SimplifiedCodeAnnotation<derivedOps>>(res);
+			res->attachValue<SimplifiedCodeAnnotation<derivedOps>>(res);
+
+			// done
+			return res;
+		}
 	}
 
 
-
 	NodePtr simplify(NodeManager& manager, const NodePtr& code, bool simplifyDerivedOps) {
-		// use the simplify-mapper for the actual operation operation
-		return Simplifier(manager, simplifyDerivedOps).map(code);
+		// forward request to proper implementation
+		return (simplifyDerivedOps) ? simplify<true>(manager, code) : simplify<false>(manager, code);
 	}
 
 
