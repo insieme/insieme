@@ -427,7 +427,9 @@ namespace tu {
 
 							// simply construct a recursive type
 							for(auto& cur : resolved) {
-								cur.second = builder.recType(resolutionCache[cur.first].as<TypeVariablePtr>(), def);
+								auto newType = builder.recType(resolutionCache[cur.first].as<TypeVariablePtr>(), def);
+								core::transform::utils::migrateAnnotations(cur.second, newType);
+								cur.second = newType;
 							}
 
 						} else if (first.isa<LiteralPtr>()) {
@@ -447,7 +449,9 @@ namespace tu {
 
 							// simply construct a recursive type
 							for(auto& cur : resolved) {
-								cur.second = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
+								auto newFun = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
+								core::transform::utils::migrateAnnotations(cur.second, newFun);
+								cur.second = newFun;
 							}
 
 						} else {
@@ -535,6 +539,11 @@ namespace tu {
 					}
 				}
 
+				// if nothing has changed ..
+				if (ptr == res) {
+					// .. the result can always be cached (even if caching is disabled)
+					return resolutionCache[ptr] = res;
+				}
 
 				// migrate annotations
 				core::transform::utils::migrateAnnotations(ptr, res);

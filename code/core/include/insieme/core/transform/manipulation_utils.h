@@ -50,10 +50,10 @@ namespace utils {
 	 * to determine whether and how the individual annotations should be migrated.
 	 */
 	template<
-		typename Node,
+		typename TypeA, typename TypeB,
 		template<typename T> class Ptr
 	>
-	inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) {
+	inline void migrateAnnotations(const Ptr<TypeA>& before, const Ptr<TypeB>& after) {
 		typedef typename Node::annotation_container::annotation_map_type AnnotationMap;
 
 		// check whether there is something to do
