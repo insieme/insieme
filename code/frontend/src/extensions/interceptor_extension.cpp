@@ -52,7 +52,7 @@ namespace extensions {
 					if(classTy->getNodeType() == core::NT_RefType) {
 						classTy = classTy.as<core::RefTypePtr>()->getElementType();
 					}
-					return	convFact.getIRBuilder().zero(classTy);
+					return	convFact.getIRBuilder().getZero(classTy);
 				}
 			}
 		}

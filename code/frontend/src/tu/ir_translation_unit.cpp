@@ -498,7 +498,7 @@ namespace tu {
 				auto res = ptr->substitute(mgr, *this);
 
 				// Cleanups:
-				{
+				if (res != ptr) {
 					// special service: get rid of unnecessary casts (which might be introduced due to opaque generic types)
 					if (const CastExprPtr& cast = res.isa<CastExprPtr>()) {
 						// check whether cast can be skipped

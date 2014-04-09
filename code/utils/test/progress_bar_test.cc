@@ -34,69 +34,38 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <set>
-#include <memory>
-
-#include "insieme/utils/pointer.h"
+#include <sstream>
+#include "insieme/utils/progress_bar.h"
 
 namespace insieme {
-namespace backend {
-namespace c_ast {
+namespace utils {
 
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
+	TEST(ProgressBar, Basic) {
 
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
+		ProgressBar bar("test", 100, 0, 40, std::cout, false);
+		EXPECT_EQ("test [>                                       ]   0.00% of 100 ", toString(bar));
 
+		bar.inc(10);
+		EXPECT_EQ("test [====>                                   ]  10.00% of 100 ", toString(bar));
 
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+		bar.inc(20);
+		EXPECT_EQ("test [============>                           ]  30.00% of 100 ", toString(bar));
 
-	class CodeFragmentManager;
-	typedef std::shared_ptr<CodeFragmentManager> SharedCodeFragmentManager;
+		bar.inc(40);
+		EXPECT_EQ("test [============================>           ]  70.00% of 100 ", toString(bar));
 
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
+		bar.inc(29);
+		EXPECT_EQ("test [=======================================>]  99.00% of 100 ", toString(bar));
 
-	class CodeFragment;
-	typedef Ptr<CodeFragment> CodeFragmentPtr;
+		bar.inc();
+		EXPECT_EQ("test [========================================] 100.00% of 100 ", toString(bar));
 
-	class CCodeFragment;
-	typedef Ptr<CCodeFragment> CCodeFragmentPtr;
+		bar.inc(60);
+		EXPECT_EQ("test [========================================] 160.00% of 100 ", toString(bar));
+	}
 
-	class DummyFragment;
-	typedef Ptr<DummyFragment> DummyFragmentPtr;
-
-	class IncludeFragment;
-	typedef Ptr<IncludeFragment> IncludeFragmentPtr;
-
-	typedef std::set<CodeFragmentPtr> FragmentSet;
-
-} // end namespace c_ast
-} // end namespace backend
+} // end namespace utils
 } // end namespace insieme
-
-namespace std {
-
-	/**
-	 * Allows node types to be printed using names.
-	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::backend::c_ast::NodeType& type);
-
-} // end namespace std
 
