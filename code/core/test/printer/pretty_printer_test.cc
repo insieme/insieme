@@ -285,3 +285,85 @@ TEST(PrettyPrinter, DerivedLiterals) {
 	// without derived interception
 	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 }
+
+TEST(PrettyPrinter, JustOuthermostScope) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
+
+	DeclarationStmtPtr a = builder.declarationStmt(builder.variable(gen.getInt4()));
+
+	StatementPtr stmt = builder.parseStmt(
+		"{"
+		"	let fun = (int<4> arg)->int<4> { return arg + 1; };"
+		"	let lfun = lit(\"lfun\":(ref<int<4>>)->int<4>);"
+		"	let rfun = (ref<int<4>> arg)->int<4> { return *arg;};"
+		""
+		"	ref<int<4>> a;"
+		"	ref<int<4>> b;"
+		"	ref<int<4>> c;"
+		"	ref<int<4>> d;"
+		"	ref<int<4>> e;"
+		"	ref<int<4>> f;"
+		"	ref<int<4>> g;"
+		"	{"
+		"		a = 7;"
+		"		fun(*b);"
+		"		rfun(c);"
+		"		fun(fun(*d));"
+		"		fun(rfun(e));"
+		"		lfun(f);"
+		"		rfun(var(lfun(g)));"
+		"	}"
+		"}"
+	);
+
+	std::string res = "let fun000 = fun(int<4> v4) -> int<4> {\n"
+					  "    return v4+1;\n"
+					  "};\n"
+					  "\n"
+					  "let fun001 = fun(ref<int<4>> v6) -> int<4> {\n"
+					  "    return v6;\n"
+					  "};\n"
+					  "\n"
+					  "{\n"
+					  "    decl ref<int<4>> v10 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v11 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v12 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v15 =  var(undefined(type<int<4>>));\n"
+					  "    decl ref<int<4>> v16 =  var(undefined(type<int<4>>));\n"
+					  "    {\n"
+					  "        v10 := 7;\n"
+					  "        fun000(v11);\n"
+					  "        fun001(v12);\n"
+					  "        fun000(fun000(v13));\n"
+					  "        fun000(fun001(v14));\n"
+					  "        lfun(v15);\n"
+					  "        fun001( var(lfun(v16)));\n"
+					  "    };\n"
+					  "}";
+	EXPECT_EQ(res,toString(PrettyPrinter(stmt)));
+	std::string res2 = "{\n"
+						"    decl ref<int<4>> v10 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v11 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v12 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v15 =  var(undefined(type<int<4>>));\n"
+						"    decl ref<int<4>> v16 =  var(undefined(type<int<4>>));\n"
+						"    {\n"
+						"        v10 := 7;\n"
+						"        fun000(v11);\n"
+						"        fun001(v12);\n"
+						"        fun000(fun000(v13));\n"
+						"        fun000(fun001(v14));\n"
+						"        lfun(v15);\n"
+						"        fun001( var(lfun(v16)));\n"
+						"    };\n"
+						"}";
+
+	EXPECT_EQ(res2,toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTHERMOST_SCOPE)));
+
+}
