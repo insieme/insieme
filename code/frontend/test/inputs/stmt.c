@@ -83,7 +83,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(int<4> v1, int<4> v2) -> int<4> { (v1+1); return (v2-1);}(( *v100), ( *v101))"
+	"fun(int<4> v1, int<4> v2) -> int<4> { (( *( var(v1)))+1); return (( *( var(v2)))-1);}(( *v100), ( *v101))"
 	(a+1, b-1);
 }
 
@@ -178,15 +178,15 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"((int.to.bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
+	"((int.to.bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))-1);}(( *v100))})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"(((( *v100)==0))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
+	"(((( *v100)==0))?bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))-1);}(( *v100))})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v100)>0) && bind(){fun(int<4> v1) -> bool { return (v1!=1);}(( *v100))})) { }"
+	"if(((( *v100)>0) && bind(){fun(int<4> v1) -> bool { return (( *( var(v1)))!=1);}(( *v100))})) { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 
@@ -347,7 +347,7 @@ void while_stmt_test() {
 int g(int x) ;
 
 #pragma test \
-	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1-1)); }; v2 = fun(int<4> v3) -> int<4> { return v0((v3+1)); };}"
+	"recFun v0 { v1 = fun(int<4> v2) -> int<4> { return v0((v2+1)); }; v0 = fun(int<4> v3) -> int<4> { return v1((v3-1)); };}"
 int f(int x) {
 	return g(x-1);
 }
@@ -371,19 +371,19 @@ int b(int x) ;
 int c(int x) ;
 
 #pragma test \
-	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1-1)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3+1)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5*2)); };}"
+	"recFun v0 { v1 = fun(int<4> v2) -> int<4> { return v0((v2*2)); }; v3 = fun(int<4> v4) -> int<4> { return v1((v4+1)); }; v0 = fun(int<4> v5) -> int<4> { return v3((v5-1)); };}"
 int a(int x) {
 	return b(x-1);
 }
 
 #pragma test \
-	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1+1)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3*2)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5-1)); };}"
+	"recFun v0 { v1 = fun(int<4> v2) -> int<4> { return v3((v2*2)); }; v0 = fun(int<4> v4) -> int<4> { return v1((v4+1)); }; v3 = fun(int<4> v5) -> int<4> { return v0((v5-1)); };}"
 int b(int x) {
 	return c(x+1);
 }
 
 #pragma test \
-	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1*2)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3-1)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5+1)); };}"
+	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1*2)); }; v3 = fun(int<4> v4) -> int<4> { return v0((v4+1)); }; v2 = fun(int<4> v5) -> int<4> { return v3((v5-1)); };}"
 int c(int x) {
 	return a(x*2);
 }
@@ -392,7 +392,7 @@ int c(int x) {
 
 void rec_function_call_test() {
 	#pragma test \
-	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1-1)); }; v2 = fun(int<4> v3) -> int<4> { return v0((v3+1)); };}(10)"
+	"recFun v0 { v1 = fun(int<4> v2) -> int<4> { return v0((v2+1)); }; v0 = fun(int<4> v3) -> int<4> { return v1((v3-1)); };}(10)"
 	f(10);
 }
 

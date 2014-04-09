@@ -1189,8 +1189,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 			if (members.empty())
 				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
-			else
+			else {
 				retIr = builder.structExpr(structTy, members);
+
+				// fix type to generic type (not the resolved one)
+				retIr = core::transform::replaceNode(mgr, core::NodeAddress(retIr).as<core::StructExprAddress>()->getType(), targetType).as<core::ExpressionPtr>();
+			}
 			return retIr;
 		}
 

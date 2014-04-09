@@ -130,10 +130,6 @@ namespace tu {
 
 		// mutable getter:
 
-	//	TypeMap& getTypes() {
-	//		return types;
-	//	}
-
 		FunctionMap& getFunctions() {
 			return functions;
 		}
@@ -305,7 +301,6 @@ namespace tu {
 
 		 */
 		void addMetaInfo(const core::TypePtr& classType, std::vector<core::ClassMetaInfo> metaInfoList);
-
 
 	};
 

@@ -25,6 +25,7 @@ endif()
          
 # Build the core library
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
+target_link_libraries(insieme_core gomp)
 
 # add dependencies
 # add_dependencies(insieme_core insieme_utils)

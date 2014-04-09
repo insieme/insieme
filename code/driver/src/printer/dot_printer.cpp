@@ -174,7 +174,7 @@ void checkSemanticErrors(const MessageList& list, DotNode& currNode, const core:
 	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
 	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
-		if(*node == *cur.getAddress().getAddressedNode()) {
+		if(*node == *cur.getOrigin().getAddressedNode()) {
 			if(cur.getType() == core::checks::Message::ERROR)
 				currNode[NodeProperty::COLOR] = "red";
 			else

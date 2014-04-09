@@ -1117,6 +1117,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			params.push_back( parmVar );
 			callArgs.push_back(this->deref(bodyVar));
 			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
+			replVariableMap.insert( std::make_pair(bodyVar, refVar(parmVar)) );
 		}
 		else{
 			// we create a new variable to replace the captured variable
