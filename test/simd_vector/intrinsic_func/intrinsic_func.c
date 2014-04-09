@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <xmmintrin.h>
 
 void printf4vector(__v4sf* p) {
