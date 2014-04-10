@@ -1165,18 +1165,33 @@ namespace core {
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
+		 * @param the name given to the namedtype
 		 * @param entries the list of entries the new type should consist of
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
+		static UnionTypePtr get(NodeManager& manager, const StringValuePtr& name, const vector<NamedTypePtr>& entries) {
 			NodeList children;
-			children.push_back(StringValue::get(manager, ""));
+			//children.push_back(StringValue::get(manager, ""));
+			children.push_back(name);
 			children.push_back(Parents::get(manager));
 			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(UnionType(children));
 		}
 
+		/**
+		 * A factory method allowing to obtain a pointer to a union type representing
+		 * an instance managed by the given manager. NO NAME
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param entries the list of entries the new type should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
+			return get(manager, StringValue::get(manager, ""), entries);
+		}
 	};
 
 	#undef IR_NAMED_COMPOSITE_TYPE

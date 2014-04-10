@@ -75,7 +75,7 @@
                     utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); "; \
         VLOG(1) << "Converted into IR expression: "; \
         if(expr) { \
-            VLOG(1) << dumpOneLine(expr) <<  " type:( " << *expr->getType() << " )"; \
+            VLOG(1) << "\n" << dumpOneLine(expr) <<  "\n of type:( " << *expr->getType() << " )"; \
         } \
 		else{ \
             VLOG(1) << "\tno expression"; \

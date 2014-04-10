@@ -543,7 +543,7 @@ typedef union
 #if defined( __GNUC__) && ! defined( __STRICT_ANSI__ )
    __extension__ struct{ cl_short  x, y, z, w; };
    __extension__ struct{ cl_short  s0, s1, s2, s3, s4, s5, s6, s7; };
-   __extension__ struct{ cl_short4 lo, hi; };
+   __extension__ struct{ cl_short2 lo, hi; };
 #endif
 #if defined( __CL_SHORT2__) 
     __cl_short2     v2[4];

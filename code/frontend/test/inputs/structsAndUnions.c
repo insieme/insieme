@@ -44,7 +44,7 @@
 #include <string.h>
 
 // ------------------------ Structs -------------------
-/*
+
 typedef struct pStruct {
 	char name[30];
 	unsigned age;
@@ -80,7 +80,7 @@ Converter getForFloat(float value) {
 	res.real = value;
 	return res;
 }
-*/
+
 // -------------------Union with Structs -------------
 
 typedef union
@@ -94,17 +94,18 @@ typedef union
 // ------------------------ Main -------------------
 
 int main(int argc, char* argv[]) {
-/*	Person mrX = getPerson();
+	Person mrX = getPerson();
 	int res = isTeenager(mrX);
 
 	Converter c = getForFloat(0.0);
 	res += c.integer;
-*/
-//	char scalars[8] = { 0xf , 0x5c, 0xb , 0x51, 0xc9, 0x22, 0xe1, 0xd3 };
-	char4* vector = (char4*)malloc(sizeof(char4) * 2);
 
+	char scalars[8] = { 0xf , 0x5c, 0xb , 0x51, 0xc9, 0x22, 0xe1, 0xd3 };
+
+
+	char4* vector = (char4*)malloc(sizeof(char4) * 2);
 	for(int i = 0; i < 8; i+=4) {
-//		vector[i] = (char4){(char)i, (char)(i+1), (char)(i+2), (char)(i+3)};
+		vector[i] = (char4){(char)i, (char)(i+1), (char)(i+2), (char)(i+3)};
 	}
 
 	return 0;

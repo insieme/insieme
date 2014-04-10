@@ -182,7 +182,8 @@ namespace extensions {
 				// return a generic opaque type
 				auto tmp = convFact.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
 				core::StructTypePtr structTy = tmp.isa<core::StructTypePtr>();
-				if (structTy && structTy->getName()->getValue().substr(0,5) == "_anon"){
+				//if (structTy && structTy->getName()->getValue().substr(0,5) == "_anon"){
+				if (structTy && structTy->getName()->getValue()== ""){
 					auto name = decl->getQualifiedNameAsString();
 					core::GenericTypePtr gen = builder.genericType(name);
 					convFact.getHeaderTagger().addHeaderForDecl(gen, decl);

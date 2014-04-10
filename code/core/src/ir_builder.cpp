@@ -297,6 +297,10 @@ UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>
 	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
 
+UnionTypePtr IRBuilder::unionType(const StringValuePtr& name,  const vector<NamedTypePtr>& entries) const {
+	return UnionType::get(manager, name, entries);
+}
+
 StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
 	return structType(IRBuilder::parents(parents), entries);
 }
@@ -670,20 +674,28 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
 	assert(targetType && "Target of an assignmet must be of type ref<'a>");
 
-	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
-	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
-		TypePtr nrtt = targetType->getElementType();
-		if(nrtt->getNodeType() != NT_UnionType) {
-			auto list = uType.getEntries();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
-				return types::isSubTypeOf(cur->getType(), nrtt);
-			});
+	// NOTE: this code is deactivated because is trying to be smarter than you, if you made your homework, there should
+	// be no need to do smart moves, the expression given to assign to is the rightfull ref to writte, and if we are
+	// dealing with an union, it should be already be addressed. if you need it, go ahead to uncoment it, but it wont be easy
+	//if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
+	//	TypePtr nrtt = targetType->getElementType();
+	//	std::cout << uType << std::endl;
+	//	std::cout << nrtt << std::endl;
+	//	if(!types::isSubTypeOf(uType, nrtt)){
+	//		if(nrtt->getNodeType() != NT_UnionType) {
+	//			auto list = uType.getEntries();
+	//				std::cout << "search for: " << nrtt << std::endl;
+	//			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+	//				std::cout << "name: " << cur << " : " << cur->getType() << std::endl;
+	//				return types::isSubTypeOf(cur->getType(), nrtt);
+	//			});
 
-			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
-			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
-					accessMember(value, pos->getName()));
-		}
-	}
+	//			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+	//			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+	//					accessMember(value, pos->getName()));
+	//		}
+	//	}
+	//}
 
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }

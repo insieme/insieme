@@ -92,7 +92,7 @@ int check(NodePtr nodeToCheck) {
 	});
 
 	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size());
+	EXPECT_EQ(0u, errors.size()) << " failed on: " << nodeToCheck;
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
@@ -119,16 +119,17 @@ TEST(IRBuilder, Assign) {
 
     check(simpleAssign);
 
-	vector<std::pair<StringValuePtr,TypePtr>> unionEntries;
-	unionEntries.push_back(std::make_pair(builder.stringValue("a"), basic.getReal4()));
-	unionEntries.push_back(std::make_pair(builder.stringValue("b"), basic.getUInt2()));
-	unionEntries.push_back(std::make_pair(builder.stringValue("c"), builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(4))));
-
-	VariablePtr unionRhs = builder.variable(builder.unionType(unionEntries));
-
-	ExpressionPtr unionAssign = builder.assign(lhs, unionRhs);
-
-	check(unionAssign);
+// NOTE: this makes no sense anymore since the builder should not look for the union field you want to access
+//	vector<std::pair<StringValuePtr,TypePtr>> unionEntries;
+//	unionEntries.push_back(std::make_pair(builder.stringValue("a"), basic.getReal4()));
+//	unionEntries.push_back(std::make_pair(builder.stringValue("b"), basic.getUInt2()));
+//	unionEntries.push_back(std::make_pair(builder.stringValue("c"), builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(4))));
+//
+//	VariablePtr unionRhs = builder.variable(builder.unionType(unionEntries));
+//
+//	ExpressionPtr unionAssign = builder.assign(lhs, unionRhs);
+//
+//	check(unionAssign);
 
 }
 

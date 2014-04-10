@@ -1218,6 +1218,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		assert(false && "fallthrow while initializing generic typed global");
 	}
 
+	// the initialization is not a list anymore, this a base case
+	//if types match, we are done
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+		return (retIr = init);
+	}
+
 	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {
 
 		// here is the thing, the field comes hiden in a literal (the function called)
@@ -1233,12 +1239,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return (retIr = init.as<core::CallExprPtr>()[0]);
-	}
-
-	// the initialization is not a list anymore, this a base case
-	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
-		return (retIr = init);
 	}
 
 	// long long types
@@ -1451,7 +1451,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 				core::TypePtr trgTy =  lookupTypeDetails(symb);
 				// a new generic type will point to the previous translation unit decl
-				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
+				if (core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()){
 
 					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
 
@@ -1461,18 +1461,28 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 					core::TypePtr impl = symb;
 					// if target is an annonymous type, we create a new type with the name of the typedef
-					if (structTy->getName()->getValue().substr(0,5) == "_anon"){
-						impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
+					if (namedType->getName()->getValue() == ""){
 
-						core::transform::utils::migrateAnnotations(structTy.as<core::TypePtr>(), impl);
+						if (auto structTy = namedType.isa<core::StructTypePtr>()){
+							impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+						}
+						else if (auto unionTy = namedType.isa<core::UnionTypePtr>()){
+							impl = builder.unionType (builder.stringValue(name), unionTy->getEntries());
+						}
+						else{
+							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
+						}
+
+						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), impl);
 						core::annotations::attachName(impl,name);
 
-						if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
+						//if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
 							//if the typeDef oft the anonymous type was done in a system header we need to
 							//annotate to enable the backend to avoid re-declaring the type
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
-						}
+						//}
 						VLOG(2) << "    -" << gen;
 						typeCache[typedefType] = gen;
 					}
@@ -1481,7 +1491,11 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 					res = gen;
 				}
 			}
+		//	else if
+		//	}
 		}
+		//std::cout << " - fixed? into: " << res << std::endl;
+		//std::cout << " - implementation: " << lookupTypeDetails(res) << std::endl;
 	}
 
     // frequently structs and their type definitions have the same name
