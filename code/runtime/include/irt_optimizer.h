@@ -65,14 +65,6 @@ typedef struct _irt_optimizer_resources {
     float time;
 } irt_optimizer_resources;
 
-typedef struct _irt_optimizer_wi_data {
-    int frequency;
-    int outer_frequency;
-    int workers_count;
-    int *param_values;  // the list of picked values (indexes) for the variables in a param clause
-    irt_optimizer_resources resources;
-} irt_optimizer_wi_data;
-
 typedef irt_optimizer_resources irt_optimizer_objective_weights;
 
 typedef struct _irt_optimizer_objective_constraints {
@@ -86,8 +78,26 @@ typedef struct _irt_optimizer_objective {
     irt_inst_region_id region_id;
 } irt_optimizer_objective;
 
+// Data types for runtime collected data 
+
+typedef struct _irt_optimizer_wi_data {
+    int frequency;
+    int outer_frequency;
+    int workers_count;
+    int *param_values;  // the list of picked values (indexes) for the variables in a param clause
+    irt_optimizer_resources resources;
+} irt_optimizer_wi_data;
+
+typedef struct _irt_optimizer_runtime_data {
+    irt_optimizer_wi_data* data;
+    size_t data_size;
+    size_t data_last;
+    size_t completed_wi_count;
+    irt_spinlock spinlock;
+} irt_optimizer_runtime_data;
+
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, bool is_task);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant);
 void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, int pos, bool wi_finalized);
 

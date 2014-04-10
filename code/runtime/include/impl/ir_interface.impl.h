@@ -69,7 +69,7 @@
 
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_worker* target = irt_worker_get_current();
-    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0]), false);
+    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0]));
     irt_optimizer_apply_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0]));
 	irt_schedule_loop(self, group, range, impl_id, args);
 }

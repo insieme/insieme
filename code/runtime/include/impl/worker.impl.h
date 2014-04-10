@@ -252,7 +252,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item *wi) {
     irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
     irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
-        wimpl->variants[0].rt_data.optimizer_data_last, false);
+        wimpl->variants[0].rt_data.optimizer_rt_data.data_last, false);
     lwt_continue(&self->basestack, &wi->stack_ptr);
 }
 

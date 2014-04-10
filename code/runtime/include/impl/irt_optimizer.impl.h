@@ -114,8 +114,9 @@ uint32 irt_g_available_freqs_count = -1;
 void irt_optimizer_objective_init(irt_context *context) {
     for(int i=0; i<context->impl_table_size; i++) { 
         for(int j=0; j<context->impl_table[i].num_variants; j++) { 
-            context->impl_table[i].variants[j].rt_data.optimizer_data_last = -1;
-            irt_spin_init(&context->impl_table[i].variants[j].rt_data.optimizer_spinlock);
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.data_last = -1;
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.completed_wi_count = -1;
+            irt_spin_init(&context->impl_table[i].variants[j].rt_data.optimizer_rt_data.spinlock);
         }
     }
 }
@@ -123,50 +124,54 @@ void irt_optimizer_objective_init(irt_context *context) {
 void irt_optimizer_objective_destroy(irt_context *context) {
     for(int i=0; i<context->impl_table_size; i++) { 
         for(int j=0; j<context->impl_table[i].num_variants; j++) { 
-            irt_spin_destroy(&context->impl_table[i].variants[j].rt_data.optimizer_spinlock);
-            free(context->impl_table[i].variants[j].rt_data.optimizer_data);
+            irt_spin_destroy(&context->impl_table[i].variants[j].rt_data.optimizer_rt_data.spinlock);
+            free(context->impl_table[i].variants[j].rt_data.optimizer_rt_data.data);
         }
     }
 }
 
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, bool is_task) {
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant) {
     if(variant->objective.region_id == (unsigned)-1) {
             return;
     }
+    printf("Test\n");
 
     irt_worker* self = irt_worker_get_current();
     
-    irt_spin_lock(&variant->rt_data.optimizer_spinlock);
+    irt_spin_lock(&variant->rt_data.optimizer_rt_data.spinlock);
 
-    // We don't need to execute this for all workers 
-    if(self->id.thread == 0 || is_task) {
+    variant->rt_data.optimizer_rt_data.completed_wi_count ++;
+    variant->rt_data.optimizer_rt_data.completed_wi_count %= irt_g_worker_count;
+
+    // We update our optimizations every round of #workers parallel executions of the work item 
+    if(variant->rt_data.optimizer_rt_data.completed_wi_count == 0) {
         // get available frequencies
         if(irt_g_available_freqs_count == -1) {
             if(irt_cpu_freq_get_available_frequencies_worker(self, irt_g_available_freqs, &irt_g_available_freqs_count)) {
-                irt_spin_unlock(&variant->rt_data.optimizer_spinlock);
+                irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
                 return;
             }
         }
 
         int32 cur_freq = irt_cpu_freq_get_cur_frequency_worker(self);
-        variant->rt_data.optimizer_data_last ++;
+        variant->rt_data.optimizer_rt_data.data_last ++;
 
         // allocate some memory
 
-        if(variant->rt_data.optimizer_data_last >= variant->rt_data.optimizer_data_size) {
-            variant->rt_data.optimizer_data_size = (variant->rt_data.optimizer_data_size) ? variant->rt_data.optimizer_data_size * 2 : 2;
-            variant->rt_data.optimizer_data = (irt_optimizer_wi_data*)realloc(variant->rt_data.optimizer_data, variant->rt_data.optimizer_data_size * sizeof(irt_optimizer_wi_data));
-            if(variant->rt_data.optimizer_data == NULL)
-                IRT_ASSERT(variant->rt_data.optimizer_data != NULL, IRT_ERR_OMPP, "Optimizer: Could not perform realloc for optimizer data: %s", strerror(errno));
+        if(variant->rt_data.optimizer_rt_data.data_last >= variant->rt_data.optimizer_rt_data.data_size) {
+            variant->rt_data.optimizer_rt_data.data_size = (variant->rt_data.optimizer_rt_data.data_size) ? variant->rt_data.optimizer_rt_data.data_size * 2 : 2;
+            variant->rt_data.optimizer_rt_data.data = (irt_optimizer_wi_data*)realloc(variant->rt_data.optimizer_rt_data.data, variant->rt_data.optimizer_rt_data.data_size * sizeof(irt_optimizer_wi_data));
+            if(variant->rt_data.optimizer_rt_data.data == NULL)
+                IRT_ASSERT(variant->rt_data.optimizer_rt_data.data != NULL, IRT_ERR_OMPP, "Optimizer: Could not perform realloc for optimizer data: %s", strerror(errno));
         }
 
         // compute optimal frequency
 
-        if(variant->rt_data.optimizer_data_last == 0) {
+        if(variant->rt_data.optimizer_rt_data.data_last == 0) {
             // conservative approach at the beginning
-            variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = 0;
-            variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].workers_count = 1;
-            variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].resources.energy = 0;
+            variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency = 0;
+            variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].workers_count = 1;
+            variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].resources.energy = 0;
         }
         else {
           	//irt_context* context = irt_context_get_current();
@@ -175,7 +180,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             //#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
             //_data_type__ cpu_energy; \
 	    	//if(irt_g_inst_region_metric_measure_cpu_energy) { \
-            //    variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last -1].resources.energy = \
+            //    variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last -1].resources.energy = \
             //       (_data_type__)((double)regions[variant->objective.region_id].aggregated_cpu_energy * _output_conversion_code__); \
             //    /*cpu_energy *= wi_count; */ \
             //    /*cpu_energy /= (irt_get_num_cores_per_socket() < irt_g_worker_count) ? irt_get_num_cores_per_socket() : irt_g_worker_count;*/ \
@@ -184,71 +189,71 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             //#define ISOLATE_CPU_ENERGY
             //#include "irt_metrics.def"
 
-            //cpu_energy = variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last -1].resources.energy;
-            //if(variant->rt_data.optimizer_data_last >= 2)
-            //    cpu_energy -= variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last -2].resources.energy;
+            //cpu_energy = variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last -1].resources.energy;
+            //if(variant->rt_data.optimizer_rt_data.data_last >= 2)
+            //    cpu_energy -= variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last -2].resources.energy;
 
-            //variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency  = variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last -1].frequency;
-            //variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].workers_count  = variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last -1].workers_count +1;
-            //if(cpu_energy < variant->objective.constraints.max.energy && variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency) {
-            //    variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency --;
+            //variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency  = variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last -1].frequency;
+            //variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].workers_count  = variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last -1].workers_count +1;
+            //if(cpu_energy < variant->objective.constraints.max.energy && variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency) {
+            //    variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency --;
             //}
-            //else if(cpu_energy > variant->objective.constraints.max.energy && variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency < irt_g_available_freqs_count -2) {
-            //    variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency ++;
+            //else if(cpu_energy > variant->objective.constraints.max.energy && variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency < irt_g_available_freqs_count -2) {
+            //    variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency ++;
             //}
             
             if(variant->objective.weights.energy) {
-                    printf("task %d ener\n", is_task);
-                variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = 10;// irt_g_available_freqs_count -1;
+                    //printf("task %d ener\n", is_task);
+                variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency =  0;// irt_g_available_freqs_count -1;
             }
             else {
-                    printf("task %d time\n", is_task);
-                variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency = 0;
+                    //printf("task %d time\n", is_task);
+                variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency = 1;
             }
 
 
-            //printf("cur_freq = %d cpu_energy = %f  next freq %d\n", cur_freq, cpu_energy, variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency);
+            //printf("cur_freq = %d cpu_energy = %f  next freq %d\n", cur_freq, cpu_energy, variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency);
         }
     
-            printf("cur_freq = %d next freq %d\n", cur_freq, variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency);
-        variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].outer_frequency = cur_freq;
+            printf("cur_freq = %d next freq %d\n", cur_freq, variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency);
+        variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].outer_frequency = 3900 ;//cur_freq;
     }
 
 
-    irt_spin_unlock(&variant->rt_data.optimizer_spinlock);
+    irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
     return;
 }
 
 void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant) {
     // no optimizations to apply
-    if(!variant || variant->objective.region_id == (unsigned)-1 || !variant->rt_data.optimizer_data)
+    if(!variant || variant->objective.region_id == (unsigned)-1 || !variant->rt_data.optimizer_rt_data.data)
         return;
 
-    irt_spin_lock(&variant->rt_data.optimizer_spinlock);
+    irt_spin_lock(&variant->rt_data.optimizer_rt_data.spinlock);
 
     irt_worker* self = irt_worker_get_current();
     //    //int32 cur_freq = irt_cpu_freq_get_cur_frequency_worker(self);
     //    //printf("cur freq = %d\n", cur_freq);
     //for(int i=0; i<irt_g_worker_count; i++) {
-    //    irt_cpu_freq_set_frequency_worker(irt_g_workers[i], irt_g_available_freqs[variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency]);
+    //    irt_cpu_freq_set_frequency_worker(irt_g_workers[i], irt_g_available_freqs[variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency]);
     //}
     //    //int32 cur_freq = irt_cpu_freq_get_cur_frequency_worker(self);
     //    //printf("set cur freq = %d\n", cur_freq);
 
-    irt_cpu_freq_set_frequency_worker(self, irt_g_available_freqs[variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency]);
+    irt_cpu_freq_set_frequency_worker(self, irt_g_available_freqs[variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency]);
 
-    irt_spin_unlock(&variant->rt_data.optimizer_spinlock);
-    printf("%s: %d\n", __func__, irt_g_available_freqs[variant->rt_data.optimizer_data[variant->rt_data.optimizer_data_last].frequency]);
+    irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
+    printf("%s: %d\n", __func__, irt_g_available_freqs[variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency]);
 
     return;
 }
 
 void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, int pos, bool wi_finalized) {
     // no optimizations to apply
-    if(!variant || !variant->rt_data.optimizer_data)
+    if(!variant || !variant->rt_data.optimizer_rt_data.data)
         return;
     
-    irt_spin_lock(&variant->rt_data.optimizer_spinlock);
+    irt_spin_lock(&variant->rt_data.optimizer_rt_data.spinlock);
 
     // Which frequency should we use to execute runtime code?
     // Does it make sense to switch to a different frequency?
@@ -256,10 +261,10 @@ void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, 
     // another one
 
     irt_worker* self = irt_worker_get_current();
-    irt_cpu_freq_set_frequency_worker(self, variant->rt_data.optimizer_data[pos].outer_frequency);
+    irt_cpu_freq_set_frequency_worker(self, variant->rt_data.optimizer_rt_data.data[pos].outer_frequency);
 
-    irt_spin_unlock(&variant->rt_data.optimizer_spinlock);
-    printf("%s: %d\n", __func__, variant->rt_data.optimizer_data[pos].outer_frequency);
+    irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
+    printf("%s: %d\n", __func__, variant->rt_data.optimizer_rt_data.data[pos].outer_frequency);
 
     return;
 }

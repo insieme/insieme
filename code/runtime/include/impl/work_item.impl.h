@@ -330,7 +330,7 @@ void irt_wi_end(irt_work_item* wi) {
 
     irt_wi_implementation *wimpl = &(irt_context_table_lookup(worker->cur_context)->impl_table[wi->impl_id]);
     irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
-        wimpl->variants[0].rt_data.optimizer_data_last, true);
+        wimpl->variants[0].rt_data.optimizer_rt_data.data_last, true);
 	// end
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
