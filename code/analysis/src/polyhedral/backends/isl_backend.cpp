@@ -552,8 +552,13 @@ AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, IterationVector
 	return data.ret;	
 }
 
+/**
+ * @brief IslSet::getCard (short for cardinality) computes the number of elements in an ISL union set.
+ * @return The resulting isl_union_pw_qpolynomial has purely parametric cells.
+ * IslSet::getCard calls isl_union_set_card from barvinok/isl.h
+ */
 PiecewisePtr<ISL> IslSet::getCard() const {
-	return PiecewisePtr<ISL>(ctx, isl_union_set_card( isl_union_set_copy(set) ) );
+    return PiecewisePtr<ISL>(ctx, isl_union_set_card( isl_union_set_copy(set) ) );
 }
 
 
@@ -1009,8 +1014,6 @@ namespace {
 	void print(std::ostream& out, isl_ctx* ctx, isl_union_pw_qpolynomial* pw) {
 		// Print the polynomial just for debugging purposes
 		isl_printer* printer = isl_printer_to_str( ctx );
-		isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-		isl_printer_set_indent(printer, 1);
 		isl_printer_print_union_pw_qpolynomial(printer, pw);
 		char* str = isl_printer_get_str(printer);
 		out << std::string(str);
@@ -1020,8 +1023,13 @@ namespace {
 
 } // end anonymous namespace 
 
+/**
+ * @brief IslPiecewise::printTo prints the piecewise quasi-polynomial contained in IslPiecewise
+ * @param out is the std::ostream where to print to
+ * @return std::ostream& out
+ */
 std::ostream& IslPiecewise::printTo(std::ostream& out) const {
-	print(out, ctx.getRawContext(), pw); 
+	print(out, ctx.getRawContext(), pw);
 	return out;
 }
 
