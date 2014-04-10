@@ -692,36 +692,35 @@ namespace tu {
 		return Resolver(getNodeManager(), *this).apply(node);
 	}
 
-	void IRTranslationUnit::extractMetaInfos() const {
-		for(auto m : metaInfos) {
-			auto classType = m.first;
-			auto metaInfoList = m.second;  //metaInfos per classType
+	core::ClassMetaInfo IRTranslationUnit::getMetaInfo(const core::TypePtr& classType, bool symbolic) {
+		auto metaInfoList = metaInfos[classType];
 			
-			//merge metaInfos into one 
-			core::ClassMetaInfo metaInfo;
-			for(auto m : metaInfoList) {
-				metaInfo = core::merge(metaInfo, m);
-			}
-
-			//std::cout << classType << " : " << metaInfo <<  std::endl;
-			auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();	
-
-			// encode meta info into pure IR
-			auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
-			
-			// resolve meta info
-			auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
-
-			// attach metainfo to type
-			core::setMetaInfo(resolvedClassType, resolved);
+		//merge metaInfos into one 
+		core::ClassMetaInfo metaInfo;
+		for(auto m : metaInfoList) {
+			metaInfo = core::merge(metaInfo, m);
 		}
+
+		if(symbolic) 
+			return metaInfo;
+		
+		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();	
+
+		// encode meta info into pure IR
+		auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
+			
+		// resolve meta info
+		auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
+		return resolved;
 	}
-	
+
 	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, core::ClassMetaInfo metaInfo) {
+		//TODO: optimization/simplification: store the metainfos already merged?
 		metaInfos[classType].push_back(metaInfo);
 	}
 
 	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, std::vector<core::ClassMetaInfo> metaInfoList) {
+		//TODO:  optimization/simplification: store the metainfos already merged?
 		for(auto m : metaInfoList) {
 			metaInfos[classType].push_back(m);
 		}

@@ -272,10 +272,14 @@ namespace tu {
 		std::ostream& printTo(std::ostream& out) const;
 
 		/**
-		 * takes all memberfunctions/ctor/dtors of a type, builds a metainfo and attaches it to the
-		 * type
+		 * Gets the metainfo for the given classType
+		 * Carefull merges _all_ the metainfos for the type together might be expensive
+		 * @param metaInfo a core::ClassMetaInfor for the given classType
+		 * @param symbolic - boolean if the classmetainfo/classtype should be symbolic or resolved 
+		 * -- by default symbolic 
+		 * @return the merged metaInfo
 		 */
-		void extractMetaInfos() const;
+		core::ClassMetaInfo getMetaInfo(const core::TypePtr& classType, bool symbolic=true);
 
 		/**
 		 * Adds the given metainfo to the vector associated with classType
