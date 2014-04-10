@@ -35,7 +35,6 @@
  */
 #include <fstream>
 
-
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 
@@ -647,12 +646,10 @@ void KernelReplacer::inlineKernelCode() {
 
 		replacements[ndrangeKernel["enrk"].getValue()] = newKernelCall;
 
-
 //	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(kernelCall);
 	});
 
 	prog = transform::replaceAll(mgr, prog, replacements, false);
-
 }
 
 ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
@@ -755,7 +752,6 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
 	loadKernelCode(icl_create_kernel);
-	collectArguments();
 	inlineKernelCode();
 	replaceKernels();
 
@@ -790,9 +786,7 @@ void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKerne
 }
 
 
-//void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size,
-//	icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
-void IclKernelReplacer::collectArguments() {
+void IclKernelReplacer::inlineKernelCode() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
@@ -854,22 +848,6 @@ void IclKernelReplacer::collectArguments() {
 
 	prog = transform::replaceAll(mgr, replacements);
 
-}
-
-void IclKernelReplacer::inlineKernelCode() {
-	NodeManager& mgr = prog->getNodeManager();
-	IRBuilder builder(mgr);
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-
-	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
-			var("kernel", pattern::any) << var("work_dim", pattern::any) <<
-			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
-			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );
-			irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()), pattern::single(var("args", pattern::any)) ));
-
-	NodeAddress pA(prog);
-	irp::matchAllPairs(iclRunKernel, pA, [&](const NodeAddress& matchAddress, const AddressMatch& runKernel) {
-	});
 }
 
 } //namespace ocl
