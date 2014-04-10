@@ -600,7 +600,9 @@ private:
 		if (ptr->getNodeType() == NT_Variable) {
 			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
 			if(pos != replacements.end()) {
-				return pos->second;
+				NodePtr res = pos->second;
+				utils::migrateAnnotations(ptr, res);
+				return res;
 			}
 		}
 
@@ -630,8 +632,11 @@ private:
 			const ExpressionList args = call->getArguments();
 			// remove illegal deref operations
 			if(builder.getNodeManager().getLangBasic().isRefDeref(call->getFunctionExpr()) &&
-					(!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType ))
-				return args.at(0);
+					(!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType )) {
+				res = args.at(0);
+				utils::migrateAnnotations(ptr, res);
+				return res;
+			}
 
 			// check return type
 			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
@@ -850,6 +855,9 @@ private:
 		// assemble new lambda
 		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
 		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
+		// preserve annotations
+		utils::migrateAnnotations(lambda, newLambda);
+
 
 		return builder.callExpr(callTy, newLambda, args);
 
