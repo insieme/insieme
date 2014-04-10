@@ -39,7 +39,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
 
-//#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
 
 
@@ -57,8 +57,37 @@ namespace annot = insieme::annotations;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
+void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
+
+	// look for kenel annotation
+	size_t kernelCnt = 0;
+	auto lookForAnnot = core::makeLambdaVisitor([&](const core::LambdaExprPtr& node) {
+		if(node->hasAnnotation(annot::ocl::BaseAnnotation::KEY)) {
+			annot::ocl::BaseAnnotationPtr baseAnnot = node->getAnnotation(annot::ocl::BaseAnnotation::KEY);
+            if(annot::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annot::ocl::KernelFctAnnotation>(baseAnnot->getAnnotationList().at(0))) {
+            	++kernelCnt;
+            }
+		}
+	});
+
+	visitDepthFirstOnce(program, lookForAnnot);
+	EXPECT_EQ(1u, kernelCnt);
+
+	// look for merges
+	size_t mergeCnt = 0;
+	auto lookForMerge = core::makeLambdaVisitor([&](const core::CallExprPtr& call) {
+		if(call->getFunctionExpr() == manager.getLangBasic().getMergeAll()) {
+			++mergeCnt;
+		}
+	});
+
+	visitDepthFirstOnce(program, lookForMerge);
+	EXPECT_EQ(1u, mergeCnt);
+
+}
+
 TEST(OclHostCompilerTest, HelloHostTest) {
-	Logger::get(std::cerr, INFO, 0);
+	Logger::get(std::cerr, ERROR, 0);
 
 	core::NodeManager manager;
 
@@ -104,6 +133,8 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 //		std::cout << "\t Context: " <<
 //		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
 	});
+
+	checkKernel(program, manager);
 
 	// check for the kernel's datarange pragma
 /*	size_t cnt = 0;
@@ -162,4 +193,5 @@ TEST(OclHostCompilerTest, VecAddTest) {
 */
 	}
 
+	checkKernel(program, manager);
 }
