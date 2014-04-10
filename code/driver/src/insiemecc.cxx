@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
     if (options.job.getFFlags().find("-fopenmp") == options.job.getFFlags().end())
     	options.job.setOption(fe::ConversionJob::OpenMP, false);
 	options.job.setOption(fe::ConversionJob::OpenCL, false);
+	options.job.setOption(fe::ConversionJob::lib_icl, false);
 
 	if (!options.valid) return (options.help)?0:1;
 

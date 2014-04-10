@@ -107,7 +107,7 @@ namespace frontend {
         	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
 		}
        
-        if(flags & icl_lib) {
+        if(flags & lib_icl) {
         	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
 		}
 
@@ -138,7 +138,13 @@ namespace frontend {
 		if(hasOption(OpenCL)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+
+			setup.setDefinition("INSIEME");
+		}
+		if(hasOption(lib_icl)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
+			setup.addIncludeDirectory(CLANG_SRC_DIR);
+			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 
 			setup.setDefinition("INSIEME");
 		}
