@@ -297,10 +297,6 @@ UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>
 	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
 
-UnionTypePtr IRBuilder::unionType(const StringValuePtr& name,  const vector<NamedTypePtr>& entries) const {
-	return UnionType::get(manager, name, entries);
-}
-
 StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
 	return structType(IRBuilder::parents(parents), entries);
 }
