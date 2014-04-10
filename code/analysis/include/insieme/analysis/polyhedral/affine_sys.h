@@ -48,6 +48,8 @@ using insieme::utils::Matrix;
  * AffineSystem represents a set of affine functions. The invariant is that every affine function
  * composing an affine system refers to the same iteration vector. Therefore changes to the
  * iteration vector owned by this affine system results in changes to all the affine functions. 
+ *
+ * Note that the implementation of the class can be found in analysis/src/polyhedral/polyhedral.cpp .
  */
 class AffineSystem : public utils::Printable, boost::noncopyable {
 	
