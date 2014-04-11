@@ -119,6 +119,8 @@ void irt_optimizer_objective_init(irt_context *context) {
             irt_spin_init(&context->impl_table[i].variants[j].rt_data.optimizer_rt_data.spinlock);
         }
     }
+
+    irt_cpu_freq_get_available_frequencies_worker(irt_worker_get_current(), irt_g_available_freqs, &irt_g_available_freqs_count);
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {
@@ -134,7 +136,6 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant)
     if(variant->objective.region_id == (unsigned)-1) {
             return;
     }
-    printf("Test\n");
 
     irt_worker* self = irt_worker_get_current();
     
@@ -143,15 +144,8 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant)
     variant->rt_data.optimizer_rt_data.completed_wi_count ++;
     variant->rt_data.optimizer_rt_data.completed_wi_count %= irt_g_worker_count;
 
-    // We update our optimizations every round of #workers parallel executions of the work item 
+    // We update our optimization values every round of #workers parallel executions of the work item 
     if(variant->rt_data.optimizer_rt_data.completed_wi_count == 0) {
-        // get available frequencies
-        if(irt_g_available_freqs_count == -1) {
-            if(irt_cpu_freq_get_available_frequencies_worker(self, irt_g_available_freqs, &irt_g_available_freqs_count)) {
-                irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
-                return;
-            }
-        }
 
         int32 cur_freq = irt_cpu_freq_get_cur_frequency_worker(self);
         variant->rt_data.optimizer_rt_data.data_last ++;
