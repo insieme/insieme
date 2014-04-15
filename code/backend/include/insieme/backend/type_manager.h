@@ -263,8 +263,7 @@ namespace backend {
 			c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
 			T* res = createInfo<T>(type);
 
-			c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(fragmentManager);
-			decl->addInclude(includeFile);
+			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(fragmentManager, includeFile);
 			res->declaration = decl;
 			res->definition = decl;
 			return res;

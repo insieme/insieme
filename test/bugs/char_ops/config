@@ -1,1 +1,2 @@
+excludeSteps="${excludeSteps}","insiemecc_c++_compile","insiemecc_c++_execute","insiemecc_c++_check","insiemecc_c_compile","insiemecc_c_execute","insiemecc_c_check"
 use_o3=1

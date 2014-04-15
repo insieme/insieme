@@ -853,7 +853,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				core::TypePtr targetTy= convFact.convertType((*it)->getType());
 				//if it is no ref we have to materialize it, otherwise refParent cannot be called
 				if(expr->getType()->getNodeType() != core::NT_RefType) {
-					expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+					//expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+					expr = builder.refVar(expr);
 				}
 				expr = builder.refParent(expr, targetTy);
 			}
@@ -863,7 +864,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.callExpr(gen.getScalarToArray(), expr);
 			}
 
-			VLOG(2) << expr;
+			VLOG(2) << "cast resoult: \n" << dumpPretty(expr) << " \n of type: " << expr->getType() ;
 			return expr;
 		}
 

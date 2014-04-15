@@ -55,6 +55,7 @@
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -377,7 +378,6 @@ namespace backend {
 	}
 
 
-
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
 
 		// conducte some cleanup (argument wrapping)
@@ -695,8 +695,7 @@ namespace backend {
 			if (header) {
 
 				// => use prototype of include file
-				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-				res->prototype->addInclude(*header);
+				res->prototype = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), *header);
 
 			} else if(funType->isMemberFunction()) {
 				// add pure-virtual member function to class declaration
@@ -1029,6 +1028,11 @@ namespace backend {
 						classDecl->members.push_back(decl);
 					}
 
+					// remove dependencies from others to this class (causes cyclic dependencies)
+					for(const auto& dep : codeInfo.prototypeDependencies) {
+						if (dep.isa<c_ast::IncludeFragmentPtr>()) dep->remDependency(info->prototype);
+					}
+
 					// add dependencies to class declaration
 					info->prototype->addDependencies(codeInfo.prototypeDependencies);
 
@@ -1265,8 +1269,8 @@ namespace backend {
 				}
 
 				void visitNode(const core::NodeAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
-					std::cout << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-					std::cout << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
+					std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
+					std::cerr << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
 					assert(false && "Must not be reached!");
 				}
 
@@ -1304,8 +1308,8 @@ namespace backend {
 				default: {}
 				}
 
-				std::cout << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-				std::cout << "Node of type " << node->getNodeType() << " should not be reachable!\n";
+				std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
+				std::cerr << "Node of type " << node->getNodeType() << " should not be reachable!\n";
 				assert(false && "Must not be reached!");
 				return c_ast::IdentifierPtr();
 			}
@@ -1462,7 +1466,7 @@ namespace backend {
 			if (lambda) {
 
 				// set up variable manager
-				ConversionContext context(converter);
+				ConversionContext context(converter, lambda);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
 					context.getVariableManager().addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
 				});
@@ -1503,7 +1507,7 @@ namespace backend {
 				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {
 					return namedType->name;
 				}
-				std::cout << "Unable to determine class-name for member function: " << funType << "\n";
+				std::cerr << "Unable to determine class-name for member function: " << funType << "\n";
 				assert(false && "Unsupported case!");
 				return c_ast::IdentifierPtr();
 			};

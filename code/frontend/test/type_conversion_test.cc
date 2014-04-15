@@ -290,24 +290,24 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(Double, 	"struct<_cpp_ref:ref<real<8>>>");
 	CHECK_REFERENCE_TYPE(LongDouble,"struct<_cpp_ref:ref<real<16>>>");	
 
-	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:ref<unit>>");  // <== this is actually not a type...
-	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:ref<bool>>");
-	CHECK_REFERENCE_CONST_TYPE(UChar, 	  "struct<_const_cpp_ref:ref<uint<1>>>");
-	CHECK_REFERENCE_CONST_TYPE(SChar, 	  "struct<_const_cpp_ref:ref<char>>");
-	CHECK_REFERENCE_CONST_TYPE(Char16, 	  "struct<_const_cpp_ref:ref<wchar<16>>>");
-	CHECK_REFERENCE_CONST_TYPE(Char32, 	  "struct<_const_cpp_ref:ref<wchar<32>>>");
-	CHECK_REFERENCE_CONST_TYPE(UShort, 	  "struct<_const_cpp_ref:ref<uint<2>>>");
-	CHECK_REFERENCE_CONST_TYPE(Short, 	  "struct<_const_cpp_ref:ref<int<2>>>");
-	CHECK_REFERENCE_CONST_TYPE(UInt, 	  "struct<_const_cpp_ref:ref<uint<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(Int, 	  "struct<_const_cpp_ref:ref<int<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(ULong, 	  "struct<_const_cpp_ref:ref<uint<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(ULongLong, "struct<_const_cpp_ref:ref<struct<longlong_val:uint<8>>>>");
-	CHECK_REFERENCE_CONST_TYPE(Long, 	  "struct<_const_cpp_ref:ref<int<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(LongLong,  "struct<_const_cpp_ref:ref<struct<longlong_val:int<8>>>>");
-	CHECK_REFERENCE_CONST_TYPE(UInt128,   "struct<_const_cpp_ref:ref<uint<16>>>");
-	CHECK_REFERENCE_CONST_TYPE(Float, 	  "struct<_const_cpp_ref:ref<real<4>>>");
-	CHECK_REFERENCE_CONST_TYPE(Double, 	  "struct<_const_cpp_ref:ref<real<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:ref<real<16>>>");	
+	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:src<unit>>");  // <== this is actually not a type...
+	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:src<bool>>");
+	CHECK_REFERENCE_CONST_TYPE(UChar, 	  "struct<_const_cpp_ref:src<uint<1>>>");
+	CHECK_REFERENCE_CONST_TYPE(SChar, 	  "struct<_const_cpp_ref:src<char>>");
+	CHECK_REFERENCE_CONST_TYPE(Char16, 	  "struct<_const_cpp_ref:src<wchar<16>>>");
+	CHECK_REFERENCE_CONST_TYPE(Char32, 	  "struct<_const_cpp_ref:src<wchar<32>>>");
+	CHECK_REFERENCE_CONST_TYPE(UShort, 	  "struct<_const_cpp_ref:src<uint<2>>>");
+	CHECK_REFERENCE_CONST_TYPE(Short, 	  "struct<_const_cpp_ref:src<int<2>>>");
+	CHECK_REFERENCE_CONST_TYPE(UInt, 	  "struct<_const_cpp_ref:src<uint<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(Int, 	  "struct<_const_cpp_ref:src<int<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(ULong, 	  "struct<_const_cpp_ref:src<uint<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(ULongLong, "struct<_const_cpp_ref:src<struct<longlong_val:uint<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(Long, 	  "struct<_const_cpp_ref:src<int<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(LongLong,  "struct<_const_cpp_ref:src<struct<longlong_val:int<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(UInt128,   "struct<_const_cpp_ref:src<uint<16>>>");
+	CHECK_REFERENCE_CONST_TYPE(Float, 	  "struct<_const_cpp_ref:src<real<4>>>");
+	CHECK_REFERENCE_CONST_TYPE(Double, 	  "struct<_const_cpp_ref:src<real<8>>>");
+	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:src<real<16>>>");	
 }
 
 #define CREATE_TYPE(ClangType) \
@@ -392,8 +392,8 @@ TEST(TypeConversion, CombinedTypes) {
 															     "struct BaseClass <fieldA:uint<2>>");
 	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
 															     "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
-	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:ref<BaseClass>>", 
-															     "struct<_const_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>");
+	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>", 
+															     "struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
 
 	////////////////////////////////////////////////////////
 	//Now that we have a class type, lets make functions
@@ -478,11 +478,11 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	classDecl->setCompleteDefinition (true);
 
 	CHECK_TYPE		(classTy, "RecClass",
-							  "rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:ref<'RecClass>>}");
+							  "rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
 	CHECK_POINTER	(classTy, "ref<array<RecClass,1>>",
-							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:ref<'RecClass>>},1>>");
+							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
 	CHECK_REFERENCE	(classTy, "struct<_cpp_ref:ref<RecClass>>",
-							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:'t0,const_ref:'t1>,'t0=struct<_cpp_ref:ref<'RecClass>>,'t1=struct<_const_cpp_ref:ref<'RecClass>>}>>");
+							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
 }
 
 

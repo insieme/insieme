@@ -187,12 +187,12 @@ namespace core {
 		 * The list of constructors to be associated to the class
 		 * type this meta-information is associated to.
 		 */
-		vector<LambdaExprPtr> constructors;
+		vector<ExpressionPtr> constructors;
 
 		/**
 		 * The destructor associated to this class type.
 		 */
-		LambdaExprPtr destructor;
+		ExpressionPtr destructor;
 
 		/**
 		 * A flag determining whether the destructor is a virtual destructor or not.
@@ -223,7 +223,7 @@ namespace core {
 		/**
 		 * Obtains a reference to the internally maintained list of constructors.
 		 */
-		const vector<LambdaExprPtr>& getConstructors() const {
+		const vector<ExpressionPtr>& getConstructors() const {
 			return constructors;
 		}
 
@@ -232,14 +232,14 @@ namespace core {
 		 *
 		 * @param constructors the new list of constructors
 		 */
-		void setConstructors(const vector<LambdaExprPtr>& constructors);
+		void setConstructors(const vector<ExpressionPtr>& constructors);
 
 		/**
 		 * Adds a new constructor to this meta-info collection.
 		 *
 		 * @param constructor the constructor to be added
 		 */
-		void addConstructor(const LambdaExprPtr& constructor);
+		void addConstructor(const ExpressionPtr& constructor);
 
 		/**
 		 * Tests whether a destructor is defined for this type.
@@ -253,7 +253,7 @@ namespace core {
 		 * to this meta-info collection or null if no destructor has been
 		 * attached.
 		 */
-		const LambdaExprPtr& getDestructor() const {
+		const ExpressionPtr& getDestructor() const {
 			return destructor;
 		}
 
@@ -262,7 +262,7 @@ namespace core {
 		 *
 		 * @param destructor the new destructor
 		 */
-		void setDestructor(const LambdaExprPtr& destructor);
+		void setDestructor(const ExpressionPtr& destructor);
 
 		/**
 		 * Determines whether the associated destructor is marked virtual or not.
@@ -404,7 +404,7 @@ namespace core {
 		bool operator==(const ClassMetaInfo& other) const {
 			return  this == &other || (
 						virtualDestructor == other.virtualDestructor &&
-						equals(constructors, other.constructors, equal_target<LambdaExprPtr>()) &&
+						equals(constructors, other.constructors, equal_target<ExpressionPtr>()) &&
 						equalTarget(destructor, other.destructor) &&
 						memberFunctions == other.memberFunctions
 					);
@@ -458,8 +458,8 @@ namespace core {
 		 * @param constructor to be tested
 		 * @return true if so, false otherwise
 		 */
-		bool containsConstructor(const LambdaExprPtr& constructor) const {
-			return contains(getConstructors(), constructor, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
+		bool containsConstructor(const ExpressionPtr& constructor) const {
+			return ::contains(getConstructors(), constructor, [](const ExpressionPtr& a, const ExpressionPtr& b)->bool {
 				// just check the type - no two constructors with the same type are supported
 				return *a->getType() == *b->getType();
 			});
@@ -504,16 +504,6 @@ namespace core {
 	 * Removes any meta information potentially attached to the given type.
 	 */
 	void removeMetaInfo(const TypePtr& type);
-
-	/**
-	 * A utility function converting a class-meta-info object into an IR expression using the encoding framework.
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info);
-
-	/**
-	 * A utility function converting an IR expression into a class-meta-info object using the encoding framework.
-	 */
-	ClassMetaInfo fromIR(const ExpressionPtr& expr);
 
 	/**
 	 * A utility merging together two meta infos for the same class.

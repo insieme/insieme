@@ -37,8 +37,10 @@
 # some configuration options 
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
+compiler[insiemecc_c_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_c++_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_cxx_sema]=@PROJECT_BINARY_DIR@/driver/main
+compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_compile]=gcc
@@ -47,6 +49,10 @@ compiler[main_seq_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_seq_compile]=gcc
 compiler[main_seq_c++_compile]=g++
+
+# frontend code interception configuration seed
+intercepted_name_spaces=
+intercepted_header_file_dirs=
 
 # boost environment
 boost_include=@Boost_INCLUDE_DIRS@

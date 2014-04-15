@@ -35,7 +35,6 @@
  */
 
 #ifdef INSIEME
-#include "ocl_device.h"
 #pragma insieme mark
 #endif
 __kernel void vec_mul(__global int* input1, __global int* input2, __global int* output, int num_elements) {

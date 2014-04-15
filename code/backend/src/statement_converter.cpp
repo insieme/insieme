@@ -131,7 +131,7 @@ namespace backend {
 			}
 
 			// create a new context
-			ConversionContext entryContext(converter);
+			ConversionContext entryContext(converter, core::LambdaPtr());
 
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
@@ -474,15 +474,9 @@ namespace backend {
 
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
 			auto& basic = initValue->getNodeManager().getLangBasic();
-			auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
 			// if it is a call to a ref.var => put it on the stack
 			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
-				return true;
-			}
-
-			// if is materialize is stack
-			if (core::analysis::isCallOf(initValue, ext.getMaterialize())) {
 				return true;
 			}
 
@@ -779,6 +773,13 @@ namespace backend {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
+
+		// special handling for returns in ctors / dtors
+		auto funType = context.getEntryPoint()->getType();
+		if (funType->isConstructor() || funType->isDestructor()) {
+			return converter.getCNodeManager()->create<c_ast::Return>();
+		}
+
 		core::IRBuilder builder(ptr.getNodeManager());
 		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
 

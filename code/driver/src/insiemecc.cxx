@@ -57,6 +57,7 @@
 #include "insieme/driver/object_file_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/naming.h"
 
 
 using namespace std;
@@ -114,6 +115,7 @@ int main(int argc, char** argv) {
     if (options.job.getFFlags().find("-fopenmp") == options.job.getFFlags().end())
     	options.job.setOption(fe::ConversionJob::OpenMP, false);
 	options.job.setOption(fe::ConversionJob::OpenCL, false);
+	options.job.setOption(fe::ConversionJob::lib_icl, false);
 
 	if (!options.valid) return (options.help)?0:1;
 
@@ -183,7 +185,41 @@ int main(int argc, char** argv) {
 
 	if (runIRChecks) {
 		std::cout << "Running semantic checks ...\n";
-		std::cout << "Errors:\n" << co::checks::check(program);
+		auto list = co::checks::check(program);
+		if (!list.empty()){
+			auto errors = list.getAll();
+			std::sort(errors.begin(), errors.end());
+			for_each(errors, [&](const co::checks::Message& cur) {
+				std::cout << cur << std::endl;
+				co::NodeAddress address = cur.getOrigin();
+				stringstream ss;
+				unsigned contextSize = 1;
+				do {
+
+					ss.str("");
+					ss.clear();
+					co::NodePtr&& context = address.getParentNode(
+							min((unsigned)contextSize, address.getDepth()-contextSize)
+						);
+					ss << co::printer::PrettyPrinter(context, co::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+
+				} while(ss.str().length() < 40 && contextSize++ < 5);
+
+				// find enclosing function
+				auto fun = address;
+				while(!fun.isRoot() && fun->getNodeType() != co::NT_LambdaExpr) {
+					fun = fun.getParentAddress();
+				}
+				if (fun->getNodeType() == co::NT_LambdaExpr) {
+					std::cout << "\tContext:\n" << co::printer::PrettyPrinter(fun,co::printer::PrettyPrinter::PRINT_DEREFS |
+													co::printer::PrettyPrinter::PRINT_CASTS |
+													co::printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE) << std::endl; 
+					if(!co::annotations::hasNameAttached(fun)) {
+						std::cout << " Function originaly named: " << co::annotations::getAttachedName(fun)<< std::endl;
+					}
+				}
+			});
+		}
 	}
 
 	// Step 3: produce output code

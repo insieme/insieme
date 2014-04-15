@@ -9,6 +9,10 @@ struct Poly_Derived: Poly_Base {};
 
 typedef int my_int_type;
 
+const std::type_info& getType(){
+	return typeid(void);
+}
+
 int main() {
   std::cout << std::boolalpha;
 
@@ -36,6 +40,13 @@ int main() {
   int a;
   float b;
   std::cout << ( typeid(a)==typeid(b) ) << '\n';  
+
+	// type literals
+  { 
+  	typeid(void);
+  	std::cout << ( typeid(int)!=typeid(long) ) << std::endl;  
+  	std::cout << ( typeid(void) == getType() );  
+  }
 
   return 0;
 }

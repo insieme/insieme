@@ -75,7 +75,7 @@ namespace frontend {
 		  systemHeaderSearchPath(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
 		  standard(Auto),
 		  definitions(),
-		  interceptions( { "std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*" } ),
+		  interceptedNameSpacePatterns( { "std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*" } ),
 		  interceptedHeaderDirs(),
 		  flags(DEFAULT_FLAGS) {
     };
@@ -88,7 +88,7 @@ namespace frontend {
 
     //register frontend plugins
     void ConversionSetup::frontendPluginInit() {
-        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptions());
+        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptedNameSpacePatterns());
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
@@ -107,7 +107,7 @@ namespace frontend {
         	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
 		}
        
-        if(flags & icl_lib) {
+        if(flags & lib_icl) {
         	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
 		}
 
@@ -138,7 +138,13 @@ namespace frontend {
 		if(hasOption(OpenCL)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+
+			setup.setDefinition("INSIEME");
+		}
+		if(hasOption(lib_icl)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
+			setup.addIncludeDirectory(CLANG_SRC_DIR);
+			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 
 			setup.setDefinition("INSIEME");
 		}
@@ -239,7 +245,7 @@ namespace frontend {
 			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
 			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
-        std::cout << "interceptions: \n" << this->getInterceptions() << std::endl;
+        std::cout << "interceptions: \n" << this->getInterceptedNameSpacePatterns() << std::endl;
         std::cout << "include dirs: \n" << this->getIncludeDirectories() << std::endl;
         std::cout << "libraries: \n" << this->libs << std::endl;
         std::cout << "standard: \n" << this->getStandard() << std::endl;

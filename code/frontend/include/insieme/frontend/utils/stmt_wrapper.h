@@ -53,6 +53,9 @@ typedef vector<insieme::core::StatementPtr> StatementList;
  * as conversion of a single C stmt can result in multiple IR statements.
  */
 struct StmtWrapper: public StatementList {
+	StmtWrapper(const StatementList& list): StatementList(list) {
+	}
+
 	StmtWrapper() :
 			StatementList() {
 	}
@@ -67,6 +70,13 @@ struct StmtWrapper: public StatementList {
 
 	bool isSingleStmt() const {
 		return size() == 1;
+	}
+
+	std::ostream& operator<<(std::ostream& out){
+		for(auto s : *this){
+			out << "-" << dumpOneLine(s) << "\n";
+		}
+		return out;
 	}
 };
 

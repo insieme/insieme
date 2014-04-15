@@ -448,6 +448,29 @@ namespace analysis {
 
 	}
 
+	TEST(IsReadOnly, MemberAccess) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		VariablePtr x = builder.variable(builder.parseType("ref<array<int<4>>>"), 1);
+		std::map<string, NodePtr> symbols;
+//		symbols["x"] = x;
+
+//		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ array.ref.elem.1D(x, 0); }", symbols), x);
+
+		x = builder.variable(builder.parseType("ref<(int<4>, real<4>)>"), 1);
+		symbols["x"] = x;
+
+//		doesn't work
+//		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ tuple.member.access(x, 0u, type<int<4>>); }", symbols), x);
+		StatementList list;
+		list.push_back(builder.callExpr(mgr.getLangBasic().getTupleRefElem(), x, builder.uintLit(0),
+				builder.getTypeLiteral(mgr.getLangBasic().getInt4())));
+		StatementPtr stmt = builder.compoundStmt(list);
+		EXPECT_PRED2( notReadOnly, stmt, x);
+	}
+
 	TEST(IsReadOnly, NestedFunctions) {
 
 		// check whether usage in nested functions is discovered

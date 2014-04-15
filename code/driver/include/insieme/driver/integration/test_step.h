@@ -62,7 +62,7 @@ namespace integration {
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps);
+	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
 
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);

@@ -42,6 +42,7 @@
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -65,10 +66,11 @@ namespace core {
 
 	// --------- Class Meta-Info --------------------
 
-	void ClassMetaInfo::setConstructors(const vector<LambdaExprPtr>& constructors) {
+	void ClassMetaInfo::setConstructors(const vector<ExpressionPtr>& constructors) {
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getNodeType() == NT_Literal || cur->getNodeType() == NT_LambdaExpr; }));
 		// check new constructors
-		assert(all(constructors, [&](const LambdaExprPtr& cur) { return cur->getFunctionType()->isConstructor(); }));
-		assert(all(constructors, [&](const LambdaExprPtr& cur) { return checkObjectType(cur); }));
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getType().isa<FunctionTypePtr>() && cur->getType().as<FunctionTypePtr>()->isConstructor(); }));
+		assert(all(constructors, [&](const ExpressionPtr& cur) { return checkObjectType(cur); }));
 
 		// exchange the list of constructors
 		this->constructors = constructors;
@@ -82,9 +84,11 @@ namespace core {
 		childList.reset();
 	}
 
-	void ClassMetaInfo::addConstructor(const LambdaExprPtr& constructor) {
+	void ClassMetaInfo::addConstructor(const ExpressionPtr& constructor) {
+		assert(constructor->getNodeType() == NT_Literal || constructor->getNodeType() == NT_LambdaExpr);
+
 		// check constructor type
-		assert(constructor->getFunctionType()->isConstructor());
+		assert(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
 		assert(checkObjectType(constructor));
 
 		// add new constructor
@@ -94,13 +98,15 @@ namespace core {
 		childList.reset();
 	}
 
-	void ClassMetaInfo::setDestructor(const LambdaExprPtr& destructor) {
+	void ClassMetaInfo::setDestructor(const ExpressionPtr& destructor) {
+		assert(!destructor || destructor->getNodeType() == NT_Literal || destructor->getNodeType() == NT_LambdaExpr);
+
 		// check destructor type
-		assert(!destructor || destructor->getFunctionType()->isDestructor());
+		assert(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
 		assert(!destructor || checkObjectType(destructor));
 
 		// update destructor
-		this->destructor = (destructor)?core::analysis::normalize(destructor):LambdaExprPtr();
+		this->destructor = (destructor)?core::analysis::normalize(destructor):ExpressionPtr();
 
 		// invalidate child list
 		childList.reset();
@@ -147,10 +153,10 @@ namespace core {
 	TypePtr ClassMetaInfo::getClassType() const {
 
 		// try destructor
-		if (destructor) return destructor->getLambda()->getType()->getObjectType();
+		if (destructor) return destructor->getType().as<FunctionTypePtr>()->getObjectType();
 
 		// try constructors
-		if (!constructors.empty()) return constructors.front()->getLambda()->getType()->getObjectType();
+		if (!constructors.empty()) return constructors.front()->getType().as<FunctionTypePtr>()->getObjectType();
 
 		// try member functions
 		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getType().as<FunctionTypePtr>()->getObjectType();
@@ -182,7 +188,7 @@ namespace core {
 
 		// add ctor code
 		if (!constructors.empty()) {
-			out << " -- Constructors --\n" << join("\n", constructors, [](std::ostream& out, const LambdaExprPtr& cur) {
+			out << " -- Constructors --\n" << join("\n", constructors, [](std::ostream& out, const ExpressionPtr& cur) {
 				out << PrettyPrinter(cur, PrettyPrinter::NO_LET_BINDINGS);
 			}) << "\n\n";
 		}
@@ -225,14 +231,31 @@ namespace core {
 		VariablePtr newParam = builder.variable(builder.refType(newClassType));
 
 		// create helper for updating functions
-		auto alter = [&](const LambdaExprPtr& in)->LambdaExprPtr {
-			assert(!in->getParameterList().empty());
+		auto alter = [&](const ExpressionPtr& in)->ExpressionPtr {
 
-			VariableMap replacement;
-			replacement[in->getParameterList()->getElement(0)] = newParam;
+			// update the object type of functions
+			if (auto fun = in.isa<LambdaExprPtr>()) {
+				assert(!fun->getParameterList().empty());
 
-			// update first parameter => switch to new variable
-			return core::transform::replaceVarsRecursiveGen(mgr, in, replacement);
+				VariableMap replacement;
+				replacement[fun->getParameterList()->getElement(0)] = newParam;
+
+				// update first parameter => switch to new variable
+				return core::transform::replaceVarsRecursiveGen(mgr, fun, replacement);
+			}
+
+			// update the type of literals
+			if (auto lit = in.isa<LiteralPtr>()) {
+
+				// get address to class type node
+				auto classType = LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getObjectType();
+
+				// replace it by new class type
+				return core::transform::replaceNode(mgr, classType, newClassType).as<LiteralPtr>();
+			}
+
+			assert_fail() << "Unsupported Function node type: " << in->getNodeType() << "\n";
+			return in;
 		};
 
 		// create a copy of this class meta info and replace parameters
@@ -240,12 +263,37 @@ namespace core {
 
 		// move constructors
 		for(auto cur : constructors) {
-			newInfo.addConstructor(alter(cur));
+			
+			if (auto lit = cur.isa<LiteralPtr>()) {
+
+				// update function type
+				newInfo.addConstructor(core::transform::replaceNode(
+						mgr,
+						LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+						builder.refType(newClassType)
+				).as<LiteralPtr>());
+
+			} else {
+				// handle as all other implementations
+				assert(cur.isa<LambdaExprPtr>());
+				newInfo.addConstructor(alter(cur.as<LambdaExprPtr>()));
+			}
 		}
 
 		// move destructor
 		if (destructor) {
-			newInfo.setDestructor(alter(destructor));
+			if (auto lit = destructor.isa<LiteralPtr>()) {
+				// update function type
+				newInfo.setDestructor(core::transform::replaceNode(
+						mgr,
+						LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+						builder.refType(newClassType)
+				).as<LiteralPtr>());
+			} else {
+				// handle as all other implementations
+				assert(destructor.isa<LambdaExprPtr>());
+				newInfo.setDestructor(alter(destructor.as<LambdaExprPtr>()));
+			}
 		}
 
 		// update virtual destructor field
@@ -342,73 +390,16 @@ namespace core {
 
 		typedef core::value_node_annotation<ClassMetaInfo>::type annotation_type;
 
-		typedef std::tuple<string, ExpressionPtr, bool, bool> encoded_member_fun_type;
-		typedef std::tuple<vector<LambdaExprPtr>, LambdaExprPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
-
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
 			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only Class-Info annotations are supported!");
-			return toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
-		}
-
-		ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) const {
-
-			// convert member functions
-			auto encodedMemberFuns = ::transform(info.getMemberFunctions(), [](const MemberFunction& cur)->encoded_member_fun_type {
-				return encoded_member_fun_type(
-						cur.getName(),
-						cur.getImplementation(),
-						cur.isVirtual(),
-						cur.isConst()
-				);
-			});
-
-			// encode class meta-info object
-			return encoder::toIR(
-				manager,
-				encoded_class_info_type (
-						info.getConstructors(),
-						info.getDestructor(),
-						info.isDestructorVirtual(),
-						encodedMemberFuns
-				)
-			);
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
 			// wrap result into annotation pointer
-			return std::make_shared<annotation_type>(fromIR(node));
-		}
-
-		ClassMetaInfo fromIR(const ExpressionPtr& node) const {
-			assert(encoder::isEncodingOf<encoded_class_info_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-
-			// decode the class object
-			auto tuple = encoder::toValue<encoded_class_info_type>(node);
-
-			// restore info
-			ClassMetaInfo res;
-
-			res.setConstructors(std::get<0>(tuple));
-			res.setDestructor(std::get<1>(tuple));
-			res.setDestructorVirtual(std::get<2>(tuple));
-			res.setMemberFunctions(::transform(std::get<3>(tuple), [](const encoded_member_fun_type& cur) {
-				return MemberFunction(std::get<0>(cur), std::get<1>(cur), std::get<2>(cur), std::get<3>(cur));
-			}));
-
-			// done
-			return res;
+			return std::make_shared<annotation_type>(encoder::toValue<ClassMetaInfo>(node));
 		}
 	};
-
-	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) {
-		ClassMetaInfoAnnotationConverter converter;
-		return converter.toIR(manager, info);
-	}
-
-	ClassMetaInfo fromIR(const ExpressionPtr& expr) {
-		ClassMetaInfoAnnotationConverter converter;
-		return converter.fromIR(expr);
-	}
 
 	// --------- Class Meta-Info Utilities --------------------
 
@@ -492,7 +483,7 @@ namespace core {
 		if (res.hasDestructor() && b.hasDestructor()) {
 			assert_eq(*analysis::normalize(res.getDestructor()), *analysis::normalize(b.getDestructor()))
 					<< "Unable to merge distinct destructors!";
-		} else if (!res.hasDestructor()) {
+		} else if (!res.hasDestructor() && b.getDestructor()) {
 			res.setDestructor(b.getDestructor());
 		}
 

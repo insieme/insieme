@@ -59,7 +59,7 @@ namespace types {
 		 * equivalent types are grouped together to equality classes. The nodes of
 		 * the resulting type therefore contain sets of types.
 		 */
-		inline SubTypeEqualityGraph computeSCCGraph(const SubTypeGraph& graph) {
+		inline SubTypeEqualityGraph computeEqualityGraph(const SubTypeGraph& graph) {
 
 			auto numTypes = graph.getNumVertices();
 
@@ -300,7 +300,7 @@ namespace types {
 
 
 		// step 2) compute SCCs within subtype graph
-		SubTypeEqualityGraph sccGraph = computeSCCGraph(subTypeGraph);
+		SubTypeEqualityGraph sccGraph = computeEqualityGraph(subTypeGraph);
 
 		if (debug) std::cout << "Subtype Equality Graph: " << std::endl;
 		if (debug) sccGraph.printGraphViz(std::cout);

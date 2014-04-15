@@ -61,6 +61,7 @@ namespace integration {
 			auto job = frontend::ConversionJob(testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
+			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
 			std::string step="main_run_convert";
 			if (testCase.isCXX11()){
@@ -73,6 +74,11 @@ namespace integration {
 				job.setDefinition(def.first, def.second);
 			});
 
+			// add interceptor configuration
+			job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
+			job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
+
+			// done
 			return job;
 		}
 
@@ -129,8 +135,8 @@ namespace integration {
 			bool enableOpenCL = false;
 			bool enableCXX11 = false;
 
-			// get the test directory
-			auto testDir = fs::path(TEST_ROOT_DIR) / testName;
+			// get the test directory -- if the testName is a existingPath skip appending rootDir
+			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(TEST_ROOT_DIR) / testName;
 
 			// check test case directory
 			const fs::path testCaseDir = fs::canonical(fs::absolute(testDir));
@@ -162,7 +168,7 @@ namespace integration {
 			if(files.size()==0){
 
 				// extract the case name from the test directory
-				string caseName = boost::filesystem::path(testDir).filename().string();
+				string caseName = boost::filesystem::path(testCaseDir).filename().string();
 
 				// add default file name
 				if (fs::exists(testCaseDir / (caseName + ".c")))
@@ -170,7 +176,7 @@ namespace integration {
 					files.push_back((testCaseDir / (caseName + ".c")).string());
 				else {
 					// this must be a c++ test case
-					assert(fs::exists(testCaseDir / (caseName + ".cpp")));
+					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file dosen't exist: " << testCaseDir << "/" << caseName << ".cpp";
 					files.push_back((testCaseDir / (caseName + ".cpp")).string());
 
 					// if test is located in apropiate folder, activate CXX11 standard
@@ -211,8 +217,22 @@ namespace integration {
 			enableOpenMP = prop.get<bool>("use_omp");
 			enableOpenCL = prop.get<bool>("use_opencl");
 
+			// extract interception configuration
+			auto interceptionNameSpacePatterns = prop.get<vector<string>>("intercepted_name_spaces");
+			vector<frontend::path> interceptedHeaderFileDirectories;
+
+			for(const auto& path : prop.get<vector<string>>("intercepted_header_file_dirs")) {
+				if(path.at(0) == '/') {
+					interceptedHeaderFileDirectories.push_back(path);
+				} else {
+					interceptedHeaderFileDirectories.push_back((testCaseDir / path).string());
+				}
+			}
+
 			// add test case
-			return IntegrationTestCase(testName, testCaseDir, files, includeDirs,libPaths,libNames, enableOpenMP, enableOpenCL, enableCXX11, prop);
+			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,
+					interceptionNameSpacePatterns, interceptedHeaderFileDirectories,
+					enableOpenMP, enableOpenCL, enableCXX11, prop);
 		}
 
 
@@ -376,14 +396,24 @@ namespace integration {
 
 		// if not included in ALL test cases since not covered by the configuration => load rest
 		if (res.empty()) {
-			res = loadAllCases(path);
+            string prefix;
+            if(absolute_path.string().size() > fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size()) {
+                prefix = absolute_path.string().substr(fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size());
+                if(prefix.back() != '/') prefix.push_back('/');
+            }
+			res = loadAllCases(path, prefix );
 		}
 
 		// if still not found => it is a individual test case
 		if (res.empty()) {
-			auto testCase = loadTestCase(path);
-			if (testCase) {
-				return toVector(*testCase);
+
+			const fs::path testConfig = absolute_path / "test.cfg";
+			if (!fs::exists(testConfig)) { 
+				//individual test cases have no "test.cfg"
+				auto testCase = loadTestCase(path);
+				if (testCase) {
+					return toVector(*testCase);
+				}
 			}
 		}
 

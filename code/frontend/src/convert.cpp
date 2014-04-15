@@ -69,6 +69,8 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/utils/progress_bar.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -178,9 +180,15 @@ inline unsigned countTypes(const clang::DeclContext* declCtx){
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
 		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
-		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { count ++; }
-		void VisitTypedefDecl(const clang::TypedefDecl* typedefDecl) {
-			if (typedefDecl->getTypeForDecl()) count++;
+		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { 
+			if (!typeDecl->isCompleteDefinition() ) return;
+			if (typeDecl->isDependentType() )      return;
+			count++;
+		}
+				
+		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
+			if (!typedefDecl->getTypeForDecl()) return;
+			count++;
 		}
 
 	} counter(count);
@@ -192,29 +200,35 @@ inline unsigned countFunctions(const clang::DeclContext* declCtx){
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
 		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
+		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
+			Counter vis(count);
+			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
+		}
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) { count++; }
 	} counter(count);
 	counter.traverseDeclCtx(declCtx);
 	return count;
 }
 
+
+inline string  createPrefix(const std::string& name, unsigned pass, unsigned of){
+	std::stringstream out;
+	out << name << " " << pass << "/" << of;
+	return out.str();
+}
+
 /**
  * some tool to print a progress bar, some day would be cool to have an infrastructure to do so
  */
-inline void printProgress (unsigned pass, unsigned cur, unsigned max){
-	std::stringstream out;
-	static unsigned last = 0;
-	unsigned a = ((float)cur*100.0f) / (float)max;
-	if (a != last){
-		unsigned i;
-		for (i = 0; i< a; i++)
-			out << "=";
-		out  << ">";
-		i++;
-		for (; i< 100; i++)
-			out << " ";
-		std::cout << "\r" << pass << "/3 [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
-		last = a;
+inline void printProgress (const std::string& prefix, unsigned cur, unsigned max) {
+	static unsigned lastPos = 0;
+	unsigned a = ((float)cur/ (float)max) * 60.0f;
+	if (a > lastPos) {
+		lastPos = a;
+		std::cout << "\r" << utils::ProgressBar(prefix, max, cur, 60, std::cout, false);
+	}
+	if (cur == max) {
+		lastPos = 0;
 	}
 }
 
@@ -278,7 +292,6 @@ tu::IRTranslationUnit Converter::convert() {
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
-
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
@@ -295,16 +308,19 @@ tu::IRTranslationUnit Converter::convert() {
         }
 
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
-			if (typeDecl->isCompleteDefinition() && !typeDecl->isDependentType() ){
+			if (!typeDecl->isCompleteDefinition() ) return;
+			if (typeDecl->isDependentType() )      return;
 
-				// we do not convert templates or partial spetialized classes/functions, the full
-				// type will be found and converted once the instantaion is found
-				converter.trackSourceLocation (typeDecl);
-				converter.convertTypeDecl(typeDecl);
-				converter.untrackSourceLocation ();
+			// we do not convert templates or partial spetialized classes/functions, the full
+			// type will be found and converted once the instantaion is found
+			converter.trackSourceLocation (typeDecl);
+			converter.convertTypeDecl(typeDecl);
+			converter.untrackSourceLocation ();
+
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),1,3);
+				printProgress (str, ++processed, count);
 			}
-
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
 		}
 		// typedefs and typealias
 		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
@@ -314,13 +330,13 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (typedefDecl);
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
-
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (1, ++processed, count);
+			
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),1,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 	} typeVisitor(*this, count);
-
-
-	//typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 	typeVisitor.traverseDeclCtx (declContext);
 
 	// collect all global declarations
@@ -346,21 +362,24 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.lookUpVariable(var);
 			converter.untrackSourceLocation();
 
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (2, ++processed, count);
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),2,3);
+				printProgress (str, ++processed, count);
+			}
 		}
 	} varVisitor(*this, count);
-
 	varVisitor.traverseDeclCtx(declContext);
 
 	// collect all global declarations
 	count = countFunctions(declContext);
+	unsigned processed = 0;
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
 
 		Converter& converter;
 		bool externC;
 		unsigned count;
-		unsigned processed;
-		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned processed=0)
+		unsigned& processed;
+		FunctionVisitor(Converter& converter, bool Ccode, unsigned count, unsigned& processed)
 		: converter(converter), externC(Ccode), count(count), processed(processed)
 		{}
 
@@ -370,22 +389,24 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
 			bool isC =  link->getLanguage () == clang::LinkageSpecDecl::lang_c;
-			FunctionVisitor vis(converter, isC, count);
+			FunctionVisitor vis(converter, isC, count,processed);
 			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
 		}
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+			processed++;
 			if (funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization ()) return;
 
 			converter.trackSourceLocation (funcDecl);
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
 			converter.untrackSourceLocation ();
 			if (externC) annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
-			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) printProgress (3, ++processed, count);
-			return;
+			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
+				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),3,3);
+				printProgress (str, processed, count);
+			}
 		}
-	} funVisitor(*this, false, count);
-
+	} funVisitor(*this, false, count,processed);
 	funVisitor.traverseDeclCtx(declContext);
 
 	// handle entry points (marked using insieme pragmas)
@@ -400,12 +421,13 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
-	//frontend done
-//	std::cout << std::endl;
 
-//	std::cout << " ==================================== " << std::endl;
-//	std::cout << getIRTranslationUnit() << std::endl;
-//	std::cout << " ==================================== " << std::endl;
+	//frontend done
+	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;
+
+	//std::cout << " ==================================== " << std::endl;
+	//std::cout << getIRTranslationUnit() << std::endl;
+	//std::cout << " ==================================== " << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -460,7 +482,8 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				};
 
 			if (isUsedToCreateConstRef(body, wrap)){
-				auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				//auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
+				auto access = builder.refVar(currParam);
 				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
 				core::visitDepthFirstOnce (newBody, transferAnnotations);
 				wrapRefMap.erase(currParam);
@@ -977,14 +1000,16 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
 // check for overloaded operator "function" (normal function has kind OO_None)
-	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
-	if (operatorKind != OO_None) {
+	if (funcDecl->isOverloadedOperator()) {
+		clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
 		core::annotations::attachName(node,("operator" + operatorAsString));
 	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
-		core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		//core::annotations::attachName(node,(funcDecl->getNameAsString()));
+		core::annotations::attachName(node,(utils::buildNameForFunction(funcDecl)));
 	}
+	if(core::annotations::hasNameAttached(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node);}
 
 // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
 	/*
@@ -1044,8 +1069,8 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
  	retIr = getInitExpr ( type, initExpr);
 
- 	VLOG(2) << "initExpr			: " << initExpr;
- 	VLOG(2) << "initExpr (adjusted)	: " << retIr;
+ 	VLOG(2) << "initExpr			: \n" << dumpPretty(initExpr);
+ 	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(retIr);
 
  	return retIr;
 }
@@ -1094,7 +1119,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	//if it is a listtype we take care recursivle of the listelements
 	if (core::encoder::isListType(init->getType())) {
 		core::ExpressionPtr retIr;
-		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>>(init);
+		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(init);
 
 		// if recursive
 		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
@@ -1113,7 +1138,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			return builder.callExpr(
 					elementType,
 					initOp,
-					core::encoder::toIR(targetType->getNodeManager(), elements),
+					core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(targetType->getNodeManager(), elements),
 					builder.getIntTypeParamLiteral(internalVecTy->getSize()));
 
 		}
@@ -1141,7 +1166,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 				*elementType.isa<core::VectorTypePtr>()->getSize())
 				return builder.callExpr(
 						builder.getLangBasic().getVectorInitPartial(),
-						core::encoder::toIR(targetType->getNodeManager(), elements),
+						core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(targetType->getNodeManager(), elements),
 						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
 					);
 
@@ -1158,9 +1183,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							getInitExpr (curr->getType(), inits[i])));
 			}
 			if (members.empty())
-				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
-			else
+				retIr = builder.getZero(structTy);
+			else {
 				retIr = builder.structExpr(structTy, members);
+
+				// fix type to generic type (not the resolved one)
+				retIr = core::transform::replaceNode(mgr, core::NodeAddress(retIr).as<core::StructExprAddress>()->getType(), targetType).as<core::ExpressionPtr>();
+			}
 			return retIr;
 		}
 
@@ -1175,7 +1204,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 
 			if (core::encoder::isListType(inits[0]->getType())){
-				vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>>(inits[0]);
+				vector<core::ExpressionPtr> innerList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(inits[0]);
 				return builder.callExpr (gen, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(gen),  builder.tupleExpr(innerList));
 			}
 			else{
@@ -1187,6 +1216,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		std::cerr << "targetType to init: " << targetType << std::endl;
 		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;
 		assert(false && "fallthrow while initializing generic typed global");
+	}
+
+	// the initialization is not a list anymore, this a base case
+	//if types match, we are done
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+		return (retIr = init);
 	}
 
 	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {
@@ -1204,12 +1239,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return (retIr = init.as<core::CallExprPtr>()[0]);
-	}
-
-	// the initialization is not a list anymore, this a base case
-	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
-		return (retIr = init);
 	}
 
 	// long long types
@@ -1238,7 +1267,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>()) {
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
-								builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
+								builder.refVar (init)));
+								//builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
 	}
 
 	// from cpp ref to value or variable
@@ -1400,12 +1430,12 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
         core::NodePtr result = plugin->Visit(decl, *this);
         if(result) {
             res = result.as<core::TypePtr>();
+			typeCache[decl->getTypeForDecl()->getCanonicalTypeInternal ()] = res;
             break;
         }
     }
 
 	if(!res) {
-
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
@@ -1414,9 +1444,14 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
 		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
 			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
+
+
+				VLOG(2) << "typedef of an anonymous type, forward the name: ";
+				VLOG(2) << "    -" << res;
+
 				core::TypePtr trgTy =  lookupTypeDetails(symb);
 				// a new generic type will point to the previous translation unit decl
-				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
+				if (core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()){
 
 					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
 
@@ -1426,20 +1461,29 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 					core::TypePtr impl = symb;
 					// if target is an annonymous type, we create a new type with the name of the typedef
-					if (structTy->getName()->getValue().substr(0,5) == "_anon"){
-						impl = builder.structType ( builder.stringValue( name), 
-											structTy->getParents(), structTy->getEntries());
+					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
+					if (namedType->getName()->getValue() == ""){
 
-						core::transform::utils::migrateAnnotations(structTy.as<core::TypePtr>(), impl);
+						if (auto structTy = namedType.isa<core::StructTypePtr>()){
+							impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+						}
+						else if (auto unionTy = namedType.isa<core::UnionTypePtr>()){
+							impl = builder.unionType (builder.stringValue(name), unionTy->getEntries());
+						}
+						else{
+							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
+						}
+
+						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), impl);
 						core::annotations::attachName(impl,name);
 
-						if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
+						//if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
 							//if the typeDef oft the anonymous type was done in a system header we need to
 							//annotate to enable the backend to avoid re-declaring the type
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
-						}
-
+						//}
+						VLOG(2) << "    -" << gen;
 						typeCache[typedefType] = gen;
 					}
 
@@ -1447,7 +1491,11 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 					res = gen;
 				}
 			}
+		//	else if
+		//	}
 		}
+		//std::cout << " - fixed? into: " << res << std::endl;
+		//std::cout << " - implementation: " << lookupTypeDetails(res) << std::endl;
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1464,6 +1512,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);
     }
+
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1756,7 +1805,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 			body = core::transform::replaceAllGen (mgr, body, thisVariable(thisType), thisVar);
 
 			// in constructors, replace all empty returns by a return of this:
-			if (funcTy->isConstructor()) {
+			if (funcTy->isConstructor() || funcTy->isDestructor()) {
 				auto emptyReturn = builder.returnStmt(builder.getLangBasic().getUnitConstant());
 				auto newReturn   = builder.returnStmt(thisVar);
 				body = core::transform::replaceAllGen (mgr, body, emptyReturn, newReturn);
@@ -1765,45 +1814,43 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 
 		// build the resulting lambda
 		lambda = builder.lambdaExpr(funcTy, params, body);
-		VLOG(2) << lambda << " + function declaration: " << funcDecl;
+		VLOG(2) << " DONE: function declaration: " << funcDecl->getQualifiedNameAsString();
 	}
 
-	// FIXME: this might have some performance impact
-	// if we are dealing with a memberFunction, retrieve meta-info and update it
 	if (funcTy->isMember()) {
-		//FIXME create map from classType to vector<metainfo> in TU
-		//FIXME merge that map, and at programm generation merge the metainfo together
-		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
+		// if we are dealing with a memberFunction, we create a meta-info and store it in the IRTU
+		// all meta-infos are merged together when leaving the realm of the TU (when turning into
+		// IRProgram) and attacthed to the according type -- this is handeled in the IRTU
 
+		//the class thype of the current member
+		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
 		core::ClassMetaInfo classInfo;
-		if (core::hasMetaInfo(classType)){
-			classInfo = core::getMetaInfo(classType);
-		}
 
 		if (funcTy->isConstructor()) {
 			//prevent multiple entries of ctors
-			if(!classInfo.containsConstructor(lambda))
-				classInfo.addConstructor(lambda);
+			if(!classInfo.containsConstructor(symbol))
+				classInfo.addConstructor(symbol);
 		}
 		else if (funcTy->isDestructor()){
-			classInfo.setDestructor(lambda);
+			classInfo.setDestructor(symbol);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
-            //Normally we use the function name of the member function.
-            //This can be dangerous when using templated member functions.
-            //In this case we have to add the return type information to
-            //the name, because it is not allowed to have overloaded functions
-            //that only differ by the return type.
-            //FIXME: Call to external functions might not work. What should we do with templated operators?!
-            std::string functionname = funcDecl->getNameAsString();
-            if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-                std::string returnType = funcDecl->getResultType().getAsString();
-                functionname.append(returnType);
-                utils::removeSymbols(functionname);
-            }
+			std::string functionname;
+            if(funcDecl->isOverloadedOperator()) {
+				//set name of the overloadop -- use the plain simple one from the funcdecl for the BE only
+				//the symbol is the rich one (with templates, const yadayadayada)
+            	functionname = funcDecl->getNameAsString(); 
+			} else {
+				//for everything else use the rich name
+				functionname = symbol->getStringValue();
+			}
+			VLOG(2) << "funcName used: " << functionname;
+			VLOG(2) << "qualName: " << funcDecl->getQualifiedNameAsString();
+			VLOG(2) << "symbol "<< symbol;
+
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
-				classInfo.addMemberFunction(functionname, lambda,
+				classInfo.addMemberFunction(functionname, symbol,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
@@ -1819,7 +1866,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 				//abort();
 			}
 		}
-		core::setMetaInfo(classType, classInfo);
+		getIRTranslationUnit().addMetaInfo(classType, classInfo);
 	}
 
 	// update cache
@@ -1893,7 +1940,9 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 }
 
 core::ExpressionPtr Converter::getCallableExpression(const clang::FunctionDecl* funcDecl){
-	return convertFunctionDecl(funcDecl,true);
+	auto retIr = convertFunctionDecl(funcDecl,true);
+	VLOG(2) << "callableExpression: " << retIr;
+	return retIr;
 }
 
 } // End conversion namespace

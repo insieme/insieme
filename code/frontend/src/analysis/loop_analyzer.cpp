@@ -207,7 +207,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 
 			core::ExpressionPtr tmpEndValue;
             auto range = builder.sub(endValue, initValue);
-            auto zero = convFact.getIRBuilder().zero(inductionVar->getType());
+            auto zero = convFact.getIRBuilder().getZero(inductionVar->getType());
             auto remainder = builder.sub(range, builder.mul(builder.div(range, stepExpr), stepExpr));
             tmpEndValue = builder.add( endValue, builder.sub(stepExpr, remainder));
             auto ifBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], endValue);
@@ -447,7 +447,10 @@ insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementP
 	tmp.push_back(newBody);
 	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
 
-	return convFact.getIRBuilder().forStmt(inductionVar, initValue, endValue, stepExpr, finalBody);
+	// make sure we initialize the thing with the right type
+	auto startVal = frontend::utils::castScalar(inductionVar->getType(), initValue);
+
+	return convFact.getIRBuilder().forStmt(inductionVar, startVal, endValue, stepExpr, finalBody);
 }
 
 } // End analysis namespace

@@ -210,14 +210,5 @@ namespace backend {
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
-	/**
-	 * 	Constructor return stmt is fixed to return "this" (ref to class), to fulfill the IR requirements, 
-	 * 	it is replaced here by an empty return so the backend can produce the right ir
-	 */
-	class ReturnOnCtor : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
 } // end namespace backend
 } // end namespace insieme

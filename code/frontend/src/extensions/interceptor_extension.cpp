@@ -52,7 +52,7 @@ namespace extensions {
 					if(classTy->getNodeType() == core::NT_RefType) {
 						classTy = classTy.as<core::RefTypePtr>()->getElementType();
 					}
-					return	convFact.getIRBuilder().zero(classTy);
+					return	convFact.getIRBuilder().getZero(classTy);
 				}
 			}
 		}
@@ -166,6 +166,35 @@ namespace extensions {
 		}
         return nullptr;
 	}
-}
-}
-}
+    core::TypePtr InterceptorPlugin::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
+
+		if (llvm::isa<clang::TypedefDecl>(decl)){
+			if (getInterceptor().isIntercepted(decl->getQualifiedNameAsString())) {
+
+				auto innerType = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
+
+				core::IRBuilder builder (innerType->getNodeManager());
+				
+				if (!innerType.isa<core::GenericTypePtr>())
+					return nullptr;
+
+				// if is a typedef which ends pointing to an annonymous struct, lets save the effort and 
+				// return a generic opaque type
+				auto tmp = convFact.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
+				core::StructTypePtr structTy = tmp.isa<core::StructTypePtr>();
+				//if (structTy && structTy->getName()->getValue().substr(0,5) == "_anon"){
+				if (structTy && structTy->getName()->getValue()== ""){
+					auto name = decl->getQualifiedNameAsString();
+					core::GenericTypePtr gen = builder.genericType(name);
+					convFact.getHeaderTagger().addHeaderForDecl(gen, decl);
+					return gen;
+				}
+				return nullptr;
+
+			}
+		}
+		return nullptr;
+	}
+} // extensions 
+} // frontend
+} // insieme

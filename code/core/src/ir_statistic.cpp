@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <cinttypes>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_statistic.h"
@@ -178,12 +180,12 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& st
 
 	// print data
 	out << format("%30s%10s%10s%12s", "NodeType", "Nodes", "Shared", "Ratio") << std::endl;
-	out << "        ---------------------------------------------------------------" << std::endl;
+	out << "        -----------------------------------------------------------------------------------" << std::endl;
 	std::for_each(infos.rbegin(), infos.rend(), [&out](const NodeInfo& cur) {
-		out << format("%30s%10d%10d%12.1f", cur.name , cur.num, cur.used, cur.ratio) << std::endl;
+		out << format("%30s%18"PRIu64"%18"PRIu64"%18.1f", cur.name , cur.num, cur.used, cur.ratio) << std::endl;
 	});
-	out << "        ---------------------------------------------------------------" << std::endl;
-	out << format("%30s%10d%10d%12.1f", "Total", statistics.getNumSharedNodes(), statistics.getNumAddressableNodes(), statistics.getShareRatio()) << std::endl;
+	out << "        -----------------------------------------------------------------------------------" << std::endl;
+	out << format("%30s%18d%18d%12.1f", "Total", statistics.getNumSharedNodes(), statistics.getNumAddressableNodes(), statistics.getShareRatio()) << std::endl;
 	return out;
 }
 

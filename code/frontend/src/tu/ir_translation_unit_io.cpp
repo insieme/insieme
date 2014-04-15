@@ -45,6 +45,7 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/pointer_maps.h"
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 
 namespace insieme {
@@ -52,13 +53,13 @@ namespace frontend {
 namespace tu {
 
 	// the type used for encoding a translation unit
-	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer, IRTranslationUnit::EntryPointList, bool> WrapperType;
+	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer, IRTranslationUnit::EntryPointList, IRTranslationUnit::MetaInfoMap, bool> WrapperType;
 
 	void dump(std::ostream& out, const IRTranslationUnit& unit) {
 		core::NodeManager localMgr(unit.getNodeManager());
 
 		// encode translation unit into an IR expression
-		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getInitializer(), unit.getEntryPoints(), unit.isCXX()));
+		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getInitializer(), unit.getEntryPoints(), unit.getMetaInfos(), unit.isCXX()));
 
 		// dump IR expression
 		core::dump::binary::dumpIR(out, encoded);
@@ -73,7 +74,7 @@ namespace tu {
 		auto values = core::encoder::toValue<WrapperType>(encoded);
 
 		// build resulting translation unit
-		return IRTranslationUnit(manager, std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values), std::get<5>(values));
+		return IRTranslationUnit(manager, std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values), std::get<5>(values), std::get<6>(values));
 	}
 
 

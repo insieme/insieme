@@ -198,6 +198,53 @@ TEST(GraphUtils, CycleDetection) {
 	EXPECT_EQ(3,cycle.size());
 }
 
+TEST(GraphUtils, SCCComputation) {
+
+	// build a dummy graph
+	Graph<int> graph;
+
+	auto res = computeSCCGraph(graph.asBoostGraph());
+	EXPECT_EQ(0,res.getNumVertices()) << res;
+	EXPECT_EQ(0,res.getNumEdges()) << res;
+
+	// add a node pair
+	graph.addEdge(1,2);
+	res = computeSCCGraph(graph.asBoostGraph());
+	EXPECT_EQ(2,res.getNumVertices()) << res;
+	EXPECT_EQ(1,res.getNumEdges()) << res;
+	EXPECT_EQ("({{1},{2}},{({1},{2})})", toString(res));
+
+	// close the cycle
+	graph.addEdge(2,1);
+	res = computeSCCGraph(graph.asBoostGraph());
+	EXPECT_EQ(1,res.getNumVertices()) << res;
+	EXPECT_EQ(0,res.getNumEdges()) << res;
+	EXPECT_EQ("({{1,2}},{})", toString(res));
+
+	// add two more edges
+	graph.addEdge(1,3);
+	graph.addEdge(1,4);
+	res = computeSCCGraph(graph.asBoostGraph());
+	EXPECT_EQ(3,res.getNumVertices()) << res;
+	EXPECT_EQ(2,res.getNumEdges()) << res;
+	EXPECT_EQ("({{1,2},{3},{4}},{({1,2},{3}),({1,2},{4})})", toString(res));
+
+}
+
+TEST(GraphUtils, TopologicalOrder) {
+
+	// build a dummy graph
+	Graph<int> graph;
+
+	EXPECT_EQ("[]",toString(getTopologicalOrder(graph)));
+
+	// add a nodes
+	graph.addEdge(1,2);
+	EXPECT_EQ("[1,2]",toString(getTopologicalOrder(graph)));
+
+	graph.addEdge(2,3);
+	EXPECT_EQ("[1,2,3]",toString(getTopologicalOrder(graph)));
+}
 
 } // end namespace graph
 } // end namespace utils

@@ -663,6 +663,12 @@ namespace backend {
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
+		res[basic.getRefToSrc()] = OP_CONVERTER({
+				std::cerr << " WARNING: this is an unchecked feature" << std::endl;
+			return CONVERT_ARG(0);
+		});
+
+
 		res[basic.getRefToInt()] = OP_CONVERTER({
 				return CONVERT_ARG(0);
 		}
@@ -778,6 +784,18 @@ namespace backend {
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
 
 		res[basic.getArrayRefDistance()] = OP_CONVERTER({
+
+			// add dependency to full type for both operators, need to know the offset for the pointer arithmetics
+			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType()); 
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
+			const TypeInfo& info = GET_TYPE_INFO(elementType); 
+			context.getDependencies().insert(info.definition);
+
+			elementType = core::analysis::getReferencedType(call[1]->getType()); 
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
+			const TypeInfo& info2 = GET_TYPE_INFO(elementType); 
+			context.getDependencies().insert(info2.definition);
+
 			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
 		});
 
@@ -824,7 +842,7 @@ namespace backend {
 			context.getDependencies().insert(info.definition);
 
 			// create data vector to fill struct
-			auto values = core::encoder::toValue<vector<core::ExpressionPtr>>(ARG(0));
+			auto values = (core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(ARG(0)));
 			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
 			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
 
@@ -1070,7 +1088,7 @@ namespace backend {
 			}
 
 			// convert init-value in fresh context, 
-			ConversionContext innerContext(context.getConverter());
+			ConversionContext innerContext(context.getConverter(), context.getEntryPoint());
 			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
 
 			// move dependencies to global var-decl fragment

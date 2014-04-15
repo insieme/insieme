@@ -229,7 +229,7 @@ namespace c_ast {
 		 *
 		 * @param fragment the code fragment to be depending on
 		 */
-		void addDependency(const CodeFragmentPtr& fragment);
+		virtual void addDependency(const CodeFragmentPtr& fragment);
 
 		/**
 		 * Adds the fragment pointers present within the given container to the
@@ -272,7 +272,7 @@ namespace c_ast {
 		 *
 		 * @param fragment the code fragment required by this fragment to be present somewhere within the resulting code
 		 */
-		void addRequirement(const CodeFragmentPtr& fragment);
+		virtual void addRequirement(const CodeFragmentPtr& fragment);
 
 		/**
 		 * Adds the fragment pointers present within the given container to the
@@ -308,7 +308,7 @@ namespace c_ast {
 		 *
 		 * @param include the file to be included
 		 */
-		void addInclude(const string& include) {
+		virtual void addInclude(const string& include) {
 			// add include
 			includes.insert(include);
 		}
@@ -468,6 +468,14 @@ namespace c_ast {
 		static CodeFragmentPtr createNew(const SharedCodeFragmentManager& manager, const FragmentSet& dependencies = FragmentSet());
 
 		/**
+		 * Prohibit the utilization of a dummy code fragment as a include fragment.
+		 */
+		virtual void addInclude(const string& include) {
+			assert_fail() << "Unsupported Operation - use an IncludeFragment instead!";
+			abort();
+		}
+
+		/**
 		 * Prints a dummy code fragment (nothing to print).
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
@@ -476,6 +484,40 @@ namespace c_ast {
 		}
 	};
 
+
+	/**
+	 * A special kind of code fragment used for representing header file dependencies. This code fragment will
+	 * only create an include file entry.
+	 */
+	class IncludeFragment : public CodeFragment {
+
+	public:
+
+		/**
+		 * Creates a new include fragment including the given file.
+		 *
+		 * @param include the file to be included.
+		 */
+		IncludeFragment(const string& include) {
+			addInclude(include);
+		}
+
+		/**
+		 * A static factory method creating a new dummy-code fragment based on the given name.
+		 *
+		 * @param manager the node manager managing the life-span of the resulting fragment
+		 * @param include the name of the file to be included
+		 */
+		static CodeFragmentPtr createNew(const SharedCodeFragmentManager& manager, const string& include);
+
+		/**
+		 * Prints a dummy code fragment (nothing to print).
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			// nothing to print
+			return out;
+		}
+	};
 
 } // end namespace c_ast
 } // end namespace backend
