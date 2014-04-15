@@ -67,7 +67,7 @@ endif()
 # -------------------------------------------------------------- find location of utilities
 
 find_program(TIME_EXECUTABLE time)
-if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND") 
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
