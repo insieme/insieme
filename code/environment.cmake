@@ -45,6 +45,8 @@ set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include
 
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
 
+set ( insieme_meta_information_include_dir 	${insieme_code_dir}/meta_information/include )
+
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
@@ -67,7 +69,7 @@ endif()
 # -------------------------------------------------------------- find location of utilities
 
 find_program(TIME_EXECUTABLE time)
-if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND") 
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
