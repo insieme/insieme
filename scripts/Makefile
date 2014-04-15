@@ -27,7 +27,6 @@ LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 SHARK 	:= ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
 KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
-XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
 PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
@@ -153,13 +152,7 @@ ${KOMPEX}: kompex_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh kompex_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## XERCES
-${XERCES}: xerces_install.sh ${GCC}
-	@echo "#### INSTALL XERCES ${XERCES} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh xerces_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## PYTHOHN
+## PYTHON
 ${PYTHON}: python_install.sh ${GCC}
 	@echo "#### INSTALL PYTHON ${PYTHON} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh python_install.sh
@@ -194,4 +187,4 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
-		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}
+		 ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}
