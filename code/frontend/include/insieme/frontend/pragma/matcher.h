@@ -206,7 +206,16 @@ class MatchObject {
             return stringMap[k];
         }
 
+        bool stringValueExists(const std::string& k) {
+            return (stringMap.find(k) != stringMap.end());
+        }
+
+        bool empty() {
+            return (varList.empty() && exprList.empty() && stringMap.empty());
+        }
+
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
+        void print() const;
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;

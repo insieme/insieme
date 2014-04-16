@@ -44,7 +44,6 @@
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
@@ -200,23 +199,8 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-	// build the wrapper for single statements
-	if ( retStmt.isSingleStmt() ) {
-
-		core::StatementPtr&& irStmt = retStmt.getSingleStmt();
-		assert(irStmt);
-
-		// Deal with mpi pragmas
-		mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
-
-		// Deal with transfromation pragmas
-		pragma::attachPragma(irStmt,stmt,convFact);
-
-
-		// Deal with omp pragmas
-		if ( irStmt->getAnnotations().empty() )
-            retStmt = omp::attachOmpAnnotation(irStmt, stmt, convFact);
-	}
+	// Deal with transfromation pragmas
+	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
     // call frontend plugin post visitors
     for(auto plugin : convFact.getConversionSetup().getPlugins()) {

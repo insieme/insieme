@@ -51,7 +51,6 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/cilk/cilk_pragma.h"
 #include "insieme/frontend/mpi/mpi_pragma.h"
 #include "insieme/frontend/mpi/mpi_sema.h"
@@ -138,9 +137,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
 
-	// register 'omp' pragmas
-	omp::registerPragmaHandlers( mClang.getPreprocessor() );
-
 	//register 'cilk' pragmas
 	cilk::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -175,6 +171,16 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	}
 
 	parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
+
+    // all pragmas should now have either a decl or a stmt attached.
+    // it can be the case that a pragma is at the end of a file
+    // and therefore not attached to anything. Find these cases
+    // and attach the pragmas to the translation unit declaration.
+    for(auto cur : mPragmaList) {
+        if(!cur->isStatement() && !cur->isDecl()) {
+            cur->setDecl(getCompiler().getASTContext().getTranslationUnitDecl());
+        }
+    }
 
 	if(mClang.getDiagnostics().hasErrorOccurred()) {
 		// errors are always fatal
