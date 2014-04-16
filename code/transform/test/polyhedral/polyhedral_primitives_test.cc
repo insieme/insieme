@@ -111,6 +111,7 @@ TEST(Primitive, AddIterator) {
 	
 	NodeManager mgr;
 	Scop&& scop = getScop( mgr );
+	std::cout << scop << std::endl;
 
 	size_t iterNum = scop.getIterationVector().getIteratorNum();
 	size_t paramNum = scop.getIterationVector().getParameterNum();

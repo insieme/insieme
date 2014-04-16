@@ -66,7 +66,7 @@
 
 #define LOG_EXPR_CONVERSION(parentExpr, expr) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         ***************************"; \
+        VLOG(1) << "******      EXPR  [class:'"<< parentExpr->getStmtClassName() <<"'] ******"; \
         if( VLOG_IS_ON(2) ) { \
             VLOG(2) << "Dump of clang expression: "; \
             parentExpr->dump(); \
@@ -75,15 +75,18 @@
                     utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); "; \
         VLOG(1) << "Converted into IR expression: "; \
         if(expr) { \
-            VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
+            VLOG(1) << "\n" << dumpOneLine(expr) <<  "\n of type:( " << *expr->getType() << " )"; \
         } \
-        VLOG(1) << "****************************************************************************************"; \
+		else{ \
+            VLOG(1) << "\tno expression"; \
+		} \
+        VLOG(1) << "****** DONE EXPR [class:'"<< parentExpr->getStmtClassName() <<"'] ******"; \
     } )
 
 
 #define LOG_STMT_CONVERSION(parentStmt, stmt) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************"; \
+        VLOG(1) << "******      STMT [class:'"<< parentStmt->getStmtClassName() <<"'] ******"; \
         if( VLOG_IS_ON(2) ) { \
             VLOG(2) << "Dump of clang statement:"; \
             parentStmt->dump(convFact.getSourceManager()); \
@@ -91,8 +94,8 @@
         VLOG(1) << "-> at location: (" \
                 << utils::location(parentStmt->getLocStart(), convFact.getSourceManager()) << "); "; \
         VLOG(1) << "Converted 'statement' into IR stmt: "; \
-        VLOG(1) << "\t" << stmt << ""; \
-        VLOG(1) << "****************************************************************************************"; \
+        VLOG(1) << stmt; \
+        VLOG(1) << "****** DONE STMT [class:'"<< parentStmt->getStmtClassName() <<"'] ******"; \
     } )
 
 

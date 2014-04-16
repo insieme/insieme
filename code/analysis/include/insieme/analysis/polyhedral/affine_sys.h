@@ -44,11 +44,13 @@ namespace insieme { namespace analysis { namespace polyhedral {
 
 using insieme::utils::Matrix;
 
-/**************************************************************************************************
- * AffineSystem: represents a set of affine functions. The invariant is that every affine function
+/**
+ * AffineSystem represents a set of affine functions. The invariant is that every affine function
  * composing an affine system refers to the same iteration vector. Therefore changes to the
  * iteration vector owned by this affine system results in changes to all the affine functions. 
- *************************************************************************************************/
+ *
+ * Note that the implementation of the class can be found in analysis/src/polyhedral/polyhedral.cpp .
+ */
 class AffineSystem : public utils::Printable, boost::noncopyable {
 	
 	typedef std::unique_ptr<AffineFunction> AffineFunctionPtr;
@@ -91,11 +93,13 @@ public:
 	// Creates an empty affine system based on the iteration vector itervec
 	AffineSystem(const IterationVector& iterVec) : 	iterVec(iterVec) { }	
 
-	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 
+	/// Copy constructor, copying the affine functions as well as the iteration vector
+	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) {
 		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
 		assert( other.funcs.size() == funcs.size() );
 	}
 
+	/// Copy constructor with new user-provided iteration vector
 	AffineSystem(const IterationVector& iterVec, const AffineSystem& other) : 
 		iterVec(iterVec) 
 	{
@@ -103,13 +107,23 @@ public:
 		assert( other.funcs.size() == funcs.size() );
 	}
 
+	/**
+	 * @brief AffineSystem constructor using an iteration vector and a matrix of coefficients
+	 * @param iterVec
+	 * @param coeffs
+	 */
 	AffineSystem(const IterationVector& iterVec, const utils::Matrix<int>& coeffs) : 
 		iterVec(iterVec) 
 	{
 		readFromMatrix(coeffs); 
 	}
 
-	AffineSystem(const IterationVector& iterVec, const std::vector<std::vector<int>>& coeffs) : 
+	/**
+	 * @brief AffineSystem constructor using an iteration vector and a matrix of coefficients
+	 * @param iterVec
+	 * @param coeffs
+	 */
+	AffineSystem(const IterationVector& iterVec, const std::vector<std::vector<int>>& coeffs) :
 		iterVec(iterVec) 
 	{
 		readFromMatrix( utils::Matrix<int>(coeffs) ); 

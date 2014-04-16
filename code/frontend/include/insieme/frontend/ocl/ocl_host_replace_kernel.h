@@ -134,11 +134,8 @@ public:
 class IclKernelReplacer : public KernelReplacer {
 public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
-	virtual core::ExpressionPtr handleArgument(const core::TypePtr& argTy, const core::TypePtr& memberTy, const core::ExpressionPtr& tupleMemberAccess,
-			core::StatementList& body);
 	virtual core::NodePtr getTransformedProgram();
 	virtual void loadKernelCode(core::pattern::TreePatternPtr);
-	virtual void collectArguments();
 	virtual void inlineKernelCode();
 };
 

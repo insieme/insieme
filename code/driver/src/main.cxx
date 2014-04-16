@@ -273,7 +273,9 @@ namespace {
 				fun = fun.getParentAddress();
 			}
 			if (fun->getNodeType() == core::NT_LambdaExpr) {
-				LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun) << std::endl;
+				LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS | 
+																   PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+																   PrettyPrinter::PRINT_CASTS) << std::endl;
 			}
 
 	//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());

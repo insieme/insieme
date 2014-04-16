@@ -46,7 +46,9 @@
 #include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/attributes.h"
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"

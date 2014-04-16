@@ -41,6 +41,7 @@
 #include <regex>
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/logging.h"
 #include "insieme/utils/config.h"
 
 #include<boost/tokenizer.hpp>
@@ -70,12 +71,24 @@ namespace integration {
 					outfile= " -o "+setup.outputFile;
 				}
 
-				// if it is a mock-run do nothing
-				if (setup.mockRun) {
-					return TestResult(true,0,0,"","",cmd + outfile);
+				//setup possible environment vars
+				std::stringstream env;
+				{
+					//set LD_LIBRARY_PATH
+					env << "LD_LIBRARY_PATH=";
+					for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+						env << ldPath << ":";
+					}
+					env<< "${LD_LIBRARY_PATH} ";
 				}
 
-				string realCmd=string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				// if it is a mock-run do nothing
+				if (setup.mockRun) {
+					return TestResult(true,0,0,"","",env.str() + cmd + outfile);
+				}
+
+				//environment must be set BEFORE executables!
+				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//TODO enable perf support
 				//if(setup.enablePerf)
@@ -222,6 +235,87 @@ namespace integration {
 					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
+			
+			TestStep createInsiemeccCompStep(const string& name, Language l) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
+					std::stringstream cmd;
+					TestSetup set=setup;
+
+					// start with executable
+					cmd<<props["compiler"];
+
+					// add include directories
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
+
+					// add external lib dirs
+					for(const auto& cur : test.getLibDirs()) {
+						cmd <<" -L"<<cur.string();
+					}
+
+					// add external libs
+					for(const auto& cur : test.getLibNames()) {
+						cmd <<" -l"<<cur;
+					}
+
+					// add input files
+					for(const auto& cur : test.getFiles()) {
+						cmd << " " << cur.string();
+					}
+
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					}
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+					});
+
+					//append intercept patterns
+					for(const auto& cur : test.getInterceptedNameSpaces()) {
+						cmd << " --intercept " << cur;
+					}
+					//append intercepted header file dirs
+					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
+						cmd << " --intercept-include " << cur.string();
+					}
+
+					// set output file, stdOutFile and stdErrFile
+					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc";
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc.comp.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc.comp.err.out";
+
+					// run it
+					return runCommand(set, props, cmd.str());
+				},std::set<std::string>(),COMPILE);
+			}
+
+			TestStep createInsiemeccRunStep(const string& name, const Dependencies& deps = Dependencies()) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					std::stringstream cmd;
+					TestSetup set=setup;
+					auto props = test.getPropertiesFor(name);
+
+					// start with executable
+					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc";
+
+					// add arguments
+					cmd << " " << props["executionFlags"];
+
+					// set output files
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc.err.out";
+
+					// run it
+					return runCommand(set, props, cmd.str());
+				}, deps,RUN);
+			}
 
 
 			TestStep createMainSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
@@ -261,6 +355,15 @@ namespace integration {
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
 						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
 					});
+
+					//append intercept patterns
+					for(const auto& cur : test.getInterceptedNameSpaces()) {
+						cmd << " --intercept " << cur;
+					}
+					//append intercepted header file dirs
+					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
+						cmd << " --intercept-include " << cur.string();
+					}
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".sema.comp.err.out";
@@ -304,6 +407,15 @@ namespace integration {
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
 						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
 					});
+
+					//append intercept patterns
+					for(const auto& cur : test.getInterceptedNameSpaces()) {
+						cmd << " --intercept " << cur;
+					}
+					//append intercepted header file dirs
+					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
+						cmd << " --intercept-include " << cur.string();
+					}
 
 					// set output file, stdOut file and stdErr file
 					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
@@ -377,6 +489,7 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+
 					// start with executable
 					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
 
@@ -420,6 +533,33 @@ namespace integration {
 					return runCommand(set, props, cmd.str());
 				}, deps,CHECK);
 			}
+			
+			TestStep createInsiemeccCheckStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
+					std::stringstream cmd;
+					TestSetup set=setup;
+
+					// define comparison script
+					cmd << props["sortdiff"];
+
+					// start with executable
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref.out";
+
+					// pipe result to output file
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc.out";
+
+					// add awk pattern
+					cmd << " "<< props["outputAwk"];
+
+					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.out";
+					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
+
+					// run it
+					return runCommand(set, props, cmd.str());
+				}, deps,CHECK);
+			}
 
 
 		}
@@ -440,8 +580,14 @@ namespace integration {
 			add(createRefRunStep("ref_c_execute", { "ref_c_compile" }));
 			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
+			add(createInsiemeccCompStep("insiemecc_c_compile", C));
+			add(createInsiemeccCompStep("insiemecc_c++_compile", CPP));
+
+			add(createInsiemeccRunStep("insiemecc_c_execute", { "insiemecc_c_compile" }));
+			add(createInsiemeccRunStep("insiemecc_c++_execute", { "insiemecc_c++_compile" }));
+
 			add(createMainSemaStep("main_c_sema", C));
-			add(createMainSemaStep("main_cxx_sema", CPP));
+			add(createMainSemaStep("main_c++_sema", CPP));
 
 			add(createMainConversionStep("main_seq_convert", Sequential, C));
 			add(createMainConversionStep("main_run_convert", Runtime, C));
@@ -464,8 +610,11 @@ namespace integration {
 			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
 			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
 
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
-			add(createMainCheckStep("main_seq_c++_check", Sequential, C, { "main_seq_c++_execute", "ref_c++_execute" }));
+			
+			add(createInsiemeccCheckStep("insiemecc_c_check", C, { "insiemecc_c_execute", "ref_c_execute" }));
+			add(createInsiemeccCheckStep("insiemecc_c++_check", CPP, { "insiemecc_c++_execute", "ref_c++_execute" }));
 
 			return list;
 		}
@@ -506,14 +655,21 @@ namespace integration {
 
 	namespace {
 
-		void scheduleStep(const TestStep& step, vector<TestStep>& res) {
+		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test) {
 
 			// check whether test is already present
 			if (contains(res, step)) return;
 
+			auto props = test.getProperties();
+
 			// check that all dependencies are present
 			for(const auto& cur : step.getDependencies()) {
-				scheduleStep(getStepByName(cur), res);
+				string excludes=props["excludeSteps"];
+				if(excludes.find(step.getName()) != std::string::npos) {
+					LOG(WARNING) << test.getName() << " has step with a dependency on an excluded step (" << step.getName() << ") -- fix test config!" << std::endl;
+				}
+					
+				scheduleStep(getStepByName(cur), res, test);
 			}
 
 			// append step to schedule
@@ -523,10 +679,10 @@ namespace integration {
 	}
 
 
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps) {
+	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
 		vector<TestStep> res;
 		for(const auto& cur : steps) {
-			scheduleStep(cur, res);
+			scheduleStep(cur, res, test);
 		}
 		return res;
 	}

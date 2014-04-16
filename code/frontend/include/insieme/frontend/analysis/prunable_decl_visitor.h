@@ -238,7 +238,7 @@ class PrunableDeclVisitor{
 			case clang::Decl::Label:    // clang 3.4
 			case clang::Decl::Empty:	// clang 3.4
 			case clang::Decl::TypeAliasTemplate:	// clang 3.4   // TODO: check if needed
-
+			case clang::Decl::StaticAssert: // TODO: C++11 ->this needs to be handled in a declstmt, to produce a call
 				break;
 
 			default:

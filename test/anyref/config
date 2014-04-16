@@ -1,1 +1,2 @@
-excludeSteps="ref_c++_execute","ref_c++_compile","main_cxx_sema"
+excludeSteps="ref_c++_execute","ref_c++_compile","main_c++_sema","main_seq_c++_convert","main_run_c++_convert","main_seq_c++_compile","main_run_c++_compile","main_seq_c++_execute","main_run_c++_execute","insiemecc_c++_compile","main_seq_c++_check","main_run_c++_check","insiemecc_c++_check","insiemecc_c++_execute","insiemecc_c++_check"
+

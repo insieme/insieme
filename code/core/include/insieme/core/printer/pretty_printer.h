@@ -71,7 +71,8 @@ struct PrettyPrinter {
 		NO_LET_BOUND_FUNCTIONS 	= 1<<12,
 		PRINT_LITERAL_TYPES		= 1<<13,
 		USE_COLOR				= 1<<14,
-		PRINT_DERIVED_IMPL 		= 1<<15
+		PRINT_DERIVED_IMPL 		= 1<<15,
+		JUST_OUTHERMOST_SCOPE	= 1<<16
 	};
 
 	/**

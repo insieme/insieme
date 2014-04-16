@@ -148,9 +148,8 @@ namespace cmd {
 		frontend::ConversionJob job(InputFiles, IncludePaths);
 
 		// add intercepts
-		for (auto i : Interceptions) job.setInterception(i);
-		
-		for (auto i : InterceptionHeaderDirs) job.addInterceptedHeaderDir(i);
+		job.addInterceptedNameSpacePatterns(Interceptions);
+		job.setInterceptedHeaderDirs(InterceptionHeaderDirs);
 
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);
@@ -169,6 +168,7 @@ namespace cmd {
 		// forward flags
 		job.setOption(frontend::ConversionJob::OpenMP, OpenMP);
 		job.setOption(frontend::ConversionJob::OpenCL, OpenCL);
+		job.setOption(frontend::ConversionJob::lib_icl, lib_icl);
 		job.setOption(frontend::ConversionJob::Cilk, Cilk);
 		job.setOption(frontend::ConversionJob::WinCrossCompile, WinCrossCompile);
 		job.setOption(frontend::ConversionJob::GemCrossCompile, GemCrossCompile);

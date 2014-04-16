@@ -58,10 +58,10 @@ namespace utils {
 
 class Interceptor {
 public:
-	Interceptor(const std::set<std::string>& interceptSet)
+	Interceptor(const std::set<std::string>& patterns)
 		: // by default intercept std:: and __gnu_cxx:: namespaces
 		  // __gnu_cxx is needed for the iterator of std::vector for example
-		  toIntercept(interceptSet), 
+		  toIntercept(patterns),
 	
 		  //joins all the strings in the toIntercept-set to one big regEx
 		  rx("("+toString(join(")|(", toIntercept))+")")

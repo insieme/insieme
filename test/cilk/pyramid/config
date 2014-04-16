@@ -1,4 +1,5 @@
 use_c[ref_c_compile]=0
 use_gnu90[ref_c_compile]=1
-excludeSteps="ref_c++_execute","ref_c++_compile","main_cxx_sema"
+excludeSteps=${excludeSteps},"ref_c++_execute","ref_c++_compile","main_c++_sema","main_run_c++_execute","main_run_c++_check","main_seq_c++_check","main_seq_c++_convert","main_seq_c++_execute","main_seq_c++_compile","main_run_c++_convert","main_run_c++_compile","insiemecc_c++_compile","insiemecc_c++_execute","insiemecc_c++_check"
+
 

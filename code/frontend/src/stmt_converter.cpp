@@ -832,7 +832,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitAsmStmt(clang::AsmStmt* as
 //							  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-	frontend_assert(false && "this code looks malform and no used");
+	//frontend_assert(false && "this code looks malform and no used") << stmt->getStmtClassName(); -- guess what, it is used!
 	std::for_each(stmt->child_begin(), stmt->child_end(), [ this ] (clang::Stmt* stmt) {
 			this->Visit(stmt);
 	});

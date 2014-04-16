@@ -80,14 +80,13 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_datarange.c").execute(manager);
 	size_t cnt = 0, cntLoopAnnot = 0;
 
-
 	auto lookForAnnot = makeLambdaVisitor([&](const NodePtr& node) {
-/*		if(node->getNodeType() == NT_CompoundStmt)
-			std::cout << "\ncompound " << node->hasAnnotation(DataRangeAnnotation::KEY) << " " << node << std::endl;
-*/
+	//	if(node->getNodeType() == NT_CompoundStmt)
+	//		std::cout << "\ncompound " << node->hasAnnotation(DataRangeAnnotation::KEY) << " " << node << std::endl;
+
 		if(node->hasAnnotation(DataRangeAnnotation::KEY)) {
 			++cnt;
-//			std::cout << node << std::endl << *node->getAnnotation(DataRangeAnnotation::KEY) << std::endl;
+	//		std::cout << node << std::endl << *node->getAnnotation(DataRangeAnnotation::KEY) << std::endl;
 		}
 
 		if(node->hasAnnotation(LoopAnnotation::KEY)) {
@@ -105,6 +104,4 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	printer::PrettyPrinter pp(program, printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-
-
 }

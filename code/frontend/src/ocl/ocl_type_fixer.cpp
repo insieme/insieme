@@ -123,12 +123,12 @@ void TypeFixer::removeClVars() {
 
 }
 
-void TypeFixer::fixDecls(NodeAddress pA, std::string typeString) {
+void TypeFixer::fixDecls(NodeAddress pA, TypePtr type) {
 	NodeManager& mgr = pA->getNodeManager();
 	IRBuilder builder(mgr);
 
 	TreePatternPtr decls = irp::declarationStmt(var("variable", pattern::any), var("init",
-			irp::callExpr(aT(irp::genericType(typeString)), pattern::any, *pattern::any)));
+			irp::callExpr(aT(pattern::atom(type)), pattern::any, *pattern::any)));
 
 	irp::matchAllPairs(decls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& decl) {
 
@@ -143,7 +143,7 @@ void TypeFixer::fixDecls(NodeAddress pA, std::string typeString) {
 }
 
 
-TypeFixer::TypeFixer(NodePtr toTransform) : prog(toTransform) {
+TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toTransform) {
 	// replace some OpenCL type variables with int<4>.
 	// Variables will be useless, but the semantics will be correct
 	NodeManager& mgr = prog->getNodeManager();
@@ -151,18 +151,23 @@ TypeFixer::TypeFixer(NodePtr toTransform) : prog(toTransform) {
 	const lang::BasicGenerator& gen = builder.getLangBasic();
 	TypePtr int4 = gen.getInt4();
 
-	NodeMap replacements;
+	NodeMap ptrReplacements;
 
 	// replace cl_program
 	TypePtr cl_program = builder.genericType("_cl_program");
-	replacements[cl_program] = int4;
-	prog = transform::replaceAll(mgr, prog, replacements, false);
+	ptrReplacements[cl_program] = int4;
+	prog = transform::replaceAll(mgr, prog, ptrReplacements, false);
 
 	NodeAddress pA(prog);
-	fixDecls(pA, "_cl_kernel");
-	fixDecls(pA, "_cl_mem");
+	for(TypePtr typeTofix : types)
+		fixDecls(pA, typeTofix);
 
-	prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
+//for(std::pair<NodePtr, NodePtr> cur : this->replacements) {
+//	std::cout << std::endl;
+//	dumpPretty(cur.first);
+//}
+	if(!this->replacements.empty())
+		prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
 
 	VariableMap emptyMap;
 	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, emptyMap, false);

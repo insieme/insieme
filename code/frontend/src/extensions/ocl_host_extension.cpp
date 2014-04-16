@@ -65,6 +65,9 @@ OclHostPlugin::OclHostPlugin(const std::vector<boost::filesystem::path>& include
 }
 
 core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
 	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
@@ -74,13 +77,10 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::OclSimpleFunHandler osfh;
 	root = osfh.mapElement(0, root);
 
-	ocl::TypeFixer otf(root);
+	std::vector<TypePtr> typesToFix = {builder.genericType("_cl_kernel"), builder.genericType("_cl_mem")};
+	ocl::TypeFixer otf(root, typesToFix);
 	root = otf.getTransformedProg();
 
-	VariableMap nada;
-	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
-
-	core::IRBuilder builder(prog->getNodeManager());
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
@@ -104,6 +104,7 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 
 	if(iclRunKernel == NULL)
 		iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+				var("derefKernel", irp::callExpr(pattern::any, pattern::atom(gen.getRefDeref()), pattern::single(var("kernel", pattern::any)))) <<
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
@@ -121,6 +122,9 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 	NodeMap replacements;
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
+		// remove deref from kernel
+		replacements[runKernel["derefKernel"].getValue()] = runKernel["kernel"].getValue();
+		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
 			if(match) {
@@ -128,7 +132,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 			}
 		}
 	});
-
 	if(!replacements.empty())
 		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
@@ -136,19 +139,32 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 }
 
 core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
 	ocl::IclKernelReplacer kr(root, includeDirs);
 	root = kr.getTransformedProgram();
 
-	core::IRBuilder builder(prog->getNodeManager());
+	ocl::OclSimpleFunHandler osfh;
+	root = osfh.mapElement(0, root);
+
+	TypePtr iclKernelTy = builder.structType(builder.stringValue("_icl_kernel"), toVector(
+			builder.namedType("kernel", builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))),
+			builder.namedType("dev", builder.refType(builder.arrayType(br.getIclDeviceType())))));
+
+
+	std::vector<TypePtr> typesToFix = {iclKernelTy, br.getIclBufferType()};
+	ocl::TypeFixer otf(root, typesToFix);
+	root = otf.getTransformedProg();
+
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-
 //std::cout << printer::PrettyPrinter(root) << std::endl;
-//	prog = builder.program(list);
+	prog = builder.program(list);
 
 	return prog;
 }

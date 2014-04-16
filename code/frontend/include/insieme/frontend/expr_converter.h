@@ -156,9 +156,7 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 				else if (core::analysis::isConstCppRef(funcParamTy)) {
 					// Note, const refs extend lifetime of values, therefore materialize the value into a ref
 					if (!arg->getType().isa<core::RefTypePtr>()) {
-						arg =  builder.callExpr(builder.refType(arg->getType()),
-												mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(),
-												arg);
+						arg = builder.refVar(arg);
 					}
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
 				}
