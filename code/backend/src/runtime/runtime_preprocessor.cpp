@@ -508,6 +508,10 @@ namespace runtime {
                         if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
 						    return wrapWithInstrumentationRegion(ptr.as<core::CallExprPtr>()->getArgument(0), builder.callExpr(builder.refType(ext.workItemType), ext.task, job));
 
+                        // handle region
+                        if(call->hasAnnotation(annotations::OmpRegionAnnotation::KEY))
+						    return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
+
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 					}
 

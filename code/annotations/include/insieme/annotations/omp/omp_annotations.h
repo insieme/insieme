@@ -48,6 +48,27 @@ enum Parameter { ENERGY, POWER, TIME };
 
 typedef std::pair<core::ExpressionPtr, core::ExpressionPtr> RangeExpr;
 
+class OmpRegionAnnotation : public NodeAnnotation {
+
+public:
+	static const string NAME;
+    static const utils::StringKey<OmpRegionAnnotation> KEY;
+
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
+
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+
+    static void attach(const NodePtr& node);
+};
+
+typedef std::shared_ptr<OmpRegionAnnotation> OmpRegionAnnotationPtr;
+
 class OmpObjectiveAnnotation : public NodeAnnotation {
     std::map<enum Parameter, core::ExpressionPtr> weights;
     std::map<enum Parameter, RangeExpr> constraints;
@@ -87,5 +108,6 @@ typedef std::shared_ptr<OmpObjectiveAnnotation> OmpObjectiveAnnotationPtr;
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpObjectiveAnnotation& lAnnot);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpRegionAnnotation& lAnnot);
 
 } // end namespace std

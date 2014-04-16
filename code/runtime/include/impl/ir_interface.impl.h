@@ -119,6 +119,14 @@ irt_joinable* irt_task(const irt_parallel_job* job) {
     return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl_id, job->args);
 }
 
+void irt_region(const irt_parallel_job* job) {
+	irt_worker* target = irt_worker_get_current();
+    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0]));
+	irt_work_item* wis = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
+    irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0].implementation(wis);
+    free(wis);
+}
+
 void irt_merge(irt_joinable* joinable) {
 	if(joinable == NULL) return;
 	if(IRT_IS_WG_PTR(joinable)) {

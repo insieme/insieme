@@ -84,6 +84,11 @@ irt_joinable* irt_parallel(const irt_parallel_job* job);
  */
 irt_joinable* irt_task(const irt_parallel_job* job);
 
+/** From a job description structure, generates a single work item to perform the job,
+ *  and immediately executes it. 
+ */
+void irt_region(const irt_parallel_job* job);
+
 /** Waits until a job launched by irt_parallel is finished.
  */
 void irt_merge(irt_joinable* joinable);

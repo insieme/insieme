@@ -148,6 +148,7 @@ namespace runtime {
 
 			table["irt_parallel"] 					= "ir_interface.h";
 			table["irt_task"] 					    = "ir_interface.h";
+			table["irt_region"] 				    = "ir_interface.h";
 			table["irt_merge"] 						= "ir_interface.h";
 			table["irt_pfor"]						= "ir_interface.h";
 

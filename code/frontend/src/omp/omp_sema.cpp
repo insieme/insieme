@@ -867,7 +867,9 @@ protected:
 		if( !reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasTarget() && !reg->hasObjective() )
 			return stmtNode;
 
-		/* else, region as parallel with one thread */
+		/* else, region as task
+         * Backend will deal with it differently cause of the annotation
+         */
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
 		auto paramNode = implementParamClause(newStmtNode, reg);
@@ -880,8 +882,12 @@ protected:
         }
 
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
-		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
-		resultStmts.push_back(mergeCall);
+
+        using namespace insieme::annotations;
+        OmpRegionAnnotationPtr ann = std::make_shared<OmpRegionAnnotation>();
+        parallelCall->addAnnotation(ann);
+
+		resultStmts.push_back(parallelCall);
 
 		CompoundStmtPtr res = build.compoundStmt(resultStmts);
 

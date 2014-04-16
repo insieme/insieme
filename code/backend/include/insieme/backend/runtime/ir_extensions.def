@@ -88,6 +88,7 @@ TYPE(jobType, 	"irt_parallel_job")
 LITERAL(createJob, 	"createJob", 	"(uint<8>,uint<8>,uint<8>,irt_wi_implementation_id,irt_lwdi<'a>)->irt_parallel_job")
 LITERAL(parallel, 	"irt_parallel", "(irt_parallel_job)->ref<irt_wi>")
 LITERAL(task, 	    "irt_task", "(irt_parallel_job)->ref<irt_wi>")
+LITERAL(region, 	"irt_region", "(irt_parallel_job)->ref<irt_wi>")
 
 LITERAL(pfor, 		"irt_pfor", 	"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
 LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")

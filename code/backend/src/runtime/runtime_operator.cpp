@@ -170,6 +170,11 @@ namespace runtime {
 		table[ext.task] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_task");
 			return c_ast::call(C_NODE_MANAGER->create("irt_task"), c_ast::ref(CONVERT_ARG(0)));
+        });
+
+		table[ext.region] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_region");
+			return c_ast::call(C_NODE_MANAGER->create("irt_region"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		table[ext.merge] = OP_CONVERTER({
