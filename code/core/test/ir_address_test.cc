@@ -43,6 +43,8 @@
 namespace insieme {
 namespace core {
 
+typedef NodeAddress::Path Path;
+
 TEST(NodeAddressTest, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

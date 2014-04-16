@@ -468,19 +468,11 @@ namespace detail {
 	struct lambda_visitor_trait_helper;
 
 	/**
-	 * A specialization handling lambdas dealing with node pointers.
+	 * A specialization handling lambdas dealing with node pointers, addresses and other stuff.
 	 */
-	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
-	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Pointer<const T>&) const, Lambda, R (C2::*)( const Pointer<const T>&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Pointer, T, Filter, P...> visitorType;
-	};
-
-	/**
-	 * A specialization handling lambdas dealing with node addresses.
-	 */
-	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
-	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Address<const T>&) const, Lambda, R (C2::*)( const Address<const T>&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Address, T, Filter, P...> visitorType;
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P, template<typename T> class Ptr>
+	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Ptr<const T>&) const, Lambda, R (C2::*)( const Ptr<const T>&, P ... ) const> {
+		typedef LambdaVisitor<Lambda, R, Ptr, T, Filter, P...> visitorType;
 	};
 
 	/**

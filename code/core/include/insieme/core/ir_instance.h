@@ -43,12 +43,16 @@
 #include "insieme/core/ir_node_traits.h"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir.h"
+
+#include "insieme/utils/hash_utils.h"
 
 namespace insieme {
 namespace core {
 
 	// ---------------------------------- forward declarations --------------------------------------------
 
+	class IteratorValue;
 	template<typename T> class Instance;
 
 	/**
@@ -64,23 +68,153 @@ namespace core {
 
 	// ----------------------------------------------------------------------------------------------------
 
+	class IteratorValue :
+			public utils::Printable,
+			public utils::HashableImmutableData<IteratorValue>,
+			public boost::equality_comparable<IteratorValue>,
+			public boost::less_than_comparable<IteratorValue>
+	{
+
+		int value;
+
+	public:
+
+		const static IteratorValue STAR;
+
+		IteratorValue(int value = 0)
+			: utils::HashableImmutableData<IteratorValue>(value), value(value) {}
+
+
+		bool operator==(const IteratorValue& other) const {
+			return value == other.value;
+		}
+
+		bool operator<(const IteratorValue& other) const {
+			// the order here is 0, 1, 2, ... * ... -2, -1
+
+			// same sign comparison
+			if (value >= 0 && other.value >= 0) return value < other.value;
+			if (value < 0 && other.value < 0) return value < other.value;
+
+			// different signs
+			return (value >= 0 && other.value < 0);
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			if (*this == STAR) return out << "*";
+			return out << value;
+		}
+	};
+
+	/**
+	 * A template specialization for node path elements handling iterator values.
+	 */
+	template<>
+	class NodePathElement<IteratorValue> : public NodePathElementBase<NodePathElement<IteratorValue>> {
+
+		/**
+		 * The counter for the referenced iteration.
+		 */
+		IteratorValue iter;
+
+	public:
+
+		/**
+		 * Creates a new path element using the given values.
+		 *
+		 * @param ptr a pointer to the node addressed by this element path
+		 * @param index the index of the addressed node within its parent node.
+		 * @param parent a pointer to the path element referencing the parent node - null if this element is referencing the root node.
+		 */
+		NodePathElement(const NodePtr& ptr, std::size_t index, const IteratorValue& iter, const NodePathElement<IteratorValue>* parent)
+			: NodePathElementBase<NodePathElement<IteratorValue>>(ptr, index, parent, computeHash(ptr,index,iter,parent)), iter(iter) {
+			assert_true(iter == IteratorValue(0) || isIterable()) << "Only loop body may have iteration values != 0";
+		}
+
+		/**
+		 * Obtains the iterator value attached to this element.
+		 */
+		const IteratorValue& getValue() const {
+			return iter;
+		}
+
+		/**
+		 * Compares the annotated iterator value.
+		 */
+		bool isValueLessThan(const IteratorValue& value) const {
+			return iter < value;
+		}
+
+		/**
+		 * Implements the printTo function as required by the base type. Note, it is not virtual,
+		 * static dispatching is utilized.
+		 */
+		std::ostream& printToInternal(std::ostream& out) const {
+			if (this->parent) {
+				out << *(this->parent) << "-";
+			}
+			out << this->index;
+			if (isIterable()) {
+				out << "/" << iter;
+			}
+			return out;
+		}
+
+		/**
+		 * Computes a hash code for the given combination of values.
+		 *
+		 * @param ptr the node pointer to be pointing to
+		 * @param index the index of the node within its parent's child list
+		 * @param iter the iteration counter
+		 * @param the parent of the given path element.
+		 * @return a proper hash value for a node based on the given values
+		 */
+		static std::size_t computeHash(const NodePtr& ptr, std::size_t index, const IteratorValue& iter, const NodePathElement<IteratorValue>* const parent) {
+			std::size_t seed = boost::hash_value(index);
+			boost::hash_combine(seed, *ptr);
+			boost::hash_combine(seed, ((parent)?parent->hash:0));
+			boost::hash_combine(seed, iter);
+			return seed;
+		}
+
+	private:
+
+		/**
+		 * Checks whether the addressed node is iterable.
+		 */
+		bool isIterable() const {
+			// the element must reference the body of a loop
+			if (!parent) return false;
+			if (!this->ptr.isa<CompoundStmtPtr>()) return false;
+			if (auto stmt = this->parent->ptr.isa<ForStmtPtr>()) {
+				return stmt->getBody() == this->ptr;
+			}
+			if (auto stmt = this->parent->ptr.isa<WhileStmtPtr>()) {
+				return stmt->getBody() == this->ptr;
+			}
+			return false;
+		}
+	};
+
+	// ----------------------------------------------------------------------------------------------------
+
 	// forward declaration of cast functors
 	struct StaticInstanceCast;
 	struct DynamicInstanceCast;
 
+	// a simple type trait to filter IR instance address types
+	template<typename P> struct is_ir_instance : public boost::false_type {};
+	template<typename T> struct is_ir_instance<Instance<T>> : public boost::true_type {};
+
 	// forward declaration for static casts
 	template<typename B, typename T, typename E = typename B::element_type>
-	inline typename std::enable_if<std::is_base_of<E,T>::value || std::is_base_of<T,E>::value, Instance<B>>::type
+	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	static_instance_cast(const Instance<T>& src);
 
 	// forward declaration for dynamic cast
 	template<typename B, typename T, typename E = typename B::element_type>
-	inline typename std::enable_if<std::is_base_of<E,T>::value || std::is_base_of<T,E>::value, Instance<B>>::type
+	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	dynamic_instance_cast(const Instance<T>& src);
-
-	// a simple type trait to filter IR instance address types
-	template<typename P> struct is_ir_instance : public boost::false_type {};
-	template<typename T> struct is_ir_instance<Instance<T>> : public boost::true_type {};
 
 	// ----------------------------------------------------------------------------------------------------
 
@@ -172,26 +306,23 @@ namespace core {
 	} // end namespace detail
 
 
-
-	// internal structures
-	namespace detail {
-
-		struct InstancePathElement { };
-
-		struct InstancePath { };
-
-	} // end namespace detail
-
-
-
 	/**
 	 * The generic class implementing the IR-Instances class representing references to instances of
 	 * statements and expressions (similar to addresses + loop iterations).
 	 */
 	template<typename T>
-	class Instance : public node_type<typename std::remove_const<T>::type>::template accessor<Instance>::type {
+	class Instance :
+			public node_type<typename std::remove_const<T>::type>::template accessor<Instance>::type,
+			public utils::Printable,
+			public boost::equality_comparable<Instance<T>>,
+			public boost::less_than_comparable<Instance<T>> {
 
 	public:
+
+		/**
+		 * The type of node path utilized by instances of this type.
+		 */
+		typedef NodePath<IteratorValue> Path;
 
 		/**
 		 * Defines a functor representing a static cast operator for this type.
@@ -204,8 +335,6 @@ namespace core {
 		 */
 		typedef T element_type;
 
-		typedef detail::InstancePath path_type;
-
 	private:
 
 		/**
@@ -217,7 +346,7 @@ namespace core {
 		/**
 		 * The path used to identify the node referenced by this address.
 		 */
-		path_type path;
+		Path path;
 
 	public:
 
@@ -235,7 +364,7 @@ namespace core {
 		 *
 		 * @param path the path to the node to be addressed.
 		 */
-		Instance(const path_type& path = path_type()) : path(path) {}
+		Instance(const Path& path = Path()) : path(path) {}
 
 		/**
 		 * A extended version of the copy constructor allowing to copy of instance addresses pointing
@@ -277,15 +406,13 @@ namespace core {
 			return getAddressedNode().as<R>();
 		}
 
-		// TODO: add converster for addresses
-
 		/**
 		 * A short-cut for static address casts enabling a short syntax.
 		 */
-//		template<typename R>
-//		typename std::enable_if<is_ir_address<R>::value, R>::type as() const {
-//			return static_instance_cast<R>(*this);
-//		}
+		template<typename R>
+		typename std::enable_if<is_ir_address<R>::value, R>::type as() const {
+			return getAsAddress().as<R>();
+		}
 
 		/**
 		 * A short-cut for static address casts enabling a short syntax.
@@ -307,10 +434,12 @@ namespace core {
 		/**
 		 * A short-cut for static address casts enabling a short syntax.
 		 */
-//		template<typename R>
-//		typename std::enable_if<is_ir_address<R>::value, R>::type as() const {
-//			return static_instance_cast<R>(*this);
-//		}
+		template<typename R>
+		typename std::enable_if<is_ir_address<R>::value, R>::type isa() const {
+			// shortcut
+			if (!getAddressedNode().isa<Pointer<const typename R::element_type>>()) return R();
+			return getAsAddress().isa<R>();
+		}
 
 		/**
 		 * Returns if a class is an instance of R
@@ -320,85 +449,40 @@ namespace core {
 			return dynamic_instance_cast<R>(*this);
 		}
 
-//		/**
-//		 * Finds *an* address with the given root and target.
-//		 *
-//		 * NOTE: generates the *first* address found that satisfies the criteria. Not necessarily unique (or what you wanted).
-//		 *
-//		 * @param target the element that the generated address points to
-//		 * @param root the root node of the generated address
-//		 * @param dfs tells whether depth-first-search strategy should be used (when true) or
-//		 * breadth-first-search (when false)
-//		 *
-//		 * @returns the address found, or the null address if not possible
-//		 */
-//		static Address<T> find(const Pointer<T>& target, const NodePtr& root, bool dfs=true) {
-//			bool visitTypes = (target->getNodeCategory() == NC_Type) ||
-//							  (target->getNodeCategory() == NC_Support) ||
-//							  (target->getNodeCategory() == NC_Value);
-//			Address<T> ret;
-//
-//			auto search = [&](const Address<T>& addr) -> bool {
-//				if(*addr.getAddressedNode() == *target) {
-//					ret = addr;
-//					return true;
-//				}
-//				return false;
-//			};
-//
-//			if (dfs)
-//				visitDepthFirstOnceInterruptible(Address(root), search, true, visitTypes);
-//			else
-//				visitBreadthFirstInterruptible(Address(root), search, visitTypes);
-//
-//			return ret;
-//		}
-//
-//
-//		/**
-//		 * Obtains a pointer to the root node this address is starting from.
-//		 *
-//		 * NOTE: nodes are not addressed in a unique way. Since nodes are shared, a single node might be accessible
-//		 * via multiple addresses.
-//		 *
-//		 * @return a pointer to the root node.
-//		 */
-//		NodePtr getRootNode() const {
-//			assert(path && "Invalid node address!");
-//			// root = the pointer assigned to the first path element
-//			return path.getRootNode();
-//		}
-//
-//		/**
-//		 * Computes a new node address which can be obtained by exchanging the
-//		 * root of this address by the given root.
-//		 */
-//		Address<T> switchRoot(const NodePtr& newRoot) const {
-//			return Address<T>(getPath().switchRoot(newRoot));
-//		}
-//
-//		/**
-//		 * Obtains a clone of this address within the given node manager.
-//		 *
-//		 * @param manager the manager this address should be cloned to
-//		 * @return a clone of this address referencing nodes within the given node manager
-//		 */
-//		Address<T> cloneTo(NodeManager& manager) const {
-//			if (!*this || &(this->getNodeManager()) == &manager) return *this;	// clone null-pointer or local address
-//			return switchRoot(manager.get(getRootNode()));
-//		}
-//
-//		/**
-//		 * Obtains a pointer to the parent node of the given address (of an arbitrary higher level).
-//		 * An assertion error will occur in case the requested level is large or equal the depth of this address.
-//		 * (Hence, the corresponding parent node does not exist or is unknown).
-//		 *
-//		 * @param level the number of levels to go up (0=same node, 1=parent, 2=grandparents ...)
-//		 * @return the requested address
-//		 */
-//		NodePtr getParentNode(unsigned level=1) const {
-//			return path.getParentNode(level);
-//		}
+		/**
+		 * Obtains a pointer to the root node this address is starting from.
+		 *
+		 * NOTE: nodes are not addressed in a unique way. Since nodes are shared, a single node might be accessible
+		 * via multiple addresses.
+		 *
+		 * @return a pointer to the root node.
+		 */
+		NodePtr getRootNode() const {
+			assert(path && "Invalid node address!");
+			// root = the pointer assigned to the first path element
+			return path.getRootNode();
+		}
+
+		/**
+		 * Computes a new node address which can be obtained by exchanging the
+		 * root of this address by the given root.
+		 */
+		Address<T> switchRoot(const NodePtr& newRoot) const {
+			return Address<T>(getPath().switchRoot(newRoot));
+		}
+
+
+		/**
+		 * Obtains a pointer to the parent node of the given address (of an arbitrary higher level).
+		 * An assertion error will occur in case the requested level is large or equal the depth of this address.
+		 * (Hence, the corresponding parent node does not exist or is unknown).
+		 *
+		 * @param level the number of levels to go up (0=same node, 1=parent, 2=grandparents ...)
+		 * @return the requested address
+		 */
+		NodePtr getParentNode(unsigned level=1) const {
+			return path.getParentNode(level);
+		}
 
 		/**
 		 * Obtains a pointer to the node referenced by this address.
@@ -409,62 +493,46 @@ namespace core {
 		 * @return a pointer to the addressed node.
 		 */
 		Pointer<const T> getAddressedNode() const {
-			assert_not_implemented() << "Missing implementation of parent node ...";
-			return Pointer<const T>();
-//			return (!path)? Pointer<const T>() : static_pointer_cast<const T>(path.getParentNode(0));
+			return (!path)? Pointer<const T>() : static_pointer_cast<const T>(path.getParentNode(0));
 		}
 
-//		/**
-//		 * Obtains the address of the root node this address is starting from. Since it will only consist of a single
-//		 * element its parents will be unknown.
-//		 *
-//		 * @return the (relative) address of the root node
-//		 */
-//		NodeAddress getRootAddress() const {
-//			return NodeAddress(getRootNode());
-//		}
-//
-//		/**
-//		 * Obtains the address of the parent node of the given address (of an arbitrary higher level).
-//		 * An assertion error will occur in case the requested level is large or equal the depth of this address.
-//		 * (Hence, the corresponding parent node does not exist or is unknown).
-//		 *
-//		 * @param level the number of levels to go up (0=same node, 1=parent, 2=grandparents ...)
-//		 * @return the requested address
-//		 */
-//		NodeAddress getParentAddress(unsigned level=1) const {
-//
-//			// check whether an actual parent is requested
-//			if (level == 0) {
-//				return *this;
-//			}
-//
-//			// create address based on modified path
-//			return NodeAddress(path.getPathToParent(level));
-//		}
-//
-//		/**
-//		 * Obtains the address of the first parent node of the given address of type typ
-//		 *
-//		 * @param the node type of the parent to find
-//		 * @return the requested address
-//		 */
-//		NodeAddress getFirstParentOfType(NodeType typ) const {
-//
-//			NodeAddress ret = NodeAddress();
-//			auto visitor = makeLambdaVisitor([&](const NodeAddress& addr) -> bool {
-//				if(addr.getAddressedNode()->getNodeType() == typ) {
-//					ret = addr;
-//					return true;
-//				}
-//				return false;
-//			});
-//			visitPathBottomUpInterruptible(*this, visitor);
-//			return ret;
-//
-//			assert(false && "Requested parent address of this type does not exist");
-//			return NodeAddress();
-//		}
+		/**
+		 * Converts this instance reference to an address.
+		 */
+		Address<const T> getAsAddress() const {
+			if (!path) return Address<const T>();
+			if (isRoot()) return Address<const T>(getAddressedNode());
+			return getParentInstance().getAsAddress().getAddressOfChild(getIndex()).as<Address<const T>>();
+		}
+
+		/**
+		 * Obtains the instance address of the root node this address is starting from. Since it will only consist of a single
+		 * element its parents will be unknown.
+		 *
+		 * @return the (relative) address of the root node
+		 */
+		NodeInstance getRootInstance() const {
+			return NodeInstance(getRootNode());
+		}
+
+		/**
+		 * Obtains the instance address of the parent node of the given instance (of an arbitrary higher level).
+		 * An assertion error will occur in case the requested level is large or equal the depth of this address.
+		 * (Hence, the corresponding parent node does not exist or is unknown).
+		 *
+		 * @param level the number of levels to go up (0=same node, 1=parent, 2=grandparents ...)
+		 * @return the requested address
+		 */
+		NodeInstance getParentInstance(unsigned level=1) const {
+
+			// check whether an actual parent is requested
+			if (level == 0) {
+				return *this;
+			}
+
+			// create address based on modified path
+			return NodeInstance(path.getPathToParent(level));
+		}
 
 		/**
 		 * Obtains the instance address of a child node. It is extending the path maintained by this instance by a single
@@ -473,95 +541,113 @@ namespace core {
 		 * @param index the index of the child-node to be addressed within the current nodes child list.
 		 * @return the address of the child node
 		 */
-		NodeInstance getInstanceOfChild(unsigned index) const {
-			assert_not_implemented();
-			return NodeInstance();
-//			// extend path by child element
-//			return NodeInstance(path.extendForChild(index));
+		NodeInstance getInstanceOfChild(unsigned index, const IteratorValue& iter = IteratorValue(0)) const {
+			// extend path by child element
+			return NodeInstance(path.extendForChild(index, iter));
 		}
 
-//		/**
-//		 * Obtains the address of a child node. It is extending the path represented by this address by
-//		 * the given sequence of steps.
-//		 *
-//		 * @param index the first child to be resolved
-//		 * @param rest the remaining steps
-//		 * @return the address of the requested child node
-//		 */
-//		template<typename ... Indices>
-//		NodeAddress getAddressOfChild(unsigned index, Indices ... rest) const {
-//			return getAddressOfChild(index).getAddressOfChild(rest...);
-//		}
-//
-//		/**
-//		 * Obtains all child addresses.
-//		 *
-//		 * @return a vector containing addresses for all child nodes
-//		 */
-//		vector<NodeAddress> getChildAddresses() const {
-//			vector<NodeAddress> addresses;
-//			for(size_t i=0; i<getAddressedNode()->getChildList().size(); ++i) {
-//				addresses.push_back(NodeAddress(path.extendForChild(i)));
-//			}
-//			return addresses;
-//		}
-//
-//		/**
-//		 * Checks whether this address is constituting a valid path within some AST. The method returns
-//		 * true in case the represented path can be reconstructed within the AST, hence if the (i+1)-th element
-//		 * within the path constituting this address is a pointer to a child node referenced by the i-th element.
-//		 *
-//		 * @return true if it is a valid path, false otherwise
-//		 */
-//		bool isValid() const {
-//			// check whether path is not null
-//			return path;
-//		}
-//
-//		/**
-//		 * Determines whether this address is the address of a root node.
-//		 */
-//		bool isRoot() const {
-//			return getDepth() == 1;
-//		}
-//
-//		/**
-//		 * Obtains the Index of the addressed element within its parent's node list
-//		 *
-//		 * @return the index of the addressed node within the parent's node list
-//		 */
-//		unsigned getIndex() const {
-//			 return path.getIndex();
-//		}
-//
-//		/**
-//		 * Obtains the depth / length of this address. The depth corresponds to the number of nodes passed
-//		 * between the root node and the addressed node.
-//		 *
-//		 * @return the depth of the addressed nodes within the IR DAG
-//		 */
-//		unsigned getDepth() const {
-//			return path.getLength();
-//		}
+		/**
+		 * Obtains the address of a child node. It is extending the path represented by this address by
+		 * the given sequence of steps.
+		 *
+		 * @param index the first child to be resolved
+		 * @param rest the remaining steps
+		 * @return the address of the requested child node
+		 */
+		template<typename ... Indices>
+		NodeInstance getInstanceOfChild(unsigned index, Indices ... rest) const {
+			return getInstanceOfChild(index).getInstanceOfChild(rest...);
+		}
+
+		/**
+		 * Obtains the address of a child node. It is extending the path represented by this address by
+		 * the given sequence of steps.
+		 *
+		 * @param index the first child to be resolved
+		 * @param iter the iterator value of the first child
+		 * @param rest the remaining steps
+		 * @return the address of the requested child node
+		 */
+		template<typename ... Indices>
+		NodeInstance getInstanceOfChild(unsigned index, IteratorValue iter, Indices ... rest) const {
+			return getInstanceOfChild(index, iter).getInstanceOfChild(rest...);
+		}
+
+		/**
+		 * Obtains all child instance addresses.
+		 *
+		 * @return a vector containing addresses for all child nodes
+		 */
+		vector<NodeInstance> getChildInstances() const {
+			vector<NodeInstance> addresses;
+			for(size_t i=0; i<getAddressedNode()->getChildList().size(); ++i) {
+				addresses.push_back(NodeInstance(path.extendForChild(i)));
+			}
+			return addresses;
+		}
+
+		/**
+		 * Obtains a instance for the same node of a different iteration.
+		 */
+		Instance<T> getIteration(const IteratorValue& iter) const {
+			if (iter == getIteratorValue()) return *this;
+			assert_false(isRoot()) << "Can not be applied to a root path.";
+			return Instance<T>(path.getPathToParent().extendForChild(path.getIndex(), iter));
+		}
+
+		/**
+		 * Checks whether this address is constituting a valid path within some AST. The method returns
+		 * true in case the represented path can be reconstructed within the AST, hence if the (i+1)-th element
+		 * within the path constituting this address is a pointer to a child node referenced by the i-th element.
+		 *
+		 * @return true if it is a valid path, false otherwise
+		 */
+		bool isValid() const {
+			// check whether path is not null
+			return path;
+		}
+
+		/**
+		 * Determines whether this address is the address of a root node.
+		 */
+		bool isRoot() const {
+			return getDepth() == 1;
+		}
+
+		/**
+		 * Obtains the Index of the addressed element within its parent's node list
+		 *
+		 * @return the index of the addressed node within the parent's node list
+		 */
+		unsigned getIndex() const {
+			 return path.getIndex();
+		}
+
+		/**
+		 * Obtains the iterator value attached to the current addressed element.
+		 */
+		const IteratorValue& getIteratorValue() const {
+			return path.getValue();
+		}
+
+		/**
+		 * Obtains the depth / length of this address. The depth corresponds to the number of nodes passed
+		 * between the root node and the addressed node.
+		 *
+		 * @return the depth of the addressed nodes within the IR DAG
+		 */
+		unsigned getDepth() const {
+			return path.getLength();
+		}
 
 		/**
 		 * Obtains the entire path constituting this node address.
 		 *
 		 * @return a constant reference to the internally maintained path.
 		 */
-		const path_type& getPath() const {
+		const Path& getPath() const {
 			return path;
 		}
-
-//		/**
-//		 * Obtains the entire path constituting this node address. This function
-//		 * is required by the move constructor.
-//		 *
-//		 * @return a reference to the internally maintained path.
-//		 */
-//		Path& getPath() {
-//			return path;
-//		}
 
 		/**
 		 * An implicit converter to a pointer type.
@@ -574,15 +660,26 @@ namespace core {
 			return getAddressedNode();
 		}
 
-//		/**
-//		 * An implicit conversion to boolean. It will be converted to true, if the address is valid.
-//		 * Otherwise the result will be false.
-//		 *
-//		 * @return true if address is valid, false otherwise
-//		 */
-//		operator bool() const {
-//			return isValid();
-//		}
+		/**
+		 * An implicit converter to a address type.
+		 */
+		template<
+			typename B,
+			typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0
+		>
+		operator Address<const B>() const {
+			return getAsAddress();
+		}
+
+		/**
+		 * An implicit conversion to boolean. It will be converted to true, if the address is valid.
+		 * Otherwise the result will be false.
+		 *
+		 * @return true if address is valid, false otherwise
+		 */
+		operator bool() const {
+			return isValid();
+		}
 
 		/**
 		 * Obtains a reference to the node addressed by this address (if valid). Otherwise an
@@ -600,45 +697,51 @@ namespace core {
 		const accessor_type* operator->() const {
 			return this;
 		}
-//
-//		/**
-//		 * Realizes an order on address according to their lexicographical order.
-//		 *
-//		 * @param other the address to be compared to
-//		 * @return true if this address is lexicographical smaller than the given address
-//		 */
-//		template<typename S>
-//		bool operator<(const Address<S>& other) const {
-//			// use the path comparison operation
-//			return path < other.getPath();
-//		}
-//
-//		/**
-//		 * Obtains a hash value for this address.
-//		 */
-//		std::size_t hash() const {
-//			// take hash of path
-//			return path.hash();
-//		}
-//
-//		/**
-//		 * Checks whether this address is referencing the same path as
-//		 * the given address.
-//		 */
-//		template <typename S>
-//		bool operator==(const Address<S>& other) const {
-//			// test for identity or equal path
-//			return this == reinterpret_cast<const Address<T>*>(&other) || path == other.getPath();
-//		}
-//
-//		/**
-//		 * Implementing the not-equal operator addresses.
-//		 */
-//		template <typename S>
-//		bool operator!=(const Address<S>& other) const {
-//			return !(*this == other);
-//		}
 
+		/**
+		 * Realizes an order on address according to their lexicographical order.
+		 *
+		 * @param other the address to be compared to
+		 * @return true if this address is lexicographical smaller than the given address
+		 */
+		template<typename S>
+		bool operator<(const Instance<S>& other) const {
+			// use the path comparison operation
+			return path < other.getPath();
+		}
+
+		/**
+		 * Obtains a hash value for this address.
+		 */
+		std::size_t hash() const {
+			// take hash of path
+			return path.hash();
+		}
+
+		/**
+		 * Checks whether this address is referencing the same path as
+		 * the given address.
+		 */
+		template <typename S>
+		bool operator==(const Instance<S>& other) const {
+			// test for identity or equal path
+			return this == reinterpret_cast<const Instance<T>*>(&other) || path == other.getPath();
+		}
+
+		/**
+		 * Implementing the not-equal operator addresses.
+		 */
+		template <typename S>
+		bool operator!=(const Instance<S>& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Allow instances to be printed.
+		 */
+		std::ostream& printTo(std::ostream& out) const {
+			return (path) ? (out << path) : (out << "NULL");
+		}
 	};
 
 	/**
@@ -648,7 +751,7 @@ namespace core {
 	 */
 	struct StaticInstanceCast {
 		template<typename Target, typename Source>
-		const Instance<const Target>& operator()(const Instance<const Source>& value) const {
+		const Instance<const Target> operator()(const Instance<const Source>& value) const {
 			return value.template as<Instance<const Target>>();
 		}
 	};
@@ -677,7 +780,7 @@ namespace core {
 	 * @return the down-casted address pointing to the same location
 	 */
 	template<typename B, typename T>
-	inline typename std::enable_if<std::is_base_of<B,T>::value || std::is_base_of<T,B>::value, Instance<B>>::type
+	inline typename std::enable_if<!is_ir_instance<B>::value && (std::is_base_of<B,T>::value || std::is_base_of<T,B>::value), Instance<B>>::type
 	static_instance_cast(const Instance<T>& src) {
 		assert_true(src && dynamic_cast<B*>(&(*src)))
 					<< "Invalid static cast!\n"
@@ -692,7 +795,7 @@ namespace core {
 	 * as a template argument.
 	 */
 	template<typename B, typename T, typename E = typename B::element_type>
-	inline typename std::enable_if<std::is_base_of<E,T>::value || std::is_base_of<T,E>::value, B>::type
+	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	static_instance_cast(const Instance<T>& src) {
 		assert_true(!src || dynamic_cast<E*>(&(*src)))
 					<< "Invalid static cast!\n"
@@ -711,7 +814,7 @@ namespace core {
 	 * @return the down-casted address pointing to the same location
 	 */
 	template<typename B, typename T>
-	inline typename std::enable_if<std::is_base_of<B,T>::value || std::is_base_of<T,B>::value, Instance<B>>::type
+	inline typename std::enable_if<!is_ir_instance<B>::value && (std::is_base_of<B,T>::value || std::is_base_of<T,B>::value), Instance<B>>::type
 	dynamic_instance_cast(const Instance<T>& src) {
 		if (src && dynamic_cast<B*>(&(*src))) {
 			return Instance<B>(static_instance_cast<B>(src));
@@ -725,7 +828,7 @@ namespace core {
 	 * as a template argument.
 	 */
 	template<typename B, typename T, typename E = typename B::element_type>
-	inline typename std::enable_if<std::is_base_of<E,T>::value || std::is_base_of<T,E>::value, B>::type
+	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	dynamic_instance_cast(const Instance<T>& src) {
 		if (src && dynamic_cast<E*>(&(*src))) {
 			return static_instance_cast<B>(src);
