@@ -461,14 +461,14 @@ namespace runtime {
 				funManager.rename(cur.getEffortEstimator(), effortFunName);
 			}
 
-			// TODO: remove this
-			insieme::annotations::effort_estimation_info effort;
-			effort.estimation_function = core::IRBuilder(cur.getImplementation().getNodeManager()).parseExpr(
-					"let int = int<4> in "
-					"(int a, int b)->int { return b - a; }"
-			);
-			effort.fallback_estimate = 15;
-			cur.getImplementation().attachValue(effort);
+//			// TODO: remove this
+//			insieme::annotations::effort_estimation_info effort;
+//			effort.estimation_function = core::IRBuilder(cur.getImplementation().getNodeManager()).parseExpr(
+//					"let int = int<4> in "
+//					"(int a, int b)->int { return b - a; }"
+//			);
+//			effort.fallback_estimate = 15;
+//			cur.getImplementation().attachValue(effort);
 
 			// register meta info
 			unsigned info_id = MetaInfoTable::get(converter)->registerMetaInfoFor(cur.getImplementation());
