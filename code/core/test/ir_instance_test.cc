@@ -159,6 +159,31 @@ namespace core {
 		EXPECT_NE(instA2, NodeInstance(Path(root).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0)));
 	}
 
+	TEST(NodeInstance, AddressConversion) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+		TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
+		TypePtr typeC = builder.genericType("C",toVector<TypePtr>());
+
+		TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+		EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(2,0,2,1);
+		EXPECT_EQ("0-2-0-2-1",toString(addr));
+
+		NodeInstance inst = addr;
+		EXPECT_EQ("0-2-0-2-1",toString(inst));
+
+		NodeAddress addr2 = inst;
+		NodeInstance inst2 = addr2;
+
+		EXPECT_EQ(addr, addr2);
+		EXPECT_EQ(inst, inst2);
+	}
+
 	TEST(NodeInstanceTest, NullTest) {
 
 		NodeInstance addr;

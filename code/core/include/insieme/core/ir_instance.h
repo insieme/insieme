@@ -360,6 +360,15 @@ namespace core {
 		explicit Instance(const Pointer<B>& root) : path(root) {}
 
 		/**
+		 * A constructor converting a address into an instance.
+		 */
+		template<
+			typename B,
+			typename std::enable_if<std::is_base_of<T,B>::value,int>::type = 0
+		>
+		Instance(const Address<B>& addr) : path(convertPath(addr)) {}
+
+		/**
 		 * A constructor creating a node address based on a path through an AST.
 		 *
 		 * @param path the path to the node to be addressed.
@@ -741,6 +750,22 @@ namespace core {
 		 */
 		std::ostream& printTo(std::ostream& out) const {
 			return (path) ? (out << path) : (out << "NULL");
+		}
+
+	private:
+
+		/**
+		 * Converts a given address into a instance path.
+		 */
+		static Path convertPath(const NodeAddress& addr) {
+			// handle undefined address
+			if (!addr) return Path();
+
+			// handle root path
+			if (addr.isRoot()) return Path(addr.getAddressedNode());
+
+			// else process recursive
+			return convertPath(addr.getParentAddress()).extendForChild(addr.getIndex());
 		}
 	};
 
