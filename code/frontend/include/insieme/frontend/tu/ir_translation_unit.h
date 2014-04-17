@@ -197,6 +197,10 @@ namespace tu {
 
 		void addGlobal(const Global& global);
 
+        void replaceGlobal(const Global& old, const Global& replacement) {
+            std::replace (globals.begin(), globals.end(), old, replacement);
+        }
+
 		void addInitializer(const core::ExpressionPtr& expr) {
 			initializer.push_back(mgr->get(expr));
 		}

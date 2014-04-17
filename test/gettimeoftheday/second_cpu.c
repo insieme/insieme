@@ -2,10 +2,9 @@
 //#include <sys/types.h>
 //#include <time.h>
 //#include <sys/times.h>
-
 #include "second_cpu.h"
 
-#define CLOCKS_PER_SEC 5
+//#define CLOCKS_PER_SEC 5
 
 double mysecond()
 {

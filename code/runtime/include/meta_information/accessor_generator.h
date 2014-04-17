@@ -34,54 +34,15 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "info_clean.h"
 
-#include "insieme/frontend/pragma/handler.h"
+#define INFO_STRUCT_BEGIN(__name) \
+__name##_info* irt_get_##__name##_info(int index) { \
+	if(irt_g_meta_info_size < index) return NULL; \
+	return &(irt_g_meta_info[index].__name); /*TODO context*/ \
+}
 
-#include "insieme/core/ir_builder.h"
+#define INFO_FIELD(__id, __type, __val)
 
-namespace insieme {
-namespace frontend {
-namespace cilk {
+#define INFO_STRUCT_END() 
 
-
-	template<typename T>
-	struct CilkPragma : public pragma::Pragma, public pragma::AutomaticAttachable {
-
-		CilkPragma(const clang::SourceLocation& 	startLoc,
-					  const clang::SourceLocation& 	endLoc,
-					  const std::string& 			name,
-					  const pragma::MatchMap& 		mmap):
-				Pragma(startLoc, endLoc, name, mmap) { }
-
-		virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
-
-            stmtutils::StmtWrapper res;
-            for(core::StatementPtr element : node) {
-                core::StatementPtr tmp;
-                core::IRBuilder builder(element->getNodeManager());
-    			if (element->getNodeCategory() == core::NC_Statement) {
-    				tmp = builder.markerStmt(element.as<core::StatementPtr>());
-    			} else if (element->getNodeCategory() == core::NC_Expression) {
-	    			tmp = builder.markerExpr(element.as<core::ExpressionPtr>());
-    			} else {
-	    			assert(false && "Cannot annotate non statement/expression!");
-		    	}
-			    tmp->attachValue<T>();
-                res.push_back(tmp);
-            }
-			return res;
-		}
-
-	};
-
-
-	/**
-	 * Registers the handlers for Cilk pragmas
-	 */
-	void registerPragmaHandlers(clang::Preprocessor& pp);
-
-
-} // end namespace cilk
-} // end namespace frontend
-} // end namespace insieme

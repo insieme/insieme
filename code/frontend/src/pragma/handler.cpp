@@ -102,9 +102,9 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 }
 
 
-core::NodePtr attachPragma( const core::NodePtr& 			node,
-						   const clang::Stmt* 				clangNode,
-						   conversion::Converter& 	fact )
+stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
+            					        const clang::Stmt* 				clangNode,
+						                conversion::Converter& 	fact )
 {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
@@ -113,7 +113,7 @@ core::NodePtr attachPragma( const core::NodePtr& 			node,
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
 
-	core::NodePtr ret = node;
+    stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
@@ -128,9 +128,9 @@ core::NodePtr attachPragma( const core::NodePtr& 			node,
 	return ret;
 }
 
-core::NodePtr attachPragma(const core::NodePtr& 			node,
-						   const clang::Decl* 				clangDecl,
-						   conversion::Converter& 	fact )
+stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
+						            const clang::Decl* 				clangDecl,
+						            conversion::Converter& 	fact )
 {
 	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 
@@ -139,7 +139,7 @@ core::NodePtr attachPragma(const core::NodePtr& 			node,
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
 
-	core::NodePtr ret = node;
+    stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::DeclMap::value_type& curr) {
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {

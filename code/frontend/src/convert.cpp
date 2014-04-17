@@ -43,7 +43,6 @@
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
@@ -288,9 +287,6 @@ tu::IRTranslationUnit Converter::convert() {
 	used = true;
 
 	assert(getCompiler().getASTContext().getTranslationUnitDecl());
-
-	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
@@ -674,11 +670,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
 
-			// OMP threadPrivate
-			if (insieme::utils::set::contains (thread_private, varDecl)){
-				omp::addThreadPrivateAnnotation(globVar);
-			}
-
 			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 			varDeclMap.insert( { valDecl, globVar } );
 
@@ -995,7 +986,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
 
-	pragma::attachPragma(node,funcDecl,*this);
+	pragma::attachPragma(node.as<core::StatementPtr>(),funcDecl,*this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -1506,8 +1497,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			getIRTranslationUnit().addType(symbol, res);
 		}
 	}
-
-	pragma::attachPragma(res,decl,*this);
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);

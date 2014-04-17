@@ -47,7 +47,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"

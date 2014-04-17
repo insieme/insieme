@@ -34,54 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+#include <omp.h>
 
-#include "insieme/frontend/pragma/handler.h"
+#include <irt_all_impls.h>
+#include <standalone.h>
 
-#include "insieme/core/ir_builder.h"
+// #include "meta_information/default_generator.h"
+// #include "insieme/meta_information/effort_estimation.def"
 
-namespace insieme {
-namespace frontend {
-namespace cilk {
+#include "meta_information/struct_generator.h"
+#include "insieme/meta_information/effort_estimation.def"
 
+typedef struct {
+	effort_estimation_info effort_estimation;
+} meta_info_table_entry;
+int irt_g_meta_info_size = 2;
 
-	template<typename T>
-	struct CilkPragma : public pragma::Pragma, public pragma::AutomaticAttachable {
+meta_info_table_entry irt_g_meta_info[2] = {
+	{ { NULL, 8 } },
+	{ { NULL, 3 } },
+};
 
-		CilkPragma(const clang::SourceLocation& 	startLoc,
-					  const clang::SourceLocation& 	endLoc,
-					  const std::string& 			name,
-					  const pragma::MatchMap& 		mmap):
-				Pragma(startLoc, endLoc, name, mmap) { }
+#include "meta_information/accessor_generator.h"
+#include "insieme/meta_information/effort_estimation.def"
 
-		virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
+TEST(meta_information, basic) {
+	//if(!irt_is_meta_info_effort_estimation_available()) {
+	EXPECT_EQ(irt_get_effort_estimation_info(0)->fallback_estimate, 8);
+	EXPECT_EQ(irt_get_effort_estimation_info(1)->fallback_estimate, 3);
+	EXPECT_EQ((void*)irt_get_effort_estimation_info(1)->estimation_function, (void*)NULL);
+	//}
+}
 
-            stmtutils::StmtWrapper res;
-            for(core::StatementPtr element : node) {
-                core::StatementPtr tmp;
-                core::IRBuilder builder(element->getNodeManager());
-    			if (element->getNodeCategory() == core::NC_Statement) {
-    				tmp = builder.markerStmt(element.as<core::StatementPtr>());
-    			} else if (element->getNodeCategory() == core::NC_Expression) {
-	    			tmp = builder.markerExpr(element.as<core::ExpressionPtr>());
-    			} else {
-	    			assert(false && "Cannot annotate non statement/expression!");
-		    	}
-			    tmp->attachValue<T>();
-                res.push_back(tmp);
-            }
-			return res;
-		}
-
-	};
-
-
-	/**
-	 * Registers the handlers for Cilk pragmas
-	 */
-	void registerPragmaHandlers(clang::Preprocessor& pp);
-
-
-} // end namespace cilk
-} // end namespace frontend
-} // end namespace insieme

@@ -214,8 +214,12 @@ struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttacha
 		});	
 	}
 	
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
-		attach(getStartLocation(), getEndLocation(), TransTy, values, node, fact);
+    virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
+        for(core::StatementPtr element : node) {
+            if((element.isa<core::ForStmtPtr>()) || (TransTy == TransformationType::REC_FUN_UNROLL)) {
+                attach(getStartLocation(), getEndLocation(), TransTy, values, element, fact);
+            }
+        }
 		return node;
 	};
 
@@ -261,8 +265,10 @@ struct InsiemeInfo : public pragma::Pragma, public pragma::AutomaticAttachable {
 		}
 	}
 	
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
-		attach(getStartLocation(), getEndLocation(), id, values, node, fact);
+	virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
+        for(auto element : node) {
+    		attach(getStartLocation(), getEndLocation(), id, values, element, fact);
+        }
 		return node;
 	};
 
