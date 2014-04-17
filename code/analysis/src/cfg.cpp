@@ -1209,11 +1209,11 @@ core::NodeAddress Address::toAbsoluteAddress(const TmpVarMap& tmpVarMap) const {
 	// because the asserts are too restrictive. In this case we try to concat two address which are
 	// not matching, therefore the standard concat wouldn't work
 	//
-	const Path& tailPath = newAddr.getPath(); 
+	const auto& tailPath = newAddr.getPath();
 	// If try to merge a path with another path containing only 1 node we return the head path
 	if ( tailPath.getLength() <= 1) { return rStmt; }
 
-	Path newPath = rStmt.getPath();
+	auto newPath = rStmt.getPath();
 	for(int i=tailPath.getLength()-2; i>=0; --i) {
 		newPath = newPath.extendForChild( tailPath.getPathToParent(i).getIndex() );
 	}

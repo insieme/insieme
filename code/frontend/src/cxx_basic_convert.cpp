@@ -40,7 +40,6 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"

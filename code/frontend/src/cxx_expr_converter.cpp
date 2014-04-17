@@ -64,7 +64,6 @@
 #include "insieme/frontend/utils/debug.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -983,8 +982,7 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
 	}
 
-	// check for OpenMP annotations
-	return omp::attachOmpAnnotation(retIr, expr, convFact);
+	return retIr;
 }
 
 } // End conversion namespace

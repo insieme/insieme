@@ -40,9 +40,8 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/omp/omp_sema.h"
-#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
@@ -63,6 +62,7 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
+#include "insieme/frontend/extensions/omp_frontend_plugin.h"
 
 namespace insieme {
 namespace frontend {
@@ -93,6 +93,10 @@ namespace frontend {
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
+
+        if(hasOption(ConversionSetup::OpenMP)) {
+            registerFrontendPlugin<extensions::OmpFrontendPlugin>();
+        }
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
             registerFrontendPlugin<GemsclaimPlugin>();
@@ -152,11 +156,6 @@ namespace frontend {
 		// convert files to translation units
 		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
 			auto res = convert(manager, file, setup);
-
-			// apply OpenMP sema
-			if (setup.hasOption(ConversionSetup::OpenMP)) {
-				res = omp::applySema(res, manager);
-			}
 
 			// apply Cilk sema
 			if (setup.hasOption(ConversionSetup::Cilk)) {

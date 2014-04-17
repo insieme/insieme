@@ -1,0 +1,752 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+
+#include "insieme/frontend/extensions/omp_frontend_plugin.h"
+
+#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/frontend/omp/omp_sema.h"
+
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
+namespace {
+
+    /*********** OMP PRAGMA SYNTAX ************/
+	// if(scalar-expression)
+	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;
+
+	// default(shared | none)
+	auto def			   	= Tok<clang::tok::kw_default>() >> l_paren >>
+							  ( kwd("shared") | kwd("none") )["default"] >> r_paren;
+
+	// identifier *(, identifier)
+	auto var_list   		= var >> *(~comma >> var);
+
+	// private(list)
+	auto private_clause    	=  kwd("private") >> l_paren >> var_list["private"] >> r_paren;
+
+	// firstprivate(list)
+	auto firstprivate_clause = kwd("firstprivate") >> l_paren >> var_list["firstprivate"] >> r_paren;
+
+	// lastprivate(list)
+	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> var_list["lastprivate"] >> r_paren;
+
+	// shared(list)
+	auto shared_clause = kwd("shared") >> l_paren >> var_list["shared"] >> r_paren;
+
+	// copyin(list)
+	auto copyin_clause = kwd("copyin") >> l_paren >> var_list["copyin"] >> r_paren;
+
+	// num_threads(list)
+	auto num_threads_clause = kwd("num_threads") >> l_paren >> expr["num_threads"] >> r_paren;
+
+	// + or - or * or & or | or ^ or && or ||
+	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp |
+							  tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
+
+	// reduction(operator: list)
+	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >>
+							  var_list["reduction"] >> r_paren;
+
+	auto parallel_clause =  ( 	// if(scalar-expression)
+								if_expr
+							| 	// num_threads(integer-expression)
+								num_threads_clause
+							|	// default(shared | none)
+								def
+							|	// private(list)
+								private_clause
+							|	// firstprivate(list)
+								firstprivate_clause
+							|	// shared(list)
+								shared_clause
+							|	// copyin(list)
+								copyin_clause
+							|	// reduction(operator: list)
+								reduction_clause
+							);
+
+	auto kind 			=   Tok<clang::tok::kw_static>() | kwd("dynamic") | kwd("guided") | kwd("auto") | kwd("runtime");
+
+	auto for_clause 	=	(	private_clause
+							|	firstprivate_clause
+							|	lastprivate_clause
+							|	reduction_clause
+								// schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
+							|	(kwd("schedule") >> l_paren >> kind["schedule"] >>
+									!( comma >> expr["chunk_size"] ) >> r_paren)
+								// collapse( expr )
+							|	(kwd("collapse") >> l_paren >> expr["collapse"] >> r_paren)
+								// ordered
+							|   kwd("ordered")
+								// nowait
+							|	kwd("nowait")
+							);
+
+	auto for_clause_list = !(for_clause >> *( !comma >> for_clause ));
+
+	auto sections_clause =  ( 	// private(list)
+								private_clause
+							| 	// firstprivate(list)
+								firstprivate_clause
+							|	// lastprivate(list)
+								lastprivate_clause
+							|	// reduction(operator: list)
+								reduction_clause
+							| 	// nowait
+								kwd("nowait")
+							);
+
+	auto sections_clause_list = !(sections_clause >> *( !comma >> sections_clause ));
+
+	// [clause[ [, ]clause] ...] new-line
+	auto parallel_for_clause_list = (parallel_clause | for_clause | sections_clause) >>
+										*( !comma >> (parallel_clause | for_clause | sections_clause) );
+
+	auto parallel_clause_list = !( 	(Tok<clang::tok::kw_for>("for") >> !parallel_for_clause_list)
+								 |  (kwd("sections") >> !parallel_for_clause_list)
+								 | 	(parallel_clause >> *(!comma >> parallel_clause))
+								 );
+
+	auto single_clause 	= 	(	// private(list)
+								private_clause
+							|	// firstprivate(list)
+								firstprivate_clause
+							|	// copyprivate(list)
+							 	kwd("copyprivate") >> l_paren >> var_list["copyprivate"] >> r_paren
+							|	// nowait
+								kwd("nowait")
+							);
+
+	auto single_clause_list = !(single_clause >> *( !comma >> single_clause ));
+
+	auto task_clause	 = 	(	// if(scalar-expression)
+								if_expr
+							|	// untied
+								kwd("untied")
+							|	// default(shared | none)
+								def
+							|	// private(list)
+								private_clause
+							| 	// firstprivate(list)
+								firstprivate_clause
+							|	// shared(list)
+								kwd("shared") >> l_paren >> var_list["shared"] >> r_paren
+							);
+
+	auto task_clause_list = !(task_clause >> *( !comma >> task_clause ));
+
+	// threadprivate(list)
+	auto threadprivate_clause = l_paren >> var_list["thread_private"] >> r_paren;
+
+    /************************************/
+
+    /**
+     *  Checks given match object for all indentifiers
+     *  that are contained in the expression or variable list of
+     *  the match object.
+     */
+    omp::VarListPtr handleIdentifierList(MatchObject& m, const std::string& key) {
+        std::vector<core::ExpressionPtr> ret;
+        for(core::ExpressionPtr p : m.getExprs(key))
+            ret.push_back(p);
+        for(core::VariablePtr p : m.getVars(key))
+            ret.push_back(p.as<core::ExpressionPtr>());
+        return std::make_shared<std::vector<core::ExpressionPtr> >(ret);
+    }
+
+    /**
+     *  Checks given match object for single expression clauses
+     *  that are contained in the expression or variable list of
+     *  the match object. (e.g. num_threads, if, ...)
+     */
+    core::ExpressionPtr handleSingleExpression(MatchObject& m, const std::string& key) {
+        auto fitV = m.getVars(key);
+        auto fitE = m.getExprs(key);
+
+        if(fitE.empty() && fitV.empty())
+            return core::ExpressionPtr();
+
+        // we have an expression
+        if(fitV.empty()) {
+            assert(fitE.size() == 1);
+            return fitE[0];
+        }
+        // we have a variable
+        if(fitE.empty()) {
+            assert(fitV.size() == 1);
+            return fitV[0];
+        }
+        assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
+        return core::ExpressionPtr();
+    }
+
+    /**
+     *  Checks given match object for default clauses
+     *  that are contained in the string list of the match object
+     */
+    omp::DefaultPtr handleDefaultClause(MatchObject& m) {
+        auto def = m.getString("default");
+        if(def.empty())
+            return omp::DefaultPtr();
+
+        omp::Default::Kind k = omp::Default::SHARED;
+        if(def == "shared")
+            k = omp::Default::SHARED;
+        else if(def == "none")
+            k = omp::Default::NONE;
+        else
+            assert(false && "Unsupported default kind");
+
+        return std::make_shared<omp::Default>(k);
+    }
+
+    /**
+     *  Checks given match object for schedule clauses
+     *  that are contained in the string list of the match object
+     */
+    omp::SchedulePtr handleScheduleClause(MatchObject& m) {
+        auto kindStr = m.getString("schedule");
+        if(kindStr.empty())
+            return omp::SchedulePtr();
+
+        // we have a schedule clause
+        omp::Schedule::Kind k = omp::Schedule::STATIC;
+        if(kindStr == "static")
+            k = omp::Schedule::STATIC;
+        else if (kindStr == "dynamic")
+            k = omp::Schedule::DYNAMIC;
+        else if (kindStr == "guided")
+            k = omp::Schedule::GUIDED;
+        else if (kindStr == "auto")
+            k = omp::Schedule::AUTO;
+        else if (kindStr == "runtime")
+            k = omp::Schedule::RUNTIME;
+        else
+            assert(false && "Unsupported scheduling kind");
+
+        // check for chunk_size expression
+        core::ExpressionPtr chunkSize = handleSingleExpression(m, "chunk_size");
+        return std::make_shared<omp::Schedule>(k, chunkSize);
+    }
+
+    /**
+     *  Checks given match object for reduction clauses
+     */
+    omp::ReductionPtr handleReductionClause(MatchObject& mmap) {
+        auto vars = mmap.getVars("reduction");
+        auto exprs = mmap.getExprs("reduction");
+        if(vars.empty() && exprs.empty()) {
+            return omp::ReductionPtr();
+        }
+
+        // we have a reduction
+        // check the operator
+        const std::string opIt = mmap.getString("reduction_op");
+
+        assert(!opIt.empty() && "Reduction clause doesn't contain an operator");
+
+        omp::Reduction::Operator op = omp::Reduction::PLUS;
+        if(opIt == "+")		    op = omp::Reduction::PLUS;
+        else if(opIt == "-")	op = omp::Reduction::MINUS;
+        else if(opIt == "*")	op = omp::Reduction::MUL;
+        else if(opIt == "&")	op = omp::Reduction::AND;
+        else if(opIt == "|")	op = omp::Reduction::OR;
+        else if(opIt == "^")	op = omp::Reduction::XOR;
+        else if(opIt == "&&")	op = omp::Reduction::LAND;
+        else if(opIt == "||")	op = omp::Reduction::LOR;
+        else assert(false && "Reduction operator not supported.");
+
+        return std::make_shared<omp::Reduction>(op, handleIdentifierList(mmap, "reduction"));
+    }
+
+
+    /**
+     * Type traits used to determine the Marker type used to
+     * attach annotations to the current IR node.
+     * We only need the marker stmt.
+     */
+    template <class NodeTy>
+    struct marker_type_trait;
+
+    template <>
+    struct marker_type_trait<core::Statement> {
+        // in the case the node is a statement a MarkerStmt has to be used
+        typedef core::MarkerStmt marker_type;
+    };
+
+    typedef typename marker_type_trait<core::Statement>::marker_type MarkerTy;
+
+    /**
+     *  This method turns a standard node into a marked node.
+     *  The list of annotations is appended to the annotation
+     *  list of the passed node.
+     */
+    template <class NodeTy=core::Statement>
+    core::Pointer<const NodeTy> getMarkedNode(core::StatementPtr& stmt, frontend::omp::BaseAnnotation::AnnotationList& anns) {
+        if(anns.empty())
+            return stmt;
+        //get old annotation list and append our annotations
+        if(stmt->hasAnnotation(omp::BaseAnnotation::KEY)) {
+            auto annotations = stmt->getAnnotation(omp::BaseAnnotation::KEY)->getAnnotationList();
+            for(auto cur : anns) {
+                annotations.push_back(cur);
+            }
+            stmt->addAnnotation(std::make_shared<frontend::omp::BaseAnnotation>(annotations));
+            return stmt;
+        }
+        //if it doesn't have a annotation list, we create a new one
+        auto marker = MarkerTy::get(stmt->getNodeManager(), stmt);
+        marker->addAnnotation(std::make_shared<frontend::omp::BaseAnnotation>(anns));
+        return marker;
+    }
+
+    /**
+     *  Can be used for debugging. Print the contents
+     *  of the match object and the stmt where the match
+     *  object belongs to
+     */
+    void debug(MatchObject& object, stmtutils::StmtWrapper stmts) {
+        object.print();
+        for(auto cur : stmts) {
+            std::cout << dumpPretty(cur.as<core::StatementPtr>()) << std::endl;
+        }
+    }
+
+}
+
+
+    OmpFrontendPlugin::OmpFrontendPlugin() {
+
+                // Add an handler for pragma omp parallel:
+                // #pragma omp parallel [clause[ [, ]clause] ...] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "parallel", parallel_clause_list >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            core::ExpressionPtr	ifClause = handleSingleExpression(object, "if");
+                            // check for num_threads clause
+                            core::ExpressionPtr	numThreadsClause = handleSingleExpression(object, "num_threads");
+                            // check for default clause
+                            omp::DefaultPtr defaultClause = handleDefaultClause(object);
+                            // check for private clause
+                            omp::VarListPtr privateClause = handleIdentifierList(object, "private");
+                            // check for firstprivate clause
+                            omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
+                            // check for shared clause
+                            omp::VarListPtr sharedClause = handleIdentifierList(object, "shared");
+                            // check for copyin clause
+                            omp::VarListPtr copyinClause = handleIdentifierList(object, "copyin");
+                            // check for reduction clause
+                            omp::ReductionPtr reductionClause = handleReductionClause(object);
+
+                            // check for 'for'
+                            if(object.stringValueExists("for")) {
+                                // this is a parallel for
+                                omp::VarListPtr lastPrivateClause = handleIdentifierList(object, "lastprivate");
+                                // check for schedule clause
+                                omp::SchedulePtr scheduleClause = handleScheduleClause(object);
+                                // check for collapse cluase
+                                core::ExpressionPtr	collapseClause = handleSingleExpression(object, "collapse");
+                                // check for nowait keyword
+                                bool noWait = object.stringValueExists("nowait");
+
+                                frontend::omp::BaseAnnotation::AnnotationList anns;
+                                anns.push_back(
+                                    std::shared_ptr<omp::ParallelFor>(
+                                            new omp::ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
+                                                                 firstPrivateClause, sharedClause, copyinClause, reductionClause,
+                                                                 lastPrivateClause, scheduleClause, collapseClause, noWait)
+                                ));
+
+                                //get next for stmt from node list and annotate it
+                                for(unsigned i=0; i<node.size(); i++) {
+                                    //if it is already a marker stmt check the sub stmt
+                                    //else check if it is a for and annotate it.
+                                    if(node[i].isa<core::MarkerStmtPtr>()) {
+                                        if(node[i].as<core::MarkerStmtPtr>()->getSubStatement().isa<core::ForStmtPtr>()) {
+                                            node[i] = getMarkedNode(node[i],anns);
+                                            return node;
+                                        }
+                                    } else if(node[i].isa<core::ForStmtPtr>()) {
+                                        node[i] = getMarkedNode(node[i],anns);
+                                        return node;
+                                    }
+                                }
+                            }
+
+                            // check for 'sections'
+                            if(object.stringValueExists("sections")) {
+                                // this is a parallel sections
+                                omp::VarListPtr lastPrivateClause = handleIdentifierList(object, "lastprivate");
+                                // check for nowait keyword
+                                bool noWait = object.stringValueExists("nowait");
+                                frontend::omp::BaseAnnotation::AnnotationList anns;
+                                anns.push_back(
+                                    std::make_shared<omp::ParallelSections>(
+                                            ifClause, numThreadsClause, defaultClause, privateClause,
+                                            firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause, noWait
+                                    )
+                                );
+                                for(unsigned i=0; i<node.size(); i++) {
+                                    node[i] = getMarkedNode(node[i],anns);
+                                }
+
+                                return node;
+                            }
+
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(
+                                std::make_shared<omp::Parallel>(
+                                        ifClause, numThreadsClause, defaultClause, privateClause,
+                                        firstPrivateClause, sharedClause, copyinClause, reductionClause
+                                )
+                            );
+                            for(unsigned i=0; i<node.size(); i++) {
+                                node[i] = getMarkedNode(node[i],anns);
+                            }
+
+                            return node;
+                        })
+                ));
+
+                // Add an handler for pragma omp for
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "for", for_clause_list >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            // check for private clause
+                            omp::VarListPtr privateClause = handleIdentifierList(object, "private");
+                            // check for firstprivate clause
+                            omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
+                            // check for lastprivate clause
+                            omp::VarListPtr lastPrivateClause = handleIdentifierList(object, "lastprivate");
+                            // check for reduction clause
+                            omp::ReductionPtr reductionClause = handleReductionClause(object);
+                            // check for schedule clause
+                            omp::SchedulePtr scheduleClause = handleScheduleClause(object);
+                            // check for collapse cluase
+                            core::ExpressionPtr	collapseClause = handleSingleExpression(object, "collapse");
+                            // check for nowait keyword
+                            bool noWait = object.stringValueExists("nowait");
+
+
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(
+                                std::make_shared<omp::For>( privateClause, firstPrivateClause, lastPrivateClause,
+                                                          reductionClause, scheduleClause, collapseClause, noWait )
+                            );
+
+                            //apply omp for annotation only to the for stmt
+                            //get next for stmt from node list and annotate it
+                            for(unsigned i=0; i<node.size(); i++) {
+                                //if it is already a marker stmt check the sub stmt
+                                //else check if it is a for and annotate it.
+                                if(node[i].isa<core::MarkerStmtPtr>()) {
+                                    if(node[i].as<core::MarkerStmtPtr>()->getSubStatement().isa<core::ForStmtPtr>()) {
+                                        node[i] = getMarkedNode(node[i],anns);
+                                        return node;
+                                    }
+                                } else if(node[i].isa<core::ForStmtPtr>()) {
+                                    node[i] = getMarkedNode(node[i],anns);
+                                    return node;
+                                }
+                            }
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp sections [clause[[,] clause] ...] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "sections", sections_clause_list >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            omp::VarListPtr privateClause = handleIdentifierList(object, "private");
+                            // check for firstprivate clause
+                            omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
+                            // check for lastprivate clause
+                            omp::VarListPtr lastPrivateClause = handleIdentifierList(object, "lastprivate");
+                            // check for reduction clause
+                            omp::ReductionPtr reductionClause = handleReductionClause(object);
+                            // check for nowait keyword
+                            bool noWait = object.stringValueExists("nowait");
+
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Sections>( privateClause, firstPrivateClause,
+                                                                            lastPrivateClause, reductionClause, noWait ));
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp sections [clause[[,] clause] ...] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "section", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Section>());
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp single
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "single", single_clause_list >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            // check for private clause
+                            omp::VarListPtr privateClause = handleIdentifierList(object, "private");
+                            // check for firstprivate clause
+                            omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
+                            // check for copyprivate clause
+                            omp::VarListPtr copyPrivateClause = handleIdentifierList(object, "copyprivate");
+                            // check for nowait keyword
+                            bool noWait = object.stringValueExists("nowait");
+
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Single>( privateClause, firstPrivateClause, copyPrivateClause, noWait ));
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp task [clause[[,] clause] ...] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "task", task_clause_list >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            // check for if clause
+                            core::ExpressionPtr	ifClause = handleSingleExpression(object, "if");
+                            // check for nowait keyword
+                            bool untied = object.stringValueExists("untied");
+                            // check for default clause
+                            omp::DefaultPtr defaultClause = handleDefaultClause(object);
+                            // check for private clause
+                            omp::VarListPtr privateClause = handleIdentifierList(object, "private");
+                            // check for firstprivate clause
+                            omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
+                            // check for shared clause
+                            omp::VarListPtr sharedClause = handleIdentifierList(object, "shared");
+                            // We need to check if the
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Task>(ifClause, untied, defaultClause, privateClause,
+                                                                       firstPrivateClause, sharedClause));
+                            
+                            for(unsigned i=0; i<node.size(); i++) {
+                                node[i] = getMarkedNode(node[i], anns);
+                            }
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp master new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "master", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Master>());
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp critical [(name)] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "critical", !(l_paren >> identifier["critical"] >> r_paren) >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            //checking region name (if existing)
+                            auto fit = object.getString("critical");
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            if(!fit.empty()) {
+                                anns.push_back(std::make_shared<omp::Critical>(fit));
+                            } else {
+                                anns.push_back(std::make_shared<omp::Critical>(std::string()));
+                            }
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp barrier new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "barrier", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Barrier>());
+                            node[0] = getMarkedNode(node[0], anns); 
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp taskwait new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "taskwait", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            //assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::TaskWait>());
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp atomic new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "atomic", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Atomic>());
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp flush [(list)] new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "flush", !(l_paren >> var_list["flush"] >> r_paren) >> tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            // check for flush identifier list
+                            omp::VarListPtr flushList = handleIdentifierList(object, "flush");
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Flush>(flushList));
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp ordered new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "ordered", tok::eod,
+                        [](MatchObject object, stmtutils::StmtWrapper node) {
+                            //attach annotation
+                            assert(node.isSingleStmt());
+                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            anns.push_back(std::make_shared<omp::Ordered>());
+                            node[0] = getMarkedNode(node[0], anns);
+                            return node;
+                        })
+                ));
+
+                // Add an handler for #pragma omp threadprivate(list) new-line
+                pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+                    insieme::frontend::extensions::PragmaHandler("omp", "threadprivate", threadprivate_clause >> tok::eod,
+                        [&](MatchObject object, stmtutils::StmtWrapper node) {
+                            //store the name of the variables
+                            omp::VarListPtr tp = handleIdentifierList(object, "thread_private");
+                            for(unsigned i=0; i<tp->size(); i++) {
+                                    thread_privates.push_back(tp->at(i));
+                            }
+                            return node;
+                        })
+                ));
+
+    }
+
+
+    /**
+     *  Insieme frontend plugin IR visitor. This needs to be done to find all thread_private variables.
+     *  All thread_private variables are annotated with the threadprivate annotation and finally
+     *  the omp sema is called.
+     */
+	insieme::frontend::tu::IRTranslationUnit OmpFrontendPlugin::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+
+	    for(auto& pair : tu.getGlobals()) {
+            if(std::find (thread_privates.begin(), thread_privates.end(), pair.first) != thread_privates.end()) {
+                core::LiteralPtr lit = pair.first;
+                lit->addAnnotation(std::make_shared<omp::BaseAnnotation>(
+                                            omp::BaseAnnotation::AnnotationList( {std::make_shared<omp::ThreadPrivate>()} ) )
+                                  );
+                std::pair<core::LiteralPtr, core::ExpressionPtr> replacement(lit, pair.second);
+                tu.replaceGlobal(pair, replacement);
+            }
+	    }
+
+        for(auto& pair : tu.getFunctions()) {
+            core::LambdaExprPtr func = pair.second;
+            auto filter = [&func] (const core::NodePtr& node) ->bool{
+                if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()){
+                    if (call == func) return true;
+                    else return false;
+                }
+                return true;
+            };
+            // wrap all returns with a cpp ref conversion
+            auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
+                //find all uses of the variables
+                if(std::find (thread_privates.begin(), thread_privates.end(), node) != thread_privates.end()) {
+                        frontend::omp::BaseAnnotation::AnnotationList anns;
+                        anns.push_back(std::make_shared<omp::ThreadPrivate>());
+                        core::StatementPtr stm = node.as<core::StatementPtr>();
+                        //return getMarkedNode(stm, anns);
+                        node->addAnnotation(std::make_shared<omp::BaseAnnotation>(
+                                            omp::BaseAnnotation::AnnotationList( {std::make_shared<omp::ThreadPrivate>()} ) )
+                        );
+                }
+                return node;
+            };
+            auto TPfixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+            func = TPfixer.map(func);
+            tu.replaceFunction(pair.first.as<core::LiteralPtr>(), func);
+        }
+
+        // apply open mp sema
+        tu = omp::applySema(tu, tu.getNodeManager());
+
+        return tu;
+	}
+
+
+
+}   //end namespace extensions
+}   //end namespace frontend
+}   //end namespace insieme

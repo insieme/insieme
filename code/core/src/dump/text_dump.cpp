@@ -383,7 +383,7 @@ namespace dump {
 
 			};
 
-			void dumpPathIndices(std::ostream& out, const Path& path) {
+			void dumpPathIndices(std::ostream& out, const NodeAddress::Path& path) {
 				// dump in order
 				if (path.getLength() > 2) {
 					dumpPathIndices(out, path.getPathToParent());
@@ -393,7 +393,7 @@ namespace dump {
 				}
 			}
 
-			void dumpPath(std::ostream& out, const Path& path) {
+			void dumpPath(std::ostream& out, const NodeAddress::Path& path) {
 				// dump path
 				if(path.getLength() > 1) {
 					dumpPathIndices(out, path.getPathToParent());

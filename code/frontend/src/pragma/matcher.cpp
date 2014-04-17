@@ -154,6 +154,12 @@ core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Conver
     clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
     assert(refVarIdent && "Clause not containing a DeclRefExpr");
     core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
+    //this is a special case, where we cannot decide
+    //if the clang stmt gets an variable or an expr.
+    //used for literals
+    if(varExpr.isa<core::LiteralPtr>()) {
+        return nullptr;
+    }
     assert(varExpr.isa<core::VariablePtr>() && "variable used in pragma cannot seems to be no variable");
     return varExpr.as<core::VariablePtr>();
 }
@@ -167,15 +173,44 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
             for(unsigned i=0; i<m.second.size(); i++) {
                 if(m.second[i]->isString()) {
                     stringMap[m.first] = (m.second[i]->toStr());
-				} else if(!m.second[i]->isExpr()) {
-                    varList[m.first].push_back(getVar(m.second[i], fact));
+                } else if(!m.second[i]->isExpr()) {
+                    auto element = getVar(m.second[i], fact);
+                    if(element) {
+                        varList[m.first].push_back(element);
+                    } else {
+                        exprList[m.first].push_back(getExpr(m.second[i], fact));
+                    }
                 } else {
                     exprList[m.first].push_back(getExpr(m.second[i], fact));
                 }
             }
+            if(!m.second.size()) {
+                //if we have no second value we just add a stringvalue with the given key
+                stringMap[m.first] = "";
+            }
         }
         called = true;
+    }                                                                                                                                                                                
+}
+
+void MatchObject::print() const {
+    std::cout << "############MATCH OBJECT PRINT############\n";
+    std::cout << "Var list: " << "\n";
+    for(auto cur: varList) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
     }
+    std::cout << "Expr list: " << "\n";
+    for(auto cur: exprList) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
+    }
+    std::cout << "String list: " << "\n";
+    for(auto cur: stringMap) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
+    }
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 }
 
 // ------------------------------------ ParserStack ---------------------------

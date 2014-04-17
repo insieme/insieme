@@ -600,7 +600,7 @@ namespace dump {
 				}
 			};
 
-			void dumpPathIndices(std::ostream& out, const Path& path) {
+			void dumpPathIndices(std::ostream& out, const NodeAddress::Path& path) {
 				// dump in order
 				if (path.getLength() > 2) {
 					dumpPathIndices(out, path.getPathToParent());
@@ -608,7 +608,7 @@ namespace dump {
 				write<index_t>(out, path.getIndex());
 			}
 
-			void dumpPath(std::ostream& out, const Path& path) {
+			void dumpPath(std::ostream& out, const NodeAddress::Path& path) {
 				// start with the length
 				write<length_t>(out, path.getLength() - 1);
 

@@ -46,6 +46,7 @@
 #include "insieme/utils/id_generator.h"
 #include "insieme/utils/instance_manager.h"
 #include "insieme/utils/range.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_mapper.h"

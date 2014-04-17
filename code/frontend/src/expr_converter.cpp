@@ -48,7 +48,6 @@
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "insieme/frontend/pragma/insieme.h"
@@ -1739,8 +1738,6 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
 	}
 
-	// check for OpenMP annotations
-	retIr =  omp::attachOmpAnnotation(retIr, expr, convFact);
 	return retIr;
 }
 
