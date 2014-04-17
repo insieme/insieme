@@ -56,7 +56,7 @@ struct _irt_meta_info_table_entry {
 
 int irt_g_meta_info_size = 2;
 
-meta_info_table_entry irt_g_meta_info[2] = {
+irt_meta_info_table_entry irt_g_meta_info[2] = {
 	{ { NULL, 8 } },
 	{ { NULL, 3 } },
 };
