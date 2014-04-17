@@ -81,6 +81,7 @@ struct _irt_wi_implementation_variant {
 	wi_channel_req_func* channel_requirements;
 	irt_wi_implementation_variant_features features;
 	irt_wi_implementation_runtime_data rt_data;
+	irt_meta_info_table_entry* meta_info;
 };
 
 /* ------------------------------ operations ----- */

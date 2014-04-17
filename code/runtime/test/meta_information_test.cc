@@ -43,18 +43,28 @@
 // #include "meta_information/default_generator.h"
 // #include "insieme/meta_information/effort_estimation.def"
 
+
+// --- compiler generated ---
+
 #include "meta_information/struct_generator.h"
 #include "insieme/meta_information/effort_estimation.def"
 
-typedef struct {
+
+struct _irt_meta_info_table_entry {
 	effort_estimation_info effort_estimation;
-} meta_info_table_entry;
+};
+
 int irt_g_meta_info_size = 2;
 
 meta_info_table_entry irt_g_meta_info[2] = {
 	{ { NULL, 8 } },
 	{ { NULL, 3 } },
 };
+
+// --- compiler generated - end ---
+
+
+// --- user code ---
 
 #include "meta_information/accessor_generator.h"
 #include "insieme/meta_information/effort_estimation.def"

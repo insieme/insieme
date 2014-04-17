@@ -49,6 +49,7 @@ namespace annotations {
 
 	namespace detail {
 
+
 		// -- basic type conversion --
 
 		template<typename T>

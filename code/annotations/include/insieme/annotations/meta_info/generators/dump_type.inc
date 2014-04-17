@@ -43,4 +43,4 @@
 	typename insieme::annotations::detail::compiler_type<_type>::type,
 
 #define INFO_STRUCT_END() \
-	bool> tuple_type; 
+	std::string> tuple_type; 

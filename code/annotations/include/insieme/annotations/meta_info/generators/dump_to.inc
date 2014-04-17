@@ -38,6 +38,7 @@
 
 #define INFO_STRUCT_BEGIN(_name) \
 	insieme::core::ExpressionPtr info_typeAnnotationConverter::toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const { \
+				static const string runtime_struct_name = #_name "_info"; \
 				typedef insieme::core::value_node_annotation<info_type>::type annotation_type; \
 				assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only " #_name "_info annotations supported!"); \
 				const auto& data = static_pointer_cast<annotation_type>(annotation)->getValue();\
@@ -47,4 +48,4 @@
 		data._name,
 
 #define INFO_STRUCT_END() \
-	true)); }
+		runtime_struct_name)); }

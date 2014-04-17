@@ -95,6 +95,11 @@ typedef struct _irt_lock irt_lock;
 typedef struct _irt_loop_sched_policy irt_loop_sched_policy;
 typedef struct _irt_loop_sched_data irt_loop_sched_data;
 
+/* ------------------------------ meta info table entry ----- */
+
+struct _irt_meta_info_table_entry;
+typedef struct _irt_meta_info_table_entry irt_meta_info_table_entry;
+
 /* ------------------------------ performance table ----- */
 
 typedef struct _irt_pd_table irt_pd_table;

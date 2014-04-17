@@ -76,8 +76,6 @@ namespace annotations {
 		EXPECT_EQ(info, dummy.getAttachedValue<test_info>());
 
 
-
-
 		// check that annotations are moved by clone
 		{
 			NodeManager mgr;
