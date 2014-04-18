@@ -45,6 +45,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <utility>
 
 #include <omp.h>
@@ -388,7 +389,16 @@ namespace {
 		if (map.count("liststeps")) {
 			std::cout << "Available steps:\n";
 			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << entry.first << "\n";
+				std::cout << "\t" << std::setw(32) << entry.first;
+				auto deps = entry.second.getDependencies();
+				if(!deps.empty()) {
+					std::cout << " <- [ ";
+					for(auto dep: deps) {
+						std::cout << dep << " ";
+					}
+					std::cout << "]";
+				}
+				std::cout << "\n";
 			}
 			return fail;
 		}
