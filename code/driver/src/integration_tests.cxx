@@ -353,6 +353,7 @@ namespace {
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
 				("help,h", 				"produce help message")
+				("liststeps",			"list all the available steps")
 				("config,c", 			"print the configuration of the selected test cases")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
 				("panic,p", 			"panic on first sign of trouble and stop execution")
@@ -360,7 +361,7 @@ namespace {
 				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+				("repeat,r",			bpo::value<int>()->default_value(1),	"the number of times the tests shell be repeated")
 				("clean",				"remove all output files")
 				("nocolor",				"no highlighting of output")
 		;
@@ -380,6 +381,15 @@ namespace {
 		// check whether help was requested
 		if (map.count("help")) {
 			std::cout << desc << "\n";
+			return fail;
+		}
+
+		// check whether step list was requested
+		if (map.count("liststeps")) {
+			std::cout << "Available steps:\n";
+			for(auto entry: insieme::driver::integration::getFullStepList()) {
+				std::cout << "\t" << entry.first << "\n";
+			}
 			return fail;
 		}
 
