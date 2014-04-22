@@ -29,11 +29,10 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
 
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 
@@ -615,8 +614,8 @@ namespace {
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "barrier", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
-                            //attach annotation
-                            assert(node.isSingleStmt());
+                            // attach annotation
+                            // does not need to be a single statement, can just be attached to first in list
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Barrier>());
                             node[0] = getMarkedNode(node[0], anns); 
@@ -627,9 +626,9 @@ namespace {
                 // Add an handler for #pragma omp taskwait new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "taskwait", tok::eod,
-                        [](MatchObject object, stmtutils::StmtWrapper node) {
-                            //attach annotation
-                            //assert(node.isSingleStmt());
+					[](MatchObject object, stmtutils::StmtWrapper node) {
+							// attach annotation
+							// does not need to be a single statement, can just be attached to first in list
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::TaskWait>());
                             node[0] = getMarkedNode(node[0], anns);
