@@ -62,14 +62,10 @@ TYPE(workItemType, 					"irt_wi")
 TYPE(workItemImplType, 				"irt_wi_implementation_id")
 TYPE(workItemVariantType, 			"irt_wi_variant")
 TYPE(workItemVariantImplType, 		"(ref<irt_wi>)->unit")
-TYPE(workItemVariantEffortFunType, 	"(int<8>,int<8>)->uint<8>")
-TYPE(workItemVariantFeaturesType, 	"irt_wi_implementation_variant_features")
 
-LITERAL(workItemVariantCtr, 		"WorkItemVariant", 	"((ref<irt_wi>)->unit,(int<8>,int<8>)->uint<8>,irt_wi_implementation_variant_features)->irt_wi_variant")
+LITERAL(workItemVariantCtr, 		"WorkItemVariant", 	"((ref<irt_wi>)->unit)->irt_wi_variant")
 LITERAL(workItemImplCtr, 			"WorkItemImpl", 	"(list<irt_wi_variant>)->irt_wi_implementation_id")
 LITERAL(unknownEffort, 				"unknownEffort", 	"(int<8>,int<8>)->uint<8>")
-// params: effort, opencl (yes/no), implicit region number (-1 if none), suggested # of threads (-1 if none)
-LITERAL(workItemVariantFeaturesCtr, "WorkItemVariantFeatures", 	"(uint<8>, bool, int<8>, int<8>)->irt_wi_implementation_variant_features")
 
 
 /**

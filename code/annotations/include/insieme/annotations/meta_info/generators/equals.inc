@@ -37,7 +37,7 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
-	bool operator==(const info_type& a, const info_type& b) { return true
+	inline bool operator==(const info_type& a, const info_type& b) { return true
 
 #define INFO_FIELD(_name, _type, _def) \
 		&& insieme::annotations::detail::field_comperator<decltype(a._name)>()(a._name, b._name)

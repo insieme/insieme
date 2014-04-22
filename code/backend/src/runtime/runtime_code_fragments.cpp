@@ -364,10 +364,8 @@ namespace runtime {
 	// -- Implementation Table --------------------------------------------------------------
 
 	struct WorkItemVariantCode {
-		string entryName;
-		string effortName;
 
-		WorkItemVariantFeatures features;
+		string entryName;
 
 		unsigned metaInfoEntryIndex;
 
@@ -379,8 +377,8 @@ namespace runtime {
 		 * @param effortName the name of the function implementing the effort estimation function. If the
 		 * 			name is empty, no such function is present.
 		 */
-		WorkItemVariantCode(const string& name, const string& effortName = "", const WorkItemVariantFeatures& features = WorkItemVariantFeatures(), unsigned metaInfoEntryIndex = 0)
-			: entryName(name), effortName(effortName), features(features), metaInfoEntryIndex(metaInfoEntryIndex) { }
+		WorkItemVariantCode(const string& name, unsigned metaInfoEntryIndex = 0)
+			: entryName(name), metaInfoEntryIndex(metaInfoEntryIndex) { }
 	};
 
 	struct WorkItemImplCode {
@@ -432,16 +430,6 @@ namespace runtime {
 			// make this fragment depending on the entry point
 			this->addDependency(entryInfo.prototype);
 
-			// resolve effort estimation function
-			if (cur.getEffortEstimator()) {
-
-				// resolve effort function
-				const FunctionInfo& effortInfo = funManager.getInfo(cur.getEffortEstimator());
-
-				// make this fragment depending on the effort function declaration
-				this->addDependency(effortInfo.prototype);
-			}
-
 		});
 
 
@@ -459,18 +447,11 @@ namespace runtime {
 			string implName = format("insieme_wi_%d_var_%d_impl", id, var_id);
 			funManager.rename(cur.getImplementation(), implName);
 
-			// update effort estimation function name
-			string effortFunName = "";
-			if (cur.getEffortEstimator()) {
-				effortFunName = format("insieme_wi_%d_var_%d_effort", id, var_id);
-				funManager.rename(cur.getEffortEstimator(), effortFunName);
-			}
-
 			// register meta info
 			unsigned info_id = MetaInfoTable::get(converter)->registerMetaInfoFor(cur.getImplementation());
 
 			// add to variant to lists of variants
-			variants.push_back(WorkItemVariantCode(implName, effortFunName, cur.getFeatures(), info_id));
+			variants.push_back(WorkItemVariantCode(implName, info_id));
 		});
 
 		// add implementation to list of implementations
@@ -493,22 +474,12 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", ";
+				out << "    { &" << variant.entryName << ", ";
 
-				// add effort function ...
-				if (variant.effortName.empty()) {
-					out << "NULL";
-				} else {
-					out << "&" << variant.effortName;
-				}
+				// data and channel requirements
+				out << "0, NULL, 0, NULL, ";
 
-				out << ", 0, NULL, 0, NULL, ";
-				out << "{";
-					out << variant.features.effort << "ull, ";
-					out << variant.features.opencl << ", ";
-					out << variant.features.implicitRegionId << "ll, ";
-					out << variant.features.suggestedThreadNum << "ll,";
-				out << "},";
+				// meta information
 				out << " &(" << META_TABLE_NAME << "[" << variant.metaInfoEntryIndex << "])";
 				out << " },\n";
 			});
@@ -646,24 +617,25 @@ namespace runtime {
 			}
 		}
 
-		out <<
-				"\n// --- meta info table entry type declarations ---\n"
-				"#include \"meta_information/struct_generator.h\"\n";
+		// TODO: remove this:
+		{
+			out <<
+					"\n// --- meta info table entry type declarations ---\n"
+					"#include \"meta_information/struct_generator.h\"\n"
+					"#include \"insieme/meta_information/effort_estimation.def\"\n"
+					"#include \"insieme/meta_information/opencl.def\"\n";
 
-		for(const auto& cur : infoStructs) {
-			out << "#include \"insieme/meta_information/" << cur << ".def\"\n";
+			out << "\n";
+
+			out <<
+					"// --- meta info table entry type ---\n"
+					"struct _irt_meta_info_table_entry {\n"
+					"	effort_estimation_info effort_estimation;\n"
+					"	opencl_info opencl;\n"
+					"";
+
+			out << "};\n\n";
 		}
-		out << "\n";
-
-		out <<
-				"// --- meta info table entry type ---\n"
-				"struct _irt_meta_info_table_entry {\n";
-
-		for(const auto& cur : infoStructs) {
-			out << "    " << cur << "_info " << cur << ";\n";
-		}
-
-		out << "};\n\n";
 
 		out <<
 				"// --- the meta info table --- \n"
@@ -674,9 +646,9 @@ namespace runtime {
 			out << "    {";
 			out << join(",", infoStructs, [&](std::ostream& out, const string& type){
 				auto pos = cur.entries.find(type);
-				out << "{";
+				out << "." << type << "={ true, ";
 				if (pos != cur.entries.end()) {
-					out << join(",", pos->second, [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
+					out << join(", ", pos->second, [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
 						out << toC(cur);
 					});
 				}

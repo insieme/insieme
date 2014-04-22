@@ -37,7 +37,7 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
-	void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
+	inline void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
 		info_type data;
 
 #define INFO_FIELD(_name, _type, _def) \

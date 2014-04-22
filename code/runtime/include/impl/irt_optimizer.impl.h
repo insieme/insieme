@@ -51,6 +51,9 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time,
 
 #else // ifndef IRT_RUNTIME_TUNING
 
+#include "meta_information/accessor_generator.h"
+#include "insieme/meta_information/opencl.def"
+
 ///////////////////////////////////// Context =========================================================================
 
 void irt_optimizer_context_startup(irt_context *context) {
@@ -63,7 +66,7 @@ void irt_optimizer_context_startup(irt_context *context) {
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
 	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
 
-	if(impl->variants[0].features.opencl) {
+	if(irt_get_opencl_info(impl->variants[0].meta_info).opencl) {
 		irt_opencl_optimizer_starting_pfor(impl, range, group);
 	} else {
 		irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(impl, range, group);

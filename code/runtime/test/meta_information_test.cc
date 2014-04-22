@@ -71,9 +71,9 @@ irt_meta_info_table_entry irt_g_meta_info[2] = {
 
 TEST(meta_information, basic) {
 	//if(!irt_is_meta_info_effort_estimation_available()) {
-	EXPECT_EQ(irt_get_effort_estimation_info(0)->fallback_estimate, 8);
-	EXPECT_EQ(irt_get_effort_estimation_info(1)->fallback_estimate, 3);
-	EXPECT_EQ((void*)irt_get_effort_estimation_info(1)->estimation_function, (void*)NULL);
+	EXPECT_EQ(irt_get_effort_estimation_info(&(irt_g_meta_info[0]))->fallback_estimate, 8);
+	EXPECT_EQ(irt_get_effort_estimation_info(&(irt_g_meta_info[1]))->fallback_estimate, 3);
+	EXPECT_EQ((void*)irt_get_effort_estimation_info(&(irt_g_meta_info[1]))->estimation_function, (void*)NULL);
 	//}
 }
 

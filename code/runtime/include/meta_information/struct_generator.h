@@ -39,7 +39,8 @@
 #define INFO_STRUCT_BEGIN(__name) \
 struct __name##_; \
 typedef struct __name##_ __name##_info; \
-struct __name##_ {
+struct __name##_ { \
+	bool available;
 
 #define INFO_FIELD(__id, __type, __val) \
 	__type __id;

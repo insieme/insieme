@@ -37,9 +37,9 @@
 #include "info_clean.h"
 
 #define INFO_STRUCT_BEGIN(__name) \
-__name##_info* irt_get_##__name##_info(int index) { \
-	if(irt_g_meta_info_size < index) return NULL; \
-	return &(irt_g_meta_info[index].__name); /*TODO context*/ \
+__name##_info* irt_get_##__name##_info(irt_meta_info_table_entry* entry) { \
+	IRT_ASSERT(entry, IRT_ERR_INTERNAL, "Accessing invalid meta info table entry!"); \
+	return &(entry->__name); \
 }
 
 #define INFO_FIELD(__id, __type, __val)
