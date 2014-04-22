@@ -34,11 +34,14 @@
  * regarding third party software licenses.
  */
 
-typedef void (*estimation_function_type)(int, int);
 
 /**
- * TODO: document me ...
+ * A struct providing information about the estimated relative effort of the associated loop.
+ * If an estimation function can be computed, its parameters are the loop boundaries of the 
+ * segment of the loop information is requested for.
+ * In any case, a fallback per-iteration estimate is provided.
  */
+typedef void (*estimation_function_type)(int, int);
 INFO_STRUCT_BEGIN(effort_estimation)
 	INFO_FIELD(estimation_function, 	estimation_function_type, 	NULL)
 	INFO_FIELD(fallback_estimate, 		int,						0)
