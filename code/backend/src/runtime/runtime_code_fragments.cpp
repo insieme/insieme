@@ -46,7 +46,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/annotations/meta_info/effort_estimation.h"
+#include "insieme/annotations/meta_info/meta_info.h"
 
 namespace insieme {
 namespace backend {
@@ -622,8 +622,7 @@ namespace runtime {
 			out <<
 					"\n// --- meta info table entry type declarations ---\n"
 					"#include \"meta_information/struct_generator.h\"\n"
-					"#include \"insieme/meta_information/effort_estimation.def\"\n"
-					"#include \"insieme/meta_information/opencl.def\"\n";
+					"#include \"insieme/meta_information/meta_infos.def\"\n";
 
 			out << "\n";
 

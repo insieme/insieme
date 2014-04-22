@@ -37,6 +37,7 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
 	inline insieme::core::NodeAnnotationPtr info_typeAnnotationConverter::toAnnotation(const insieme::core::ExpressionPtr& expr) const { \
 				assert(insieme::core::encoder::isEncodingOf<tuple_type>(expr) && "Invalid encoding encountered!"); \
 				auto tuple = insieme::core::encoder::toValue<tuple_type>(expr); \
@@ -47,4 +48,4 @@
 	data._name = std::get<_name ## Idx>(tuple);
 
 #define INFO_STRUCT_END() \
-	return std::make_shared<annotation_type>(data); }
+	return std::make_shared<annotation_type>(data); } }

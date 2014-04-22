@@ -57,8 +57,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
-#include "insieme/annotations/meta_info/effort_estimation.h"
-#include "insieme/annotations/meta_info/opencl.h"
+#include "insieme/annotations/meta_info/meta_info.h"
 
 namespace insieme {
 namespace backend {

@@ -37,10 +37,11 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+		namespace _name ## _ns { \
 		enum FieldEnum { 
 
 #define INFO_FIELD(_name, _type, _def) \
 		_name ## Idx,
 
 #define INFO_STRUCT_END() \
-		};
+		}; }

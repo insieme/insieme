@@ -34,12 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include "clear.inc"
+typedef void (*estimation_function_type)(int, int);
 
-#define INFO_STRUCT_BEGIN(_name) \
-		}; \
-		typedef _name ## _ns::info_type _name ## _info;
+/**
+ * TODO: document me ...
+ */
+INFO_STRUCT_BEGIN(effort_estimation)
+	INFO_FIELD(estimation_function, 	estimation_function_type, 	NULL)
+	INFO_FIELD(fallback_estimate, 		int,						0)
+INFO_STRUCT_END()
 
-#define INFO_FIELD(_name, _type, _def)
 
-#define INFO_STRUCT_END()
+/**
+ * A st...
+ */
+INFO_STRUCT_BEGIN(opencl)
+	INFO_FIELD(opencl, 	bool,	false)
+INFO_STRUCT_END()

@@ -41,32 +41,28 @@
 namespace insieme {
 namespace annotations {
 
-	#include "insieme/annotations/meta_info/generators/start.inc"
+
+	#include "insieme/annotations/meta_info/generators/enum.inc"
 	#include "test_info.def"
 
-		#include "insieme/annotations/meta_info/generators/enum.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/struct.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/equals.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/clone.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/dump_type.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/dump_to.inc"
-		#include "test_info.def"
-
-		#include "insieme/annotations/meta_info/generators/dump_from.inc"
-		#include "test_info.def"
-
-	#include "insieme/annotations/meta_info/generators/end.inc"
+	#include "insieme/annotations/meta_info/generators/struct.inc"
 	#include "test_info.def"
+
+	#include "insieme/annotations/meta_info/generators/equals.inc"
+	#include "test_info.def"
+
+	#include "insieme/annotations/meta_info/generators/clone.inc"
+	#include "test_info.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_type.inc"
+	#include "test_info.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_to.inc"
+	#include "test_info.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_from.inc"
+	#include "test_info.def"
+
 
 	#include "insieme/annotations/meta_info/generators/clear.inc"
 

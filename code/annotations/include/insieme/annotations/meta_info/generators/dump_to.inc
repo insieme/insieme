@@ -37,6 +37,7 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
 	inline insieme::core::ExpressionPtr info_typeAnnotationConverter::toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const { \
 				static const string runtime_struct_name = #_name; \
 				typedef insieme::core::value_node_annotation<info_type>::type annotation_type; \
@@ -48,4 +49,4 @@
 		data._name,
 
 #define INFO_STRUCT_END() \
-		runtime_struct_name)); }
+		runtime_struct_name)); } }

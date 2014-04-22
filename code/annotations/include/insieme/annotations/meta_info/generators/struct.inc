@@ -37,6 +37,9 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { struct info_type; } \
+	typedef _name ## _ns::info_type _name ## _info; \
+	namespace _name ## _ns { \
 	struct info_type; \
 	VALUE_ANNOTATION_CONVERTER(info_type) \
 		typedef insieme::core::value_node_annotation<info_type>::type annotation_type;\
@@ -54,4 +57,4 @@
 		typename detail::compiler_type<_type>::type _name;
 
 #define INFO_STRUCT_END() \
-	};
+	}; }

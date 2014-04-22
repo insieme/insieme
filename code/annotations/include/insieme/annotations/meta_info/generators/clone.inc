@@ -37,6 +37,7 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
 	inline void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
 		info_type data;
 
@@ -44,4 +45,4 @@
 		data._name = insieme::annotations::detail::field_cloner<decltype(_name)>()(target.getNodeManager(), _name);
 
 #define INFO_STRUCT_END() \
-		target.attachValue(data); }
+		target.attachValue(data); } }

@@ -90,6 +90,32 @@ namespace annotations {
 		};
 	}
 
+	// include the actual definitions
+
+	#include "insieme/annotations/meta_info/generators/enum.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/struct.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/equals.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/clone.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_type.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_to.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/dump_from.inc"
+	#include "insieme/meta_information/meta_infos.def"
+
+	#include "insieme/annotations/meta_info/generators/clear.inc"
+
+
 
 } // end namespace annotations
 } // end namespace insieme

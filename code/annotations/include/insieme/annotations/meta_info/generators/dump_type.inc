@@ -37,10 +37,11 @@
 #include "clear.inc"
 
 #define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
 	typedef std::tuple<
 
 #define INFO_FIELD(_name, _type, _def) \
 	typename insieme::annotations::detail::compiler_type<_type>::type,
 
 #define INFO_STRUCT_END() \
-	std::string> tuple_type; 
+	std::string> tuple_type; }
