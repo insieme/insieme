@@ -57,7 +57,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
-#include "insieme/annotations/meta_info/meta_info.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 namespace insieme {
 namespace backend {
@@ -668,14 +668,14 @@ namespace runtime {
 					insieme::annotations::effort_estimation_info effort;
 					effort.estimation_function = getLoopEffortEstimationFunction(body);
 					effort.fallback_estimate = estimateEffort(body);
-					body.attachValue(effort);
+					entryPoint.attachValue(effort);
 				}
 
-				// also attach opencl flag
+				// also attach OpenCL flag
 				{
 					insieme::annotations::opencl_info opencl;
-					opencl.opencl = isOpencl(body);
-					body.attachValue(opencl);
+					opencl.opencl = isOpencl(entryPoint);
+					entryPoint.attachValue(opencl);
 				}
 
 				// ------------- finish process -------------
