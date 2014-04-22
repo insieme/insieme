@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/annotations/meta_info/meta_info.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 namespace insieme {
 namespace annotations {
