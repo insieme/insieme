@@ -36,6 +36,8 @@
 
 #include "clear.inc"
 
+#define INFO_DECL(_text) _text;
+
 #define INFO_STRUCT_BEGIN(_name) \
 	namespace _name ## _ns { struct info_type; } \
 	typedef _name ## _ns::info_type _name ## _info; \

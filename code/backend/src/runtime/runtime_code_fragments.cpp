@@ -613,12 +613,21 @@ namespace runtime {
 	std::ostream& MetaInfoTable::printTo(std::ostream& out) const {
 
 		// collect all meta info structs
-		std::set<string> infoStructs;
-		for(const auto& cur : infos) {
-			for(const auto& entry : cur.entries) {
-				infoStructs.insert(entry.first);
-			}
-		}
+		std::vector<string> infoStructs;
+		#define INFO_STRUCT_BEGIN(_name) infoStructs.push_back(#_name);
+		#include "insieme/meta_information/meta_infos.def"
+		#undef INFO_STRUCT_BEGIN
+
+		// collect all defaults
+
+		std::map<string, std::vector<const char*>> defaults;
+		std::vector<const char*>* cur;
+
+		#define INFO_STRUCT_BEGIN(_name) cur = &defaults[#_name];
+		#define INFO_FIELD(_name,_type,_default) cur->push_back(#_default);
+		#include "insieme/meta_information/meta_infos.def"
+		#undef INFO_STRUCT_BEGIN
+
 
 		// TODO: remove this:
 		{
@@ -642,22 +651,32 @@ namespace runtime {
 		out <<
 				"// --- the meta info table --- \n"
 				"irt_meta_info_table_entry " META_TABLE_NAME "[] = {\n";
-		out << "    {}, /* the no-info-entry */\n";
 
-		out << join(",\n", infos, [&](std::ostream& out, const MetaInfoTableEntry& cur) {
+		auto cPrinter = [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
+			out << toC(cur);
+		};
+
+		auto infoPrinter = [&](std::ostream& out, const MetaInfoTableEntry& cur) {
 			out << "    {";
 			out << join(",", infoStructs, [&](std::ostream& out, const string& type){
 				auto pos = cur.entries.find(type);
-				out << " ." << type << "={ true, ";
+				out << "{ ";
 				if (pos != cur.entries.end()) {
-					out << join(", ", pos->second, [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
-						out << toC(cur);
-					});
+					out << "true, "; 			// mark it available
+					out << join(", ", pos->second, cPrinter);
+				} else {
+					out << "false, ";			// it is not available
+					out << join(", ", defaults[type]);
 				}
 				out << " }";
 			});
 			out << "}";
-		});
+		};
+
+		infoPrinter(out, MetaInfoTableEntry());
+		out << ", /* the no-info-entry */\n";
+
+		out << join(",\n", infos, infoPrinter);
 
 		return out << "\n};\n\n";
 	}
