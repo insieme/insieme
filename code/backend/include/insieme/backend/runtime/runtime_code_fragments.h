@@ -81,6 +81,8 @@ namespace runtime {
 
 		ImplementationTablePtr implTable;
 
+		MetaInfoTablePtr infoTable;
+
 	public:
 
 		ContextHandlingFragment(const Converter& converter);

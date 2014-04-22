@@ -55,6 +55,8 @@ struct _irt_context {
 	irt_type* type_table;
 	uint32 impl_table_size;
 	irt_wi_implementation* impl_table;
+	uint32 info_table_size;
+	irt_meta_info_table_entry* info_table;
 
 	// TODO: moved this into an #ifdef and have the backend only set it when actually required
 	uint32 num_regions;													// initialized by compiler

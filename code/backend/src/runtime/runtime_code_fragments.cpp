@@ -60,7 +60,10 @@ namespace runtime {
 	#define META_TABLE_NAME "g_insieme_meta_table"
 
 	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter)
-		: converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)) {
+		: converter(converter),
+		  typeTable(TypeTable::get(converter)),
+		  implTable(ImplementationTable::get(converter)),
+		  infoTable(MetaInfoTable::get(converter)) {
 
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
@@ -97,7 +100,9 @@ namespace runtime {
 				"    context->type_table_size = " << typeTable->size() << ";\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
 				"    context->impl_table_size = " << implTable->size() << ";\n"
-				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
+				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
+				"    context->info_table_size = " << infoTable->size() << ";\n"
+				"    context->info_table = " META_TABLE_NAME ";\n";
 
 		for_each(initExpressions, [&](const string& cur) {
 			out << format(cur.c_str(), "context");
@@ -304,7 +309,7 @@ namespace runtime {
 	std::ostream& TypeTable::printTo(std::ostream& out) const {
 
 		// create component arrays
-		out << "// --- componenents for type table entries ---\n";
+		out << "// --- components for type table entries ---\n";
 		for_each(store->getEntries(), [&](const TypeTableStore::Entry& cur) {
 			if (!cur.components.empty()) {
 				out << "irt_type_id g_type_" << cur.index << "_components[] = {" << join(",", cur.components) << "};\n";
@@ -461,15 +466,6 @@ namespace runtime {
 				funManager.rename(cur.getEffortEstimator(), effortFunName);
 			}
 
-//			// TODO: remove this
-//			insieme::annotations::effort_estimation_info effort;
-//			effort.estimation_function = core::IRBuilder(cur.getImplementation().getNodeManager()).parseExpr(
-//					"let int = int<4> in "
-//					"(int a, int b)->int { return b - a; }"
-//			);
-//			effort.fallback_estimate = 15;
-//			cur.getImplementation().attachValue(effort);
-
 			// register meta info
 			unsigned info_id = MetaInfoTable::get(converter)->registerMetaInfoFor(cur.getImplementation());
 
@@ -512,8 +508,8 @@ namespace runtime {
 					out << variant.features.opencl << ", ";
 					out << variant.features.implicitRegionId << "ll, ";
 					out << variant.features.suggestedThreadNum << "ll,";
-					out << "&(" << META_TABLE_NAME << "[" << variant.metaInfoEntryIndex << "])";
-				out << "}";
+				out << "},";
+				out << " &(" << META_TABLE_NAME << "[" << variant.metaInfoEntryIndex << "])";
 				out << " },\n";
 			});
 			out << "};\n";
@@ -541,6 +537,7 @@ namespace runtime {
 
 	struct MetaInfoTableEntry {
 
+		// a map from an info type name to a list of values required for its initialization
 		std::map<string, std::vector<c_ast::ExpressionPtr>> entries;
 
 		void add(const string& type, const std::vector<c_ast::ExpressionPtr>& data) {
@@ -650,11 +647,20 @@ namespace runtime {
 		}
 
 		out <<
+				"\n// --- meta info table entry type declarations ---\n"
+				"#include \"meta_information/struct_generator.h\"\n";
+
+		for(const auto& cur : infoStructs) {
+			out << "#include \"insieme/meta_information/" << cur << ".def\"\n";
+		}
+		out << "\n";
+
+		out <<
 				"// --- meta info table entry type ---\n"
 				"struct _irt_meta_info_table_entry {\n";
 
 		for(const auto& cur : infoStructs) {
-			out << "    " << cur << " " << cur << ";\n";
+			out << "    " << cur << "_info " << cur << ";\n";
 		}
 
 		out << "};\n\n";

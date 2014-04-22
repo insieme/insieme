@@ -21,7 +21,7 @@ endif()
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-get_directory_property( insieme_root_dir DIRECTORY ${insieme_code_dir} PARENT_DIRECTORY )
+get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 
 include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)

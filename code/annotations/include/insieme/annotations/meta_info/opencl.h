@@ -34,18 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include "clear.inc"
+#pragma once
 
-#define INFO_STRUCT_BEGIN(_name) \
-	insieme::core::ExpressionPtr info_typeAnnotationConverter::toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const { \
-				static const string runtime_struct_name = #_name; \
-				typedef insieme::core::value_node_annotation<info_type>::type annotation_type; \
-				assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only " #_name "_info annotations supported!"); \
-				const auto& data = static_pointer_cast<annotation_type>(annotation)->getValue();\
-				return insieme::core::encoder::toIR(manager, tuple_type ( 
 
-#define INFO_FIELD(_name, _type, _def) \
-		data._name,
+#include "insieme/annotations/meta_info/meta_info.h"
 
-#define INFO_STRUCT_END() \
-		runtime_struct_name)); }
+namespace insieme {
+namespace annotations {
+
+	#include "insieme/annotations/meta_info/generators/start.inc"
+	#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/enum.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/struct.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/equals.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/clone.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/dump_type.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/dump_to.inc"
+		#include "insieme/meta_information/opencl.def"
+
+		#include "insieme/annotations/meta_info/generators/dump_from.inc"
+		#include "insieme/meta_information/opencl.def"
+
+	#include "insieme/annotations/meta_info/generators/end.inc"
+	#include "insieme/meta_information/opencl.def"
+
+	#include "insieme/annotations/meta_info/generators/clear.inc"
+
+
+} // end namespace annotations
+} // end namespace insieme
