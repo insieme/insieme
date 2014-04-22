@@ -40,6 +40,5 @@ __name##_info* irt_meta_info_get_##__name(irt_meta_info_table_entry* entry) { \
 	return &(entry->__name); \
 } \
 bool irt_meta_info_is_##__name##_available(irt_meta_info_table_entry* entry) { \
-	IRT_ASSERT(entry, IRT_ERR_INTERNAL, "Accessing invalid meta info table entry!"); \
-	return entry->__name.available; \
+	return entry && entry->__name.available; \
 }
