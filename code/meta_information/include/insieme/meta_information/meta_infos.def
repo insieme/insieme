@@ -34,7 +34,28 @@
  * regarding third party software licenses.
  */
 
-typedef void (*estimation_function_type)(int, int);
+// ------------ interface ------------------
+
+#ifndef INFO_DECL
+#define INFO_DECL(_text)
+#endif
+
+#ifndef INFO_STRUCT_BEGIN
+#define INFO_STRUCT_BEGIN(_name)
+#endif
+
+#ifndef INFO_FIELD
+#define INFO_FIELD(_name, _type, _default)
+#endif
+
+#ifndef INFO_STRUCT_END
+#define INFO_STRUCT_END()
+#endif
+
+
+// ------------ definitions ------------------
+
+INFO_DECL(typedef void (*estimation_function_type)(int, int))
 
 /**
  * TODO: document me ...
@@ -51,3 +72,12 @@ INFO_STRUCT_END()
 INFO_STRUCT_BEGIN(opencl)
 	INFO_FIELD(opencl, 	bool,	false)
 INFO_STRUCT_END()
+
+
+
+// ------------ clear definitions ------------------
+
+#undef INFO_DECL
+#undef INFO_STRUCT_BEGIN
+#undef INFO_FIELD
+#undef INFO_STRUCT_END
