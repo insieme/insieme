@@ -46,7 +46,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/annotations/meta_info/meta_info.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 namespace insieme {
 namespace backend {
@@ -548,6 +548,8 @@ namespace runtime {
 	unsigned MetaInfoTable::registerMetaInfoFor(const core::NodePtr& node) {
 		auto reg = core::dump::AnnotationConverterRegister::getDefault();
 		auto& mgr = node.getNodeManager();
+		core::IRBuilder builder(mgr);
+		auto zero = converter.getCNodeManager()->create<c_ast::Literal>("0");
 
 		// iterate through all annotations
 		MetaInfoTableEntry entry;
@@ -584,7 +586,8 @@ namespace runtime {
 					expr = core::encoder::toValue<core::ExpressionPtr>(expr);
 				}
 
-				fields.push_back(converter.getStmtConverter().convertExpression(context, expr));
+				// add field if not null ...
+				fields.push_back((expr) ? converter.getStmtConverter().convertExpression(context, expr) : zero);
 			}
 
 			// add dependencies
@@ -645,13 +648,13 @@ namespace runtime {
 			out << "    {";
 			out << join(",", infoStructs, [&](std::ostream& out, const string& type){
 				auto pos = cur.entries.find(type);
-				out << "." << type << "={ true, ";
+				out << " ." << type << "={ true, ";
 				if (pos != cur.entries.end()) {
 					out << join(", ", pos->second, [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
 						out << toC(cur);
 					});
 				}
-				out << "}";
+				out << " }";
 			});
 			out << "}";
 		});
