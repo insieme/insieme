@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -66,43 +66,43 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi);
 void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_simple, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_simple }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_multiple_metrics[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_multiple_metrics, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_multiple_metrics }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_nested[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_nested, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_nested }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_repeated_execution[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_repeated_execution, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_repeated_execution }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_rapl[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_rapl, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_rapl }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_merge[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_merge, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_merge }
 };
 
 irt_wi_implementation_variant g_insieme_wi_variants_for[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_implementation_for, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_implementation_for }
 };
 
 irt_wi_implementation_variant g_insieme_wi_variants_pfor[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_implementation_pfor, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_implementation_pfor }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_papi[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_papi, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_papi }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_all_metrics[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_all_metrics, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_all_metrics }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {

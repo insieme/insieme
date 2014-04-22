@@ -46,8 +46,8 @@
 // scheduling policy
 #ifndef IRT_SCHED_POLICY
 	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
-	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
 #endif
 
 #define IRT_LOOP_SCHED_POLICY_ENV "IRT_LOOP_SCHED_POLICY"
@@ -55,7 +55,7 @@
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!
 // workers must not sleep when compiling/running a program on windows xp because condition variables are not supported there
-#define IRT_WORKER_SLEEPING
+//#define IRT_WORKER_SLEEPING
 
 // ir interface
 #ifndef IRT_SANE_PARALLEL_MAX

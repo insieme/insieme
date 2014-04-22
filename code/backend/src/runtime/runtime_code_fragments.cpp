@@ -628,26 +628,6 @@ namespace runtime {
 		#include "insieme/meta_information/meta_infos.def"
 		#undef INFO_STRUCT_BEGIN
 
-
-		// TODO: remove this:
-		{
-			out <<
-					"\n// --- meta info table entry type declarations ---\n"
-					"#include \"meta_information/struct_generator.h\"\n"
-					"#include \"insieme/meta_information/meta_infos.def\"\n";
-
-			out << "\n";
-
-			out <<
-					"// --- meta info table entry type ---\n"
-					"struct _irt_meta_info_table_entry {\n"
-					"	effort_estimation_info effort_estimation;\n"
-					"	opencl_info opencl;\n"
-					"";
-
-			out << "};\n\n";
-		}
-
 		out <<
 				"// --- the meta info table --- \n"
 				"irt_meta_info_table_entry " META_TABLE_NAME "[] = {\n";

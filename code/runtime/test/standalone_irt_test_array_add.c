@@ -83,12 +83,12 @@ void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, NULL, 2, &insieme_wi_add_datareq, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, NULL, 2, &insieme_wi_add_datareq, 0, NULL }
+	{ &insieme_wi_add_implementation1, 2, &insieme_wi_add_datareq, 0, NULL },
+	{ &insieme_wi_add_implementation2, 2, &insieme_wi_add_datareq, 0, NULL }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {

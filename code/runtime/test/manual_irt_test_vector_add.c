@@ -112,20 +112,20 @@ void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_check_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_init_implementation, 0, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, NULL, 0, NULL, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_add_implementation1, 0, NULL, 0, NULL, 0, NULL },
+	{ &insieme_wi_add_implementation2, 0, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_check_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_check_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_check_implementation, 0, NULL, 0, NULL, 0, NULL }
 };
 
 #define INSIEME_WI_INIT_INDEX 1

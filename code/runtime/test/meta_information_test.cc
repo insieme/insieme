@@ -40,40 +40,24 @@
 #include <irt_all_impls.h>
 #include <standalone.h>
 
-// #include "meta_information/default_generator.h"
-// #include "insieme/meta_information/effort_estimation.def"
-
-
 // --- compiler generated ---
 
-#include "meta_information/struct_generator.h"
-#include "insieme/meta_information/effort_estimation.def"
-
-
-struct _irt_meta_info_table_entry {
-	effort_estimation_info effort_estimation;
-};
-
-int irt_g_meta_info_size = 2;
-
-irt_meta_info_table_entry irt_g_meta_info[2] = {
-	{ { NULL, 8 } },
-	{ { NULL, 3 } },
+irt_meta_info_table_entry irt_g_meta_info[] = {
+	{ { true, NULL, 8 } },
+	{ { true, NULL, 3 } },
+	{ { false, NULL, 0 } },
 };
 
 // --- compiler generated - end ---
 
-
-// --- user code ---
-
-#include "meta_information/accessor_generator.h"
-#include "insieme/meta_information/effort_estimation.def"
-
 TEST(meta_information, basic) {
-	//if(!irt_is_meta_info_effort_estimation_available()) {
-	EXPECT_EQ(irt_get_effort_estimation_info(&(irt_g_meta_info[0]))->fallback_estimate, 8);
-	EXPECT_EQ(irt_get_effort_estimation_info(&(irt_g_meta_info[1]))->fallback_estimate, 3);
-	EXPECT_EQ((void*)irt_get_effort_estimation_info(&(irt_g_meta_info[1]))->estimation_function, (void*)NULL);
-	//}
+	EXPECT_EQ(irt_meta_info_is_effort_estimation_available(&(irt_g_meta_info[0])), true);
+	EXPECT_EQ(irt_meta_info_is_effort_estimation_available(&(irt_g_meta_info[2])), false);
+	EXPECT_EQ(irt_meta_info_is_opencl_available(&(irt_g_meta_info[0])), false);
+	EXPECT_EQ(irt_meta_info_is_opencl_available(&(irt_g_meta_info[1])), false);
+	EXPECT_EQ(irt_meta_info_is_opencl_available(&(irt_g_meta_info[2])), false);
+	EXPECT_EQ(irt_meta_info_get_effort_estimation(&(irt_g_meta_info[0]))->fallback_estimate, 8);
+	EXPECT_EQ(irt_meta_info_get_effort_estimation(&(irt_g_meta_info[1]))->fallback_estimate, 3);
+	EXPECT_EQ((void*)irt_meta_info_get_effort_estimation(&(irt_g_meta_info[1]))->estimation_function, (void*)NULL);
 }
 
