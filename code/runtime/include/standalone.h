@@ -328,6 +328,11 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 
+	if(getenv(IRT_REPORT_ENV)) {
+		irt_dbg_print_context(context);
+		exit(0);
+	}
+
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
