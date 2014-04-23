@@ -555,21 +555,24 @@ namespace runtime {
 		MetaInfoTableEntry entry;
 		for(const auto& cur : node.getAnnotations()) {
 
+			// filter out non-meta information annotations
+			if (!annotations::isMetaInfo(cur.second)) continue;
+
 			// try obtaining a matching converter
 			auto conv = reg.getConverterFor(cur.second);
-			if (!conv) continue;
+			assert_true(conv) << "There has to be a available converter!";
 
 			// convert the information
 			auto pack = conv->toIR(mgr, cur.second);
 
 			// unpack it
 			auto tuple = pack.isa<core::TupleExprPtr>();
-			if (!tuple) continue;
+			assert_true(tuple) << "Invalid meta-info IR encoding of type " << pack->getNodeType() << " encountered!";
 			vector<core::ExpressionPtr> values = tuple->getExpressions();
 
 			// isolate last
 			auto typeName = values.back().isa<core::LiteralPtr>();
-			if (!typeName) continue;
+			assert_true(typeName) << "Invalid meta-info IR encoding encountered!";
 			values.pop_back();
 
 			// get string name of type
