@@ -34,15 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "info_clean.h"
+#include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(__name) \
-struct __name##_; \
-typedef struct __name##_ __name##_info; \
-struct __name##_ {
+#define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
+	inline void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
+		info_type data;
 
-#define INFO_FIELD(__id, __type, __val) \
-	__type __id;
+#define INFO_FIELD(_name, _type, _def) \
+		data._name = insieme::annotations::detail::field_cloner<decltype(_name)>()(target.getNodeManager(), _name);
 
 #define INFO_STRUCT_END() \
-};
+		target.attachValue(data); } }

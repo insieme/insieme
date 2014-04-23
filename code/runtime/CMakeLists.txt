@@ -195,6 +195,8 @@ if (NOT MSVC)
 	endif (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
 endif (NOT MSVC)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	

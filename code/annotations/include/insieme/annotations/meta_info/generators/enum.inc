@@ -34,10 +34,14 @@
  * regarding third party software licenses.
  */
 
-typedef void (*estimation_function_type)(int, int);
+#include "clear.inc"
 
-INFO_STRUCT_BEGIN(effort_estimation)
-	INFO_FIELD(estimation_function, 	estimation_function_type, 	NULL)
-	INFO_FIELD(fallback_estimate, 	int,					0)
-INFO_STRUCT_END()
+#define INFO_STRUCT_BEGIN(_name) \
+		namespace _name ## _ns { \
+		enum FieldEnum { 
 
+#define INFO_FIELD(_name, _type, _def) \
+		_name ## Idx,
+
+#define INFO_STRUCT_END() \
+		}; }

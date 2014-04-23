@@ -34,15 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include "info_clean.h"
+// ------------ interface ------------------
 
-#define INFO_STRUCT_BEGIN(__name) \
-__name##_info* irt_get_##__name##_info(int index) { \
-	if(irt_g_meta_info_size < index) return NULL; \
-	return &(irt_g_meta_info[index].__name); /*TODO context*/ \
-}
+#ifndef INFO_DECL
+#define INFO_DECL(_text)
+#endif
 
-#define INFO_FIELD(__id, __type, __val)
+#ifndef INFO_STRUCT_BEGIN
+#define INFO_STRUCT_BEGIN(_name)
+#endif
 
-#define INFO_STRUCT_END() 
+#ifndef INFO_FIELD
+#define INFO_FIELD(_name, _type, _default)
+#endif
 
+#ifndef INFO_STRUCT_END
+#define INFO_STRUCT_END()
+#endif
+
+// ------------ definitions ------------------
+
+/**
+ * A struct providing information about the estimated relative effort of the associated loop.
+ * If an estimation function can be computed, its parameters are the loop boundaries of the 
+ * segment of the loop information is requested for.
+ * In any case, a fallback per-iteration estimate is provided.
+ */
+INFO_DECL(typedef void (*estimation_function_type)(int, int))
+INFO_STRUCT_BEGIN(effort_estimation)
+	INFO_FIELD(estimation_function, 	estimation_function_type, 	NULL)
+	INFO_FIELD(fallback_estimate, 		int,						0)
+INFO_STRUCT_END()
+
+
+/**
+ * A st...
+ */
+INFO_STRUCT_BEGIN(opencl)
+	INFO_FIELD(opencl, 	bool,	false)
+INFO_STRUCT_END()
+
+// ------------ clear definitions ------------------
+
+#undef INFO_DECL
+#undef INFO_STRUCT_BEGIN
+#undef INFO_FIELD
+#undef INFO_STRUCT_END

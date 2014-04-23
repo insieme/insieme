@@ -34,8 +34,23 @@
  * regarding third party software licenses.
  */
 
-#undef INFO_STRUCT_BEGIN
+#include <gtest/gtest.h>
 
-#undef INFO_FIELD
+#include "insieme/core/ir_node_path.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
-#undef INFO_STRUCT_END
+namespace insieme {
+namespace core {
+
+	TEST(NodePathTest, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePath<empty> path;
+
+	}
+
+} // end namespace core
+} // end namespace insieme
+

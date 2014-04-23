@@ -54,19 +54,22 @@ namespace cilk {
 					  const pragma::MatchMap& 		mmap):
 				Pragma(startLoc, endLoc, name, mmap) { }
 
-		virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
+		virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
 
-			core::IRBuilder builder(node->getNodeManager());
-			core::NodePtr res;
-			if (node->getNodeCategory() == core::NC_Statement) {
-				res = builder.markerStmt(node.as<core::StatementPtr>());
-			} else if (node->getNodeCategory() == core::NC_Expression) {
-				res = builder.markerExpr(node.as<core::ExpressionPtr>());
-			} else {
-				assert(false && "Cannot annotate non statement/expression!");
-			}
-
-			res->attachValue<T>();
+            stmtutils::StmtWrapper res;
+            for(core::StatementPtr element : node) {
+                core::StatementPtr tmp;
+                core::IRBuilder builder(element->getNodeManager());
+    			if (element->getNodeCategory() == core::NC_Statement) {
+    				tmp = builder.markerStmt(element.as<core::StatementPtr>());
+    			} else if (element->getNodeCategory() == core::NC_Expression) {
+	    			tmp = builder.markerExpr(element.as<core::ExpressionPtr>());
+    			} else {
+	    			assert(false && "Cannot annotate non statement/expression!");
+		    	}
+			    tmp->attachValue<T>();
+                res.push_back(tmp);
+            }
 			return res;
 		}
 

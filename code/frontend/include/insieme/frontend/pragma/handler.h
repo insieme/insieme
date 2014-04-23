@@ -43,6 +43,7 @@
 
 #include "insieme/frontend/sema.h"
 #include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
@@ -54,6 +55,10 @@ namespace clang {
 class Stmt;
 class Decl;
 class Expr;
+}
+
+namespace stmtutils {
+    class StmtWrapper;
 }
 
 namespace insieme {
@@ -84,7 +89,7 @@ namespace pragma {
  */
 struct AutomaticAttachable {
 
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const = 0;
+	virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const = 0;
 
 	virtual ~AutomaticAttachable() { }
 };
@@ -95,17 +100,6 @@ struct AutomaticAttachable {
  * target node
  */
 class Pragma {
-	/**
-	 * Attach the pragma to a statement. If the pragma is already bound to a
-	 * statement or location, a call to this method will produce an error.
-	 */
-	void setStatement(clang::Stmt const* stmt);
-
-	/**
-	 * Attach the pragma to a declaration. If the pragma is already bound to a
-	 * statement or location, a call to this method will produce an error.
-	 */
-	void setDecl(clang::Decl const* decl);
 
 	friend class insieme::frontend::InsiemeSema;
 public:
@@ -147,6 +141,18 @@ public:
 	clang::Decl const* getDecl() const;
 
 	/**
+	 * Attach the pragma to a statement. If the pragma is already bound to a
+	 * statement or location, a call to this method will produce an error.
+	 */
+	void setStatement(clang::Stmt const* stmt);
+
+	/**
+	 * Attach the pragma to a declaration. If the pragma is already bound to a
+	 * statement or location, a call to this method will produce an error.
+	 */
+	void setDecl(clang::Decl const* decl);
+
+	/**
 	 * Returns true if the AST node associated to this pragma is a statement (clang::Stmt)
 	 */
 	bool isStatement() const {
@@ -186,7 +192,7 @@ class FrontendPluginPragma : public Pragma {
  private:
      pragma::MatchMap mMap;
      pragma::MatchObject m;
-     const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f;
+     const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> f;
  public:
      FrontendPluginPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
@@ -205,7 +211,7 @@ class FrontendPluginPragma : public Pragma {
                           const clang::SourceLocation& endLoc,
                           const std::string& type,
                           const MatchMap& mmap,
-                          const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> func) :
+                          const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> func) :
                               Pragma(startLoc, endLoc, type), mMap(mmap), f(func) { }
 
      const pragma::MatchObject& getMatchObject(conversion::Converter& fact) {
@@ -214,7 +220,7 @@ class FrontendPluginPragma : public Pragma {
          return m;
      }
 
-     const std::function<core::NodePtr(MatchObject, core::NodePtr)> getFunction() {
+     const std::function<stmtutils::StmtWrapper (MatchObject, stmtutils::StmtWrapper)> getFunction() {
          return f;
      }
 
@@ -258,12 +264,12 @@ template<class T>
 class BasicPragmaHandler: public clang::PragmaHandler {
 	pragma::node* pragma_matcher;
 	std::string base_name;
-    const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> func;
+    const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> func;
 public:
 	BasicPragmaHandler(clang::IdentifierInfo* 	name,
 					   const node& 				pragma_matcher,
 					   const std::string& 		base_name = std::string(),
-                       const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f = nullptr)
+                       const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> f = nullptr)
 		: PragmaHandler(name->getName().str()),
 		  pragma_matcher(pragma_matcher.copy()), base_name(base_name), func(f) { }
 
@@ -320,20 +326,20 @@ struct PragmaHandlerFactory {
 			clang::IdentifierInfo* name, node
 			const& re,
 			const std::string& base_name = std::string(),
-            const std::function<core::NodePtr(const MatchObject&, core::NodePtr)> f = nullptr)
+            const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> f = nullptr)
 	{
 		return new BasicPragmaHandler<T> (name, re, base_name, f);
 	}
 };
 
 // Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes
-core::NodePtr  attachPragma( const core::NodePtr& 			node,
-		  				     const clang::Stmt* 				clangNode,
-						     conversion::Converter& 	fact );
+stmtutils::StmtWrapper  attachPragma( const stmtutils::StmtWrapper& 			node,
+		  			                  const clang::Stmt* 				clangNode,
+                                      conversion::Converter& 	fact );
 
-core::NodePtr  attachPragma( const core::NodePtr& 			node,
-		  				     const clang::Decl* 				clangDecl,
-						     conversion::Converter& 	fact );
+stmtutils::StmtWrapper  attachPragma( const stmtutils::StmtWrapper& 			node,
+		  			                  const clang::Decl* 				clangDecl,
+				                      conversion::Converter& 	fact );
 } // end pragma namespace
 } // End frontend namespace
 } // End insieme namespace

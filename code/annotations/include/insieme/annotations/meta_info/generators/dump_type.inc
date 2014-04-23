@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(__name) \
-__name irt_g_default_meta_info_##__name = {
+#define INFO_STRUCT_BEGIN(_name) \
+	namespace _name ## _ns { \
+	typedef std::tuple<
 
-#define INFO_FIELD(__id, __type, __val) \
-	__val,
+#define INFO_FIELD(_name, _type, _def) \
+	typename insieme::annotations::detail::compiler_type<_type>::type,
 
-#define INFO_STRUCT_END(__name) \
-}; \
-__name irt_get_meta_info_##__name(int) { return irt_g_default_meta_info_##__name; }
+#define INFO_STRUCT_END() \
+	std::string> tuple_type; }

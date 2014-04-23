@@ -29,12 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
+#include <vector>
+#include <memory>
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -43,11 +45,12 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/extensions/omp_frontend_plugin.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -60,6 +63,24 @@ namespace fe = insieme::frontend;
 #define CHECK_LOCATION(loc, srcMgr, line, col) \
 	EXPECT_EQ((size_t)line, utils::Line(loc, srcMgr)); \
 	EXPECT_EQ((size_t)col, utils::Column(loc, srcMgr));
+
+namespace {
+
+    /**
+     *  Checks given match object for all indentifiers
+     *  that are contained in the expression or variable list of
+     *  the match object.
+     */
+    std::vector<insieme::core::ExpressionPtr> handleIdentifierList(MatchObject& m, const std::string& key) {
+        std::vector<insieme::core::ExpressionPtr> ret;
+        for(insieme::core::ExpressionPtr p : m.getExprs(key))
+            ret.push_back(p);
+        for(insieme::core::VariablePtr p : m.getVars(key))
+            ret.push_back(p.as<insieme::core::ExpressionPtr>());
+        return ret;
+    }
+
+}
 
 
 TEST(PragmaMatcherTest, PragmaPossitions) {
@@ -328,9 +349,13 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c" );
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/omp_parallel.c");
+    job.registerFrontendPlugin<insieme::frontend::extensions::OmpFrontendPlugin>();
+
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c", job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
+	insieme::frontend::conversion::Converter convFactory(manager, tu);
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -356,8 +381,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 45, 2);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+		auto mo = omp->getMatchObject(convFactory);
+		EXPECT_TRUE(mo.empty());
 	}
 
 	// CHECK SECOND PRAGMA
@@ -381,34 +407,25 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 51, 3);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_FALSE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+		auto mo = omp->getMatchObject(convFactory);
+		EXPECT_FALSE(mo.empty());
 
-		auto fit = omp->getMap().find("private");
-		EXPECT_TRUE( fit != omp->getMap().end() );
-		const ValueList& values = fit->second;
+		auto fit = handleIdentifierList(mo, "private");
+		EXPECT_FALSE( fit.empty() );
 		// only 1 variable in the private construct
-		EXPECT_EQ(values.size(), (size_t) 2);
+		EXPECT_EQ(fit.size(), (size_t) 2);
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef =  llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
-			ASSERT_TRUE(varRef);
-			// ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
-		}
-
-		// check second variable name
-		{
-			clang::DeclRefExpr* varRef = llvm::dyn_cast<clang::DeclRefExpr>(values[1]->get<clang::Stmt*>());
-			ASSERT_TRUE(varRef);
-			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "b");
-		}
+		    EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
+		    EXPECT_TRUE(toString(fit[1].as<VariablePtr>()) == "AP(v2)");
+        }
 
 		// check default(shared)
-		auto dit = omp->getMap().find("default");
-		EXPECT_TRUE(dit != omp->getMap().end());
-		EXPECT_FALSE(dit->second.empty());
-		EXPECT_EQ(*dit->second[0]->get<std::string*>(), "shared");
+        auto def = mo.getString("default");
+        EXPECT_FALSE(def.empty());
+        EXPECT_TRUE(def == "shared");
 	}
 
 	p = pl[2];
@@ -431,8 +448,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 52, 24);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+        auto mo = omp->getMatchObject(convFactory);
+		EXPECT_TRUE(mo.empty());
 	}
 
 	p = pl[3];
@@ -454,8 +472,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 56, 23);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+        auto mo = omp->getMatchObject(convFactory);
+		EXPECT_TRUE(mo.empty());
 	}
 
 }
@@ -464,9 +483,14 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c");
+
+    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/omp_for.c");
+    job.registerFrontendPlugin<insieme::frontend::extensions::OmpFrontendPlugin>();
+
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c", job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
+	insieme::frontend::conversion::Converter convFactory(manager, tu);
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -494,23 +518,22 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 45, 22);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_FALSE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+		auto mo = omp->getMatchObject(convFactory);
+
+		EXPECT_FALSE(mo.empty());
 
 		// look for 'for' keyword in the map
-		EXPECT_TRUE(omp->getMap().find("for") != omp->getMap().end());
+		EXPECT_TRUE(mo.stringValueExists("for"));
 
-		auto fit = omp->getMap().find("private");
-		EXPECT_TRUE(fit != omp->getMap().end());
-		const ValueList& values = fit->second;
+		auto fit = handleIdentifierList(mo, "private");
+		EXPECT_FALSE(fit.empty());
 		// only 1 variable in the private construct
-		EXPECT_EQ(values.size(), (size_t) 1);
+		EXPECT_EQ(fit.size(), (size_t) 1);
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef = llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
-			ASSERT_TRUE(varRef);
-			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
+            EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
 		}
 	}
 
@@ -537,8 +560,10 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 52, 2);
 
 		// check empty map
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
-		EXPECT_TRUE(omp->getMap().empty());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+        auto mo = omp->getMatchObject(convFactory);
+
+		EXPECT_TRUE(mo.empty());
 	}
 
 	// pragma is at location [(13:3) - (14:14)]
@@ -564,23 +589,21 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 51, 3);
 
 		// check the omp parallel is empty
-		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		FrontendPluginPragma* omp = static_cast<FrontendPluginPragma*>(p.get());
+        auto mo = omp->getMatchObject(convFactory);
 
-		auto fit = omp->getMap().find("firstprivate");
-		EXPECT_TRUE(fit != omp->getMap().end());
-		const ValueList& values = fit->second;
+		auto ex = handleIdentifierList(mo, "firstprivate");
+		EXPECT_FALSE(ex.empty());
 		// only 1 variable in the private construct
-		EXPECT_EQ(values.size(), (size_t) 1);
+		EXPECT_EQ(ex.size(), (size_t) 1);
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef =  llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
-			ASSERT_TRUE(varRef);
-			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
+            EXPECT_TRUE(toString(ex[0]) == "AP(v1)");
 		}
 
 		// look for 'nowait' keyword in the map
-		EXPECT_TRUE(omp->getMap().find("nowait") != omp->getMap().end());
+		EXPECT_TRUE(mo.stringValueExists("nowait"));
 	}
 
 	// pragma is at location [(16:5) - (16:24)]

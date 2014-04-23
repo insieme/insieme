@@ -57,6 +57,8 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
+#include "insieme/annotations/meta_info/meta_infos.h"
+
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -488,30 +490,11 @@ namespace runtime {
 				// check that it is indeed a pfor call
 				assert(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
-				// obtain pfor-attributes
-				int64_t regionId = -1; int numThreads = -1;
-				auto attributes = core::analysis::getAttributes(call->getFunctionExpr());
-
-				for_each(attributes, [&](const core::ExpressionPtr& cur) {
-					if (core::analysis::isCallOf(cur, ext.regionAttribute)) {
-						auto id = core::arithmetic::toFormula(cur.as<core::CallExprPtr>()->getArgument(0));
-						assert(id.isInteger() && "Only supporting constant region IDs!");
-						regionId = id.getConstantValue();
-					}
-				});
-
-
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
 
 				// convert pfor body
 				auto info = pforBodyToWorkItem(args[4]);
-
-				// update pfor-attributes
-				for_each(info.first.getVariants(), [&](WorkItemVariant& cur) {
-					cur.getFeatures().implicitRegionId = regionId;
-					cur.getFeatures().suggestedThreadNum = numThreads;
-				});
 
 				// encode into IR
 				core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);
@@ -612,14 +595,6 @@ namespace runtime {
 				);
 			}
 
-			WorkItemVariantFeatures getFeatures(const core::StatementPtr& body) {
-				WorkItemVariantFeatures features;
-				features.effort = estimateEffort(body);
-				features.opencl = isOpencl(body);
-				return features;
-			}
-
-
 			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
 				// ------------- build captured data -------------
 
@@ -688,14 +663,25 @@ namespace runtime {
 
 				// ------------- try build up function estimating loop range effort -------------
 
-				core::LambdaExprPtr effort;
-				if(includeEffortEstimation) effort = getLoopEffortEstimationFunction(body);
-				WorkItemVariantFeatures features = getFeatures(builder.callExpr(basic.getUnit(), body, builder.intLit(1), builder.intLit(2), builder.intLit(1)));
+				if(includeEffortEstimation) {
+					// attach effort estimation
+					insieme::annotations::effort_estimation_info effort;
+					effort.estimation_function = getLoopEffortEstimationFunction(body);
+					effort.fallback_estimate = estimateEffort(body);
+					entryPoint.attachValue(effort);
+				}
+
+				// also attach OpenCL flag
+				{
+					insieme::annotations::opencl_info opencl;
+					opencl.opencl = isOpencl(entryPoint);
+					entryPoint.attachValue(opencl);
+				}
 
 				// ------------- finish process -------------
 
 				// create implementation
-				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint, effort, features)));
+				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint)));
 
 				// combine results into a pair
 				return std::make_pair(impl, data);

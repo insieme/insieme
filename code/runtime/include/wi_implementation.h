@@ -56,13 +56,6 @@ typedef enum _irt_wi_implementation_type {
 	IRT_WI_IMPL_SHARED_MEM, IRT_WI_IMPL_DISTRIBUTED, IRT_WI_IMPL_OPENCL
 } irt_wi_implementation_type;
 
-struct _irt_wi_implementation_variant_features {
-	uint64 effort;
-	bool opencl;
-	int64 implicit_region_id;
-	int64 suggested_thread_num;
-};
-
 struct _irt_wi_implementation_runtime_data {
 	bool flat_profile;
 	bool tested;
@@ -72,14 +65,12 @@ struct _irt_wi_implementation_runtime_data {
 };
 
 struct _irt_wi_implementation_variant {
-	irt_wi_implementation_type type;
 	wi_implementation_func* implementation;
-	wi_effort_estimation_func* effort_estimator;
 	uint32 num_required_data_items;
 	wi_di_req_func* data_requirements;
 	uint32 num_required_channels;
 	wi_channel_req_func* channel_requirements;
-	irt_wi_implementation_variant_features features;
+	irt_meta_info_table_entry* meta_info;
 	irt_wi_implementation_runtime_data rt_data;
 };
 

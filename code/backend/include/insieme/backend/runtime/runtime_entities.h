@@ -76,46 +76,19 @@ namespace runtime {
 
 	};
 
-
-	struct WorkItemVariantFeatures {
-		uint64_t effort;
-		bool opencl;
-		int64_t implicitRegionId;
-		int64_t suggestedThreadNum;
-
-		WorkItemVariantFeatures()
-			: effort(0), opencl(false), implicitRegionId(-1), suggestedThreadNum(-1) {}
-	};
-
 	class WorkItemVariant {
 
 		core::LambdaExprPtr implementation;
-		core::LambdaExprPtr effortEstimator;
-		WorkItemVariantFeatures features;
 
 	public:
 
-		WorkItemVariant(const core::LambdaExprPtr& impl, 
-				const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr(), 
-				const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
-			: implementation(impl), effortEstimator(effortEstimator), features(features) { };
+		WorkItemVariant(const core::LambdaExprPtr& impl)
+			: implementation(impl) { };
 
 		const core::LambdaExprPtr& getImplementation() const {
 			return implementation;
 		}
 		
-		const core::LambdaExprPtr& getEffortEstimator() const {
-			return effortEstimator;
-		}
-
-		WorkItemVariantFeatures& getFeatures() {
-			return features;
-		}
-
-		const WorkItemVariantFeatures& getFeatures() const {
-			return features;
-		}
-
 		bool operator==(const WorkItemVariant& other) const {
 			return equalTarget(implementation, other.implementation);
 		}
@@ -255,71 +228,6 @@ namespace encoder {
 	};
 
 
-	// -- Work Item Variant features ------------------
-	
-	template<>
-	struct type_factory<rbe::WorkItemVariantFeatures> {
-		core::TypePtr operator()(core::NodeManager& manager) const {
-			return manager.getLangExtension<rbe::Extensions>().workItemVariantFeaturesType;
-		}
-	};
-
-	template<>
-	struct value_to_ir_converter<rbe::WorkItemVariantFeatures> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemVariantFeatures& value) const {
-			IRBuilder builder(manager);
-			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
-
-			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, 
-				toVector(toIR(manager, value.effort), toIR(manager, value.opencl), 
-				         toIR(manager, value.implicitRegionId), toIR(manager, value.suggestedThreadNum)));
-		}
-	};
-
-	template<>
-	struct ir_to_value_converter<rbe::WorkItemVariantFeatures> {
-		rbe::WorkItemVariantFeatures operator()(const core::ExpressionPtr& expr) const {
-			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
-
-			// check constructor format
-			if (!core::analysis::isCallOf(expr, ext.workItemVariantFeaturesCtr)) {
-				throw InvalidExpression(expr);
-			}
-
-			rbe::WorkItemVariantFeatures features;
-			features.effort = toValue<uint64_t>(core::analysis::getArgument(expr,0));
-			features.opencl = toValue<bool>(core::analysis::getArgument(expr,1));
-			features.implicitRegionId = toValue<int64_t>(core::analysis::getArgument(expr,2));
-			features.suggestedThreadNum = toValue<int64_t>(core::analysis::getArgument(expr,3));
-			
-			return features;
-		}
-	};
-	
-	template<>
-	struct is_encoding_of<rbe::WorkItemVariantFeatures> {
-		bool operator()(const core::ExpressionPtr& expr) const {
-			// check call expr
-			if (!expr || expr->getNodeType() != core::NT_CallExpr) {
-				return false;
-			}
-
-			// check call target and arguments
-			const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
-			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
-
-			bool res = true;
-			res = res && *call->getFunctionExpr() == *ext.workItemVariantFeaturesCtr;
-			res = res && isEncodingOf<uint64_t>(call->getArgument(0));
-			res = res && isEncodingOf<bool>(call->getArgument(1));
-			res = res && isEncodingOf<int64_t>(call->getArgument(2));
-			res = res && isEncodingOf<int64_t>(call->getArgument(3));
-
-			return res;
-		}
-	};
-
-
 
 	// -- Work Item Impls ---------------------------
 
@@ -336,15 +244,8 @@ namespace encoder {
 			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 
-			// encode the effort function ...
-			core::ExpressionPtr effortExpr = value.getEffortEstimator();
-			if (!effortExpr) {
-				effortExpr = ext.unknownEffort;
-			}
-
 			// ... and call the variant constructor
-			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation(), 
-				effortExpr, toIR(manager, value.getFeatures()));
+			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation());
 		}
 	};
 
@@ -358,17 +259,7 @@ namespace encoder {
 				throw InvalidExpression(expr);
 			}
 
-			core::LambdaExprPtr impl = static_pointer_cast<const core::LambdaExpr>(core::analysis::getArgument(expr, 0));
-			core::ExpressionPtr effortExpr = core::analysis::getArgument(expr,1);
-
-			core::LambdaExprPtr effort =
-					(effortExpr->getNodeType() == core::NT_LambdaExpr)		?
-					static_pointer_cast<core::LambdaExprPtr>(effortExpr)	:
-					core::LambdaExprPtr();
-
-			auto features = toValue<rbe::WorkItemVariantFeatures>(core::analysis::getArgument(expr,2));
-
-			return rbe::WorkItemVariant(impl, effort, features);
+			return rbe::WorkItemVariant(static_pointer_cast<const core::LambdaExpr>(core::analysis::getArgument(expr, 0)));
 		}
 	};
 
@@ -386,20 +277,12 @@ namespace encoder {
 			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
 
 			bool res = true;
-			res = res && call->getArguments().size() == static_cast<std::size_t>(3);
+			res = res && call->getArguments().size() == static_cast<std::size_t>(1);
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantCtr;
 
 			const auto& fun = call->getArgument(0);
 			res = res && fun->getNodeType() == core::NT_LambdaExpr;
 			res = res && *fun->getType() == *ext.workItemVariantImplType;
-
-			const auto& effort = call->getArgument(1);
-			res = res && (
-					*effort == *ext.unknownEffort ||
-					(effort->getNodeType() == core::NT_LambdaExpr && *effort->getType() == *ext.workItemVariantEffortFunType)
-				);
-
-			res = res && isEncodingOf<rbe::WorkItemVariantFeatures>(call->getArgument(2));
 
 			return res;
 		}

@@ -260,13 +260,13 @@ void insieme_wi_0_var_0_impl(irt_work_item* var_71) {
 
 // --- work item variants ---
 irt_wi_implementation_variant g_insieme_wi_0_variants[] = {
-    { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_0_var_0_impl, NULL, 0, NULL, 0, NULL, {800000ull, 0, -1ll, -1ll} },
+    { &insieme_wi_0_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 irt_wi_implementation_variant g_insieme_wi_1_variants[] = {
-    { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_1_var_0_impl, NULL, 0, NULL, 0, NULL, {0ull, 0, -1ll, -1ll} },
+    { &insieme_wi_1_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 irt_wi_implementation_variant g_insieme_wi_2_variants[] = {
-    { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_2_var_0_impl, NULL, 0, NULL, 0, NULL, {0ull, 0, -1ll, -1ll} },
+    { &insieme_wi_2_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 // --- the implementation table --- 
 irt_wi_implementation g_insieme_impl_table[] = {

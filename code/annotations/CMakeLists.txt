@@ -16,6 +16,7 @@ file(GLOB_RECURSE insieme_annotations_incs 	include/*.h )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_core_include_dir} )
+include_directories( ${insieme_meta_information_include_dir} )
 
 # Build the core library
 add_library(insieme_annotations ${LINKING_TYPE} ${insieme_annotations_srcs} ${insieme_annotations_incs} )

@@ -257,7 +257,7 @@ namespace integration {
 			// read the test.cfg file
 			const fs::path testConfig = testDir / "test.cfg";
 			if (!fs::exists(testConfig)) {
-				LOG(WARNING) << "Not test-configuration file found!";
+				LOG(WARNING) << "No test-configuration file found!";
 				return res;
 			}
 

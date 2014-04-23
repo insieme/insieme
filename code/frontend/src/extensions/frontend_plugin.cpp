@@ -46,7 +46,7 @@ namespace extensions {
 
     // ############ PRAGMA HANDLING ############ //
     PragmaHandler::PragmaHandler(const std::string& pragmaNamespace, const std::string& keyword, insieme::frontend::pragma::node const& re,
-                                 std::function<insieme::core::NodePtr (const insieme::frontend::pragma::MatchObject&, insieme::core::NodePtr)> lambda)
+                                 std::function<stmtutils::StmtWrapper (const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)> lambda)
                                  : f(lambda), name(pragmaNamespace), keyw(keyword), tok(re.copy()) { };
 
     PragmaHandler::PragmaHandler( PragmaHandler& pragma  )

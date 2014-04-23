@@ -444,7 +444,12 @@ namespace integration {
 					for(const auto& cur : test.getIncludeDirs()) {
 						cmd << " -I" << cur.string();
 					}
-					cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
+
+					// add runtime include directories
+					if (backend == Runtime) {			// TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
+						cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
+						cmd << " -I "<< SRC_ROOT_DIR << "meta_information/include";
+					}
 
 					// add external lib dirs
 					for(const auto& cur : test.getLibDirs()) {

@@ -60,6 +60,9 @@ namespace runtime {
 	class ImplementationTable;
 	typedef Ptr<ImplementationTable> ImplementationTablePtr;
 
+	class MetaInfoTable;
+	typedef Ptr<MetaInfoTable> MetaInfoTablePtr;
+
 	/**
 	 * This code fragment is containing code for context handling functions like
 	 * insieme_init_context - invoked right after loading a context (shared library
@@ -77,6 +80,8 @@ namespace runtime {
 		TypeTablePtr typeTable;
 
 		ImplementationTablePtr implTable;
+
+		MetaInfoTablePtr infoTable;
 
 	public:
 
@@ -137,7 +142,7 @@ namespace runtime {
 
 		static TypeTablePtr get(const Converter& converter);
 
-		const c_ast::ExpressionPtr getTypeTable();
+		const c_ast::ExpressionPtr getTable();
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -167,9 +172,36 @@ namespace runtime {
 
 		static ImplementationTablePtr get(const Converter& converter);
 
-		const c_ast::ExpressionPtr getImplementationTable();
+		const c_ast::ExpressionPtr getTable();
 
 		unsigned registerWorkItemImpl(const core::ExpressionPtr& implementation);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+		unsigned size() const;
+	};
+
+	struct MetaInfoTableEntry;
+
+	/**
+	 * The code fragment maintaining the meta information to be encoded into the generated
+	 * target code to be forwarded to the runtime system.
+	 */
+	class MetaInfoTable : public c_ast::CodeFragment {
+
+		const Converter& converter;
+
+		vector<MetaInfoTableEntry> infos;
+
+	public:
+
+		MetaInfoTable(const Converter& converter);
+
+		static MetaInfoTablePtr get(const Converter& converter);
+
+		const c_ast::ExpressionPtr getTable();
+
+		unsigned registerMetaInfoFor(const core::NodePtr& node);
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 

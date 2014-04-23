@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -51,7 +51,7 @@ irt_type g_insieme_type_table[] = {
 void insieme_wi_startup_implementation_simple(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_simple, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_simple, 0, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {

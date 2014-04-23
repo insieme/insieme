@@ -214,6 +214,11 @@ namespace cba {
 				return mayReachCallTo(stmt->getReturnExpr(), filter);
 			}
 
+            bool visitMarkerStmt(const MarkerStmtPtr& stmt) {
+                if (mayReachCallTo(stmt->getSubStatement(), filter)) return true;
+                return false;
+            }
+
 			bool visitNode(const core::NodePtr& node) {
 				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
 				return false;

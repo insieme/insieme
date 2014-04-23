@@ -1431,7 +1431,7 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 	NodePtr res = replacement;
 
 	// process the path bottom up => replace one node after another
-	Path path = toReplace.getPath();
+	auto path = toReplace.getPath();
 
 	// replace bottom up
 	unsigned lastPos = path.getIndex();

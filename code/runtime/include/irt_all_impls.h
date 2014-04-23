@@ -50,6 +50,7 @@
 #include "impl/irt_logging.impl.h"
 #include "impl/papi_helper.impl.h"
 #include "irt_types.h"
+#include "meta_information/meta_infos.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"

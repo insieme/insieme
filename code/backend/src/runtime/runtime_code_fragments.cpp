@@ -42,8 +42,11 @@
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/statement_converter.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
+
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 namespace insieme {
 namespace backend {
@@ -54,9 +57,13 @@ namespace runtime {
 	#define CLEAN_CONTEXT_NAME "insieme_cleanup_context"
 	#define TYPE_TABLE_NAME "g_insieme_type_table"
 	#define IMPL_TABLE_NAME "g_insieme_impl_table"
+	#define META_TABLE_NAME "g_insieme_meta_table"
 
 	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter)
-		: converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)) {
+		: converter(converter),
+		  typeTable(TypeTable::get(converter)),
+		  implTable(ImplementationTable::get(converter)),
+		  infoTable(MetaInfoTable::get(converter)) {
 
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
@@ -93,7 +100,9 @@ namespace runtime {
 				"    context->type_table_size = " << typeTable->size() << ";\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
 				"    context->impl_table_size = " << implTable->size() << ";\n"
-				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
+				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
+				"    context->info_table_size = " << infoTable->size() << ";\n"
+				"    context->info_table = " META_TABLE_NAME ";\n";
 
 		for_each(initExpressions, [&](const string& cur) {
 			out << format(cur.c_str(), "context");
@@ -293,14 +302,14 @@ namespace runtime {
 		return static_pointer_cast<TypeTable>(res);
 	}
 
-	const c_ast::ExpressionPtr TypeTable::getTypeTable() {
+	const c_ast::ExpressionPtr TypeTable::getTable() {
 		return c_ast::ref(converter.getCNodeManager()->create(TYPE_TABLE_NAME));
 	}
 
 	std::ostream& TypeTable::printTo(std::ostream& out) const {
 
 		// create component arrays
-		out << "// --- componenents for type table entries ---\n";
+		out << "// --- components for type table entries ---\n";
 		for_each(store->getEntries(), [&](const TypeTableStore::Entry& cur) {
 			if (!cur.components.empty()) {
 				out << "irt_type_id g_type_" << cur.index << "_components[] = {" << join(",", cur.components) << "};\n";
@@ -351,14 +360,14 @@ namespace runtime {
 		return store->getEntries().size();
 	}
 
+
 	// -- Implementation Table --------------------------------------------------------------
 
-
 	struct WorkItemVariantCode {
-		string entryName;
-		string effortName;
 
-		WorkItemVariantFeatures features;
+		string entryName;
+
+		unsigned metaInfoEntryIndex;
 
 		/**
 		 * Creates a new entry to the implementation table referencing the names
@@ -368,8 +377,8 @@ namespace runtime {
 		 * @param effortName the name of the function implementing the effort estimation function. If the
 		 * 			name is empty, no such function is present.
 		 */
-		WorkItemVariantCode(const string& name, const string& effortName = "", const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
-			: entryName(name), effortName(effortName), features(features) { }
+		WorkItemVariantCode(const string& name, unsigned metaInfoEntryIndex = 0)
+			: entryName(name), metaInfoEntryIndex(metaInfoEntryIndex) { }
 	};
 
 	struct WorkItemImplCode {
@@ -378,7 +387,9 @@ namespace runtime {
 	};
 
 	ImplementationTable::ImplementationTable(const Converter& converter)
-		: converter(converter) {}
+		: converter(converter) {
+		this->addDependency(MetaInfoTable::get(converter));
+	}
 
 
 	ImplementationTablePtr ImplementationTable::get(const Converter& converter) {
@@ -419,16 +430,6 @@ namespace runtime {
 			// make this fragment depending on the entry point
 			this->addDependency(entryInfo.prototype);
 
-			// resolve effort estimation function
-			if (cur.getEffortEstimator()) {
-
-				// resolve effort function
-				const FunctionInfo& effortInfo = funManager.getInfo(cur.getEffortEstimator());
-
-				// make this fragment depending on the effort function declaration
-				this->addDependency(effortInfo.prototype);
-			}
-
 		});
 
 
@@ -446,15 +447,11 @@ namespace runtime {
 			string implName = format("insieme_wi_%d_var_%d_impl", id, var_id);
 			funManager.rename(cur.getImplementation(), implName);
 
-			// update effort estimation function name
-			string effortFunName = "";
-			if (cur.getEffortEstimator()) {
-				effortFunName = format("insieme_wi_%d_var_%d_effort", id, var_id);
-				funManager.rename(cur.getEffortEstimator(), effortFunName);
-			}
+			// register meta info
+			unsigned info_id = MetaInfoTable::get(converter)->registerMetaInfoFor(cur.getImplementation());
 
 			// add to variant to lists of variants
-			variants.push_back(WorkItemVariantCode(implName, effortFunName, cur.getFeatures()));
+			variants.push_back(WorkItemVariantCode(implName, info_id));
 		});
 
 		// add implementation to list of implementations
@@ -465,7 +462,7 @@ namespace runtime {
 
 
 
-	const c_ast::ExpressionPtr ImplementationTable::getImplementationTable() {
+	const c_ast::ExpressionPtr ImplementationTable::getTable() {
 		return c_ast::ref(converter.getCNodeManager()->create(IMPL_TABLE_NAME));
 	}
 
@@ -477,22 +474,13 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", ";
+				out << "    { &" << variant.entryName << ", ";
 
-				// add effort function ...
-				if (variant.effortName.empty()) {
-					out << "NULL";
-				} else {
-					out << "&" << variant.effortName;
-				}
+				// data and channel requirements
+				out << "0, NULL, 0, NULL, ";
 
-				out << ", 0, NULL, 0, NULL, ";
-				out << "{";
-					out << variant.features.effort << "ull, ";
-					out << variant.features.opencl << ", ";
-					out << variant.features.implicitRegionId << "ll, ";
-					out << variant.features.suggestedThreadNum << "ll";
-				out << "}";
+				// meta information
+				out << " &(" << META_TABLE_NAME << "[" << variant.metaInfoEntryIndex << "])";
 				out << " },\n";
 			});
 			out << "};\n";
@@ -513,6 +501,170 @@ namespace runtime {
 	unsigned ImplementationTable::size() const {
 		return workItems.size();
 	}
+
+
+	// -- Meta Info Table --------------------------------------------------------------
+
+
+	struct MetaInfoTableEntry {
+
+		// a map from an info type name to a list of values required for its initialization
+		std::map<string, std::vector<c_ast::ExpressionPtr>> entries;
+
+		void add(const string& type, const std::vector<c_ast::ExpressionPtr>& data) {
+			entries[type] = data;
+		}
+
+		bool empty() const {
+			return entries.empty();
+		}
+
+	};
+
+
+	MetaInfoTable::MetaInfoTable(const Converter& converter)
+		: converter(converter) {}
+
+
+	MetaInfoTablePtr MetaInfoTable::get(const Converter& converter) {
+		static string ENTRY_NAME = "MetaInfoTable";
+
+		// look up the entry within the fragment manager
+		auto manager = converter.getFragmentManager();
+		auto res = manager->getFragment(ENTRY_NAME);
+		if (!res) {
+			// create new instance
+			MetaInfoTablePtr table = manager->create<MetaInfoTable>(boost::ref(converter));
+			manager->bindFragment(ENTRY_NAME, table);
+			res = table;
+		}
+		return static_pointer_cast<MetaInfoTable>(res);
+	}
+
+	const c_ast::ExpressionPtr MetaInfoTable::getTable() {
+		return c_ast::ref(converter.getCNodeManager()->create(META_TABLE_NAME));
+	}
+
+	unsigned MetaInfoTable::registerMetaInfoFor(const core::NodePtr& node) {
+		auto reg = core::dump::AnnotationConverterRegister::getDefault();
+		auto& mgr = node.getNodeManager();
+		core::IRBuilder builder(mgr);
+		auto zero = converter.getCNodeManager()->create<c_ast::Literal>("0");
+
+		// iterate through all annotations
+		MetaInfoTableEntry entry;
+		for(const auto& cur : node.getAnnotations()) {
+
+			// try obtaining a matching converter
+			auto conv = reg.getConverterFor(cur.second);
+			if (!conv) continue;
+
+			// convert the information
+			auto pack = conv->toIR(mgr, cur.second);
+
+			// unpack it
+			auto tuple = pack.isa<core::TupleExprPtr>();
+			if (!tuple) continue;
+			vector<core::ExpressionPtr> values = tuple->getExpressions();
+
+			// isolate last
+			auto typeName = values.back().isa<core::LiteralPtr>();
+			if (!typeName) continue;
+			values.pop_back();
+
+			// get string name of type
+			auto type = typeName->getStringValue();
+
+			// build list of fields
+			vector<c_ast::ExpressionPtr> fields;
+			ConversionContext context(converter, core::LambdaPtr());
+			for(const auto& cur : values) {
+				auto expr = cur;
+
+				// unpack nested expressions
+				if (core::encoder::isEncodingOf<core::ExpressionPtr>(expr)) {
+					expr = core::encoder::toValue<core::ExpressionPtr>(expr);
+				}
+
+				// add field if not null ...
+				fields.push_back((expr) ? converter.getStmtConverter().convertExpression(context, expr) : zero);
+			}
+
+			// add dependencies
+			this->addDependencies(context.getDependencies());
+			this->addRequirements(context.getRequirements());
+			this->addIncludes(context.getIncludes());
+
+			// register new entry
+			entry.add(type, fields);
+		}
+
+		// if there is no info => don't add empty row
+		if (entry.empty()) return 0;
+
+		// add new entry
+		infos.push_back(entry);
+
+		// return new index (+1 since 0 is utilized)
+		return infos.size();
+	}
+
+
+	std::ostream& MetaInfoTable::printTo(std::ostream& out) const {
+
+		// collect all meta info structs
+		std::vector<string> infoStructs;
+		#define INFO_STRUCT_BEGIN(_name) infoStructs.push_back(#_name);
+		#include "insieme/meta_information/meta_infos.def"
+		#undef INFO_STRUCT_BEGIN
+
+		// collect all defaults
+
+		std::map<string, std::vector<const char*>> defaults;
+		std::vector<const char*>* cur;
+
+		#define INFO_STRUCT_BEGIN(_name) cur = &defaults[#_name];
+		#define INFO_FIELD(_name,_type,_default) cur->push_back(#_default);
+		#include "insieme/meta_information/meta_infos.def"
+		#undef INFO_STRUCT_BEGIN
+
+		out <<
+				"// --- the meta info table --- \n"
+				"irt_meta_info_table_entry " META_TABLE_NAME "[] = {\n";
+
+		auto cPrinter = [](std::ostream& out, const c_ast::ExpressionPtr& cur) {
+			out << toC(cur);
+		};
+
+		auto infoPrinter = [&](std::ostream& out, const MetaInfoTableEntry& cur) {
+			out << "    {";
+			out << join(",", infoStructs, [&](std::ostream& out, const string& type){
+				auto pos = cur.entries.find(type);
+				out << "{ ";
+				if (pos != cur.entries.end()) {
+					out << "true, "; 			// mark it available
+					out << join(", ", pos->second, cPrinter);
+				} else {
+					out << "false, ";			// it is not available
+					out << join(", ", defaults[type]);
+				}
+				out << " }";
+			});
+			out << "}";
+		};
+
+		infoPrinter(out, MetaInfoTableEntry());
+		out << ", /* the no-info-entry */\n";
+
+		out << join(",\n", infos, infoPrinter);
+
+		return out << "\n};\n\n";
+	}
+
+	unsigned MetaInfoTable::size() const {
+		return infos.size();
+	}
+
 
 } // end namespace runtime
 } // end namespace backend

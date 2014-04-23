@@ -107,17 +107,17 @@ void insieme_wi_mul_implementation3(irt_work_item* wi);
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, NULL, 4, &insieme_wi_init_datareq, 0, NULL }
+	{ &insieme_wi_init_implementation, 4, &insieme_wi_init_datareq, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_mul_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_mul_implementation1, NULL, 6, &insieme_wi_mul_datareq, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_mul_implementation2, NULL, 6, &insieme_wi_mul_datareq, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_mul_implementation3, NULL, 6, &insieme_wi_mul_datareq, 0, NULL }
+	{ &insieme_wi_mul_implementation1, 6, &insieme_wi_mul_datareq, 0, NULL },
+	{ &insieme_wi_mul_implementation2, 6, &insieme_wi_mul_datareq, 0, NULL },
+	{ &insieme_wi_mul_implementation3, 6, &insieme_wi_mul_datareq, 0, NULL }
 };
 
 #define INSIEME_WI_INIT_INDEX 1

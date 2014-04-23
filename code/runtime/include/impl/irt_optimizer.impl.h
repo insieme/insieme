@@ -39,6 +39,7 @@
 #include "utils/timing.h"
 #include "irt_optimizer.h"
 #include "impl/irt_context.impl.h"
+#include "meta_information/meta_infos.h"
 
 #include "optimizers/opencl_optimizer.h"
 #include "optimizers/shared_mem_effort_estimate_external_load_optimizer.h"
@@ -63,7 +64,7 @@ void irt_optimizer_context_startup(irt_context *context) {
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
 	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
 
-	if(impl->variants[0].features.opencl) {
+	if(irt_meta_info_is_opencl_available(impl->variants[0].meta_info) && irt_meta_info_get_opencl(impl->variants[0].meta_info)->opencl) {
 		irt_opencl_optimizer_starting_pfor(impl, range, group);
 	} else {
 		irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(impl, range, group);
