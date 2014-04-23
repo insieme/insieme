@@ -63,7 +63,6 @@ namespace annotations {
 	#include "insieme/annotations/meta_info/generators/dump_from.inc"
 	#include "test_info.def"
 
-
 	#include "insieme/annotations/meta_info/generators/clear.inc"
 
 

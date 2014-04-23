@@ -360,7 +360,9 @@ namespace runtime {
 				assert(!impls.empty() && "There must be at least one implementation!");
 
 				for(const auto& cur : impls) {
-					variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, fixBranch(cur), params)));
+					auto impl = builder.lambdaExpr(unit, fixBranch(cur), params);
+					annotations::migrateMetaInfos(job, impl);
+					variants.push_back(WorkItemVariant(impl));
 				}
 
 			} else {
@@ -380,8 +382,14 @@ namespace runtime {
 				// add default branch
 				body.push_back(fixBranch(job->getDefaultExpr()));
 
+				// build implementation
+				auto impl = builder.lambdaExpr(unit, builder.compoundStmt(body), params);
+
+				// move meta-infos
+				annotations::migrateMetaInfos(job, impl);
+
 				// add to variant list
-				variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), params)));
+				variants.push_back(WorkItemVariant(impl));
 
 			}
 
@@ -438,6 +446,14 @@ namespace runtime {
 					if (basic.isParallel(fun)) {
 						const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
 						assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
+
+						// unpack job to attach meta information
+						WorkItemImpl wi = core::encoder::toValue<WorkItemImpl>(job.as<core::CallExprPtr>()[3]);
+						for(const auto& var : wi.getVariants()) {
+							annotations::migrateMetaInfos(call, var.getImplementation());
+						}
+
+						// build runtime call
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 					}
 
@@ -495,6 +511,12 @@ namespace runtime {
 
 				// convert pfor body
 				auto info = pforBodyToWorkItem(args[4]);
+
+				// migrate meta infos
+				for(const auto& cur : info.first.getVariants()) {
+					annotations::migrateMetaInfos(call, cur.getImplementation());
+					annotations::migrateMetaInfos(args[4], cur.getImplementation());
+				}
 
 				// encode into IR
 				core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);

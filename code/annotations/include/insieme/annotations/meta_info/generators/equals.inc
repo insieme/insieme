@@ -38,10 +38,10 @@
 
 #define INFO_STRUCT_BEGIN(_name) \
 	namespace _name ## _ns { \
-	inline bool operator==(const info_type& a, const info_type& b) { return true
+	inline bool info_type::operator==(const info_type& other) const { return true
 
 #define INFO_FIELD(_name, _type, _def) \
-		&& insieme::annotations::detail::field_comperator<decltype(a._name)>()(a._name, b._name)
+		&& insieme::annotations::detail::field_comperator<decltype(_name)>()(_name, other._name)
 
 #define INFO_STRUCT_END() \
 	; } }

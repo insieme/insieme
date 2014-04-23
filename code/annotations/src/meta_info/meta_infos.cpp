@@ -34,30 +34,29 @@
  * regarding third party software licenses.
  */
 
-#include "clear.inc"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
-#define INFO_DECL(_text) _text;
+namespace insieme {
+namespace annotations {
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { struct info_type; } \
-	typedef _name ## _ns::info_type _name ## _info; \
-	namespace _name ## _ns { \
-	struct info_type; \
-	VALUE_ANNOTATION_CONVERTER(info_type) \
-		typedef insieme::core::value_node_annotation<info_type>::type annotation_type;\
-		virtual insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const; \
-		virtual insieme::core::NodeAnnotationPtr toAnnotation(const insieme::core::ExpressionPtr& node) const; \
-	}; \
-	\
-	struct info_type : \
-			public insieme::core::value_annotation::copy_on_migration, \
-			public insieme::core::value_annotation::cloneable \
-	{ \
-		void cloneTo(const insieme::core::NodePtr& target) const; \
-		bool operator==(const info_type& other) const; \
+	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
 
-#define INFO_FIELD(_name, _type, _def) \
-		typename detail::compiler_type<_type>::type _name;
+		// skip operation if there is nothing to do
+		if (!src || !dest || src == dest) return;
 
-#define INFO_STRUCT_END() \
-	}; }
+		// just iterate through all annotations and move meta information
+		for(const auto& cur : src->getAnnotations()) {
+
+			// skip non-meta info annotations
+			if (!isMetaInfo(cur.second)) continue;
+
+			// move annotation (using the clone operation)
+			cur.second->clone(cur.second, dest);
+		}
+
+	}
+
+
+
+} // end namespace annotations
+} // end namespace insieme

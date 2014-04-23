@@ -67,9 +67,11 @@ namespace annotations {
 		info.fun = fun;
 		info.valA = 12;
 		info.valB = 0.14;
+		info.valC = true;
 
 		NodePtr dummy = builder.genericType("A");
 
+		// attach meta info
 		EXPECT_FALSE(dummy.hasAttachedValue<test_info>());
 		dummy.attachValue(info);
 		EXPECT_TRUE(dummy.hasAttachedValue<test_info>());
@@ -109,7 +111,15 @@ namespace annotations {
 			EXPECT_TRUE(restored.hasAttachedValue<test_info>());
 
 			auto info2 = restored.getAttachedValue<test_info>();
+
+			// full check
 			EXPECT_EQ(info, info2);
+
+			// details
+			EXPECT_EQ(*info.fun, *info2.fun);
+			EXPECT_EQ(info.valA, info2.valA);
+			EXPECT_EQ(info.valB, info2.valB);
+			EXPECT_EQ(info.valC, info2.valC);
 
 			EXPECT_TRUE(mgr.contains(info2.fun));
 
@@ -117,6 +127,48 @@ namespace annotations {
 
 	}
 
+	TEST(InfoAnnotation, IsMetaInfoTest) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// build annotation
+		opencl_info info;
+		info.opencl = false;
+
+		NodePtr dummy = builder.genericType("A");
+		dummy.attachValue(info);
+
+		// also the corresponding value annotation pointer
+		EXPECT_EQ(1u, dummy.getAnnotations().size());
+		EXPECT_TRUE(isMetaInfo(dummy.getAnnotations().begin()->second));
+
+	}
+
+	TEST(InfoAnnotation, Migration) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// build annotation
+		opencl_info info;
+		info.opencl = false;
+
+		NodePtr dummy = builder.genericType("A");
+		dummy.attachValue(info);
+		dummy.attachValue(123);
+
+		// also the corresponding value annotation pointer
+		EXPECT_EQ(2u, dummy.getAnnotations().size());
+
+		NodePtr dummy2 = builder.genericType("B");
+
+		EXPECT_EQ(2u, dummy.getAnnotations().size());
+		migrateMetaInfos(dummy, dummy2);
+
+		EXPECT_EQ(1u, dummy2.getAnnotations().size());
+		EXPECT_TRUE(isMetaInfo(dummy2.getAnnotations().begin()->second));
+	}
 
 } // end namespace annotations
 } // end namespace insieme
