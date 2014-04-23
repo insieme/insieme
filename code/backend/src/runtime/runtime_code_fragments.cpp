@@ -101,7 +101,7 @@ namespace runtime {
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
 				"    context->impl_table_size = " << implTable->size() << ";\n"
 				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
-				"    context->info_table_size = " << infoTable->size() << ";\n"
+				"    context->info_table_size = " << infoTable->size()+1 << ";\n"
 				"    context->info_table = " META_TABLE_NAME ";\n";
 
 		for_each(initExpressions, [&](const string& cur) {
