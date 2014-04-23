@@ -59,7 +59,7 @@ namespace cba {
 		/**
 		 * The expression which created the represented group.
 		 */
-		core::ExpressionAddress creationPoint;
+		core::ExpressionInstance creationPoint;
 
 		/**
 		 * The context when triggering the create function.
@@ -69,14 +69,14 @@ namespace cba {
 	public:
 
 		ThreadGroup()
-			: utils::HashableImmutableData<ThreadGroup<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
+			: utils::HashableImmutableData<ThreadGroup<Context>>(combineHashes(core::ExpressionInstance(), Context())) {}
 
-		ThreadGroup(const core::ExpressionAddress& group, const Context& ctxt)
+		ThreadGroup(const core::ExpressionInstance& group, const Context& ctxt)
 			: utils::HashableImmutableData<ThreadGroup<Context>>(combineHashes(group, ctxt)),
 			  creationPoint(group),
 			  creationContext(ctxt) {}
 
-		const core::ExpressionAddress& getAddress() const {
+		const core::ExpressionInstance& getCreationPoint() const {
 			return creationPoint;
 		}
 
@@ -100,7 +100,7 @@ namespace cba {
 		}
 	};
 
-	inline bool isThreadGroupConstructor(const core::ExpressionAddress& address) {
+	inline bool isThreadGroupConstructor(const core::ExpressionInstance& address) {
 		core::ExpressionPtr expr = address;
 
 		// the expression needs to be a call to the parallel
@@ -110,7 +110,7 @@ namespace cba {
 	}
 
 	template<typename Context>
-	ThreadGroup<Context> getThreadGroupFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	ThreadGroup<Context> getThreadGroupFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
 		assert(isThreadGroupConstructor(ctor));
 

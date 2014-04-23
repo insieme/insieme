@@ -167,7 +167,7 @@ namespace cba {
 
 					// extract the current set
 					SyncPointSetType cur_set;
-					auto call = stmt.template isa<CallExprAddress>();
+					auto call = stmt.template isa<CallExprInstance>();
 					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)
@@ -288,7 +288,7 @@ namespace cba {
 				bool changed = false;
 				for(const auto& cur : all_sync_points) {
 					// ... that are spawn points ...
-					auto call = cur.getStatement().template isa<CallExprAddress>();
+					auto call = cur.getStatement().template isa<CallExprInstance>();
 					if (call && basic.isParallelOp(call->getFunctionExpr())) {
 
 						// ... add the list of potential spanned bodies to the inputs

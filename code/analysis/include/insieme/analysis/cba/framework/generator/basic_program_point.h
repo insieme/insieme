@@ -99,21 +99,21 @@ namespace cba {
 	protected:
 
 		template<typename SetTypeA, typename SetTypeB>
-		void connectSets(const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+		void connectSets(const SetTypeA& a, const StatementInstance& al, const Context& ac, const SetTypeB& b, const StatementInstance& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSets(a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
 		}
 
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+		void connectSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, const StatementInstance& al, const Context& ac, const SetTypeB& b, const StatementInstance& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
 		}
 
 		template<typename F, typename SetTypeA, typename SetTypeB>
-		void connectSetsIf(const F& filter, const SetTypeA& a, const StatementAddress& al, const Context& ac, const SetTypeB& b, const StatementAddress& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+		void connectSetsIf(const F& filter, const SetTypeA& a, const StatementInstance& al, const Context& ac, const SetTypeB& b, const StatementInstance& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIfFilter(filter, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
@@ -208,7 +208,7 @@ namespace cba {
 		BasicInConstraintGenerator(CBA& cba, const InSetIDType& Ain, const TmpSetIDType& Atmp, const OutSetIDType& Aout)
 			: super(cba, Ain, Atmp, Aout), cba(cba) {}
 
-		void connectCallToBody(const CallExprAddress& call, const Context& callCtxt, const StatementAddress& body, const Context& trgCtxt, const Callee& callee, const ExtraParams& ... args, Constraints& constraints) {
+		void connectCallToBody(const CallExprInstance& call, const Context& callCtxt, const StatementInstance& body, const Context& trgCtxt, const Callee& callee, const ExtraParams& ... args, Constraints& constraints) {
 
 			// filter out invalid contexts
 			if (!cba.isValid(callCtxt) || !cba.isValid(trgCtxt)) return;
@@ -233,7 +233,7 @@ namespace cba {
 
 			// check whether call-site is within a bind
 			bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
-			auto bind = (isCallWithinBind) ? call.getParentAddress().as<BindExprAddress>() : BindExprAddress();
+			auto bind = (isCallWithinBind) ? call.getParentInstance().as<BindExprInstance>() : BindExprInstance();
 			// special case: if this is a bind with no free parameters
 			if (bind && bind->getParameters().empty()) {
 				// connect in of call site with in of body
@@ -245,7 +245,7 @@ namespace cba {
 
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 
 			// special handling only for calls in bind expressions
 			if (call.isRoot() || call.getParentNode()->getNodeType() != NT_BindExpr) {
@@ -255,13 +255,13 @@ namespace cba {
 			}
 
 			// ----- we have a call in a bind expression ----
-			auto bind = call.getParentAddress().as<BindExprAddress>();
+			auto bind = call.getParentInstance().as<BindExprInstance>();
 			if (bind.isRoot()) return;	// nothing to do
 
-			auto user = bind.getParentAddress();
+			auto user = bind.getParentInstance();
 
 			// check for direct calls ...
-			if (user->getNodeType() == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == bind) {
+			if (user->getNodeType() == NT_CallExpr && user.as<CallExprInstance>()->getFunctionExpr() == bind) {
 
 				// it is one => no change in context
 				this->connectSets(this->Ain, bind, ctxt, this->Ain, call, ctxt, args..., constraints);
@@ -309,15 +309,15 @@ namespace cba {
 
 		}
 
-		void visitCompoundStmt(const CompoundStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
+		void visitCompoundStmt(const CompoundStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 
 			// TODO: check whether it is a function body => otherwise default handling
 			if (stmt.isRoot()) return;
 
-			auto parent = stmt.getParentAddress();
+			auto parent = stmt.getParentInstance();
 
 			// handle lambda
-			if (auto lambda = parent.isa<LambdaAddress>()) {
+			if (auto lambda = parent.isa<LambdaInstance>()) {
 
 				// get all call sites
 				Callee callee(lambda);
@@ -361,22 +361,22 @@ namespace cba {
 		}
 
 
-		void visitStatement(const StatementAddress& stmt, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
+		void visitStatement(const StatementInstance& stmt, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 
 			// determine predecessor based on parent
 			if (stmt.isRoot()) return;		// no predecessor
 
 			// check out parent
-			auto parent = stmt.getParentAddress();
+			auto parent = stmt.getParentInstance();
 
 			// TODO: turn this into a visitor!
 
 			// special case: if current expression is an argument of a bind-call expression
 			if (stmt.getDepth() >=2) {
-				if (auto call = parent.isa<CallExprAddress>()) {
-					if (auto bind = call.getParentAddress().isa<BindExprAddress>()) {
+				if (auto call = parent.isa<CallExprInstance>()) {
+					if (auto bind = call.getParentInstance().isa<BindExprInstance>()) {
 						// if this is a bound expression predecessor is the bind, not the call
-						if (bind->isBoundExpression(stmt.as<ExpressionAddress>())) {
+						if (bind->isBoundExpression(stmt.as<ExpressionInstance>())) {
 							// connect bind with stmt - skip the call
 							this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 							// and done
@@ -387,10 +387,10 @@ namespace cba {
 			}
 
 			// if the parent is a call expression the state transitions need to be chained up
-			if (auto call = parent.isa<CallExprAddress>()) {
+			if (auto call = parent.isa<CallExprInstance>()) {
 
 				// we have to distinguish the chain of non-captured values evaluation (during execution)
-				if (!isCapturedValue(stmt.as<ExpressionAddress>())) {
+				if (!isCapturedValue(stmt.as<ExpressionInstance>())) {
 
 					// the first to evaluate is the function
 					if (call->getFunctionExpr() == stmt) {
@@ -400,13 +400,13 @@ namespace cba {
 					}
 
 					// otherwise it is a argument and we connect it to its predecessor (the first predecessor is the function expr)
-					auto pre = parent.getAddressOfChild(stmt.getIndex() - 1).as<ExpressionAddress>();
+					auto pre = parent.getInstanceOfChild(stmt.getIndex() - 1).as<ExpressionInstance>();
 					while(isCapturedValue(pre)) {	// skip captured values
 						if (pre == call->getFunctionExpr()) {	// we reached the edge here
 							this->connectSets(this->Ain, call, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 							return;
 						} else {
-							pre = parent.getAddressOfChild(pre.getIndex() - 1).as<ExpressionAddress>();
+							pre = parent.getInstanceOfChild(pre.getIndex() - 1).as<ExpressionInstance>();
 						}
 					}
 
@@ -416,7 +416,7 @@ namespace cba {
 
 				} else {
 					// and the chain of captured value evaluations (during evaluation of a bind)
-					auto bind = call.getParentAddress().as<BindExprAddress>();
+					auto bind = call.getParentInstance().as<BindExprInstance>();
 
 					// the first to evaluate is the function
 					if (call->getFunctionExpr() == stmt) {
@@ -426,13 +426,13 @@ namespace cba {
 					}
 
 					// otherwise it is a argument and we connect it to its predecessor (the first predecessor is the function expr)
-					auto pre = parent.getAddressOfChild(stmt.getIndex() - 1).as<ExpressionAddress>();
+					auto pre = parent.getInstanceOfChild(stmt.getIndex() - 1).as<ExpressionInstance>();
 					while(!isCapturedValue(pre)) {	// skip captured values
 						if (pre == call->getFunctionExpr()) {	// we reached the edge here
 							this->connectSets(this->Ain, bind, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 							return;
 						} else {
-							pre = parent.getAddressOfChild(pre.getIndex() - 1).as<ExpressionAddress>();
+							pre = parent.getInstanceOfChild(pre.getIndex() - 1).as<ExpressionInstance>();
 						}
 					}
 
@@ -449,23 +449,23 @@ namespace cba {
 			}
 
 			// a simple case - it is just a nested expression
-			if (auto expr = parent.isa<ExpressionAddress>()) {
+			if (auto expr = parent.isa<ExpressionInstance>()) {
 				// parent is an expression => in of parent is in of current stmt
 				this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 				return;	// done
 			}
 
 			// if it is a named value of struct expression
-			if (auto value = parent.isa<NamedValueAddress>()) {
+			if (auto value = parent.isa<NamedValueInstance>()) {
 				// TODO: actually here the evaluation should be chained up!
 				// the grant-parent should be a struct expression => link in with this in state
-				auto expr = parent.getParentAddress(2).as<StructExprAddress>();
+				auto expr = parent.getParentInstance(2).as<StructExprInstance>();
 				this->connectSets(this->Ain, expr, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 				return; // done
 			}
 
 			// handle full-expressions
-			if (auto compound = parent.isa<CompoundStmtAddress>()) {
+			if (auto compound = parent.isa<CompoundStmtInstance>()) {
 
 				// parent is a compound, predecessor is one statement before
 				auto pos = stmt.getIndex();
@@ -490,14 +490,14 @@ namespace cba {
 			}
 
 			// handle simple statements
-			if (parent.isa<ReturnStmtAddress>() || parent.isa<DeclarationStmtAddress>()) {
+			if (parent.isa<ReturnStmtInstance>() || parent.isa<DeclarationStmtInstance>()) {
 				// in is the in of the stmt
-				this->connectSets(this->Ain, parent.as<StatementAddress>(), ctxt, this->Ain, stmt, ctxt, args..., constraints);
+				this->connectSets(this->Ain, parent.as<StatementInstance>(), ctxt, this->Ain, stmt, ctxt, args..., constraints);
 				return; // done
 			}
 
 			// handle if stmt
-			if (auto ifStmt = parent.isa<IfStmtAddress>()) {
+			if (auto ifStmt = parent.isa<IfStmtInstance>()) {
 
 				// check whether which part the current node is
 
@@ -530,7 +530,7 @@ namespace cba {
 			}
 
 			// handle while stmt
-			if (auto whileStmt = parent.isa<WhileStmtAddress>()) {
+			if (auto whileStmt = parent.isa<WhileStmtInstance>()) {
 
 				// check which part of a while the current node is
 				auto cond = whileStmt->getCondition();
@@ -553,7 +553,7 @@ namespace cba {
 			}
 
 			// handle for stmt
-			if (auto forStmt = parent.isa<ForStmtAddress>()) {
+			if (auto forStmt = parent.isa<ForStmtInstance>()) {
 
 				// check which part of a while the current node is
 				auto body = forStmt->getBody();
@@ -578,7 +578,7 @@ namespace cba {
 			}
 
 			// handle marker stmt
-			if (auto markerStmt = parent.isa<MarkerStmtAddress>()) {
+			if (auto markerStmt = parent.isa<MarkerStmtInstance>()) {
 				// marker stmts are just ignored
 				this->connectSets(this->Ain, markerStmt, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 				return;
@@ -739,7 +739,7 @@ namespace cba {
 				const ThreadGroup<Context>& group = *groups.begin();
 
 				// get spawning point of threads
-				auto spawnPoint = group.getAddress().template as<CallExprAddress>();
+				auto spawnPoint = group.getCreationPoint().template as<CallExprInstance>();
 
 				// get potential list of jobs to be started at spawn point
 				auto jobValue = cba.getSet(Jobs, spawnPoint[0], group.getContext());
@@ -756,7 +756,7 @@ namespace cba {
 
 				// obtain body of job
 				const Job<Context>& job = *jobs.begin();
-				const JobExprAddress& jobExpr = job.getAddress();
+				const JobExprInstance& jobExpr = job.getCreationPoint();
 				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
 
 				// get set containing list of bodies
@@ -882,7 +882,7 @@ namespace cba {
 			: super(cba, Ain, Atmp, Aout), cba(cba) {}
 
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 
 			// things to do:
 			//  - link in of call with in of arguments
@@ -960,7 +960,7 @@ namespace cba {
 
 		}
 
-		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitBindExpr(const BindExprInstance& bind, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			auto l_bind = cba.getLabel(bind);
 
 			// the out-effect is the effect of the last bound arguments
@@ -979,13 +979,13 @@ namespace cba {
 			// and no more ! (in particular not the effects of the inner call)
 		}
 
-		void visitExpression(const ExpressionAddress& expr, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitExpression(const ExpressionInstance& expr, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// for most expressions: just connect in and out
 			auto l_cur = cba.getLabel(expr);
 			this->connectStateSets(this->Ain, l_cur, ctxt, this->Aout, l_cur, ctxt, params..., constraints);
 		}
 
-		void visitCompoundStmt(const CompoundStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitCompoundStmt(const CompoundStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 
 			// special case: empty compound
 			if (stmt.empty()) {
@@ -1005,14 +1005,14 @@ namespace cba {
 
 			// TODO: locate return statements more efficiently
 
-			vector<ReturnStmtAddress> returns;
+			vector<ReturnStmtInstance> returns;
 
-			visitDepthFirstPrunable(stmt, [&](const StatementAddress& stmt) {
+			visitDepthFirstPrunable(stmt, [&](const StatementInstance& stmt) {
 				// prune inner functions
-				if (stmt.isa<LambdaExprAddress>()) return true;
+				if (stmt.isa<LambdaExprInstance>()) return true;
 
 				// visit return statements
-				if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
+				if (auto returnStmt = stmt.isa<ReturnStmtInstance>()) {
 					returns.push_back(returnStmt);
 					return true;
 				}
@@ -1021,7 +1021,7 @@ namespace cba {
 			});
 
 			auto l_body = cba.getLabel(stmt);
-			for(const ReturnStmtAddress& returnStmt : returns) {
+			for(const ReturnStmtInstance& returnStmt : returns) {
 				// connect value of return statement with body value
 				auto l_ret = cba.getLabel(returnStmt);
 				auto R_ret = cba.getSet(Rout, l_ret, ctxt);
@@ -1030,17 +1030,17 @@ namespace cba {
 
 		}
 
-		void visitDeclarationStmt(const DeclarationStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitDeclarationStmt(const DeclarationStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out of init expression to out of decl stmt
 			this->connectSets(this->Aout, stmt->getInitialization(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitReturnStmt(const ReturnStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out of return expression to out of return stmt
 			this->connectSets(this->Aout, stmt->getReturnExpr(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitIfStmt(const IfStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out with out of bodies
 			auto l_cond = cba.getLabel(stmt->getCondition());
 			auto B_cond = cba.getSet(B, l_cond, ctxt);
@@ -1048,14 +1048,14 @@ namespace cba {
 			this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitSwitchStmt(const SwitchStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitSwitchStmt(const SwitchStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out with out of cases
 			for(const auto& cur : stmt->getCases()) {
 				this->connectSets(this->Aout, cur->getBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 			}
 		}
 
-		void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitWhileStmt(const WhileStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out of condition to out if condition may ever become false
 			auto cond = stmt->getCondition();
 			auto l_cond = cba.getLabel(cond);
@@ -1063,7 +1063,7 @@ namespace cba {
 			this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitForStmt(const ForStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitForStmt(const ForStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			typedef std::function<bool(const std::set<Formula>&,const std::set<Formula>&,const std::set<Formula>&)> filter;
 			// TODO: consider continues and breaks!
 
@@ -1080,14 +1080,14 @@ namespace cba {
 			this->connectSetsIf(f_trinary(filter(detail::loop_not_entered), Al, Au, As), this->Aout, stmt->getStep(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitMarkerStmt(const MarkerStmtAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitMarkerStmt(const MarkerStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out of body with out of for stmt
 			auto body = stmt->getSubStatement();
 			// TODO: consider continues and breaks!
 			this->connectSets(this->Aout, body, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
-		void visitNode(const NodeAddress& node, const Context& ctxt, const ExtraParams& ... params, Constraints& res) {
+		void visitNode(const NodeInstance& node, const Context& ctxt, const ExtraParams& ... params, Constraints& res) {
 			assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
 		}
 
@@ -1114,7 +1114,7 @@ namespace cba {
 		BasicTmpConstraintGenerator(CBA& cba, const InValueType& Ain, const TmpValueType& Atmp, const OutValueType& Aout)
 			: DataValueConstraintGenerator<Context, ExtraParams...>(cba), cba(cba), Ain(Ain), Atmp(Atmp), Aout(Aout) {}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 
 			auto A_tmp = cba.getSet(Atmp, call, ctxt, params...);
 
@@ -1143,7 +1143,7 @@ namespace cba {
 
 		}
 
-		void visitStatement(const StatementAddress& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
+		void visitStatement(const StatementInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// simply link in with tmp
 			auto A_in  = cba.getSet(Ain, stmt, ctxt, params...);
 			auto A_tmp = cba.getSet(Atmp, stmt, ctxt, params...);

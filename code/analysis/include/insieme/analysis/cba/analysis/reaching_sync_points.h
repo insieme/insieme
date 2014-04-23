@@ -82,7 +82,7 @@ namespace cba {
 
 		typedef BasicInConstraintGenerator<reaching_sync_points_in_analysis, reaching_sync_points_tmp_analysis, reaching_sync_points_out_analysis, ReachingSyncPointsInConstraintGenerator<Context>, Context> super;
 
-		StatementAddress root;
+		StatementInstance root;
 
 		CBA& cba;
 
@@ -91,14 +91,14 @@ namespace cba {
 		ReachingSyncPointsInConstraintGenerator(CBA& cba)
 			: super(cba, RSPin, RSPtmp, RSPout), root(cba.getRoot()), cba(cba) { }
 
-		void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+		void visit(const NodeInstance& node, const Context& ctxt, Constraints& constraints) {
 
 			// the entry point of every thread is a sync point
-			if (auto stmt = node.isa<StatementAddress>()) {
+			if (auto stmt = node.isa<StatementInstance>()) {
 				if (isThreadBody(stmt, ctxt)) {
 					auto l = cba.getLabel(stmt);
 					auto R = cba.getSet(RSPin, l, ctxt);
-					constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::In, node.as<StatementAddress>(), ctxt), R));
+					constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::In, node.as<StatementInstance>(), ctxt), R));
 					return;
 				}
 			}
@@ -121,7 +121,7 @@ namespace cba {
 		ReachingSyncPointsOutConstraintGenerator(CBA& cba)
 			: super(cba, RSPin, RSPtmp, RSPout), cba(cba) { }
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// check whether it is a sync-operation call
 			auto fun = call->getFunctionExpr();
@@ -148,7 +148,7 @@ namespace cba {
 			super::visitCallExpr(call, ctxt, constraints);
 		}
 
-		void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
+		void visitExpression(const ExpressionInstance& expr, const Context& ctxt, Constraints& constraints) {
 
 			// skip sub-expressions if we can statically determine that there are no sync points
 			if (detail::isSyncPointFree(expr)) {

@@ -63,7 +63,7 @@ namespace cba {
 	namespace {
 
 		template<typename Context, typename JobSetType, typename ThreadBodySetType>
-		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprAddress& spawn, const Context& spawnCtxt);
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprInstance& spawn, const Context& spawnCtxt);
 
 		template<typename Context, typename ThreadGroupSetType, typename ThreadBodySetType>
 		ConstraintPtr createThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res);
@@ -85,7 +85,7 @@ namespace cba {
 		ThreadBodyConstraintGenerator(CBA& cba)
 			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// check whether this is a call to parallel
 			auto fun = call->getFunctionExpr();
@@ -142,7 +142,7 @@ namespace cba {
 
 			ThreadBodySetType out;
 
-			CallExprAddress spawn;
+			CallExprInstance spawn;
 
 			Context spawnCtxt;
 
@@ -154,7 +154,7 @@ namespace cba {
 
 		public:
 
-			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const CallExprAddress& spawn, const Context& spawnCtxt) :
+			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const CallExprInstance& spawn, const Context& spawnCtxt) :
 				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), spawn(spawn), spawnCtxt(spawnCtxt) {
 				inputs.push_back(job);
 			}
@@ -196,7 +196,7 @@ namespace cba {
 					if (bodies.find(job) != bodies.end()) continue;
 
 					// register body reference
-					auto curBodySet = cba.getSet(C, job.getAddress()->getDefaultExpr(), job.getContext());
+					auto curBodySet = cba.getSet(C, job.getCreationPoint()->getDefaultExpr(), job.getContext());
 					bodies[job] = curBodySet;
 					inputs.push_back(curBodySet);
 					changed = true;
@@ -282,7 +282,7 @@ namespace cba {
 
 
 		template<typename Context, typename JobSetType, typename ThreadBodySetType>
-		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprAddress& spawn, const Context& spawnCtxt) {
+		ConstraintPtr createThreadBodySpawnConstraint(CBA& cba, const JobSetType& jobs, const ThreadBodySetType& res, const CallExprInstance& spawn, const Context& spawnCtxt) {
 			return std::make_shared<ThreadBodySpawnConstraint<Context, JobSetType, ThreadBodySetType>>(cba, jobs, res, spawn, spawnCtxt);
 		}
 
@@ -344,7 +344,7 @@ namespace cba {
 				for(const auto& group : gs) {
 
 					// add dependency to spawn point of current group
-					auto curBodySet = cba.getSet(ThreadBodies, group.getAddress(), group.getContext());
+					auto curBodySet = cba.getSet(ThreadBodies, group.getCreationPoint(), group.getContext());
 					if (!contains(bodies, curBodySet)) {
 						bodies.push_back(curBodySet);
 						inputs.push_back(curBodySet);

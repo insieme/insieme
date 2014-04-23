@@ -70,7 +70,7 @@ namespace cba {
 
 		using super::elem;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitLiteral(literal, ctxt, constraints);
@@ -87,12 +87,12 @@ namespace cba {
 
 		}
 
-		void visitVariable(const VariableAddress& var, const Context& ctxt, Constraints& constraints) {
+		void visitVariable(const VariableInstance& var, const Context& ctxt, Constraints& constraints) {
 
 			// special case - lambda-bindings
 			if (!var.isRoot() && var.getParentNode().isa<LambdaBindingPtr>()) {
 
-				auto value = Callee(var.getParentAddress().as<LambdaBindingAddress>()->getLambda());
+				auto value = Callee(var.getParentInstance().as<LambdaBindingInstance>()->getLambda());
 				auto l_var = cba.getLabel(var);
 				auto f_var = cba.getSet(f, l_var, ctxt);
 
@@ -107,7 +107,7 @@ namespace cba {
 
 		}
 
-		void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
+		void visitLambdaExpr(const LambdaExprInstance& lambda, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitLambdaExpr(lambda, ctxt, constraints);
@@ -122,7 +122,7 @@ namespace cba {
 
 		}
 
-		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+		void visitBindExpr(const BindExprInstance& bind, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitBindExpr(bind, ctxt, constraints);

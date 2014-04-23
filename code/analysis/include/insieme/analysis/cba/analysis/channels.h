@@ -77,7 +77,7 @@ namespace cba {
 
 		using super::elem;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitLiteral(literal, ctxt, constraints);
@@ -94,7 +94,7 @@ namespace cba {
 
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitCallExpr(call, ctxt, constraints);

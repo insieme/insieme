@@ -78,7 +78,7 @@ namespace cba {
 		/**
 		 * The address of the referenced program statement.
 		 */
-		core::StatementAddress stmt;
+		core::StatementInstance stmt;
 
 		/**
 		 * The dynamic context of the represented statement.
@@ -90,13 +90,13 @@ namespace cba {
 		/**
 		 * Creates a new instance using the given set of fields.
 		 */
-		ProgramPoint(State state, const core::StatementAddress& stmt, const Context& ctxt)
+		ProgramPoint(State state, const core::StatementInstance& stmt, const Context& ctxt)
 			: state(state), stmt(stmt), ctxt(ctxt) {}
 
 		/**
 		 * Obtain the statement addressed by this program point.
 		 */
-		const core::StatementAddress& getStatement() const {
+		const core::StatementInstance& getStatement() const {
 			return stmt;
 		}
 

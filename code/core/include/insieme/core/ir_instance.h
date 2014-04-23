@@ -596,6 +596,29 @@ namespace core {
 		}
 
 		/**
+		 * Appends the given address at the end of this instance address.
+		 */
+		template<typename R>
+		Instance<R> concat(const Address<R>& other) const {
+			return concat(Instance<R>(other));
+		}
+
+		/**
+		 * Appends the given address at the end of this instance address.
+		 */
+		template<typename R>
+		Instance<R> concat(const Instance<R>& other) const {
+			// check matching ends
+			assert_eq(getAddressedNode(), other.getRootNode())
+				<< "Cannot concatenate paths with un-matching ends: "
+				<< getAddressedNode()->getNodeType() << "@" << &*getAddressedNode() << " vs. "
+				<< other.getRootNode()->getNodeType() << "@" << &*other.getRootNode();
+
+			// build result
+			return Instance<R>(Path::concat(path, other.getPath()));
+		}
+
+		/**
 		 * Obtains a instance for the same node of a different iteration.
 		 */
 		Instance<T> getIteration(const IteratorValue& iter) const {
@@ -862,6 +885,37 @@ namespace core {
 		return B();
 	}
 
+	/**
+	 * Extends the given node instance address by the given tail address.
+	 */
+	template <class A, class B>
+	Instance<const B> concat(const Instance<const A>& head, const Address<const B>& tail) {
+		return head.concat(tail);
+	}
+
+	/**
+	 * Extends the given node instance address by the given tail address.
+	 */
+	template <class A, class B>
+	Instance<const B> concat(const Instance<const A>& head, const Instance<const B>& tail) {
+		return head.concat(tail);
+	}
+
 
 } // end namespace core
 } // end namespace insieme
+
+
+namespace std {
+
+	/**
+	 * Integrate addresses into the std::hash framework.
+	 */
+	template<typename T>
+	struct hash<insieme::core::Instance<T>> {
+		size_t operator()(const insieme::core::Instance<T>& addr) const {
+			return addr.hash();
+		}
+	};
+
+}

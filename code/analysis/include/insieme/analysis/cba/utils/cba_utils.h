@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_instance.h"
 
 namespace insieme {
 namespace analysis {
@@ -47,27 +47,27 @@ namespace cba {
 
 	CBA& getCBA(const core::NodeAddress& node);
 
-	core::NodeAddress getSurroundingFreeFunction(const core::NodeAddress& cur);
+	core::NodeInstance getSurroundingFreeFunction(const core::NodeInstance& cur);
 
-	core::LambdaAddress getSurroundingRecursiveFunction(const core::NodeAddress& cur);
+	core::LambdaInstance getSurroundingRecursiveFunction(const core::NodeInstance& cur);
 
-	vector<core::ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root);
+	vector<core::ExpressionInstance> getAllFreeFunctions(const core::NodeInstance& root);
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
-	bool isMemoryConstructor(const core::StatementAddress& stmt);
+	bool isMemoryConstructor(const core::StatementInstance& stmt);
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
+	core::VariableInstance getDefinitionPoint(const core::VariableInstance& varAddress);
 
-	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
+	core::ExpressionInstance getLocationDefinitionPoint(const core::StatementInstance& stmt);
 
-	core::StatementAddress getAnalysisRoot(const core::NodeAddress& node);
+	core::StatementInstance getAnalysisRoot(const core::NodeInstance& node);
 
-	bool isRecursiveCall(const core::CallExprAddress& call);
+	bool isRecursiveCall(const core::CallExprInstance& call);
 
 	/**
 	 * Checks whether the given address is referencing a value captured by a bind expression.
 	 */
-	bool isCapturedValue(const core::ExpressionAddress& value);
+	bool isCapturedValue(const core::ExpressionInstance& value);
 
 	/**
 	 * Checks whether the given function has a synchronizing effect on threads.
@@ -79,14 +79,14 @@ namespace cba {
 		/**
 		 * Checks whether the given statement is a potential entry point for a thread.
 		 */
-		bool isThreadBody(const core::StatementAddress& stmt);
+		bool isThreadBody(const core::StatementInstance& stmt);
 	}
 
 	/**
 	 * Checks whether the given stmt / context combination is a potential body of a thread.
 	 */
 	template<typename Context>
-	bool isThreadBody(const core::StatementAddress& stmt, const Context& ctxt) {
+	bool isThreadBody(const core::StatementInstance& stmt, const Context& ctxt) {
 		typedef typename Context::call_context call_context_type;
 
 		// check context

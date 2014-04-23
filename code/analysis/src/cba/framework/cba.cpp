@@ -52,7 +52,7 @@ namespace cba {
 
 	using namespace core;
 
-	CBA::CBA(const StatementAddress& root)
+	CBA::CBA(const StatementInstance& root)
 		: root(root),
 		  solver([&](const set<ValueID>& sets) {
 				Constraints res;

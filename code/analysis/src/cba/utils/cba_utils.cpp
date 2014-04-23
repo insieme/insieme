@@ -60,8 +60,8 @@ namespace cba {
 		return *root->getAttachedValue<CBA_Ptr>();
 	}
 
-	NodeAddress getSurroundingFreeFunction(const NodeAddress& cur) {
-		static const ExpressionAddress none;
+	NodeInstance getSurroundingFreeFunction(const NodeInstance& cur) {
+		static const ExpressionInstance none;
 
 		// move up until reaching requested function
 		if (cur.isRoot()) return none; // there is none
@@ -69,7 +69,7 @@ namespace cba {
 		// stop decent at lambda or binds
 		auto type = cur->getNodeType();
 		if (type != NT_Lambda && type != NT_BindExpr) {
-			return getSurroundingFreeFunction(cur.getParentAddress());
+			return getSurroundingFreeFunction(cur.getParentInstance());
 		}
 		auto fun = cur;
 
@@ -77,15 +77,15 @@ namespace cba {
 		if (fun.isRoot()) return none;
 
 		// if lambda is not directly called it is a free function
-		auto user = (type == NT_Lambda) ? fun.getParentAddress(4) : fun.getParentAddress();
+		auto user = (type == NT_Lambda) ? fun.getParentInstance(4) : fun.getParentInstance();
 
 		// if user is a program, it is not a free function
 		if (auto prog = user.isa<ProgramPtr>()) return none;
 
 		// if lambda is used as an argument to a call => it is a free function
-		auto call = user.isa<CallExprAddress>();
+		auto call = user.isa<CallExprInstance>();
 		if (!call) return fun;
-		if (auto callTrg = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+		if (auto callTrg = call->getFunctionExpr().isa<LambdaExprInstance>()) {
 			if (callTrg->getLambda() != fun) return fun;
 		}
 
@@ -93,15 +93,15 @@ namespace cba {
 		return getSurroundingFreeFunction(user);
 	}
 
-	LambdaAddress getSurroundingRecursiveFunction(const NodeAddress& cur) {
-		static const LambdaAddress none;
+	LambdaInstance getSurroundingRecursiveFunction(const NodeInstance& cur) {
+		static const LambdaInstance none;
 
 		// check whether current node is a function
 		if (cur->getNodeType() == NT_Lambda) {
 
-			auto lambda = cur.as<LambdaAddress>();
-			auto lambdaVar = cur.getParentAddress(1).as<LambdaBindingPtr>()->getVariable();
-			auto lambdaDef = cur.getParentAddress(2).as<LambdaDefinitionAddress>();
+			auto lambda = cur.as<LambdaInstance>();
+			auto lambdaVar = cur.getParentInstance(1).as<LambdaBindingPtr>()->getVariable();
+			auto lambdaDef = cur.getParentInstance(2).as<LambdaDefinitionInstance>();
 
 			if (lambdaDef->isRecursive(lambdaVar)) {
 				return lambda;
@@ -112,14 +112,14 @@ namespace cba {
 		if (cur.isRoot()) return none;
 
 		// process recursively
-		return getSurroundingRecursiveFunction(cur.getParentAddress());
+		return getSurroundingRecursiveFunction(cur.getParentInstance());
 	}
 
-	vector<ExpressionAddress> getAllFreeFunctions(const core::NodeAddress& root) {
-		vector<ExpressionAddress> res;
+	vector<ExpressionInstance> getAllFreeFunctions(const core::NodeInstance& root) {
+		vector<ExpressionInstance> res;
 
 		// collect all terms in the code
-		visitDepthFirst(root, [&](const ExpressionAddress& cur) {
+		visitDepthFirst(root, [&](const ExpressionInstance& cur) {
 
 			// only interested in lambdas and binds
 			if (!(cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>())) return;
@@ -128,8 +128,8 @@ namespace cba {
 			if (cur.isRoot()) return;
 
 			// it must not be the target of a call expression
-			auto parent = cur.getParentAddress();
-			if (auto call = parent.isa<CallExprAddress>()) {
+			auto parent = cur.getParentInstance();
+			if (auto call = parent.isa<CallExprInstance>()) {
 				if (call->getFunctionExpr() == cur) {
 					return;
 				}
@@ -143,18 +143,18 @@ namespace cba {
 	}
 
 
-	VariableAddress getDefinitionPoint(const VariableAddress& varAddress) {
+	VariableInstance getDefinitionPoint(const VariableInstance& varAddress) {
 
 		// extract the variable
 		VariablePtr var = varAddress.getAddressedNode();
 
 		// start walking up the address
-		NodeAddress cur = varAddress;
+		NodeInstance cur = varAddress;
 
 		// check the parent
 		while (!cur.isRoot()) {
 			auto pos = cur.getIndex();
-			cur = cur.getParentAddress();
+			cur = cur.getParentInstance();
 			switch(cur->getNodeType()) {
 
 			case NT_Parameters: {
@@ -164,7 +164,7 @@ namespace cba {
 			case NT_Lambda: {
 
 				// check parameters
-				for(auto param : cur.as<LambdaAddress>()->getParameters()) {
+				for(auto param : cur.as<LambdaInstance>()->getParameters()) {
 					if (param.as<VariablePtr>() == var) {
 						return param;		// found it
 					}
@@ -176,7 +176,7 @@ namespace cba {
 
 			case NT_LambdaBinding: {
 				// check the bound variable
-				auto boundVar = cur.as<LambdaBindingAddress>()->getVariable();
+				auto boundVar = cur.as<LambdaBindingInstance>()->getVariable();
 				if (boundVar.as<VariablePtr>() == var) {
 					return boundVar;
 				}
@@ -187,7 +187,7 @@ namespace cba {
 
 			case NT_LambdaDefinition: {
 				// check whether variable is bound
-				if (auto binding = cur.as<LambdaDefinitionAddress>()->getBindingOf(var)) {
+				if (auto binding = cur.as<LambdaDefinitionInstance>()->getBindingOf(var)) {
 					return binding->getVariable();
 				}
 
@@ -197,7 +197,7 @@ namespace cba {
 
 			case NT_BindExpr: {
 				// check parameters
-				for(auto param : cur.as<BindExprAddress>()->getParameters()) {
+				for(auto param : cur.as<BindExprInstance>()->getParameters()) {
 					if (param.as<VariablePtr>() == var) {
 						return param;		// found it
 					}
@@ -210,9 +210,9 @@ namespace cba {
 			case NT_CompoundStmt: {
 
 				// check whether there is an earlier declaration
-				auto compound = cur.as<CompoundStmtAddress>();
+				auto compound = cur.as<CompoundStmtInstance>();
 				for(int i = pos; i >= 0; i--) {
-					if (auto decl = compound[i].isa<DeclarationStmtAddress>()) {
+					if (auto decl = compound[i].isa<DeclarationStmtInstance>()) {
 						if (decl->getVariable().as<VariablePtr>() == var) {
 							return decl->getVariable();
 						}
@@ -225,7 +225,7 @@ namespace cba {
 
 			case NT_ForStmt: {
 				// check whether it is an iterator
-				auto iter = cur.as<ForStmtAddress>()->getIterator();
+				auto iter = cur.as<ForStmtInstance>()->getIterator();
 				if (var == iter.as<VariablePtr>()) {
 					return iter;
 				}
@@ -238,55 +238,42 @@ namespace cba {
 		}
 
 		// the variable is a free variable in this context
-		return VariableAddress(var);
+		return VariableInstance(var);
 	}
 
-
-	StatementAddress getAnalysisRoot(const NodeAddress& node) {
+	StatementInstance getAnalysisRoot(const NodeInstance& node) {
 		// the root node is the outermost statement (or expression, since expressions are statements)
-		auto stmt = node.isa<StatementAddress>();
+		auto stmt = node.isa<StatementInstance>();
 		if (node.isRoot()) return stmt;
-		auto res = getAnalysisRoot(node.getParentAddress());
+		auto res = getAnalysisRoot(node.getParentInstance());
 		// special case - use body of lambdas
-		if (auto lambda = res.isa<LambdaExprAddress>()) return lambda->getBody();
+		if (auto lambda = res.isa<LambdaExprInstance>()) return lambda->getBody();
 		// otherwise take outermost
 		return (res) ? res : stmt;
 	}
 
-	bool isRecursiveCall(const CallExprAddress& call) {
+	bool isRecursiveCall(const CallExprInstance& call) {
 		if (!call) return false;
 
 		// check function
 		auto fun = call->getFunctionExpr();
 
 		// needs to be a variable
-		auto var = fun.isa<VariableAddress>();
+		auto var = fun.isa<VariableInstance>();
 		if (!var) return false;
 
 		// and this variable needs to be a recursive function
 		auto def = getDefinitionPoint(var);
 		return !def.isRoot() && def.getParentNode().isa<LambdaBindingPtr>();
 	}
-//
-//	LambdaDefinitionAddress getRecursiveDefinition(const CallExprAddress& call) {
-//		assert(isRecursiveCall(call));
-//
-//		// get definition point
-//		auto var = call->getFunctionExpr().as<VariableAddress>();
-//		auto def = getDefinitionPoint(var);
-//
-//		// get enclosing definition
-//		return def.getParentAddress(2).as<LambdaDefinitionAddress>();
-//
-//	}
 
-	bool isCapturedValue(const core::ExpressionAddress& value) {
+	bool isCapturedValue(const core::ExpressionInstance& value) {
 
 		// check whether there are at least 2 parents (call and bind expression)
 		if (value.getDepth() < 2) return false;
 
 		// it has to be the argument of a call expression within a bind expression
-		auto bind = value.getParentAddress(2).isa<BindExprAddress>();
+		auto bind = value.getParentInstance(2).isa<BindExprInstance>();
 		return bind && bind->isBoundExpression(value);
 	}
 
@@ -302,7 +289,7 @@ namespace cba {
 
 	namespace detail {
 
-		bool isThreadBody(const StatementAddress& stmt) {
+		bool isThreadBody(const StatementInstance& stmt) {
 			// the root is a thread starter
 			if (getAnalysisRoot(stmt) == stmt) return true;
 
@@ -311,12 +298,12 @@ namespace cba {
 			if (!freeFun) return false;
 
 			// in case the surrounding callable is a bind => handle it
-			if (auto bind = freeFun.isa<BindExprAddress>()) {
+			if (auto bind = freeFun.isa<BindExprInstance>()) {
 				return stmt == bind->getCall();
 			}
 
 			// in case it it is a function, handle it as well
-			if (auto lambda = freeFun.isa<LambdaAddress>()) {
+			if (auto lambda = freeFun.isa<LambdaInstance>()) {
 				return stmt == lambda->getBody();
 			}
 
