@@ -39,6 +39,5 @@ typedef void (*fun_type)(int, int);
 INFO_STRUCT_BEGIN(test)
 	INFO_FIELD(fun, 	fun_type, 				NULL)
 	INFO_FIELD(valA, 	int,					0)
-	INFO_FIELD(valB, 	double,					0)
-	INFO_FIELD(valC, 	bool,					0)
+	INFO_FIELD(valB, 	bool,					0)
 INFO_STRUCT_END()

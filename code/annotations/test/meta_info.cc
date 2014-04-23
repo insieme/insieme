@@ -66,8 +66,7 @@ namespace annotations {
 		test_info info;
 		info.fun = fun;
 		info.valA = 12;
-		info.valB = 0.14;
-		info.valC = true;
+		info.valB = true;
 
 		NodePtr dummy = builder.genericType("A");
 
@@ -119,7 +118,6 @@ namespace annotations {
 			EXPECT_EQ(*info.fun, *info2.fun);
 			EXPECT_EQ(info.valA, info2.valA);
 			EXPECT_EQ(info.valB, info2.valB);
-			EXPECT_EQ(info.valC, info2.valC);
 
 			EXPECT_TRUE(mgr.contains(info2.fun));
 
