@@ -117,7 +117,9 @@ namespace integration {
 				fs::ifstream in(file);
 				if (in.is_open()) {
 					// load local configuration
-					res <<= Properties::load(in);
+					auto p = Properties::load(in);
+					res.set("CUR_CONFIG_PATH", dir.string());
+					res <<= p;
 				} else {
 					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
 				}
@@ -161,7 +163,10 @@ namespace integration {
 			vector<frontend::path> files;
 
 			for (const auto& file : prop.get<vector<string>>("files")) {
-				files.push_back((testCaseDir / file).string());
+				if(fs::path(file).is_absolute())
+					files.push_back(file);
+				else
+					files.push_back((testCaseDir / file).string());
 			}
 
 			//no files specified, use default names TODO ENABLE IF ALL TEST_DATA IS CONVERTED
