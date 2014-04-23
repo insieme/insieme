@@ -107,7 +107,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi);
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
