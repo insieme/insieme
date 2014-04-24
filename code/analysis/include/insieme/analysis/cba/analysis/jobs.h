@@ -71,7 +71,7 @@ namespace cba {
 
 		using super::elem;
 
-		void visitJobExpr(const JobExprAddress& job, const Context& ctxt, Constraints& constraints) {
+		void visitJobExpr(const JobExprInstance& job, const Context& ctxt, Constraints& constraints) {
 
 			// this expression is creating a job
 			auto value = getJobFromConstructor(job, ctxt);

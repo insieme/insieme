@@ -68,7 +68,7 @@ namespace cba {
 
 	private:
 
-		set<Label> getReachingPredecessor(const CallExprAddress& call) {
+		set<Label> getReachingPredecessor(const CallExprInstance& call) {
 
 			set<Label> res;
 
@@ -95,12 +95,12 @@ namespace cba {
 			if (auto recFun = getSurroundingRecursiveFunction(call)) {
 
 				// get list of recursive calls
-				auto lambda = recFun.as<LambdaAddress>();
-				auto lambdaVar = recFun.getParentAddress(1).as<LambdaBindingPtr>()->getVariable();
-				auto lambdaDef = recFun.getParentAddress(2).as<LambdaDefinitionAddress>();
+				auto lambda = recFun.as<LambdaInstance>();
+				auto lambdaVar = recFun.getParentInstance(1).as<LambdaBindingPtr>()->getVariable();
+				auto lambdaDef = recFun.getParentInstance(2).as<LambdaDefinitionInstance>();
 
 				for(const auto& recCall : lambdaDef->getRecursiveCallsOf(lambdaVar)) {
-					res.insert(cba.getLabel(lambdaDef >> recCall));
+					res.insert(cba.getLabel(concat(lambdaDef, recCall)));
 				}
 			}
 
@@ -109,7 +109,7 @@ namespace cba {
 
 	public:
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			// restrict context
 			assert_true(ctxt == Context()) << "This resolver only operates on the default context - given: " << ctxt;
 
@@ -125,87 +125,6 @@ namespace cba {
 			for(auto cur : getReachingPredecessor(call)) {
 				constraints.add(elem(cur, pred_res));
 			}
-
-			// TODO: old version had additional optimizations
-
-//std::cout << " # Processing Call: " << call << " = " << *call << "\n";
-//			// get surrounding free function
-//			auto fun = getSurroundingFreeFunction(call);
-//
-//			// check whether there is a surrounding free function
-//			if (!fun) {
-//std::cout << " - no surrounding free function\n";
-//				// => this function can only reached statically
-//				constraints.add(elem(0, pred_res));
-//
-//				// consider potential recursive case
-//				if (auto recLambda = getSurroundingRecursiveFunction(call)) {
-//
-//					// get recursive calls
-//					for (const Caller& cur : cba.getCallSiteManager().getCaller(Callee(recLambda))) {
-//
-//						// check whether it is a recursive call
-//						const auto& call = cur.getCall();
-//						if (causesContextShift(call)) continue;
-//
-//						// add call site to potential label
-//						auto l_call = cba.getLabel(call);
-//						constraints.add(elem(l_call, pred_res));
-//					}
-//				}
-//
-//				return;
-//			}
-//
-//			// wrap targeted function into a callee instance
-//			Callee callee(fun);
-//
-//			// get call sites for surrounding function
-//			const vector<Caller>& caller = cba.getCallSiteManager().getCaller(callee);
-//
-//			// special case: all calls to functions are statically bound => callee is not free
-//			if (!cba.getCallSiteManager().isFree(callee)) {
-//std::cout << " - it is not calling a free function\n";
-//std::cout << " - callee: " << callee.getDefinition() << " = " << *callee.getDefinition() << "\n";
-//std::cout << " - caller: " << caller << "\n";
-//
-//				// just add caller-contexts to the resulting set
-//				for(const CallExprAddress& cur : caller) {
-//
-//					// if the call is a
-//					if (causesContextShift(cur)) {
-//						auto l_call = cba.getLabel(cur);
-//						std::cout << "Adding " << cur << " = " << l_call << "\n";
-//						constraints.add(elem(l_call, pred_res));
-//					} else {
-//
-//					}
-//
-//				}
-//
-//				// and done
-//				return;
-//			}
-//std::cout << " - it is calling a free function\n";
-//			// all kind of calling-contexts need to be considered
-//			auto callContexts = generateSequences<Context::call_context::size>(cba.getDynamicCallLabels());
-//
-//			// the dynamic callers are creating new contexts
-//			for(const CallExprAddress& cur : caller) {
-//
-//				// ignore static calls
-//				if (!causesContextShift(cur)) continue;
-//
-//				auto l_call = cba.getLabel(cur);
-//				auto l_fun = cba.getLabel(cur->getFunctionExpr());
-//
-//				// for all potential source-contexts (context of call site)
-//				for(const auto& callCtxt : callContexts) {
-//
-//					auto F_dynCall = cba.getSet(F, l_fun, Context(callCtxt));
-//					constraints.add(elemIf(callee, F_dynCall, l_call, pred_res));
-//				}
-//			}
 
 		}
 

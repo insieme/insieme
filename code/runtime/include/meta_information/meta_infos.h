@@ -54,3 +54,7 @@ typedef struct _irt_meta_info_table_entry {
 // build accessors for metainformation
 #include "meta_information/accessor_generator.inc"
 #include "insieme/meta_information/meta_infos.def"
+
+// build printer for metainformation
+#include "meta_information/printer_generator.inc"
+#include "insieme/meta_information/meta_infos.def"

@@ -53,18 +53,18 @@ namespace cba {
 		typedef boost::optional<CallerList> OptCallerList;
 
 		OptCallerList getStaticUses(const Callee& callee);
-		NodeAddress tryObtainingFunction(const core::ExpressionAddress& expr);
+		NodeInstance tryObtainingFunction(const core::ExpressionInstance& expr);
 
 	}
 
 
-	CallSiteManager::CallSiteManager(const core::StatementAddress& root)
+	CallSiteManager::CallSiteManager(const core::StatementInstance& root)
 		: freeCallees(), freeCallers(), dynamicCalls() {
 
 		// collect free callers and callees
 		visitDepthFirst(root,
 			insieme::utils::chain(
-				[&](const ExpressionAddress& cur) {
+				[&](const ExpressionInstance& cur) {
 
 					// only interested in lambdas, bind and literals
 					auto kind = cur->getNodeType();
@@ -86,16 +86,16 @@ namespace cba {
 
 					// if all uses of the function can be determined statically => done
 					// TODO: result could be immediately saved within map (since it is required later on)
-					if (getStaticUses(cur.as<NodeAddress>())) return;
+					if (getStaticUses(cur.as<NodeInstance>())) return;
 
 					// found a free function => register it
-					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprAddress>()->getLambda()) :
-									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprAddress>()) : Callee(cur.as<LiteralAddress>());
+					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprInstance>()->getLambda()) :
+									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprInstance>()) : Callee(cur.as<LiteralInstance>());
 					freeCallees[type->getParameterTypes()->size()].push_back(callee);
 				},
-				[&](const ExpressionAddress& cur) {
+				[&](const ExpressionInstance& cur) {
 
-					auto call = cur.isa<CallExprAddress>();
+					auto call = cur.isa<CallExprInstance>();
 					if (!call) return;
 
 					// check whether target is fixed
@@ -176,29 +176,29 @@ namespace cba {
 		typedef vector<Caller> CallerList;
 		typedef boost::optional<CallerList> OptCallerList;
 
-		bool collectUsesOfVariable(const VariableAddress& var, vector<Caller>& res) {
+		bool collectUsesOfVariable(const VariableInstance& var, vector<Caller>& res) {
 			assert(getDefinitionPoint(var) == var);
 
-			NodeAddress root;
-			if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
-				root = decl.getParentAddress();
-			} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
-				if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
+			NodeInstance root;
+			if (auto decl = var.getParentInstance().isa<DeclarationStmtInstance>()) {
+				root = decl.getParentInstance();
+			} else if (auto params = var.getParentInstance().isa<ParametersInstance>()) {
+				if (auto lambda = params.getParentInstance().isa<LambdaInstance>()) {
 					root = lambda->getBody();
-				} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
+				} else if (auto bind = params.getParentInstance().isa<BindExprInstance>()) {
 					root = bind->getCall();
 				} else {
-					assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
+					assert_fail() << "Unknown parent type for Parameters: " << params.getParentInstance()->getNodeType();
 				}
 			} else {
-				assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
+				assert_fail() << "Unknown parent of variable definition: " << var.getParentInstance()->getNodeType();
 			}
 
 			// there should be a root now
 			assert(root);
 
 			bool allFine = true;
-			visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
+			visitDepthFirstPrunable(root, [&](const ExpressionInstance& cur) {
 				// stop if already failed
 				if (!allFine) return true;
 
@@ -209,7 +209,7 @@ namespace cba {
 				if (*cur != *var) return false;
 
 				// if variable is used as a function => found a call
-				auto call = cur.getParentAddress().isa<CallExprAddress>();
+				auto call = cur.getParentInstance().isa<CallExprInstance>();
 
 				// if it is not a call, we don't care
 				if (!call) return false;
@@ -220,7 +220,7 @@ namespace cba {
 					res.push_back(call);
 				} else {
 					// it is an argument
-					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+					if (auto fun = call->getFunctionExpr().isa<LambdaExprInstance>()) {
 						assert(call[cur.getIndex()-2] == cur);
 						// ok - it is a static call => we may follow the parameter
 						allFine = allFine && collectUsesOfVariable(fun->getParameterList()[cur.getIndex()-2], res);
@@ -239,7 +239,7 @@ namespace cba {
 
 		}
 
-		OptCallerList getUsesOfVariable(const VariableAddress& def) {
+		OptCallerList getUsesOfVariable(const VariableInstance& def) {
 			static const OptCallerList fail;
 			vector<Caller> res;
 			bool success = collectUsesOfVariable(def, res);
@@ -258,18 +258,18 @@ namespace cba {
 			OptCallerList res = CallerList();
 
 			// check whether defining expression is actually addressing represented callee
-			if (!callee.isLambda() || function.as<LambdaExprAddress>()->getLambda() == callee.getDefinition()) {
+			if (!callee.isLambda() || function.as<LambdaExprInstance>()->getLambda() == callee.getDefinition()) {
 
 				// option A: the lambda is created as an argument of a call expression
-				auto parent = function.getParentAddress();
-				if (auto call = parent.isa<CallExprAddress>()) {
+				auto parent = function.getParentInstance();
+				if (auto call = parent.isa<CallExprInstance>()) {
 
 					// check for a direct call
 					if (call->getFunctionExpr() == function) {
 						res = toVector(Caller(call));
 
 					// function is an argument of the call => check whether target function is fixed
-					} else if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
+					} else if (auto fun = call->getFunctionExpr().isa<LambdaExprInstance>()) {
 						// collect all uses of corresponding function parameter
 						assert(call[function.getIndex()-2] == function);
 						res = getUsesOfVariable(fun->getParameterList()[function.getIndex()-2]);
@@ -279,7 +279,7 @@ namespace cba {
 					}
 
 				// option B: the lambda is created as the init value of a declaration
-				} else if (auto decl = parent.isa<DeclarationStmtAddress>()) {
+				} else if (auto decl = parent.isa<DeclarationStmtInstance>()) {
 					// simply collect all uses of the variable
 					res = getUsesOfVariable(decl->getVariable());
 				}
@@ -290,15 +290,15 @@ namespace cba {
 			if (!res || !callee.isRecursive()) return res;
 
 			// add recursive calls
-			auto def = function.as<LambdaExprAddress>()->getDefinition();
-			auto var = callee.getDefinition().getParentAddress().as<LambdaBindingPtr>()->getVariable();
+			auto def = function.as<LambdaExprInstance>()->getDefinition();
+			auto var = callee.getDefinition().getParentInstance().as<LambdaBindingPtr>()->getVariable();
 			for(auto cur : def->getRecursiveCallsOf(var)) {
 
 				// compute absolute position of the variable
 				auto var = concat(def, cur);
 
 				// get call from recursive variable reference
-				CallExprAddress call = var.getParentAddress().as<CallExprAddress>();
+				CallExprInstance call = var.getParentInstance().as<CallExprInstance>();
 				assert_true(call->getFunctionExpr() == var) << "Recursive variables should be called directly!";
 
 				// add call to result list
@@ -334,25 +334,25 @@ namespace cba {
 
 	namespace {
 
-		bool isFunction(const core::ExpressionAddress& expr) {
+		bool isFunction(const core::ExpressionInstance& expr) {
 			auto nodeType = expr->getNodeType();
 			return nodeType == NT_LambdaExpr || nodeType == NT_BindExpr || nodeType == NT_Literal;
 		}
 
-		NodeAddress tryObtainingFunction(const core::ExpressionAddress& expr) {
-			static const ExpressionAddress unknown;
+		NodeInstance tryObtainingFunction(const core::ExpressionInstance& expr) {
+			static const ExpressionInstance unknown;
 
 			// check for null
 			if (!expr) return unknown;
 
 			// check whether we have a lambda expression
-			if (auto lambdaExpr = expr.isa<LambdaExprAddress>()) return lambdaExpr->getLambda();
+			if (auto lambdaExpr = expr.isa<LambdaExprInstance>()) return lambdaExpr->getLambda();
 
 			// check whether we already have one
 			if (isFunction(expr)) return expr;
 
 			// otherwise we are only supporting variables
-			auto var = expr.isa<VariableAddress>();
+			auto var = expr.isa<VariableInstance>();
 			if (!var) return unknown;
 
 			// get definition of variable
@@ -360,28 +360,28 @@ namespace cba {
 
 			// if it is a free variable => there is nothing we can do
 			if (def.isRoot()) return unknown;
-			auto parent = def.getParentAddress();
+			auto parent = def.getParentInstance();
 
 			// if definition is a lambda binding => it is a recursive call
-			if (auto binding = parent.isa<LambdaBindingAddress>()) {
+			if (auto binding = parent.isa<LambdaBindingInstance>()) {
 				return binding->getLambda();
 			}
 
 			// if variable is declared => consider declaration
-			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
+			if (auto decl = parent.isa<DeclarationStmtInstance>()) {
 				return tryObtainingFunction(decl->getInitialization());
 			}
 
 			// if it is an parameter => follow argument of direct call (if possible)
-			if (auto param = parent.isa<ParametersAddress>()) {
+			if (auto param = parent.isa<ParametersInstance>()) {
 
 				if (param.isRoot()) return unknown;
 
 				auto userOffset = param.getParentNode().isa<LambdaPtr>() ? 5 : 2;
-				auto user = param.getParentAddress(userOffset);
+				auto user = param.getParentInstance(userOffset);
 
 				// continue with proper argument
-				auto call = user.isa<CallExprAddress>();
+				auto call = user.isa<CallExprInstance>();
 				if (call) return tryObtainingFunction(call[def.getIndex()]);
 			}
 
@@ -395,37 +395,37 @@ namespace cba {
 		static const vector<Callee> empty;
 
 		// investigate function expression
-		ExpressionAddress fun = caller.getCall()->getFunctionExpr();
+		ExpressionInstance fun = caller.getCall()->getFunctionExpr();
 
 		// -- handle direct calls --
-		if (auto literal = fun.isa<LiteralAddress>()) {
+		if (auto literal = fun.isa<LiteralInstance>()) {
 			// simply a direct call to a literal
 			return toVector(Callee(literal));
 		}
-		if (auto lambda = fun.isa<LambdaExprAddress>()) {
+		if (auto lambda = fun.isa<LambdaExprInstance>()) {
 			// this is a direct call to a lambda
 			return toVector(Callee(lambda->getLambda()));
 		}
-		if (auto bind = fun.isa<BindExprAddress>()) {
+		if (auto bind = fun.isa<BindExprInstance>()) {
 			// this is a direct call to a local bind
 			return toVector(Callee(bind));
 		}
 
 		// -- handle indirect calls - calling a variable --
-		if (auto var = fun.isa<VariableAddress>()) {
+		if (auto var = fun.isa<VariableInstance>()) {
 
 			// try to obtain function represented by variable statically
-			NodeAddress trg = tryObtainingFunction(var);
+			NodeInstance trg = tryObtainingFunction(var);
 
 			if (trg) {
 				// good => that's the function to be called
-				if (auto lambda = trg.isa<LambdaAddress>()) {
+				if (auto lambda = trg.isa<LambdaInstance>()) {
 					return toVector(Callee(lambda));
 				}
-				if (auto bind = trg.isa<BindExprAddress>()) {
+				if (auto bind = trg.isa<BindExprInstance>()) {
 					return toVector(Callee(bind));
 				}
-				return toVector(Callee(trg.as<LiteralAddress>()));
+				return toVector(Callee(trg.as<LiteralInstance>()));
 			}
 
 			// bad => it may call any function
@@ -455,165 +455,6 @@ namespace cba {
 		return contains(getFreeCallees(callee.getNumParams()), callee);
 	}
 
-
-//	namespace {
-//
-//		bool collectUsesOfVariable(CBA& context, const VariableAddress& var, vector<Label>& res) {
-//			assert(getDefinitionPoint(var) == var);
-//
-//			NodeAddress root;
-//			if (auto decl = var.getParentAddress().isa<DeclarationStmtAddress>()) {
-//				root = decl.getParentAddress();
-//			} else if (auto params = var.getParentAddress().isa<ParametersAddress>()) {
-//				if (auto lambda = params.getParentAddress().isa<LambdaAddress>()) {
-//					root = lambda->getBody();
-//				} else if (auto bind = params.getParentAddress().isa<BindExprAddress>()) {
-//					root = bind->getCall();
-//				} else {
-//					assert_fail() << "Unknown parent type for Parameters: " << params.getParentAddress()->getNodeType();
-//				}
-//			} else {
-//				assert_fail() << "Unknown parent of variable definition: " << var.getParentAddress()->getNodeType();
-//			}
-//
-//			// there should be a root now
-//			assert(root);
-//
-//			bool allFine = true;
-//			visitDepthFirstPrunable(root, [&](const ExpressionAddress& cur) {
-//				// stop if already failed
-//				if (!allFine) return true;
-//
-//				// only process local scope
-//				if (cur->getNodeType() == NT_LambdaExpr) return true;
-//
-//				// for the rest, only interested in variables
-//				if (*cur != *var) return false;
-//
-//				// if variable is used as a function => found a call
-//				auto call = cur.getParentAddress().isa<CallExprAddress>();
-//
-//				// if it is not a call, we don't care
-//				if (!call) return false;
-//
-//				// check out whether it is a call to the function or passed as an argument
-//				if (call->getFunctionExpr() == cur) {
-//					// it is the target function => collect this one
-//					res.push_back(context.getLabel(call));
-//				} else {
-//					// it is an argument
-//					if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-//						assert(call[cur.getIndex()-2] == cur);
-//						// ok - it is a static call => we may follow the parameter
-//						allFine = allFine && collectUsesOfVariable(context, fun->getParameterList()[cur.getIndex()-2], res);
-//					}
-//				}
-//
-//				return false;
-//
-//			});
-//
-//			return allFine;
-//
-//		}
-//
-//		CBA::OptCallSiteList getUsesOfVariable(CBA& context, const VariableAddress& def) {
-//			static const CBA::OptCallSiteList fail;
-//			vector<Label> res;
-//			bool success = collectUsesOfVariable(context, def, res);
-//			return success ? res : fail;
-//		}
-//
-//		CBA::OptCallSiteList getStaticUses(CBA& context, const ExpressionAddress& function) {
-//			static const CBA::OptCallSiteList unknown;
-//
-//			// there is nothing we can do for the root
-//			if (function.isRoot()) return unknown;
-//
-//			// option A: the lambda is created as an argument of a call expression
-//			auto parent = function.getParentAddress();
-//			if (auto call = parent.isa<CallExprAddress>()) {
-//				assert(call->getFunctionExpr() != function);
-//
-//				// check whether target function is fixed
-//				if (auto fun = call->getFunctionExpr().isa<LambdaExprAddress>()) {
-//					// collect all uses of corresponding function parameter
-//					assert(call[function.getIndex()-2] == function);
-//					return getUsesOfVariable(context, fun->getParameterList()[function.getIndex()-2]);
-//				} else {
-//					return unknown;
-//				}
-//			}
-//
-//			// option B: the lambda is created as the value of a definition
-//			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
-//				// simply collect all uses of the variable
-//				return getUsesOfVariable(context, decl->getVariable());
-//			}
-//
-//			return unknown;
-//		}
-//
-//		bool isFunction(const core::ExpressionAddress& expr) {
-//			return expr->getNodeType() == NT_LambdaExpr || expr->getNodeType() == NT_BindExpr;
-//		}
-//
-//		ExpressionAddress tryObtainingFunction(const core::ExpressionAddress& expr) {
-//			static const ExpressionAddress unknown;
-//
-//			// check for null
-//			if (!expr) return unknown;
-//
-//			// check whether we already have one
-//			if (isFunction(expr)) return expr;
-//
-//			// otherwise we are only supporting variables
-//			auto var = expr.isa<VariableAddress>();
-//			if (!var) return unknown;
-//
-//			// get definition of variable
-//			auto def = getDefinitionPoint(var);
-//
-//			// if it is a free variable => there is nothing we can do
-//			if (def.isRoot()) return unknown;
-//
-//			// if variable is declared => consider declaration
-//			auto parent = def.getParentAddress();
-//			if (auto decl = parent.isa<DeclarationStmtAddress>()) {
-//				return tryObtainingFunction(decl->getInitialization());
-//			}
-//
-//			// if it is an lambda parameter => follow argument
-//			if (auto param = parent.isa<ParametersAddress>()) {
-//
-//				if (param.isRoot()) return unknown;
-//
-//				auto userOffset = param.getParentNode().isa<LambdaPtr>() ? 5 : 2;
-//				auto user = param.getParentAddress(userOffset);
-//
-//				// continue with proper argument
-//				auto call = user.isa<CallExprAddress>();
-//				if (call) return tryObtainingFunction(call[param.getIndex()]);
-//			}
-//
-//			// otherwise there is nothing we can do
-//			return unknown;
-//		}
-//
-//	}
-//
-//
-//	const CBA::OptCallSiteList& CBA::getAllStaticUses(const core::ExpressionAddress& fun) {
-//
-//		// check the cache
-//		auto pos = callSiteCache.find(fun);
-//		if (pos != callSiteCache.end()) {
-//			return pos->second;
-//		}
-//
-//		// compute call-site list
-//		return callSiteCache[fun] = getStaticUses(*this, fun);
-//	}
 
 } // end namespace cba
 } // end namespace analysis

@@ -69,10 +69,10 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_bench_implementation(irt_work_item* wi);
 void insieme_wi_opt_bench_implementation(irt_work_item* wi);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants[] = { { &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL } };
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = { { &insieme_wi_startup_implementation } };
 
-irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { &insieme_wi_bench_implementation, NULL, 0, NULL, 0, NULL } };
-irt_wi_implementation_variant g_insieme_wi_opt_bench_variants[] = { { &insieme_wi_opt_bench_implementation, NULL, 0, NULL, 0, NULL } };
+irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { &insieme_wi_bench_implementation } };
+irt_wi_implementation_variant g_insieme_wi_opt_bench_variants[] = { { &insieme_wi_opt_bench_implementation } };
 
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants },

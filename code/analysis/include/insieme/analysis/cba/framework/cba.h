@@ -57,7 +57,7 @@
 #include "insieme/analysis/cba/utils/cba_utils.h"
 
 #include "insieme/core/ir.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_instance.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -126,7 +126,7 @@ namespace cba {
 
 		typedef utils::TypedMap<Container, ContainerBase> index_map_type;
 
-		core::StatementAddress root;
+		core::StatementInstance root;
 
 		Solver solver;
 
@@ -142,11 +142,11 @@ namespace cba {
 
 		// two caches for resolving labels and variables
 		int idCounter;
-		std::unordered_map<core::StatementAddress, Label> labels;
+		std::unordered_map<core::StatementInstance, Label> labels;
 		std::unordered_map<core::VariableAddress, Variable> vars;
 
 		// a reverse lookup structure for labels
-		std::unordered_map<Label, core::StatementAddress> reverseLabels;
+		std::unordered_map<Label, core::StatementInstance> reverseLabels;
 		std::unordered_map<Variable, core::VariableAddress> reverseVars;
 
 		// a utility deducing caller <=> callee relations
@@ -157,7 +157,7 @@ namespace cba {
 
 	public:
 
-		CBA(const core::StatementAddress& root);
+		CBA(const core::StatementInstance& root);
 
 		~CBA() {
 			for(auto cur : generatorIndex) delete cur.second;
@@ -165,7 +165,7 @@ namespace cba {
 
 		// basic functionality
 
-		const core::StatementAddress& getRoot() const {
+		const core::StatementInstance& getRoot() const {
 			return root;
 		}
 
@@ -177,14 +177,14 @@ namespace cba {
 
 		template<typename A, typename Context = DefaultContext>
 		const typename lattice<A,analysis_config<Context>>::type::value_type&
-		getValuesOf(const core::StatementAddress& expr, const A& a, const Context& ctxt = Context()) {
+		getValuesOf(const core::StatementInstance& expr, const A& a, const Context& ctxt = Context()) {
 			auto id = getSet(a, getLabel(expr), ctxt);
 			return solver.solve(id)[id];
 		}
 
 		template<typename A, typename Context, typename ... Rest>
 		const typename lattice<A,analysis_config<Context>>::type::value_type&
-		getValuesOf(const core::StatementAddress& expr, const A& a, const Context& ctxt, const Rest& ... rest) {
+		getValuesOf(const core::StatementInstance& expr, const A& a, const Context& ctxt, const Rest& ... rest) {
 			auto id = getSet(a, getLabel(expr), ctxt, rest...);
 			return solver.solve(id)[id];
 		}
@@ -304,7 +304,7 @@ namespace cba {
 
 		// -- label management --
 
-		Label getLabel(const core::StatementAddress& expr) {
+		Label getLabel(const core::StatementInstance& expr) {
 			auto pos = labels.find(expr);
 			if (pos != labels.end()) {
 				return pos->second;
@@ -315,14 +315,14 @@ namespace cba {
 			return l;
 		}
 
-		Label getLabel(const core::StatementAddress& expr) const {
+		Label getLabel(const core::StatementInstance& expr) const {
 			auto pos = labels.find(expr);
 			return (pos != labels.end()) ? pos->second : 0;
 		}
 
-		core::StatementAddress getStmt(Label label) const {
+		core::StatementInstance getStmt(Label label) const {
 			auto pos = reverseLabels.find(label);
-			return (pos != reverseLabels.end()) ? pos->second : core::StatementAddress();
+			return (pos != reverseLabels.end()) ? pos->second : core::StatementInstance();
 		}
 
 

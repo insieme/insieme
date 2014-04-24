@@ -37,6 +37,7 @@
 #pragma once
 
 #include <tuple>
+#include <type_traits>
 
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/encoder/encoder.h"
@@ -113,8 +114,21 @@ namespace annotations {
 	#include "insieme/annotations/meta_info/generators/dump_from.inc"
 	#include "insieme/meta_information/meta_infos.def"
 
+	inline bool isMetaInfo(const insieme::core::NodeAnnotationPtr& ptr) {
+		return false
+		#define INFO_STRUCT_BEGIN(_name) \
+				|| dynamic_pointer_cast<insieme::core::value_node_annotation<_name##_info>::type>(ptr)
+		#include "insieme/meta_information/meta_infos.def"
+		;
+	}
+
 	#include "insieme/annotations/meta_info/generators/clear.inc"
 
+
+	/**
+	 * A utility function copying all meta information from the given src to the destination node.
+	 */
+	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
 
 
 } // end namespace annotations

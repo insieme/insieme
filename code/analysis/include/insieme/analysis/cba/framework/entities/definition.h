@@ -61,7 +61,7 @@ namespace cba {
 		/**
 		 * The expression conducting the assignment (realizing the definition)
 		 */
-		core::CallExprAddress definitionPoint;
+		core::CallExprInstance definitionPoint;
 
 		/**
 		 * The context when triggering the assignment operation.
@@ -71,14 +71,14 @@ namespace cba {
 	public:
 
 		Definition()
-			: utils::HashableImmutableData<Definition<Context>>(combineHashes(core::CallExprAddress(), Context())) {}
+			: utils::HashableImmutableData<Definition<Context>>(combineHashes(core::CallExprInstance(), Context())) {}
 
-		Definition(const core::CallExprAddress& expr, const Context& ctxt = Context())
+		Definition(const core::CallExprInstance& expr, const Context& ctxt = Context())
 			: utils::HashableImmutableData<Definition<Context>>(combineHashes(expr, ctxt)),
 			  definitionPoint(expr),
 			  definitionContext(ctxt) {}
 
-		const core::CallExprAddress& getAddress() const {
+		const core::CallExprInstance& getDefinitionPoint() const {
 			return definitionPoint;
 		}
 
@@ -102,7 +102,7 @@ namespace cba {
 		}
 	};
 
-	inline bool isDefinition(const core::StatementAddress& address) {
+	inline bool isDefinition(const core::StatementInstance& address) {
 		core::StatementPtr stmt = address;
 
 		// only ref.assign calls are definitions
@@ -110,13 +110,13 @@ namespace cba {
 	}
 
 	template<typename Context>
-	Definition<Context> getDefinition(const core::StatementAddress& def, const Context& ctxt) {
+	Definition<Context> getDefinition(const core::StatementInstance& def, const Context& ctxt) {
 
 		// make sure it is a valid definition target
 		assert(isDefinition(def));
 
 		// create the definition instance
-		return Definition<Context>(def.as<core::CallExprAddress>(), ctxt);
+		return Definition<Context>(def.as<core::CallExprInstance>(), ctxt);
 	}
 
 } // end namespace cba

@@ -103,12 +103,12 @@ namespace cba {
 		ReachingSpawnPointsOutConstraintGenerator(CBA& cba)
 			: super(cba, ReachingSpawnPointsIn, ReachingSpawnPointsTmp, ReachingSpawnPointsOut), cba(cba) { }
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// check whether it is a spawn-operation call
 			auto fun = call->getFunctionExpr();
 			ProgramPoint<Context> point(ProgramPoint<Context>::Tmp, call, ctxt);
-			if (point.isSpawn() && point.getStatement().getParentAddress().template isa<CompoundStmtAddress>()) {		// only interested in unattached spawns
+			if (point.isSpawn() && point.getStatement().getParentInstance().template isa<CompoundStmtInstance>()) {		// only interested in unattached spawns
 
 				auto l = cba.getLabel(call);
 				auto R = cba.getSet(ReachingSpawnPointsOut, l, ctxt);

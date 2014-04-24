@@ -156,7 +156,7 @@ namespace cba {
 		using super::elem;
 		using super::pack;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// only interested in boolean literals
 			if (!base.isBool(literal->getType())) {
@@ -177,7 +177,7 @@ namespace cba {
 		}
 
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// conduct std-procedure
 			super::visitCallExpr(call, ctxt, constraints);

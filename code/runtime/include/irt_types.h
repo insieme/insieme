@@ -63,3 +63,30 @@ struct _irt_type {
 static inline uint32 irt_type_get_bytes(irt_context* context, irt_type_id type_id) {
 	return context->type_table[type_id].bytes;
 }
+
+static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
+	switch(kind) {
+	case IRT_T_VOID: return "IRT_T_VOID"; 
+	case IRT_T_BOOL: return "IRT_T_BOOL";
+	case IRT_T_INT8: return "IRT_T_INT8"; 
+	case IRT_T_INT16: return "IRT_T_INT16"; 
+	case IRT_T_INT32: return "IRT_T_INT32";
+	case IRT_T_INT64: return "IRT_T_INT64";
+	case IRT_T_UINT8: return "IRT_T_UINT8"; 
+	case IRT_T_UINT16: return "IRT_T_UINT16";
+	case IRT_T_UINT32: return "IRT_T_UINT32"; 
+	case IRT_T_UINT64: return "IRT_T_UINT64";
+	case IRT_T_REAL16: return "IRT_T_REAL16"; 
+	case IRT_T_REAL32: return "IRT_T_REAL32"; 
+	case IRT_T_REAL64: return "IRT_T_REAL64";
+	case IRT_T_STRUCT: return "IRT_T_STRUCT";
+	case IRT_T_UNION: return "IRT_T_UNION"; 
+	case IRT_T_FUNC: return "IRT_T_FUNC";
+	case IRT_T_POINTER: return "IRT_T_POINTER"; 
+	case IRT_T_ARRAY: return "IRT_T_ARRAY"; 
+	case IRT_T_VECTOR: return "IRT_T_VECTOR"; 
+	case IRT_T_VAR_VECTOR: return "IRT_T_VAR_VECTOR"; 
+	case IRT_T_CHANNEL: return "IRT_T_CHANNEL"; 
+	case IRT_T_BASIC: return "IRT_T_BASIC"; 
+	}
+}

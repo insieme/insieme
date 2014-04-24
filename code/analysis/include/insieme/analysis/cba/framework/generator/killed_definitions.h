@@ -125,7 +125,7 @@ namespace cba {
 
 			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
 			Label label = std::get<1>(data);
-			const auto& call = cba.getStmt(label).as<CallExprAddress>();
+			const auto& call = cba.getStmt(label).as<CallExprInstance>();
 			const auto& ctxt = std::get<2>(data);
 			const auto& loc  = std::get<3>(data);
 
@@ -189,19 +189,19 @@ namespace cba {
 
 		KilledDefsOutConstraintGenerator(CBA& cba) : super(cba, KDin, KDtmp, KDout), cba(cba) {}
 
-		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+		virtual void visit(const NodeInstance& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			// we can stop at the creation point - no definitions will be killed before
-			if (loc.getAddress() == addr) {
+			if (loc.getCreationPoint() == addr) {
 
-				auto KD_out = cba.getSet(KDout, loc.getAddress(), ctxt, loc);
+				auto KD_out = cba.getSet(KDout, loc.getCreationPoint(), ctxt, loc);
 				constraints.add(elem(iset<Definition<Context>>::empty(), KD_out));
 				return;
 			}
 
 			// if the current expression is assignment free we can skip the inner part
 			if (detail::isAssignmentFree(addr)) {
-				auto KD_in  = cba.getSet( KDin, addr.as<StatementAddress>(), ctxt, loc);
-				auto KD_out = cba.getSet(KDout, addr.as<StatementAddress>(), ctxt, loc);
+				auto KD_in  = cba.getSet( KDin, addr.as<StatementInstance>(), ctxt, loc);
+				auto KD_out = cba.getSet(KDout, addr.as<StatementInstance>(), ctxt, loc);
 				constraints.add(subset(KD_in, KD_out));
 				return;
 			}
@@ -213,7 +213,7 @@ namespace cba {
 		// TODO: the parallel evaluation of call-arguments may kill multiple definitions => here the union needs to be formed instead of the
 		//		 the intersection.
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
 
 			// a special case: assignments

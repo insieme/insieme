@@ -63,17 +63,17 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
 		// extract caller and callee
-		Caller callerA(root[0].as<CallExprAddress>());
-		Callee calleeA(root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>()->getLambda());
+		Caller callerA(root[0].as<CallExprInstance>());
+		Callee calleeA(root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>()->getLambda());
 
-		Caller callerB(root[1].as<CallExprAddress>());
-		Callee calleeB(root[1].as<CallExprAddress>()->getFunctionExpr().as<BindExprAddress>());
+		Caller callerB(root[1].as<CallExprInstance>());
+		Callee calleeB(root[1].as<CallExprInstance>()->getFunctionExpr().as<BindExprInstance>());
 
-		Caller callerC(root[2].as<CallExprAddress>());
-		Callee calleeC(root[2].as<CallExprAddress>()->getFunctionExpr().as<LiteralAddress>());
+		Caller callerC(root[2].as<CallExprInstance>());
+		Callee calleeC(root[2].as<CallExprInstance>()->getFunctionExpr().as<LiteralInstance>());
 
 		EXPECT_TRUE(calleeA.isLambda());
 		EXPECT_TRUE(calleeB.isBind());
@@ -115,17 +115,17 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
 		// extract caller and callee
-		Caller callerA(root[1].as<CallExprAddress>());
-		Callee calleeA(root[0].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getLambda());
+		Caller callerA(root[1].as<CallExprInstance>());
+		Callee calleeA(root[0].as<DeclarationStmtInstance>()->getInitialization().as<LambdaExprInstance>()->getLambda());
 
-		Caller callerB(root[3].as<CallExprAddress>());
-		Callee calleeB(root[2].as<DeclarationStmtAddress>()->getInitialization().as<BindExprAddress>());
+		Caller callerB(root[3].as<CallExprInstance>());
+		Callee calleeB(root[2].as<DeclarationStmtInstance>()->getInitialization().as<BindExprInstance>());
 
-		Caller callerC(root[5].as<CallExprAddress>());
-		Callee calleeC(root[4].as<DeclarationStmtAddress>()->getInitialization().as<LiteralAddress>());
+		Caller callerC(root[5].as<CallExprInstance>());
+		Callee calleeC(root[4].as<DeclarationStmtInstance>()->getInitialization().as<LiteralInstance>());
 
 		EXPECT_TRUE(calleeA.isLambda());
 		EXPECT_TRUE(calleeB.isBind());
@@ -172,17 +172,17 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
 		// extract caller and callee
-		Caller callerA(root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>().getBody()[0].as<CallExprAddress>());
-		Callee calleeA(root[0].as<CallExprAddress>()[0].as<LambdaExprAddress>()->getLambda());
+		Caller callerA(root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>().getBody()[0].as<CallExprInstance>());
+		Callee calleeA(root[0].as<CallExprInstance>()[0].as<LambdaExprInstance>()->getLambda());
 
-		Caller callerB(root[1].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>().getBody()[0].as<CallExprAddress>());
-		Callee calleeB(root[1].as<CallExprAddress>()[0].as<BindExprAddress>());
+		Caller callerB(root[1].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>().getBody()[0].as<CallExprInstance>());
+		Callee calleeB(root[1].as<CallExprInstance>()[0].as<BindExprInstance>());
 
-		Caller callerC(root[2].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>().getBody()[0].as<CallExprAddress>());
-		Callee calleeC(root[2].as<CallExprAddress>()[0].as<LiteralAddress>());
+		Caller callerC(root[2].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>().getBody()[0].as<CallExprInstance>());
+		Callee calleeC(root[2].as<CallExprInstance>()[0].as<LiteralInstance>());
 
 		EXPECT_TRUE(calleeA.isLambda());
 		EXPECT_TRUE(calleeB.isBind());
@@ -220,12 +220,12 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
 		// extract caller and callee
-		Caller callerA1(root[0].as<CallExprAddress>());
-		Caller callerA2(root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>().getBody()[0].as<CallExprAddress>());
-		Callee calleeA (root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>()->getLambda());
+		Caller callerA1(root[0].as<CallExprInstance>());
+		Caller callerA2(root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>().getBody()[0].as<CallExprInstance>());
+		Callee calleeA (root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>()->getLambda());
 
 		EXPECT_TRUE(calleeA.isLambda());
 
@@ -240,9 +240,9 @@ namespace cba {
 		// ----------------------
 
 		// check indirect recursive call
-		Callee calleeB (root[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getLambda());
-		Caller callerB1(root[2].as<CallExprAddress>());
-		Caller callerB2(root[1].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()->getLambda()->getBody()[0].as<CallExprAddress>());
+		Callee calleeB (root[1].as<DeclarationStmtInstance>()->getInitialization().as<LambdaExprInstance>()->getLambda());
+		Caller callerB1(root[2].as<CallExprInstance>());
+		Caller callerB2(root[1].as<DeclarationStmtInstance>()->getInitialization().as<LambdaExprInstance>()->getLambda()->getBody()[0].as<CallExprInstance>());
 
 		EXPECT_EQ(toString(toVector(calleeB)), toString(mgr.getCallee(callerB1)));
 		EXPECT_EQ(toString(toVector(calleeB)), toString(mgr.getCallee(callerB2)));
@@ -266,16 +266,16 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
-		LambdaExprAddress l = root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>();
-		LambdaAddress f = l->getDefinition()[0]->getLambda();
-		LambdaAddress g = l->getDefinition()[1]->getLambda();
+		LambdaExprInstance l = root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>();
+		LambdaInstance f = l->getDefinition()[0]->getLambda();
+		LambdaInstance g = l->getDefinition()[1]->getLambda();
 
 		// extract caller and callee
-		Caller callerA(root[0].as<CallExprAddress>());
-		Caller callerG(f.getBody()[0].as<CallExprAddress>());
-		Caller callerF(g.getBody()[0].as<CallExprAddress>());
+		Caller callerA(root[0].as<CallExprInstance>());
+		Caller callerG(f.getBody()[0].as<CallExprInstance>());
+		Caller callerF(g.getBody()[0].as<CallExprInstance>());
 
 		Callee calleeF (f);
 		Callee calleeG (g);
@@ -312,18 +312,18 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
-		LambdaExprAddress l = root[0].as<CallExprAddress>()->getFunctionExpr().as<LambdaExprAddress>();
-		LambdaAddress f = l->getDefinition()[0]->getLambda();
-		LambdaAddress g = l->getDefinition()[1]->getLambda();
+		LambdaExprInstance l = root[0].as<CallExprInstance>()->getFunctionExpr().as<LambdaExprInstance>();
+		LambdaInstance f = l->getDefinition()[0]->getLambda();
+		LambdaInstance g = l->getDefinition()[1]->getLambda();
 
 		// extract caller and callee
-		Caller callerA(root[0].as<CallExprAddress>());
-		Caller callerG1(f.getBody()[0].as<CallExprAddress>());
-		Caller callerG2(g.getBody()[1].as<CallExprAddress>());
-		Caller callerF1(g.getBody()[0].as<CallExprAddress>());
-		Caller callerF2(f.getBody()[1].as<CallExprAddress>());
+		Caller callerA(root[0].as<CallExprInstance>());
+		Caller callerG1(f.getBody()[0].as<CallExprInstance>());
+		Caller callerG2(g.getBody()[1].as<CallExprInstance>());
+		Caller callerF1(g.getBody()[0].as<CallExprInstance>());
+		Caller callerF2(f.getBody()[1].as<CallExprInstance>());
 
 		Callee calleeF (f);
 		Callee calleeG (g);
@@ -380,18 +380,18 @@ namespace cba {
 
 		ASSERT_TRUE(code);
 
-		CompoundStmtAddress root(code);
+		CompoundStmtInstance root(code);
 
 		// get list of all functions
-		Callee calleeA = root[0].as<CallExprAddress>()[0].as<LambdaExprAddress>();
-		Callee calleeB = root[1].as<CallExprAddress>()[0].as<LambdaExprAddress>();
-		Callee calleeC = root[2].as<CallExprAddress>()[0].as<LambdaExprAddress>();
-		Callee calleeD = root[3].as<CallExprAddress>()[0].as<BindExprAddress>();
-		Callee calleeE = root[4].as<LambdaExprAddress>();
-		Callee calleeF = root[5].as<BindExprAddress>();
+		Callee calleeA = root[0].as<CallExprInstance>()[0].as<LambdaExprInstance>();
+		Callee calleeB = root[1].as<CallExprInstance>()[0].as<LambdaExprInstance>();
+		Callee calleeC = root[2].as<CallExprInstance>()[0].as<LambdaExprInstance>();
+		Callee calleeD = root[3].as<CallExprInstance>()[0].as<BindExprInstance>();
+		Callee calleeE = root[4].as<LambdaExprInstance>();
+		Callee calleeF = root[5].as<BindExprInstance>();
 
 		// get caller
-		Caller caller = root[6].as<CallExprAddress>();
+		Caller caller = root[6].as<CallExprInstance>();
 
 		// create call site manager
 		CallSiteManager mgr(root);

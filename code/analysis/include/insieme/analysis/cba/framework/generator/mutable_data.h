@@ -130,17 +130,17 @@ namespace cba {
 		ImperativeInStateConstraintGenerator(CBA& cba)
 			: super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()), cba(cba) {}
 
-		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+		virtual void visit(const NodeInstance& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			typedef typename generator<BaseAnalysis, analysis_config<Context>>::type BaseGenerator;
 
 			// we can stop at the creation point - no definitions will be killed before
 			if (loc.isGlobal() && addr == cba.getRoot() && ctxt == Context()) {
 				// at the initial point a global value is undefined
-				auto setID = cba.getSet(Sin<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto setID = cba.getSet(Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				auto unknownValue = BaseGenerator(cba).getUnknownValue();
 
 				// get type of value stored in memory location
-				auto type = loc.getAddress().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
+				auto type = loc.getCreationPoint().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
 				if (!type) return;
 
 				// compute undefined value and add constraint fixing value
@@ -160,7 +160,7 @@ namespace cba {
 
 			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
 			int label = std::get<1>(data);
-			const core::NodeAddress& node = cba.getStmt(label);
+			const core::NodeInstance& node = cba.getStmt(label);
 			const Context& ctxt = std::get<2>(data);
 			const Location<Context>& location = std::get<3>(data);
 
@@ -505,7 +505,7 @@ namespace cba {
 				for(const Definition<Context>& cur : defs) {
 
 					// get the current value
-					newDefs.push_back(cba.getSet(Sout<BaseAnalyis>(), cur.getAddress(), cur.getContext(), loc));
+					newDefs.push_back(cba.getSet(Sout<BaseAnalyis>(), cur.getDefinitionPoint(), cur.getContext(), loc));
 				}
 
 				// check whether something has changed
@@ -603,7 +603,7 @@ namespace cba {
 
 			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
 			int label = std::get<1>(data);
-			const core::NodeAddress& node = cba.getStmt(label);
+			const core::NodeInstance& node = cba.getStmt(label);
 			const Context& ctxt = std::get<2>(data);
 			const Location<Context>& location = std::get<3>(data);
 
@@ -614,17 +614,17 @@ namespace cba {
 						 << ctxt << "]";
 		}
 
-		virtual void visit(const NodeAddress& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
+		virtual void visit(const NodeInstance& addr, const Context& ctxt, const Location<Context>& loc, Constraints& constraints) {
 			typedef typename generator<BaseAnalysis, analysis_config<Context>>::type BaseGenerator;
 
 			// we can stop at the creation point - no definitions will be killed before
-			if ((loc.getAddress() == addr && ctxt == loc.getContext()) || (cba.getRoot() == addr && loc.isGlobal() && ctxt == Context())) {
+			if ((loc.getCreationPoint() == addr && ctxt == loc.getContext()) || (cba.getRoot() == addr && loc.isGlobal() && ctxt == Context())) {
 				// every reference is initialized by its default value
-				auto setID = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto setID = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				auto unknownValue = BaseGenerator(cba).getUnknownValue();
 
 				// get type of value stored in memory location
-				auto type = loc.getAddress().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
+				auto type = loc.getCreationPoint().template as<ExpressionPtr>()->getType().template isa<RefTypePtr>();
 				if (!type) return;
 
 				// fix undefined value
@@ -639,8 +639,8 @@ namespace cba {
 			// if the current sub-tree does not contain any potential assignment to a pre-existing location we can skip it
 			if (detail::isAssignmentFree(addr)) {
 				// if so in = out
-				auto In  = cba.getSet( Sin<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
-				auto Out = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementAddress>(), ctxt, loc);
+				auto In  = cba.getSet( Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
+				auto Out = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				constraints.add(subset(In,Out));
 				return;
 			}
@@ -649,7 +649,7 @@ namespace cba {
 			super::visit(addr, ctxt, loc, constraints);
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, const Location<Context>& location, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const Location<Context>& location, Constraints& constraints) {
 			const auto& base = call->getNodeManager().getLangBasic();
 
 			// one special case: assignments
