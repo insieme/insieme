@@ -73,7 +73,7 @@ namespace cba {
 
 		using super::elem;
 
-		void visitCallExpr(const CallExprAddress& expr, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& expr, const Context& ctxt, Constraints& constraints) {
 
 			// default handling
 			super::visitCallExpr(expr, ctxt, constraints);

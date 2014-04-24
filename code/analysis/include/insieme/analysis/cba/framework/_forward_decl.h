@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_instance.h"
 #include "insieme/utils/constraint/solver.h"
 
 namespace insieme {

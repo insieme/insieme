@@ -87,7 +87,7 @@ namespace cba {
 
 		using super::elem;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// only interested in memory location constructors
 			if (!isMemoryConstructor(literal)) {
@@ -107,7 +107,7 @@ namespace cba {
 
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// and default handling
 			super::visitCallExpr(call, ctxt, constraints);
@@ -190,8 +190,8 @@ namespace cba {
 			auto type = mgr.getLangBasic().getAnyRef();
 
 			set<Reference<Context>> res;
-			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_A", type)))));
-			res.insert(Reference<Context>(Location<Context>(ExpressionAddress(builder.literal("__artificial_ext_ref_B", type)))));
+			res.insert(Reference<Context>(Location<Context>(ExpressionInstance(builder.literal("__artificial_ext_ref_A", type)))));
+			res.insert(Reference<Context>(Location<Context>(ExpressionInstance(builder.literal("__artificial_ext_ref_B", type)))));
 			return cba.getDataManager<typename lattice<reference_analysis_data, analysis_config<Context>>::type>().atomic(res);
 		}
 

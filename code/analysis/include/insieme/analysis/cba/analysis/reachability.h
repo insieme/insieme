@@ -72,7 +72,7 @@ namespace cba {
 
 		typedef BasicInConstraintGenerator<reachable_in_analysis, reachable_tmp_analysis, reachable_out_analysis, ReachableInConstraintGenerator<Context>, Context> super;
 
-		StatementAddress root;
+		StatementInstance root;
 
 		bool initSet;
 
@@ -83,7 +83,7 @@ namespace cba {
 		ReachableInConstraintGenerator(CBA& cba)
 			: super(cba, Rin, Rtmp, Rout), root(cba.getRoot()), initSet(false), cba(cba) { }
 
-		void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+		void visit(const NodeInstance& node, const Context& ctxt, Constraints& constraints) {
 
 			// make sure root is reachable
 			if (!initSet && node == root && ctxt == Context()) {
@@ -111,7 +111,7 @@ namespace cba {
 		ReachableOutConstraintGenerator(CBA& cba)
 			: super(cba, Rin, Rtmp, Rout), cba(cba) { }
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			// every call reached will be finished
 			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rout,call,ctxt)));
 		}
@@ -145,7 +145,7 @@ namespace cba {
 
 		ReachableTmpConstraintGenerator(CBA& cba) : super(cba, Rin, Rtmp, Rout), cba(cba) {}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			// every call reached will be finished
 			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rtmp,call,ctxt)));
 		}

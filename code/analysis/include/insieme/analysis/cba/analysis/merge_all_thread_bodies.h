@@ -92,7 +92,7 @@ namespace cba {
 		MergeAllThreadBodyConstraintGenerator(CBA& cba)
 			: super(cba), cba(cba), basic(cba.getRoot()->getNodeManager().getLangBasic()) { };
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// only interested in merge-all calls
 			if (basic.isMergeAll(call->getFunctionExpr())) {

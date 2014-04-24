@@ -175,7 +175,7 @@ namespace cba {
 
 					// get the preceeding sync points
 					reaching_sync_points_set_id_type cur_set;
-					auto call = stmt.template isa<CallExprAddress>();
+					auto call = stmt.template isa<CallExprInstance>();
 					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)

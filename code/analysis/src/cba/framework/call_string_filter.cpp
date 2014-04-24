@@ -56,7 +56,7 @@ namespace cba {
 		allCallsList.push_back(0);
 
 		// collect all dynamic call sites
-		core::visitDepthFirst(cba.getRoot(), [&](const CallExprAddress& cur) {
+		core::visitDepthFirst(cba.getRoot(), [&](const CallExprInstance& cur) {
 			// collect all calls causing a context switch
 			if (!causesContextShift(cur)) return;
 
@@ -100,15 +100,15 @@ namespace cba {
 
 		// get call and check validity
 		auto stmt = cba.getStmt(label);
-		assert_true(stmt.isa<CallExprAddress>()) << "\nLabel: " << label << "\nStmt: " << stmt;
-		auto call = stmt.as<CallExprAddress>();
+		assert_true(stmt.isa<CallExprInstance>()) << "\nLabel: " << label << "\nStmt: " << stmt;
+		auto call = stmt.as<CallExprInstance>();
 		assert_true(causesContextShift(call)) << "\nLabel: " << label << "\nCall: " << call << " = " << *call << "\nDynamicCallSites: " << allCallsList << "\n";
 
 		// the rest is done by the other signature
-		return computePotentialPredecessors(call.as<StatementAddress>());
+		return computePotentialPredecessors(call.as<StatementInstance>());
 	}
 
-	std::set<Label> CallStringFilter::computePotentialPredecessors(const StatementAddress& stmt) {
+	std::set<Label> CallStringFilter::computePotentialPredecessors(const StatementInstance& stmt) {
 
 		// get surrounding free function
 		auto fun = getSurroundingFreeFunction(stmt);
@@ -136,7 +136,7 @@ namespace cba {
 					res.insert(cba.getLabel(call));
 				} else {
 					// get surrounding contexts
-					const auto& outerCtxts = computePotentialPredecessors(call.as<StatementAddress>());
+					const auto& outerCtxts = computePotentialPredecessors(call.as<StatementInstance>());
 					res.insert(outerCtxts.begin(), outerCtxts.end());
 				}
 			}
@@ -154,12 +154,12 @@ namespace cba {
 		}
 
 		set<Label> res;
-		for(const CallExprAddress& cur : callers) {
+		for(const CallExprInstance& cur : callers) {
 			if (causesContextShift(cur)) {
 				res.insert(cba.getLabel(cur));
 			} else {
 				// get surrounding contexts
-				const auto& outerCtxts = computePotentialPredecessors(cur.as<StatementAddress>());
+				const auto& outerCtxts = computePotentialPredecessors(cur.as<StatementInstance>());
 				res.insert(outerCtxts.begin(), outerCtxts.end());
 			}
 		}

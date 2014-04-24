@@ -59,7 +59,7 @@ namespace cba {
 		/**
 		 * The expression which created the represented channel.
 		 */
-		core::ExpressionAddress creationPoint;
+		core::ExpressionInstance creationPoint;
 
 		/**
 		 * The context when triggering the create function.
@@ -69,14 +69,14 @@ namespace cba {
 	public:
 
 		Channel()
-			: utils::HashableImmutableData<Channel<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
+			: utils::HashableImmutableData<Channel<Context>>(combineHashes(core::ExpressionInstance(), Context())) {}
 
-		Channel(const core::ExpressionAddress& expr, const Context& ctxt)
+		Channel(const core::ExpressionInstance& expr, const Context& ctxt)
 			: utils::HashableImmutableData<Channel<Context>>(combineHashes(expr, ctxt)),
 			  creationPoint(expr),
 			  creationContext(ctxt) {}
 
-		const core::ExpressionAddress& getAddress() const {
+		const core::ExpressionInstance& getCreationPoint() const {
 			return creationPoint;
 		}
 
@@ -100,7 +100,7 @@ namespace cba {
 		}
 	};
 
-	inline bool isChannelConstructor(const core::ExpressionAddress& address) {
+	inline bool isChannelConstructor(const core::ExpressionInstance& address) {
 		core::ExpressionPtr expr = address;
 
 		// literals of a channel type are channels
@@ -113,13 +113,13 @@ namespace cba {
 	}
 
 	template<typename Context>
-	Channel<Context> getChannelFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	Channel<Context> getChannelFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
 		assert(isChannelConstructor(ctor));
 
 		// for globals the call context and thread context is not relevant
 		if (auto lit = ctor.isa<core::LiteralPtr>()) {
-			return Channel<Context>(core::ExpressionAddress(lit), Context());
+			return Channel<Context>(core::ExpressionInstance(lit), Context());
 		}
 
 		// create the channel instance
