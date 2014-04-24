@@ -1220,7 +1220,7 @@ inline void visitDepthFirstOnce(const Ptr<Node>& root, Lambda lambda, bool preor
 
 /**
  * The given visitor is DepthFirstly applied to all nodes reachable starting from the
- * given root node. If the given visitor returns false, the visiting will be interrupted.
+ * given root node. If the given visitor returns true, the visiting will be interrupted.
  *
  * NOTE: if used based on Addresses, only the first address referencing a shared node
  * 		 is visited.
@@ -1249,7 +1249,7 @@ inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, Lambda lambd
 
 /**
  * The given visitor is DepthFirstly applied to all nodes reachable starting from the
- * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
+ * given root node. If the given visitor returns true, the corresponding sub-tree will be pruned.
  *
  * NOTE: if used based on Addresses, only the first address referencing a shared node
  * 		 is visited.
