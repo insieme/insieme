@@ -447,8 +447,13 @@ bool compareTypes(const TypePtr& a, const TypePtr& b);
 
 // ----------------------------------- Jobs ----------------------------
 
+/*
+ * Tests wheter the given job expression has group operations (getThreadGroup, pfor, redistribute etc...)
+ */
+bool hasGroupOperations(const JobExprPtr& job);
+
 /**
- * Tests whether the given job expression is a task (only processed by a single thread) or not.
+ * Tests whether the given job expression is a task (only processed by a single thread and no group operations) or not.
  */
 bool isTask(const JobExprPtr& job);
 
