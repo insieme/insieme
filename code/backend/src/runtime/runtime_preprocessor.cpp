@@ -442,7 +442,7 @@ namespace runtime {
 					const auto& call = res.as<core::CallExprPtr>();
 					const auto& fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
-					// handle parallel call
+					// handle parallel/task call
 					if (basic.isParallel(fun)) {
 						const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
 						assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
@@ -454,6 +454,9 @@ namespace runtime {
 						}
 
 						// build runtime call
+                        if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
+						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
+
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 					}
 
