@@ -292,7 +292,7 @@ namespace integration {
 				// check whether it is a test suite
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
-					LOG(INFO) << "Descending into sub-test-directory " << (testCaseDir).string();
+					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
 					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/");
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 					continue;
