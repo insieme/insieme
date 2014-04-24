@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+// TODO: add support for more types
+
 #define INFO_STRUCT_BEGIN(__name) \
 void irt_meta_info_print_##__name(FILE* dest, irt_meta_info_table_entry* entry) { \
 	fprintf(dest, #__name ": "); \
@@ -44,10 +46,11 @@ void irt_meta_info_print_##__name(FILE* dest, irt_meta_info_table_entry* entry) 
 #define INFO_FIELD(__id, __type, __val) { \
 		fprintf(dest, #__id " = "); \
 		const char *ts = #__type; \
-		if(strcmp(ts, "int")) fprintf(dest, "%d", i->__id); \
-		else if(strcmp(ts, "int")) fprintf(dest, "%d", i->__id); \
-		else if(strcmp(ts, "bool")) fprintf(dest, "%s", i->__id ? "true" : "false"); \
+		if(strcmp(ts, "int") == 0) fprintf(dest, "%d", i->__id); \
+		else if(strcmp(ts, "unsigned") == 0) fprintf(dest, "%u", i->__id); \
+		else if(strcmp(ts, "bool") == 0) fprintf(dest, "%s", i->__id ? "true" : "false"); \
 		else fprintf(dest, "%s", (i->__id == __val) ? "default" : "set"); \
+		fprintf(dest, ", "); \
 	}
 
 #define INFO_STRUCT_END() \
