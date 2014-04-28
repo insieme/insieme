@@ -440,9 +440,9 @@ namespace integration {
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
 
 		// add pre-processor definitions
-		//for_each(definitions, [&](const std::pair<string,string>& def) {
-			//job.setDefinition(def.first, def.second);
-		//});
+		for(const auto& cur : definitions) {
+			job.setDefinition(cur.first, cur.second);
+		}
 
 		return job.execute(manager);
 
