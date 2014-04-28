@@ -46,7 +46,7 @@ void irt_meta_info_print_##__name(FILE* dest, irt_meta_info_table_entry* entry) 
 
 #define INFO_FIELD(__id, __type, __val) { \
 /* Need to ingore seemingly possible printf format specifier type mismatches because we do type-checking at run time */ \
-/* Also, since we are inside a macro definition, we need to use _Pragma("<options>") instead of #pragma <options> */
+/* Also, since we are inside a macro definition, we need to use _Pragma("<options>") instead of #pragma <options> */ \
 _Pragma("GCC diagnostic push") \
 _Pragma("GCC diagnostic ignored \"-Wformat\"") \
 		fprintf(dest, #__id " = "); \
