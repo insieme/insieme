@@ -54,11 +54,11 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi);
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_dvfs[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_dvfs, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_dvfs }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_rapl[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_rapl, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_rapl }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
