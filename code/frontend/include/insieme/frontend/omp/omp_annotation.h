@@ -408,22 +408,22 @@ public:
 	typedef std::vector<Operator> OperatorList;
 	typedef std::vector<Parameter> ParameterList;
 
-	Objective(const core::ExpressionPtr& timeWeight,
-				const core::ExpressionPtr& energyWeight,
-				const core::ExpressionPtr& powerWeight,
+	Objective(const double timeWeight,
+				const double energyWeight,
+				const double powerWeight,
 				const std::shared_ptr<ParameterList>& constraintsParams,
 				const std::shared_ptr<OperatorList>& constraintsOps,
 				const std::shared_ptr<core::ExpressionList>& constraintsExprs) : timeWeight(timeWeight), energyWeight(energyWeight),
 						powerWeight(powerWeight), constraintsParams(constraintsParams), constraintsOps(constraintsOps), constraintsExprs(constraintsExprs) {}
 
-	bool hasTimeWeight() const { return static_cast<bool>(timeWeight); }
-	const core::ExpressionPtr getTimeWeight() const { assert(hasTimeWeight()); return timeWeight; }
+	bool hasTimeWeight() const { return true; }
+	const double getTimeWeight() const { assert(hasTimeWeight()); return timeWeight; }
 
-	bool hasEnergyWeight() const { return static_cast<bool>(energyWeight); }
-	const core::ExpressionPtr getEnergyWeight() const { assert(hasEnergyWeight()); return energyWeight; }
+	bool hasEnergyWeight() const { return true; }
+	const double getEnergyWeight() const { assert(hasEnergyWeight()); return energyWeight; }
 
-	bool hasPowerWeight() const { return static_cast<bool>(powerWeight); }
-	const core::ExpressionPtr getPowerWeight() const { assert(hasPowerWeight()); return powerWeight; }
+	bool hasPowerWeight() const { return true; }
+	const double getPowerWeight() const { assert(hasPowerWeight()); return powerWeight; }
 
 	bool hasConstraintsParams() const { return static_cast<bool>(constraintsParams); }
 	const std::vector<Parameter>& getConstraintsParams() const { assert(hasConstraintsParams()); return *constraintsParams; }
@@ -458,18 +458,18 @@ public:
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "objective(";
-		if(hasTimeWeight())
-			out << "T * " << *timeWeight << " + ";
-		else
-			out << "T * 0 + ";
 		if(hasEnergyWeight())
-			out << "E * " << *energyWeight << " + ";
+			out << "E * " << energyWeight << " + ";
 		else
 			out << "E * 0 + ";
 		if(hasPowerWeight())
-			out << "P * " << *powerWeight << ": ";
+			out << "P * " << powerWeight << " + ";
 		else
-			out << "P * 0: ";
+			out << "P * 0 + ";
+		if(hasTimeWeight())
+			out << "T * " << timeWeight << ": ";
+		else
+			out << "T * 0: ";
 		if(hasConstraintsParams() && hasConstraintsOps() && hasConstraintsExprs()
 				&& constraintsParams->size() > 0
 				&& constraintsParams->size() == constraintsOps->size()
@@ -486,16 +486,13 @@ public:
 	}
 
 	void replaceUsage (const core::NodeMap& map){
-		if(timeWeight)replaceVars (timeWeight, map);
-		if(energyWeight)replaceVars (energyWeight, map);
-		if(powerWeight)replaceVars (powerWeight, map);
 		if(constraintsExprs)replaceVars (constraintsExprs, map);
 	}
 
 private:
-	core::ExpressionPtr timeWeight;
-	core::ExpressionPtr energyWeight;
-	core::ExpressionPtr powerWeight;
+	double timeWeight;
+	double energyWeight;
+	double powerWeight;
 	std::shared_ptr<std::vector<Parameter>> constraintsParams;
 	std::shared_ptr<std::vector<Operator>> constraintsOps;
 	std::shared_ptr<core::ExpressionList> constraintsExprs;
@@ -766,6 +763,8 @@ public:
 	For(const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& lastPrivateClause,
+		const VarListPtr& localClause,
+		const VarListPtr& firstLocalClause,
 		const VarListPtr& lastLocalClause,
 		const ReductionPtr& reductionClause,
 		const SchedulePtr& scheduleClause,
@@ -774,7 +773,7 @@ public:
 		const ObjectivePtr& objectiveClause, 
         const ParamPtr& paramClause, bool noWait, bool ordered) :
             SharedOMPP(targetClause, objectiveClause, paramClause),
-			DatasharingClause(privateClause, firstPrivateClause),
+			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
@@ -828,7 +827,7 @@ public:
 	}
 	ForPtr toFor() const {
 		// do not duplicate stuff already handled in parallel
-		return std::make_shared<For>(/*private*/VarListPtr(), /*firstprivate*/VarListPtr(), lastPrivateClause, lastLocalClause,
+		return std::make_shared<For>(/*private*/VarListPtr(), /*firstprivate*/VarListPtr(), lastPrivateClause, /*local*/VarListPtr(), /*firstlocal*/VarListPtr(), lastLocalClause,
 			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered);
 	}
 

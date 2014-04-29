@@ -58,6 +58,7 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
+#include "insieme/annotations/omp/omp_annotations.h"
 
 namespace insieme {
 namespace backend {
@@ -290,37 +291,12 @@ namespace runtime {
 			return res;
 		}
 
-        WorkItemVariantObjective getObjective(const core::ExpressionPtr& expr) {
-            WorkItemVariantObjective objective;
-
-            if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
-                annotations::OmpObjectiveAnnotationPtr ann = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY);
-
-                objective.energy_weight = ann->getWeight(annotations::ENERGY).as<core::LiteralPtr>().getValueAs<float>();
-                objective.power_weight  = ann->getWeight(annotations::POWER).as<core::LiteralPtr>().getValueAs<float>();
-                objective.time_weight   = ann->getWeight(annotations::TIME).as<core::LiteralPtr>().getValueAs<float>();
-
-                float first = ann->getConstraint(annotations::ENERGY).first.as<core::LiteralPtr>().getValueAs<float>();
-                float second = ann->getConstraint(annotations::ENERGY).second.as<core::LiteralPtr>().getValueAs<float>();
-                objective.energy_constraints = std::make_pair(first, second);
-                first = ann->getConstraint(annotations::POWER).first.as<core::LiteralPtr>().getValueAs<float>();
-                second = ann->getConstraint(annotations::POWER).second.as<core::LiteralPtr>().getValueAs<float>();
-                objective.power_constraints  = std::make_pair(first, second);
-                first = ann->getConstraint(annotations::TIME).first.as<core::LiteralPtr>().getValueAs<float>();
-                second = ann->getConstraint(annotations::TIME).second.as<core::LiteralPtr>().getValueAs<float>();
-                objective.time_constraints   = std::make_pair(first, second);
-                objective.region_id = ann->getRegionId();
-            }
-
-            return objective;
-        }
-
         core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
-            if(expr->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
+            if(expr->hasAttachedValue<annotations::ompp_objective_info>()) {
 			    core::IRBuilder builder(manager);
 			    const Extensions& extensions = manager.getLangExtension<Extensions>();
 		        core::StatementList stmtList;
-                unsigned region_id = expr->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
+                unsigned region_id = expr->getAttachedValue<annotations::ompp_objective_info>().region_id;
                 stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
                 stmtList.push_back(stmt);
                 stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
@@ -330,7 +306,7 @@ namespace runtime {
                 return stmt;
         }
 
-		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job, bool isTask = false) {
+		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
@@ -387,7 +363,6 @@ namespace runtime {
 
 			// compute work-item implementation variants
 			vector<WorkItemVariant> variants;
-            WorkItemVariantObjective objective = getObjective(job);
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
@@ -401,7 +376,8 @@ namespace runtime {
 
 				for(const auto& cur : impls) {
                     core::StatementPtr instrumentedBody;
-                    if(isTask)
+                    // Let's wrap task/region with instrumentation calls
+                    if(core::analysis::isTask(job))
                         instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
                     else
                         instrumentedBody = fixBranch(cur);
@@ -429,7 +405,8 @@ namespace runtime {
 				body.push_back(fixBranch(job->getDefaultExpr()));
 
                 core::StatementPtr instrumentedBody;
-                if(isTask)
+                // Let's wrap task/region with instrumentation calls
+                if(core::analysis::isTask(job))
                     instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
                 else
                     instrumentedBody = builder.compoundStmt(body);
@@ -505,12 +482,14 @@ namespace runtime {
 						}
 
 						// build runtime call
-                        if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
-						    return wrapWithInstrumentationRegion(ptr.as<core::CallExprPtr>()->getArgument(0), builder.callExpr(builder.refType(ext.workItemType), ext.task, job));
 
-                        // handle region
+                        // handle region (must be handled before task or it will be mixed up)
                         if(call->hasAnnotation(annotations::OmpRegionAnnotation::KEY))
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
+
+                        // handle task
+                        if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
+						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
 
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 					}
@@ -527,7 +506,7 @@ namespace runtime {
                                 const auto& parArg = parCall->getArgument(0);
                                 if(basic.isJob(parArg->getType())) {
                                     const auto& job = parArg.as<core::JobExprPtr>();
-                                    return wrapWithInstrumentationRegion(manager,job, builder.callExpr(basic.getUnit(), ext.merge, arg));
+                                    return wrapWithInstrumentationRegion(manager, job, builder.callExpr(basic.getUnit(), ext.merge, arg));
                                 }
                             }
                         }
@@ -566,12 +545,8 @@ namespace runtime {
 				core::ExpressionPtr max = range.max;
 				core::ExpressionPtr mod = range.mod;
 
-                bool isTask = false;
-                if(max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u)
-                    isTask = true;
-
 				// creates a list of work-item implementations and the work item data record to be passed along
-				auto info = wrapJob(manager, job, isTask);
+				auto info = wrapJob(manager, job);
 				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
 				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 
@@ -587,10 +562,8 @@ namespace runtime {
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
 
-                WorkItemVariantObjective objective = getObjective(call);
-
 				// convert pfor body
-				auto info = pforBodyToWorkItem(args[4], objective);
+				auto info = pforBodyToWorkItem(args[4]);
 
 				// migrate meta infos
 				for(const auto& cur : info.first.getVariants()) {
@@ -966,9 +939,9 @@ namespace runtime {
 
         // OMP+ instrumentationRegionStart calls will be added in a later preprocessing phase
         // so we have to check annotations on JobExpr
-		core::visitDepthFirstOnce(node, [&](const core::JobExprPtr& job) {
-            if(job->hasAnnotation(annotations::OmpObjectiveAnnotation::KEY)) {
-                unsigned regionId = job->getAnnotation(annotations::OmpObjectiveAnnotation::KEY)->getRegionId();
+		core::visitDepthFirstOnce(node, [&](const core::ExpressionPtr& cur) {
+            if(cur->hasAttachedValue<annotations::ompp_objective_info>()) {
+                unsigned regionId = cur->getAttachedValue<annotations::ompp_objective_info>().region_id;
 			    if (max < regionId) max = regionId;
             }
         });

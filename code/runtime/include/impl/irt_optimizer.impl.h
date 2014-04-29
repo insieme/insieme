@@ -133,7 +133,7 @@ void irt_optimizer_objective_destroy(irt_context *context) {
 }
 
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant) {
-    if(variant->objective.region_id == (unsigned)-1) {
+    if(!variant->meta_info || variant->meta_info->ompp_objective.region_id == (unsigned)-1) {
             return;
     }
 
@@ -196,7 +196,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant)
             //    variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency ++;
             //}
             
-            if(variant->objective.weights.energy) {
+            if(variant->meta_info->ompp_objective.energy_weight) {
                     //printf("task %d ener\n", is_task);
                 variant->rt_data.optimizer_rt_data.data[variant->rt_data.optimizer_rt_data.data_last].frequency =  0;// irt_g_available_freqs_count -1;
             }
@@ -220,7 +220,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant)
 
 void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant) {
     // no optimizations to apply
-    if(!variant || variant->objective.region_id == (unsigned)-1 || !variant->rt_data.optimizer_rt_data.data)
+    if(!variant->meta_info || variant->meta_info->ompp_objective.region_id == (unsigned)-1 || !variant->rt_data.optimizer_rt_data.data)
         return;
 
     irt_spin_lock(&variant->rt_data.optimizer_rt_data.spinlock);

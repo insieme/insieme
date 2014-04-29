@@ -105,16 +105,14 @@ TEST(OMPx, SimpleRegion) {
 
 	auto res = analysis::normalize(builder.parseProgram(
 			"let fun000 = ()->unit {"
-				"{"
-					"ref<int<4>> v1 = var(3);"
-				"};"
+				"ref<int<4>> v1 = var(3);"
 			"};"
 
 			"int<4> main() {"
 				"ref<int<4>> v1 = var(0);"
 				"ref<int<4>> v5 = var(0);"
 				"{"
-					"merge(parallel(job([1-1], fun000())));"
+					"parallel(job([1-1], fun000()));"
 				"};"
 				"return 0;"
 			"}"));
@@ -170,7 +168,7 @@ TEST(OMPx, FirstLocal) {
 				"ref<int<4>> v1 = var(5);"
 				"{"
 					"int<4> v2 = *v1;"
-					"merge(parallel(job([1-1], fun000(v2))));"
+					"parallel(job([1-1], fun000(v2)));"
 				"};"
 				"return 0;"
 			"}"));

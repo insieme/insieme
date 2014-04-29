@@ -65,19 +65,6 @@ typedef struct _irt_optimizer_resources {
     float time;
 } irt_optimizer_resources;
 
-typedef irt_optimizer_resources irt_optimizer_objective_weights;
-
-typedef struct _irt_optimizer_objective_constraints {
-    irt_optimizer_resources min;
-    irt_optimizer_resources max;
-} irt_optimizer_objective_constraints;
-
-typedef struct _irt_optimizer_objective {
-    irt_optimizer_objective_weights weights;    
-    irt_optimizer_objective_constraints constraints;    
-    irt_inst_region_id region_id;
-} irt_optimizer_objective;
-
 // Data types for runtime collected data 
 
 typedef struct _irt_optimizer_wi_data {

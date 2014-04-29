@@ -44,10 +44,6 @@ namespace annotations {
 
 using namespace insieme::core;
 
-enum Parameter { ENERGY, POWER, TIME };
-
-typedef std::pair<core::ExpressionPtr, core::ExpressionPtr> RangeExpr;
-
 class OmpRegionAnnotation : public NodeAnnotation {
 
 public:
@@ -69,45 +65,11 @@ public:
 
 typedef std::shared_ptr<OmpRegionAnnotation> OmpRegionAnnotationPtr;
 
-class OmpObjectiveAnnotation : public NodeAnnotation {
-    std::map<enum Parameter, core::ExpressionPtr> weights;
-    std::map<enum Parameter, RangeExpr> constraints;
-    unsigned regionId;
-
-public:
-	static const string NAME;
-    static const utils::StringKey<OmpObjectiveAnnotation> KEY;
-
-    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
-
-    OmpObjectiveAnnotation(std::map<enum Parameter, core::ExpressionPtr>& weights, std::map<enum Parameter, RangeExpr>& constraints): weights(weights), constraints(constraints) {
-        static unsigned regionCnt = 0;
-        regionId = regionCnt++;
-    } 
-
-    ExpressionPtr getWeight(enum Parameter par) const { return weights.at(par); }
-    RangeExpr getConstraint(enum Parameter par) const { return constraints.at(par); }
-    unsigned getRegionId() const { return regionId; }
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
-		return true;
-	}
-
-    static void attach(const NodePtr& node, std::map<enum Parameter, core::ExpressionPtr>& weights, std::map<enum Parameter, RangeExpr>& constraints);
-};
-
-typedef std::shared_ptr<OmpObjectiveAnnotation> OmpObjectiveAnnotationPtr;
-
 } // end namespace insieme
 } // end namespace annotations
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpObjectiveAnnotation& lAnnot);
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpRegionAnnotation& lAnnot);
 
 } // end namespace std

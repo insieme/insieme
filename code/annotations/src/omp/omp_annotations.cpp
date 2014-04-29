@@ -54,33 +54,10 @@ void OmpRegionAnnotation::attach(const core::NodePtr& node) {
 	node->addAnnotation(std::make_shared<OmpRegionAnnotation>());
 }
 
-const string OmpObjectiveAnnotation::NAME = "OmpObjectiveAnnotation";
-const utils::StringKey<OmpObjectiveAnnotation> OmpObjectiveAnnotation::KEY("OmpObjective");
-
-void OmpObjectiveAnnotation::attach(const core::NodePtr& node, std::map<enum Parameter, core::ExpressionPtr>& weights, std::map<enum Parameter, RangeExpr>& constraints) {
-	node->addAnnotation(std::make_shared<OmpObjectiveAnnotation>(weights, constraints));
-}
-
 } // namespace annotations
 } // namespace insieme
 
 namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpObjectiveAnnotation& lAnnot) {
-		out << "OmpObjectiveAnnotation (" << lAnnot.getRegionId() << "):\n";
-        auto eneRange = lAnnot.getConstraint(insieme::annotations::ENERGY);
-        auto powRange = lAnnot.getConstraint(insieme::annotations::POWER);
-        auto timRange = lAnnot.getConstraint(insieme::annotations::TIME);
-        auto eneWeight = lAnnot.getWeight(insieme::annotations::ENERGY);
-        auto powWeight = lAnnot.getWeight(insieme::annotations::POWER);
-        auto timWeight = lAnnot.getWeight(insieme::annotations::TIME);
-
-        out << "Energy (> " << eneRange.first << ", < " << eneRange.second << ", " << eneWeight << ") ";
-        out << "Power (> " << powRange.first << ", < " << powRange.second << ", " << powWeight << ") ";
-        out << "Time (> " << timRange.first << ", < " << timRange.second << ", " << timWeight << ") " << std::endl;
-
-		return out;
-	}
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpRegionAnnotation& lAnnot) {
         out << "OmpRegionAnnotation ()" << std::endl;

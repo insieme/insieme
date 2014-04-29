@@ -60,6 +60,7 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/annotations/omp/omp_annotations.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 #include <stack>
 
@@ -769,7 +770,7 @@ protected:
 			assign = build.assign(param.getVar(), exp);
 		}
 		else if(param.hasEnum()) {
-			auto pick = build.pickInRange( param.getEnumSize() );
+			auto pick = build.pickInRange( utils::castScalar(basic.getUInt8(), param.getEnumSize()) );
 			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
 			assign = build.assign( param.getVar(), build.deref( arrVal ) );
 		}
@@ -785,39 +786,25 @@ protected:
 		return build.compoundStmt(resultStmts);
 	}
 
-    insieme::annotations::Parameter annotationParToFrontendPar(Objective::Parameter& par) {
-            switch (par) {
-                case Objective::ENERGY:
-                    return insieme::annotations::ENERGY;
-                case Objective::POWER:
-                    return insieme::annotations::POWER;
-                case Objective::TIME:
-                    return insieme::annotations::TIME;
-                default:
-                    return insieme::annotations::TIME;
-            }
-    }
-
 	void implementObjectiveClause(const NodePtr& node, const Objective& obj)
     {
-        using namespace insieme::annotations;
+        insieme::annotations::ompp_objective_info objective;
 
-        std::map<Parameter, ExpressionPtr> weights;
-        weights[insieme::annotations::ENERGY] = obj.getEnergyWeight();
-        weights[insieme::annotations::POWER ] = obj.getPowerWeight();
-        weights[insieme::annotations::TIME  ] = obj.getTimeWeight();
+        objective.energy_weight = obj.getEnergyWeight();
+        objective.power_weight = obj.getPowerWeight();
+        objective.time_weight = obj.getTimeWeight();
 
-        /* TODO: 
-         * Constraints are translated as ranges
-         * If a bound is not set, -1 is used but -inf and inf should be used to deal with parameters that can have negative values (not the case now)
-         * If multiple values are provided for a range, the last one is considered but they could be compared to choose the largest one
-         * <= and >= are equivalent to < and >
-         */
-        std::map<Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
+        ///* TODO: 
+        // * Constraints are translated as ranges
+        // * If a bound is not set, -1 is used but -inf and inf should be used to deal with parameters that can have negative values (not the case now)
+        // * If multiple values are provided for a range, the last one is considered but they could be compared to choose the largest one
+        // * <= and >= are equivalent to < and >
+        // */
+        std::map<Objective::Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
         auto minusOneLit = build.literal(basic.getFloat(), "-1f");
-        constraints[insieme::annotations::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-        constraints[insieme::annotations::POWER ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-        constraints[insieme::annotations::TIME  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::POWER ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::TIME  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
 
         if(obj.hasConstraintsParams() && obj.hasConstraintsOps() && obj.hasConstraintsExprs()){
             auto params = obj.getConstraintsParams();
@@ -829,7 +816,7 @@ protected:
                 auto exprsIt = exprs.begin();
 
                 for(auto par : params) {
-                    auto oldCon = constraints[annotationParToFrontendPar(par)];
+                    auto oldCon = constraints[par];
 
                     switch(*opsIt) {
                         case Objective::LESS:
@@ -846,7 +833,7 @@ protected:
                             break;
                     }
 
-                    constraints[annotationParToFrontendPar(par)] = oldCon;
+                    constraints[par] = oldCon;
 
                     opsIt++;
                     exprsIt++;
@@ -854,8 +841,17 @@ protected:
             }
         }
 
-        OmpObjectiveAnnotationPtr ann = std::make_shared<OmpObjectiveAnnotation>(weights, constraints);
-        node->addAnnotation(ann);
+        objective.energy_min = constraints[Objective::ENERGY].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.energy_max = constraints[Objective::ENERGY].second.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.power_min  = constraints[Objective::POWER].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.power_max  = constraints[Objective::POWER].second.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.time_min   = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.time_max   = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
+
+        static unsigned regionId = 0;
+        objective.region_id = regionId ++;
+
+        node->attachValue(objective);
 
         return;
     }
@@ -914,6 +910,7 @@ protected:
 
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
+
 		resultStmts.push_back(mergeCall);
 		// if clause handling
 		assert(par->hasIf() == false && "OMP parallel if clause not supported");

@@ -1035,7 +1035,7 @@ bool hasGroupOperations(const JobExprPtr& job) {
                 hasGroupOps = true;
 
             // Prune on Parallel
-            if (basic.isParallel(f))
+            if (basic.isParallel(f) && !c->hasAnnotation(annotations::OmpRegionAnnotation::KEY))
                 return true;
             else
                 return false;
