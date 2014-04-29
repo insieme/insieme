@@ -980,6 +980,43 @@ TEST(Manipulation, pushIntoMultiple) {
 	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 }
 
+TEST(Manipulation, pushIntoLazy) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	std::map<string,NodePtr> symbols;
+	symbols["g"] = builder.literal("g",builder.refType(manager.getLangBasic().getInt4()));
+
+	// create a expression utilizing a lazy expression without closure
+	auto addresses = builder.parseAddresses(
+			"if (g>1 && g<$5$) {}", symbols
+	);
+
+	ASSERT_EQ(1u, addresses.size());
+	ExpressionAddress trg = addresses[0].as<ExpressionAddress>();
+
+	// check that the original code is bug-free
+	NodePtr original = trg.getRootNode();
+	EXPECT_TRUE(checks::check(original).empty()) << checks::check(original);
+
+	// push a variable to the location of the targeted expression
+	VariablePtr var = builder.variable(manager.getLangBasic().getInt4(), 12);
+	auto innerVar = transform::pushInto(manager, trg, var);
+
+	NodePtr modified = innerVar.getRootNode();
+	EXPECT_EQ(var, innerVar.as<VariablePtr>());
+
+//	std::cout << "Original:\n";
+//	std::cout << *original << "\n";
+//
+//	std::cout << "Modified:\n";
+//	std::cout << *modified << "\n";
+
+	// check that all variables are properly forwarded
+	EXPECT_TRUE(checks::check(modified).empty()) << checks::check(modified);
+
+}
+
 TEST(Manipulation, ReplaseVaresRecursive) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
