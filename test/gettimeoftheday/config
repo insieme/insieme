@@ -1,1 +1,2 @@
 files="gettimeoftheday.c","second_cpu.c"
+outputAwk="/^[A-Z]/{ print $1 }"

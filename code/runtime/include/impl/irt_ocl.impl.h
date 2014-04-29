@@ -46,7 +46,6 @@
 #include "irt_ocl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
-#include "standalone.h"
 
 #ifdef REMOTE_MODE
 #include <mpi.h>

@@ -2,9 +2,7 @@
 
 # do awk before
 if [ $# -eq 3 ]; then
-	awk1=<(awk '$3' $1)
-	awk2=<(awk '$3' $2)
-	diff <(echo $awk1) <(echo $awk2)
+	diff <(awk "$3" $1) <(awk "$3" $2)
 else
 	diff <(sort $1) <(sort $2)
 fi
