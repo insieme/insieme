@@ -440,11 +440,6 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
-					// add include directories
-					for(const auto& cur : test.getIncludeDirs()) {
-						cmd << " -I" << cur.string();
-					}
-
 					// add runtime include directories
 					if (backend == Runtime) {			// TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
 						cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
