@@ -639,6 +639,10 @@ protected:
 			}
 			replacements.push_back(decl);
 		});
+		// pFor firstprivate semantics require additional barrier
+		if(forP && clause->hasFirstPrivate()) {
+			replacements.push_back(build.barrier());
+		}
 		// implement copyin for threadprivate vars
 		if(parallelP && parallelP->hasCopyin()) {
 			for(const ExpressionPtr& varExp : parallelP->getCopyin()) {

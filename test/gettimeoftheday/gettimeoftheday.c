@@ -23,6 +23,6 @@ int main(int argc, char **argv)
 	else
 		printf("FAIL");
 
-	printf("%1.4f\n", mysecond()); 
+	printf(" %1.4f\n", mysecond()); 
 	return 0;
 }

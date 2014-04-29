@@ -38,7 +38,7 @@
 
 #include "error_handling.h"
 
-#include "globals.h"
+#include "irt_globals.h"
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"

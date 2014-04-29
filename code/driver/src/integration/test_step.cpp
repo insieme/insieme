@@ -440,8 +440,8 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
-					// add include directories
-					for(const auto& cur : test.getIncludeDirs()) {
+					// add intercepted include directories
+					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " -I" << cur.string();
 					}
 
@@ -529,7 +529,9 @@ namespace integration {
 					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be << ".out";
 
 					// add awk pattern
-					cmd << " "<< props["outputAwk"];
+					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
+					string outputAwk = props["outputAwk"].substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
+					cmd << " '"<< outputAwk << "'";
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
@@ -556,7 +558,9 @@ namespace integration {
 					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc.out";
 
 					// add awk pattern
-					cmd << " "<< props["outputAwk"];
+					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
+					string outputAwk = props["outputAwk"].substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
+					cmd << " '"<< outputAwk << "'";
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+".match.err.out";
