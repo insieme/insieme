@@ -169,7 +169,7 @@ namespace integration {
 					files.push_back((testCaseDir / file).string());
 			}
 
-			//no files specified, use default names TODO ENABLE IF ALL TEST_DATA IS CONVERTED
+			//no files specified, use default names
 			if(files.size()==0){
 
 				// extract the case name from the test directory

@@ -1,4 +1,4 @@
 files="interceptor.cpp"
 includes="./"
-excludeSteps="main_c_sema","main_run_convert","main_run_compile","main_run_execute","ref_c_compile","ref_c_execute","main_run_check","main_seq_convert","main_seq_compile","main_seq_execute","main_seq_check"
+excludeSteps="main_c_sema","main_run_convert","main_run_compile","main_run_execute","ref_c_compile","ref_c_execute","ref_c_check","main_run_check","main_seq_convert","main_seq_compile","main_seq_execute","main_seq_check","insiemecc_c_execute","insiemecc_c_check"
 
