@@ -82,9 +82,11 @@ IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_
 IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
+static bool irt_g_exit_handling_done;
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+	irt_g_exit_handling_done = false;
 
 	irt_log_init();
 
@@ -132,7 +134,7 @@ void irt_cleanup_globals() {
 // on exit() and termination signals, the irt exit handler should be called
 void irt_exit_handler();
 void irt_term_handler(int signal) {
-	exit(0);
+	exit(signal);
 }
 void irt_exit(int i) {
 	irt_exit_handler();
@@ -148,8 +150,6 @@ void irt_abort_handler(int signum) {
 	// raise the signal
 	raise(signum);
 }
-
-static bool irt_g_exit_handling_done;
 
 // the irt exit handler
 // needs to correctly shutdown all workers regardless of the situation it was called in
@@ -250,7 +250,7 @@ void _irt_wake_sleeping_workers(irt_worker_init_signal *signal, void *ev_handle)
 	#endif
 }
 
-void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
+void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
 		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...\n", IRT_MAX_WORKERS, worker_count);
@@ -260,12 +260,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_g_runtime_behaviour = behaviour;
 
 	// initialize error and termination signal handlers
-	signal(IRT_SIG_ERR, &irt_error_handler);
-	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
-	signal(SIGTERM, &irt_term_handler);
-	signal(SIGINT, &irt_term_handler);
-	signal(SIGSEGV, &irt_abort_handler);
-	atexit(&irt_exit_handler);
+	if(handle_signals) {
+		signal(IRT_SIG_ERR, &irt_error_handler);
+		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
+		signal(SIGTERM, &irt_term_handler);
+		signal(SIGINT, &irt_term_handler);
+		signal(SIGSEGV, &irt_abort_handler);
+		atexit(&irt_exit_handler);
+	}
 	// initialize globals
 	irt_init_globals();
 	irt_g_exit_handling_done = false;
@@ -323,20 +325,8 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 	return false;
 }
 
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
-	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
-	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
-	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
-
-	if(getenv(IRT_REPORT_ENV)) {
-		irt_dbg_print_context(context);
-		exit(0);
-	}
-
-	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i]->cur_context = context->id;
-	}
-	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl_id, startup_params);
+void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *params) {
+	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl_id, params);
 	// create work group for outermost wi
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
@@ -354,6 +344,29 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&mutex);
+}
+
+irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
+	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
+	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
+
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_g_workers[i]->cur_context = context->id;
+	}
+
+	return context;
+}
+
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
+	irt_context* context = irt_runtime_start_in_context(worker_count, init_fun, cleanup_fun, true);
+
+	if(getenv(IRT_REPORT_ENV)) {
+		irt_dbg_print_context(context);
+		exit(0);
+	}
+
+	irt_runtime_run_wi(impl_id, startup_params);
 
 	// shut-down context
 	irt_context_destroy(context);

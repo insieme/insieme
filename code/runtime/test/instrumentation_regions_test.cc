@@ -41,6 +41,7 @@
 
 #include <gtest/gtest.h>
 #include "standalone.h"
+#include "irt_all_impls.h"
 
 // type table
 
@@ -359,7 +360,8 @@ void insieme_wi_implementation_pfor(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
-	const char* env_string = "wall_time,PAPI_FP_OPS";
+
+	const char* env_string = "wall_time,PAPI_TOT_INS";
 	irt_inst_region_select_metrics(env_string);
 	// explicit call to papi necessary because we do not have an env var 
 	// set as it would be the case for normal apps running in the runtime
@@ -375,15 +377,15 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 
 	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 
-	EXPECT_GT(reg0->aggregated_PAPI_FP_OPS, 1e4);
-	EXPECT_LT(reg0->aggregated_PAPI_FP_OPS, 1e6);
-	EXPECT_EQ(reg0->last_PAPI_FP_OPS, 0);
+	EXPECT_GT(reg0->aggregated_PAPI_TOT_INS, 1e4);
+	EXPECT_LT(reg0->aggregated_PAPI_TOT_INS, 1e6);
+	EXPECT_EQ(reg0->last_PAPI_TOT_INS, 0);
 	EXPECT_GT(reg0->aggregated_wall_time, 0);
 	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg0->last_wall_time, 0);
 	EXPECT_EQ(reg0->num_executions, 1);
 
-	printf("res: %f, floating point ops: %llu\n", a, reg0->aggregated_PAPI_FP_OPS);
+	printf("res: %f, total instruction count: %llu\n", a, reg0->aggregated_PAPI_TOT_INS);
 }
 
 void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
@@ -406,23 +408,31 @@ void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
 }
 
 TEST(region_instrumentation, simple) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 0, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(0, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, multiple_metrics) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 1, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(1, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, nested) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_nested_multiple, &insieme_cleanup_context, 2, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested_multiple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(2, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, repeated_execution) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 3, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(3, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, rapl) {
@@ -434,21 +444,29 @@ TEST(region_instrumentation, rapl) {
 		printf("warning: RAPL not available, not testing it\n");
 		return;
 	}
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 4, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(4, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, pfor) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_nested, &insieme_cleanup_context, 5, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested, insieme_cleanup_context, false);
+	irt_runtime_run_wi(5, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, papi) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 8, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(8, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(region_instrumentation, all_metrics) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context_simple, &insieme_cleanup_context, 9, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(9, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
