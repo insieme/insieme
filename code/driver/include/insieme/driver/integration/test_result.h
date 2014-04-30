@@ -36,6 +36,7 @@
 
 #pragma once
 
+
 #include <string>
 #include <vector>
 using namespace std;
@@ -43,6 +44,8 @@ using namespace std;
 namespace insieme {
 namespace driver {
 namespace integration {
+
+	enum SchedulingPolicy{SCHED_UNDEFINED,STATIC,DYNAMIC,GUIDED};
 
 	class TestResult {
 
@@ -53,14 +56,17 @@ namespace integration {
 		string errorOut;
 		string cmd;
 		std::vector<std::string> producedFiles;
-
+		int numThreads;
+		SchedulingPolicy sched;
+	
 		bool userabort;
+
 
 	public:
 
 		TestResult(bool success = true, float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd=""
-				,std::vector<std::string> producedFiles=std::vector<std::string>())
-			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles), userabort(false) {}
+			,std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
+			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
 
 		static TestResult userAborted(float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd="") {
 			TestResult res(false, runtime, memory, output, errorOut, cmd);
@@ -91,6 +97,10 @@ namespace integration {
 			return cmd;
 		}
 
+		int getNumThreads() const{
+			return numThreads;
+		}
+
 		string getFullOutput() const{
 			return output+errorOut;
 		}
@@ -101,6 +111,16 @@ namespace integration {
 
 		bool hasBeenAborted() const {
 			return userabort;
+		}
+
+		string getSchedulingString() const{
+			if(sched==STATIC)
+				return "static";
+			if(sched==DYNAMIC)
+				return "dynamic";
+			if(sched==GUIDED)
+				return "guided";
+			return "undefined";
 		}
 	};
 

@@ -50,7 +50,7 @@
 
 #include <omp.h>
 
-#include <boost/program_options.hpp>
+
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
@@ -59,6 +59,7 @@
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
+#include "insieme/driver/integration/test_framework.h"
 
 #include "insieme/utils/config.h"
 
@@ -74,91 +75,107 @@ typedef itc::IntegrationTestCase TestCase;
 using itc::TestStep;
 using itc::TestResult;
 
-namespace {
+namespace tf = itc::testFramework;
+namespace{
+	tf::Options parseCommandLine(int argc, char** argv) {
+		static const tf::Options fail(false);
 
-	struct Options {
-		bool valid;
-		bool mockrun;
-		int num_threads;
-		int num_repeditions;
-		bool print_configs;
-		bool panic_mode;
-		bool list_only;
-		bool clean;
-		bool color;
-		vector<string> cases;
-		vector<string> steps;
+		// -- parsing -------------------------------------------
 
-		Options(bool valid = true)
-			: valid(valid), mockrun(false),
-			  num_threads(1), num_repeditions(1), print_configs(false),
-			  panic_mode(false), list_only(false), clean(false), color(true) {}
-	};
+		// define options
+		bpo::options_description desc("Supported Parameters");
+		desc.add_options()
+				("help,h", 				"produce help message")
+				("config,c", 			"print the configuration of the selected test cases")
+                                ("liststeps",                   "list all the available steps")
+				("mock,m", 				"make it a mock run just printing commands not really executing those")
+				("panic,p", 			"panic on first sign of trouble and stop execution")
+				("list,l", 				"just list the targeted test cases")
+				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
+				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
+				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
+				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+				("clean",				"remove all output files")
+				("nocolor",				"no highlighting of output")
+		;
 
-	namespace fs = boost::filesystem;
+		// define positional options (all options not being named)
+		bpo::positional_options_description pos;
+		pos.add("cases", -1);
 
-	Options parseCommandLine(int argc, char** argv);
+		// parse parameters
+		bpo::variables_map map;
+		bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
+		bpo::notify(map);
 
-	vector<TestCase> loadCases(const Options& options);
-
-	vector<TestStep> getTestSteps(const Options& options);
-
-	struct Colorize{ 
-		enum Color { RED, GREEN, BLUE, BLACK, BOLD, RESET};
-		bool color;
-		Colorize(bool color) : color(color) {}
-		string getColor(Color c) {
-			if(color) {
-				switch(c) {
-					case RED: return "\033[31m";
-					case GREEN: return "\033[32m";
-					case BLUE: return "\033[34m";
-					case BLACK: return "\033[30m";
-					case RESET: return "\033[0m";
-					case BOLD: return "\033[1m";
+		// check whether step list was requested
+		if (map.count("liststeps")) {
+			std::cout << "Available steps:\n";
+			for(auto entry: insieme::driver::integration::getFullStepList()) {
+				std::cout << "\t" << std::setw(32) << entry.first;
+				auto deps = entry.second.getDependencies();
+				if(!deps.empty()) {
+					std::cout << " <- [ ";
+					for(auto dep: deps) {
+						std::cout << dep << " ";
+					}
+					std::cout << "]";
 				}
+				std::cout << "\n";
 			}
-
-			return "";
+			return fail;
 		}
 
-		string red() {return getColor(RED); }
-		string green() {return getColor(GREEN); }
-		string blue() {return getColor(BLUE); }
-		string black() {return getColor(BLACK); }
-		string reset() {return getColor(RESET); }
-		string bold() {return getColor(BOLD); }
-	};
+		// -- processing -----------------------------------------
+
+		// check whether help was requested
+		if (map.count("help")) {
+			std::cout << desc << "\n";
+			return fail;
+		}
+
+		tf::Options res;
+
+		if (map.count("config")) {
+			res.print_configs = true;
+		}
+
+		if (map.count("cases")) {
+			res.cases = map["cases"].as<vector<string>>();
+		}
+
+		res.mockrun = map.count("mock");
+		res.clean=map.count("clean");
+		res.color=!map.count("nocolor");
+		res.panic_mode = map.count("panic");
+		res.num_threads = map["worker"].as<int>();
+		res.num_repeditions = map["repeat"].as<int>();
+
+		res.list_only = map.count("list");
+
+		if (map.count("step")) {
+			res.steps.push_back(map["step"].as<string>());
+		}
+
+		return res;
+	}
 }
-
-std::string getGitVersion(){
-	string getGitVersionCmd=string("cd ")+SRC_ROOT_DIR+"; git describe --dirty";
-	FILE* pipe=popen(getGitVersionCmd.c_str(),"r");
-	char buff [50];
-	fgets(buff,50,pipe);
-	pclose(pipe);
-
-	//remove line break
-	buff[strlen(buff)-1]='\0';
-	return string(buff);
-}
-
 int main(int argc, char** argv) {
 	//TODO custom root config file
 
 	Logger::setLevel(WARNING);
 
 	// parse parameters
-	Options options = parseCommandLine(argc, argv);
+	tf::Options options = parseCommandLine(argc, argv);
 
 	// check whether the options have been valid
 	if (!options.valid) return 1;		// fail otherwise
 
 	// get list of test cases
-	auto cases = loadCases(options);
+	auto cases = tf::loadCases(options);
 
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
-	std::cout << format("#                 Insieme version: %-43s #\n", getGitVersion());
+	std::cout << format("#                 Insieme version: %-43s #\n", tf::getGitVersion());
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
 	std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
@@ -193,13 +210,13 @@ int main(int argc, char** argv) {
 
 
 	// load list of test steps
-	auto steps = getTestSteps(options);
+	auto steps = tf::getTestSteps(options);
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
 
-	Colorize colorize(options.color);
+	tf::Colorize colorize(options.color);
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
@@ -338,143 +355,4 @@ int main(int argc, char** argv) {
 
 	// done
 	return (failed.empty())?0:1;
-}
-
-
-
-namespace {
-
-
-	Options parseCommandLine(int argc, char** argv) {
-		static const Options fail(false);
-
-		// -- parsing -------------------------------------------
-
-		// define options
-		bpo::options_description desc("Supported Parameters");
-		desc.add_options()
-				("help,h", 				"produce help message")
-				("liststeps",			"list all the available steps")
-				("config,c", 			"print the configuration of the selected test cases")
-				("mock,m", 				"make it a mock run just printing commands not really executing those")
-				("panic,p", 			"panic on first sign of trouble and stop execution")
-				("list,l", 				"just list the targeted test cases")
-				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
-				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
-				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-				("repeat,r",			bpo::value<int>()->default_value(1),	"the number of times the tests shell be repeated")
-				("clean",				"remove all output files")
-				("nocolor",				"no highlighting of output")
-		;
-
-		// define positional options (all options not being named)
-		bpo::positional_options_description pos;
-		pos.add("cases", -1);
-
-		// parse parameters
-		bpo::variables_map map;
-		bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
-		bpo::notify(map);
-
-
-		// -- processing -----------------------------------------
-
-		// check whether help was requested
-		if (map.count("help")) {
-			std::cout << desc << "\n";
-			return fail;
-		}
-
-		// check whether step list was requested
-		if (map.count("liststeps")) {
-			std::cout << "Available steps:\n";
-			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << std::setw(32) << entry.first;
-				auto deps = entry.second.getDependencies();
-				if(!deps.empty()) {
-					std::cout << " <- [ ";
-					for(auto dep: deps) {
-						std::cout << dep << " ";
-					}
-					std::cout << "]";
-				}
-				std::cout << "\n";
-			}
-			return fail;
-		}
-
-		Options res;
-
-		if (map.count("config")) {
-			res.print_configs = true;
-		}
-
-		if (map.count("cases")) {
-			res.cases = map["cases"].as<vector<string>>();
-		}
-
-		res.mockrun = map.count("mock");
-		res.clean=map.count("clean");
-		res.color=!map.count("nocolor");
-		res.panic_mode = map.count("panic");
-		res.num_threads = map["worker"].as<int>();
-		res.num_repeditions = map["repeat"].as<int>();
-
-		res.list_only = map.count("list");
-
-		if (map.count("step")) {
-			res.steps.push_back(map["step"].as<string>());
-		}
-
-		return res;
-	}
-
-	vector<TestCase> loadCases(const Options& options) {
-
-		// of no test is specified explicitly load all of them
-		if (options.cases.empty()) {
-				return itc::getAllCases();
-		}
-
-		// load selected test cases
-		vector<TestCase> cases;
-		for(const auto& cur : options.cases) {
-			// load test case based on the location
-			auto curSuite = itc::getTestSuite(cur);
-			for(const auto& cur : curSuite) {
-				if (!contains(cases, cur)) {		// make sure every test is only present once
-					cases.push_back(cur);
-				}
-			}
-		}
-		return cases;
-	}
-
-	vector<TestStep> getTestSteps(const Options& options) {
-		vector<TestStep> steps;
-
-		// load steps selected by the options
-		if (!options.steps.empty()) {
-			const auto& all = itc::getFullStepList();
-
-			for(const auto& cur : options.steps) {
-				auto pos = all.find(cur);
-				if (pos != all.end()) {
-					steps.push_back(pos->second);
-					continue;
-				}
-				std::cout << "WARNING: Unknown test step: " << cur << "\n";
-			}
-
-			return steps;
-		}
-
-
-		// TODO: filter them based on some options
-		for(const auto& cur : itc::getFullStepList()) {
-			steps.push_back(cur.second);
-		}
-		return steps;
-	}
-
 }
