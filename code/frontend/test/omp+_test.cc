@@ -202,6 +202,28 @@ TEST(OMPx, Objective) {
     ASSERT_TRUE(infos[2].region_id == infos[0].region_id +2);
 }
 
+TEST(OMPx, Target) {
+
+	Logger::get(std::cerr, INFO, 0);
+
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+
+	// C source code compilation
+
+	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+	job.setOption(fe::ConversionJob::OpenMP);
+
+	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+
+	core::ProgramPtr prog = job.execute(manager, false);
+	ASSERT_TRUE(prog);
+
+	LambdaExprPtr progEntry = getEntryPoint(prog, "target");
+	ASSERT_TRUE(progEntry);
+}
+
 TEST(OMPx, Param) {
 
 	Logger::get(std::cerr, INFO, 0);

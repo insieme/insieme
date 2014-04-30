@@ -92,6 +92,25 @@ int param() {
 }
 
 #pragma insieme mark
+int target() {
+
+	int a = 0, n = 0;
+    int A[3];
+
+	#pragma omp region target(accelerator) 
+	{
+		int x = a;
+	}
+
+    #pragma omp parallel target(accelerator: 0,1 ... 8: 12)
+	{
+		int x = a;
+	}
+
+	return 0;
+}
+
+#pragma insieme mark
 int firstLocal() {
 
 	int a = 5;
