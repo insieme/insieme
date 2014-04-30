@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
 
 				for(const auto& curRes : results) {
 					if(options.mockrun){
-						std::cout << colorize.black() << curRes.first<< std::endl;
+						std::cout << colorize.blue() << curRes.first<< std::endl;
 						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
 					} else {
 						string colOffset;
