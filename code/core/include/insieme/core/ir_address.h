@@ -73,6 +73,95 @@ namespace core {
 	inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 	dynamic_address_cast(const Address<T>& src);
 
+
+	namespace detail {
+
+		/**
+		 * A specialization of the NodeAccessor template which will be used in cases where
+		 * the accessor is inherited by an address (to support access to the same elements
+		 * as for pointers and nodes directly).
+		 */
+		template<typename Node>
+		class node_access_helper<Address<const Node>> {
+
+			/**
+			 * The lazy-evaluated list of child-addresses. If the pointer is null, the
+			 * child list hasn't been evaluated yet. Using the shared pointer will handle
+			 * life cycles and it will reduce the amount of work when copying addresses.
+			 */
+			mutable std::shared_ptr<vector<NodeAddress>> childList;
+
+		public:
+
+			/**
+			 * A simple constructor for this type.
+			 */
+			node_access_helper() : childList() {};
+
+			/**
+			 * The type of the handled node.
+			 */
+			typedef Node node_type;
+
+			/**
+			 * Obtains access to the accessed node.
+			 */
+			inline const Node& getNode() const {
+				return **static_cast<const Address<const Node>*>(this);
+			}
+
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
+			const vector<NodeAddress>& getChildList() const {
+				if (!bool(childList)) {
+					// produce child list
+					const NodeList& children = getNode().getChildNodeList();
+					childList = std::make_shared<vector<NodeAddress>>();
+					vector<NodeAddress>& list = *childList;
+					for(unsigned i=0; i<children.size(); ++i) {
+						list.push_back(static_cast<const Address<const Node>*>(this)->getAddressOfChild(i));
+					}
+				}
+				return *childList;
+			}
+
+			/**
+			 * This generic method allows to access child nodes in a type-safe way. It is also used
+			 * by node accessors to obtain addresses of child nodes.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @tparam index the index of the child node to be obtained
+			 * @tparam Res the type of the child node
+			 * @return the address of the requested child node
+			 */
+			template<
+				unsigned index,
+				typename Res = typename node_child_type<node_type,index>::type
+			>
+			Address<const Res> getChildNodeReference() const {
+				// access the child via static polymorthism and cast result to known type
+				return Address<const Res>(getChildNodeReference(index).getPath());
+			}
+
+			/**
+			 * Obtains access to the child associated to the given index.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @param index the index of the child node to be accessed
+			 */
+			const NodeAddress& getChildNodeReference(std::size_t index) const {
+				return getChildList()[index];
+			}
+		};
+
+	} // end namespace detail
+
+
 	/**
 	 * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
 	 * the same node may be reused at multiple locations within the AST. Hence, a simple pointer would be insufficient for
