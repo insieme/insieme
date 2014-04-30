@@ -384,16 +384,18 @@ namespace {
                                 // check for schedule clause
                                 omp::SchedulePtr scheduleClause = handleScheduleClause(object);
                                 // check for collapse cluase
-                                core::ExpressionPtr	collapseClause = handleSingleExpression(object, "collapse");
-                                // check for nowait keyword
-                                bool noWait = object.stringValueExists("nowait");
+								core::ExpressionPtr	collapseClause = handleSingleExpression(object, "collapse");
+								// check for nowait keyword
+								bool noWait = object.stringValueExists("nowait");
+								// check for ordered keyword
+								bool ordered = object.stringValueExists("ordered");
 
                                 frontend::omp::BaseAnnotation::AnnotationList anns;
                                 anns.push_back(
                                     std::shared_ptr<omp::ParallelFor>(
                                             new omp::ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
                                                                  firstPrivateClause, sharedClause, copyinClause, reductionClause,
-                                                                 lastPrivateClause, scheduleClause, collapseClause, noWait)
+                                                                 lastPrivateClause, scheduleClause, collapseClause, noWait, ordered)
                                 ));
 
                                 //get next for stmt from node list and annotate it
@@ -465,13 +467,14 @@ namespace {
                             // check for collapse cluase
                             core::ExpressionPtr	collapseClause = handleSingleExpression(object, "collapse");
                             // check for nowait keyword
-                            bool noWait = object.stringValueExists("nowait");
-
+							bool noWait = object.stringValueExists("nowait");
+							// check for ordered keyword
+							bool ordered = object.stringValueExists("ordered");
 
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(
                                 std::make_shared<omp::For>( privateClause, firstPrivateClause, lastPrivateClause,
-                                                          reductionClause, scheduleClause, collapseClause, noWait )
+                                                          reductionClause, scheduleClause, collapseClause, noWait, ordered )
                             );
 
                             //apply omp for annotation only to the for stmt

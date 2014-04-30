@@ -391,6 +391,11 @@ void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddre
  */
 bool isVolatileType(const TypePtr& type);
 
+/**
+ * Returns the inner type of a volatile type.
+ *
+ * @return inner type of "type"
+ */
 TypePtr getVolatileType(const TypePtr& type);
 
 /**

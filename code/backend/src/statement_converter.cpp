@@ -475,6 +475,11 @@ namespace backend {
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
 			auto& basic = initValue->getNodeManager().getLangBasic();
 
+			// if call to volatileMake, check inner
+			if (core::analysis::isCallOf(initValue, basic.getVolatileMake())) {
+				return toBeAllocatedOnStack(initValue.as<core::CallExprPtr>()[0]);
+			}
+
 			// if it is a call to a ref.var => put it on the stack
 			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
 				return true;
@@ -573,9 +578,14 @@ namespace backend {
 			return resolveStackBasedArray(context, var, init);
 		}
 
+		core::TypePtr plainType = var->getType();
+		if(core::analysis::isVolatileType(plainType)) {
+			plainType = core::analysis::getVolatileType(plainType);
+		}
+
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		if (core::analysis::hasRefType(var)) {
+		if (plainType.isa<core::RefTypePtr>()) {
 
 			if (toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
@@ -592,7 +602,7 @@ namespace backend {
 
 		// if a reference variable is put on the stack, the element type definition is also required
 		if (location == VariableInfo::DIRECT) {
-			auto elementType = core::analysis::getReferencedType(var->getType());
+			auto elementType = core::analysis::getReferencedType(plainType);
 			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
 		}
 
@@ -610,6 +620,11 @@ namespace backend {
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
 		auto& basic = converter.getNodeManager().getLangBasic();
 		auto manager = converter.getCNodeManager();
+
+		// skip make volatile calls ...
+		if (core::analysis::isCallOf(init, basic.getVolatileMake())) {
+			return convertInitExpression(context, init.as<core::CallExprPtr>()[0]);
+		}
 
 		// test whether initialization is required ...
 		if (core::analysis::isCallOf(init, basic.getRefVar())) {
