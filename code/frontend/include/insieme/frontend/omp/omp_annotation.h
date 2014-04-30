@@ -82,6 +82,7 @@ DEFINE_TYPE(Schedule);
 DEFINE_TYPE(Collapse);
 DEFINE_TYPE(Default);
 DEFINE_TYPE(For);
+DEFINE_TYPE(Ordered);
 DEFINE_TYPE(Single);
 DEFINE_TYPE(Task);
 DEFINE_TYPE(TaskWait);
@@ -291,9 +292,12 @@ protected:
 	SchedulePtr			scheduleClause;
 	core::ExpressionPtr	collapseExpr;
 	bool 				noWait;
+	bool 				ordered;
 public:
-	ForClause( const VarListPtr& lastPrivateClause, const SchedulePtr& scheduleClause, const core::ExpressionPtr& collapseExpr, bool noWait) :
-		lastPrivateClause(lastPrivateClause), scheduleClause(scheduleClause), collapseExpr(collapseExpr), noWait(noWait) { }
+	ForClause(const VarListPtr& lastPrivateClause, const SchedulePtr& scheduleClause, 
+			  const core::ExpressionPtr& collapseExpr, bool noWait, bool ordered) :
+		lastPrivateClause(lastPrivateClause), scheduleClause(scheduleClause), 
+		collapseExpr(collapseExpr), noWait(noWait), ordered(ordered) { }
 
 	bool hasLastPrivate() const { return static_cast<bool>(lastPrivateClause); }
 	const VarList& getLastPrivate() const { assert(hasLastPrivate()); return *lastPrivateClause; }
@@ -305,6 +309,7 @@ public:
 	const core::Expression& getCollapse() const { assert(hasCollapse()); return *collapseExpr; }
 
 	bool hasNoWait() const { return noWait; }
+	bool hasOrdered() const { return ordered; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -450,9 +455,9 @@ public:
 		const ReductionPtr& reductionClause,
 		const SchedulePtr& scheduleClause,
 		const core::ExpressionPtr& collapseExpr,
-		bool noWait) :
+		bool noWait, bool ordered) :
 			DatasharingClause(privateClause, firstPrivateClause),
-			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
+			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
@@ -484,10 +489,12 @@ public:
 		const ReductionPtr& reductionClause,
 		const VarListPtr& lastPrivateClause,
 		const SchedulePtr& scheduleClause,
-		const core::ExpressionPtr& collapseExpr, bool noWait) :
+		const core::ExpressionPtr& collapseExpr, 
+		bool noWait, bool ordered) :
 			CommonClause(privateClause, firstPrivateClause),
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause),
-			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
+			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait, ordered), 
+			reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
@@ -499,7 +506,7 @@ public:
 	ForPtr toFor() const {
 		// do not duplicate stuff already handled in parallel
 		return std::make_shared<For>(/*private*/VarListPtr(), /*firstprivate*/VarListPtr(), lastPrivateClause, 
-			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, noWait);
+			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, noWait, ordered);
 	}
 
 	std::ostream& dump(std::ostream& out) const;

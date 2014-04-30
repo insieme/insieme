@@ -105,7 +105,7 @@ public:
 	OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(),
 			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses(),
-			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8()))),
+			  orderedCountLit(build.literal("ordered_counter", build.volatileType(build.refType(basic.getInt8())))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())),
 			  orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {
 	}
@@ -745,6 +745,10 @@ protected:
 		return replacement;
 	}
 
+	ExpressionPtr getVolatileOrderedCount() {
+		return build.readVolatile(orderedCountLit);
+	}
+
 	// Process parallel regions containing omp fors with the "ordered" clause
 	StatementPtr processOrderedParallel(const StatementPtr& origStmt) {
 		VariablePtr orderedCountVar = build.variable(orderedCountLit->getType());
@@ -755,13 +759,12 @@ protected:
 		// if we don't find any orderedCountLit literals, we don't have to do anything
 		if(pushMap.empty()) return origStmt;
 		// create variable outside the parallel
-		auto countVarDecl = build.declarationStmt(orderedCountVar, build.undefinedVar(orderedCountVar->getType()));
+		auto countVarDecl = build.declarationStmt(orderedCountVar, 
+			build.makeVolatile(build.undefinedVar(orderedCountVar->getType().as<GenericTypePtr>()->getTypeParameter(0))));
 		// push ordered variable to where it is needed
 		auto newStmt = transform::pushInto(nodeMan, pushMap).as<CompoundStmtPtr>();
 		// build new compound and return it
 		newStmt = build.compoundStmt(countVarDecl, newStmt);
-		std::cout << "\n\nPRE:\n" << dumpPretty(origStmt) << "\n";
-		std::cout << "\n\nPOST:\n" << dumpPretty(newStmt) << "\n";
 		return newStmt;
 	}
 
@@ -777,15 +780,15 @@ protected:
 		auto stepVar = b.variable(step->getType());
 		auto stepVarDecl = b.declarationStmt(stepVar, step);
 		// set value in first iteration of loop
-		auto initialSet = b.ifStmt(b.eq(iterator, start), b.assign(orderedCountLit, start));
+		auto initialSet = b.ifStmt(b.eq(iterator, start), b.assign(getVolatileOrderedCount(), start));
 		// add safety net at end of body (for cases where ordered section not encountered)
-		auto waitLoop = b.whileStmt(b.ne(b.deref(orderedCountLit), orderedItLit), b.compoundStmt());
-		auto increment = b.atomicAssignment(
-			b.assign(orderedCountLit, b.add(b.deref(orderedCountLit), orderedIncLit)));
-		auto condition = b.logicOr( // deal with loops counting down as well as up
-			b.logicAnd(b.le(orderedIncLit, b.getZero(step->getType())), b.le(b.deref(orderedCountLit),orderedItLit)), 
-			b.logicAnd(b.ge(orderedIncLit, b.getZero(step->getType())), b.ge(b.deref(orderedCountLit),orderedItLit)) );
-		auto conditionalIncrease = b.ifStmt(condition, b.compoundStmt(waitLoop, increment));
+		auto waitLoop = b.whileStmt(b.ne(b.deref(getVolatileOrderedCount()), orderedItLit), b.compoundStmt());
+		auto atomic = b.atomicAssignment(
+			b.assign(getVolatileOrderedCount(), b.add(b.deref(getVolatileOrderedCount()), orderedIncLit)));
+		auto increment = b.compoundStmt(waitLoop, atomic);
+		auto conditionalIncrease = b.ifStmt(b.ge(orderedIncLit, b.getZero(step->getType())), // deal with loops counting down as well as up
+			b.ifStmt(b.le(b.deref(getVolatileOrderedCount()),orderedItLit), increment),
+			b.ifStmt(b.ge(b.deref(getVolatileOrderedCount()),orderedItLit), increment) );
 		// build new body
 		CompoundStmtPtr newBody = b.compoundStmt(stepVarDecl, initialSet, body, conditionalIncrease);
 		// push loop step to required position
@@ -795,8 +798,6 @@ protected:
 			if(lit.getAddressedNode() == orderedItLit) pushMap.insert(std::make_pair(lit, iterator));
 		} );
 		newBody = transform::pushInto(nodeMan, pushMap).as<CompoundStmtPtr>();
-		//std::cout << "\n\nPRE:\n" << dumpPretty(body) << "\n";
-		//std::cout << "\n\nPOST:\n" << dumpPretty(newBody) << "\n";
 		// replace original body
 		forStmt = transform::replaceNode(nodeMan, ForStmtAddress(forStmt)->getBody(), newBody).as<ForStmtPtr>();
 		return forStmt;
@@ -804,9 +805,9 @@ protected:
 
 	NodePtr handleOrdered(const StatementPtr& stmtNode, const OrderedPtr& orderedP) {
 		auto int8 = basic.getInt8();
-		auto waitLoop = build.whileStmt(build.ne(build.deref(orderedCountLit), orderedItLit), build.compoundStmt());
+		auto waitLoop = build.whileStmt(build.ne(build.deref(getVolatileOrderedCount()), orderedItLit), build.compoundStmt());
 		auto increment = build.atomicAssignment(
-			build.assign(orderedCountLit, build.add(build.deref(orderedCountLit), orderedIncLit)));
+			build.assign(getVolatileOrderedCount(), build.add(build.deref(getVolatileOrderedCount()), orderedIncLit)));
 		return build.compoundStmt(waitLoop, stmtNode, increment);
 	}
 
@@ -968,74 +969,13 @@ namespace {
 
 		return globals.front().getVariable().getType().as<RefTypePtr>();
 	}
-}
 
-//const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
-//	IRBuilder build(resultStorage);
-//	ProgramPtr result = prog;
-//
-//	// new sema
-//	{
-//		OMPSemaMapper semaMapper(resultStorage);
-//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//		insieme::utils::Timer timer("Omp sema");
-//		result = semaMapper.map(result);
-//		timer.stop();
-//		LOG(INFO) << timer;
-//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//
-//		// fix global struct type if modified by threadprivate
-//		if(semaMapper.getAdjustStruct()) {
-//			result = static_pointer_cast<const Program>(
-//				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
-//		}
-//	}
-//
-//	// fix globals
-//	{
-//		insieme::utils::Timer timer("Omp global handling");
-//		auto collectedGlobals = markGlobalUsers(result);
-//		if(collectedGlobals.size() > 0) {
-//			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-//			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-//			result = globalMapper.map(result);
-//			// add initialization for collected global locks
-//			for(NamedValuePtr& val : collectedGlobals) {
-//				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
-//					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
-//					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
-//				}
-//			}
-//			timer.stop();
-//			LOG(INFO) << timer;
-//		}
-//	}
-//
-//	// omp postprocessing optimization
-//	//{
-//	//	insieme::utils::Timer timer("Omp postprocessing optimization");
-//
-//	//	p::TreePattern tpAccesses
-//
-//	//	timer.stop();
-//	//	LOG(INFO) << timer;
-//	//}
-//
-//	return result;
-//}
-
-namespace {
-
-	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
+	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) { 
 
 		// search locks
-		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {
-
+		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) { 
 			const string& gname = lit->getStringValue();
-			if (gname.find("global_omp") != 0) return;
-
-			std::cout << "Found lock: " << gname << "\n";
-
+			if(gname.find("global_omp") != 0) return;
 			assert(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
 
 			// add lock to global list
@@ -1044,9 +984,7 @@ namespace {
 			// add lock initialization code
 			unit.addInitializer(IRBuilder(mgr).initLock(lit));
 		});
-
 	}
-
 }
 
 
