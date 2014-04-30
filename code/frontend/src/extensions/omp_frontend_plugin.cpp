@@ -574,8 +574,8 @@ namespace {
 
         if(!weightsParamList && !constraintsParamList)
                 return omp::ObjectivePtr();
-    
-    	assert( (( !constraintsParamList && !constraintsOpList && !constraintsExprList )
+
+    	assert( (( !constraintsParamList && !constraintsOpList && constraintsExprList->empty() )
     			|| ( constraintsParamList && constraintsOpList && constraintsParamList->size() == constraintsOpList->size()
     					&& constraintsExprList && constraintsParamList->size() == constraintsExprList->size() ))
     			&& "Objective clause constraints bad formatted" );

@@ -50,6 +50,48 @@ int simpleRegion() {
 }
 
 #pragma insieme mark
+int objective() {
+
+	int a = 0, n = 0;
+
+	#pragma omp region objective(0.1*E+0.3*P+0.6*T)
+	{
+		int x = 3;
+	}
+
+	#pragma omp task objective(:E<10)
+	{
+		int x = 4;
+	}
+
+	#pragma omp parallel objective(0.1*E+0.2*P+0.7*T:T<3;P>22)
+	{
+		int x = 5;
+	}
+
+	return 0;
+}
+
+#pragma insieme mark
+int param() {
+
+	int a = 0, n = 0;
+    int A[3];
+
+	#pragma omp region param(a, range(0:10:2)) 
+	{
+		int x = a;
+	}
+
+    #pragma omp parallel param(a, enum(A:3)) 
+	{
+		int x = a;
+	}
+
+	return 0;
+}
+
+#pragma insieme mark
 int firstLocal() {
 
 	int a = 5;
