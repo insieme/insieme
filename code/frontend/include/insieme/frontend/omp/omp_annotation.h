@@ -792,7 +792,7 @@ public:
 /**
  * OpenMP 'parallel for' clause
  */
-class ParallelFor: public Annotation, public DatasharingClause, public ParallelClause, public ForClause {
+class ParallelFor: public Annotation, public CommonClause, public ParallelClause, public ForClause {
 protected:
 	ReductionPtr reductionClause;
 public:
@@ -835,7 +835,7 @@ public:
 
 	virtual void replaceUsage (const core::NodeMap& map){
 		Annotation::replaceUsage(map);
-		DatasharingClause::replaceUsage(map);
+		CommonClause::replaceUsage(map);
 		ParallelClause::replaceUsage(map);
 		ForClause::replaceUsage(map);
 		if (hasReduction()) reductionClause->replaceUsage (map);

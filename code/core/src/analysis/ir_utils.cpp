@@ -49,6 +49,8 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 
+#include "insieme/annotations/omp/omp_annotations.h"
+
 #include "insieme/utils/logging.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
