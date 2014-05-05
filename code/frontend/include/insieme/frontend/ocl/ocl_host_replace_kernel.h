@@ -136,7 +136,6 @@ public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
 	virtual core::NodePtr getTransformedProgram();
 	virtual void loadKernelCode(core::pattern::TreePatternPtr);
-	virtual void collectArguments();
 	virtual void inlineKernelCode();
 };
 

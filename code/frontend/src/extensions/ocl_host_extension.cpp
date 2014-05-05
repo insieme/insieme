@@ -81,9 +81,6 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::TypeFixer otf(root, typesToFix);
 	root = otf.getTransformedProg();
 
-	VariableMap nada;
-	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
-
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
@@ -160,10 +157,7 @@ core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	std::vector<TypePtr> typesToFix = {iclKernelTy, br.getIclBufferType()};
 	ocl::TypeFixer otf(root, typesToFix);
 	root = otf.getTransformedProg();
-/*
-	VariableMap nada;
-	root = core::transform::fixTypesGen(prog->getNodeManager(), root, nada, false);
-*/
+
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 

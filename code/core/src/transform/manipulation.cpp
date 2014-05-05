@@ -1131,6 +1131,38 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 
 namespace {
 
+	namespace detail {
+
+		/**
+		 * Adds a new parameter to the given lambda - if the parameter is colliding with a free variable
+		 * within the given lambda a alternative variable of the same type will be created to replace the
+		 * handed in parameter.
+		 */
+		LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
+			assert(!lambda->isRecursive() && "Recursive functions not supported yet!");
+
+			IRBuilder builder(lambda.getNodeManager());
+
+			// find name for new parameter
+			auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
+
+			VariablePtr newVar = param;
+			while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) { return a->getId() == b->getId(); })) {
+				newVar = builder.variable(newVar->getType());
+			}
+
+			// update propagated variable
+			param = newVar;
+
+			// add new parameter and return new lambda
+			VariableList params = lambda->getParameterList().getParameters();
+			params.push_back(newVar);
+			return builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
+		}
+
+	}
+
+
 	/**
 	 * Pushes the given variable from the root-node context of target to the target node by passing it
 	 * to every lambda encountered along this path. In the variable has to be renamed since the same id is
@@ -1146,66 +1178,93 @@ namespace {
 		NodeAddress parent = makeAvailable(manager, target.getParentAddress(), var);
 		NodeAddress res = parent.getAddressOfChild(target.getIndex());
 
-		// if this is a call to a lambda => add parameter (if not already there)
-		if (parent.getNodeType() == NT_CallExpr) {
-			CallExprPtr call = parent.as<CallExprPtr>();
-			if (*call->getFunctionExpr() == *target) {
-				// we are following the function call => add a parameter
-				if (!contains(call.getArguments(), var)) {
+		// handle standard calls to lambdas
+		if (parent.isa<CallExprPtr>() && parent.as<CallExprAddress>()->getFunctionExpr() == res) {
 
-					IRBuilder builder(manager);
-					ExpressionList newArgs = call.getArguments();
-					newArgs.push_back(var);
+			// if this is a call to a lambda => add parameter (if not already there)
+			if (parent.getNodeType() == NT_CallExpr) {
+				CallExprPtr call = parent.as<CallExprPtr>();
+				if (*call->getFunctionExpr() == *target) {
+					// we are following the function call => add a parameter
+					if (!contains(call.getArguments(), var)) {
 
-					// build new call (function is fixed within recursive step one level up)
-					CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
-					res = replaceAddress(manager, parent, newCall).getAddressOfChild(target.getIndex());
-				}
-			}
-		}
+						IRBuilder builder(manager);
+						ExpressionList newArgs = call.getArguments();
+						newArgs.push_back(var);
 
-		// if we are crossing a lambda, check whether new parameter needs to be accepted
-		if (res.getNodeType() == NT_LambdaExpr) {
-			assert(res.getParentNode()->getNodeType() == NT_CallExpr && "Parent of lambda needs to be a call!");
-			assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
-
-			LambdaExprPtr lambda = res.as<LambdaExprPtr>();
-			CallExprPtr call = res.getParentNode().as<CallExprPtr>();
-
-			// check whether a new argument needs to be added
-			if (call->getArguments().size() != lambda->getParameterList().size()) {
-				assert(!lambda->isRecursive() && "Recursive functions not supported yet!");
-				IRBuilder builder(manager);
-
-				// find name for new parameter
-				auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
-
-				VariablePtr newVar = var;
-				while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) { return a->getId() == b->getId(); })) {
-					newVar = builder.variable(newVar->getType());
-				}
-
-				// update propagated variable
-				var = newVar;
-
-				// add new parameter and return new lambda
-				VariableList params = lambda->getParameterList().getParameters();
-				params.push_back(newVar);
-				LambdaExprPtr newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
-				res = replaceAddress(manager, res, newLambda);
-
-			} else {
-
-				// update variable when it is already passed as an argument
-				auto args = call->getArguments();
-				for(int i = args.size() - 1; i>0; i--) {
-					if (args[i] == var) {
-						var = lambda->getParameterList()[i];
-						break;
+						// build new call (function is fixed within recursive step one level up)
+						CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
+						res = replaceAddress(manager, parent, newCall).getAddressOfChild(target.getIndex());
 					}
 				}
-
 			}
+
+			// if we are crossing a lambda, check whether new parameter needs to be accepted
+			if (res.getNodeType() == NT_LambdaExpr) {
+				assert(res.getParentNode()->getNodeType() == NT_CallExpr && "Parent of lambda needs to be a call!");
+				assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
+
+				LambdaExprPtr lambda = res.as<LambdaExprPtr>();
+				CallExprPtr call = res.getParentNode().as<CallExprPtr>();
+
+				// check whether a new argument needs to be added
+				if (call->getArguments().size() != lambda->getParameterList().size()) {
+
+					// add new parameter to lambda
+					LambdaExprPtr newLambda = detail::addNewParameter(lambda, var);
+					res = replaceAddress(manager, res, newLambda);
+
+				} else {
+
+					// update variable when it is already passed as an argument
+					auto args = call->getArguments();
+					for(int i = args.size() - 1; i>0; i--) {
+						if (args[i] == var) {
+							var = lambda->getParameterList()[i];
+							break;
+						}
+					}
+
+				}
+			}
+
+		// otherwise: if the result is a lambda expression but the parent is not a function call it => capture local variable
+		} else if (auto lambda = res.isa<LambdaExprAddress>()) {
+
+			// in this case we have something like
+			//   bool.and(..., fun, ...)
+			// where fun is the next step. We need to capture the local variable and forward it to fun by
+			//   bool.and(..., (<args>)=>fun(<args>,var), ...)
+
+			// extend lambda by an extra parameter (and update variable to be pushed)
+			VariablePtr innerVar = var;
+			LambdaExprPtr newLambda = detail::addNewParameter(lambda, innerVar);
+
+			// build bind expression
+			IRBuilder builder(lambda->getNodeManager());
+
+			// - new list of arguments
+			ExpressionList newArgs;
+			for(const auto& cur : lambda->getParameterList()) {
+				newArgs.push_back(cur);
+			}
+			newArgs.push_back(var);
+
+			// - new function type
+			auto funTypeIn  = lambda->getFunctionType();
+			auto funTypeOut = builder.functionType(funTypeIn->getParameterTypes(), funTypeIn->getReturnType(), FK_CLOSURE);
+
+			// - actual bind
+			auto bind = builder.bindExpr(funTypeOut, lambda->getParameterList().as<ParametersPtr>(),
+					builder.callExpr(newLambda, newArgs)
+			);
+
+			// build address to result for next step
+			res = replaceAddress(manager, res, bind);
+			res = res.as<BindExprAddress>()->getCall()->getFunctionExpr();
+
+			// update propagated variable
+			var = innerVar;
 		}
 
 		// for all others: just return result

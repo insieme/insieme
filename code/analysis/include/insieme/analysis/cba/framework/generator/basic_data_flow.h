@@ -74,15 +74,15 @@ namespace cba {
 
 	namespace {
 
-		StatementAddress getBody(const ContextFreeCallable& fun) {
-			if (auto lambda = fun.isa<LambdaExprAddress>()) {
+		StatementInstance getBody(const ContextFreeCallable& fun) {
+			if (auto lambda = fun.isa<LambdaExprInstance>()) {
 				return lambda->getBody();
 			}
-			if (auto bind = fun.isa<BindExprAddress>()) {
+			if (auto bind = fun.isa<BindExprInstance>()) {
 				return bind->getCall();
 			}
 			assert_fail() << "Unsupported function type encountered: " << fun->getNodeType();
-			return StatementAddress();
+			return StatementInstance();
 		}
 
 		template<typename Lattice>
@@ -193,7 +193,7 @@ namespace cba {
 			CBA& cba;
 
 			// the read operation itself
-			CallExprAddress readOp;
+			CallExprInstance readOp;
 
 			// the context of the read operation
 			Context ctxt;
@@ -213,7 +213,7 @@ namespace cba {
 		public:
 
 			ReadConstraint(
-					CBA& cba, const CallExprAddress& call, const Context& ctxt,
+					CBA& cba, const CallExprInstance& call, const Context& ctxt,
 					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res
 				) : Constraint(toVector<ValueID>(ref), toVector<ValueID>(res), true, true),
 				  cba(cba), readOp(call), ctxt(ctxt), ref(ref), res(res)
@@ -322,7 +322,7 @@ namespace cba {
 		};
 
 		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
-		ConstraintPtr read(CBA& cba, const CallExprAddress& readOp, const Context& readCtxt, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr read(CBA& cba, const CallExprInstance& readOp, const Context& readCtxt, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res) {
 			return std::make_shared<ReadConstraint<NestedAnalysesType,ValueLattice,RefLattice,Context>>(cba, readOp, readCtxt, ref, res);
 		}
 
@@ -350,10 +350,10 @@ namespace cba {
 			TypedValueID<CallableLattice> callees;
 
 			// the bind expression looking for
-			BindExprAddress bind;
+			BindExprInstance bind;
 
 			// the address of the captured value to be collected (with unspecified context)
-			ExpressionAddress capturedValue;
+			ExpressionInstance capturedValue;
 
 			// the set to be updated
 			TypedValueID<ValueLattice> res;
@@ -368,7 +368,7 @@ namespace cba {
 
 			BoundValueCollectorConstraint(
 					CBA& cba, const TypedValueID<CallableLattice>& callees,
-					const BindExprAddress& bind, const ExpressionAddress& capturedValue,
+					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
 					const TypedValueID<ValueLattice>& res
 				) : Constraint(toVector<ValueID>(callees), toVector<ValueID>(res), true, true),
 				  cba(cba), callees(callees), bind(bind), capturedValue(capturedValue), res(res)
@@ -450,7 +450,7 @@ namespace cba {
 		};
 
 		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename CallableLattice>
-		ConstraintPtr collectCapturedValue(CBA& cba, const TypedValueID<CallableLattice>& callables, const BindExprAddress& bind, const ExpressionAddress& capturedValue, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr collectCapturedValue(CBA& cba, const TypedValueID<CallableLattice>& callables, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
 			return std::make_shared<BoundValueCollectorConstraint<ValueAnalysisType,ValueLattice,CallableLattice,Context>>(cba, callables, bind, capturedValue, res);
 		}
 
@@ -479,10 +479,10 @@ namespace cba {
 			TypedValueID<JobLattice> jobs;
 
 			// the bind expression looking for
-			BindExprAddress bind;
+			BindExprInstance bind;
 
 			// the address of the captured value to be collected (with unspecified context)
-			ExpressionAddress capturedValue;
+			ExpressionInstance capturedValue;
 
 			// the set to be updated
 			TypedValueID<ValueLattice> res;
@@ -500,7 +500,7 @@ namespace cba {
 
 			JobValueCollectorConstraint(
 					CBA& cba, const TypedValueID<JobLattice>& jobs,
-					const BindExprAddress& bind, const ExpressionAddress& capturedValue,
+					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
 					const TypedValueID<ValueLattice>& res
 				) : Constraint(toVector<ValueID>(jobs), toVector<ValueID>(res), true, true),
 				  cba(cba), jobs(jobs), bind(bind), capturedValue(capturedValue), res(res)
@@ -532,7 +532,7 @@ namespace cba {
 				for(const auto& j : job_set) {
 
 					// get set of job-bodies
-					auto body = cba.getSet(C, j.getAddress()->getDefaultExpr(), j.getContext());
+					auto body = cba.getSet(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
 
 					// register body
 					if (!::contains(bodies, body)) {
@@ -602,7 +602,7 @@ namespace cba {
 		};
 
 		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename JobLattice>
-		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedValueID<JobLattice>& jobs, const BindExprAddress& bind, const ExpressionAddress& capturedValue, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedValueID<JobLattice>& jobs, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
 			return std::make_shared<JobValueCollectorConstraint<ValueAnalysisType,ValueLattice,JobLattice,Context>>(cba, jobs, bind, capturedValue, res);
 		}
 	}
@@ -658,7 +658,7 @@ namespace cba {
 			return getValueManager().atomic(value);
 		}
 
-		void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
+		void visitCompoundStmt(const CompoundStmtInstance& compound, const Context& ctxt, Constraints& constraints) {
 
 			// only interested in lambda bodies
 			if (compound.isRoot()) return;
@@ -670,12 +670,12 @@ namespace cba {
 			auto A_body = cba.getSet(A, l_body, ctxt);
 
 			// since value of a compound is the value of return statements => visit those
-			visitDepthFirstPrunable(compound, [&](const StatementAddress& stmt) {
+			visitDepthFirstPrunable(compound, [&](const StatementInstance& stmt) {
 				// prune inner functions
-				if (stmt.isa<LambdaExprAddress>()) return true;
+				if (stmt.isa<LambdaExprInstance>()) return true;
 
 				// visit return statements
-				if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
+				if (auto returnStmt = stmt.isa<ReturnStmtInstance>()) {
 					// connect value of return statement with body value
 					auto l_return = cba.getLabel(returnStmt->getReturnExpr());
 					auto A_return = cba.getSet(A, l_return, ctxt);
@@ -694,17 +694,17 @@ namespace cba {
 
 		}
 
-		void visitStatement(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
+		void visitStatement(const StatementInstance& stmt, const Context& ctxt, Constraints& constraints) {
 			// not other statement has a value => nothing to do
 		}
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 			// external literals are by default unknown values - could be overloaded by sub-classes
 			auto A_lit = cba.getSet(A, literal, ctxt);
 			constraints.add(subset(getUnknownValue(literal->getType()), A_lit));
 		}
 
-		void visitVariable(const VariableAddress& variable, const Context& ctxt, Constraints& constraints) {
+		void visitVariable(const VariableInstance& variable, const Context& ctxt, Constraints& constraints) {
 
 			// ----- Part I: read variable value -------
 
@@ -721,7 +721,7 @@ namespace cba {
 			// ----- Part II: add constraints for variable definition point ------
 
 			// let it be handled by the definition point
-			VariableAddress def = getDefinitionPoint(variable);
+			VariableInstance def = getDefinitionPoint(variable);
 			if (def != variable) {
 				this->visit(def, ctxt, constraints);
 				return;
@@ -737,14 +737,14 @@ namespace cba {
 			}
 
 			// so, there should be a parent
-			auto parent = def.getParentAddress();
+			auto parent = def.getParentInstance();
 			switch(parent->getNodeType()) {
 
 				// if the variable is declared imperatively => just handle declaration statement
 				case NT_DeclarationStmt: {
 
 					// check whether it is a for-loop
-					if (!parent.isRoot() && parent.isa<ForStmtAddress>()) {
+					if (!parent.isRoot() && parent.isa<ForStmtInstance>()) {
 
 						// a for-loop iterator is unknown by default
 						// TODO: find a better solution for this ...
@@ -754,7 +754,7 @@ namespace cba {
 
 					// TODO: consider for-loops
 
-					auto decl = parent.as<DeclarationStmtAddress>();
+					auto decl = parent.as<DeclarationStmtInstance>();
 
 					// add constraint r(var) \subset C(init)
 					auto l_init = cba.getLabel(decl->getInitialization());
@@ -779,7 +779,7 @@ namespace cba {
 //					auto predecessor_ctxt = cba.getSet(pred, ctxt.callContext.back());
 
 					// get containing callee (lambda or bind)
-					Callee callee(parent.getParentAddress());
+					Callee callee(parent.getParentInstance());
 					assert(callee.isLambda() || callee.isBind());
 
 					// get all callers
@@ -823,7 +823,7 @@ namespace cba {
 							// we have to get the value bound to the argument at the creation point of the closure
 
 							// get bind expression
-							auto bind = call.getParentAddress().as<BindExprAddress>();
+							auto bind = call.getParentInstance().as<BindExprInstance>();
 							auto num_params = bind->getParameters()->size();
 
 							// for all the potential call contexts
@@ -834,7 +834,7 @@ namespace cba {
 								if (l_bind_call == 0) continue;
 
 								// check number of arguments of bind call
-								auto bindCall = cba.getStmt(l_bind_call).template as<CallExprAddress>();
+								auto bindCall = cba.getStmt(l_bind_call).template as<CallExprInstance>();
 								if (bindCall.size() != num_params) continue;
 
 								// get potential contexts of the bind call
@@ -859,7 +859,7 @@ namespace cba {
 
 								// get thread call context
 								const auto& spawnID = ctxt.threadContext.front();
-								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprAddress>();
+								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprInstance>();
 								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
 
 								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
@@ -913,11 +913,11 @@ namespace cba {
 
 		}
 
-		void visitStructExpr(const StructExprAddress& expr, const Context& ctxt, Constraints& constraints) {
+		void visitStructExpr(const StructExprInstance& expr, const Context& ctxt, Constraints& constraints) {
 
 			// collect values of all fields
 			std::map<FieldIndex, TypedValueID<lattice_type>> elements;
-			for(const core::NamedValueAddress& cur : expr->getMembers()) {
+			for(const core::NamedValueInstance& cur : expr->getMembers()) {
 				elements[cur.getAddressedNode()->getName()] = cba.getSet(A, cur->getValue(), ctxt);
 			}
 
@@ -930,15 +930,15 @@ namespace cba {
 
 		}
 
-		void visitLambdaExpr(const LambdaExprAddress& lambda, const Context& ctxt, Constraints& constraints) {
+		void visitLambdaExpr(const LambdaExprInstance& lambda, const Context& ctxt, Constraints& constraints) {
 			// nothing to do here => magic happens at call site
 		}
 
-		void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+		void visitBindExpr(const BindExprInstance& bind, const Context& ctxt, Constraints& constraints) {
 			// nothing to do here => magic happens at call site
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
 			// the value of the call expression is the result of the function
 
@@ -1057,7 +1057,7 @@ namespace cba {
 		}
 
 
-		void visitNode(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+		void visitNode(const NodeInstance& node, const Context& ctxt, Constraints& constraints) {
 			std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
 			assert(false);
 		}
@@ -1094,17 +1094,17 @@ namespace cba {
 
 	private:
 
-		bool isBoundValueInFreeBind(const ExpressionAddress& expr) const {
+		bool isBoundValueInFreeBind(const ExpressionInstance& expr) const {
 
 			// ok, we need at least 2 levels of parents
 			if (expr.getDepth() < 3) return false;
 
 			// the first needs to be a call
-			auto call = expr.getParentAddress().isa<CallExprAddress>();
+			auto call = expr.getParentInstance().isa<CallExprInstance>();
 			if (!call) return false;
 
 			// the second a bind
-			auto bind = call.getParentAddress().isa<BindExprAddress>();
+			auto bind = call.getParentInstance().isa<BindExprInstance>();
 			if (!bind) return false;
 
 			// and the expression must be bound
@@ -1112,13 +1112,13 @@ namespace cba {
 			if (!bind->isBoundExpression(expr)) return false;
 
 			// test whether bind is free (not statically bound)
-			call = bind.getParentAddress().isa<CallExprAddress>();
+			call = bind.getParentInstance().isa<CallExprInstance>();
 			return !call || call->getFunctionExpr() != bind;
 		}
 
-		bool isBoundValueInFreeBind(const NodeAddress& node) const {
+		bool isBoundValueInFreeBind(const NodeInstance& node) const {
 			if (node->getNodeCategory() != NC_Expression) return false;
-			return isBoundValueInFreeBind(node.as<ExpressionAddress>());
+			return isBoundValueInFreeBind(node.as<ExpressionInstance>());
 		}
 
 	};

@@ -94,26 +94,26 @@ namespace cba {
 			).as<CompoundStmtPtr>();
 
 			ASSERT_TRUE(in);
-			CompoundStmtAddress code(in);
+			CompoundStmtInstance code(in);
 
 			// check call-site manager
 			CallSiteManager callMgr(code);
 
 			// for function f
-			auto call = code[1].as<DeclarationStmtAddress>()->getInitialization().as<BindExprAddress>()->getCall();
-			auto caller = callMgr.getCaller(Callee(code[0].as<DeclarationStmtAddress>()->getInitialization().as<LambdaExprAddress>()));
+			auto call = code[1].as<DeclarationStmtInstance>()->getInitialization().as<BindExprInstance>()->getCall();
+			auto caller = callMgr.getCaller(Callee(code[0].as<DeclarationStmtInstance>()->getInitialization().as<LambdaExprInstance>()));
 			EXPECT_EQ(toVector(Caller(call)), caller);
 
 			// and the bind expression b
-			caller = callMgr.getCaller(Callee(code[1].as<DeclarationStmtAddress>()->getInitialization().as<BindExprAddress>()));
-			EXPECT_EQ(toVector(Caller(code[2].as<CallExprAddress>()), Caller(code[3].as<CallExprAddress>())), caller);
+			caller = callMgr.getCaller(Callee(code[1].as<DeclarationStmtInstance>()->getInitialization().as<BindExprInstance>()));
+			EXPECT_EQ(toVector(Caller(code[2].as<CallExprInstance>()), Caller(code[3].as<CallExprInstance>())), caller);
 
 			// run analysis to check whether capturing is working properly
 			CBA analysis(code);
 
-			EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+			EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[2].as<ExpressionInstance>(), A)));
 			createDotDump(analysis);
-			EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+			EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[3].as<ExpressionInstance>(), A)));
 	}
 
 

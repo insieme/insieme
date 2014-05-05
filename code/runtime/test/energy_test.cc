@@ -54,11 +54,11 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi);
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_dvfs[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_dvfs, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_dvfs }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_rapl[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation_rapl, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_rapl }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
@@ -170,8 +170,10 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 }
 
 TEST(energy, dvfs) {
-	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context, insieme_cleanup_context, false);
+	irt_runtime_run_wi(0, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 TEST(energy, rapl) {
@@ -179,6 +181,9 @@ TEST(energy, rapl) {
 	irt_papi_init();
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_get_num_cores_per_socket();
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 1, NULL);
+	irt_context* context = irt_runtime_start_in_context(wcount, insieme_init_context, insieme_cleanup_context, false);
+	irt_runtime_run_wi(1, NULL);
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 

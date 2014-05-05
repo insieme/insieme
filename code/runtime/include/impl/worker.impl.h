@@ -40,7 +40,7 @@
 
 #include <stdlib.h>
 
-#include "globals.h"
+#include "irt_globals.h"
 
 #ifndef IRT_MIN_MODE
 	#include "impl/irt_mqueue.impl.h"

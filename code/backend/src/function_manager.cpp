@@ -695,8 +695,7 @@ namespace backend {
 			if (header) {
 
 				// => use prototype of include file
-				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-				res->prototype->addInclude(*header);
+				res->prototype = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), *header);
 
 			} else if(funType->isMemberFunction()) {
 				// add pure-virtual member function to class declaration
@@ -1027,6 +1026,11 @@ namespace backend {
 						decl->isVirtual = isVirtual;
 
 						classDecl->members.push_back(decl);
+					}
+
+					// remove dependencies from others to this class (causes cyclic dependencies)
+					for(const auto& dep : codeInfo.prototypeDependencies) {
+						if (dep.isa<c_ast::IncludeFragmentPtr>()) dep->remDependency(info->prototype);
 					}
 
 					// add dependencies to class declaration

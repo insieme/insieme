@@ -76,7 +76,6 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	_irt_cwb_try_push_back(self, yielding_wi, true);
-	self->cur_wi = NULL;
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
@@ -118,12 +117,13 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 #define IRT_NUM_TASK_VARIANTS 4
 uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) {
 	int64 demand = wo->sched_data.demand;
+	uint64 selection = IRT_NUM_TASK_VARIANTS-1;
 	if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-1))/(IRT_NUM_TASK_VARIANTS*2)) {
-		return 0;
+		selection = 0;
 	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-2))/(IRT_NUM_TASK_VARIANTS*2)) {
-		return 1;
+		selection = 1;
 	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-3))/(IRT_NUM_TASK_VARIANTS*2)) {
-		return 2;
+		selection = 2;
 	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-4))/(IRT_NUM_TASK_VARIANTS*2)) {
 	//	return 3;
 	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-5))/(IRT_NUM_TASK_VARIANTS*2)) {
@@ -131,7 +131,8 @@ uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) 
 	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-6))/(IRT_NUM_TASK_VARIANTS*2)) {
 	//	return 5;
 	}
-	return 3;
+	irt_inst_insert_db_event(wo, IRT_INST_DBG_TASK_SELECTION, *(irt_worker_id*)(&selection));
+	return (uint32)selection;
 }
 #endif //IRT_TASK_OPT
 

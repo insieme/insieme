@@ -42,6 +42,8 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/depth_first_search.hpp>
+#include <boost/graph/strong_components.hpp>
+#include <boost/graph/topological_sort.hpp>
 
 #include <boost/unordered_map.hpp>
 #include <boost/optional.hpp>
@@ -561,6 +563,93 @@ namespace graph {
 			res.push_back(graph[cur]);
 		}
 
+		return res;
+	}
+
+
+	template<
+		typename GraphType,
+		typename VertexType = typename boost::vertex_bundle_type<GraphType>::type,
+		typename VertexDecriptorType = typename boost::graph_traits<GraphType>::vertex_descriptor
+	>
+	Graph<std::set<VertexType>> computeSCCGraph(const GraphType& graph) {
+
+		auto numVertices = boost::num_vertices(graph);
+
+		// start by computing identifying the components using boost ...
+		typename GraphType::vertices_size_type componentMap[numVertices];
+		auto numComponents = boost::strong_components(graph, componentMap);
+
+		// create sets forming equivalence classes (nodes of the resulting graph)
+		std::set<VertexType> sets[numComponents];
+
+		for (std::size_t i=0; i<numVertices; i++) {
+			// add type to corresponding set
+			sets[componentMap[i]].insert(graph[i]);
+		}
+
+		// create resulting graph
+		Graph<std::set<VertexType>> res;
+		for (std::size_t i=0; i<numComponents; i++) {
+			res.addVertex(sets[i]);
+		}
+
+		// add edges between components
+		// Therefore: iterate through all original edges and connect corresponding SCCs
+		auto edges = boost::edges(graph);
+		for(auto it = edges.first; it != edges.second; ++it) {
+			auto cur = *it;
+
+			// get components this edge is connection
+			#pragma GCC diagnostic push
+			#pragma GCC diagnostic ignored "-Wuninitialized"
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 7
+			#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+			auto src = componentMap[source(cur, graph)];
+			auto trg = componentMap[target(cur, graph)];
+			#pragma GCC diagnostic pop
+
+			// if edge is crossing component boarders ...
+			if (src != trg) {
+				// ... add an edge to the result
+				res.addEdge(sets[src], sets[trg]);
+			}
+		}
+
+		return res;
+	}
+
+	/**
+	 * Computes a topological order of the nodes stored within the given boost graph.
+	 */
+	template<typename GraphType>
+	std::vector<typename GraphType::vertex_descriptor> getTopologicalOrder(const GraphType& graph) {
+
+		vector<typename GraphType::vertex_descriptor> order;
+		try {
+			// compute (reverse) topological order
+			boost::topological_sort(graph, std::back_inserter(order));
+		} catch(boost::not_a_dag e) {
+			assert(0 && "There should not be any cycles!");
+		}
+
+		// reverse order and return result
+		return reverse(order);
+	}
+
+	/**
+	 * Computes a topological order of the vertices organized within the given graph.
+	 */
+	template<
+		class Vertex,
+		class EdgeLabel,
+		template<class V, class D> class VertexMap
+	>
+	std::vector<Vertex> getTopologicalOrder(const Graph<Vertex,EdgeLabel,boost::bidirectionalS, VertexMap>& graph) {
+		auto order = getTopologicalOrder(graph.asBoostGraph());
+		std::vector<Vertex> res;
+		for(const auto& cur : order) res.push_back(graph.getVertexFromDescriptor(cur));
 		return res;
 	}
 

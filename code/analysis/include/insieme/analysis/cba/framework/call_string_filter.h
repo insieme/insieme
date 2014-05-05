@@ -91,7 +91,7 @@ namespace cba {
 
 		std::set<Label> computePotentialPredecessors(const Label& label);
 
-		std::set<Label> computePotentialPredecessors(const StatementAddress& stmt);
+		std::set<Label> computePotentialPredecessors(const StatementInstance& stmt);
 
 		std::set<Label> getAllStaticUses(const Callee& fun);
 	};

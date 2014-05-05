@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 
 	for(int i = 0; i < 1; ++i)
 		err = subfunction(kernel, queue[0], globalSize, localSize, context, dev_ptr5);
-//		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
+//		err = clEnqueueNDRangeKernel(queue[0], kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
 

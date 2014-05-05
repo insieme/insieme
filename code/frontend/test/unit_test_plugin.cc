@@ -84,14 +84,14 @@ public:
 	UnitTestPlugin() {
 		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
 		auto unitTestSymbolicPragma = insieme::frontend::extensions::PragmaHandler("unittest", "symbolic", tok::string_literal["expected"] >> tok::eod,
-			[&](MatchObject mo, NodePtr node) {
-				symbolicTests[node] = mo.getString("expected");
+			[&](MatchObject mo, stmtutils::StmtWrapper node) {
+				symbolicTests[node[0]] = mo.getString("expected");
 				return node;
 			});
 		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
 		auto unitTestResolvedPragma = insieme::frontend::extensions::PragmaHandler("unittest", "resolved", tok::string_literal["expected"] >> tok::eod,
-			[&](MatchObject mo, NodePtr node) {
-				resolvedTests[node] = mo.getString("expected");
+			[&](MatchObject mo, stmtutils::StmtWrapper node) {
+				resolvedTests[node[0]] = mo.getString("expected");
 				return node;
 			});
 

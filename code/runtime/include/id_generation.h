@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "globals.h"
+#include "irt_globals.h"
 
 #define IRT_DECLARE_ID_TYPE(__type) \
 typedef struct _irt_##__type##_id irt_##__type##_id;

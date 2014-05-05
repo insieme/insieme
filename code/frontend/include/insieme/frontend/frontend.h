@@ -89,7 +89,7 @@ namespace frontend {
 			NoWarnings		= 1<<8,
 			StrictSemanticChecks = 1<<9,
 
-			icl_lib			= 1<<10
+			lib_icl			= 1<<10
 		};
 
 		/**

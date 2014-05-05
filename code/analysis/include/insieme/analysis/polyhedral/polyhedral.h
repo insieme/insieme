@@ -131,14 +131,14 @@ typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
 typedef std::vector<AccessInfoPtr> 	AccessList;
 
 /**
- * Stmt: this class assembles together the informations which are utilized to represent a
- * statement in the polyhedral mdoel. 
+ * Stmt: this class contains all necessary information which are together representing a
+ * statement in the polyhedral model.
  *
- * A statement is represented by the following infomrations:
- * 	- An *iteration domain* (with associated an iteration vector)
- * 	- A *scheduling* (or scattering) matrix (which defines the logical dates when the statment is
+ * A statement is represented by:
+ * 	- an **iteration domain** (with an associated iteration vector)
+ * 	- a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
  * 	  executed)
- *  - a set of *access functions* which identifies the read/writes happening inside the statement
+ *  - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
  */
 class Stmt : public utils::Printable {
 

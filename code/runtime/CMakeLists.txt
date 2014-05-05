@@ -162,6 +162,11 @@ lookup_lib ( GTEST_MAIN gtest_main )
 #include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR}) #what's this include/ thing? S. Widerin
 include_directories(${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
+# add meta information include path
+get_filename_component( insieme_runtime_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
+get_directory_property( insieme_code_dir DIRECTORY ${insieme_runtime_dir} PARENT_DIRECTORY )
+include_directories( ${insieme_code_dir}/meta_information/include )
+
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
@@ -189,6 +194,8 @@ if (NOT MSVC)
 		list(REMOVE_ITEM test_cases ${energy_test_cases})
 	endif (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
 endif (NOT MSVC)
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )

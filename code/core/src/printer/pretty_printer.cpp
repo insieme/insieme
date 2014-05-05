@@ -257,6 +257,7 @@ namespace {
 			int funCounter = 0;
 			int typeCounter = 0;
 			singleLineTypes = false;		// enable multiline type definitions
+
 			visitDepthFirstOnce(node, [&](const NodePtr& cur) {
 
 				// do not let-bind build ins
@@ -276,16 +277,23 @@ namespace {
 					// obtain a name (TODO: pick something more important)
 					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
 
-					// print a let binding
-					out << "let " << name << " = ";
-					visit(cur);
-					out << ";\n\n";
+					// avoid printing more than one scope
+					if(!printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
+						// print a let binding
+						out << "let " << name << " = ";
+						visit(cur);
+						out << ";\n\n";
+					}
 
 					// add a substitution rule
 					letBindings[cur] = name;
 				}
 
 			}, false);	// iterate through IR in post-order
+
+			if (printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
+				letBindings.erase(node);
+			}
 
 			singleLineTypes = true;
 			visit(node);

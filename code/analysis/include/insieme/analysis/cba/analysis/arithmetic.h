@@ -166,7 +166,7 @@ namespace cba {
 		using super::elem;
 		using super::pack;
 
-		void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
+		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// special case for the lit(1:'a) in the lang def
 			if (literal->getStringValue() == "1") {
@@ -190,7 +190,7 @@ namespace cba {
 
 		}
 
-		void visitVariable(const VariableAddress& var, const Context& ctxt, Constraints& constraints) {
+		void visitVariable(const VariableInstance& var, const Context& ctxt, Constraints& constraints) {
 
 			auto def = getDefinitionPoint(var);
 
@@ -225,7 +225,7 @@ namespace cba {
 
 			// special case: it is the parameter of an entry-point function
 			if (var.getDepth() > 5) {
-				auto lambda = var.getParentAddress(5).isa<LambdaExprAddress>();
+				auto lambda = var.getParentInstance(5).isa<LambdaExprInstance>();
 				if (lambda && lambda->getBody() == cba.getRoot()) {
 					// it is a input parameter of the function => use symbolic value as well
 					addSymbolicValue();
@@ -238,7 +238,7 @@ namespace cba {
 
 		}
 
-		void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			static const Formula unknown;
 
 			// conduct std-procedure
@@ -309,7 +309,7 @@ namespace cba {
 			constraints.add(elem(unknown, A_res));
 		}
 
-		void visitCastExpr(const CastExprAddress& cast, const Context& ctxt, Constraints& constraints) {
+		void visitCastExpr(const CastExprInstance& cast, const Context& ctxt, Constraints& constraints) {
 			// for this analysis we are ignoring casts
 			constraints.add(subset(
 					cba.getSet(A, cast->getSubExpression(), ctxt),

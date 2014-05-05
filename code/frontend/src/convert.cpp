@@ -43,7 +43,6 @@
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
@@ -68,6 +67,8 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
+
+#include "insieme/utils/progress_bar.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -218,23 +219,16 @@ inline string  createPrefix(const std::string& name, unsigned pass, unsigned of)
 /**
  * some tool to print a progress bar, some day would be cool to have an infrastructure to do so
  */
-inline void printProgress (const std::string& prefix, unsigned cur, unsigned max){
-	std::stringstream out;
-	static unsigned last = 0;
+inline void printProgress (const std::string& prefix, unsigned cur, unsigned max) {
+	static unsigned lastPos = 0;
 	unsigned a = ((float)cur/ (float)max) * 60.0f;
-	if (a > last){
-		unsigned i;
-		for (i = 0; i< a; i++)
-			out << "=";
-		out  << ">";
-		i++;
-		for (; i< 60; i++)
-			out << " ";
-		std::cout << "\r" << prefix << " [" << out.str() << "] " << boost::format("%5.2f") % (100.f*((float)cur/(float)max)) << "\% of " << max << " " << std::flush;
-		last = a;
+	if (a > lastPos) {
+		lastPos = a;
+		std::cout << "\r" << utils::ProgressBar(prefix, max, cur, 60, std::cout, false);
 	}
-	if (cur == max)
-		last =0;
+	if (cur == max) {
+		lastPos = 0;
+	}
 }
 
 } // End empty namespace
@@ -293,9 +287,6 @@ tu::IRTranslationUnit Converter::convert() {
 	used = true;
 
 	assert(getCompiler().getASTContext().getTranslationUnitDecl());
-
-	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
@@ -430,9 +421,9 @@ tu::IRTranslationUnit Converter::convert() {
 	//frontend done
 	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;
 
-//	std::cout << " ==================================== " << std::endl;
-//	std::cout << getIRTranslationUnit() << std::endl;
-//	std::cout << " ==================================== " << std::endl;
+	//std::cout << " ==================================== " << std::endl;
+	//std::cout << getIRTranslationUnit() << std::endl;
+	//std::cout << " ==================================== " << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -678,11 +669,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			}
 
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
-
-			// OMP threadPrivate
-			if (insieme::utils::set::contains (thread_private, varDecl)){
-				omp::addThreadPrivateAnnotation(globVar);
-			}
 
 			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 			varDeclMap.insert( { valDecl, globVar } );
@@ -1000,7 +986,7 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
 
-	pragma::attachPragma(node,funcDecl,*this);
+	pragma::attachPragma(node.as<core::StatementPtr>(),funcDecl,*this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -1188,9 +1174,13 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 							getInitExpr (curr->getType(), inits[i])));
 			}
 			if (members.empty())
-				retIr = builder.callExpr(mgr.getLangBasic().getZero(), builder.getTypeLiteral(structTy));
-			else
+				retIr = builder.getZero(structTy);
+			else {
 				retIr = builder.structExpr(structTy, members);
+
+				// fix type to generic type (not the resolved one)
+				retIr = core::transform::replaceNode(mgr, core::NodeAddress(retIr).as<core::StructExprAddress>()->getType(), targetType).as<core::ExpressionPtr>();
+			}
 			return retIr;
 		}
 
@@ -1219,6 +1209,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		assert(false && "fallthrow while initializing generic typed global");
 	}
 
+	// the initialization is not a list anymore, this a base case
+	//if types match, we are done
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+		return (retIr = init);
+	}
+
 	if ( core::UnionTypePtr unionTy = elementType.isa<core::UnionTypePtr>() ) {
 
 		// here is the thing, the field comes hiden in a literal (the function called)
@@ -1234,12 +1230,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return (retIr = init.as<core::CallExprPtr>()[0]);
-	}
-
-	// the initialization is not a list anymore, this a base case
-	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
-		return (retIr = init);
 	}
 
 	// long long types
@@ -1452,7 +1442,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 				core::TypePtr trgTy =  lookupTypeDetails(symb);
 				// a new generic type will point to the previous translation unit decl
-				if (core::StructTypePtr structTy = trgTy.isa<core::StructTypePtr>()){
+				if (core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()){
 
 					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
 
@@ -1462,18 +1452,28 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 
 					core::TypePtr impl = symb;
 					// if target is an annonymous type, we create a new type with the name of the typedef
-					if (structTy->getName()->getValue().substr(0,5) == "_anon"){
-						impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
+					if (namedType->getName()->getValue() == ""){
 
-						core::transform::utils::migrateAnnotations(structTy.as<core::TypePtr>(), impl);
+						if (auto structTy = namedType.isa<core::StructTypePtr>()){
+							impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+						}
+						else if (auto unionTy = namedType.isa<core::UnionTypePtr>()){
+							impl = builder.unionType (builder.stringValue(name), unionTy->getEntries());
+						}
+						else{
+							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
+						}
+
+						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), impl);
 						core::annotations::attachName(impl,name);
 
-						if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
+						//if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
 							//if the typeDef oft the anonymous type was done in a system header we need to
 							//annotate to enable the backend to avoid re-declaring the type
 							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
 							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
-						}
+						//}
 						VLOG(2) << "    -" << gen;
 						typeCache[typedefType] = gen;
 					}
@@ -1482,7 +1482,11 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 					res = gen;
 				}
 			}
+		//	else if
+		//	}
 		}
+		//std::cout << " - fixed? into: " << res << std::endl;
+		//std::cout << " - implementation: " << lookupTypeDetails(res) << std::endl;
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1493,8 +1497,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			getIRTranslationUnit().addType(symbol, res);
 		}
 	}
-
-	pragma::attachPragma(res,decl,*this);
 
 	for(auto plugin : this->getConversionSetup().getPlugins()) {
         plugin->PostVisit(decl, res, *this);
@@ -1804,25 +1806,22 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		VLOG(2) << " DONE: function declaration: " << funcDecl->getQualifiedNameAsString();
 	}
 
-	// FIXME: this might have some performance impact
-	// if we are dealing with a memberFunction, retrieve meta-info and update it
 	if (funcTy->isMember()) {
-		//FIXME create map from classType to vector<metainfo> in TU
-		//FIXME merge that map, and at programm generation merge the metainfo together
-		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
+		// if we are dealing with a memberFunction, we create a meta-info and store it in the IRTU
+		// all meta-infos are merged together when leaving the realm of the TU (when turning into
+		// IRProgram) and attacthed to the according type -- this is handeled in the IRTU
 
+		//the class thype of the current member
+		core::TypePtr classType = funcTy->getParameterTypes()[0].as<core::RefTypePtr>()->getElementType();
 		core::ClassMetaInfo classInfo;
-		if (core::hasMetaInfo(classType)){
-			classInfo = core::getMetaInfo(classType);
-		}
 
 		if (funcTy->isConstructor()) {
 			//prevent multiple entries of ctors
-			if(!classInfo.containsConstructor(lambda))
-				classInfo.addConstructor(lambda);
+			if(!classInfo.containsConstructor(symbol))
+				classInfo.addConstructor(symbol);
 		}
 		else if (funcTy->isDestructor()){
-			classInfo.setDestructor(lambda);
+			classInfo.setDestructor(symbol);
 			classInfo.setDestructorVirtual(llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual());
 		}
 		else {
@@ -1835,9 +1834,12 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 				//for everything else use the rich name
 				functionname = symbol->getStringValue();
 			}
+			VLOG(2) << "funcName used: " << functionname;
+			VLOG(2) << "qualName: " << funcDecl->getQualifiedNameAsString();
+			VLOG(2) << "symbol "<< symbol;
 
             if (!classInfo.hasMemberFunction(functionname, funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())){
-				classInfo.addMemberFunction(functionname, lambda,
+				classInfo.addMemberFunction(functionname, symbol,
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
@@ -1853,7 +1855,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 				//abort();
 			}
 		}
-		core::setMetaInfo(classType, classInfo);
+		getIRTranslationUnit().addMetaInfo(classType, classInfo);
 	}
 
 	// update cache

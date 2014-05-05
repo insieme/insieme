@@ -40,9 +40,8 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/omp/omp_sema.h"
-#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
@@ -63,6 +62,7 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
+#include "insieme/frontend/extensions/omp_frontend_plugin.h"
 
 namespace insieme {
 namespace frontend {
@@ -94,6 +94,10 @@ namespace frontend {
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
         registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 
+        if(hasOption(ConversionSetup::OpenMP)) {
+            registerFrontendPlugin<extensions::OmpFrontendPlugin>();
+        }
+
         if(hasOption(ConversionJob::GemCrossCompile)) {
             registerFrontendPlugin<GemsclaimPlugin>();
 			setDefinition("_GEM");
@@ -107,7 +111,7 @@ namespace frontend {
         	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
 		}
        
-        if(flags & icl_lib) {
+        if(flags & lib_icl) {
         	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
 		}
 
@@ -138,7 +142,13 @@ namespace frontend {
 		if(hasOption(OpenCL)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+
+			setup.setDefinition("INSIEME");
+		}
+		if(hasOption(lib_icl)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
+			setup.addIncludeDirectory(CLANG_SRC_DIR);
+			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 
 			setup.setDefinition("INSIEME");
 		}
@@ -146,11 +156,6 @@ namespace frontend {
 		// convert files to translation units
 		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
 			auto res = convert(manager, file, setup);
-
-			// apply OpenMP sema
-			if (setup.hasOption(ConversionSetup::OpenMP)) {
-				res = omp::applySema(res, manager);
-			}
 
 			// apply Cilk sema
 			if (setup.hasOption(ConversionSetup::Cilk)) {

@@ -40,7 +40,7 @@
 
 #include "declarations.h"
 #include "hwinfo.h"
-#include "globals.h"
+#include "irt_globals.h"
 #include "irt_logging.h"
 
 #include <limits.h>

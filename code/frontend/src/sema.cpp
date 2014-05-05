@@ -37,7 +37,6 @@
 #include "insieme/frontend/sema.h"
 
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "clang/Lex/Preprocessor.h"

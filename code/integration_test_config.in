@@ -37,6 +37,8 @@
 # some configuration options 
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
+compiler[insiemecc_c_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_c++_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
 compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
@@ -63,6 +65,5 @@ sortdiff=@insieme_root_dir@/test/sortdiff
 time_executable=@TIME_EXECUTABLE@
 
 # setup insieme runtime compiler flags
-includes[main_run_compile]={@insieme_code_dir@/runtime/include}
 use_libmath[main_run_compile]=1
 use_libpthread[main_run_compile]=1

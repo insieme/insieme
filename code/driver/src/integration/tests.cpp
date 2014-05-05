@@ -117,7 +117,9 @@ namespace integration {
 				fs::ifstream in(file);
 				if (in.is_open()) {
 					// load local configuration
-					res <<= Properties::load(in);
+					auto p = Properties::load(in);
+					res.set("CUR_CONFIG_PATH", dir.string());
+					res <<= p;
 				} else {
 					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
 				}
@@ -161,10 +163,13 @@ namespace integration {
 			vector<frontend::path> files;
 
 			for (const auto& file : prop.get<vector<string>>("files")) {
-				files.push_back((testCaseDir / file).string());
+				if(fs::path(file).is_absolute())
+					files.push_back(file);
+				else
+					files.push_back((testCaseDir / file).string());
 			}
 
-			//no files specified, use default names TODO ENABLE IF ALL TEST_DATA IS CONVERTED
+			//no files specified, use default names
 			if(files.size()==0){
 
 				// extract the case name from the test directory
@@ -176,7 +181,7 @@ namespace integration {
 					files.push_back((testCaseDir / (caseName + ".c")).string());
 				else {
 					// this must be a c++ test case
-					assert(fs::exists(testCaseDir / (caseName + ".cpp")));
+					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file dosen't exist: " << testCaseDir << "/" << caseName << ".cpp";
 					files.push_back((testCaseDir / (caseName + ".cpp")).string());
 
 					// if test is located in apropiate folder, activate CXX11 standard
@@ -219,7 +224,15 @@ namespace integration {
 
 			// extract interception configuration
 			auto interceptionNameSpacePatterns = prop.get<vector<string>>("intercepted_name_spaces");
-			auto interceptedHeaderFileDirectories = prop.get<vector<frontend::path>>("intercepted_header_file_dirs");
+			vector<frontend::path> interceptedHeaderFileDirectories;
+
+			for(const auto& path : prop.get<vector<string>>("intercepted_header_file_dirs")) {
+				if(path.at(0) == '/') {
+					interceptedHeaderFileDirectories.push_back(path);
+				} else {
+					interceptedHeaderFileDirectories.push_back((testCaseDir / path).string());
+				}
+			}
 
 			// add test case
 			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,
@@ -244,7 +257,7 @@ namespace integration {
 			// read the test.cfg file
 			const fs::path testConfig = testDir / "test.cfg";
 			if (!fs::exists(testConfig)) {
-				LOG(WARNING) << "Not test-configuration file found!";
+				LOG(WARNING) << "No test-configuration file found!";
 				return res;
 			}
 
@@ -284,7 +297,7 @@ namespace integration {
 				// check whether it is a test suite
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
-					LOG(INFO) << "Descending into sub-test-directory " << (testCaseDir).string();
+					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
 					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/");
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 					continue;
@@ -427,9 +440,9 @@ namespace integration {
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
 
 		// add pre-processor definitions
-		//for_each(definitions, [&](const std::pair<string,string>& def) {
-			//job.setDefinition(def.first, def.second);
-		//});
+		for(const auto& cur : definitions) {
+			job.setDefinition(cur.first, cur.second);
+		}
 
 		return job.execute(manager);
 

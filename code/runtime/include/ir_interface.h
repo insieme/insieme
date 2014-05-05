@@ -70,17 +70,25 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 
 /** From a job description structure, generates a number of parallel work items to perform the job,
  *  and puts them into a shared group. 
- *  If the parallel only implements a single task, no group is created.
  *  The return value is a pointer to either a work item or a work group.
  *  To wait for the completion of the whole parallel job, use "irt_merge".
  */
 irt_joinable* irt_parallel(const irt_parallel_job* job);
+
+/** From a job description structure, generates a single work item to perform the job.
+ *  No group is created.
+ *  The return value is a pointer to a work item.
+ *  To wait for the completion of the whole parallel job, use "irt_merge".
+ */
+irt_joinable* irt_task(const irt_parallel_job* job);
 
 /** Waits until a job launched by irt_parallel is finished.
  */
 void irt_merge(irt_joinable* joinable);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
+
+#define IRT_BUSYWHILE(_bla) while(_bla) { irt_scheduling_yield(irt_worker_get_current(), irt_wi_get_current()); }
 
 #define par_printf printf
 

@@ -58,7 +58,7 @@ namespace cba {
 		/**
 		 * The expression which created the represented channel.
 		 */
-		core::JobExprAddress creationPoint;
+		core::JobExprInstance creationPoint;
 
 		/**
 		 * The context when triggering the create function.
@@ -68,14 +68,14 @@ namespace cba {
 	public:
 
 		Job()
-			: utils::HashableImmutableData<Job<Context>>(combineHashes(core::JobExprAddress(), Context())) {}
+			: utils::HashableImmutableData<Job<Context>>(combineHashes(core::JobExprInstance(), Context())) {}
 
-		Job(const core::JobExprAddress& job, const Context& ctxt)
+		Job(const core::JobExprInstance& job, const Context& ctxt)
 			: utils::HashableImmutableData<Job<Context>>(combineHashes(job, ctxt)),
 			  creationPoint(job),
 			  creationContext(ctxt) {}
 
-		const core::JobExprAddress& getAddress() const {
+		const core::JobExprInstance& getCreationPoint() const {
 			return creationPoint;
 		}
 
@@ -103,17 +103,17 @@ namespace cba {
 		}
 	};
 
-	inline bool isJobConstructor(const core::ExpressionAddress& address) {
+	inline bool isJobConstructor(const core::ExpressionInstance& address) {
 		return address.isa<core::JobExprAddress>();
 	}
 
 	template<typename Context>
-	Job<Context> getJobFromConstructor(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	Job<Context> getJobFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
 		assert(isJobConstructor(ctor));
 
 		// create the job instance
-		return Job<Context>(ctor.as<core::JobExprAddress>(), ctxt);
+		return Job<Context>(ctor.as<core::JobExprInstance>(), ctxt);
 	}
 
 } // end namespace cba

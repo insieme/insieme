@@ -202,7 +202,7 @@ namespace cba {
 						if (channelValues.find(point) != channelValues.end()) continue;
 
 						// add dependency to channel
-						auto channelSet = cba.getSet(Ch, point.getStatement().template as<CallExprAddress>()[0], point.getContext());
+						auto channelSet = cba.getSet(Ch, point.getStatement().template as<CallExprInstance>()[0], point.getContext());
 						channelValues[point] = channelSet;
 						inputs.push_back(channelSet);
 						changed = true;

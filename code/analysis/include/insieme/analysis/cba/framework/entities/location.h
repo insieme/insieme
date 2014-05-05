@@ -62,7 +62,7 @@ namespace cba {
 		/**
 		 * The expression which created the represented memory location.
 		 */
-		core::ExpressionAddress creationPoint;
+		core::ExpressionInstance creationPoint;
 
 		/**
 		 * The context when triggering the create function.
@@ -72,16 +72,16 @@ namespace cba {
 	public:
 
 		Location()
-			: utils::HashableImmutableData<Location<Context>>(combineHashes(core::ExpressionAddress(), Context())) {}
+			: utils::HashableImmutableData<Location<Context>>(combineHashes(core::ExpressionInstance(), Context())) {}
 
-		Location(const core::ExpressionAddress& expr, const Context& ctxt = Context())
+		Location(const core::ExpressionInstance& expr, const Context& ctxt = Context())
 			: utils::HashableImmutableData<Location<Context>>(combineHashes(expr, ctxt)),
 			  creationPoint(expr),
 			  creationContext(ctxt) {}
 
 		Location(const Location<Context>& other) =default;
 
-		const core::ExpressionAddress& getAddress() const {
+		const core::ExpressionInstance& getCreationPoint() const {
 			return creationPoint;
 		}
 
@@ -167,11 +167,11 @@ namespace cba {
 		}
 
 		std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << location.getAddress() << "," << location.getContext() << "," << path << ")";
+			return out << "(" << location.getCreationPoint() << "," << location.getContext() << "," << path << ")";
 		}
 	};
 
-	inline bool isMemoryConstructor(const core::StatementAddress& address) {
+	inline bool isMemoryConstructor(const core::StatementInstance& address) {
 		core::StatementPtr stmt = address;
 
 		// literals of a reference type are memory locations
@@ -183,22 +183,22 @@ namespace cba {
 		return core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAlloc());
 	}
 
-	inline core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt) {
+	inline core::ExpressionInstance getLocationDefinitionPoint(const core::StatementInstance& stmt) {
 		assert(isMemoryConstructor(stmt));
 
 		// globals are globals => always the same
 		if (auto lit = stmt.isa<core::LiteralPtr>()) {
-			return core::LiteralAddress(lit);
+			return core::LiteralInstance(lit);
 		}
 
 		// locations created by ref.alloc calls are created at the call side
-		assert(stmt.isa<core::CallExprAddress>());
-		return stmt.as<core::CallExprAddress>();
+		assert(stmt.isa<core::CallExprInstance>());
+		return stmt.as<core::CallExprInstance>();
 	}
 
 
 	template<typename Context>
-	Location<Context> getLocation(const core::ExpressionAddress& ctor, const Context& ctxt) {
+	Location<Context> getLocation(const core::ExpressionInstance& ctor, const Context& ctxt) {
 
 		assert(isMemoryConstructor(ctor));
 

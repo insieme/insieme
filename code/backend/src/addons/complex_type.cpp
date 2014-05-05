@@ -94,8 +94,7 @@ namespace addons {
 			refInfo->externalType = c_ast::complexType(refInfo->externalType);
 
             //add the header dummy
-            c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(converter.getFragmentManager());
-			decl->addInclude("complex.h");
+            c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "complex.h");
 			refInfo->declaration = decl;
 			refInfo->definition = decl;
 

@@ -48,7 +48,7 @@ namespace analysis {
 namespace cba {
 
 	// a simple function
-	typedef core::ExpressionAddress ContextFreeCallable;
+	typedef core::ExpressionInstance ContextFreeCallable;
 
 	// the type used to represent functions / closures
 	template<typename Context>
@@ -56,13 +56,13 @@ namespace cba {
 		Callee callee;
 		Context context;
 
-		Callable(const core::LiteralAddress& lit)
+		Callable(const core::LiteralInstance& lit)
 			: callee(lit), context() {}
-		Callable(const core::LambdaExprAddress& fun)
+		Callable(const core::LambdaExprInstance& fun)
 			: callee(fun), context() {}
-		Callable(const core::BindExprAddress& bind, const Context& context)
+		Callable(const core::BindExprInstance& bind, const Context& context)
 			: callee(bind), context(context) {}
-		Callable(const core::ExpressionAddress& expr, const Context& context = Context())
+		Callable(const core::ExpressionInstance& expr, const Context& context = Context())
 			: callee(expr), context(context) {}
 		Callable(const Callee& callee, const Context& context = Context())
 			: callee(callee), context(context) {}
@@ -87,11 +87,11 @@ namespace cba {
 
 		std::size_t getNumParams() const { return callee.getNumParams(); }
 
-		const core::NodeAddress& getDefinition() const {
+		const core::NodeInstance& getDefinition() const {
 			return callee.getDefinition();
 		}
 
-		core::StatementAddress getBody() const {
+		core::StatementInstance getBody() const {
 			return callee.getBody();
 		}
 

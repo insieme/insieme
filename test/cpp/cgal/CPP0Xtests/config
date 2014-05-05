@@ -1,4 +1,7 @@
+use_cpp=0
 use_cpp11=1
 use_cpp[main_c++_sema]=0
 use_cpp[ref_c++_compile]=0
-use_cpp=0
+use_cpp[insiemecc_c++_compile]=0
+use_cpp[main_run_c++_convert]=0
+use_cpp[main_seq_c++_convert]=0

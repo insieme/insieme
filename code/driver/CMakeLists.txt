@@ -28,6 +28,7 @@ include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 include_directories( ${insieme_machine_learning_include_dir} )
+include_directories( ${insieme_meta_information_include_dir} )
 
 set( insieme_libraries 
 	insieme_utils 

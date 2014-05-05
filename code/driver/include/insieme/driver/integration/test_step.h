@@ -56,24 +56,28 @@ namespace integration {
 	struct TestStep;
 
 	// a function obtaining an index of available steps
+	const std::map<std::string,TestStep>& getFullStepList(int statThreads,bool scheduling);
 	const std::map<std::string,TestStep>& getFullStepList();
 
 	// filters out test steps that are not suitable for the given tests
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps);
+	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
 
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
 
 	// ------------------------------------------------------------------------
 
+
+
 	struct TestSetup {
 		bool mockRun;
-		bool enableStatistics;
+		SchedulingPolicy sched;
 		bool enablePerf;
 		bool clean;
+		int numThreads;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
@@ -128,6 +132,10 @@ namespace integration {
 
 		std::ostream& printTo(std::ostream& out) const {
 			return out << name;
+		}
+
+		const StepType getStepType(){
+			return type;
 		}
 	};
 

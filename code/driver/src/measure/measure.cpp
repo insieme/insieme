@@ -1101,6 +1101,7 @@ namespace measure {
 
 		// add flags required by the runtime
 		compiler.addFlag("-I " DRIVER_SRC_DIR "../../runtime/include");
+		compiler.addFlag("-I " DRIVER_SRC_DIR "../../meta_information/include");
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");

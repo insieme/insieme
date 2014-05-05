@@ -48,7 +48,6 @@
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "insieme/frontend/pragma/insieme.h"
@@ -989,8 +988,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	core::TypePtr&& lhsTy = lhs->getType();
 	core::TypePtr&& rhsTy = rhs->getType();
-	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 	if( !isAssignment ) {
 
@@ -1123,11 +1120,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	frontend_assert(opFunc) << "no operation code set\n"
 			<< "\tOperator: " << binOp->getOpcodeStr().str() << "\n"
-			<< "\t     LHS: " << *lhs << " : " << *lhs->getType() << "\n"
-			<< "\t     RHS: " << *rhs << " : " << *rhs->getType() << "\n";
+			<< "\t     LHS: \n" << dumpOneLine(lhs) << " \n of type: " << lhs->getType() << "\n"
+			<< "\t     RHS: \n" << dumpOneLine(rhs) << " \n of type: " << rhs->getType() << "\n";
 
-	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+	VLOG(2)	<< " Operator: " << binOp->getOpcodeStr().str();
+	VLOG(2) << " LHS: \n    " << dumpOneLine(lhs) << " \nof type: " << lhs->getType();
+	VLOG(2) << " RHS: \n    " << dumpOneLine(rhs) << " \nof type: " << rhs->getType();
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
 	return retIr;
@@ -1740,8 +1738,6 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		core::annotations::attachLocation(retIr, std::string (presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(), presEnd.getColumn());
 	}
 
-	// check for OpenMP annotations
-	retIr =  omp::attachOmpAnnotation(retIr, expr, convFact);
 	return retIr;
 }
 

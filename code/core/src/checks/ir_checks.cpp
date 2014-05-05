@@ -45,34 +45,65 @@ namespace core {
 namespace checks {
 
 
-Message Message::shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
+CodeLocation CodeLocation::shift(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
 
 	// make some assumptions
 	assert(outer.hasAnnotation(key));
 	assert(any(outer.getAnnotation(key)->getChildNodes(), [&](const NodePtr& cur) { return cur == address.getRootNode(); }));
 
-	// create new path
-	annotation_path new_path = annotationPath;
-	new_path.insert(new_path.begin(), std::make_pair(key, address));
+	// create a copy of this instance
+	CodeLocation res = *this;
 
-	// create shifted address
-	return Message(outer, new_path, errorCode, message, type);
+	// update the annotation path
+	res.annotationPath.insert(res.annotationPath.begin(), std::make_pair(key, address));
+
+	// update the address
+	res.address = outer;
+
+	// done
+	return res;
+}
+
+std::ostream& CodeLocation::printTo(std::ostream& out) const {
+	// start with the address ...
+	if (address.isValid()) {
+		out << address;
+	} else {
+		out << "<unknown>";
+	}
+
+	// ... followed by the annotation path ...
+	if (!annotationPath.empty()) {
+		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
+			out << *cur.first << ":" << cur.second;
+		});
+	}
+
+	// ... and finish with a source location if present
+	auto origin = getOrigin();
+	if (origin.isValid()) {
+		if (auto loc = annotations::getLocation(origin)) {
+			out << " - " << *loc;
+		}
+	}
+
+	return out;
+}
+
+Message Message::shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
+	// just built a new message targeting the shifted location
+	return Message(location.shift(outer, key), errorCode, message, type);
 }
 
 bool Message::operator==(const Message& other) const {
-	return type == other.type && address == other.address && annotationPath == other.annotationPath && errorCode == other.errorCode;
+	return type == other.type && location == other.location && errorCode == other.errorCode;
 }
 
 bool Message::operator<(const Message& other) const {
 	if (type != other.type) {
 		return type < other.type;
 	}
-
-	if (address != other.address) {
-		return address < other.address;
-	}
-
-	return annotationPath < other.annotationPath;
+	return location < other.location;
 }
 
 std::ostream& Message::printTo(std::ostream& out) const {
@@ -89,28 +120,7 @@ std::ostream& Message::printTo(std::ostream& out) const {
 	out << getErrorCode();
 
 	// .. continue with location ..
-	out << " @ (";
-	const insieme::core::NodeAddress& address = getAddress();
-	if (address.isValid()) {
-		out << address;
-	} else {
-		out << "<unknown>";
-	}
-
-	const auto& annotationPath = getAnnotationPath();
-	if (!annotationPath.empty()) {
-		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
-			out << *cur.first << ":" << cur.second;
-		});
-	}
-
-	// source location
-	auto origin = getOrigin();
-	if (origin.isValid()) {
-		if (auto loc = annotations::getLocation(origin)) {
-			out << " - " << *loc;
-		}
-	}
+	out << " @ (" << getLocation();
 
 	// .. and conclude with the message.
 	out << ") - MSG: " << getMessage();
@@ -264,59 +274,93 @@ namespace {
 		OptionalMessageList visitNode(const NodeAddress& node) {
 
 			// create result list
-			OptionalMessageList res;
+			MessageList res;
 
 			// create node set to eliminate double-visits
 			NodeSet all;
 
-			// use internal implementation for processing
-			checkNode(node, res, all);
+			// collect full list of locations to be checked
+			vector<CodeLocation> locations;
+			collectLocations(node, all, locations);
 
-			// done
-			return res;
-		}
+			// now check all the locations
+			for(const auto& loc : locations) {
+				auto issues = check->visit(loc.getOrigin());
 
-		void checkNode(const NodeAddress& node, OptionalMessageList& res, NodeSet& all) {
-
-			// add current node to set ...
-			bool isNew = all.insert(node.getAddressedNode()).second;
-			if (!isNew) {
-				// ... and if already checked, we are done!
-				return;
-			}
-
-			// check the current node and collect results
-			addAll(res, this->check->visit(node));
-
-			// check annotations of current node
-			auto annotations = node->getAnnotations();		// annotations might mutate while iterating through them
-			for (const auto& cur : annotations) {
-				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
-					assert(innerNode && "Nodes must not be null!");
-
-					// create an inner list of issues
-					OptionalMessageList innerList;
-
-					// collect messages from current annotation node
-					checkNode(NodeAddress(innerNode), innerList, all);
-
-					// merge inner message list with outer list
-					if (innerList) {
-						for(auto msg : innerList->getErrors()) {
-							add(res, msg.shiftAddress(node, cur.first));
-						}
-						for(auto msg : innerList->getWarnings()) {
-							add(res, msg.shiftAddress(node, cur.first));
-						}
+				// correct locations
+				if(issues) {
+					for(const Message& cur : issues->getAll()) {
+						res.add(Message(loc, cur.getErrorCode(), cur.getMessage(), cur.getType()));
 					}
 				}
 			}
 
-			// visit / check all child nodes
-			for (auto cur : node->getChildList()) {
-				checkNode(cur, res, all);
+			// -- experimental -- parallel version is disabled due to unsynchronized operations in the core -- experimental --
+//			#pragma omp parallel if(all.size() > 1000)			// i know, it is just a guess
+//			{
+//
+//				// create a thread-local storage for error messages
+//				MessageList local;
+//
+//				#pragma omp for
+//				for (typename vector<CodeLocation>::const_iterator it = locations.begin(); it < locations.end(); it++) {
+//					const auto& loc = *it;
+//
+//					// conduct checks
+//					auto issues = check->visit(loc.getOrigin());
+//
+//					// correct locations
+//					if(issues) {
+//						for(const Message& cur : issues->getAll()) {
+//							local.add(Message(loc, cur.getErrorCode(), cur.getMessage(), cur.getType()));
+//						}
+//					}
+//				}
+//
+//				#pragma omp critical (merge_message_list)
+//				{
+//					// merge the thread-local message list results
+//					res.addAll(local);
+//				}
+//
+//			}
+
+			// done
+			return (res.empty()) ? OptionalMessageList() : res;
+		}
+
+		void collectLocations(const NodeAddress& cur, NodeSet& all, vector<CodeLocation>& locations) {
+
+			// add node to known list of nodes
+			bool isNew = all.insert(cur.getAddressedNode()).second;
+			if (!isNew) return;		// it has already been known => done
+
+			// add to list of targets (addresses)
+			locations.push_back(cur);
+
+			// also add locations within check-able annotations
+			auto annotations = cur->getAnnotations();		// annotations might mutate while iterating through them
+			for (const auto& entry : annotations) {
+				for(const NodePtr& innerNode : entry.second->getChildNodes()) {
+					assert(innerNode && "Nodes must not be null!");
+
+					// create a inner list of locations
+					vector<CodeLocation> innerList;
+					collectLocations(NodeAddress(innerNode), all, innerList);
+
+					// merge inner list of locations with outer list
+					for(const auto& loc : innerList) {
+						locations.push_back(loc.shift(cur, entry.first));
+					}
+				}
+			}
+
+			// add child nodes
+			for (auto c : cur->getChildList()) {
+				collectLocations(c, all, locations);
 			}
 		}
+
 	};
 
 }

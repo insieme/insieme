@@ -3,6 +3,7 @@ build*/
 *.inl
 *.run
 *.seq
+*.insiemecc
 *.bin
 *~
 *.match

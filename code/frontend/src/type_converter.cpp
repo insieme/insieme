@@ -648,11 +648,17 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 }
 
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+
+	std::string name;
+	if (tagDecl->getName() != ""){
+		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), 
+									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), 
+									   convFact.getSourceManager());
+	}
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-		std::string name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), convFact.getSourceManager());
 		return builder.structType( builder.stringValue(name), structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-		return builder.unionType( structElements );
+		return builder.unionType( builder.stringValue(name), structElements );
 	}
 	frontend_assert(false && "TagType not supported");
 	return core::TypePtr();

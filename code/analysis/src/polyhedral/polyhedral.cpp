@@ -277,11 +277,12 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 //==== AffineSystem ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {
-	out << "{" << std::endl;
-	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunctionPtr& cur) { 
-			out << "\t" << cur->toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
-		} ); 
-	return out << "}" << std::endl;
+	for (std::vector<AffineFunctionPtr>::const_iterator cur=funcs.begin(); cur!=funcs.end(); ++cur) {
+		out << "\t\t" << (*cur)->toStr(AffineFunction::PRINT_ZEROS);
+		if (cur+1==funcs.end()) out << " #";
+		out << std::endl;
+	}
+	return out;
 }
 
 void AffineSystem::insert(const iterator& pos, const AffineFunction& af) { 
@@ -340,22 +341,24 @@ std::vector<core::VariablePtr> Stmt::loopNest() const {
 	return nest;
 }
 
+/**
+ * @brief Stmt::printTo prints the statement in human-readable format to the given stream
+ * @param out: the stream where to write the information to
+ * @return returns the ostream out stream (same as input)
+ */
 std::ostream& Stmt::printTo(std::ostream& out) const {
 
-	out << "@ S" << id << ": " << std::endl 
-		<< " -> " << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
-	
-	// Print the iteration domain for this statement 
-	out << " -> ID " << dom << std::endl; 
-
-	// Prints the Scheduling for this statement 
-	out << " -> Schedule: " << std::endl << schedule;
+	out << "stmt S_" << id << ": " << std::endl;
+	out << "\tnode       \t" << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
+	out << "\titer domain\t" << dom << std::endl;
+	out << "\tschedule   \t" << std::endl << schedule;
 
 	// Prints the list of accesses for this statement 
+	out << "\taccess     \t" << std::endl;
 	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
 
 	auto&& ctx = makeCtx();
-	out << "Card: " << *makeSet(ctx, dom)->getCard() << std::endl;
+	out << "\tcardinality\t" << *makeSet(ctx, dom)->getCard() << std::endl;
 
 	return out;
 }
@@ -430,17 +433,17 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 
 //==== Scop ====================================================================================
 
+/**
+ * @brief Scop::printTo prints a SCoP in human-readable format to out
+ * @param out
+ * @return the out stream (same as input stream)
+ */
 std::ostream& Scop::printTo(std::ostream& out) const {
-	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << std::left << "@ SCoP PRINT";	
-	// auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-	out << "\nNumber of sub-statements: " << size() << std::endl;
-		
-	out << "IV: " << getIterationVector() << std::endl;
+	out << "SCoP [#stmt:" << size() << ", itervec:" << getIterationVector() << "]" << std::endl;
 	for_each(begin(), end(), [&](const StmtPtr& cur) {
-		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur << std::endl; 
+		out << *cur << std::endl;
 	} );
-
-	return out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
+	return out;
 }
 
 // Adds a stmt to this scop. 

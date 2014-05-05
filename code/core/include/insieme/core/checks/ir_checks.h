@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -106,35 +106,20 @@ namespace checks {
 		return std::make_shared<C>(args...);
 	}
 
-
 	/**
-	 * The class used to represent Warnings and Errors encountered while running IR checks.
+	 * A class utilized to address the origin of issues within semantic checks.
 	 */
-	class Message : public utils::Printable {
-
+	class CodeLocation :
+			public utils::Printable,
+			public boost::equality_comparable<CodeLocation>,
+			public boost::less_than_comparable<CodeLocation> {
 	public:
-
-		/**
-		 * An enumeration of the various types of messaged that might occure.
-		 */
-		enum Type {
-			ERROR,		/* < in case a real problem has been discovered */
-			WARNING 	/* < in case something has been discovered that shouldn't be used but is */
-		};
-
 		/**
 		 * The type used to model a path through annotations and nodes.
 		 */
 		typedef vector<pair<utils::AnnotationKeyPtr, NodeAddress>> annotation_path;
 
 	private:
-
-		/**
-		 * The type of this message.
-		 *
-		 * @see Type
-		 */
-		Type type;
 
 		/**
 		 * The address of the node where this issue has been discovered on.
@@ -151,60 +136,12 @@ namespace checks {
 		 */
 		annotation_path annotationPath;
 
-		/**
-		 * The error code of this message - added since it is easier to automatically process
-		 * numbers than strings.
-		 */
-		ErrorCode errorCode;
-
-		/**
-		 * A string message describing the problem.
-		 */
-		string message;
-
 	public:
 
 		/**
-		 * Creates a new message based on the given parameters.
-		 *
-		 * @param address the address of the node this error has been discovered on - may be the empty address.
-		 * @param errorCode the error code describing the problem
-		 * @param message a message describing the issue
-		 * @param type the type of the new message (ERROR by default)
+		 * A default constructor for a location based on the given address.
 		 */
-		Message(const NodeAddress& address, ErrorCode errorCode, const string& message, Type type = ERROR)
-			: type(type), address(address), errorCode(errorCode), message(message) {};
-
-		/**
-		 * Creates a new message based on the given parameters.
-		 *
-		 * @param address the address of the node this error has been discovered on
-		 * @param errorCode the error code describing the problem
-		 * @param annotationPath the path within the annotation identifying the problem
-		 * @param message a message describing the issue
-		 * @param type the type of the new message (ERROR by default)
-		 */
-		Message(const NodeAddress& address, const annotation_path& annotatioPath, ErrorCode errorCode, const string& message, Type type = ERROR)
-			: type(type), address(address), annotationPath(annotatioPath), errorCode(errorCode), message(message) {};
-
-		/**
-		 * Shifts the address of this message such that it becomes a message addressing a
-		 * problem within a node of an annotation of an outer node.
-		 *
-		 * @param outer the address of the outer node
-		 * @param key the key of the annotation causing this issue
-		 * @return the modified message
-		 */
-		Message shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const;
-
-		/**
-		 * Obtains the address of the node this message is associated to.
-		 *
-		 * @return the node address - might be invalid in case the error cannot be associated to a single node.
-		 */
-		const NodeAddress& getAddress() const {
-			return address;
-		}
+		CodeLocation(const NodeAddress& address) : address(address), annotationPath() {};
 
 		/**
 		 * Obtains the annotation path of the node this message is associated to.
@@ -226,6 +163,135 @@ namespace checks {
 		const NodeAddress& getOrigin() const {
 			if (annotationPath.empty()) return address;
 			return annotationPath.back().second;
+		}
+
+		/**
+		 * Shifts the address of this location such that it becomes a location addressing a
+		 * problem within a node of an annotation of an outer node.
+		 *
+		 * @param outer the address of the outer node
+		 * @param key the key of the annotation causing this issue
+		 * @return the modified message
+		 */
+		CodeLocation shift(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const;
+
+		/**
+		 * Implements an equality operator for this code location implementation comparing the base address
+		 * and the extended annotation path.
+		 */
+		bool operator==(const CodeLocation& other) const {
+			return address == other.address && annotationPath == other.annotationPath;
+		}
+
+		/**
+		 * Implements a total order on code locations.
+		 */
+		bool operator<(const CodeLocation& other) const {
+			// address is more important ..
+			if (address != other.address) {
+				return address < other.address;
+			}
+			// if equal, it depends on the path
+			return annotationPath < other.annotationPath;
+		}
+
+		/**
+		 * Allows this location to be printed to an output stream.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
+
+	};
+
+
+	/**
+	 * The class used to represent Warnings and Errors encountered while running IR checks.
+	 */
+	class Message : public utils::Printable {
+
+	public:
+
+		/**
+		 * An enumeration of the various types of messaged that might occure.
+		 */
+		enum Type {
+			ERROR,		/* < in case a real problem has been discovered */
+			WARNING 	/* < in case something has been discovered that shouldn't be used but is */
+		};
+
+
+	private:
+
+		/**
+		 * The type of this message.
+		 *
+		 * @see Type
+		 */
+		Type type;
+
+		/**
+		 * The address of the node where this issue has been discovered on.
+		 */
+		CodeLocation location;
+
+		/**
+		 * The error code of this message - added since it is easier to automatically process
+		 * numbers than strings.
+		 */
+		ErrorCode errorCode;
+
+		/**
+		 * A string message describing the problem.
+		 */
+		string message;
+
+	public:
+
+		/**
+		 * Creates a new message based on the given parameters.
+		 *
+		 * @param location the location of the node this error has been discovered on - may be the empty location.
+		 * @param errorCode the error code describing the problem
+		 * @param message a message describing the issue
+		 * @param type the type of the new message (ERROR by default)
+		 */
+		Message(const CodeLocation& location, ErrorCode errorCode, const string& message, Type type = ERROR)
+			: type(type), location(location), errorCode(errorCode), message(message) {};
+
+		/**
+		 * Creates a new message based on the given parameters.
+		 *
+		 * @param origin the address of the node this error has been discovered on - may be the empty location.
+		 * @param errorCode the error code describing the problem
+		 * @param message a message describing the issue
+		 * @param type the type of the new message (ERROR by default)
+		 */
+		Message(const NodeAddress& origin, ErrorCode errorCode, const string& message, Type type = ERROR)
+			: type(type), location(origin), errorCode(errorCode), message(message) {};
+
+		/**
+		 * Shifts the message of this location such that it becomes a message addressing a
+		 * problem within a node of an annotation of an outer node.
+		 *
+		 * @param outer the address of the outer node
+		 * @param key the key of the annotation causing this issue
+		 * @return the modified message
+		 */
+		Message shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const;
+
+		/**
+		 * Obtains the location of the node causing this issue.
+		 *
+		 * @return the code location - might be invalid in case the error cannot be associated to a single node.
+		 */
+		const CodeLocation& getLocation() const {
+			return location;
+		}
+
+		/**
+		 * Obtains the address of the origin of this message (to the node causing the issue).
+		 */
+		const NodeAddress& getOrigin() const {
+			return location.getOrigin();
 		}
 
 		/**
@@ -287,7 +353,7 @@ namespace checks {
 		/**
 		 * Allows this message to be printed to an output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -420,7 +486,7 @@ namespace std {
     size_t operator()(const insieme::core::checks::Message &m) const
     {
         std::hash<string> hasher;
-        auto addr = m.getAddress();
+        auto addr = m.getLocation().getOrigin();
         auto message = m.getMessage();
         std::stringstream s;
         s << addr << message;

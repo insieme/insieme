@@ -521,11 +521,6 @@ ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }
 
-ExpressionPtr IRBuilder::zero(const TypePtr& type) const {
-	assert_true(type.isa<GenericTypePtr>()) << "Only supported for generic types - not for " << type << "\n";
-	return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
-}
-
 ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
@@ -635,7 +630,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// for all other generic types we return a generic zero value
 	if (type.isa<GenericTypePtr>()) {
-		return zero(type);
+		return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 	}
 
 	// TODO: extend for more types
@@ -675,20 +670,28 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
 	assert(targetType && "Target of an assignmet must be of type ref<'a>");
 
-	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
-	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
-		TypePtr nrtt = targetType->getElementType();
-		if(nrtt->getNodeType() != NT_UnionType) {
-			auto list = uType.getEntries();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
-				return types::isSubTypeOf(cur->getType(), nrtt);
-			});
+	// NOTE: this code is deactivated because is trying to be smarter than you, if you made your homework, there should
+	// be no need to do smart moves, the expression given to assign to is the rightfull ref to writte, and if we are
+	// dealing with an union, it should be already be addressed. if you need it, go ahead to uncoment it, but it wont be easy
+	//if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
+	//	TypePtr nrtt = targetType->getElementType();
+	//	std::cout << uType << std::endl;
+	//	std::cout << nrtt << std::endl;
+	//	if(!types::isSubTypeOf(uType, nrtt)){
+	//		if(nrtt->getNodeType() != NT_UnionType) {
+	//			auto list = uType.getEntries();
+	//				std::cout << "search for: " << nrtt << std::endl;
+	//			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+	//				std::cout << "name: " << cur << " : " << cur->getType() << std::endl;
+	//				return types::isSubTypeOf(cur->getType(), nrtt);
+	//			});
 
-			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
-			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
-					accessMember(value, pos->getName()));
-		}
-	}
+	//			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+	//			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+	//					accessMember(value, pos->getName()));
+	//		}
+	//	}
+	//}
 
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
@@ -766,7 +769,9 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 
 
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
-	assert(!dynamic_pointer_cast<const ArrayType>(array->getType()) && "Accessing array by value is not allowed!");
+	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
+	if(aType)
+		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArraySubscript1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
@@ -775,7 +780,8 @@ CallExprPtr IRBuilder::arrayRefElem(const ExpressionPtr& array, const Expression
 	assert(analysis::isRefType(array->getType()) && "Tried vector ref elem operation on non-ref expression");
 
 	auto aType = dynamic_pointer_cast<const ArrayType>(analysis::getReferencedType(array->getType()));
-	if(aType) return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArrayRefElem1D(), array, index);
+	if(aType)
+		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArrayRefElem1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(array->getType()));
 	assert(vType && "Tried array ref elem operation on non-array-ref expression");
 	return callExpr(refType(vType->getElementType()), manager.getLangBasic().getVectorRefElem(), array, index);
@@ -1117,6 +1123,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			params.push_back( parmVar );
 			callArgs.push_back(this->deref(bodyVar));
 			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
+			replVariableMap.insert( std::make_pair(bodyVar, refVar(parmVar)) );
 		}
 		else{
 			// we create a new variable to replace the captured variable

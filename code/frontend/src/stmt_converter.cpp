@@ -45,7 +45,6 @@
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/mpi/mpi_pragma.h"
 
@@ -92,7 +91,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 			// check if there is a kernelFile annotation
 			ocl::attatchOclAnnotation(decl->getInitialization(), declStmt, convFact);
 			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(decl, declStmt, convFact) );
+			retList.push_back( decl );
 		}
 		else{
 			retList.push_back(retStmt);
@@ -109,7 +108,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 //try {
 			auto retStmt = convFact.convertVarDecl(varDecl);
 			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
+			retList.push_back( retStmt );
 
 //		} catch ( const GlobalVariableDeclarationException& err ) {}
 	}
@@ -266,7 +265,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		// add annotations
 		attatchDatarangeAnnotation(forIr, forStmt, convFact);
 		attatchLoopAnnotation(forIr, forStmt, convFact);
-		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));
+		retStmt.push_back( forIr );
 
 		// incorporate statements do be done after loop and we are done
 		retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
@@ -357,7 +356,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		);
 
 		// handle eventual pragmas attached to the Clang node
-		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
+		retStmt.push_back( whileStmt );
 
 		if (!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
 			std::cerr << std::endl;
@@ -543,11 +542,8 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDoStmt(clang::DoStmt* doSt
 
 	core::StatementPtr irNode = builder.compoundStmt(stmts);
 
-	// handle eventual OpenMP pragmas attached to the Clang node
-	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irNode, doStmt, convFact);
-
 	// adding the WhileStmt to the list of returned stmts
-	retStmt.push_back(annotatedNode);
+	retStmt.push_back(irNode);
 	retStmt = stmtutils::tryAggregateStmts(builder, retStmt);
 
 	// otherwise we introduce an outer CompoundStmt
@@ -713,15 +709,12 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 	core::StatementPtr irSwitch = builder.switchStmt(condExpr, cases, defStmt);
 
-	// handle eventual OpenMP pragmas attached to the Clang node
-	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irSwitch, switchStmt, convFact);
-
 	// add declarations at switch scope
 	for(auto decl : decls) {
 		retStmt.push_back(decl);
 	}
 
-	retStmt.push_back(annotatedNode);
+	retStmt.push_back(irSwitch);
 	retStmt = tryAggregateStmts(builder, retStmt);
 
 	return retStmt;
@@ -832,7 +825,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitAsmStmt(clang::AsmStmt* as
 //							  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-	frontend_assert(false && "this code looks malform and no used");
+	//frontend_assert(false && "this code looks malform and no used") << stmt->getStmtClassName(); -- guess what, it is used!
 	std::for_each(stmt->child_begin(), stmt->child_end(), [ this ] (clang::Stmt* stmt) {
 			this->Visit(stmt);
 	});
@@ -865,31 +858,18 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 		convFact.untrackSourceLocation();
 	}
 
+	// print diagnosis messages
+	convFact.printDiagnosis(stmt->getLocStart());
+
+    // Deal with transfromation pragmas
+	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
+
     // call frontend plugin post visitors
     for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retStmt = plugin->PostVisit(stmt, retStmt, convFact);
     }
-
-	// print diagnosis messages
-	convFact.printDiagnosis(stmt->getLocStart());
-
-	// build the wrapper for single statements
-	if ( retStmt.isSingleStmt() ) {
-		core::StatementPtr irStmt = retStmt.getSingleStmt();
-
-		// Deal with mpi pragmas
-		mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
-
-		// Deal with transfromation pragmas
-		irStmt = pragma::attachPragma(irStmt,stmt,convFact).as<core::StatementPtr>();
-
-		// Deal with omp pragmas
-		if ( irStmt->getAnnotations().empty() )
-			retStmt = omp::attachOmpAnnotation(irStmt, stmt, convFact);
-        else
-            retStmt = stmtutils::StmtWrapper(irStmt);
-	}
-	return retStmt;
+	
+    return retStmt;
 }
 
 }

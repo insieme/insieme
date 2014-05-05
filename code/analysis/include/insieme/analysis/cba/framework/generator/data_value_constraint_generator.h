@@ -61,10 +61,10 @@ namespace cba {
 	template<typename Context, typename ... ExtraParams>
 	class DataValueConstraintGenerator :
 			public ConstraintGenerator,
-			public core::IRVisitor<void, core::Address, const Context&, const ExtraParams& ..., Constraints&> {
+			public core::IRVisitor<void, core::Instance, const Context&, const ExtraParams& ..., Constraints&> {
 
 		// a short-cut for the base class
-		typedef core::IRVisitor<void, core::Address, const Context&, const ExtraParams& ..., Constraints&> super;
+		typedef core::IRVisitor<void, core::Instance, const Context&, const ExtraParams& ..., Constraints&> super;
 
 		/**
 		 * The base-implementation is preventing the same arguments to be processed multiple times.
@@ -124,7 +124,7 @@ namespace cba {
 			auto& data = cba.getValueParameters<int, Context, ExtraParams...>(value);
 
 			// resolve node address (need to convert label to stmt)
-			const core::NodeAddress& node = cba.getStmt(std::get<1>(data));
+			const core::NodeInstance& node = cba.getStmt(std::get<1>(data));
 
 			// resolve the rest recursively and trigger the visit function
 			resolve(constraints, utils::int_type<2>(), data, node);
@@ -137,7 +137,7 @@ namespace cba {
 
 			auto& data = cba.getValueParameters<int,Context,ExtraParams...>(value);
 			int label = std::get<1>(data);
-			const core::NodeAddress& node = cba.getStmt(label);
+			const core::NodeInstance& node = cba.getStmt(label);
 
 			out << value << " = " << getAnalysisName(std::get<0>(data)) <<
 					"[l" << label << " = " << node->getNodeType() << " : "
@@ -157,7 +157,7 @@ namespace cba {
 		 * Overrides the standard visit function of the super type and realizes the guard avoiding the
 		 * repeated evaluation of identical argument types.
 		 */
-		virtual void visit(const core::NodeAddress& node, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
+		virtual void visit(const core::NodeInstance& node, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 
 			// filter out invalid contexts
 //			if (!isValidContext(cba, ctxt)) return;
@@ -172,7 +172,7 @@ namespace cba {
 		 * An entry point to be intersected in case sub-classes would like to customize the entry point of the
 		 * constraint resolution process (after the cache and ctxt has been checked).
 		 */
-		virtual void visitInternal(const core::NodeAddress& node, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
+		virtual void visitInternal(const core::NodeInstance& node, const Context& ctxt, const ExtraParams& ... args, Constraints& constraints) {
 			// by default, just forward call to visit
 			super::visit(node, ctxt, args..., constraints);
 		}

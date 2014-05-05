@@ -73,7 +73,7 @@ public:
             if(!msg.empty()) {
                 for(auto m:msg.getErrors()) {
                     std::stringstream s;
-                    s << m.getMessage() << m.getAddress() << m.getErrorCode();
+                    s << m.getMessage() << m.getLocation() << m.getErrorCode();
                     if(handledErrors.find(s.str())==handledErrors.end() &&
                        m.getMessage().find("Unresolved \"this\" literal found, check translation process") == std::string::npos) {
                         std::cerr << "\n####EXPR SEM. ERROR####\n" << m << "\n\n";
@@ -106,7 +106,7 @@ public:
             if(!msg.empty()) {
                 for(auto m: msg.getErrors()) {
                     std::stringstream s;
-                    s << m.getMessage() << m.getAddress() << m.getErrorCode();
+                    s << m.getMessage() << m.getLocation() << m.getErrorCode();
                     if(handledErrors.find(s.str())==handledErrors.end()) {
                         std::cerr << "\n####TYPE SEM. ERROR####\n" << m << "\n\n";
                         type.getTypePtr()->dump();
@@ -185,7 +185,7 @@ public:
             //dumpPretty(cur.second);
             for(auto m : msg.getErrors()) {
                     std::stringstream f;
-                    f << m.getMessage() << m.getAddress() << m.getErrorCode();
+                    f << m.getMessage() << m.getLocation() << m.getErrorCode();
                     if(handledErrors.find(f.str())==handledErrors.end()) {
                         std::cout << "#####\n" << m << std::endl;
                         std::cout << toString(*m.getOrigin());

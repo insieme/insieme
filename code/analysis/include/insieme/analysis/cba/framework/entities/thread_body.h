@@ -58,7 +58,7 @@ namespace cba {
 		 * The statement (compound or call of a bind expression) forming the body
 		 * of a thread.
 		 */
-		core::StatementAddress body;
+		core::StatementInstance body;
 
 		/**
 		 * The root context of the processed thread.
@@ -68,14 +68,14 @@ namespace cba {
 	public:
 
 		ThreadBody()
-			: utils::HashableImmutableData<ThreadBody<Context>>(combineHashes(core::StatementAddress(), Context())) {}
+			: utils::HashableImmutableData<ThreadBody<Context>>(combineHashes(core::StatementInstance(), Context())) {}
 
-		ThreadBody(const core::StatementAddress& body, const Context& ctxt)
+		ThreadBody(const core::StatementInstance& body, const Context& ctxt)
 			: utils::HashableImmutableData<ThreadBody<Context>>(combineHashes(body, ctxt)),
 			  body(body),
 			  threadRootContext(ctxt) {}
 
-		const core::StatementAddress& getBody() const {
+		const core::StatementInstance& getBody() const {
 			return body;
 		}
 

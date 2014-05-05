@@ -300,6 +300,17 @@ namespace utils {
 			return (!filename.empty() && ba::ends_with(filename.string(), "intrin.h")) ? (filename) : fail;
 		}
 
+namespace {
+
+	 boost::optional<std::string> isOCLHeader(const fs::path& path){
+		std::string name = path.filename().string();
+ 		if (name == "cl_platform.h") return std::string("CL/cl_platform.h");
+ 		if (name == "cl.h") return std::string("CL/cl.h");
+		return boost::optional<std::string>();
+	}
+
+}
+
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 			header tagging interface
 
@@ -341,8 +352,11 @@ namespace utils {
 		// get absolute path of header file
 		fs::path header = fs::canonical(fileName);
 
-		// check if header is in STL
-		if( auto stdLibHeader = toStdLibHeader(header) ) {
+		if (auto oclHeader = isOCLHeader(header)){
+			VLOG(2) << "OCL		header to be attached: " << oclHeader;
+			insieme::annotations::c::attachInclude(node, *oclHeader);
+			return;
+		}if( auto stdLibHeader = toStdLibHeader(header) ) {
 			header = *stdLibHeader;
 		} else if (auto interceptedLibHeader = toInterceptedLibHeader(header) ) {
 			header = *interceptedLibHeader;

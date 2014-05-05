@@ -21,7 +21,7 @@ endif()
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-get_directory_property( insieme_root_dir DIRECTORY ${insieme_code_dir} PARENT_DIRECTORY )
+get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 
 include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)
@@ -45,6 +45,8 @@ set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include
 
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
 
+set ( insieme_meta_information_include_dir 	${insieme_code_dir}/meta_information/include )
+
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
@@ -67,7 +69,7 @@ endif()
 # -------------------------------------------------------------- find location of utilities
 
 find_program(TIME_EXECUTABLE time)
-if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND") 
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
@@ -285,6 +287,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -fshow-column )
 	add_definitions( -fdiagnostics-show-option )
 	add_definitions( -Wall )
+	add_definitions( -fopenmp )
 	# add_definitions( -Wextra )
 	# add_definitions( -Werror )
 	# add_definitions( -pedantic )
