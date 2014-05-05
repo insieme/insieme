@@ -49,8 +49,6 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 
-#include "insieme/annotations/omp/omp_annotations.h"
-
 #include "insieme/utils/logging.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
@@ -1020,57 +1018,6 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 	}
 
 	return false;
-}
-
-bool hasGroupOperations(const JobExprPtr& job) {
-	if (!job) return false;
-
-	const core::lang::BasicGenerator& basic = job->getNodeManager().getLangBasic();
-
-    bool hasGroupOps = false;
-    core::visitDepthFirstPrunable (job, [&] (const core::NodePtr& cur) -> bool{
-        if (cur->getNodeType() == core::NT_CallExpr) {
-            const auto& c = cur.as<core::CallExprPtr>();
-            const auto& f = core::analysis::stripAttributes(c->getFunctionExpr());
-
-            if(basic.isGetThreadGroup(f) || basic.isGetGroupSize(f) || basic.isGetThreadId(f) || basic.isPFor(f) || basic.isRedistribute(f))
-                hasGroupOps = true;
-
-            // Prune on Parallel
-            if (basic.isParallel(f) && !c->hasAnnotation(annotations::OmpRegionAnnotation::KEY))
-                return true;
-            else
-                return false;
-        }
-
-        return false;
-    });
-
-    return hasGroupOps;
-}
-
-bool isTask(const JobExprPtr& job) {
-	// make a null-check
-	if (!job) return false;
-
-	core::IRBuilder builder(job->getNodeManager());
-
-    // range(1-inf)
-    if(job->getThreadNumRange().as<core::CallExprPtr>()->getArguments().size() == 1)
-            return false;
-
-    // skipping casts
-    core::ExpressionPtr max = job->getThreadNumRange().as<core::CallExprPtr>()->getArgument(1);
-    core::visitDepthFirstPrunable (max, [&] (const core::NodePtr& cur) -> bool{
-        if(cur.isa<core::LiteralPtr>()) {
-            max = cur.as<core::LiteralPtr>();
-            return true;
-        }
-
-        return false;
-    });
-
-    return !hasGroupOperations(job) && (max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u);
 }
 
 bool isZero(const core::ExpressionPtr& value) {

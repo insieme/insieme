@@ -56,6 +56,7 @@
 #include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/omp/omp_utils.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
 #include "insieme/annotations/omp/omp_annotations.h"
@@ -377,7 +378,7 @@ namespace runtime {
 				for(const auto& cur : impls) {
                     core::StatementPtr instrumentedBody;
                     // Let's wrap task/region with instrumentation calls
-                    if(core::analysis::isTask(job))
+                    if(analysis::omp::isTask(job))
                         instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
                     else
                         instrumentedBody = fixBranch(cur);
@@ -406,7 +407,7 @@ namespace runtime {
 
                 core::StatementPtr instrumentedBody;
                 // Let's wrap task/region with instrumentation calls
-                if(core::analysis::isTask(job))
+                if(analysis::omp::isTask(job))
                     instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
                 else
                     instrumentedBody = builder.compoundStmt(body);
@@ -484,11 +485,11 @@ namespace runtime {
 						// build runtime call
 
                         // handle region (must be handled before task or it will be mixed up)
-                        if(call->hasAnnotation(annotations::OmpRegionAnnotation::KEY))
+                        if(call->hasAnnotation(annotations::omp::RegionAnnotation::KEY))
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
 
                         // handle task
-                        if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
+                        if(analysis::omp::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
 
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);

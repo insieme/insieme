@@ -34,36 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/omp/omp_annotations.h"
+#pragma once
 
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/encoder/encoder.h"
-
-#include "insieme/utils/container_utils.h"
-
-#include "insieme/core/dump/annotations.h"
-
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
-namespace annotations {
+namespace analysis {
 namespace omp {
-
-const string RegionAnnotation::NAME = "omp::RegionAnnotation";
-const utils::StringKey<RegionAnnotation> RegionAnnotation::KEY("OMP::REGION");
-
-void RegionAnnotation::attach(const core::NodePtr& node) {
-	node->addAnnotation(std::make_shared<RegionAnnotation>());
-}
-
-} // namespace omp 
-} // namespace annotations
-} // namespace insieme
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot) {
-        out << "OmpRegionAnnotation ()" << std::endl;
-        return out;
+    // ----------------------------------- Jobs ----------------------------
+    
+    /*
+     * Tests wheter the given job expression has group operations (getThreadGroup, pfor, redistribute etc...)
+     */
+    bool hasGroupOperations(const insieme::core::JobExprPtr& job);
+    
+    /**
+     * Tests whether the given job expression is a task (only processed by a single thread and no group operations) or not.
+     */
+    bool isTask(const insieme::core::JobExprPtr& job);
+    
+    /**
+     * Tests whether the given job expression is a task (only processed by a single thread) or not.
+     */
+    inline bool isTask(const insieme::core::NodePtr& job) {
+    	return isTask(job.isa<insieme::core::JobExprPtr>());
     }
 
-} // end namespace std
+} // end omp namespace
+} // end analysis namespace 
+} // end insieme namespace
+

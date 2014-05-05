@@ -44,11 +44,13 @@ namespace annotations {
 
 using namespace insieme::core;
 
-class OmpRegionAnnotation : public NodeAnnotation {
+namespace omp {
+
+class RegionAnnotation : public NodeAnnotation {
 
 public:
 	static const string NAME;
-    static const utils::StringKey<OmpRegionAnnotation> KEY;
+    static const utils::StringKey<RegionAnnotation> KEY;
 
     const utils::AnnotationKeyPtr getKey() const { return &KEY; }
     const std::string& getAnnotationName() const { return NAME; }
@@ -63,13 +65,14 @@ public:
     static void attach(const NodePtr& node);
 };
 
-typedef std::shared_ptr<OmpRegionAnnotation> OmpRegionAnnotationPtr;
+typedef std::shared_ptr<RegionAnnotation> RegionAnnotationPtr;
 
-} // end namespace insieme
+} // end namespace omp 
 } // end namespace annotations
+} // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::OmpRegionAnnotation& lAnnot);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot);
 
 } // end namespace std

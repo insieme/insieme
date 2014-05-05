@@ -15,7 +15,6 @@ file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_annotations_include_dir} )
 
 # automatically run the script for generating IRBuilder interface
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)

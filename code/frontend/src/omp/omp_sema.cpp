@@ -879,8 +879,8 @@ protected:
 
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 
-        using namespace insieme::annotations;
-        OmpRegionAnnotationPtr ann = std::make_shared<OmpRegionAnnotation>();
+        using namespace insieme::annotations::omp;
+        RegionAnnotationPtr ann = std::make_shared<RegionAnnotation>();
         parallelCall->addAnnotation(ann);
 
 		resultStmts.push_back(parallelCall);

@@ -395,8 +395,8 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
-	irt_mutex_unlock(&condbundle.mutex);
-	irt_mutex_destroy(&condbundle.mutex);
+	//irt_mutex_unlock(&condbundle.mutex);
+	//irt_mutex_destroy(&condbundle.mutex);
 	IRT_DEBUG("Exiting ...\n");
 	irt_exit_handler();
 }
