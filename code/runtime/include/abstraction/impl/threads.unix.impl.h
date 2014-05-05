@@ -123,6 +123,7 @@ void irt_mutex_destroy(irt_mutex_obj *m) {
 }
 
 void irt_cond_wake_all(irt_cond_var *cv) {
+	// TODO [_GEMS]: is it still true? irt_cond_wake_one added since no irt_cond_wake_all implementation is available 
 	pthread_cond_broadcast(cv);
 }
 

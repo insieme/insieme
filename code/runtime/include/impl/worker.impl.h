@@ -108,8 +108,6 @@ void _irt_await_all_workers_init(irt_worker_init_signal *signal){
 		if(signal->init_count == irt_g_worker_count) {
 			// signal readyness of created thread to master thread
 			irt_cond_wake_all(&signal->init_condvar);
-			// TODO [_GEMS]: irt_cond_wake_one added since no irt_cond_wake_all implementation is available 
-			irt_cond_wake_one(&signal->init_condvar);
 		} else {
 			irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
 		}

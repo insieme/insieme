@@ -60,9 +60,9 @@
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
 // make sure scheduling policy is fixed to static
-//#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
-//	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
-//#endif
+#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
+	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
+#endif
 
 void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_context_data* region) {
 	irt_inst_region_list* list = wi->inst_region_list;
