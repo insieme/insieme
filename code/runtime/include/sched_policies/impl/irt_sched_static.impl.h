@@ -99,3 +99,10 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 		return real_wi;
 	}
 }
+
+void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
+	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
+	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
+}
+

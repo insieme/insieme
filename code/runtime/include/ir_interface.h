@@ -88,6 +88,8 @@ void irt_merge(irt_joinable* joinable);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
 
+#define IRT_BUSYWHILE(_bla) while(_bla) { irt_scheduling_yield(irt_worker_get_current(), irt_wi_get_current()); }
+
 #define par_printf printf
 
 static inline double irt_get_wtime() {

@@ -42,6 +42,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/parallel_extension.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -478,19 +479,6 @@ protected:
 			// create an expression accessing the literal
 			ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
 			return accessExpr;
-			// TODO fix this optimization:
-			//if(masterCopy) return accessExpr;
-			//// if not a master copy, optimize access
-			//if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
-			//	// repeated access, just use existing variable
-			//	return thisLambdaTPAccesses[accessExpr];
-			//} else {
-			//	// new access, generate var and add to map
-			//	VariablePtr varP = build.variable(accessExpr->getType());
-			//	assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
-			//	thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
-			//	return varP;
-			//}
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call / non-literal");
 		return NodePtr();
@@ -782,7 +770,8 @@ protected:
 		// set value in first iteration of loop
 		auto initialSet = b.ifStmt(b.eq(iterator, start), b.assign(getVolatileOrderedCount(), start));
 		// add safety net at end of body (for cases where ordered section not encountered)
-		auto waitLoop = b.whileStmt(b.ne(b.deref(getVolatileOrderedCount()), orderedItLit), b.compoundStmt());
+		auto waitLoop = b.callExpr(nodeMan.getLangExtension<core::lang::ParallelExtension>().getBusyLoop(), 
+			b.wrapLazy(b.ne(b.deref(getVolatileOrderedCount()), orderedItLit)));
 		auto atomic = b.atomicAssignment(
 			b.assign(getVolatileOrderedCount(), b.add(b.deref(getVolatileOrderedCount()), orderedIncLit)));
 		auto increment = b.compoundStmt(waitLoop, atomic);
@@ -804,11 +793,13 @@ protected:
 	}
 
 	NodePtr handleOrdered(const StatementPtr& stmtNode, const OrderedPtr& orderedP) {
+		auto& b = build; 
 		auto int8 = basic.getInt8();
-		auto waitLoop = build.whileStmt(build.ne(build.deref(getVolatileOrderedCount()), orderedItLit), build.compoundStmt());
-		auto increment = build.atomicAssignment(
-			build.assign(getVolatileOrderedCount(), build.add(build.deref(getVolatileOrderedCount()), orderedIncLit)));
-		return build.compoundStmt(waitLoop, stmtNode, increment);
+		auto waitLoop = b.callExpr(nodeMan.getLangExtension<core::lang::ParallelExtension>().getBusyLoop(), 
+			b.wrapLazy(b.ne(b.deref(getVolatileOrderedCount()), orderedItLit)));
+		auto increment = b.atomicAssignment(
+			b.assign(getVolatileOrderedCount(), b.add(b.deref(getVolatileOrderedCount()), orderedIncLit)));
+		return b.compoundStmt(waitLoop, stmtNode, increment);
 	}
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {

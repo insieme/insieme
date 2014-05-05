@@ -48,6 +48,9 @@
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
+#include "insieme/core/lang/parallel_extension.h"
+#include "insieme/core/transform/manipulation.h"
+
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -56,6 +59,7 @@ namespace runtime {
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
+		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		#include "insieme/backend/operator_converter_begin.inc"
@@ -224,6 +228,11 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0));
 		});
 
+		table[parExt.getBusyLoop()] = OP_CONVERTER({
+			auto whileLoop = core::transform::evalLazy(NODE_MANAGER, ARG(0), true);
+			return c_ast::call(C_NODE_MANAGER->create("IRT_BUSYWHILE"), CONVERT_EXPR((whileLoop))) ;
+		});
+
 		// locks
 
 		table[basic.getLockInit()] = OP_CONVERTER({
@@ -293,8 +302,6 @@ namespace runtime {
 			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		});
-
-
 
 		#include "insieme/backend/operator_converter_end.inc"
 

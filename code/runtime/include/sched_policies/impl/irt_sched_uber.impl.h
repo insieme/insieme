@@ -153,3 +153,13 @@ int irt_scheduling_iteration(irt_worker* self) {
 	// didn't find any work
 	return 0;
 }
+
+// ------------------------------------------------------------ optional scheduling -----------------------------------
+
+void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
+	irt_cwb_push_front(&self->sched_data.queue, yielding_wi);
+	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
+}
+
+
