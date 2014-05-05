@@ -58,6 +58,72 @@ struct DynamicPointerCast;
 template<typename P> struct is_ir_pointer : public boost::false_type {};
 template<typename T> struct is_ir_pointer<Pointer<T>> : public boost::true_type {};
 
+
+namespace detail {
+
+	/**
+	 * A specialization of the NodeAccessor template which will be used in cases where
+	 * the accessor is inherited by a pointer (to support access to the same elements
+	 * as for address and nodes directly).
+	 */
+	template<typename Node>
+	struct node_access_helper<Pointer<const Node>> {
+
+		/**
+		 * The type of the handled node.
+		 */
+		typedef Node node_type;
+
+		/**
+		 * Obtains access to the accessed node.
+		 */
+		inline const Node& getNode() const {
+			return **static_cast<const Pointer<const Node>*>(this);
+		}
+
+		/**
+		 * Obtains a reference to the entire list of children stored internally.
+		 *
+		 * @return a reference to the internally maintained child list
+		 */
+		const NodeList& getChildList() const {
+			return getNode().getChildNodeList();
+		}
+
+		/**
+		 * This generic method allows to access child nodes in a type-safe way. It is also used
+		 * by node accessors to obtain addresses of child nodes.
+		 *
+		 * Note: this function is required by the node accessors
+		 *
+		 * @tparam index the index of the child node to be obtained
+		 * @tparam Res the type of the child node
+		 * @return the address of the requested child node
+		 */
+		template<
+			unsigned index,
+			typename Res = typename node_child_type<node_type,index>::type
+		>
+		Pointer<const Res> getChildNodeReference() const {
+			// access the child via static polymorthism and cast result to known type
+			return static_pointer_cast<const Res>(getChildList()[index]);
+		}
+
+		/**
+		 * Obtains access to the child associated to the given index.
+		 *
+		 * Note: this function is required by the node accessors
+		 *
+		 * @param index the index of the child node to be accessed
+		 */
+		const NodePtr& getChildNodeReference(std::size_t index) const {
+			return getChildList()[index];
+		}
+	};
+
+}
+
+
 template<typename T>
 class Pointer :
 	public Ptr<T>,
