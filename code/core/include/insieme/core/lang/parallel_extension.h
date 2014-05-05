@@ -58,6 +58,7 @@ namespace lang {
 				: core::lang::Extension(manager) {}
 
 	public:
+		// An extension representing a busy waiting loop
 		LANG_EXT_DERIVED(BusyLoop, "(()=>bool condition) -> unit { while(condition()) { } }");
 	};
 }
