@@ -80,7 +80,6 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	_irt_cwb_try_push_back(self, yielding_wi, true);
-	self->cur_wi = NULL;
     _irt_worker_switch_from_wi(self, yielding_wi);
 }
 
