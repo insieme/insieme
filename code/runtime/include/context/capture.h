@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_CAPTURE_H
+#define __GUARD_CONTEXT_CAPTURE_H
 
 /**
  * This header file is defining a list of macros to be inserted into instrumented or isolated
@@ -126,3 +128,6 @@
 #endif
 
 
+
+
+#endif // ifndef __GUARD_CONTEXT_CAPTURE_H

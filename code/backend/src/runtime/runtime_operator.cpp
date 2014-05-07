@@ -50,13 +50,14 @@
 
 #include "insieme/core/lang/parallel_extension.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/backend/backend_config.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
 
-	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfigPtr& config) {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
@@ -169,6 +170,11 @@ namespace runtime {
 		table[ext.task] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_task");
 			return c_ast::call(C_NODE_MANAGER->create("irt_task"), c_ast::ref(CONVERT_ARG(0)));
+        });
+
+		table[ext.region] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_region");
+			return c_ast::call(C_NODE_MANAGER->create("irt_region"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		table[ext.merge] = OP_CONVERTER({
@@ -253,7 +259,8 @@ namespace runtime {
 		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME) \
 		table[basic.get##__IRNAME()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR(#__IRTNAME); \
-			return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 		
 		BIN_ATOMIC_CONVERTER(AtomicFetchAndAdd, irt_atomic_fetch_and_add)
@@ -270,12 +277,14 @@ namespace runtime {
 
 		table[basic.getAtomicValCompareAndSwap()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR("irt_atomic_val_compare_and_swap"); \
-			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 
 		table[basic.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({ \
 			ADD_HEADER_FOR("irt_atomic_bool_compare_and_swap"); \
-			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+            core::IRBuilder builder(NODE_MANAGER); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_TYPE(builder.deref(ARG(0))->getType())); \
 		});
 
 		// special
@@ -302,6 +311,50 @@ namespace runtime {
 			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		});
+
+		table[ext.instrumentationRegionStart] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_start"), CONVERT_ARG(0));
+		});
+
+		table[ext.instrumentationRegionEnd] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0));
+		});
+
+		// scratchpad 
+
+		table[basic.getRefLoc()] = OP_CONVERTER({
+			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
+			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
+
+			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_alloc"), size);
+		});
+
+        // param clause
+
+		table[basic.getPickInRange()] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0));
+		});
+		
+		table[basic.getRefDelete()] = OP_CONVERTER({
+            return operators::refDelete(context, call, "irt_free", false);
+		});
+
+        if(!config->areShiftOpsSupported) {
+		    #define SHIFT_OP_CONVERTER(__IRNAME, __OP) \
+		    table[basic.get##__IRNAME()] = OP_CONVERTER({ \
+                ADD_HEADER("math.h"); \
+                c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16); \
+                return c_ast::__OP(CONVERT_ARG(0), c_ast::call(C_NODE_MANAGER->create("pow"), c_ast::lit(uint16, "2"), CONVERT_ARG(1))); });
+
+		    SHIFT_OP_CONVERTER(UnsignedIntLShift, mul);
+		    SHIFT_OP_CONVERTER(SignedIntLShift, mul);
+		    SHIFT_OP_CONVERTER(GenLShift, mul);
+		    SHIFT_OP_CONVERTER(UnsignedIntRShift, div);
+		    SHIFT_OP_CONVERTER(SignedIntRShift, div);
+		    SHIFT_OP_CONVERTER(GenRShift, div);
+
+    		#undef BIN_ATOMIC_CONVERTER
+        }
 
 		#include "insieme/backend/operator_converter_end.inc"
 

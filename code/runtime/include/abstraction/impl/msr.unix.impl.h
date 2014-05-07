@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_MSR_UNIX_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MSR_UNIX_IMPL_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,3 +73,6 @@ int64 _irt_read_msr(int32 file, int32 subject) {
 int32 _irt_close_msr(int32 file) {
 	return close(file);
 }
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_UNIX_IMPL_H

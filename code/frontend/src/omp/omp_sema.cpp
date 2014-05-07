@@ -59,6 +59,9 @@
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
+#include "insieme/annotations/omp/omp_annotations.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
+
 #include <stack>
 
 #define MAX_THREADPRIVATE 80
@@ -145,6 +148,8 @@ protected:
 				newNode = flattenCompounds(newNode);
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
 					newNode = handleParallel(static_pointer_cast<const Statement>(newNode), parAnn);
+				} else if(auto taskAnn = std::dynamic_pointer_cast<Region>(subAnn)) {
+					newNode = handleRegion(static_pointer_cast<const Statement>(newNode), taskAnn);
 				} else if(auto taskAnn = std::dynamic_pointer_cast<Task>(subAnn)) {
 					newNode = handleTask(static_pointer_cast<const Statement>(newNode), taskAnn);
 				} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
@@ -575,8 +580,12 @@ protected:
 		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 		const Task* taskP = dynamic_cast<const Task*>(clause);
 		StatementList replacements;
+		StatementList localDeallocations;
 		VarList allp;
 		VarList firstPrivates;
+		VarList lastPrivates;
+		VarList alll;
+		StatementList ifStmtBodyLast;
 		// for OMP tasks, default free variable binding is threadprivate
 		if(taskP) {
 			auto&& freeVarsAndFuns = core::analysis::getFreeVariables(stmtNode);
@@ -593,6 +602,8 @@ protected:
 				if(taskP->hasShared()) ret = ret && !contains(taskP->getShared(), v);
 				if(taskP->hasFirstPrivate()) ret = ret && !contains(taskP->getFirstPrivate(), v);
 				if(taskP->hasPrivate()) ret = ret && !contains(taskP->getPrivate(), v);
+				if(taskP->hasFirstLocal()) ret = ret && !contains(taskP->getFirstLocal(), v);
+				if(taskP->hasLocal()) ret = ret && !contains(taskP->getLocal(), v);
 				if(taskP->hasReduction()) ret = ret && !contains(taskP->getReduction().getVars(), v);
 				// variables declared shared in all enclosing constructs, up to and including
 				// the innermost parallel construct, should not be privatized
@@ -607,7 +618,25 @@ protected:
 			firstPrivates.insert(firstPrivates.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
 			allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
 		}
+		if(forP && forP->hasLastPrivate()) {
+			lastPrivates.insert(lastPrivates.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
+			allp.insert(allp.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
+		}
 		if(clause->hasPrivate()) allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
+		if(clause->hasFirstLocal()) {
+			firstPrivates.insert(firstPrivates.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+			allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+			alll.insert(alll.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+		}
+		if(forP && forP->hasLastLocal()) {
+			lastPrivates.insert(lastPrivates.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
+			allp.insert(allp.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
+			alll.insert(alll.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
+		}
+		if(clause->hasLocal()) {
+			allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
+			alll.insert(alll.end(), clause->getLocal().begin(), clause->getLocal().end());
+		}
 		if(clause->hasReduction()) allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end());
 		NodeMap publicToPrivateMap;
 		NodeMap privateToPublicMap;
@@ -618,13 +647,21 @@ protected:
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
+			if(contains(alll, varExp)) 
+			{
+				decl = build.declarationStmt(pVar, build.undefinedLoc(expType));
+				localDeallocations.push_back(build.refDelete(pVar));
+			}
 			if(contains(firstPrivates, varExp)) {
 				// make sure to actually get *copies* for firstprivate initialization, not copies of references
 				if(core::analysis::isRefType(expType)) {
 					VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
 					DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
 					outsideDecls.push_back(fpPassDecl);
-					decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
+					if(contains(alll, varExp))
+						decl = build.declarationStmt(pVar, build.refLoc(fpPassVar));
+					else
+						decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
 				}
 				else {
 					decl = build.declarationStmt(pVar, varExp);
@@ -632,6 +669,9 @@ protected:
 			}
 			if(clause->hasReduction() && contains(clause->getReduction().getVars(), varExp)) {
 				decl = build.declarationStmt(pVar, getReductionInitializer(clause->getReduction().getOperator(), expType));
+			}
+			if(contains(lastPrivates, varExp)) {
+				ifStmtBodyLast.push_back(build.assign(varExp, build.deref(pVar)));
 			}
 			replacements.push_back(decl);
 		});
@@ -672,15 +712,32 @@ protected:
 		if(!publicToPrivateAddressMap.empty()) subStmt = transform::pushInto(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
 
 		// specific handling if clause is a omp for
-		if(forP) {
+		if(forP){
 			if(forP->hasOrdered()) subStmt = processOrderedFor(subStmt);
-			subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
+			// Handling lastlocal
+			if(lastPrivates.size())
+			{
+				auto outer = static_pointer_cast<const ForStmt>(subStmt);
+				StatementList newForBodyStmts;
+				for_each(outer->getBody()->getStatements(), [&](core::StatementPtr elem){
+					newForBodyStmts.push_back(elem);
+				});
+				auto condition = build.eq(build.forStmtFinalValue(outer), outer->getIterator());
+				auto ifStmt = build.ifStmt(condition, build.compoundStmt(ifStmtBodyLast));
+				newForBodyStmts.push_back(ifStmt);
+				auto newForStmt = build.forStmt(outer->getDeclaration(), outer->getEnd(), outer->getStep(), build.compoundStmt(newForBodyStmts));
+				subStmt = build.pfor(newForStmt);
+			}
+			else
+				subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 		}
 		replacements.push_back(subStmt);
 		// implement reductions
 		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
+		//append localDeallocations
+		copy(localDeallocations.cbegin(), localDeallocations.cend(), back_inserter(replacements));
 		// append postfix
 		copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
 		// handle threadprivates before it is too late!
@@ -695,21 +752,169 @@ protected:
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
 
+	StatementPtr implementParamClause(const StatementPtr& stmtNode, const SharedOMPPPtr& reg)
+	{
+		if(!reg->hasParam())
+			return stmtNode;
+
+		StatementList resultStmts;
+		CallExprPtr assign;
+		vector<ExpressionPtr> variants;
+
+		Param param = reg->getParam();
+
+		if(param.hasRange()) {
+			auto max 	= build.div( build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
+			auto pick 	= build.pickInRange(max);
+			auto exp = build.add( build.mul(pick, param.getRangeStep()), param.getRangeLBound() );
+			assign = build.assign(param.getVar(), exp);
+		}
+		else if(param.hasEnum()) {
+			auto pick = build.pickInRange( utils::castScalar(basic.getUInt8(), param.getEnumSize()) );
+			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
+			assign = build.assign( param.getVar(), build.deref( arrVal ) );
+		}
+		else {
+			/* Boolean */
+			auto pick = build.pickInRange( build.intLit(1) );
+			assign = build.assign( param.getVar(), pick );
+		}
+
+		resultStmts.push_back(assign);
+		resultStmts.push_back(stmtNode);
+
+		return build.compoundStmt(resultStmts);
+	}
+
+	void implementObjectiveClause(const NodePtr& node, const Objective& obj)
+    {
+        insieme::annotations::ompp_objective_info objective;
+
+        objective.energy_weight = obj.getEnergyWeight();
+        objective.power_weight = obj.getPowerWeight();
+        objective.time_weight = obj.getTimeWeight();
+
+        ///* TODO: 
+        // * Constraints are translated as ranges
+        // * If a bound is not set, -1 is used but -inf and inf should be used to deal with parameters that can have negative values (not the case now)
+        // * If multiple values are provided for a range, the last one is considered but they could be compared to choose the largest one
+        // * <= and >= are equivalent to < and >
+        // */
+        std::map<Objective::Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
+        auto minusOneLit = build.literal(basic.getFloat(), "-1f");
+        constraints[Objective::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::POWER ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::TIME  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+
+        if(obj.hasConstraintsParams() && obj.hasConstraintsOps() && obj.hasConstraintsExprs()){
+            auto params = obj.getConstraintsParams();
+            auto ops    = obj.getConstraintsOps();
+            auto exprs  = obj.getConstraintsExprs();
+            
+            if(params.size() == ops.size() && params.size() == exprs.size()) {
+                auto opsIt = ops.begin();
+                auto exprsIt = exprs.begin();
+
+                for(auto par : params) {
+                    auto oldCon = constraints[par];
+
+                    switch(*opsIt) {
+                        case Objective::LESS:
+                        case Objective::LESSEQUAL:
+                            oldCon.second = *exprsIt;
+                            break;
+                        case Objective::EQUALEQUAL:
+                            oldCon.first = *exprsIt;
+                            oldCon.second = *exprsIt;
+                            break;
+                        case Objective::GREATEREQUAL:
+                        case Objective::GREATER:
+                            oldCon.first = *exprsIt;
+                            break;
+                    }
+
+                    constraints[par] = oldCon;
+
+                    opsIt++;
+                    exprsIt++;
+                }
+            }
+        }
+
+        objective.energy_min = constraints[Objective::ENERGY].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.energy_max = constraints[Objective::ENERGY].second.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.power_min  = constraints[Objective::POWER].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.power_max  = constraints[Objective::POWER].second.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.time_min   = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.time_max   = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
+
+        static unsigned regionId = 0;
+        objective.region_id = regionId ++;
+
+        node->attachValue(objective);
+
+        return;
+    }
+
+	NodePtr handleRegion(const StatementPtr& stmtNode, const RegionPtr& reg) {
+
+		/* if there isn't any clause nothing to do */
+
+		if( !reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasTarget() && !reg->hasObjective() )
+			return stmtNode;
+
+		/* else, region as task
+         * Backend will deal with it differently cause of the annotation
+         */
+		StatementList resultStmts;
+		auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
+		auto paramNode = implementParamClause(newStmtNode, reg);
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
+		auto range = build.getThreadNumRange(1, 1);
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(reg->hasObjective()) {
+            implementObjectiveClause(jobExp, reg->getObjective());
+        }
+
+		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+
+        using namespace insieme::annotations::omp;
+        RegionAnnotationPtr ann = std::make_shared<RegionAnnotation>();
+        parallelCall->addAnnotation(ann);
+
+		resultStmts.push_back(parallelCall);
+
+		CompoundStmtPtr res = build.compoundStmt(resultStmts);
+
+		return res;
+	}
+
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		StatementList resultStmts;
 		// handle implicit taskwait in postfix of task
 		StatementList postFix;
 		postFix.push_back(build.mergeAll());
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
-		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		auto paramNode = implementParamClause(newStmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		// mark printf as unordered
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(par->hasObjective()) {
+            implementObjectiveClause(jobExp, par->getObjective());
+        }
+
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
+
 		resultStmts.push_back(mergeCall);
+		// if clause handling
+		assert(par->hasIf() == false && "OMP parallel if clause not supported");
+
 		StatementPtr ret = build.compoundStmt(resultStmts);
 		// add code for "ordered" pfors in this parallel, if any
 		ret = processOrderedParallel(ret);
@@ -719,11 +924,18 @@ protected:
 	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
-		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		auto paramNode = implementParamClause(newStmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+        if(par->hasObjective()) {
+            implementObjectiveClause(jobExp, par->getObjective());
+        }
+
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		resultStmts.push_back(parallelCall);
+
 		return build.compoundStmt(resultStmts);
 	}
 
@@ -802,19 +1014,29 @@ protected:
 		return b.compoundStmt(waitLoop, stmtNode, increment);
 	}
 
-	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
+	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 		//outer = collapseForNest(outer);
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(outer, &*forP, resultStmts);
-		resultStmts.push_back(newStmtNode);
+
+        // We keep only the annotation added on the handleParallel
+        if(!isParallel && forP->hasObjective()) {
+             for(auto stmt : newStmtNode.as<CompoundStmtPtr>()->getStatements()) {
+                if(core::analysis::isCallOf(stmt, basic.getPFor())) {
+                    implementObjectiveClause(stmt, forP->getObjective());
+                }
+             }
+        }
+		
+        resultStmts.push_back(newStmtNode);
 		return build.compoundStmt(resultStmts);
 	}
 
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
 		NodePtr newNode = stmtNode;
-		newNode = handleFor(static_pointer_cast<const Statement>(newNode), pforP->toFor());
+		newNode = handleFor(static_pointer_cast<const Statement>(newNode), pforP->toFor(), true);
 		newNode = handleParallel(static_pointer_cast<const Statement>(newNode), pforP->toParallel());
 		return newNode;
 	}

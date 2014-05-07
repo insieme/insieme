@@ -37,12 +37,18 @@
 // platform independent implementations of timing functions
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_TIMING_IMPL_H
+#define __GUARD_UTILS_IMPL_TIMING_IMPL_H
 
 #include "utils/timing.h"
 #include "abstraction/impl/rdtsc.impl.h"
 #include "irt_inttypes.h"
 #include "../filesystem.h"
 #include "irt_logging.h"
+
+#ifdef _GEMS
+	#include "include_gems/impl/time.impl.h"
+#endif
 
 // ====== sleep functions ======================================
 
@@ -51,7 +57,7 @@ int irt_nanosleep_timespec(const struct timespec *wait_time) {
 }
 
 int irt_nanosleep(uint64 wait_time) {
-	struct timespec t = {(__time_t)(wait_time/1000000000ull), (__time_t)(wait_time%1000000000ull)};
+	struct timespec t = {(time_t)(wait_time/1000000000ull), (time_t)(wait_time%1000000000ull)};
 	return nanosleep(&t, NULL);
 }
 
@@ -120,6 +126,10 @@ uint64 irt_time_set_ticks_per_sec() {
  */
 
 uint64 irt_time_ticks_per_sec_calibration_mark() {
+#ifdef _GEMS
+	irt_g_time_ticks_per_sec = GEMS_CORE_FREQ_MHZ * 1e6;
+	return irt_g_time_ticks_per_sec;
+#else
 	static uint64 before = 0;
 	//static struct timespec time_before;
 	static struct timeval time_before;
@@ -177,9 +187,13 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 
 		return irt_g_time_ticks_per_sec;
 	}
+#endif
 }
 
 // converts clock ticks to nanoseconds
 uint64 irt_time_convert_ticks_to_ns(uint64 ticks) {
 	return (uint64)(ticks/((double)irt_g_time_ticks_per_sec/1000000000));
 }
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_TIMING_IMPL_H

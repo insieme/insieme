@@ -452,27 +452,11 @@ bool compareTypes(const TypePtr& a, const TypePtr& b);
 
 // ----------------------------------- Jobs ----------------------------
 
-/*
- * Tests wheter the given job expression has group operations (getThreadGroup, pfor, redistribute etc...)
- */
-bool hasGroupOperations(const JobExprPtr& job);
-
-/**
- * Tests whether the given job expression is a task (only processed by a single thread and no group operations) or not.
- */
-bool isTask(const JobExprPtr& job);
-
 /**
  * Tests whether the given expression is zero or not.
  */
 bool isZero(const core::ExpressionPtr& value);
 
-/**
- * Tests whether the given job expression is a task (only processed by a single thread) or not.
- */
-inline bool isTask(const NodePtr& job) {
-	return isTask(job.isa<JobExprPtr>());
-}
 
 } // end namespace utils
 } // end namespace core

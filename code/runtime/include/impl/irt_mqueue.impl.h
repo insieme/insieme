@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_MQUEUE_IMPL_H
+#define __GUARD_IMPL_IRT_MQUEUE_IMPL_H
 
 #include "irt_mqueue.h"
 
@@ -99,3 +101,5 @@ irt_mqueue_msg* irt_mqueue_receive() {}
 void irt_mqueue_send_new_app(const char* appname) {}
 
 #endif
+
+#endif // ifndef __GUARD_IMPL_IRT_MQUEUE_IMPL_H

@@ -6,7 +6,7 @@
 // -------- problem size ------------
 
 #ifndef N
-	#define N (2048*4)
+	#define N (256)
 #endif
 
 // -------- to support cilk in gcc ------------
@@ -68,10 +68,11 @@ void calibrate_tile_size();
 #define RUN_TEST(IMPL,NAME) \
 { \
 	reset(); \
-	double time = omp_get_wtime(); \
+	/*double time = omp_get_wtime();*/ \
 	IMPL(); \
-	time = omp_get_wtime() - time; \
-	printf("%s: time = %fsec, success: %s\n", NAME, time, (check())?"true":"false"); \
+	/*time = omp_get_wtime() - time;*/ \
+	/*printf("%s: time = %fsec, success: %s\n", NAME, time, (check())?"true":"false");*/ \
+	printf("%s: success: %s\n", NAME, (check())?"true":"false"); \
 }
 
 
@@ -200,7 +201,7 @@ void mm_omp_tiled() {
 
 void calibrate_tile_size() {
 	printf("Starting Tile-Size Calibration ...\n");
-	tile_sizes best; double bestTime = 10000;
+	tile_sizes best; //double bestTime = 10000;
 
 	// N= 256 => 64/256/32
 	// N= 512 => 32/256/32
@@ -213,23 +214,24 @@ void calibrate_tile_size() {
 		TILE.i = i;
 		TILE.j = j;
 		TILE.k = k;
-		double times[3];
+		//double times[3];
 		printf("\tTile-Size: %d/%d/%d\n", TILE.i, TILE.j, TILE.k);
 		for (int j=0; j<3; j++) {
-			times[j] = omp_get_wtime();
+			//times[j] = omp_get_wtime();
 			mm_tiled();
-			times[j] = omp_get_wtime() - times[j];
-			printf("\t\tTotal time: %fsec\n", times[j]);
+			//times[j] = omp_get_wtime() - times[j];
+			//printf("\t\tTotal time: %fsec\n", times[j]);
 		}
-		double time = median(times[0], times[1], times[2]);
-		if (time < bestTime) {
-			best = TILE;
-			bestTime = time;
-		}
+		//double time = median(times[0], times[1], times[2]);
+		//if (time < bestTime) {
+		//	best = TILE;
+		//	bestTime = time;
+		//}
 	}
 	}
 	}
-	printf("Best tile size: %d/%d/%d - %f\n", best.i, best.j, best.k, bestTime);
+	//printf("Best tile size: %d/%d/%d - %f\n", best.i, best.j, best.k, bestTime);
+	printf("Best tile size: %d/%d/%d\n", best.i, best.j, best.k);
 	TILE = best;
 }
 
@@ -237,25 +239,26 @@ void calibrate_tile_size() {
 
 void calibrate_cut_off() {
 	printf("Starting Calibration ...\n");
-	int best = 0; double bestTime = 10000;
+	int best = 0; //double bestTime = 10000;
 	for(int i=8; i<=256; i=i<<1) {
 		reset();
 		CUT = i;
-		double times[3];
+		//double times[3];
 		printf("\tCut-off: %d\n", CUT);
 		for (int j=0; j<3; j++) {
-			times[j] = omp_get_wtime();
+			//times[j] = omp_get_wtime();
 			mm_recursive();
-			times[j] = omp_get_wtime() - times[j];
-			printf("\t\tTotal time: %fsec\n", times[j]);
+			//times[j] = omp_get_wtime() - times[j];
+			//printf("\t\tTotal time: %fsec\n", times[j]);
 		}
-		double time = median(times[0], times[1], times[2]);
-		if (time < bestTime) {
-			best = i;
-			bestTime = time;
-		}
+		//double time = median(times[0], times[1], times[2]);
+		//if (time < bestTime) {
+		//	best = i;
+		//	bestTime = time;
+		//}
 	}
-	printf("Best CUT: %d - %f\n", best, bestTime);
+	//printf("Best CUT: %d - %f\n", best, bestTime);
+	printf("Best CUT: %d\n", best);
 	CUT = best;
 }
 

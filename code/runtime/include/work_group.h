@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_WORK_GROUP_H
+#define __GUARD_WORK_GROUP_H
 
 #include "declarations.h"
 #include "irt_loop_sched.h"
@@ -94,3 +96,6 @@ void irt_wg_joining_barrier(irt_work_group* wg);
 void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
 void irt_wg_join(irt_work_group* wg);
 
+
+
+#endif // ifndef __GUARD_WORK_GROUP_H

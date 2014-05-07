@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_OPTIMIZER_H
+#define __GUARD_IRT_OPTIMIZER_H
 
 #include "declarations.h"
 //#define IRT_RUNTIME_TUNING
@@ -45,6 +47,7 @@
 #endif
 
 void irt_optimizer_context_startup(irt_context *context);
+void irt_optimizer_context_destroy(irt_context *context);
 
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
 
@@ -53,3 +56,36 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time,
 #else
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
 #endif
+
+/* OpenMP+ */
+
+typedef struct _irt_optimizer_resources {
+    double energy;
+    float power;
+    float time;
+} irt_optimizer_resources;
+
+// Data types for runtime collected data 
+
+typedef struct _irt_optimizer_wi_data {
+    int frequency;
+    int outer_frequency;
+    int workers_count;
+    int *param_values;  // the list of picked values (indexes) for the variables in a param clause
+    irt_optimizer_resources resources;
+} irt_optimizer_wi_data;
+
+typedef struct _irt_optimizer_runtime_data {
+    irt_optimizer_wi_data* data;
+    size_t data_size;
+    size_t data_last;
+    size_t completed_wi_count;
+    irt_spinlock spinlock;
+} irt_optimizer_runtime_data;
+
+uint64_t irt_optimizer_pick_in_range(uint64_t max);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant);
+void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant);
+void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, int pos, bool wi_finalized);
+
+#endif // ifndef __GUARD_IRT_OPTIMIZER_H

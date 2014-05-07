@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_TIMING_H
+#define __GUARD_UTILS_TIMING_H
 
 // prototype of functions using rdtsc
 #include "abstraction/rdtsc.h"
@@ -43,6 +45,9 @@
 	#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
 	#include "include_win32/time.h"
 	#include "include_win32/sys_time.h"
+#elif defined _GEMS
+	#include "include_gems/time.h"
+	#include "include_gems/sys_time.h"
 #else
 	#include <time.h>
 	#include <unistd.h>
@@ -103,3 +108,6 @@ uint64 irt_time_ticks_per_sec_calibration_mark();
 
 // converts clock ticks to nanoseconds
 uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+
+
+#endif // ifndef __GUARD_UTILS_TIMING_H

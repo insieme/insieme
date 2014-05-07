@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_DATA_METRIC_TABLE_H
+#define __GUARD_DATA_METRIC_TABLE_H
 
 #include "tuning.h"
 
@@ -94,3 +96,6 @@ const irt_atomic_metric_info g_atomic_metric_table[] = {
 const irt_atomic_metric_info* irt_get_metric_info(irt_atomic_metric_index metric) {
 	return &g_atomic_metric_table[metric];
 }
+
+
+#endif // ifndef __GUARD_DATA_METRIC_TABLE_H

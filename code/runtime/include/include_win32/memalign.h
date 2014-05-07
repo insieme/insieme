@@ -38,6 +38,8 @@
  (it is mapped to malloc because on Windows must use _aligend_free if _aligned_malloc was used, which makes things complicated */
 
 #pragma once
+#ifndef __GUARD_INCLUDE_WIN32_MEMALIGN_H
+#define __GUARD_INCLUDE_WIN32_MEMALIGN_H
 
 #ifdef _WIN32
 	#include <malloc.h>
@@ -47,3 +49,5 @@
 	}
 
 #endif
+
+#endif // ifndef __GUARD_INCLUDE_WIN32_MEMALIGN_H

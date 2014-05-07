@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_UBER_H
+#define __GUARD_SCHED_POLICIES_IRT_SCHED_UBER_H
 
 #include "declarations.h"
 
@@ -56,3 +58,6 @@ typedef struct _irt_cw_data {
 // placeholder, not required
 #define irt_wi_scheduling_data uint32
 
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_UBER_H

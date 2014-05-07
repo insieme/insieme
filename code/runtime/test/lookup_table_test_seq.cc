@@ -43,7 +43,7 @@
 #include <impl/error_handling.impl.h>
 
 // horrible hack incoming
-uint32 irt_g_error_key = 0;
+irt_tls_key irt_g_error_key = 0;
 
 #define TEST_ELEMS 77
 #define TEST_BUCKETS 111

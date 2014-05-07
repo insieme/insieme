@@ -35,7 +35,12 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_IPC_BASE_H
+#define __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_IPC_BASE_H
 
 #include "declarations.h"
 
 static inline int _irt_sched_check_ipc_queue(irt_worker* self);
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_IPC_BASE_H

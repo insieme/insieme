@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_INSTRUMENTATION_REGIONS_H
+#define __GUARD_INSTRUMENTATION_REGIONS_H
 
 #include <stdio.h>
 
@@ -141,3 +143,5 @@ void irt_inst_region_debug_output();
 void irt_inst_region_output();
 
 irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi);
+
+#endif // #ifndef __GUARD_INSTRUMENTATION_REGIONS_H

@@ -66,6 +66,22 @@ INFO_STRUCT_BEGIN(effort_estimation)
 	INFO_FIELD(fallback_estimate, 		int,						0)
 INFO_STRUCT_END()
 
+/**
+ * OpenMP+ objective
+ */
+
+INFO_STRUCT_BEGIN(ompp_objective)
+    INFO_FIELD(energy_weight,   float,      0)
+    INFO_FIELD(energy_min,      float,      -1)
+    INFO_FIELD(energy_max,      float,      -1)
+    INFO_FIELD(power_weight,    float,      0)
+    INFO_FIELD(power_min,       float,      -1)
+    INFO_FIELD(power_max,       float,      -1)
+    INFO_FIELD(time_weight,     float,      0)
+    INFO_FIELD(time_min,        float,      -1)
+    INFO_FIELD(time_max,        float,      -1)
+    INFO_FIELD(region_id,       unsigned,   -1)
+INFO_STRUCT_END()
 
 /**
  * A st...

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_RESTORE_H
+#define __GUARD_CONTEXT_RESTORE_H
 
 /**
  * This function can be used to obtain a value from a profile file being tagged with a given value.
@@ -46,3 +48,6 @@ void irt_cap_profile_get_value(void* target, uint16 region_id, uint16 tag, uint3
  * state.
  */
 void irt_cap_profile_finalize();
+
+
+#endif // ifndef __GUARD_CONTEXT_RESTORE_H

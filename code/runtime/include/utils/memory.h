@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_MEMORY_H
+#define __GUARD_UTILS_MEMORY_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,3 +77,6 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
         }   
         fclose(file);
 }
+
+
+#endif // ifndef __GUARD_UTILS_MEMORY_H

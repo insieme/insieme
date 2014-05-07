@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_STANDALONE_H
+#define __GUARD_STANDALONE_H
 
 /*
 	definition of global variables, startup, shutdown and signal handling functionality
@@ -43,10 +45,16 @@
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/memory.h"
+#include "abstraction/impl/memory.impl.h"
 
 #include "client_app.h"
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
+
+#ifdef _GEMS
+	#include "include_gems/stdlib.h"
+#endif
 
 #ifndef IRT_MIN_MODE
 #include "irt_mqueue.h"
@@ -65,12 +73,12 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 // globals
 irt_tls_key irt_g_error_key;
-irt_lock_obj irt_g_error_mutex;
-irt_lock_obj irt_g_exit_handler_mutex;
+irt_mutex_obj irt_g_error_mutex;
+irt_mutex_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
-irt_lock_obj irt_g_active_worker_mutex;
+irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -92,6 +100,7 @@ void irt_init_globals() {
 
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
+
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -259,6 +268,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
+#ifndef _GEMS
+	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
 		signal(IRT_SIG_ERR, &irt_error_handler);
@@ -268,6 +279,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		signal(SIGSEGV, &irt_abort_handler);
 		atexit(&irt_exit_handler);
 	}
+#endif
 	// initialize globals
 	irt_init_globals();
 	irt_g_exit_handling_done = false;
@@ -276,11 +288,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
+	#ifdef _GEMS
+		irt_inst_region_select_metrics("rapmi_energy,rapmi_average_power,rapmi_ticks");
+	#endif
 #endif
-
-//	#ifndef _WIN32
-//		irt_cpu_freq_set_frequency_socket_env();
-//	#endif
 
 	irt_log_comment("starting worker threads");
 	irt_log_setting_u("irt_g_worker_count", worker_count);
@@ -313,15 +324,23 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 }
 
 uint32 irt_get_default_worker_count() {
+	uint32 cores;
+
 	if(getenv(IRT_NUM_WORKERS_ENV)) {
 		return atoi(getenv(IRT_NUM_WORKERS_ENV));
 	}
-	return irt_affinity_cores_available();
+	else if( (cores = irt_affinity_cores_available()) > 0 )
+		return cores;
+	else
+		return IRT_DEF_WORKERS;
+
 }
 
-bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
-	irt_lock_obj* mutex = (irt_lock_obj*)mutexp;
-	irt_mutex_unlock(mutex);
+bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {
+	irt_cond_bundle *condbundle = (irt_cond_bundle*)condbundlep;
+	irt_mutex_lock(&condbundle->mutex);
+	irt_cond_wake_one(&condbundle->condvar);
+	irt_mutex_unlock(&condbundle->mutex);
 	return false;
 }
 
@@ -331,22 +350,27 @@ void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *para
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
-	irt_lock_obj mutex; // TODO don't use mutex
-	irt_mutex_init(&mutex);
-	irt_mutex_lock(&mutex);
+	irt_cond_bundle condbundle;
+	irt_mutex_init(&condbundle.mutex);
+	irt_cond_var_init(&condbundle.condvar);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
-	handler.data = &mutex;
+	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 
 	// wait for workers to finish the main work-item
-	irt_mutex_lock(&mutex);
+	irt_mutex_lock(&condbundle.mutex);
+	irt_cond_wait(&condbundle.condvar, &condbundle.mutex);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
+    #ifdef _GEMS
+        irt_mutex_init(&print_mutex);
+    #endif
+	IRT_DEBUG("Workers count: %d\n", worker_count);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
@@ -371,5 +395,11 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
+	//irt_mutex_unlock(&condbundle.mutex);
+	//irt_mutex_destroy(&condbundle.mutex);
+	IRT_DEBUG("Exiting ...\n");
 	irt_exit_handler();
 }
+
+
+#endif // ifndef __GUARD_STANDALONE_H

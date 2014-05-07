@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
+#define __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H
 
 /*
  * in this file prototypes of platform dependent affinity functionality shall be declared
@@ -46,6 +48,9 @@
 	#include <io.h>
 	#include <Windows.h>
 	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
+#elif defined(_GEMS)
+	// TODO: must still find a proper type
+	typedef int irt_native_cpu_set;
 #else
 	#include <unistd.h>
 	typedef cpu_set_t irt_native_cpu_set;
@@ -68,3 +73,6 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 uint32 irt_affinity_cores_available();
 
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H

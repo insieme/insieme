@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_TYPES_H
+#define __GUARD_IRT_TYPES_H
 
 #include "declarations.h"
 
@@ -90,3 +92,5 @@ static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
 	case IRT_T_BASIC: return "IRT_T_BASIC"; 
 	}
 }
+
+#endif // ifndef __GUARD_IRT_TYPES_H

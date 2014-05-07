@@ -35,11 +35,18 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
 
 #if defined(_MSC_VER)
 	#warning "MSR reading under Windows not implemented!"
 #elif defined(__MINGW32__)
 	#warning "MSR reading under MINGW32 not implemented!"
+#elif defined(_GEMS)
+	#include "abstraction/impl/msr.gems.impl.h"
 #else
 	#include "abstraction/impl/msr.unix.impl.h"
 #endif
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_MQUEUE_H
+#define __GUARD_IRT_MQUEUE_H
 
 #include "declarations.h"
 
@@ -81,3 +83,6 @@ void irt_mqueue_send_new_app(const char* appname);
  ** Note: must call free on returned object
  **/
 irt_mqueue_msg* irt_mqueue_receive();
+
+
+#endif // ifndef __GUARD_IRT_MQUEUE_H

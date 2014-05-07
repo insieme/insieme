@@ -66,6 +66,49 @@
 namespace insieme {
 namespace backend {
 
+    namespace operators {
+        
+		#include "insieme/backend/operator_converter_begin.inc"
+
+	    c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name = "free", bool addHeader = true) {
+			// TODO: fix when frontend is producing correct code
+
+			// do not free non-heap variables
+			if (ARG(0)->getNodeType() == core::NT_Variable) {
+				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
+				if (GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
+					// return NULL pointer => no op
+					return c_ast::ExpressionPtr();
+				}
+			}
+
+			// ensure correct type
+			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
+
+			// handle destructor call
+			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
+				if (dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
+					return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0]));
+				}
+			}
+
+			// add dependency to stdlib.h (contains the free)
+            if(addHeader)
+			    ADD_HEADER_FOR(name);
+
+			// construct argument
+			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
+
+			if (core::analysis::getReferencedType(ARG(0)->getType())->getNodeType() == core::NT_ArrayType) {
+				// TODO: call array destructor instead!!
+			}
+
+			return c_ast::call(C_NODE_MANAGER->create(name), arg);
+		}
+
+		#include "insieme/backend/operator_converter_end.inc"
+    }
+
 	namespace {
 
 
@@ -460,7 +503,7 @@ namespace backend {
 
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
-			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())) {
+			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefLoc())) {
 				// skip ref.var / ref.new => stupid
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
 				return CONVERT_EXPR(call->getArgument(0));
@@ -544,7 +587,7 @@ namespace backend {
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});
 
-		res[basic.getRefNew()] = OP_CONVERTER({
+		auto refNewLoc = OP_CONVERTER({
 
 			// get result type information
 			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
@@ -614,39 +657,11 @@ namespace backend {
 
 		});
 
+		res[basic.getRefNew()] = refNewLoc;
+		res[basic.getRefLoc()] = refNewLoc;
+
 		res[basic.getRefDelete()] = OP_CONVERTER({
-			// TODO: fix when frontend is producing correct code
-
-			// do not free non-heap variables
-			if (ARG(0)->getNodeType() == core::NT_Variable) {
-				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
-				if (GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
-					// return NULL pointer => no op
-					return c_ast::ExpressionPtr();
-				}
-			}
-
-			// ensure correct type
-			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
-
-			// handle destructor call
-			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
-				if (dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
-					return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0]));
-				}
-			}
-
-			// add dependency to stdlib.h (contains the free)
-			ADD_HEADER_FOR("free");
-
-			// construct argument
-			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-
-			if (core::analysis::getReferencedType(ARG(0)->getType())->getNodeType() == core::NT_ArrayType) {
-				// TODO: call array destructor instead!!
-			}
-
-			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
+		    return operators::refDelete(context, call);
 		});
 
 		res[basic.getRefReinterpret()] = OP_CONVERTER({

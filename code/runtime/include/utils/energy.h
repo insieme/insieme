@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_ENERGY_H
+#define __GUARD_UTILS_ENERGY_H
 
 #include "abstraction/rapl.h"
 
@@ -53,3 +55,6 @@ void irt_get_energy_consumption_dummy(rapl_energy_data* data);
  */
 
 void irt_energy_select_instrumentation_method();
+
+
+#endif // ifndef __GUARD_UTILS_ENERGY_H

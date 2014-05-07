@@ -35,11 +35,13 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_WORK_GROUP_IMPL_H
+#define __GUARD_IMPL_WORK_GROUP_IMPL_H
 
 #include "work_group.h"
 
 #include "impl/work_item.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "impl/instrumentation_events.impl.h"
 
 static inline irt_work_group* _irt_wg_new() {
@@ -95,7 +97,7 @@ void irt_wg_end(irt_work_group* wg) {
 
 static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
-	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1) == wg->local_member_count) {
+	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1, uint32_t) == wg->local_member_count) {
 		irt_wg_event_trigger_existing(wg->id, IRT_WG_EV_COMPLETED);
 		irt_wg_end(wg);
 	}
@@ -104,8 +106,8 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
-	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1);
-	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1);
+	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1, uint32_t);
+	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1, uint32_t);
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;
@@ -113,7 +115,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
-	irt_atomic_dec(&wg->local_member_count);
+	irt_atomic_dec(&wg->local_member_count, uint32_t);
 	// cleaning up group membership in wi is not necessary, wis may only be removed from groups when they end
 }
 
@@ -149,12 +151,12 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	//IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
 	irt_wg_event_register_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 	// check if last
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
 		// remove own handler from event register
 		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 		// trigger barrier completion
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
 		// suspend
@@ -162,7 +164,7 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		// suspend until allowed to leave barrier
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 //		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
@@ -173,15 +175,16 @@ void irt_wg_barrier_busy(irt_work_group* wg) {
  	irt_work_item* swi = self->cur_wi;
 	// check if last
 	uint32 pre_barrier_count = wg->tot_barrier_count;
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
-		irt_atomic_inc(&wg->tot_barrier_count);
+		irt_atomic_inc(&wg->tot_barrier_count, uint32_t);
 	} else {
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		while(wg->tot_barrier_count == pre_barrier_count) {
 			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
 			irt_busy_ticksleep(1000);
+			irt_thread_yield();
 		}
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
 	}
@@ -192,12 +195,12 @@ void irt_wg_barrier_timed_busy(irt_work_group* wg) {
 	int64 barrier_start_ticks = irt_time_ticks();
 	// check if last
 	uint32 pre_barrier_count = wg->tot_barrier_count;
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
 		irt_spin_lock(&wg->lock);
 		// trigger waiting busy wis
-		irt_atomic_inc(&wg->tot_barrier_count);
+		irt_atomic_inc(&wg->tot_barrier_count, uint32_t);
 		// trigger suspended wis
 		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 		irt_spin_unlock(&wg->lock);
@@ -219,7 +222,7 @@ void irt_wg_barrier_timed_busy(irt_work_group* wg) {
 					// suspend
 //					irt_inst_region_suspend(swi);
 					irt_inst_region_end_measurements(swi);
-					lwt_continue(&self->basestack, &swi->stack_ptr);
+                    _irt_worker_switch_from_wi(self, swi);
 //					irt_inst_region_continue(swi);
 					irt_inst_region_start_measurements(swi);
 					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
@@ -246,7 +249,7 @@ inline void irt_wg_barrier(irt_work_group* wg) {
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);
-	bool worked = irt_atomic_bool_compare_and_swap((uintptr_t*)&wg->redistribute_data_array, (uintptr_t)0, (uintptr_t)arr);
+	bool worked = irt_atomic_bool_compare_and_swap((uintptr_t*)&wg->redistribute_data_array, (uintptr_t)0, (uintptr_t)arr, uintptr_t);
 	if(!worked) free(arr);
 }
 
@@ -279,9 +282,12 @@ void irt_wg_join(irt_work_group* wg) {
 //		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 //		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }
+
+
+#endif // ifndef __GUARD_IMPL_WORK_GROUP_IMPL_H

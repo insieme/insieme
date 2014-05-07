@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_MINGW_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_RDTSC_MINGW_IMPL_H
 
 #include <Windows.h>
 #include "irt_inttypes.h"
@@ -90,3 +92,6 @@ bool irt_time_ticks_constant() {
 	else
 		return 0;
 }
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_MINGW_IMPL_H

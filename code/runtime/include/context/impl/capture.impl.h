@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_IMPL_CAPTURE_IMPL_H
+#define __GUARD_CONTEXT_IMPL_CAPTURE_IMPL_H
 
 #include "context/capture.h"
 
@@ -74,3 +76,6 @@
 #undef DEBUG
 #undef MAGIC_NUMBER
 #undef IRT_CONTEXT_CAPTURE_ALIGNMENT
+
+
+#endif // ifndef __GUARD_CONTEXT_IMPL_CAPTURE_IMPL_H

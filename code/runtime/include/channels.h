@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CHANNELS_H
+#define __GUARD_CHANNELS_H
 
 #include "irt_inttypes.h"
 
@@ -56,3 +58,6 @@ irt_channel* irt_channel_create();
 void irt_channel_destroy(irt_channel* wi);
 
 // TODO send recieve test probe try
+
+
+#endif // ifndef __GUARD_CHANNELS_H

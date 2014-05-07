@@ -40,6 +40,8 @@
 */
 
 #pragma once
+#ifndef __GUARD_INCLUDE_WIN32_TIME_H
+#define __GUARD_INCLUDE_WIN32_TIME_H
 
 #include "irt_inttypes.h"
 #include "error_handling.h"
@@ -87,3 +89,6 @@ int clock_gettime(int X, struct timespec *ts)
     ts->tv_nsec = counter.QuadPart % 1000000000;
     return (0);
 } 
+
+
+#endif // ifndef __GUARD_INCLUDE_WIN32_TIME_H

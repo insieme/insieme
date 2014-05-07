@@ -394,6 +394,46 @@ ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start
 	return forStmt(var, start, end, step, wrapBody(body));
 }
 
+ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
+{
+	core::TypePtr iterType =
+						(loopStmt->getIterator()->getType()->getNodeType() == core::NT_RefType) ?
+								core::static_pointer_cast<const core::RefType>(loopStmt->getIterator()->getType())->getElementType() :
+								loopStmt->getIterator()->getType();
+	core::FunctionTypePtr ceilTy = functionType(
+						toVector<core::TypePtr>(getLangBasic().getDouble()),
+						getLangBasic().getDouble()
+				);
+
+	core::ExpressionPtr finalVal = add( // start + ceil((end-start)/step) * step
+			loopStmt->getStart(),
+			mul( // ceil((end-start)/step) * step
+				castExpr(iterType,// ( cast )
+						callExpr(
+								getLangBasic().getDouble(),
+								literal(ceilTy, "ceil"),// ceil()
+								div(// (end-start)/step
+										castExpr(
+												getLangBasic().getDouble(),
+												sub(
+													sub(
+															loopStmt->getEnd(),
+															loopStmt->getStep()
+													),
+													loopStmt->getStart()
+												)// end - start
+										),
+										castExpr(getLangBasic().getDouble(), loopStmt->getStep())
+								)
+						)
+				),
+				castExpr(loopStmt->getStart()->getType(), loopStmt->getStep())
+			)
+	);
+
+	return finalVal;
+}
+
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
 
@@ -528,10 +568,19 @@ ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	}
 	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
 }
+
 ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
 		return refNew(undefinedNew(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+
+ExpressionPtr IRBuilder::undefinedLoc(const TypePtr& typ) const {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refLoc(undefinedLoc(elementType));
 	}
 	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
 }
@@ -659,6 +708,10 @@ CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefNew(), subExpr);
+}
+
+CallExprPtr IRBuilder::refLoc(const ExpressionPtr& subExpr) const {
+	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefLoc(), subExpr);
 }
 
 CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
@@ -864,6 +917,10 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert(!variants.empty() && "Variant list must not be empty!");
 	assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); }) && "All options have to have the same type.");
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
+}
+
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& max) const {
+	return callExpr(manager.getLangBasic().getPickInRange(), max);
 }
 
 

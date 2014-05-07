@@ -385,8 +385,8 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew,
-	  RefIsNull, RefReinterpret, RefNarrow, RefExpand)
+GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew, 
+	  RefLoc, RefIsNull, RefReinterpret, RefNarrow, RefExpand)
 GROUP(Delete, RefDelete)
 
 TYPE(MemLoc, "memloc")
@@ -408,7 +408,8 @@ LITERAL(RefToInt,		"ref.to.int",			"(ref<'a>) -> uint<8>")
 LITERAL(IntToRef,		"int.to.ref",			"(uint<8>, type<'a>) -> ref<'a>")
 
 DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
-DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap); r = v; return r; }")
+DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap ); r = v; return r; }")
+DERIVED(RefLoc,  			"ref.loc",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.local); r = v; return r; }")
 DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
 DERIVED(FuncIsNull,   		"func.is.null",			"('a f) -> bool { return f == func.null(lit('a)); }")
 
@@ -629,6 +630,8 @@ DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { re
 // Tunable Options ----------------------------------------------------------------------------------------------------
 
 LITERAL(Pick, "pick", "(list<'a>)->'a")
+LITERAL(PickInRange, "pickInRange", "('a)->'a")
+
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 

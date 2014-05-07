@@ -148,6 +148,9 @@ lookup_lib( BARVINOK barvinok )
 # lookup GMP library
 lookup_lib( GMP gmp ) 
 
+# lookup MPFR library
+lookup_lib( MPFR mpfr )
+
 # lookup CUDD library
 lookup_lib( CUDD cudd )
 

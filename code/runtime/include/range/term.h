@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_RANGE_TERM_H
+#define __GUARD_RANGE_TERM_H
 
 #include <stdio.h>
 #include "range/point.h"
@@ -106,3 +108,6 @@ int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d* a);
 //	return irt_range_point_3d_eq(a.start, b.start) && irt_range_point_3d_eq(a.end, b.end) && irt_range_point_3d_eq(a.step, b.step);
 //}
 
+
+
+#endif // ifndef __GUARD_RANGE_TERM_H

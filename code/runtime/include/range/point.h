@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_RANGE_POINT_H
+#define __GUARD_RANGE_POINT_H
 
 #include <stdio.h>
 #include "irt_inttypes.h"
@@ -111,3 +113,6 @@ inline irt_range_point_2d irt_range_point_2d_add(irt_range_point_2d a, irt_range
 inline irt_range_point_3d irt_range_point_3d_add(irt_range_point_3d a, irt_range_point_3d b) {
 	return (irt_range_point_3d){a.x + b.x, a.y + b.y, a.z + b.z};
 }
+
+
+#endif // ifndef __GUARD_RANGE_POINT_H

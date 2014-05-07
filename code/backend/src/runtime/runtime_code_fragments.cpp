@@ -481,6 +481,7 @@ namespace runtime {
 
 				// meta information
 				out << " &(" << META_TABLE_NAME << "[" << variant.metaInfoEntryIndex << "])";
+
 				out << " },\n";
 			});
 			out << "};\n";

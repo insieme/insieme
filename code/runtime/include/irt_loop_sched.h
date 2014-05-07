@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_LOOP_SCHED_H
+#define __GUARD_IRT_LOOP_SCHED_H
 
 #include "declarations.h"
 #include "irt_optimizer.h"
@@ -86,3 +88,6 @@ inline static void irt_schedule_loop(
 // sets the scheduling policy for the given group
 // it will activate upon reaching the next loop
 void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy);
+
+
+#endif // ifndef __GUARD_IRT_LOOP_SCHED_H

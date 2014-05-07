@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_AFFINITY_H
+#define __GUARD_UTILS_AFFINITY_H
 
 // in this file, only prototypes of platform independent shall be declared
 
@@ -113,3 +115,6 @@ irt_affinity_policy irt_load_affinity_from_env();
 static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy);
 
 void irt_set_global_affinity_policy(irt_affinity_policy policy);
+
+
+#endif // ifndef __GUARD_UTILS_AFFINITY_H

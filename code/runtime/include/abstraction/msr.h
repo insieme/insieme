@@ -35,9 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_MSR_H
+#define __GUARD_ABSTRACTION_MSR_H
 
 int32 _irt_open_msr(uint32 core);
 
 int64 _irt_read_msr(int32 file, int32 subject);
 
 int32 _irt_close_msr(int32 file);
+
+
+#endif // ifndef __GUARD_ABSTRACTION_MSR_H

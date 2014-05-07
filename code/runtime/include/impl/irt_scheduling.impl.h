@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_SCHEDULING_IMPL_H
+#define __GUARD_IMPL_IRT_SCHEDULING_IMPL_H
 #include "irt_scheduling.h"
 #include "utils/timing.h"
 #include "impl/instrumentation_events.impl.h"
@@ -92,7 +94,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
 		// we were woken up by the signal and now own the mutex
 		irt_g_active_worker_count++;
-		irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_RUNNING);
+		irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_RUNNING, uint32_t);
 		irt_mutex_unlock(&irt_g_active_worker_mutex);
 #endif // IRT_WORKER_SLEEPING
 	}
@@ -107,3 +109,6 @@ void irt_signal_worker(irt_worker* target) {
 	irt_mutex_unlock(&irt_g_active_worker_mutex);
 #endif // IRT_WORKER_SLEEPING
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_SCHEDULING_IMPL_H

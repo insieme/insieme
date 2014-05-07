@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_EVENTS_H
+#define __GUARD_IRT_EVENTS_H
 
 #include "declarations.h"
 
@@ -104,3 +106,6 @@ IRT_DECLARE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
 IRT_DEFINE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
+
+
+#endif // ifndef __GUARD_IRT_EVENTS_H

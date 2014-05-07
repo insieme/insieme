@@ -38,10 +38,11 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
-#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/hash_utils.h"
+
+#include "insieme/analysis/omp/omp_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -84,7 +85,7 @@ namespace cba {
 		}
 
 		bool isTask() const {
-			return core::analysis::isTask(creationPoint.as<core::JobExprPtr>());
+			return insieme::analysis::omp::isTask(creationPoint.as<core::JobExprPtr>());
 		}
 
 		bool operator==(const Job<Context>& other) const {

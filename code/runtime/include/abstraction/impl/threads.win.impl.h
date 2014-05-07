@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H
 
 #include "abstraction/threads.h"
 #include "error_handling.h"
@@ -105,36 +107,16 @@ int irt_thread_join(irt_thread *t){
 
 void irt_thread_exit(int exit_code){
 	ExitThread(exit_code);
+}  
+
+void irt_thread_yield()
+{
+	IRT_WARN("irt_thread_yield empty implementation");
 }
 
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 	return t1->thread_id == t2->thread_id;
 }
-
-
-/* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
-
-void irt_spin_lock(irt_spinlock *lock){
-	// if value at destination lock == IRT_SPIN_UNLOCKED, then it will be changed to IRT_SPIN_LOCKED and the loop
-	// will exit, otherwise we loop until the condition is met and the lock can be set
-	// InterlockedCompareExchange returns the previous value of the Destination (lock) parameter.
-	while (IRT_SPIN_LOCKED == InterlockedCompareExchange(lock, IRT_SPIN_LOCKED, IRT_SPIN_UNLOCKED)){}
-}
-
-void irt_spin_unlock(irt_spinlock *lock){
-	// if lock was set to IRT_SPIN_LOCKED then it will be set to IRT_SPIN_UNLOCKED, otherwise nothing happens
-	InterlockedCompareExchange(lock, IRT_SPIN_UNLOCKED, IRT_SPIN_LOCKED);
-}
-
-int irt_spin_init(irt_spinlock *lock){
-	*lock = IRT_SPIN_UNLOCKED;
-	return 0;
-}
-
-void irt_spin_destroy(irt_spinlock *lock){
-	IRT_ASSERT(InterlockedCompareExchange(lock, IRT_SPIN_DESTROYED, IRT_SPIN_UNLOCKED) == IRT_SPIN_UNLOCKED, IRT_ERR_INTERNAL, "Spin lock was either locked, destroyed or uninitialized when attempting to destroy lock.");
-}
-
 
 /* MUTEX FUNCTIONS ------------------------------------------------------------------- */
 
@@ -162,7 +144,7 @@ void irt_cond_wake_all(irt_cond_var* cv){
 	#endif
 }
 
-int irt_cond_wait(irt_cond_var* cv, irt_lock_obj* m){
+int irt_cond_wait(irt_cond_var* cv, irt_mutex_obj* m){
 	#if (WINVER < 0x0600)
 		#ifdef IRT_WORKER_SLEEPING
 			#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
@@ -188,23 +170,23 @@ void irt_cond_wake_one(irt_cond_var *cv){
 // Windows Vista and up use slim reader writer locks
 #if (WINVER >= 0x0600)
 
-void irt_mutex_init(irt_lock_obj *m){
+void irt_mutex_init(irt_mutex_obj *m){
 	InitializeSRWLock(m);
 }
 
-void irt_mutex_lock(irt_lock_obj *m){
+void irt_mutex_lock(irt_mutex_obj *m){
 	AcquireSRWLockExclusive(m);
 }
 
-int irt_mutex_trylock(irt_lock_obj *m){
+int irt_mutex_trylock(irt_mutex_obj *m){
 	return !TryAcquireSRWLockExclusive(m);
 }
 
-void irt_mutex_unlock(irt_lock_obj *m){
+void irt_mutex_unlock(irt_mutex_obj *m){
 	ReleaseSRWLockExclusive(m);
 }
 
-void irt_mutex_destroy(irt_lock_obj *m){
+void irt_mutex_destroy(irt_mutex_obj *m){
 	// there is no WinAPI call
 }
 
@@ -215,15 +197,15 @@ void irt_mutex_destroy(irt_lock_obj *m){
 // it won't be blocked
 #else
 
-void irt_mutex_init(irt_lock_obj *m){
+void irt_mutex_init(irt_mutex_obj *m){
 	*m = CreateSemaphore(NULL, 1, 1, NULL);
 }
 
-void irt_mutex_lock(irt_lock_obj *m){
+void irt_mutex_lock(irt_mutex_obj *m){
 	WaitForSingleObject(*m, INFINITE); // decreases semaphore count by 1 if it is greater than 0, else waits until it becomes greater than 0
 }
 
-int irt_mutex_trylock(irt_lock_obj *m){
+int irt_mutex_trylock(irt_mutex_obj *m){
 	DWORD res = WaitForSingleObject(*m, 1); // wait 1ms for m being signalled, then return
 	if (res == WAIT_OBJECT_0)
 		return 0;
@@ -231,11 +213,11 @@ int irt_mutex_trylock(irt_lock_obj *m){
 		return -1;
 }
 
-void irt_mutex_unlock(irt_lock_obj *m){
+void irt_mutex_unlock(irt_mutex_obj *m){
 	ReleaseSemaphore(*m, 1, NULL); // increase semaphore count by 1
 }
 
-void irt_mutex_destroy(irt_lock_obj *m){
+void irt_mutex_destroy(irt_mutex_obj *m){
 	CloseHandle(*m);
 }
 
@@ -262,3 +244,5 @@ void* irt_tls_get(irt_tls_key k){
 int irt_tls_set(irt_tls_key k, void *val){
 	return !TlsSetValue(k, val);
 }
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H

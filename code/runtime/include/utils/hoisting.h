@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_HOISTING_H
+#define __GUARD_UTILS_HOISTING_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -80,3 +82,6 @@
 
 
 
+
+
+#endif // ifndef __GUARD_UTILS_HOISTING_H

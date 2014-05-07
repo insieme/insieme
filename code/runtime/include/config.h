@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONFIG_H
+#define __GUARD_CONFIG_H
 
 /* ------------------------------ config options ----- */
 
@@ -118,6 +120,9 @@
 // don't misalign!
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
+#ifndef IRT_DEF_WORKERS
+#define IRT_DEF_WORKERS 1
+#endif
 #ifndef IRT_MAX_WORKERS
 #define IRT_MAX_WORKERS 2048
 #endif
@@ -125,3 +130,9 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
+#ifdef _GEMS
+	#define	GEMS_CORE_FREQ_MHZ 100
+#endif
+
+
+#endif // ifndef __GUARD_CONFIG_H

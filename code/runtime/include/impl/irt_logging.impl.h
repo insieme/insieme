@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_LOGGING_IMPL_H
+#define __GUARD_IMPL_IRT_LOGGING_IMPL_H
 
 #include "irt_logging.h"
 #include "irt_version.h"
@@ -163,3 +165,6 @@ void irt_log_setting_u(const char* name, uint64 value) {}
 void irt_log(const char* format, ...) {}
 void irt_log_cleanup() {}
 #endif // (IRT_LOGGING)
+
+
+#endif // ifndef __GUARD_IMPL_IRT_LOGGING_IMPL_H

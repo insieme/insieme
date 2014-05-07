@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_TEMPERATURE_INTEL_H
+#define __GUARD_ABSTRACTION_TEMPERATURE_INTEL_H
 
 #include "declarations.h"
 
@@ -50,3 +52,6 @@ uint64 irt_get_temperature_intel_package(const irt_worker* worker);
 
 bool irt_temperature_intel_is_core_supported();
 bool irt_temperature_intel_is_package_supported();
+
+
+#endif // ifndef __GUARD_ABSTRACTION_TEMPERATURE_INTEL_H

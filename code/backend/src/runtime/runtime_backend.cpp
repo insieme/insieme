@@ -90,6 +90,7 @@ namespace runtime {
         if(isGemsclaim) {
             config->mainFunctionName = "insieme_main";
             config->additionalHeaderFiles.push_back("input_file.h");
+            config->areShiftOpsSupported = false;
         }
 
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
@@ -130,7 +131,7 @@ namespace runtime {
 
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
-		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable());
+		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), config);
 
 		// done
 		return converter;
@@ -147,6 +148,7 @@ namespace runtime {
 
 			table["irt_parallel"] 					= "ir_interface.h";
 			table["irt_task"] 					    = "ir_interface.h";
+			table["irt_region"] 				    = "ir_interface.h";
 			table["irt_merge"] 						= "ir_interface.h";
 			table["irt_pfor"]						= "ir_interface.h";
 
@@ -168,18 +170,15 @@ namespace runtime {
 			table["irt_lock_acquire"] 	= "irt_all_impls.h";
 			table["irt_lock_release"] 	= "irt_all_impls.h";
 
-            table["irt_atomic_fetch_and_or"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_xor"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_and"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_add"]			= "irt_atomic.h";
-			table["irt_atomic_fetch_and_sub"]			= "irt_atomic.h";
-			table["irt_atomic_add_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_sub_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_or_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_and_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_xor_and_fetch"]			= "irt_atomic.h";
-			table["irt_atomic_val_compare_and_swap"]	= "irt_atomic.h";
-			table["irt_atomic_bool_compare_and_swap"]	= "irt_atomic.h";
+			table["irt_atomic_fetch_and_add"]			= "irt_all_impls.h";
+			table["irt_atomic_fetch_and_sub"]			= "irt_all_impls.h";
+			table["irt_atomic_add_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_sub_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_or_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_and_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_xor_and_fetch"]			= "irt_all_impls.h";
+			table["irt_atomic_val_compare_and_swap"]	= "irt_all_impls.h";
+			table["irt_atomic_bool_compare_and_swap"]	= "irt_all_impls.h";
 
 			table["irt_variant_pick"]	= "irt_all_impls.h";
 		}

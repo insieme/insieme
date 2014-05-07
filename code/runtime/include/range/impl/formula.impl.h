@@ -431,6 +431,10 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 		res = newRes;
 	}
 
+#ifdef _GEMS
+	// alloca is implemented as malloc
+	free(diffList);
+#endif
 	// return result
 	return res;
 }
@@ -542,6 +546,10 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 		res = newRes;
 	}
 
+#ifdef _GEMS
+	// alloca is implemented as malloc
+	free(diffList);
+#endif
 	// return result
 	return res;
 
