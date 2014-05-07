@@ -1,0 +1,57 @@
+# 1 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.c"
+# 1 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark//"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.c"
+
+
+
+
+
+
+# 1 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.h" 1
+# 10 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.h"
+# 1 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/complex_def.h" 1
+# 10 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/complex_def.h"
+typedef struct {
+  short int re;
+  short int im;
+} complex;
+
+
+
+
+
+complex cmul(complex a, complex b);
+complex cmulc(complex a, complex b);
+int cabs2(complex a);
+complex cadd(complex a, complex b);
+complex csub(complex a, complex b);
+complex cscale(int a, int exp, complex b);
+complex cmake(short int re, short int im);
+complex cconj(complex a);
+# 11 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.h" 2
+
+void interleave(complex* in, complex* out, int n);
+# 8 "/home/petert/tests/insieme-LTE_Uplink_Receiver_PHY_Benchmark/lib/kernels/interleave_11.c" 2
+
+void interleave(complex* in, complex* out, int n){
+  int s;
+  int i;
+  int c = 0;
+  int r = 0;
+  int cols = 12;
+  int rows = 7;
+  int steps = n/(rows*cols);
+
+  for (s = 0; s < steps; s++) {
+    for (c = 0; c < cols; c++) {
+      for (r = 0; r < rows; r++) {
+ out[s*rows*cols + r*cols + c] = in[s*rows*cols + c*rows + r];
+      }
+    }
+  }
+
+  for (i=(s-1)*rows*cols + (r-1)*cols + c; i<n; i++)
+    out[i] = in[i];
+}
