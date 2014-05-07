@@ -309,9 +309,10 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 	} else {
 		argument = builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0)));
 
-		if(utils::tryDeref(argument)->getType() != argTy) {// e.g. argument of kernel is an ocl vector type
+		TypePtr refArtTy = builder.refType(argTy);
+		if(argument->getType() != refArtTy) {// e.g. argument of kernel is an ocl vector type
 
-			argument = builder.callExpr(argTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
+			argument = builder.callExpr(refArtTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
 		}
 		argument = utils::tryDeref(argument);
 	}
@@ -853,4 +854,15 @@ void IclKernelReplacer::inlineKernelCode() {
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
+
+// aes 				cast
+// fib
+// mol_dyn_vec 		cast
+// nbody 			cast
+// ocl_jacsolver 	cannot acces not tuple type
+// ocl_kernel 		not designed for insieme
+// ocl_reduce		many semantic errors
+// openCore 		includes
+// perlin noise		it is not a ref, what is this?
+// qap_array		replacements must not be empty
 
