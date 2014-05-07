@@ -1,1 +1,2 @@
-executionFlags=${PATH}/inputs/benchmark.par ${PATH}/inputs/benchmark.list
+executionFlags=${PATH}/inputs/example1.par ${PATH}/inputs/example1.list
+use_libmath=1

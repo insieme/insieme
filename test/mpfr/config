@@ -1,1 +1,3 @@
+includes="${gmp_home}/include","${mpfr_home}/include"
 libNames=mpfr
+libPaths="${mpfr_home}/lib"
