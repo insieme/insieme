@@ -1053,12 +1053,9 @@ bool isZero(const core::ExpressionPtr& value) {
 	}
 
 	// TODO: remove this when frontend is fixed!!
-	// => compensate for silly stuff like var(*getNull())
-	if (core::analysis::isCallOf(value, basic.getRefVar())) {
-		core::ExpressionPtr arg = core::analysis::getArgument(value, 0);
-		if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
-			return isZero(core::analysis::getArgument(arg, 0));
-		}
+	// => compensate for silly stuff like var(*getNull()) or NULL aka ref.deref(ref.null)
+	if (core::analysis::isCallOf(value, basic.getRefVar()) || core::analysis::isCallOf(value, basic.getRefDeref())) {
+		return isZero(core::analysis::getArgument(value, 0));
 	}
 
 	// otherwise, it is not zero
