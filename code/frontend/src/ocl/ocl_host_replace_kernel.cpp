@@ -847,6 +847,8 @@ void IclKernelReplacer::inlineKernelCode() {
 		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
 	});
 
+	assert(!replacements.empty() && "No kernels found");
+
 	prog = transform::replaceAll(mgr, replacements);
 
 }
