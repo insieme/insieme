@@ -410,22 +410,6 @@ core::NodePtr IclBufferReplacer::getTransformedProgram() {
 
 	performReplacements();
 
-//	NodeManager& mgr = prog->getNodeManager();
-//	IRBuilder builder(mgr);
-//	NodeMap replacements;
-//	visitDepthFirst(prog, [&](const DeclarationStmtPtr& decl) {
-//		VariablePtr var = decl->getVariable();
-//		ExpressionPtr init = decl->getInitialization();
-//		if(!types::isSubTypeOf(init->getType(), var->getType())) {
-//			replacements[var] = builder.variable(init->getType());
-//std::cout << "asdf " << *var << std::endl;
-//		}
-//	});
-//assert(false);
-//	prog = transform::replaceAll(mgr, prog, replacements);
-//	printer::PrettyPrinter pp(prog);
-//		std::cout << "\nPrETTy: \n" <<  pp << std::endl;
-
 	return prog;
 }
 

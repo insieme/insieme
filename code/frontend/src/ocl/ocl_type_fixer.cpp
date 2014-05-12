@@ -127,21 +127,39 @@ void TypeFixer::fixDecls(NodeAddress pA, TypePtr type) {
 	NodeManager& mgr = pA->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr decls = irp::declarationStmt(var("variable", pattern::any), var("init",
-			irp::callExpr(aT(pattern::atom(type)), pattern::any, *pattern::any)));
+	TreePatternPtr decls = irp::declarationStmt(var("variable", pattern::any),
+			irp::callExpr(aT(pattern::atom(type)), pattern::atom(BASIC.getRefVar()), pattern::single(var("init", pattern::any))));
 
 	irp::matchAllPairs(decls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& decl) {
 
 		TypePtr varType = decl["variable"].getValue().as<ExpressionPtr>()->getType();
-		TypePtr initType = varType.as<RefTypePtr>()->getElementType();
+		TypePtr memType = varType.as<RefTypePtr>()->getElementType();
 
-		replacements[matchAddress >> decl["init"].getValue()] = builder.callExpr(varType, BASIC.getRefNew(),
-				builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
-//		dumpPretty(replacements[decl["init"].getValue()]);
+		replacements[matchAddress >> decl["init"].getValue()] = builder.callExpr(memType, BASIC.getUndefined(), builder.getTypeLiteral(memType));
 	});
 
 }
 
+
+void TypeFixer::updateTemps(TypePtr type, VariableMap& varReplacements) {
+	NodeManager& mgr = prog->getNodeManager();
+	IRBuilder builder(mgr);
+
+	TreePatternPtr decls = irp::declarationStmt(var("variable", irp::variable(aT(pattern::atom(type)))), (var("init", pattern::any)));
+	TreePatternPtr assigns = irp::assignment(var("variable", irp::variable(aT(pattern::atom(type)))), (var("rhs", pattern::any)));
+	TreePatternPtr oneFitsAll = decls | assigns;
+
+	irp::matchAllPairs(oneFitsAll, prog, [&](const NodePtr& matchPtr, const NodeMatch& decl) {
+
+		VariablePtr var = decl["variable"].getValue().as<VariablePtr>();
+		TypePtr varType = var->getType();
+		TypePtr initType = decl.isVarBound("init") ?	decl["init"].getValue().as<ExpressionPtr>()->getType() :
+				builder.refType(decl["rhs"].getValue().as<ExpressionPtr>()->getType());
+
+		varReplacements[var] = builder.variable(initType);
+	});
+
+}
 
 TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toTransform) {
 	// replace some OpenCL type variables with int<4>.
@@ -156,12 +174,13 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	// replace cl_program
 	TypePtr cl_program = builder.genericType("_cl_program");
 	ptrReplacements[cl_program] = int4;
+
 	prog = transform::replaceAll(mgr, prog, ptrReplacements, false);
 
 	NodeAddress pA(prog);
 	for(TypePtr typeTofix : types)
 		fixDecls(pA, typeTofix);
-
+//	assert(false);
 //for(std::pair<NodePtr, NodePtr> cur : this->replacements) {
 //	std::cout << std::endl;
 //	dumpPretty(cur.first);
@@ -169,8 +188,12 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	if(!this->replacements.empty())
 		prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
 
-	VariableMap emptyMap;
-	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, emptyMap, false);
+	VariableMap varReplacements;
+	// replace temporal variables
+	for(TypePtr typeTofix : types)
+		updateTemps(typeTofix, varReplacements);
+
+	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, varReplacements, false);
 
 	removeClVars();
 }

@@ -582,7 +582,7 @@ void KernelReplacer::replaceKernels() {
 		kernelReplacements[k] = replacement;
 	});
 
-	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements);
+	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements, false);
 }
 
 void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates) {
@@ -856,7 +856,7 @@ void IclKernelReplacer::inlineKernelCode() {
 } //namespace insieme
 
 // aes 				cast
-// fib
+// fib				cannot find kernel, is simple file load
 // mol_dyn_vec 		cast
 // nbody 			cast
 // ocl_jacsolver 	cannot acces not tuple type
