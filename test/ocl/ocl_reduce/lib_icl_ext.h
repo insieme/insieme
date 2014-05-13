@@ -34,7 +34,7 @@ enum icl_datatype { icl_FLOAT, icl_INT, icl_DOUBLE };
 typedef struct {
 	size_t size;
 	size_t groupSize;	
-	int deviceType;         // available device type: CL_DEVICE_TYPE_CPU, CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_ACCELERATOR, CL_DEVICE_TYPE_ALL
+	cl_device_type deviceType;         // available device type: CL_DEVICE_TYPE_CPU, CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_ACCELERATOR, CL_DEVICE_TYPE_ALL
 	int deviceId;   	
 	unsigned iter;          // iterations 	
 	bool checkResults;      // results are check against a serial implementation or a precomputed solution	
