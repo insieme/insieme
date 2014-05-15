@@ -340,6 +340,7 @@ namespace runtime {
 		});
 
         if(!config->areShiftOpsSupported) {
+            // TODO: parenthesize ARG(0)
 		    #define SHIFT_OP_CONVERTER(__IRNAME, __OP) \
 		    table[basic.get##__IRNAME()] = OP_CONVERTER({ \
                 ADD_HEADER("math.h"); \
