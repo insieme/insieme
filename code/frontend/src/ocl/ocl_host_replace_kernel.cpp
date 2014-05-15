@@ -326,7 +326,14 @@ ExpressionPtr KernelReplacer::createKernelCallLambda(const ExpressionAddress loc
 	IRBuilder builder(mgr);
 
 	ExpressionPtr k = utils::getRootVariable(localKernel).as<ExpressionPtr>();
+/*
+std::cout << "searching " << *k << " from " << *localKernel << std::endl;
+if(kernelFunctions.empty()) std::cout << "\tnothing\n";
 
+for_each(kernelFunctions, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kernel) {
+	std::cout << "in " << *kernel.first << std::endl;
+});
+*/
 	// try to find coresponding kernel function
 	assert(kernelFunctions.find(k) != kernelFunctions.end() && "Cannot find OpenCL Kernel");
 	const ExpressionPtr local = anythingToVec3(work_dim, local_work_size);
@@ -587,9 +594,7 @@ void KernelReplacer::replaceKernels() {
 
 void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates) {
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-		std::cout << "found a f**ing kernel function\n";
 		if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
-			std::cout << "\tit's a lambda\n";
 			std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
 			assert(!cname.empty() && "cannot find the name of the kernel function");
 			assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
@@ -858,10 +863,10 @@ void IclKernelReplacer::inlineKernelCode() {
 } //namespace insieme
 
 // aes 				cast
-// fib				cannot find kernel, is simple file load
+// fib				return types of clRelease*
 // mol_dyn_vec 		cast
 // nbody 			cast
 // ocl_kernel 		not designed for insieme
 // openCore 		includes
 // perlin noise		vector even/odd operation
-
+// qap_array		return types of clRelease*

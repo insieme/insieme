@@ -247,6 +247,10 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr){
 	core::TypePtr exprTy = expr->getType();
+
+	// check if cast is needed at all
+	if(exprTy == trgTy) return expr;
+
 	core::TypePtr targetTy = trgTy;
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
