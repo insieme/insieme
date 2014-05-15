@@ -285,7 +285,6 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 		if(subscript) {
-			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
 			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
@@ -329,17 +328,18 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			return;
 		}
 	});
-
+/*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
 		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
+*/
 }
 
 void BufferReplacer::performReplacements() {
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-			std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
-		// use pointer in replacements to replace all occurences of the addressed expression
+//			std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurrences of the addressed expression
 	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
 		em[replacement.first] = replacement.second;
 	});
