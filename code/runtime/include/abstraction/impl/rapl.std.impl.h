@@ -118,6 +118,8 @@ bool irt_rapl_is_supported() {
 			return true;
 		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EN 32nm
 			return true;
+		if(model_number == 0xE && extended_model == 0x3) // IvyBridge EN 22nm
+			return true;
 		if(model_number == 0xD && extended_model == 0x2) // dx1 = E5-2660
 			return true;
 		if(model_number == 0xA && extended_model == 0x3) // IvyBridge 22nm
