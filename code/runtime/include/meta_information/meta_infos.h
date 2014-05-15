@@ -35,13 +35,15 @@
  */
 
 #pragma once
+#ifndef __GUARD_META_INFORMATION_META_INFOS_H
+#define __GUARD_META_INFORMATION_META_INFOS_H
 
 // build struct definitions
 #include "meta_information/struct_generator.inc"
 #include "insieme/meta_information/meta_infos.def"
 
 // build default table entry definition containing all structs
-typedef struct _irt_meta_info_table_entry {
+struct _irt_meta_info_table_entry {
 #ifdef IRT_META_INFO_TABLE_ENTRY_FIELDS
 	IRT_META_INFO_TABLE_ENTRY_FIELDS
 #else // IRT_META_INFO_TABLE_ENTRY_FIELDS
@@ -49,7 +51,7 @@ typedef struct _irt_meta_info_table_entry {
 	#include "meta_information/default_generator.inc"
 	#include "insieme/meta_information/meta_infos.def"
 #endif // IRT_META_INFO_TABLE_ENTRY_FIELDS
-} irt_meta_info_table_entry;
+};
 
 // build accessors for metainformation
 #include "meta_information/accessor_generator.inc"
@@ -58,3 +60,5 @@ typedef struct _irt_meta_info_table_entry {
 // build printer for metainformation
 #include "meta_information/printer_generator.inc"
 #include "insieme/meta_information/meta_infos.def"
+
+#endif //#ifndef __GUARD_META_INFORMATION_META_INFOS_H
