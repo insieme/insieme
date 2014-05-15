@@ -152,7 +152,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 		path = path.substr(1, path.length() - 2);
 //std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
-			string root = path;
+	string root = path;
 	size_t nIncludes = includeDirs.size();
 	// try relative path first
 	check.open(path);
@@ -586,16 +586,18 @@ void KernelReplacer::replaceKernels() {
 }
 
 void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates) {
-			for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
-                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
-                assert(!cname.empty() && "cannot find the name of the kernel function");
-				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
-				checkDuplicates[cname] = 1;
-				kernelFunctions[kernelNames[cname]] = lambdaEx;
-			}
+	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
+		std::cout << "found a f**ing kernel function\n";
+		if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+			std::cout << "\tit's a lambda\n";
+			std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
+			assert(!cname.empty() && "cannot find the name of the kernel function");
+			assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+			checkDuplicates[cname] = 1;
+			kernelFunctions[kernelNames[cname]] = lambdaEx;
+		}
 
-		});
+	});
 }
 
 void KernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
@@ -859,10 +861,7 @@ void IclKernelReplacer::inlineKernelCode() {
 // fib				cannot find kernel, is simple file load
 // mol_dyn_vec 		cast
 // nbody 			cast
-// ocl_jacsolver 	cannot acces not tuple type
 // ocl_kernel 		not designed for insieme
-// ocl_reduce		many semantic errors
 // openCore 		includes
-// perlin noise		it is not a ref, what is this?
-// qap_array		replacements must not be empty
+// perlin noise		vector even/odd operation
 
