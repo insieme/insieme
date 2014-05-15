@@ -60,6 +60,7 @@ void solve_rec(int size, __global int* A, __global int* B, int* partial, int pla
 }
 
 
+#pragma insieme mark
 __kernel void qap(int size, __global int* A, __global int* B, __global call_record* problems, __global int* block, __global int* best, int num_sub_problems) {
 	int gid = get_global_id(0);
 
