@@ -60,18 +60,32 @@ namespace pattern {
 		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
 			: pattern(pattern), generator(generator) {}
 
+		/**
+		 * Applies this rule to the given input node.
+		 * If the rule does not fit a null pointer will be returned.
+		 */
 		core::NodePtr applyTo(const core::NodePtr& tree) const;
 
+		/**
+		 * Applies this rule to the given input node.
+		 * If the rule does not fit a null pointer will be returned.
+		 */
 		core::NodePtr operator()(const core::NodePtr& tree) const {
 			return applyTo(tree);
+		}
+
+		/**
+		 * Applies this rule until a fixpoint is reached.
+		 */
+		core::NodePtr fixpoint(const core::NodePtr& tree) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return pattern->printTo(out) << " -> " << *generator;
 		}
 
 		// for testing only ...
 		TreePtr applyTo(const TreePtr& tree) const;
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return pattern->printTo(out) << " -> " << *generator;
-		}
 	};
 
     inline core::NodePtr apply(const core::NodePtr& node, const TreePatternPtr& pattern, const TreeGeneratorPtr& generator) {

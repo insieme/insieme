@@ -126,6 +126,10 @@ namespace irg {
 		return node(core::NT_CallExpr, type << single(function) << parameters);
 	}
 
+	inline TreeGeneratorPtr callExpr(const TreeGeneratorPtr& type, const NodePtr& function, const ListGeneratorPtr& parameters = generator::empty) {
+		return callExpr(type, atom(function), parameters);
+	}
+
 	inline TreeGeneratorPtr bindExpr(const ListGeneratorPtr& parameters, const TreeGeneratorPtr& call) {
 		return node(core::NT_BindExpr, parameters << single(call));
 	}

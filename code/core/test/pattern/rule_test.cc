@@ -39,6 +39,7 @@
 #include "insieme/core/pattern/rule.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/ir_generator.h"
+#include "insieme/core/pattern/variable.h"
 
 namespace insieme {
 namespace core {
@@ -144,34 +145,85 @@ namespace pattern {
 
 	TEST(Rule, OpReplacement) {
 
+		using namespace generator;
+
 	    core::NodeManager mgr;
 	    IRBuilder builder(mgr);
 
 	    core::NodePtr code = builder.normalize(builder.parseExpr("1+2"));
 	    ASSERT_EQ("int.add(1, 2)", toString(*code));
-	    std::cout << "input: " << code << "\n";
 
-	    auto pTypeF = p::var("typeF");
-	    auto pTypeR = p::var("typeR");
-	    auto pArg1 = p::var("arg1");
-	    auto pArg2 = p::var("arg2");
+	    // create a set of tree variables
+	    Variable typeF = "typeF";
+	    Variable typeR = "typeR";
+	    Variable arg1 = "arg1";
+	    Variable arg2 = "arg2";
 
-	    TreePatternPtr callAdd = irp::callExpr(pTypeR, irp::literal(pTypeF,"int.add"), pArg1 <<  pArg2);
-	    ASSERT_TRUE(callAdd->matchPointer(code));
+	    auto pattern   = irp::callExpr(typeR, irp::literal(typeF,"int.add"), arg1 << arg2);
+	    auto generator = irg::callExpr(typeR, irg::literal(typeF,"int.sub"), arg1 << arg2);
 
-	    auto gTypeF = g::var("typeF");
-	    auto gTypeR = g::var("typeR");
-	    auto gArg1 = g::var("arg1");
-	    auto gArg2 = g::var("arg2");
-
-	    auto callFMA = g::irg::callExpr(gTypeR, g::irg::literal(gTypeF, "int.sub"), gArg1 << gArg2 );
+	    // check that the pattern is right
+	    ASSERT_TRUE(pattern->matchPointer(code));
 
 	    // create and apply a rule
-	    Rule rule(callAdd, callFMA);
+	    Rule rule(pattern, generator);
 	    auto out = rule(code);
 	    ASSERT_TRUE(out);
 	    EXPECT_EQ("int.sub(1, 2)", toString(*out));
 	}
+
+
+	TEST(Rule, MultiplyAndAdd) {
+
+		using namespace generator;
+
+		core::NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto mul = builder.getLangBasic().getSignedIntMul();
+		auto add = builder.getLangBasic().getSignedIntAdd();
+		auto mad = builder.parseExpr("lit(\"mad\" : (int<#a>,int<#a>,int<#a>) -> int<#a>)");
+
+		Variable t = "t";
+		Variable a = "a";
+		Variable b = "b";
+		Variable c = "c";
+
+		auto p = irp::callExpr(t, add, irp::callExpr(mul, a << b) << c);
+		auto g = irg::callExpr(t, mad, a << b << c);
+
+		auto c1 = builder.parseExpr("(1*2)+3");
+		ASSERT_TRUE(p->matchPointer(c1));
+
+		Rule rule(p, g);
+		EXPECT_EQ("mad(1, 2, 3)", toString(*rule(c1)));
+
+		// now nested
+		auto p2 = aT(p::var("i", p));
+		auto g2 = g::substitute(g::root, g::var("i"), g);
+
+		auto c2 = builder.parseStmt(
+				"{"
+				"	int<4> a = 12;"
+				"	int<4> b = 14;"
+				"	1+2;"
+				"	1*2+3;"
+				"	12 * (2*3+1) + (a*b+3);"
+				"	int<4> c = a * b + 123;"
+				"}"
+		);
+
+		ASSERT_TRUE(p2->matchPointer(c2));
+
+		Rule r2(p2,g2);
+		NodePtr res = r2.fixpoint(c2);
+
+		EXPECT_EQ("{int<4> v1 = 12; int<4> v2 = 14; int.add(1, 2); mad(1, 2, 3); mad(12, mad(2, 3, 1), mad(v1, v2, 3)); int<4> v3 = mad(v1, v2, 123);}", toString(*res));
+
+
+	}
+
+
 
 } // end namespace pattern
 } // end namespace core
