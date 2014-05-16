@@ -106,6 +106,10 @@ namespace irg {
 		return literal(type, atom(value));
 	}
 
+	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, const string& value) {
+		return literal(type, stringValue(value));
+	}
+
 	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, int value) {
 		return literal(type, stringValue(toString(value)));
 	}

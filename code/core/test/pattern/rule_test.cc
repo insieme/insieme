@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/pattern/rule.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
 
 namespace insieme {
 namespace core {
@@ -137,6 +139,38 @@ namespace pattern {
 
 		EXPECT_EQ("(a,c,b,a)", toString(rule.applyTo(makeTree(a,b,c,a))));
 
+	}
+
+
+	TEST(Rule, OpReplacement) {
+
+	    core::NodeManager mgr;
+	    IRBuilder builder(mgr);
+
+	    core::NodePtr code = builder.normalize(builder.parseExpr("1+2"));
+	    ASSERT_EQ("int.add(1, 2)", toString(*code));
+	    std::cout << "input: " << code << "\n";
+
+	    auto pTypeF = p::var("typeF");
+	    auto pTypeR = p::var("typeR");
+	    auto pArg1 = p::var("arg1");
+	    auto pArg2 = p::var("arg2");
+
+	    TreePatternPtr callAdd = irp::callExpr(pTypeR, irp::literal(pTypeF,"int.add"), pArg1 <<  pArg2);
+	    ASSERT_TRUE(callAdd->matchPointer(code));
+
+	    auto gTypeF = g::var("typeF");
+	    auto gTypeR = g::var("typeR");
+	    auto gArg1 = g::var("arg1");
+	    auto gArg2 = g::var("arg2");
+
+	    auto callFMA = g::irg::callExpr(gTypeR, g::irg::literal(gTypeF, "int.sub"), gArg1 << gArg2 );
+
+	    // create and apply a rule
+	    Rule rule(callAdd, callFMA);
+	    auto out = rule(code);
+	    ASSERT_TRUE(out);
+	    EXPECT_EQ("int.sub(1, 2)", toString(*out));
 	}
 
 } // end namespace pattern

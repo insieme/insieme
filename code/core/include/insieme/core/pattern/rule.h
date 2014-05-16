@@ -62,6 +62,10 @@ namespace pattern {
 
 		core::NodePtr applyTo(const core::NodePtr& tree) const;
 
+		core::NodePtr operator()(const core::NodePtr& tree) const {
+			return applyTo(tree);
+		}
+
 		// for testing only ...
 		TreePtr applyTo(const TreePtr& tree) const;
 
