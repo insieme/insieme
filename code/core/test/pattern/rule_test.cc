@@ -199,8 +199,9 @@ namespace pattern {
 		EXPECT_EQ("mad(1, 2, 3)", toString(*rule(c1)));
 
 		// now nested
-		auto p2 = aT(p::var("i", p));
-		auto g2 = g::substitute(g::root, g::var("i"), g);
+		Variable trg("i",p);
+		auto p2 = aT(trg);
+		auto g2 = g::substitute(g::root, trg, g);
 
 		auto c2 = builder.parseStmt(
 				"{"

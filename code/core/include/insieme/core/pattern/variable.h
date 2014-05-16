@@ -72,11 +72,11 @@ namespace pattern {
 
 	public:
 
-		Variable(const string& name, const TreePatternPtr& = any)
-			: name(name), pVar(var(name, any)), gVar(generator::var(name)) {}
+		Variable(const string& name, const TreePatternPtr& pattern = any)
+			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
-		Variable(const char* name, const TreePatternPtr& = any)
-			: name(name), pVar(var(name, any)), gVar(generator::var(name)) {}
+		Variable(const char* name, const TreePatternPtr& pattern = any)
+			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
 		/**
 		 * The implicit conversion support to convert instances to tree patterns.
