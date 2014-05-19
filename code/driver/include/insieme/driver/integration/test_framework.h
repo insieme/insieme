@@ -72,15 +72,22 @@ namespace testFramework{
 		bool list_only;
 		bool clean;
 		bool color;
-		bool perf;
 		bool overwrite;
 		vector<string> cases;
 		vector<string> steps;
+		vector<string> outputFormats;
+
+		//perf metrics
+		bool perf;
+		string load_miss;
+		string store_miss;
+		string flops;
+		vector<string> perf_metrics;
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
 			  num_threads(1), num_repeditions(1), statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
-			  panic_mode(false), list_only(false), clean(false), color(true),perf(true),overwrite(false) {}
+			  panic_mode(false), list_only(false), clean(false), color(true),overwrite(false),perf(true),load_miss(""),store_miss(""),flops("") {}
 	};
 
 	namespace fs = boost::filesystem;
