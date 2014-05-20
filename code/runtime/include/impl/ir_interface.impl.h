@@ -67,16 +67,14 @@
 //	return ret;
 //}
 
-void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	irt_worker* target = irt_worker_get_current();
-    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0]));
-    irt_optimizer_apply_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0]));
-	irt_schedule_loop(self, group, range, impl_id, args);
+void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args) {
+    irt_optimizer_compute_optimizations(&(impl->variants[0]));
+    irt_optimizer_apply_optimizations(&(impl->variants[0]));
+	irt_schedule_loop(self, group, range, impl, args);
 }
 
 
 irt_joinable* irt_parallel(const irt_parallel_job* job) {
-	irt_worker* target = irt_worker_get_current();
 	//irt_work_item *self = target->cur_wi;
 	//irt_lw_data_item *prev_args = self->parameters;
 	//irt_work_item_range prev_range = self->range;
@@ -90,8 +88,8 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	// Parallel
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
-    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0]));
-    irt_optimizer_apply_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0]));
+    irt_optimizer_compute_optimizations(&(job->impl->variants[0]));
+    irt_optimizer_apply_optimizations(&(job->impl->variants[0]));
 	irt_work_group* retwg = irt_wg_create();
 	uint32 num_threads = (job->max/2+job->min/2);
 	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
@@ -100,7 +98,7 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
 	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 	for(uint32 i=0; i<num_threads; ++i) {
-		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
+		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
 		irt_wg_insert(retwg, wis[i]);
 	}
 	for(uint32 i=0; i<num_threads; ++i) {
@@ -116,14 +114,13 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 irt_joinable* irt_task(const irt_parallel_job* job) {
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");
-    return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl_id, job->args);
+    return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
 }
 
 void irt_region(const irt_parallel_job* job) {
-	irt_worker* target = irt_worker_get_current();
-    irt_optimizer_compute_optimizations(&(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0]));
-	irt_work_item* wis = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
-    irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0].implementation(wis);
+    irt_optimizer_compute_optimizations(&(job->impl->variants[0]));
+	irt_work_item* wis = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
+    job->impl->variants[0].implementation(wis);
     free(wis);
 }
 

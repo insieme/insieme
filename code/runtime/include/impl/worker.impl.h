@@ -207,7 +207,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
 #ifndef IRT_TASK_OPT
-		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+		irt_wi_implementation *wimpl = wi->impl;
 		if(self->default_variant < wimpl->num_variants) {
             irt_optimizer_apply_optimizations(&(wimpl->variants[self->default_variant]));
 			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
@@ -239,7 +239,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 //		irt_inst_region_start_measurements(wi);
 #endif
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, wi->id);
-		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+		irt_wi_implementation *wimpl = wi->impl;
         irt_optimizer_apply_optimizations(&(wimpl->variants[0]));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
@@ -248,29 +248,29 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 }
 
 void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item *wi) {
-    irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+    irt_wi_implementation *wimpl = wi->impl;
     irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
         wimpl->variants[0].rt_data.optimizer_rt_data.data_last, false);
     lwt_continue(&self->basestack, &wi->stack_ptr);
 }
 
 void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi) {
-	irt_worker_run_immediate(self, &wi->range, wi->impl_id, wi->parameters);
+	irt_worker_run_immediate(self, &wi->range, wi->impl, wi->parameters);
 }
 
-void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 	irt_inst_insert_wo_event(target, IRT_INST_WORKER_IMMEDIATE_EXEC, target->id);
 	irt_work_item *self = target->cur_wi;
 	// store current wi data
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
-	irt_wi_implementation_id prev_impl_id = self->impl_id;
+	irt_wi_implementation* prev_impl = self->impl;
 	irt_work_item_id prev_source = self->source_id;
 	uint32 prev_fragments = self->num_fragments;
 	// set new wi data
 	self->parameters = args;
 	self->range = *range;
-	self->impl_id = impl_id;
+	self->impl = impl;
 	self->source_id = irt_work_item_null_id();
 	self->num_fragments = 0;
 	// need unique active child number, can re-use id (and thus register entry)
@@ -280,9 +280,9 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_active_children = &active_child_count;
 	// call wi
 #ifndef IRT_TASK_OPT
-	(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
+	(impl->variants[0].implementation)(self);
 #else // !IRT_TASK_OPT
-	irt_wi_implementation *wimpl = &(irt_context_table_lookup(target->cur_context)->impl_table[impl_id]);
+	irt_wi_implementation *wimpl = impl;
 	uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(self, target) : 0;
 	wimpl->variants[opt].implementation(self);
 #endif // !IRT_TASK_OPT
@@ -292,7 +292,7 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	// restore data
 	self->parameters = prev_args;
 	self->range = prev_range;
-	self->impl_id = prev_impl_id;
+	self->impl = prev_impl;
 	self->source_id = prev_source;
 	self->num_fragments = prev_fragments;
 }
