@@ -49,12 +49,12 @@
 void irt_optimizer_context_startup(irt_context *context);
 void irt_optimizer_context_destroy(irt_context *context);
 
-void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
+void irt_optimizer_starting_pfor(irt_wi_implementation *impl, irt_work_item_range range, irt_work_group* group);
 
 #ifndef IRT_RUNTIME_TUNING_EXTENDED
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time, irt_loop_sched_data* sched_data);
+void irt_optimizer_completed_pfor(irt_wi_implementation *impl, uint64 time, irt_loop_sched_data* sched_data);
 #else
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
+void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
 #endif
 
 /* OpenMP+ */

@@ -206,7 +206,7 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 		return wi;
 	}
 	else {
-		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl_id, wi->parameters);
+		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
 		irt_scheduling_assign_wi(target, real_wi);
 		return real_wi;
 	}

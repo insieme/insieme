@@ -52,6 +52,7 @@ struct _irt_wi_di_requirement {
 };
 
 struct _irt_wi_implementation {
+	int32 id;
 	uint32 num_variants;
 	irt_wi_implementation_variant* variants;
 };

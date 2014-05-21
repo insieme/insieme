@@ -107,16 +107,16 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_all_metrics[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants_simple },
-	{ 1, g_insieme_wi_startup_variants_multiple_metrics },
-	{ 1, g_insieme_wi_startup_variants_nested },
-	{ 1, g_insieme_wi_startup_variants_repeated_execution },
-	{ 1, g_insieme_wi_startup_variants_rapl },
-	{ 1, g_insieme_wi_startup_variants_merge },
-	{ 1, g_insieme_wi_variants_for },
-	{ 1, g_insieme_wi_variants_pfor },
-	{ 1, g_insieme_wi_startup_variants_papi },
-	{ 1, g_insieme_wi_startup_variants_all_metrics }
+	{ 1, 1, g_insieme_wi_startup_variants_simple },
+	{ 2, 1, g_insieme_wi_startup_variants_multiple_metrics },
+	{ 3, 1, g_insieme_wi_startup_variants_nested },
+	{ 4, 1, g_insieme_wi_startup_variants_repeated_execution },
+	{ 5, 1, g_insieme_wi_startup_variants_rapl },
+	{ 6, 1, g_insieme_wi_startup_variants_merge },
+	{ 7, 1, g_insieme_wi_variants_for },
+	{ 8, 1, g_insieme_wi_variants_pfor },
+	{ 9, 1, g_insieme_wi_startup_variants_papi },
+	{ 10, 1, g_insieme_wi_startup_variants_all_metrics }
 };
 
 // initialization
@@ -317,7 +317,7 @@ void insieme_wi_startup_implementation_merge(irt_work_item* wi) {
 	irt_inst_region_select_metrics("cpu_time,wall_time");
 
 	__insieme_type_helper di = {1};
-	irt_parallel_job job = {(uint64_t)1, (uint64_t)4294967295, (uint64_t)1, 7, (irt_lw_data_item*)(&di)};
+	irt_parallel_job job = {(uint64_t)1, (uint64_t)4294967295, (uint64_t)1, &g_insieme_impl_table[7], (irt_lw_data_item*)(&di)};
 
 	ir_inst_region_start(0);
 	irt_merge(irt_parallel(&job));
@@ -355,7 +355,7 @@ void insieme_wi_implementation_for(irt_work_item* wi) {
 void insieme_wi_implementation_pfor(irt_work_item* wi) {
 	__insieme_type_helper di = {1};
 	ir_inst_region_start(1);
-	irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){0, 200, 1}, 6, (irt_lw_data_item*)(&di));
+	irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){0, 200, 1}, &g_insieme_impl_table[6], (irt_lw_data_item*)(&di));
 	ir_inst_region_end(1);
 }
 
@@ -409,28 +409,28 @@ void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
 
 TEST(region_instrumentation, simple) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(0, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[0], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, multiple_metrics) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(1, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[1], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, nested) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested_multiple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(2, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[2], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, repeated_execution) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(3, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[3], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
@@ -445,28 +445,28 @@ TEST(region_instrumentation, rapl) {
 		return;
 	}
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(4, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[4], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, pfor) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested, insieme_cleanup_context, false);
-	irt_runtime_run_wi(5, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[5], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, papi) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(8, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[8], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
 
 TEST(region_instrumentation, all_metrics) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
-	irt_runtime_run_wi(9, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[9], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }

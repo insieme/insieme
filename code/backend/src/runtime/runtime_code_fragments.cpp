@@ -387,7 +387,14 @@ namespace runtime {
 	};
 
 	ImplementationTable::ImplementationTable(const Converter& converter)
-		: converter(converter) {
+		: converter(converter),
+		  declaration(
+				  c_ast::CCodeFragment::createNew(
+						  converter.getFragmentManager(),
+						  converter.getCNodeManager()->create<c_ast::OpaqueCode>("extern irt_wi_implementation " IMPL_TABLE_NAME "[];")
+				  )
+		  ) {
+		this->addDependency(declaration);
 		this->addDependency(MetaInfoTable::get(converter));
 	}
 
@@ -460,10 +467,12 @@ namespace runtime {
 		return id;
 	}
 
-
+	c_ast::CodeFragmentPtr ImplementationTable::getDeclaration() {
+		return declaration;
+	}
 
 	const c_ast::ExpressionPtr ImplementationTable::getTable() {
-		return c_ast::ref(converter.getCNodeManager()->create(IMPL_TABLE_NAME));
+		return c_ast::ref(converter.getCNodeManager()->create<c_ast::Literal>(IMPL_TABLE_NAME));
 	}
 
 	std::ostream& ImplementationTable::printTo(std::ostream& out) const {
@@ -493,7 +502,8 @@ namespace runtime {
 
 		counter=0;
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
-			out << "    { " << cur.variants.size() << ", g_insieme_wi_" << counter++ << "_variants },\n";
+			out << "    { " << (counter+1) << ", " << cur.variants.size() << ", g_insieme_wi_" << counter << "_variants },\n";
+			counter++;
 		});
 
 		return out << "};\n\n";

@@ -74,8 +74,8 @@ irt_wi_implementation_variant g_insieme_wi_test_variants[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_test_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_test_variants }
 };
 
 // initialization
@@ -102,7 +102,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	test_params->wg = wg1;
 	irt_work_item **test_wis = (irt_work_item **)malloc(NUM_WIS*sizeof(irt_work_item*));
 	for(int i=0; i<NUM_WIS; ++i) {
-		test_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)test_params);
+		test_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, &g_insieme_impl_table[1], (irt_lw_data_item*)test_params);
 		irt_wg_insert(wg1, test_wis[i]);
 		test_params->vals[i] = 0;
 	}

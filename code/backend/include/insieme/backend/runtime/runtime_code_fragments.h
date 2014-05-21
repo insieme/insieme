@@ -166,11 +166,15 @@ namespace runtime {
 
 		vector<WorkItemImplCode> workItems;
 
+		c_ast::CodeFragmentPtr declaration;
+
 	public:
 
 		ImplementationTable(const Converter& converter);
 
 		static ImplementationTablePtr get(const Converter& converter);
+
+		c_ast::CodeFragmentPtr getDeclaration();
 
 		const c_ast::ExpressionPtr getTable();
 

@@ -47,6 +47,7 @@
  */
 #define ARG(N) call->getArgument(N)
 
+#define CONVERTER context.getConverter()
 #define NODE_MANAGER context.getConverter().getNodeManager()
 #define C_NODE_MANAGER context.getConverter().getCNodeManager()
 #define FRAGMENT_MANAGER context.getConverter().getFragmentManager()
