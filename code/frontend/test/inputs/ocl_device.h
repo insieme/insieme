@@ -375,17 +375,23 @@ float __attribute__((overloadable)) native_divide(float, float); float2 __attrib
 
 // atomic operations
 #define atom_fct(op) long __attribute__((overloadable)) atom_##op(long* p, long val); ulong __attribute__((overloadable)) atom_##op(ulong* p, ulong val); \
-    /* only to ship around clang problems */ \
-    int __attribute__((overloadable)) atom_##op(int* p, int val); uint __attribute__((overloadable)) atom_##op(uint* p, uint val); \
+    int __attribute__((overloadable)) atomic_##op(int* p, int val); uint __attribute__((overloadable)) atomic_##op(uint* p, uint val); \
 
 atom_fct(add)
+atom_fct(and)
+atom_fct(max)
+atom_fct(min)
+atom_fct(or)
 atom_fct(sub)
 atom_fct(xchg)
-atom_fct(xchg)
+atom_fct(xor)
 
 #define atom_inc(p) atom_add(p, 1)
 #define atom_dec(p) atom_sub(p, 1)
+#define atomic_inc(p) atomic_add(p, 1)
+#define atomic_dec(p) atomic_sub(p, 1)
 long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
+long __attribute__((overloadable)) atomic_cmpxchg(int *p, int cmp, int val); ulong __attribute__((overloadable)) atomic_cmpxchg(uint *p, uint cmp, uint val);
 
 // convert
 #define iconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \

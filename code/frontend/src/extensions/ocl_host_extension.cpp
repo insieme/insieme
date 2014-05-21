@@ -101,8 +101,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 	NodeManager& mgr = irExpr->getNodeManager();
 	IRBuilder builder(mgr);
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-
-	if(iclRunKernel == NULL)
 		iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
 				var("derefKernel", irp::callExpr(pattern::any, pattern::atom(gen.getRefDeref()), pattern::single(var("kernel", pattern::any)))) <<
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),

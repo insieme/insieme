@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_UBER_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_UBER_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "sched_policies/irt_sched_uber.h"
@@ -42,6 +44,8 @@
 
 #ifdef _WIN32
 	#include "../../include_win32/rand_r.h"
+#elif defined(_GEMS)
+	#include "include_gems/rand_r.h"
 #endif
 
 
@@ -162,4 +166,5 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_UBER_IMPL_H
 

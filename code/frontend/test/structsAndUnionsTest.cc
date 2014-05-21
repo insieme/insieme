@@ -73,11 +73,7 @@ TEST(StructsAndUnionTest, Cinput) {
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
 	EXPECT_TRUE(manager.contains(program));
-/*
-	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program, job);
-	hc.compile();
-*/
+
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;

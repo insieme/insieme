@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_LAZY_BINARY_SPLITTING_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_LAZY_BINARY_SPLITTING_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_queue_pool_base.impl.h"
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
@@ -113,5 +115,8 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
-	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
+    _irt_worker_switch_from_wi(self, yielding_wi);
 }
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_LAZY_BINARY_SPLITTING_IMPL_H

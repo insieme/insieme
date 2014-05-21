@@ -340,6 +340,35 @@
 				core::IRBuilder builder(func->getNodeManager());
 				const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 
+
+				// check if return type is volatile or not and adapt return statements accordingly
+				bool funcIsVolatile = core::analysis::isVolatileType(retType);
+
+				core::LambdaExprAddress fA(func);
+				std::map<core::NodeAddress, core::NodePtr> replacements;
+
+				// loock at all return types and check if a volatile has to be added/removed
+				visitDepthFirst(fA, [&](const core::ReturnStmtAddress& ret) {
+					core::TypePtr returningType = ret->getReturnExpr()->getType();
+					bool returnIsVolatile = core::analysis::isVolatileType(returningType);
+					core::StatementPtr newRet;
+					if(returnIsVolatile && !funcIsVolatile) {
+						core::GenericTypePtr genReturningType = returningType.as<core::GenericTypePtr>();
+						newRet = (builder.returnStmt(builder.callExpr(genReturningType->getTypeParameter(0),
+								gen.getVolatileRead(), ret->getReturnExpr())));
+					}
+					if(!returnIsVolatile && funcIsVolatile) {
+						newRet = builder.returnStmt(builder.callExpr(gen.getVolatileMake(), ret->getReturnExpr()));
+					}
+					if(newRet) replacements[ret] = newRet;
+				});
+
+				// replace return statements if necessary
+				if(!replacements.empty())
+					func = core::transform::replaceAll(func->getNodeManager(), replacements).as<core::LambdaExprPtr>();
+
+
+
 				// filter to filter out the recursive transition to another called function
 				auto filter = [&func] (const core::NodePtr& node) ->bool{
 					if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()){
@@ -433,7 +462,6 @@ namespace {
 
     stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
 		stmtutils::StmtWrapper newStmts;
-
 		//////////////////////////////////////////////////////////////
 		// remove frontend assignments and extract them into different statements
 		{
@@ -466,9 +494,8 @@ namespace {
 			};
 
 			for (auto stmt : irStmts){
-
 				// do nothing on declarations
-				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() || 
+				if (stmt.isa<core::DeclarationStmtPtr>() || stmt.isa<core::CompoundStmtPtr>() ||
 					stmt.isa<core::ForStmtPtr>()){
 					newStmts.push_back( stmt);
 				}
@@ -486,7 +513,7 @@ namespace {
 					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, conditionBody, convFact.getCompiler().isCXX());
 					conditionBody.push_back(builder.returnStmt(res.as<core::WhileStmtPtr>().getCondition()));
 
-					// reconstrucy the conditional expression, if this became more than one statements we'll capture it in a lambda
+					// reconstruct the conditional expression, if this became more than one statements we'll capture it in a lambda
 					// whenever free variable will be captured by ref and therefore modified in the outer scope
 					if (conditionBody.size() ==1 ){
 						conditionExpr = res.as<core::WhileStmtPtr>().getCondition();

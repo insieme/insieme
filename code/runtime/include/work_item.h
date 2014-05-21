@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_WORK_ITEM_H
+#define __GUARD_WORK_ITEM_H
 
 #include "declarations.h"
 #include "instrumentation_events.h"
@@ -142,3 +144,6 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi);
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis);
+
+
+#endif // ifndef __GUARD_WORK_ITEM_H

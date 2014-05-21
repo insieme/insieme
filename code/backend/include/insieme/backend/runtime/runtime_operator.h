@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/backend/operator_converter.h"
+#include "insieme/backend/backend_config.h"
 
 namespace insieme {
 namespace backend {
@@ -50,7 +51,7 @@ namespace runtime {
 	 * @param table the table to be extended
 	 * @return a reference to the handed in table
 	 */
-	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
+	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfigPtr& config);
 
 } // end namespace runtime
 } // end namespace backend

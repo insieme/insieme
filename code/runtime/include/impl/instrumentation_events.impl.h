@@ -35,10 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_INSTRUMENTATION_EVENTS_IMPL_H
+#define __GUARD_IMPL_INSTRUMENTATION_EVENTS_IMPL_H
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#include <sys/stat.h>
+#ifndef _GEMS
+	#include <sys/stat.h>
+#endif
 #include <errno.h>
 #include "utils/timing.h"
 #include "instrumentation_events.h"
@@ -171,11 +175,13 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	//setlocale(LC_ALL, "");
 	//
 	
+	FILE* outputfile = stdout;
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
+#ifndef _GEMS
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
@@ -185,13 +191,14 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.thread);
 
-	FILE* outputfile = fopen(outputfilename, "w");
+	outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for event log writing: %s", strerror(errno));
 /*	if(outputfile == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for event log writing\n");
 		IRT_DEBUG_ONLY(strerror(errno));
 		return;
 	}*/
+#endif
 	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.thread);
@@ -339,7 +346,10 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		}
 	}
 
+#ifndef _GEMS
 	fclose(outputfile);
+#endif
+
 #if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
 	free(ocl_helper_table);
 #endif
@@ -464,3 +474,5 @@ void irt_inst_insert_db_event(irt_worker* worker, irt_instrumentation_event even
 void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {}
 
 #endif // IRT_ENABLE_INSTRUMENTATION
+
+#endif // #ifdef __GUARD_IMPL_INSTRUMENTATION_EVENTS_IMPL_H

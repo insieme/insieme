@@ -227,8 +227,6 @@ namespace encoder {
 		}
 	};
 
-
-
 	// -- Work Item Impls ---------------------------
 
 	template<>
@@ -357,3 +355,4 @@ namespace encoder {
 } // end namespace encoder
 } // end namespace core
 } // end namespace insieme
+

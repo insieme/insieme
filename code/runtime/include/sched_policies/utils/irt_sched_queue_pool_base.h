@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_QUEUE_POOL_BASE_H
+#define __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_QUEUE_POOL_BASE_H
 
 #include "utils/deques.h"
 #include "utils/counted_deques.h"
@@ -51,3 +53,6 @@ typedef struct _irt_wi_queue_pool_base {
 	struct _irt_work_item* work_deque_next;
 	struct _irt_work_item* work_deque_prev;
 } irt_wi_queue_pool_base;
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_UTILS_IRT_SCHED_QUEUE_POOL_BASE_H

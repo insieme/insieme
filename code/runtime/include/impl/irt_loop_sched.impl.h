@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
+#define __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
 
 #include "irt_loop_sched.h"
 #include "work_group.h"
@@ -84,7 +86,11 @@ inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_
 	base_range.begin = base_range.begin + id * chunk * base_range.step;
 
 	// adjust chunk and begin to take care of remainder
-	if(id < rem) chunk += 1;
+	if(id < rem) { 
+		// TODO [_GEMS]: one should not be propagated since gemsclaim compiler is bugged
+		uint64 one = 1;
+		chunk += one;
+	}
 	base_range.begin += MIN(rem, id) * base_range.step;
 	base_range.end = base_range.begin + chunk * base_range.step;
 
@@ -118,7 +124,7 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
@@ -139,7 +145,7 @@ inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* sel
 	uint64 comp = sched_data->completed;
 	sched_data->part_times[id] = 0;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
@@ -162,7 +168,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64_t)) {
 			uint64 new_bsize = MAX(sched_data->policy.param.chunk_size, bsize*0.8); // TODO factor tweakable?
 			//irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize);
 			sched_data->block_size = MIN(new_bsize, sched_data->block_size);
@@ -353,7 +359,7 @@ inline static void irt_schedule_loop(
 	uint32 part_inc;
 	do {
 		part_inc = sched_data->participants_complete+1;
-	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
+	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc, uint32_t));
 
 	if(part_inc == sched_data->policy.participants) {
 		// sched_data no longer volatile, loop completed
@@ -419,9 +425,17 @@ void irt_loop_sched_policy_init() {
 				}
 			} else {
 				fprintf(stderr, "unknown loop scheduler policy requested: %s\n", policy_env_copy);
+				#ifdef _GEMS
+					// alloca is implemented as malloc
+					free(policy_env_copy);
+				#endif
 				exit(-1);
 			}
 		}
+	#ifdef _GEMS
+		// alloca is implemented as malloc
+		free(policy_env_copy);
+	#endif
 	} else {
 		irt_log_setting_s("IRT_LOOP_SCHED_POLICY", "IRT_STATIC");
 		irt_g_loop_sched_policy_default.type = IRT_STATIC;
@@ -430,3 +444,6 @@ void irt_loop_sched_policy_init() {
 	}
 	irt_g_loop_sched_policy_single = (irt_loop_sched_policy){ IRT_DYNAMIC_CHUNKED, IRT_SANE_PARALLEL_MAX, { 1000 } };
 }
+
+
+#endif // ifndef __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H

@@ -50,8 +50,8 @@ namespace integration {
 	class TestResult {
 
 		bool success;
-		float runtime;
-		float memory;
+		map<string,float> metricResults;
+
 		string output;
 		string errorOut;
 		string cmd;
@@ -61,15 +61,17 @@ namespace integration {
 	
 		bool userabort;
 
+	protected:
+		map<string,string> staticResults;
 
 	public:
 
-		TestResult(bool success = true, float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd=""
+		TestResult(bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd=""
 			,std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
-			: success(success),runtime(runtime),memory(memory),output(output),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
+			: success(success),metricResults(metricResults),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
 
-		static TestResult userAborted(float runtime = 0.0 , float memory = 0.0, string output="", string errorOut="", string cmd="") {
-			TestResult res(false, runtime, memory, output, errorOut, cmd);
+		static TestResult userAborted(map<string,float> metricResults, string output="", string errorOut="", string cmd="") {
+			TestResult res(false, metricResults, output, errorOut, cmd);
 			res.userabort = true;
 			return res;
 		}
@@ -89,10 +91,6 @@ namespace integration {
 			return success;
 		}
 
-		float getRuntime() const{
-			return runtime;
-		}
-
 		string getCmd() const{
 			return cmd;
 		}
@@ -105,12 +103,20 @@ namespace integration {
 			return output+errorOut;
 		}
 
-		float getMemory() const{
-			return memory;
+		map<string,float> getMetrics() const{
+			return metricResults;
 		}
 
 		bool hasBeenAborted() const {
 			return userabort;
+		}
+
+		float getRuntime() const{
+			return metricResults.find("time")->second;
+		}
+
+		float getMemory() const{
+			return metricResults.find("mem")->second;
 		}
 
 		string getSchedulingString() const{
@@ -121,6 +127,16 @@ namespace integration {
 			if(sched==GUIDED)
 				return "guided";
 			return "undefined";
+		}
+	
+	};
+
+	class StaticResult : public TestResult{
+		public:
+		StaticResult(map<string,string> results){staticResults=results;};
+
+		map<string,string> getStaticMetrics(){
+			return staticResults;
 		}
 	};
 

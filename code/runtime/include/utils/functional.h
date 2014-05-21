@@ -35,9 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_FUNCTIONAL_H
+#define __GUARD_UTILS_FUNCTIONAL_H
 
 #include <stdarg.h>
 
 typedef int irt_util_vsnprinter(char*,size_t,va_list);
 
 char* irt_util_to_str(irt_util_vsnprinter* p, ...);
+
+
+#endif // ifndef __GUARD_UTILS_FUNCTIONAL_H

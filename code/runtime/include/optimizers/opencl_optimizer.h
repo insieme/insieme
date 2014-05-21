@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_OPTIMIZERS_OPENCL_OPTIMIZER_H
+#define __GUARD_OPTIMIZERS_OPENCL_OPTIMIZER_H
 irt_loop_sched_policy irt_g_ocl_shares_policy;
 
 void irt_get_split_values() {
@@ -67,3 +69,6 @@ void irt_opencl_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_it
 	irt_wg_set_loop_scheduling_policy(group, &irt_g_ocl_shares_policy);
 	//irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
 }
+
+
+#endif // ifndef __GUARD_OPTIMIZERS_OPENCL_OPTIMIZER_H

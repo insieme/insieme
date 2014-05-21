@@ -165,9 +165,33 @@ insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, ins
 	core::TypePtr&& exprTy = convFact.convertType( (vecElemExpr)->getType() );
 	unsigned int pos = 0u;
 	core::IRBuilder builder = convFact.getIRBuilder();
+	const core::lang::BasicGenerator& gen(builder.getLangBasic());
 
+	// catch hi and lo
+	if(accessor == "hi" || accessor == "lo") {
+		core::TypePtr ty = base->getType();
+		core::RefTypePtr refTy = ty.isa<core::RefTypePtr>();
+
+		core::VectorTypePtr vecTy = refTy ? refTy->getElementType().as<core::VectorTypePtr>() : ty.as<core::VectorTypePtr>();
+		core::TypePtr elementTy = vecTy->getElementType();
+		unsigned vecSize = vecTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+
+		// length is always half of original vector length
+		core::LiteralPtr newVecSize = builder.getIntParamLiteral(vecSize/2);
+
+		// start at 0 for lo, vecSize/2 for hi
+		core::LiteralPtr start = accessor == "lo" ? builder.getIntParamLiteral(0) : newVecSize;
+
+		core::TypePtr resultTy = builder.vectorType(elementTy, builder.concreteIntTypeParam(vecSize/2));
+		if(refTy) resultTy = builder.refType(resultTy);
+
+		// select ref or non-ref projection function
+		core::ExpressionPtr fct = refTy ? gen.getVectorRefProjection() : gen.getVectorProjection();
+
+		return builder.callExpr(resultTy, fct, base, start.as<core::ExpressionPtr>(), newVecSize.as<core::ExpressionPtr>());
+	}
 	//translate OpenCL accessor string to index
-	if ( accessor == "x" ) pos = 0u;
+	else if ( accessor == "x" ) pos = 0u;
 	else if ( accessor == "y" ) pos = 1u;
 	else if ( accessor == "z" ) pos = 2u;
 	else if ( accessor == "w" ) pos = 3u;
@@ -220,7 +244,6 @@ insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, ins
 	core::ExpressionPtr&& idx = builder.uintLit(pos);
 	// if the type of the vector is a refType, we deref it
 	base = convFact.tryDeref(base);
-	const core::lang::BasicGenerator& gen(builder.getLangBasic());
 
 	return (retIr = builder.callExpr(exprTy, gen.getVectorSubscript(), base, idx));
 

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_ALL_IMPLS_H
+#define __GUARD_IRT_ALL_IMPLS_H
 
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
@@ -74,3 +76,6 @@
 #endif
 
 #include "impl/irt_debug.impl.h"
+
+
+#endif // ifndef __GUARD_IRT_ALL_IMPLS_H

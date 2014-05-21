@@ -56,8 +56,10 @@
 #include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/omp/omp_utils.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
+#include "insieme/annotations/omp/omp_annotations.h"
 
 namespace insieme {
 namespace backend {
@@ -290,6 +292,20 @@ namespace runtime {
 			return res;
 		}
 
+        core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
+            if(expr->hasAttachedValue<annotations::ompp_objective_info>()) {
+			    core::IRBuilder builder(manager);
+			    const Extensions& extensions = manager.getLangExtension<Extensions>();
+		        core::StatementList stmtList;
+                unsigned region_id = expr->getAttachedValue<annotations::ompp_objective_info>().region_id;
+                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
+                stmtList.push_back(stmt);
+                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
+                return builder.compoundStmt(stmtList);
+            }
+            else
+                return stmt;
+        }
 
 		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
@@ -360,7 +376,14 @@ namespace runtime {
 				assert(!impls.empty() && "There must be at least one implementation!");
 
 				for(const auto& cur : impls) {
-					auto impl = builder.lambdaExpr(unit, fixBranch(cur), params);
+                    core::StatementPtr instrumentedBody;
+                    // Let's wrap task/region with instrumentation calls
+                    if(analysis::omp::isTask(job))
+                        instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
+                    else
+                        instrumentedBody = fixBranch(cur);
+
+					auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
 					annotations::migrateMetaInfos(job, impl);
 					variants.push_back(WorkItemVariant(impl));
 				}
@@ -382,8 +405,15 @@ namespace runtime {
 				// add default branch
 				body.push_back(fixBranch(job->getDefaultExpr()));
 
+                core::StatementPtr instrumentedBody;
+                // Let's wrap task/region with instrumentation calls
+                if(analysis::omp::isTask(job))
+                    instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
+                else
+                    instrumentedBody = builder.compoundStmt(body);
+
 				// build implementation
-				auto impl = builder.lambdaExpr(unit, builder.compoundStmt(body), params);
+				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
 
 				// move meta-infos
 				annotations::migrateMetaInfos(job, impl);
@@ -405,7 +435,6 @@ namespace runtime {
 			// return implementation + parameters
 			return std::make_pair(impl, parameters);
 		}
-
 
 		class WorkItemIntroducer : public core::transform::CachedNodeMapping {
 
@@ -454,7 +483,13 @@ namespace runtime {
 						}
 
 						// build runtime call
-                        if(core::analysis::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
+
+                        // handle region (must be handled before task or it will be mixed up)
+                        if(call->hasAnnotation(annotations::omp::RegionAnnotation::KEY))
+						    return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
+
+                        // handle task
+                        if(analysis::omp::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
 
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
@@ -462,12 +497,28 @@ namespace runtime {
 
 					// handle merge call
 					if (basic.isMerge(fun)) {
-						return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
+						const auto& arg = core::analysis::getArgument(res, 0);
+ 
+                        // OMP+ instrumentation
+					    const auto& mergeArg = ptr.as<core::CallExprPtr>()->getArgument(0);
+				        if (mergeArg->getNodeType() == core::NT_CallExpr) {
+                            const auto& parCall = mergeArg.as<core::CallExprPtr>();
+                            if(basic.isParallel(parCall->getFunctionExpr())) {
+                                const auto& parArg = parCall->getArgument(0);
+                                if(basic.isJob(parArg->getType())) {
+                                    const auto& job = parArg.as<core::JobExprPtr>();
+                                    return wrapWithInstrumentationRegion(manager, job, builder.callExpr(basic.getUnit(), ext.merge, arg));
+                                }
+                            }
+                        }
+
+						return builder.callExpr(basic.getUnit(), ext.merge, arg);
 					}
 
 					// handle pfor calls
 					if (basic.isPFor(fun)) {
-						return convertPfor(call);
+						auto pFor = convertPfor(call).as<core::CallExprPtr>();
+                        return wrapWithInstrumentationRegion(manager, call, pFor);
 					}
 				}
 
@@ -886,6 +937,15 @@ namespace runtime {
 			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
 			if (max < regionId) max = regionId;
 		});
+
+        // OMP+ instrumentationRegionStart calls will be added in a later preprocessing phase
+        // so we have to check annotations on JobExpr
+		core::visitDepthFirstOnce(node, [&](const core::ExpressionPtr& cur) {
+            if(cur->hasAttachedValue<annotations::ompp_objective_info>()) {
+                unsigned regionId = cur->getAttachedValue<annotations::ompp_objective_info>().region_id;
+			    if (max < regionId) max = regionId;
+            }
+        });
 
 		// add information to application
 		core::NodeAddress root(node);

@@ -35,12 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_MINLWT_IMPL_H
+#define __GUARD_UTILS_IMPL_MINLWT_IMPL_H
 
 #include "utils/minlwt.h"
 #include "work_item.h"
 #include "wi_implementation.h"
 #include "impl/error_handling.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 
 //#include <sys/mman.h> /* not required for now, mmap not used (see below) */
 
@@ -90,10 +92,10 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	//static unsigned long long total = 0;
 	//total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
 	//printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
-	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
+	// TODO [_GEMS]: we need +4 because of gemsclaim compiler generated instruction: when entering a function call the sp is stored on the stack
+	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE + 4);
 		
-	if (ret == NULL)
-		perror("FAIL");
+    IRT_ASSERT(ret != NULL, IRT_ERR_IO, "Malloc of lwt stack failed.\n");
 		
 	ret->next = NULL;
 	return ret;
@@ -196,6 +198,10 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 	#include "minlwt.mingw.impl.h"
 
+#elif defined(_GEMS)
+	
+	#include "minlwt.gems.impl.h"
+
 #else // eg. GCC (on Linux), if not gcc compiler we will get an error anyway
 
 	#include "minlwt.gcc.impl.h"
@@ -204,16 +210,16 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
-	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, *basestack, func);
+	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, (void*)*basestack, func);
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
-	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
+	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", (void*)*newstack, (void*)*basestack);
 	lwt_continue_impl(NULL, NULL, newstack, basestack);
-	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
+	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", (void*)*newstack, (void*)*basestack);
 }
 void lwt_end(intptr_t *basestack) {
-	IRT_DEBUG("END Basestack: %p", *basestack);
+	IRT_DEBUG("END Basestack: %p", (void*)*basestack);
 	intptr_t dummy;
 	lwt_continue_impl(NULL, NULL, basestack, &dummy);
 }
@@ -273,3 +279,6 @@ void lwt_end(lwt_context *basestack) {
 
 //#endif
 #endif
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_MINLWT_IMPL_H

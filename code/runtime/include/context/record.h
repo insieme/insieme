@@ -35,9 +35,12 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_RECORD_H
+#define __GUARD_CONTEXT_RECORD_H
 
 #include "irt_inttypes.h"
 #include "abstraction/threads.h"
+#include "abstraction/spin_locks.h"
 
 
 // ------------------------------------------------------------------------------------
@@ -197,3 +200,6 @@ void irt_cap_written_pointer(void** pos);
  */
 void irt_cap_profile_save();
 
+
+
+#endif // ifndef __GUARD_CONTEXT_RECORD_H

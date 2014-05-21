@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_INTTYPES_H
+#define __GUARD_IRT_INTTYPES_H
 
 // if Visual Studio Compiler
 #ifdef _MSC_VER
@@ -56,7 +58,11 @@
 	// also gcc for windows (MinGW, cygwin) will come with the required header files
 	#define __STDC_LIMIT_MACROS 1
 	#define __STDC_CONSTANT_MACROS 1
-	#include <inttypes.h>
+	#ifdef _GEMS
+		#include "include_gems/inttypes.h"
+	#else
+		#include <inttypes.h>
+	#endif
 	#include <stdbool.h>
 	typedef int8_t int8;
 	typedef uint8_t uint8;
@@ -67,3 +73,6 @@
 	typedef int64_t int64;
 	typedef uint64_t uint64;
 #endif
+
+
+#endif // ifndef __GUARD_IRT_INTTYPES_H

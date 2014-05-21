@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_WIN_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_RDTSC_WIN_IMPL_H
 
 #include <Windows.h>
 #include "irt_inttypes.h"
@@ -97,3 +99,6 @@ bool irt_time_ticks_constant() {
 		return 0;
 }
 #endif // NOT _WIN64
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_RDTSC_WIN_IMPL_H

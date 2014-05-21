@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_MAINTENANCE_H
+#define __GUARD_IRT_MAINTENANCE_H
 
 // Insieme runtime maintenance event system
 // Implements a low-overhead system for the execution of maintenance events at fixed timesteps
@@ -90,7 +92,7 @@ bool irt_g_maintenance_thread_active;
 // maintenance thread;
 irt_thread irt_g_maintenance_thread;
 irt_cond_var irt_g_maintenance_cond;
-irt_lock_obj irt_g_maintenance_mutex;
+irt_mutex_obj irt_g_maintenance_mutex;
 
 // functions //////////////////////////////////////////////////////////////////
 
@@ -159,7 +161,7 @@ void irt_maintenance_register(irt_maintenance_lambda *lam) {
 		uint64 mi = irt_g_maintenance_min_interval_slot;
 		if(slot < mi) {
 			irt_mutex_lock(&irt_g_maintenance_mutex);
-			if(irt_atomic_bool_compare_and_swap(&irt_g_maintenance_min_interval_slot, mi, slot)) {
+			if(irt_atomic_bool_compare_and_swap(&irt_g_maintenance_min_interval_slot, mi, slot, uint64)) {
 //printf("set sleep slot from %lu to %lu\n", mi, slot);
 				// wake maintenance thread, interval was reduced
 				irt_cond_wake_one(&irt_g_maintenance_cond);
@@ -215,7 +217,7 @@ void* irt_maintenance_thread_func(void *) {
 				// check if previous lowest occupied slot is now free, if so increase interval
 				if(!slot_occupied) {
 					if(i>current_min_interval) {
-						if(irt_atomic_bool_compare_and_swap(&irt_g_maintenance_min_interval_slot, current_min_interval, i)) {
+						if(irt_atomic_bool_compare_and_swap(&irt_g_maintenance_min_interval_slot, current_min_interval, i, uint64)) {
 							// after increasing min interval slot, update maintenance count so as not to get out of sync
 							maintenance_count += maintenance_count%(1<<irt_g_maintenance_min_interval_slot);
 							// we set the current min interval, so we can adjust it
@@ -245,3 +247,6 @@ void* irt_maintenance_thread_func(void *) {
 	}
 }
 
+
+
+#endif // ifndef __GUARD_IRT_MAINTENANCE_H

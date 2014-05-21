@@ -51,6 +51,7 @@ class TypeFixer {
 
 	void removeClVars();
 	void fixDecls(core::NodeAddress pA, core::TypePtr type);
+	void updateTemps(core::TypePtr type, core::VariableMap& varReplacements);
 public:
 	TypeFixer(core::NodePtr toTransform, std::vector<core::TypePtr> typeStrings);
 	core::NodePtr getTransformedProg() { return prog; };

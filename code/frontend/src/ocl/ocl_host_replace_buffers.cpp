@@ -285,7 +285,6 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 		if(subscript) {
-//			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
 			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
@@ -322,6 +321,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			}
 			return;
 		}
+
 		// global variable case
 		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
 			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
@@ -330,7 +330,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 	});
 /*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
-		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()->getType()) << " -> " << printer::PrettyPrinter(replacement.second->getType()) << std::endl;
+		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
 */
 }
@@ -338,8 +338,8 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 void BufferReplacer::performReplacements() {
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-	//		std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
-		// use pointer in replacements to replace all occurences of the addressed expression
+//			std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurrences of the addressed expression
 	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
 		em[replacement.first] = replacement.second;
 	});
@@ -406,13 +406,9 @@ core::NodePtr IclBufferReplacer::getTransformedProgram() {
 
 	collectInformation(iclCreateBuffer);
 
-
 	generateReplacements(getIclBufferType());
 
 	performReplacements();
-
-	printer::PrettyPrinter pp(prog);
-	//	std::cout << "\nPrETTy: \n" <<  pp << std::endl;
 
 	return prog;
 }

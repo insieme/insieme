@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
+#define __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
 
 #include "declarations.h"
 
@@ -84,3 +86,6 @@ typedef struct _irt_cw_data {
 #define irt_wi_scheduling_data uint32
 
 #endif // 64 bit triplet implementation
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H

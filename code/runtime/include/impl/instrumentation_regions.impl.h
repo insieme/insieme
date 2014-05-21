@@ -35,10 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
+#define __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#include <sys/stat.h>
+#ifndef _GEMS
+	#include <sys/stat.h>
+#endif
 #include <errno.h>
 #include "utils/timing.h"
 #include "utils/energy.h"
@@ -55,9 +59,11 @@
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
-// make sure scheduling policy is fixed to static
-#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
-	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
+#ifndef _GEMS
+	// make sure scheduling policy is fixed to static
+	#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
+		#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
+	#endif
 #endif
 
 void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_context_data* region) {
@@ -296,7 +302,7 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Start of region id %lu requested, but only %u region(s) present", id, context->num_regions)
 	irt_inst_region_context_data* inner_region = &(context->inst_region_data[id]);
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1);
+	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64_t);
 	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
 
 	if(outer_region) {
@@ -333,11 +339,11 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 
 	uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
 
-	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1) == 0) {
+	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64_t) == 0) {
 		_irt_inst_region_end_late_exit_measurements(wi);
 		inner_last_exit = true;
-		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count);
-		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count);
+		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64_t);
+		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64_t);
 	}
 
 	// only increase count if wi is not member in any work group or has wg id == 0
@@ -367,7 +373,11 @@ void irt_inst_region_select_metrics(const char* selection) {
 #include "irt_metrics.def"
 	} else {
 		// need to copy string since strtok requires it to be non-const
+#ifdef _GEMS
+		char selection_copy[512];
+#else
 		char selection_copy[strlen(selection)];
+#endif
 		strcpy(selection_copy, selection);
 		// tokenize
 		char* tok = strtok(selection_copy, ",");
@@ -389,6 +399,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 }
 
 void irt_inst_region_select_metrics_from_env() {
+#ifndef _GEMS
 	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "true") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
@@ -401,6 +412,7 @@ void irt_inst_region_select_metrics_from_env() {
 #include "irt_metrics.def"
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "disabled");
 	}
+#endif
 }
 
 void irt_inst_region_debug_output() {
@@ -422,11 +434,13 @@ void irt_inst_region_debug_output() {
 }
 
 void irt_inst_region_output() {
+    FILE* outputfile = stderr;
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
+#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
@@ -436,8 +450,9 @@ void irt_inst_region_output() {
 
 	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
 
-	FILE* outputfile = fopen(outputfilename, "w");
+	outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open region data file for writing: %s", strerror(errno));
+#endif
 
 	irt_context* context = irt_context_get_current();
 	uint32 num_regions = context->num_regions;
@@ -462,7 +477,9 @@ void irt_inst_region_output() {
 #include "irt_metrics.def"
 		fprintf(outputfile, "\n");
 	}
+#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	fclose(outputfile);
+#endif
 }
 
 inline irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi) {
@@ -504,3 +521,5 @@ void irt_inst_region_output() { }
 irt_inst_region_context_data* irt_inst_region_get_current(irt_work_item* wi) { return NULL; }
 
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
+
+#endif // ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H

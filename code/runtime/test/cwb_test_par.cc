@@ -66,7 +66,7 @@ TEST(circular_work_buffers, token_passing_single) {
 		{
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb)) {
-					irt_atomic_inc(&num);
+					irt_atomic_inc(&num, uint32);
 					irt_cwb_push_front(&cwb, swi);
 				} 
 			}
@@ -97,7 +97,7 @@ TEST(circular_work_buffers, token_passing_single_dual) {
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb)) {
 					irt_cwb_push_front(&cwb, swi);
-					irt_atomic_inc(&num);
+					irt_atomic_inc(&num, uint32);
 				} 
 			}
 		}
@@ -124,7 +124,7 @@ TEST(circular_work_buffers, token_passing_multi_self) {
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_cwb_push_front(&cwb[omp_get_thread_num()], swi);
-					irt_atomic_inc(&num);
+					irt_atomic_inc(&num, uint32);
 				}
 			}
 		}
@@ -149,7 +149,7 @@ TEST(circular_work_buffers, token_passing_multi_rand) {
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
-					irt_atomic_inc(&num);
+					irt_atomic_inc(&num, uint32);
 				} 
 			}
 		}
@@ -180,7 +180,7 @@ TEST(circular_work_buffers, token_passing_multi_dual_rand) {
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
-					irt_atomic_inc(&num); 
+					irt_atomic_inc(&num, uint32); 
 				} 
 			}
 		}
@@ -213,7 +213,7 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
-					irt_atomic_inc(&num);
+					irt_atomic_inc(&num, uint32);
 				} 
 			}
 		}

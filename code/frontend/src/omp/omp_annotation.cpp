@@ -60,12 +60,26 @@ const std::string BaseAnnotation::toString() const {
 std::ostream& ForClause::dump(std::ostream& out) const {
 	if(hasLastPrivate())
 		out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
+	if(hasLastLocal())
+		out << "lastlocal("   << join(",", *lastLocalClause)   << "), ";
 	if(hasSchedule())
 		scheduleClause->dump(out) << ", ";
 	if(hasCollapse())
 		out << "collapse(" << *collapseExpr << "), ";
 	if(hasNoWait())
 		out << "nowait, ";
+	SharedOMPP::dump(out);
+	return out;
+}
+
+///----- SharedOMPP -----
+std::ostream& SharedOMPP::dump(std::ostream& out) const {
+	if(hasTarget())
+			targetClause->dump(out) << ", ";
+	if(hasObjective())
+			objectiveClause->dump(out) << ", ";
+	if(hasParam())
+			paramClause->dump(out) << ", ";
 	return out;
 }
 
@@ -96,7 +110,18 @@ std::ostream& CommonClause::dump(std::ostream& out) const {
 		out << "private(" << join(",", *privateClause) << "), ";
 	if(hasFirstPrivate())
 		out << "firstprivate(" << join(",", *firstPrivateClause) << "), ";
+	if(hasLocal())
+		out << "local(" << join(",", *localClause) << "), ";
+	if(hasFirstLocal())
+		out << "firstlocal(" << join(",", *firstLocalClause) << "), ";
 	return out;
+}
+
+///----- Region -----
+std::ostream& Region::dump(std::ostream& out) const {
+	out << "region(";
+	SharedOMPP::dump(out);
+	return out << ")";
 }
 
 ///----- Parallel -----

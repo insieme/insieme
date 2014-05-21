@@ -152,7 +152,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 		path = path.substr(1, path.length() - 2);
 //std::cout << "Path: " << path << std::endl;
 	std::ifstream check;
-			string root = path;
+	string root = path;
 	size_t nIncludes = includeDirs.size();
 	// try relative path first
 	check.open(path);
@@ -309,9 +309,10 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 	} else {
 		argument = builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0)));
 
-		if(utils::tryDeref(argument)->getType() != argTy) {// e.g. argument of kernel is an ocl vector type
+		TypePtr refArtTy = builder.refType(argTy);
+		if(argument->getType() != refArtTy) {// e.g. argument of kernel is an ocl vector type
 
-			argument = builder.callExpr(argTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
+			argument = builder.callExpr(refArtTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
 		}
 		argument = utils::tryDeref(argument);
 	}
@@ -325,7 +326,14 @@ ExpressionPtr KernelReplacer::createKernelCallLambda(const ExpressionAddress loc
 	IRBuilder builder(mgr);
 
 	ExpressionPtr k = utils::getRootVariable(localKernel).as<ExpressionPtr>();
+/*
+std::cout << "searching " << *k << " from " << *localKernel << std::endl;
+if(kernelFunctions.empty()) std::cout << "\tnothing\n";
 
+for_each(kernelFunctions, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kernel) {
+	std::cout << "in " << *kernel.first << std::endl;
+});
+*/
 	// try to find coresponding kernel function
 	assert(kernelFunctions.find(k) != kernelFunctions.end() && "Cannot find OpenCL Kernel");
 	const ExpressionPtr local = anythingToVec3(work_dim, local_work_size);
@@ -581,20 +589,20 @@ void KernelReplacer::replaceKernels() {
 		kernelReplacements[k] = replacement;
 	});
 
-	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements);
+	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements, false);
 }
 
 void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates) {
-			for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
-                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
-                assert(!cname.empty() && "cannot find the name of the kernel function");
-				assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
-				checkDuplicates[cname] = 1;
-				kernelFunctions[kernelNames[cname]] = lambdaEx;
-			}
+	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
+		if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+			std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
+			assert(!cname.empty() && "cannot find the name of the kernel function");
+			assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+			checkDuplicates[cname] = 1;
+			kernelFunctions[kernelNames[cname]] = lambdaEx;
+		}
 
-		});
+	});
 }
 
 void KernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
@@ -854,3 +862,11 @@ void IclKernelReplacer::inlineKernelCode() {
 } //namespace frontend
 } //namespace insieme
 
+// aes 				cast
+// fib				return types of clRelease*
+// mol_dyn_vec 		cast
+// nbody 			cast
+// ocl_kernel 		not designed for insieme
+// openCore 		includes
+// perlin noise		vector even/odd operation
+// qap_array		return types of clRelease*

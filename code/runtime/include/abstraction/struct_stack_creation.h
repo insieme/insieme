@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_STRUCT_STACK_CREATION_H
+#define __GUARD_ABSTRACTION_STRUCT_STACK_CREATION_H
 
 // a macro which creates a new struct of the specified type on the stack, uses compound initializer under linux
 // and a function which creates and returns a struct under windows (because Visual Studio does not support the compound initializer)
@@ -44,3 +46,5 @@
 #else
 	#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
 #endif
+
+#endif // ifndef __GUARD_ABSTRACTION_STRUCT_STACK_CREATION_H

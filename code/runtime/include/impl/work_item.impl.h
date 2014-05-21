@@ -35,13 +35,15 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_WORK_ITEM_IMPL_H
+#define __GUARD_IMPL_WORK_ITEM_IMPL_H
 
 #include "work_item.h"
 
 #include <stdlib.h>
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 #include "work_group.h"
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
@@ -143,9 +145,9 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	_irt_wi_init(self, retval, range, impl_id, params);
 	if(self->cur_wi != NULL) {
 		// increment child count in current wi
-		irt_atomic_inc(self->cur_wi->num_active_children);
+		irt_atomic_inc(self->cur_wi->num_active_children, uint32_t);
 	}
-	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : -1);
+	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : (uint32_t*)-1);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
@@ -229,7 +231,7 @@ void irt_wi_join(irt_work_item* wi) {
 		//irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
-		lwt_continue(&self->basestack, &swi->stack_ptr);
+        _irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
 		//irt_inst_region_continue(swi);
 	}
@@ -272,9 +274,9 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// make stack available for children
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
-		lwt_continue(&self->basestack, &wi->stack_ptr);
+        _irt_worker_switch_from_wi(self, wi);
 #ifdef IRT_ASTEROIDEA_STACKS
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
 //		irt_inst_region_continue(wi);
 		irt_inst_region_start_measurements(wi);
@@ -302,7 +304,7 @@ void irt_wi_end(irt_work_item* wi) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
-		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
+		irt_atomic_fetch_and_sub(&source->num_fragments, 1, uint32_t);
 		if(source->num_fragments == 0) irt_wi_end(source);
 	} else {
 		// delete params struct
@@ -326,6 +328,9 @@ void irt_wi_end(irt_work_item* wi) {
 	
 	IRT_DEBUG(" ! %p end\n", wi);
 
+    irt_wi_implementation *wimpl = &(irt_context_table_lookup(worker->cur_context)->impl_table[wi->impl_id]);
+    irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
+        wimpl->variants[0].rt_data.optimizer_rt_data.data_last, true);
 	// end
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
@@ -337,7 +342,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	if(wi->parent_num_active_children) {
 		//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
 		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
-		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
+		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32_t) == 0) {
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
 			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
@@ -357,6 +362,10 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 	uint64 step = (r->end - r->begin) / elements, cur = r->begin;
 	for(uint32 i=0; i<elements; ++i, cur+=step) offsets[i] = cur;
 	irt_wi_split(wi, elements, offsets, out_wis);
+#ifdef _GEMS
+	// alloca is implemented as malloc
+	free(offsets);
+#endif
 }
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	// TODO implement custom (faster)
@@ -381,17 +390,19 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
-		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1); // This needs to be atomic even if it may not look like it
+		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1, uint32_t); // This needs to be atomic even if it may not look like it
 		for(uint32 i=0; i<source->num_groups; ++i) {
-			irt_atomic_fetch_and_add(&(source->wg_memberships[i].wg_id.cached->local_member_count), elements - 1); // TODO
+			irt_atomic_fetch_and_add(&(source->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32_t); // TODO
 		}
 		// splitting fragment wi, can safely delete
 		_irt_wi_recycle(wi, self);
 	} else {
-		irt_atomic_fetch_and_add(&wi->num_fragments, elements); // This needs to be atomic even if it may not look like it		
+		irt_atomic_fetch_and_add(&wi->num_fragments, elements, uint32_t); // This needs to be atomic even if it may not look like it		
 		for(uint32 i=0; i<wi->num_groups; ++i) {
-			irt_atomic_fetch_and_add(&(wi->wg_memberships[i].wg_id.cached->local_member_count), elements - 1); // TODO
+			irt_atomic_fetch_and_add(&(wi->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32_t); // TODO
 		}
 	}
 }
 
+
+#endif // ifndef __GUARD_IMPL_WORK_ITEM_IMPL_H

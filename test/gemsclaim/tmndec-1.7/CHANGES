@@ -1,0 +1,324 @@
+		   Changes from version 1.6c to 1.7
+		   ================================
+
+Encoder & Decoder:
+*	Changed the copyright to put all the software under the GNU
+	General Public License. Permission has been granted from all
+	parties that have contributed to this version of the software.
+
+*	It is no longer necessary to compile separate versions
+	for encoding and decoding the different coding formats
+	(SQCIF, QCIF, CIF, 4CIF, 16CIF)
+
+Encoder:
+*	Removed all code coming from the Stanford PVRG group. This was
+	the bitstream functions and the VLC encoding. New bitstream
+	functions and new VLC-tables were written based the idea
+	from the MPEG-2 simulation group software.
+
+*	Added back the low-delay, variable frame rate, rate control 
+	from version 1.5.
+	To use the rate control from version 1.6, compile with
+	OFFLINE_RATE_CONTROL defined. Read more about the rate 
+	control methods in ratectrl.c.
+
+
+Decoder:
+*	Display for Windows 95/NT has been added. This works much
+	the same way as the X11 display: when the decoder is
+	run in a console window, a window displaying the decoded
+	frames pops up.
+
+*	Variable frame rate display has been added. In this
+	mode the decoder will read the frame rate from the bitstream.
+	This is now the default display mode.
+
+*	When decoding PB-frames the display rate should
+	be reasonably correct, provided the computer 
+	running the decoder is fast enough.
+
+
+		   Changes from version 1.6b to 1.6c
+		   =================================
+
+Encoder & Decoder:
+*	Fixed a bug in OBMC prediction for the P-frame in PB-mode 
+	when surrounding block is intra encoded. 
+
+Decoder:
+*	Fixed a bug in packed 24-bit display mode.
+
+
+		   Changes from version 1.6a to 1.6b
+		   =================================
+
+Encoder & Decoder:
+*	Fixed a bug in OBMC prediction when the surrounding block
+	is intra encoded.
+
+Encoder:
+*	Fixed Temporal Reference in the PB-frames mode.
+	Changed some variable names related to frame skipping
+	to make them more understandable.
+
+*	Fixed a problem when Unrestricted MV mode was used
+	together with several GOB syncs per picture.
+
+Decoder:
+*	Is now able to handle stuffing in SAC mode (I hope)
+
+
+
+		   Changes from version 1.6 to 1.6a
+		   ================================
+
+Decoder:
+*	Support for display at 16 and 24 (32) bits colordepths. 
+	No dithering is used in these mode. Display looks
+	great, but speed is slower than in 8 bits mode.
+
+
+
+		   Changes from version 1.5 to 1.6
+		   ===============================
+
+Encoder & Decoder:
+*	The increased motion vector range has been included 
+	in the Unrestricted Motion Vector mode. This increases
+	performance considerably for sequences with large
+	amounts of camera motion. Note that in the Advanced
+	Prediction mode, motion vectors are still allowed to
+	point outside the picture, but the UMV mode is not
+	automatically turned on.
+
+*	Other changes in the final version of H.263:
+	+ back to old half pel interpolation scheme
+	+ calculation of chroma vectors in PB mode
+
+*	Bug-fixes and code clean-up:
+	+ most reported problems with version 1.5 
+	+ several others, but none essential for coding
+	  performance
+	
+
+Encoder:
+*	When using PB-frames the adaptive switch which turns
+	off PB-frames when they are not effective, has been
+	included. This is always used in the PB-frames mode, 
+	and encodes the next frames as two P-pictures instead 
+	of a PB-frame when this is more effective.
+
+*	The TMN5 rate control has been replaced by a simplified 
+	rate control with fixed frame rate and a quantizer 
+	change for each picture. Read the comments in 
+	ratectrl.c for more information.
+
+	(both algorithms above were used when generating
+	the anchors for the MPEG-4 test)
+
+*	It is possible to encode sequences which have been 
+	grabbed at frame rates below the reference frame
+	rate (25 or 30 Hz). Set DEF_ORIG_SKIP in config.h
+	or use option "-O <n>". Temporal Reference in
+	bitstream as well as encoding statistics are
+	adjusted to account for this.
+
+
+		   Changes from version 1.4 to 1.5
+		   ===============================
+
+Encoder & Decoder:
+*	Support for SQCIF (128x96), 4CIF (704x576) and 
+	16CIF (1408x1152) in addition to the already included
+	QCIF and CIF formats. Recompilation is still necessary
+	when the format is changed. Please note that these new 
+	modes have not been tested properly, and I expect the 
+	buffer regulation may not work very well for the 4CIF 
+	and 16CIF modes.
+
+
+The changes decided at the Boston meeting in June 95:
+*	Picture header:
+	- start code byte aligned
+	- changes in PTYPE (also changed since White Book version)
+	- CPM bit with PLCI and GLCI if CPM bit is present
+*	*Truncation* instead of rounding for two of the interpolated
+    	pels for the half-pel prediction
+*	PB-frames: 
+	- The reconstructed P-macroblock data is clipped 
+	  *before* it is used in the reconstruction of the
+          B-macroblock. (This was already done in the decoder
+	  so this is actually a bugfix in the encoder :-)
+	- When the bidirectional prediction-block is made by adding
+	  the reconstructed data from the previous and future frames,
+	  division with truncation instead of rounding is used.
+
+These changes do not affect the performance very much, max. +/- 1%
+for the different test sequences.
+
+
+Encoder:
+*	The problem with the strange "edge-artifacts" for PB-frames
+	in sequences with severe motion reported be Motorola, has been
+	solved with the bugfix I reported to the sg15.lbc.video
+	reflector: 
+	"When intra coding was chosen because P prediction was bad, 
+	I zeroed out the vector, but still did a PB-delta search. 
+	This caused very narrow edges being forward-predicted only, 
+	leading to the visible edges. One way to remove the bug is: 
+	Still zero out the vector in case intra is chosen because of 
+	bad prediction, but NOT do a PB-delta search."
+
+
+		   Changes from version 1.4 to 1.4a
+		   ================================
+
+Encoder:
+*	Changed the quantizer for the B-frame in PB-frame coding.
+	Fixed small SAC bug at the end of the bitstream.
+	Will no longer allow quantization parameter > 31.
+
+Decoder:
+* 	Fixed a bug when saving PB-frames with option o0 - 03 (wrong
+	numbering). Changed the framenumbering in the trace-file for 
+	decoding PB-frames.
+
+Encoder & decoder: 
+
+*	Can now be compiled without changing anything with
+	Visual C++ 2.0 under Win32. Some cosmetic changes.
+
+
+
+		   Changes from version 1.3 to 1.4
+		   ===============================
+
+Encoder & Decoder:
+
+*	Syntax-based Arithmetic Coding mode (annex E). When 
+	option '-E' is used in the encoder, syntax-based 
+	arithmetic coding is used instead of VLC coding.
+	SAC was implemented by Patrick Mulroy and Wayne Ellis
+	at BT Labs. Thanks! 
+
+*	In the PB-frame mode PB delta vectors have been added. 
+	These increase the PB-frames performance significantly for
+	difficult sequences like foreman and carphone. The inter-
+	leaving of P and B coefficients has been removed. Instead
+	a combination of MODB and CBPB in the macroblock header 
+	signals whether vectors and/or coefficients are present for 
+	the current macroblock.
+
+*	It is now possible to compile CIF versions of both the 
+	encoder and decoder. Note that separate CIF and QCIF
+	version will have to be compiled. See the Makefiles for
+	details. 
+
+*	Other changes decided in Geneva included in this version:
+	- changed limits for PB frames bidir prediction
+	- removed stuffing bit in picture header in the PB data
+	- 6 bit run in escape coding / no more MRUN with SAC
+	- COD is no longer used in intra pictures
+	- GFID included in GOB header
+	- End Of Sequence code readable by decoder
+	- changed rounding of chroma vectors
+
+Decoder:
+
+*	The decoder has a new option '-x' which will interpolate
+	the decoded image to double size before display.
+	This does not affect saved images, when another output
+	option than -o4 is used. Thanks to Anurag Bist at Rockwell
+	for the idea and outline for this option.
+	
+
+		   Changes from version 1.1 to 1.3
+		   ===============================
+
+
+Encoder & Decoder:
+
+*	Unrestricted Motion Vector mode (annex D)
+	when option '-D' is used in the encoder, there are no
+	restrictions at all on the motion vectors around the
+	edges. This is fully decodable with the decoder.
+	The gain is very significant for sequences where the camera
+	moves (eg. foreman) or objects are moving at the edge of 
+	the picture.
+
+*	Advanced Prediction mode (annex F)
+	when option '-F' is used in the encoder, the advanced prediction
+	mode (overlapped block motion compensation = OBMC) with 16x16 
+	or 8x8 vectors are used. 16x16 or 8x8 vectors
+	are chosen as described in TMN5. This works fine together
+	with PB-frames, and is fully decodable with the decoder.
+	However, if option '-D' is not used, the unrestricted motion
+	vector mode is automatically turned on. This is because
+	of the complex limitations on the vectors near the edges of 
+	the pictures when OBMC is used. A significant gain for all 
+	sequences is observed with the advanced prediction mode. 
+	For low bitrates this gain is mostly subjective, but for higher
+	bitrates both subjective and objective.
+
+Encoder:
+
+*	use of PB-frames is now turned on with option '-G' (annex G :-)
+	instead of '-M'. 
+
+*	When buffer regulation is used, DQUANT is not transmitted until
+	a coded MB is transmitted. In version 1.1, the MB at the start
+	of each slice was always coded and transmitted when the quantizer
+	changed, which was on nearly every slice.
+
+
+*	some not so very important bug-fixes and changes:
+	- a memory leak in the PB-frames mode
+	- non-initialized QP_mean
+	- other small fixes which I don't remember
+
+*	CodeOnePred() and CodeTwoPB() merged into CodeOneOrTwo().
+
+
+
+		   Changes from version 0.5 to 1.1
+		   ===============================
+
+Version history:
+Version 0.5 worked so well, I called the version with the new syntax
+and buffer regulation v-1.0 (this was not released). This is v-1.1
+which includes PB-frames.
+
+Encoder & Decoder:
+
+ *	Changes adopted at the Leidschendam meeting:
+	- picture start code
+	- new bits in PTYPE for options
+	- new MCBPC VLC table for intra pictures
+	- changed MCBPC VLC table for predicted frames
+	- new MV prediction at the top of a GOB
+
+ *	PB-frames
+
+	option '-M' inserts one B-frame between consecutive P-frames
+	option '-Q' decides BQUANT 
+	option '-Z' decides BSCAN for B-frame
+	(see encoder file config.h for more info. on these new options)
+
+Encoder:
+
+ *	Buffer regulation (thanks to Anurag Bist of Rockwell)
+	works both with and without PB-frames
+
+	option '-r <bits/sec>' overrides '-q'
+	option '-m' writes repeated frames to disk, so that the 
+	sequence of reconstructed frames is 25 (or 30) Hz.
+
+ * 	option '-S <n>' is changed so that n is now the number 
+	of frames to skip for fixed framerate coding, not the distance
+	between coded frames as it used to be
+
+Decoder:
+
+ *  	New output format: concatenated YUV which is the same format
+	the encoder uses. (option '-o5').
+

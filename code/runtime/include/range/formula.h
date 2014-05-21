@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_RANGE_FORMULA_H
+#define __GUARD_RANGE_FORMULA_H
 
 #include <stdio.h>
 #include "range/point.h"
@@ -109,3 +111,6 @@ int irt_range_formula_3d_snprint(char* str, size_t size, const irt_range_formula
 int irt_range_formula_1d_print(const irt_range_formula_1d* formula);
 int irt_range_formula_2d_print(const irt_range_formula_2d* formula);
 int irt_range_formula_3d_print(const irt_range_formula_3d* formula);
+
+
+#endif // ifndef __GUARD_RANGE_FORMULA_H

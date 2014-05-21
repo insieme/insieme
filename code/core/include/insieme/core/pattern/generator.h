@@ -40,9 +40,11 @@
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/assert.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace core {
@@ -233,7 +235,10 @@ namespace generator {
 			Atom(const core::NodePtr& node) : TreeGenerator(TreeGenerator::Atom), node(node) {}
 			Atom(const TreePtr& tree) : TreeGenerator(TreeGenerator::Atom), tree(tree) {}
 
-			std::ostream& printTo(std::ostream& out) const { return out << tree; }
+			std::ostream& printTo(std::ostream& out) const {
+				if (tree) return out << tree;
+				return out << node;
+			}
 		};
 
 		struct Root : public TreeGenerator {
@@ -493,6 +498,13 @@ namespace generator {
 	inline TreeGeneratorPtr var(const std::string& name) {
 		return std::make_shared<tree::Expression>(varExpr<target>(name));
 	}
+
+	template<typename target = ptr_target>
+	inline TreeGeneratorPtr var(const TreePatternPtr& p_var) {
+		assert_true(dynamic_pointer_cast<const pattern::tree::Variable>(p_var));
+		return var(dynamic_pointer_cast<const pattern::tree::Variable>(p_var)->name);
+	}
+
 
 	template<typename target = ptr_target>
 	inline TreeGeneratorPtr treeVar(const std::string& name) {

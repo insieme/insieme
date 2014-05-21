@@ -35,13 +35,16 @@
  */
 
 #pragma once
+#ifndef __GUARD_CONTEXT_IMPL_RECORD_IMPL_H
+#define __GUARD_CONTEXT_IMPL_RECORD_IMPL_H
 
 #include "context/record.h"
-#include "irt_atomic.h"
+#include "abstraction/atomic.h"
 
 #include "context/impl/common.impl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/impl/spin_locks.impl.h"
 
 #ifdef __INTEL_COMPILER
 #pragma warning push
@@ -86,7 +89,7 @@ const irt_cap_data_block_info* irt_cap_dbi_register_block(void* base, uint32 siz
 		node->info.id = (node->next)?(node->next->info.id + 1):1;
 
 		// try adding the element to list
-	} while (!irt_atomic_bool_compare_and_swap((intptr_t*)&irt_g_cap_data_block_list, (intptr_t)(node->next), (intptr_t)node));
+	} while (!irt_atomic_bool_compare_and_swap((intptr_t*)&irt_g_cap_data_block_list, (intptr_t)(node->next), (intptr_t)node, intptr_t));
 
 	// return pointer to stored information
 	return &(node->info);
@@ -192,7 +195,7 @@ void irt_cap_region_start(uint32 id) {
 	// push on stack using lock-free mechanism
 	do {
 		stackElem->next = irt_g_cap_region_stack;
-	} while (!irt_atomic_bool_compare_and_swap((intptr_t*)&irt_g_cap_region_stack, (intptr_t)stackElem->next, (intptr_t)stackElem));
+	} while (!irt_atomic_bool_compare_and_swap((intptr_t*)&irt_g_cap_region_stack, (intptr_t)stackElem->next, (intptr_t)stackElem, intptr_t));
 }
 
 void irt_cap_region_stop(uint32 id) {
@@ -792,3 +795,6 @@ void irt_cap_profile_save() {
 #ifdef __INTEL_COMPILER
 #pragma warning pop
 #endif
+
+
+#endif // ifndef __GUARD_CONTEXT_IMPL_RECORD_IMPL_H

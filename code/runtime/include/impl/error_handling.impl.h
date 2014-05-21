@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IMPL_ERROR_HANDLING_IMPL_H
+#define __GUARD_IMPL_ERROR_HANDLING_IMPL_H
 
 #include "error_handling.h"
 
@@ -88,3 +90,6 @@ void irt_print_error_info(FILE* target, irt_error* error) {
 		fprintf(target, "%s\n", (char*)error+sizeof(irt_error));
 	}
 }
+
+
+#endif // ifndef __GUARD_IMPL_ERROR_HANDLING_IMPL_H

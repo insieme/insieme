@@ -1104,6 +1104,7 @@ namespace {
 		ADD_FORMATTER(basic.getRefAssign(), { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRefVar(), { OUT(" var("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(basic.getRefLoc(), { OUT(" loc("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 
 		ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });

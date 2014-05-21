@@ -90,6 +90,7 @@ int main(int argc, char** argv) {
 	bool compileOnly;
 	bool runIRChecks;
     bool optimize;
+    bool debug;
 	string tuCodeFile;		// a file to dump the TU code
 	string irCodeFile;		// a file to dump IR code to
 	string trgCodeFile;		// a file to dump the generated target code
@@ -98,6 +99,7 @@ int main(int argc, char** argv) {
 		("compile", 	'c', 	compileOnly, 	"compilation only")
         ("strict-semantic", 'S', runIRChecks,   "semantic checks")
         ("full-optimization", 'O',      optimize,   "full optimization")
+        ("debug-information", 'g',      debug,   "produce debug information")
 		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
 		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
 		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
@@ -273,6 +275,8 @@ int main(int argc, char** argv) {
     //set this flag in the backend compiler
     if (optimize)
         compiler.addFlag("-O3");
+    if (debug)
+        compiler.addFlag("-g3");
 
     //check if the c++11 standard was set when calling insieme
     //if yes, use the same standard in the backend compiler

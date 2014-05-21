@@ -149,7 +149,7 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 
 		free(bench_wis);
 	}
-	irt_atomic_inc(params->check);
+	irt_atomic_inc(params->check, uint64);
 }
 
 void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
@@ -169,7 +169,7 @@ void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
 
 		free(bench_wis);
 	}
-	irt_atomic_inc(params->check);
+	irt_atomic_inc(params->check, uint64);
 }
 
 

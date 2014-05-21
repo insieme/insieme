@@ -35,11 +35,15 @@
  */
 
 #pragma once
+#ifndef __GUARD_IRT_LOGGING_H
+#define __GUARD_IRT_LOGGING_H
 
 #include "declarations.h"
 
-#ifndef IRT_LOGGING
-#define IRT_LOGGING 1
+#ifdef _GEMS
+	#undef IRT_LOGGING
+#elif !defined(IRT_LOGGING)
+	#define IRT_LOGGING 1
 #endif
 
 void irt_log_init();
@@ -48,3 +52,6 @@ void irt_log_setting_s(const char* name, const char* value);
 void irt_log_setting_u(const char* name, uint64 value);
 void irt_log(const char* format, ...);
 void irt_log_cleanup();
+
+
+#endif // ifndef __GUARD_IRT_LOGGING_H

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_GLOBALS_H
+#define __GUARD_GLOBALS_H
 
 #include "config.h" // required to make the switch in threads.h work
 #include "abstraction/threads.h"
@@ -42,13 +44,16 @@
 #include "runtime.h"
 
 extern irt_tls_key irt_g_error_key;
-extern irt_lock_obj irt_g_error_mutex;
+extern irt_mutex_obj irt_g_error_mutex;
 
 extern irt_tls_key irt_g_worker_key;
 extern uint32 irt_g_worker_count;
 extern uint32 irt_g_active_worker_count;
-extern irt_lock_obj irt_g_active_worker_mutex;
+extern irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker;
 extern struct _irt_worker **irt_g_workers;
 
 extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
+
+
+#endif // ifndef __GUARD_GLOBALS_H

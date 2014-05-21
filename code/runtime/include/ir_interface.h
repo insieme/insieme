@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_IR_INTERFACE_H
+#define __GUARD_IR_INTERFACE_H
 
 #include "declarations.h"
 #include "instrumentation_regions.h"
@@ -82,6 +84,11 @@ irt_joinable* irt_parallel(const irt_parallel_job* job);
  */
 irt_joinable* irt_task(const irt_parallel_job* job);
 
+/** From a job description structure, generates a single work item to perform the job,
+ *  and immediately executes it. 
+ */
+void irt_region(const irt_parallel_job* job);
+
 /** Waits until a job launched by irt_parallel is finished.
  */
 void irt_merge(irt_joinable* joinable);
@@ -105,3 +112,6 @@ static inline void ir_inst_region_start(irt_inst_region_id id) {
 static inline void ir_inst_region_end(irt_inst_region_id id) {
 	irt_inst_region_end(id);
 }
+
+
+#endif // ifndef __GUARD_IR_INTERFACE_H

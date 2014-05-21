@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_CLIENT_APP_H
+#define __GUARD_CLIENT_APP_H
 
 #include "declarations.h"
 
@@ -61,3 +63,6 @@ struct _irt_client_app {
 irt_client_app* irt_client_app_create(const char* library_file_name);
 void irt_client_app_destroy(irt_client_app* app);
 
+
+
+#endif // ifndef __GUARD_CLIENT_APP_H

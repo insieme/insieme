@@ -35,10 +35,14 @@
  */
 
 #pragma once
+#ifndef __GUARD_WI_IMPLEMENTATION_H
+#define __GUARD_WI_IMPLEMENTATION_H
 
 #include "declarations.h"
 
 #include "data_item.h"
+
+#include "irt_optimizer.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -61,6 +65,7 @@ struct _irt_wi_implementation_runtime_data {
 	bool tested;
 	bool force_dyn;
 	double distribution[IRT_MAX_WORKERS];
+    irt_optimizer_runtime_data optimizer_rt_data;
 	uint32 chunk_size;
 };
 
@@ -77,3 +82,6 @@ struct _irt_wi_implementation_variant {
 /* ------------------------------ operations ----- */
 
 
+
+
+#endif // ifndef __GUARD_WI_IMPLEMENTATION_H

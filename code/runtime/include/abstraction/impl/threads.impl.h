@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_THREADS_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_THREADS_IMPL_H
 
 #if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
 	#include "threads.win.impl.h"
@@ -42,3 +44,6 @@
 	#include "threads.unix.impl.h"
 #endif
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_IMPL_H

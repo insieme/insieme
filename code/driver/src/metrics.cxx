@@ -51,7 +51,7 @@
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/integration/test_framework.h"
-#include "insieme/driver/integration/metrics.h"
+#include "insieme/driver/integration/test_output.h"
 #include "insieme/utils/config.h"
 
 
@@ -96,6 +96,11 @@ int main(int argc, char** argv) {
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
+	setup.perf=options.perf;
+	setup.load_miss=options.load_miss;
+	setup.store_miss=options.store_miss;
+	setup.flops=options.flops;
+	setup.perf_metrics=options.perf_metrics;
 
 	tf::Colorize colorize(options.color);
 
@@ -136,7 +141,7 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int totalTests=cases.size() * options.num_repeditions;
 	int act=0;
-	std::string sql=mr::getSQLInit(true);
+	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
 
 	for(auto it = cases.begin(); it < cases.end(); it++) {			
 		const auto& cur = *it;
@@ -159,9 +164,6 @@ int main(int argc, char** argv) {
 				break;
 			}
 		}
-
-		// get SQL statements out of the current result
-		sql+=mr::getSQLString(cur,results,options.overwrite);
 		
 		// print test info
 		std::cout << "#------------------------------------------------------------------------------#\n";
@@ -205,6 +207,11 @@ int main(int argc, char** argv) {
 			}
 		}
 
+		//execute static metrics
+		results.push_back(std::make_pair(itc::StaticMetricsStep(),mr::getStaticMetrics(cur,results)));
+		//save results into global map
+		allResults[cur]=results;
+
 		if(success) 
 			std::cout << colorize.green();
 		else 
@@ -231,14 +238,13 @@ int main(int argc, char** argv) {
 
 	} // end test case loop
 
-	// write sql into metrics.sql file
-	ofstream sqlFile("metrics.sql");
-	if(sqlFile.is_open()){
-		sqlFile<<sql;
-		sqlFile.close();
+	// iterate over all output methods and execute them
+	for(string s : options.outputFormats){
+		mr::TestOutput* output= mr::createTestOutput(s,allResults);
+		output->writeOutput(options.overwrite);
 	}
-	else
-		LOG(ERROR)<<"Unable to open file metrics.sql for writing!"<<std::endl;
+
+	
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size()*options.num_repeditions);
@@ -273,9 +279,14 @@ namespace {
 				//("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 				("no-perf",				"disable perf metrics")
 				("scheduling,S",			"enable runs on all scheduling variants (static,dynamic,guided)")
-				("no-overwrite",			"do not overwrite existing sql data")
+				("no-overwrite",			"do not overwrite existing output data")
 				("threads,t",				bpo::value<int>()->default_value(omp_get_max_threads()),"number of threads for statistic calculation")
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
+				("load-miss",			bpo::value<string>(),"the perf code for the llc load misses")
+				("store-miss",			bpo::value<string>(),"the perf code for the llc store misses")
+				("flops",			bpo::value<string>(),"the perf code for the number of floating point operations")
+				("perf-metric,P",		bpo::value<vector<string>>(),"a perf code to be measured")
+				("output,o",			bpo::value<vector<string>>(),"output formats, currently supported: SQL,CSV")
 		;
 
 		// define positional options (all options not being named)
@@ -303,7 +314,29 @@ namespace {
 			res.cases = map["cases"].as<vector<string>>();
 		}
 
-		res.perf=!(map.count("no_perf"));
+		if(map.count("output")){
+			res.outputFormats = map["output"].as<vector<string>>();
+		}
+
+		res.perf=!(map.count("no-perf"));
+		if(res.perf){
+			//if perf is enabled perf codes must be given
+			if(map.count("load-miss")==0 || map.count("store-miss")==0 || map.count("flops")==0){
+				std::cout << "To enable perf support perf metrics (load-miss,store-miss,flops) have to be given using the appropriate arguments!"<<std::endl;
+				return fail;
+			}
+			res.load_miss=map["load-miss"].as<string>();
+			res.store_miss=map["store-miss"].as<string>();
+			res.flops=map["flops"].as<string>();
+		
+			if(map.count("perf-metric")){
+				res.perf_metrics=map["perf-metric"].as<vector<string>>();
+			}
+		}
+
+		if(!res.perf && map.count("perf-metric")){
+			LOG(WARNING)<<"Requested perf metrics will not be executed!"<<std::endl;
+		}
 		res.scheduling=map.count("scheduling");
 		res.mockrun = map.count("mock");
 		res.clean=true;

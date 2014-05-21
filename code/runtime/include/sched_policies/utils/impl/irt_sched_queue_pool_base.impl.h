@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_QUEUE_POOL_BASE_IMPL_H
+#define __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_QUEUE_POOL_BASE_IMPL_H
 
 #include "sched_policies/utils/irt_sched_queue_pool_base.h"
 
@@ -66,3 +68,6 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 		return real_wi;
 	}
 }
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_QUEUE_POOL_BASE_IMPL_H

@@ -35,8 +35,13 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STATIC_H
+#define __GUARD_SCHED_POLICIES_IRT_SCHED_STATIC_H
 
 #include "sched_policies/utils/irt_sched_queue_pool_base.h"
 
 #define irt_worker_scheduling_data irt_worker_queue_pool_base
 #define irt_wi_scheduling_data irt_wi_queue_pool_base
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STATIC_H

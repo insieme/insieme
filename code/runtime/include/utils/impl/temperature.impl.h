@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_TEMPERATURE_IMPL_H
+#define __GUARD_UTILS_IMPL_TEMPERATURE_IMPL_H
 
 #include "utils/temperature.h"
 
@@ -66,3 +68,6 @@ void irt_temperature_select_instrumentation_method() {
 		irt_log_setting_s("irt pkg temperature measurement method", "none");
 	}
 }
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_TEMPERATURE_IMPL_H

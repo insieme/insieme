@@ -35,13 +35,19 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H
 
 // implementation of threads using pthread library; will be used for both Linux and Windows.
 
 #include "abstraction/threads.h"
 #include "error_handling.h"
 
-#include <sys/time.h>
+#ifdef _GEMS
+	#include "include_gems/sys_time.h"
+#else
+	#include <sys/time.h>
+#endif
 
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
@@ -58,7 +64,12 @@ void irt_thread_get_current(irt_thread *t) {
 }
 
 void irt_thread_cancel(irt_thread *t){
+#ifdef _GEMS
+	// TODO [_GEMS]: missing implementation of pthread_cancel
+	IRT_WARN("irt_thread_cancel empty implementation\n");
+#else
 	pthread_cancel(*t);
+#endif
 }
 
 int irt_thread_join(irt_thread *t){
@@ -72,6 +83,10 @@ void irt_thread_exit(int exit_code){
 	pthread_exit(&exit_code);
 }
 
+void irt_thread_yield() {
+	pthread_yield();
+}
+
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 	#ifdef _WIN32
 		return t1->p == t2->p;
@@ -81,60 +96,42 @@ bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 }
 
 
-/* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
-
-void irt_spin_lock(irt_spinlock *lock){
-	pthread_spin_lock(lock);
-}
-
-void irt_spin_unlock(irt_spinlock *lock){
-	pthread_spin_unlock(lock);
-}
-
-int irt_spin_init(irt_spinlock *lock){
-	return pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE);
-}
-
-void irt_spin_destroy(irt_spinlock *lock){
-	pthread_spin_destroy(lock);
-}
-
-
 /* MUTEX FUNCTIONS ------------------------------------------------------------------- */
 
 void irt_cond_var_init(irt_cond_var *cv) {
 	 pthread_cond_init(cv, NULL);
 }
 
-void irt_mutex_init(irt_lock_obj *m) {
+void irt_mutex_init(irt_mutex_obj *m) {
 	pthread_mutex_init(m, NULL);
 }
 
-void irt_mutex_lock(irt_lock_obj *m) {
+void irt_mutex_lock(irt_mutex_obj *m) {
 	pthread_mutex_lock(m);
 }
 
-int irt_mutex_trylock(irt_lock_obj *m) {
+int irt_mutex_trylock(irt_mutex_obj *m) {
 	return pthread_mutex_trylock(m);
 }
 
-void irt_mutex_unlock(irt_lock_obj *m) {
+void irt_mutex_unlock(irt_mutex_obj *m) {
 	pthread_mutex_unlock(m);
 }
 
-void irt_mutex_destroy(irt_lock_obj *m) {
+void irt_mutex_destroy(irt_mutex_obj *m) {
 	pthread_mutex_destroy(m);
 }
 
 void irt_cond_wake_all(irt_cond_var *cv) {
+	// TODO [_GEMS]: is it still true? irt_cond_wake_one added since no irt_cond_wake_all implementation is available 
 	pthread_cond_broadcast(cv);
 }
 
-int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m) {
+int irt_cond_wait(irt_cond_var *cv, irt_mutex_obj *m) {
 	return pthread_cond_wait(cv, m);
 }
 
-int irt_cond_timedwait(irt_cond_var *cv, irt_lock_obj *m, uint64 time_ns) {
+int irt_cond_timedwait(irt_cond_var *cv, irt_mutex_obj *m, uint64 time_ns) {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	uint64 new_nsecs = ts.tv_nsec + time_ns%(1000ULL*1000*1000);
@@ -168,3 +165,6 @@ int irt_tls_set(irt_tls_key k, void *val) {
 }
 
 
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H

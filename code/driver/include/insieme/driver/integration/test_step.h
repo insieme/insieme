@@ -75,15 +75,21 @@ namespace integration {
 	struct TestSetup {
 		bool mockRun;
 		SchedulingPolicy sched;
-		bool enablePerf;
 		bool clean;
 		int numThreads;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
+
+		//perf metrics
+		bool perf;
+		string load_miss;
+		string store_miss;
+		string flops;
+		vector<string> perf_metrics;
 	};
 
-	enum StepType {COMPILE,RUN,CHECK,UNDEFINED};
+	enum StepType {COMPILE,RUN,CHECK,STATIC_METRIC,UNDEFINED};
 
 	struct TestStep :
 			public boost::less_than_comparable<TestStep>,
@@ -137,6 +143,12 @@ namespace integration {
 		const StepType getStepType(){
 			return type;
 		}
+	};
+
+	//special test step only to contain results of static metrics
+	struct StaticMetricsStep : public TestStep{
+		public:
+		StaticMetricsStep(){type=STATIC_METRIC;};
 	};
 
 

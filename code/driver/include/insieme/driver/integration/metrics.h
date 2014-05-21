@@ -59,7 +59,6 @@ namespace driver{
 namespace integration{
 namespace metrics{
 
-
 //executes a command and returns its output
 std::string executeCommand(std::string command){
 	FILE *pipe;
@@ -79,31 +78,19 @@ std::string executeCommand(std::string command){
 	return returnString;
 }
 
-
-//gets all results of a testcase and generates an SQL string to insert it into a DB
-std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> results, bool deleteCase){
-	std::string sqlStatement("");
+TestResult getStaticMetrics(TestCase testcase,vector<pair<TestStep, TestResult>> results){
+	map<string,string> metricResults;
 
 	std::string filenames("");
 	for(const auto& cur : testcase.getFiles())
 		filenames += " " + cur.string();
 
-	//testID
-	std::string testID=std::to_string(boost::hash_value(testcase.getName()));
-
-	//DELETE IF NECESSARY
-	if(deleteCase)
-		sqlStatement=sqlStatement+"DELETE FROM Test where id=\""+testID+"\";\n";
-
-
-	//INSERT TEST
-
-	//get codeType
+	// TODO get codeType
 	std::string codeType("");
+	metricResults["codeType"]=codeType;
 
 	//get loc
 	std::string loc("");
-	
 	loc =executeCommand(std::string(TEST_ROOT_DIR)+"/cloc.pl "+filenames+" --quiet --xml");
 
 	//"parse" xml to find total lines of code
@@ -127,16 +114,19 @@ std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> re
 		LOG(WARNING)<<"Unable to determine LOC of "<<testcase.getName()<<std::endl;
 		loc="-1";
 	}
+	metricResults["loc"]=loc;
 		
 	//get size
 	std::string size("");
 	size=executeCommand("du -cL "+filenames+" | grep \"total\" | awk '{{print $1;}}'");
 	size.resize(size.length()-1); 			//remove line break
+	metricResults["size"]=size;
 	
 	//get omp pragams
 	std::string pragmas("");
 	pragmas=executeCommand("egrep '#pragma omp' "+filenames+" | wc -l");
 	pragmas.resize(pragmas.length()-1);		//remove line break
+	metricResults["ompPragmas"]=pragmas;
 	
 	//get parType
 	std::string parType("");
@@ -146,6 +136,7 @@ std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> re
 		parType="ocl";
 	else
 		parType="unknown/sequential";	
+	metricResults["parType"]=parType;
 
 	//get failState
 	std::string failstate("");
@@ -154,37 +145,53 @@ std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> re
 			failstate=stepResult.first.getName();
 			break;
 		}
+	metricResults["failState"]=failstate;
 
-	//insert test
-	sqlStatement=sqlStatement+"\n"+
-		"INSERT OR IGNORE INTO Test (id,name,codeType,loc,size,ompPragmas,parType,failState) "+
-		"VALUES(\""+testID+"\",\""+testcase.getName()+"\",\""+codeType+"\","+loc+","+size+","+pragmas+",\""+parType+"\",\""+failstate+"\");\n";
+	return StaticResult(metricResults);
+}
 
 
-	//INSERT METRICS
+//gets all results of a testcase and generates an SQL string to insert it into a DB
+std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> results, bool deleteCase){
+	std::string sqlStatement("");
 
-	//insert runtime metric
-	sqlStatement=sqlStatement+"INSERT OR IGNORE INTO Metric(name) VALUES(\"RUNTIME\");\n";
-	//insert memory consumption metric
-	sqlStatement=sqlStatement+"INSERT OR IGNORE INTO Metric(name) VALUES(\"MEMORY\");\n";	
+	std::string filenames("");
+	for(const auto& cur : testcase.getFiles())
+		filenames += " " + cur.string();
 
-	//TODO insert here perf metrics
+	//testID
+	std::string testID=std::to_string(boost::hash_value(testcase.getName()));
 
+	//DELETE IF NECESSARY
+	if(deleteCase)
+		sqlStatement=sqlStatement+"DELETE FROM Test where id=\""+testID+"\";\n";
 
 	//INSERT RUNCONFIGURATIONS
 
+	std::string sqlRunconfigs("");
 	std::string host=executeCommand("hostname");
 	host.resize(host.size()-1);
 	std::string insiemeVersion=itc::testFramework::getGitVersion();
 	std::map<string,string> knownBackendCompiler;
+	std::set<string> knownMetrics;
 
 	for (const auto& stepResult : results){
 		TestStep step=stepResult.first;
 		TestResult result=stepResult.second;
 
-		if(step.getStepType()==RUN){
+		//insert static metrics
+		if(step.getStepType()==STATIC_METRIC){
+			StaticResult* statRes=(StaticResult*)&result;
 
-			std::string runConfigID=std::to_string(boost::hash_value(testID+step.getName()));
+			map<string,string> metricResults=statRes->getStaticMetrics();			
+
+			//INSERT TEST
+			sqlStatement=sqlStatement+"\n"+
+			"INSERT OR IGNORE INTO Test (id,name,codeType,loc,size,ompPragmas,parType,failState) "+
+			"VALUES(\""+testID+"\",\""+testcase.getName()+"\",\""+metricResults["codeType"]+"\","+metricResults["loc"]+","+metricResults["size"]+","+metricResults["ompPragmas"]+",\""+metricResults["parType"]+"\",\""+metricResults["failstate"]+"\");\n";
+
+		}
+		else if(step.getStepType()==RUN){
 			
 			std::string stepBaseName=step.getName();
 			//get name until the second occurrence of "_"
@@ -217,7 +224,7 @@ std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> re
 
 					std::string backendID=std::to_string(boost::hash_value(backendComp+backendVersion));
 					
-					sqlStatement=sqlStatement+"INSERT OR IGNORE INTO BackendCompiler(id,name,version) "+
+					sqlRunconfigs=sqlRunconfigs+"INSERT OR IGNORE INTO BackendCompiler(id,name,version) "+
 						"VALUES(\""+backendID+"\",\""+backendComp+"\",\""+backendVersion+"\");\n";
 
 					knownBackendCompiler[backendComp]=backendID;
@@ -226,24 +233,30 @@ std::string getSQLString(TestCase testcase,vector<pair<TestStep, TestResult>> re
 				backendComp=knownBackendCompiler[backendComp];
 			}
 
-			sqlStatement=sqlStatement+"\n"+
-				"INSERT OR IGNORE INTO RunConfiguration(id,testID,step,numThreads,scheduling,insiemeVersion,backendCompiler,host) "+
+			std::string runConfigID=std::to_string(boost::hash_value(testID+step.getName()+insiemeVersion+backendComp+host));
+
+			sqlRunconfigs=sqlRunconfigs+"\n"+
+				"INSERT OR IGONORE INTO RunConfiguration(id,testID,step,numThreads,scheduling,insiemeVersion,backendCompiler,host) "+
 				"VALUES(\""+runConfigID+"\",\""+testID+"\",\""+stepBaseName+"\","+numThreads+",\""+scheduling+"\",\""+insiemeVersion+"\",\""+backendComp+"\",\""+host+"\");\n";
 
-			//INSERT RESULTS
+			//INSERT METRICS AND RESULTS
+			map<string,float> metricResults=result.getMetrics();
 			
-			//insert runtime
-			sqlStatement=sqlStatement+"INSERT INTO Result(metricID,runID,value) "+
-				"VALUES(\"RUNTIME\",\""+runConfigID+"\","+std::to_string(result.getRuntime())+");\n";
-			//insert memory
-			sqlStatement=sqlStatement+"INSERT INTO Result(metricID,runID,value) "+
-				"VALUES(\"MEMORY\",\""+runConfigID+"\","+std::to_string(result.getMemory())+");\n";	
+			for(auto metr=metricResults.begin();metr!=metricResults.end();metr++){
+				//check if metric has to be inserted into DB
+				if(knownMetrics.find(metr->first)==knownMetrics.end()){
+					sqlRunconfigs=sqlRunconfigs+"INSERT OR IGNORE INTO Metric(name) VALUES(\""+metr->first+"\");\n";
+					knownMetrics.insert(metr->first);
+				}
 
-			//TODO insert perf metric values here	
+				//insert value
+				sqlRunconfigs=sqlRunconfigs+"INSERT INTO Result(metricID,runID,value) "+
+				"VALUES(\""+metr->first+"\",\""+runConfigID+"\","+std::to_string(metr->second)+");\n";
+			}
 		}
 	}
 	
-	return sqlStatement;
+	return sqlStatement+sqlRunconfigs;
 }
 
 
@@ -269,8 +282,7 @@ std::string getSQLCreate(){
 		"	scheduling varchar(10),\n"
 		"	insiemeVersion varchar(20) REFERENCES InsiemeVersion(name) ON DELETE CASCADE,\n"
 		"	backendCompiler varchar(20) REFERENCES BackendCompiler(id) ON DELETE CASCADE,\n"
-		"	host varchar(20) REFERENCES Host(name) ON DELETE CASCADE,\n"
-		"	UNIQUE(testID,step,numThreads)"
+		"	host varchar(20) REFERENCES Host(name) ON DELETE CASCADE\n"
 		");\n"
 		"CREATE TABLE IF NOT EXISTS Metric(\n"
 		"	name varchar(20) PRIMARY KEY\n"
@@ -321,8 +333,6 @@ std::string getSQLInit(bool createDB=false){
 
 	return initStr;
 }
-
-
 
 } // end namespace metrics
 } // end namespace integration

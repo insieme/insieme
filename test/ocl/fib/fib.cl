@@ -53,6 +53,7 @@ int _fib0(int n) { return (n <= 1)?1:(_fib1(n-1) + _fib1(n-2)); }
 */
 int _fib0(int n) { return (n <= 1)?1:(_fib0(n-1) + _fib0(n-2)); }
 
+#pragma insieme mark
 __kernel void fib(__global int* a, __global int* res, int size) {
 	int gid = get_global_id(0);
 

@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H
+#define __GUARD_UTILS_IMPL_ENERGY_IMPL_H
 
 #include "utils/energy.h"
 
@@ -66,3 +68,6 @@ void irt_energy_select_instrumentation_method() {
 		irt_log_setting_s("irt energy measurement method", "none");
 	}
 }
+
+
+#endif // ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H

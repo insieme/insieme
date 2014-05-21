@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#define offsetof(st, m) ((size_t)(&((st *)0)->m))
+
 typedef struct _parameters {
 	int energy;				/* print energy (0/1)  */
 	
@@ -171,7 +173,7 @@ bool parameters_read(parameters *para, const char* filename) {
 			sprintf(scanstring, "%s:", g_parameter_data[i]->name);
 			if(strstr(line, scanstring)==line)
 			{
-				int loc = (int)para+g_parameter_data[i]->offset;
+				long loc = (long)para+g_parameter_data[i]->offset;
 				char* strloc = strchr(line, ':')+1;
 				for(unsigned j=0; j<g_parameter_data[i]->count; 
 					++j, loc+=g_parameter_data[i]->datasize, strloc = strchr(line, ',')+1)

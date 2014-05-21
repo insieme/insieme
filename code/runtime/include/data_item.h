@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_DATA_ITEM_H
+#define __GUARD_DATA_ITEM_H
 
 #include "declarations.h"
 
@@ -106,3 +108,6 @@ struct _irt_lw_data_item {
 	irt_type_id type_id;
 	// actual content will be stored here
 };
+
+
+#endif // ifndef __GUARD_DATA_ITEM_H

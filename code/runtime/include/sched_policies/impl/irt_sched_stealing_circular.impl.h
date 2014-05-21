@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "sched_policies/irt_sched_stealing_circular.h"
@@ -42,6 +44,8 @@
 
 #ifdef _WIN32
 	#include "../../include_win32/rand_r.h"
+#elif defined(_GEMS)
+	#include "include_gems/rand_r.h"
 #endif
 
 // ============================================================================ Scheduling (general)
@@ -76,7 +80,7 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	_irt_cwb_try_push_back(self, yielding_wi, true);
-	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
+    _irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
@@ -339,3 +343,6 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 }
 
 #endif // 64 bit triplet implementation
+
+
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H

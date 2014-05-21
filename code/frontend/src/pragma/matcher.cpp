@@ -172,7 +172,7 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
         for(auto m : mmap) {
             for(unsigned i=0; i<m.second.size(); i++) {
                 if(m.second[i]->isString()) {
-                    stringMap[m.first] = (m.second[i]->toStr());
+                    stringList[m.first].push_back(m.second[i]->toStr());
                 } else if(!m.second[i]->isExpr()) {
                     auto element = getVar(m.second[i], fact);
                     if(element) {
@@ -186,7 +186,7 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
             }
             if(!m.second.size()) {
                 //if we have no second value we just add a stringvalue with the given key
-                stringMap[m.first] = "";
+                stringList[m.first] = StringList(1, "");
             }
         }
         called = true;
@@ -206,7 +206,7 @@ void MatchObject::print() const {
         std::cout << "[" << (cur.second) << "]" << std::endl;
     }
     std::cout << "String list: " << "\n";
-    for(auto cur: stringMap) {
+    for(auto cur: stringList) {
         std::cout << "KEY: " << cur.first << " -> ";
         std::cout << "[" << (cur.second) << "]" << std::endl;
     }

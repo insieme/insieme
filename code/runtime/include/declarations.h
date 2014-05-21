@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_DECLARATIONS_H
+#define __GUARD_DECLARATIONS_H
 
 #include "irt_inttypes.h"
 #include "id_generation.h"
@@ -43,6 +45,10 @@
 #ifdef _WIN32
 	#include <Windows.h>
 	#include <malloc.h>
+#elif defined(_GEMS)
+	#include <include_gems/alloca.h>
+	#include <include_gems/stdlib.h>
+	#include <include_gems/stdio.h>
 #else
 	#include <alloca.h>
 #endif
@@ -146,3 +152,5 @@ typedef struct _irt_worker irt_worker;
 /* ------------------------------ region instrumentation ----- */
 
 //typedef struct _irt_inst_region_data irt_inst_region_data;
+
+#endif // ifndef __GUARD_DECLARATIONS_H

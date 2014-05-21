@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_UNIX_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_AFFINITY_UNIX_IMPL_H
 
 #include <sched.h>
 #include "utils/affinity.h"
@@ -113,3 +115,6 @@ uint32 irt_affinity_cores_available() {
 	}
 	return count;
 }
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_UNIX_IMPL_H

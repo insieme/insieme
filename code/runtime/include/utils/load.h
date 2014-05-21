@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_UTILS_LOAD_H
+#define __GUARD_UTILS_LOAD_H
 
 #include "stdlib.h"
 #include "stdio.h"
@@ -122,3 +124,6 @@ double get_load_external() {
 	return ext;
 }
 
+
+
+#endif // ifndef __GUARD_UTILS_LOAD_H

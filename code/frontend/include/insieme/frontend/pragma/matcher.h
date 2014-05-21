@@ -189,9 +189,10 @@ class MatchObject {
         bool called;
         typedef std::vector<core::VariablePtr> VarList;
         typedef std::vector<core::ExpressionPtr> ExprList;
+        typedef std::vector<std::string> StringList;
         std::map<std::string, VarList> varList;
         std::map<std::string, ExprList> exprList;
-        std::map<std::string, std::string> stringMap;
+        std::map<std::string, StringList> stringList;
         core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
         core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
     public:
@@ -202,16 +203,22 @@ class MatchObject {
         const ExprList& getExprs(const std::string& s) {
             return exprList[s];
         }
+        const StringList& getStrings(const std::string& k) {
+            return stringList[k];
+        }
         const std::string& getString(const std::string& k) {
-            return stringMap[k];
+            if(stringList[k].size() < 1) 
+                stringList[k].push_back("");
+
+            return stringList[k].front();
         }
 
         bool stringValueExists(const std::string& k) {
-            return (stringMap.find(k) != stringMap.end());
+            return (stringList.find(k) != stringList.end());
         }
 
         bool empty() {
-            return (varList.empty() && exprList.empty() && stringMap.empty());
+            return (varList.empty() && exprList.empty() && stringList.empty());
         }
 
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);

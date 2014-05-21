@@ -35,6 +35,8 @@
  */
 
 #pragma once
+#ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H
+#define __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H
 
 #include "sched_policies/utils/impl/irt_sched_queue_pool_base.impl.h"
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
@@ -69,6 +71,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 	// if that failed as well, look in the IPC message queue
 	if(_irt_sched_check_ipc_queue(self))
 		return 1;
+	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems 
+	irt_thread_yield();
+
 	return 0;
 }
 
@@ -82,6 +87,10 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
 			irt_signal_worker(irt_g_workers[i]);
 		}
+	#ifdef _GEMS
+		// alloca is implemented as malloc
+		free(split_wis);
+	#endif
 	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 		irt_signal_worker(target);
@@ -106,3 +115,4 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
+#endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STATIC_IMPL_H

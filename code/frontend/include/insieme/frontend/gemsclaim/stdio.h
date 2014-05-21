@@ -8,7 +8,7 @@
 /* The following 3 fields should be provided to the backend compiler
  * test/gemsclaim/tools/enc.cpp produces the header file with proper
  * definitions  */
-extern long input_file_pos;
+extern unsigned long input_file_pos;
 extern const char input_file[];
 extern const unsigned long INPUT_FILE_LEN;
 
@@ -36,6 +36,8 @@ FILE *fdopen(int fd, const char *mode);
 FILE *freopen(const char *path, const char *mode, FILE *stream);
 int fclose(FILE *fp);
 int printf(const char *format, ...);
+int sprintf(char *str, const char *format, ...);
+int snprintf(char *str, size_t size, const char *format, ...);
 int scanf(const char *format, ...);
 int sscanf(const char *str, const char *format, ...);
 
@@ -98,7 +100,12 @@ size_t gemfread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
             else
                 bytes = size * nmemb;
 
-            memcpy(ptr, input_file, bytes);
+            /* the following trick is needed because Insieme will change
+             * the data layout of input_file */
+            const char* tmp = input_file;
+            tmp += input_file_pos;
+
+            memcpy(ptr, tmp, bytes);
             input_file_pos += bytes;
 
             return bytes;
