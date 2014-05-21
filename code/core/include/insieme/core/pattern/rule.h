@@ -39,6 +39,7 @@
 #include "insieme/core/pattern/structure.h"
 #include "insieme/core/pattern/pattern.h"
 #include "insieme/core/pattern/generator.h"
+#include "insieme/core/pattern/variable.h"
 
 #include "insieme/utils/printable.h"
 

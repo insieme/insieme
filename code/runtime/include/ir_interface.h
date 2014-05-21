@@ -50,7 +50,7 @@ typedef struct _irt_parallel_job {
 	uint32 min;
 	uint32 max;
 	uint32 mod;
-	irt_wi_implementation_id impl_id;
+	irt_wi_implementation* impl;
 	irt_lw_data_item* args;
 } irt_parallel_job;
 
@@ -68,7 +68,7 @@ typedef void irt_joinable;
 /** Distributes the provided work range over the given group. 
  *  Needs to be called by every work item within the group! (OMP semantics)
  */
-void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args);
 
 /** From a job description structure, generates a number of parallel work items to perform the job,
  *  and puts them into a shared group. 

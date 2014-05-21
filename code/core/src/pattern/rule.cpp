@@ -51,9 +51,17 @@ namespace pattern {
 
 	core::NodePtr Rule::fixpoint(const core::NodePtr& tree) const {
 		auto res = tree;
+
+		// while applicable ..
 		while(auto next = applyTo(res)) {
+			// if nothing has changed => done
+			if (res == next) return res;
+
+			// try next iteration
 			res = next;
 		}
+
+		// done
 		return res;
 	}
 
