@@ -472,7 +472,7 @@ namespace runtime {
 	}
 
 	const c_ast::ExpressionPtr ImplementationTable::getTable() {
-		return c_ast::ref(converter.getCNodeManager()->create(IMPL_TABLE_NAME));
+		return c_ast::ref(converter.getCNodeManager()->create<c_ast::Literal>(IMPL_TABLE_NAME));
 	}
 
 	std::ostream& ImplementationTable::printTo(std::ostream& out) const {
