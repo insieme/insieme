@@ -75,9 +75,9 @@ irt_wi_implementation_variant g_insieme_wi_loop_variants[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_test_variants },
-	{ 1, g_insieme_wi_loop_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_test_variants },
+	{ 3, 1, g_insieme_wi_loop_variants }
 };
 
 uint32 g_memcount = 8;
@@ -100,14 +100,14 @@ int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
 	if(argc>=3) g_memcount = atoi(argv[2]);
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
 
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-	irt_parallel_job job = { g_memcount,g_memcount,1, INSIEME_TEST_WI_INDEX, NULL };
+	irt_parallel_job job = { g_memcount,g_memcount,1, &g_insieme_impl_table[INSIEME_TEST_WI_INDEX], NULL };
 	irt_joinable* joinable = irt_parallel(&job);
 	irt_merge(joinable);
 }
@@ -119,28 +119,28 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_wg_barrier(wg);
 
 	irt_work_item_range loop_range = {0, 100, 3};
-	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
 	irt_loop_sched_policy static10 = {IRT_STATIC_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &static10);
-	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
 	irt_loop_sched_policy dynamic10 = {IRT_DYNAMIC_CHUNKED, 1024, 2};
 	irt_wg_set_loop_scheduling_policy(wg, &dynamic10);
-	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
 	irt_loop_sched_policy guided10 = {IRT_GUIDED_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &guided10);
-	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
@@ -151,7 +151,7 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	fixed_policy.participants = 7;
 	fixed_policy.param.boundaries = boundaries;
 	irt_wg_set_loop_scheduling_policy(wg, &fixed_policy);
-	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);

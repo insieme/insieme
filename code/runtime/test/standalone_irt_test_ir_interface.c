@@ -75,9 +75,9 @@ irt_wi_implementation_variant g_insieme_wi_loop_variants[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_test_variants },
-	{ 1, g_insieme_wi_loop_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_test_variants },
+	{ 3, 1, g_insieme_wi_loop_variants }
 };
 
 // initialization
@@ -97,14 +97,14 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
 
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-	irt_parallel_job job = { 8,8,1, INSIEME_TEST_WI_INDEX, NULL };
+	irt_parallel_job job = { 8,8,1, &g_insieme_impl_table[INSIEME_TEST_WI_INDEX], NULL };
 	irt_joinable* joinable = irt_parallel(&job);
 	irt_merge(joinable);
 }
@@ -113,10 +113,10 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	printf("WI %d here\n", wi->wg_memberships[0].num);
 	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
 	irt_work_item_range loop_range = {0, 100, 1};
-	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
 	loop_range.end = 1000;
-	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
 }
 

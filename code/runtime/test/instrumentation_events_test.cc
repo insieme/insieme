@@ -55,7 +55,7 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants_simple },
+	{ 1, 1, g_insieme_wi_startup_variants_simple },
 };
 
 // initialization
@@ -101,5 +101,5 @@ void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 
 TEST(event_instrumentation, simple) {
 	uint32 wcount = irt_get_default_worker_count();
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 }
