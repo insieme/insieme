@@ -213,9 +213,7 @@ ExpressionAddress extractVariable(ExpressionAddress expr) {
 		return extractVariable(cast->getSubExpression());
 
 	if(CallExprAddress call = expr.isa<CallExprAddress>()){
-//		if (gen.isRefDeref(call->getFunctionExpr())){
-			return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
-//		}
+		return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
 
 	}
 
@@ -252,18 +250,17 @@ NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
 			pirp::callExpr(mgr.getLangBasic().getRefDeref(), icp::var("val", pirp::variable())) |
 			pirp::callExpr(mgr.getLangBasic().getRefNew(), icp::var("val", pirp::variable())) |
 			pirp::callExpr(mgr.getLangBasic().getRefVar(), icp::var("val", pirp::variable()));
-	icp::TreePatternPtr valueCopyCast = valueCopy | pirp::castExpr(icp::any, valueCopy);
-	icp::TreePatternPtr assign = pirp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(icp::any));
-			icp::var("lhs", pirp::variable()) << valueCopyCast);
+//	icp::TreePatternPtr valueCopyCast = valueCopy | pirp::castExpr(icp::any, valueCopy);
+//	icp::TreePatternPtr assign = pirp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(icp::any));
+//			icp::var("lhs", pirp::variable()) << valueCopyCast);
 
+//std::cout << "var: " << *var << std::endl;
 //std::cout << "\nscope: " << (scope.getChildAddresses().size()) << std::endl;
 
 	vector<NodeAddress> childAddresses = scope.getChildAddresses();
 	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
-//std::cout << "iterating " << *I << std::endl;
-
 		NodeAddress child = *I;
-//std::cout << "Tolles I " << NodePtr(child) << std::endl;
+//std::cout << "\tTolles I " << child << std::endl;
 
 		/* will be implplemented when a propper testcase can be found
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(child)) {
@@ -313,11 +310,13 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 				return decl->getVariable();
 			}
 		}
+
+		if(CallExprAddress call = var.isa<CallExprAddress>()) {
+//std::cout << "calling " << *call << std::endl;
+			return getRootVariable(scope, extractVariable(call->getArgument(0))); // crossing my fingers that that will work ;)
+		}
+
 	}
-
-	if(CallExprAddress call = var.isa<CallExprAddress>())
-		return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
-
 
 	//compound expressions may not open a new scope, therefore declaration can be in the parent
 	return getRootVariable(scope.getParentAddress(), var);
