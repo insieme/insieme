@@ -52,7 +52,7 @@
 
 
 
-IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
+IRT_DEFINE_LOCKED_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 
 static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	char* retval = (char*)malloc(sizeof(irt_data_item) + sizeof(irt_data_range)*dimensions);

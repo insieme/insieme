@@ -62,8 +62,8 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_rapl[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants_dvfs },
-	{ 1, g_insieme_wi_startup_variants_rapl }
+	{ 1, 1, g_insieme_wi_startup_variants_dvfs },
+	{ 2, 1, g_insieme_wi_startup_variants_rapl }
 };
 
 // initialization
@@ -171,7 +171,7 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 
 TEST(energy, dvfs) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context, insieme_cleanup_context, false);
-	irt_runtime_run_wi(0, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[0], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
@@ -182,7 +182,7 @@ TEST(energy, rapl) {
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_get_num_cores_per_socket();
 	irt_context* context = irt_runtime_start_in_context(wcount, insieme_init_context, insieme_cleanup_context, false);
-	irt_runtime_run_wi(1, NULL);
+	irt_runtime_run_wi(&g_insieme_impl_table[1], NULL);
 	irt_context_destroy(context);
 	irt_exit_handler();
 }
