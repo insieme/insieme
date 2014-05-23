@@ -223,6 +223,11 @@ void irt_mutex_destroy(irt_mutex_obj *m){
 
 #endif
 
+void irt_cond_bundle_init(irt_cond_bundle* b) {
+    irt_cond_var_init(&(b->condvar));
+	irt_mutex_init(&(b->mutex));
+}
+
 
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 

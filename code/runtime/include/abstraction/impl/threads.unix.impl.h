@@ -99,7 +99,7 @@ bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 /* MUTEX FUNCTIONS ------------------------------------------------------------------- */
 
 void irt_cond_var_init(irt_cond_var *cv) {
-	 pthread_cond_init(cv, NULL);
+	pthread_cond_init(cv, NULL);
 }
 
 void irt_mutex_init(irt_mutex_obj *m) {
@@ -145,6 +145,10 @@ void irt_cond_wake_one(irt_cond_var *cv) {
 	pthread_cond_signal(cv);
 }
 
+void irt_cond_bundle_init(irt_cond_bundle* b) {
+    irt_cond_var_init(&(b->condvar));
+	irt_mutex_init(&(b->mutex));
+}
 
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 

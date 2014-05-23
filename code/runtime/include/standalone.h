@@ -351,8 +351,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
 	irt_cond_bundle condbundle;
-	irt_mutex_init(&condbundle.mutex);
-	irt_cond_var_init(&condbundle.condvar);
+	irt_cond_bundle_init(&condbundle);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
 	handler.data = &condbundle;
