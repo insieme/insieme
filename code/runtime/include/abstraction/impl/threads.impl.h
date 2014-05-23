@@ -44,6 +44,14 @@
 	#include "threads.unix.impl.h"
 #endif
 
+void irt_cond_bundle_init(irt_cond_bundle* b) {
+    irt_cond_var_init(&(b->condvar));
+	irt_mutex_init(&(b->mutex));
+}
+
+int irt_cond_bundle_wait(irt_cond_bundle* b) {
+    return irt_cond_wait(&(b->condvar), &(b->mutex));
+}
 
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_IMPL_H
