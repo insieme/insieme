@@ -993,11 +993,11 @@ namespace cba {
 				return;
 			}
 
-			// connect with last statement
+			// connect with last statement (if reachable)
 			auto last = stmt[stmt.size()-1];
 			auto type = last->getNodeType();
 			if (!(type == NT_ReturnStmt || type == NT_ContinueStmt || type==NT_BreakStmt)) {
-				this->connectSets(this->Aout, last, ctxt, this->Aout, stmt, ctxt, params..., constraints);
+				this->connectSetsIf(Reachable(), cba.getSet(Rout, last, ctxt), this->Aout, last, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 			}
 
 			// also connect stmt-out with all returns if it is a lambda body
