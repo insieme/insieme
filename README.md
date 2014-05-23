@@ -92,7 +92,6 @@ Integration tests can be executed in parallel (``-w SLOTS``), and multiple times
 If everything was successful... **congratulation!**
 **You may start enjoying Insieme now!**
 
-## Using Insieme 
 
 
 
