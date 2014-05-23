@@ -145,11 +145,6 @@ void irt_cond_wake_one(irt_cond_var *cv) {
 	pthread_cond_signal(cv);
 }
 
-void irt_cond_bundle_init(irt_cond_bundle* b) {
-    irt_cond_var_init(&(b->condvar));
-	irt_mutex_init(&(b->mutex));
-}
-
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 
 int irt_tls_key_create(irt_tls_key* k) {

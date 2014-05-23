@@ -136,6 +136,9 @@ inline void irt_cond_wake_one(irt_cond_var *cv);
 /** initialize the condition variable and associated mutex */
 inline void irt_cond_bundle_init(irt_cond_bundle*);
 
+/** releases the mutex and sleeps the thread on the condition variable */
+inline int irt_cond_bundle_wait(irt_cond_bundle*);
+
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 
 /** creates a new thread local storage key at location k */
