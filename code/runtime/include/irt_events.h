@@ -90,7 +90,7 @@ typedef enum _irt_wi_event_code {
 
 IRT_DECLARE_EVENTS(work_item, wi, IRT_WI_EV_NUM)
 
-IRT_DEFINE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
+IRT_DEFINE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
 // WG events //////////////////////////////////////
 
@@ -104,7 +104,7 @@ typedef enum _irt_wg_event_code {
 
 IRT_DECLARE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
-IRT_DEFINE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
+IRT_DEFINE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
 
 

@@ -145,7 +145,6 @@ namespace integration {
 				//environment must be set BEFORE executables!
 				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+ perfString +cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
-
 				//get return value, stdOut and stdErr
 				int retVal=system(realCmd.c_str());
 

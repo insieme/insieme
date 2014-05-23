@@ -69,6 +69,7 @@ namespace testFramework{
 		bool print_configs;
 		int statThreads;
 		bool panic_mode;
+		bool force;
 		bool list_only;
 		bool clean;
 		bool color;
@@ -87,7 +88,7 @@ namespace testFramework{
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
 			  num_threads(1), num_repeditions(1), statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
-			  panic_mode(false), list_only(false), clean(false), color(true),overwrite(false),perf(true),load_miss(""),store_miss(""),flops("") {}
+			  panic_mode(false),force(false), list_only(false), clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
 	};
 
 	namespace fs = boost::filesystem;
@@ -140,16 +141,16 @@ namespace testFramework{
 
 	vector<TestCase> loadCases(const Options& options) {
 
-		// of no test is specified explicitly load all of them
+		// if no test is specified explicitly load all of them
 		if (options.cases.empty()) {
-				return itc::getAllCases();
+				return itc::getAllCases(options.force);
 		}
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = itc::getTestSuite(cur);
+			auto curSuite = itc::getTestSuite(cur,options.force);
 			for(const auto& cur : curSuite) {
 				if (!contains(cases, cur)) {		// make sure every test is only present once
 					cases.push_back(cur);

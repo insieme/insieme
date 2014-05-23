@@ -85,10 +85,10 @@ irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 mqd_t irt_g_message_queue;
 #endif
 
-IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 static bool irt_g_exit_handling_done;
 
@@ -351,8 +351,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
 	irt_cond_bundle condbundle;
-	irt_mutex_init(&condbundle.mutex);
-	irt_cond_var_init(&condbundle.condvar);
+	irt_cond_bundle_init(&condbundle);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
 	handler.data = &condbundle;
@@ -363,7 +362,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&condbundle.mutex);
-	irt_cond_wait(&condbundle.condvar, &condbundle.mutex);
+	irt_cond_bundle_wait(&condbundle);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
