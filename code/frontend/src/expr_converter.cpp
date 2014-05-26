@@ -214,6 +214,48 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+
+core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType) {
+
+	core::ExpressionPtr res = expr;
+	auto type = expr.getType();
+
+	// if it is already fitting => done
+	if (*targetType == *type) return expr;
+
+	// if is a CPP ref, do not cast, do a transformation
+	if (core::analysis::isCppRef(targetType)) {
+		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), res);
+	}
+	else if (core::analysis::isConstCppRef(targetType)) {
+		// Note, const refs extend lifetime of values, therefore materialize the value into a ref
+		if (!res->getType().isa<core::RefTypePtr>()) {
+			res = builder.refVar(res);
+		}
+		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), res);
+	}
+	else if (core::analysis::isAnyCppRef(type)) {
+		res =  core::analysis::unwrapCppRef(res);
+	}
+	else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(type)) {
+		res = insieme::frontend::utils::castScalar(targetType, res);
+	}
+	else{
+		res = utils::cast(res, targetType);
+	}
+
+	// if nothing has changed we are done
+	if (res == expr) {
+		return res;
+	}
+
+	// otherwise apply recursively
+	return fixType(res, targetType);
+
+}
+
+
+
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
