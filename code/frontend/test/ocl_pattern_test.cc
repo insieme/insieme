@@ -69,24 +69,24 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	EXPECT_EQ(&program->getNodeManager(), &manager);
 	EXPECT_TRUE(manager.contains(program));
 
-	core::NodeAddress root(program->getElement(0));
+	core::NodeAddress root(core::analysis::normalize(program->getElement(0)));
 
 	p::TreePatternPtr clSetKernelArg =  p::irp::callExpr(p::any, p::irp::literal("clSetKernelArg"), var("kernel", p::any) << var("idx", p::any) <<
 			var("size", p::any) << var("arg", p::any));
 
 	std::string kernelString = "ref<array<_cl_kernel,1>>";
 
-//	dumpPretty(root);
+	dumpPretty(root);
 
 	std::string variableName[8];
 	variableName[0] = "kernel1";
 	variableName[1] = "kernel2";
 	variableName[2] = "kernel3";
 	variableName[3] = "kernel4";
-	variableName[4] = "v21";
-	variableName[5] = "v32";
-	variableName[6] = "v33";
-	variableName[7] = "v34";
+	variableName[4] = "v1";
+	variableName[5] = "v2";
+	variableName[6] = "v3";
+	variableName[7] = "v4";
 
 	int cnt = 0;
 	p::irp::matchAllPairs(clSetKernelArg, root, [&](const core::NodeAddress& matchAddress, const p::AddressMatch& setArg) {
