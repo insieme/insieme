@@ -49,6 +49,25 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+bool TypeFixer::isClType(TypePtr type) {
+	RefTypePtr refTy = type.isa<RefTypePtr>();
+	if(refTy) return isClType(refTy->getElementType());
+
+	if(type.isa<StructTypePtr>())
+		return false;
+	return type->toString().find("array<_cl_") != string::npos;
+}
+
+StructTypePtr TypeFixer::cleanStructures(StructTypePtr& st) {
+	TypeList newMembers;
+	for(auto m : st->getElements()) {
+		utils::whatIs(m);
+	}
+
+
+	return st;
+}
+
 void TypeFixer::removeClVars() {
 	NodeMapping* h;
 	NodeManager& mgr = prog->getNodeManager();
@@ -57,8 +76,11 @@ void TypeFixer::removeClVars() {
 
 	// removes cl_* variables from argument lists of lambdas
 	auto cleaner = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
-		// stop recursion at type level
 		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			if(StructTypePtr st = element.isa<StructTypePtr>())
+				return cleanStructures(st);
+
+			// stop recursion at type level
 			return element;
 		}
 
@@ -66,7 +88,7 @@ void TypeFixer::removeClVars() {
 		if(const DeclarationStmtPtr& decl = element.isa<DeclarationStmtPtr>()) {
 			TypePtr varType = decl->getVariable()->getType();
 			TypePtr initType = decl->getInitialization()->getType();
-			if(varType->toString().find("array<_cl_") != string::npos || initType->toString().find("array<_cl_") != string::npos ) {
+			if(isClType(varType) || isClType(initType)) {
 				return builder.getNoOp();
 			}
 			return element->substitute(builder.getNodeManager(), *h);
@@ -85,7 +107,7 @@ void TypeFixer::removeClVars() {
 
 				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
 					// do nothing if the argument type is not a cl_* type
-					if(arg->getType()->toString().find("array<_cl_") == string::npos) {
+					if(!isClType(arg->getType())) {
 						newArgs.push_back(arg);
 						newParams.push_back(oldParams.at(cnt));
 						paramTypes.push_back(oldParams.at(cnt)->getType());
@@ -109,7 +131,7 @@ void TypeFixer::removeClVars() {
 			if(gen.isRefAssign(call->getFunctionExpr())) {
 				TypePtr lhsTy = call->getArgument(0)->getType();
 				TypePtr rhsTy = call->getArgument(1)->getType();
-				if(lhsTy->toString().find("array<_cl_") != string::npos || rhsTy->toString().find("array<_cl_") != string::npos) {
+				if(isClType(lhsTy) || isClType(rhsTy)) {
 					return builder.getNoOp();
 				}
 			}
@@ -153,7 +175,7 @@ void TypeFixer::updateTemps(TypePtr type, VariableMap& varReplacements) {
 
 		VariablePtr var = decl["variable"].getValue().as<VariablePtr>();
 		TypePtr varType = var->getType();
-		TypePtr initType = decl.isVarBound("init") ?	decl["init"].getValue().as<ExpressionPtr>()->getType() :
+		TypePtr initType = decl.isVarBound("init") ? decl["init"].getValue().as<ExpressionPtr>()->getType() :
 				builder.refType(decl["rhs"].getValue().as<ExpressionPtr>()->getType());
 
 		varReplacements[var] = builder.variable(initType);

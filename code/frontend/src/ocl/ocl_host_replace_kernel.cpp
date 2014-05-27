@@ -471,15 +471,13 @@ void KernelReplacer::collectArguments() {
 
 
 	irp::matchAllPairs(clSetKernelArg, pA, [&](const NodeAddress& matchAddress, const AddressMatch& setArg) {
-		std::cout << "Kernel: " << *(matchAddress >> setArg["kernel"].getValue()) <<
-				"\n\tidx: " << *setArg["arg_index"].getValue() << " val "
-				<< *utils::tryRemove(gen.getRefReinterpret(), setArg["arg_value"].getValue().as<ExpressionPtr>()) << std::endl;
+//		std::cout << "Kernel: " << *(matchAddress >> setArg["kernel"].getValue()) <<
+//				"\n\tidx: " << *setArg["arg_index"].getValue() << " val "
+//				<< *utils::tryRemove(gen.getRefReinterpret(), setArg["arg_value"].getValue().as<ExpressionPtr>()) << std::endl;
 
-		ExpressionAddress localKernel = utils::tryRemoveDeref(matchAddress >> setArg["kernel"].getValue().as<ExpressionAddress>());
+//std::cout << "ARGUMENT: \t" << *setArg["kernel"].getValue().as<ExpressionAddress>()->getType() << "  " << *setArg["kernel"].getValue().as<ExpressionAddress>() << std::endl;
+		ExpressionAddress localKernel = matchAddress >> setArg["kernel"].getValue().as<ExpressionAddress>();
 		ExpressionAddress kernel = utils::getRootVariable(localKernel).as<ExpressionAddress>();
-
-std::cout << "local: " << *localKernel << "\nglobal: " << *kernel << std::endl;
-
 
 		// check if the call contains a structure access. If yes, store the name of the field containing the kernel
 		if(setArg.isVarBound("identifier")) {
@@ -515,7 +513,7 @@ std::cout << "local: " << *localKernel << "\nglobal: " << *kernel << std::endl;
 			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 not needed since we store the entire sizeArg to avoid confusions with different types
 +*/
-			// only store size of local mem arrays, therefore it's always uint8
+			// only store size of local mem arrays, therefore it's always uint<8>
 			kernelTypes[kernel].at(argIdx) = gen.getUInt8();
 			// store the information that this is a local memory argument
 			localMemArgs[kernel].insert(argIdx);
@@ -554,17 +552,15 @@ not needed since we store the entire sizeArg to avoid confusions with different 
 			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 			replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, args);
 
-//dumpPretty(replacements[setArg["clSetKernelArg"].getValue()]);
-//std::cout << "\n------------------------------------------------------\n";
 			return;
 		}
 
-//	std::cout << "ARGUMENT: \t" << *arg->getType() << "  " << *arg << std::endl;
 		//collect types of the arguments
 		kernelTypes[kernel].at(argIdx) = (arg->getType());
 
 		FunctionTypePtr fTy = builder.functionType(toVector(localKernel->getType().as<TypePtr>(), (arg)->getType()), gen.getInt4());
 		params.push_back(src);
+//std::cout << src->getType() << " -- " << src << std::endl;
 
 		body.push_back(builder.assign( builder.callExpr(gen.getTupleRefElem(), tuple, idxArg, builder.getTypeLiteral(src->getType())), src));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
@@ -573,8 +569,6 @@ not needed since we store the entire sizeArg to avoid confusions with different 
 		// store argument in a tuple
 		replacements[setArg["clSetKernelArg"].getValue()] = builder.callExpr(gen.getInt4(), function, localKernel, arg);
 
-//		dumpPretty(replacements[setArg["clSetKernelArg"].getValue()]);
-//		std::cout << "\n------------------------------------------------------\n";
 /*
 		dumpPretty(replacements[setArg["clSetKernelArg"].getValue()]);
 for_each(kernelTypes[kernel], [](NodePtr doll) {
@@ -595,16 +589,11 @@ void updateStruct(const ExpressionPtr& kernelStruct, TypePtr& kernelType, const 
 	StructTypePtr kst = refTy ? refTy->getElementType().as<StructTypePtr>() : kernelStruct->getType().as<StructTypePtr>();
 	std::string name = identifier->toString();
 	NamedTypePtr oldKernelType = kst->getNamedTypeEntryOf(name);
-	NamedTypePtr newKernelType = builder.namedType(name, kernelType);
+	NamedTypePtr newKernelType = builder.namedType(name, refTy ? builder.refType(kernelType) : kernelType);
 
 	TypePtr newStructType = transform::replaceAll(mgr, kst, oldKernelType, newKernelType).as<TypePtr>();
 
-//std::cout << "old: " << *oldKernelType << "\nnew: " << *newKernelType << std::endl;
-//
-//std::cout << "\nwcb: " << *kst << std::endl;
-//	std::cout << "okt: " << *newStructType << std::endl;
-
-	kernelType = /*refTy ? builder.refType(newStructType) :*/ newStructType;
+	kernelType = newStructType;
 }
 
 void KernelReplacer::replaceKernels() {
@@ -613,8 +602,6 @@ void KernelReplacer::replaceKernels() {
 
 	// generate tuple variables for each kernel and replace kernel variables
 	ExpressionMap kernelReplacements;
-
-std::cout << "num Kernels: " <<kernelTypes.size() << std::endl;
 
 	for_each(kernelTypes, [&](std::pair<ExpressionPtr, std::vector<TypePtr> > kT) {
 		ExpressionPtr k = kT.first;
@@ -625,7 +612,9 @@ std::cout << "num Kernels: " <<kernelTypes.size() << std::endl;
 
 //			std::cout << *identifier << " -- " << *k << std::endl;
 			updateStruct(k, tt, identifier);
-		}
+		} else
+			tt = builder.refType(tt);
+
 
 		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(builder.refType(tt)).as<ExpressionPtr>()
 				: builder.literal(builder.refType(tt), k.as<LiteralPtr>()->getStringValue());
