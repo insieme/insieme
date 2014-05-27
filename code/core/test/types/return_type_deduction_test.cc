@@ -267,6 +267,25 @@ namespace types {
 		EXPECT_EQ("ref<X>", toString(*resType));
 	}
 
+
+	TEST(ReturnTypeDeduction, MultipleIntTypeVariables) {
+
+		// Problem: the return type of a function of type
+		//			('a)->'a    passing p<#m,#n> returns p<#m,#m>
+		// but should be
+		//			p<#m,#n>
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto f = builder.parseExpr("lit(\"f\":('a)->'a)");
+		auto a = builder.parseExpr("lit(\"a\":p<#m,#n>)");
+
+		auto c = builder.callExpr(f,a);
+
+		EXPECT_EQ("p<#m,#n>", toString(*c->getType()));
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme

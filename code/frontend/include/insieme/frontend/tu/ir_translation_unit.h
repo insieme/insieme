@@ -174,10 +174,10 @@ namespace tu {
 	//			if (aliasLoc) std::cout << " -alias @ " << *aliasLoc << std::endl;
 	//		}
 
-			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
-					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
-					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
-					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
+//			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
+//					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
+//					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
+//					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
 
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}

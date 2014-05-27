@@ -512,7 +512,7 @@ namespace types {
 					// add a new constant
 					// NOTE: the generation of constants is not safe in all cases - it is just assumed
 					// that no constants > 1.000.000.000 are used
-					auto substitute = ConcreteIntTypeParam::get(manager, 1000000000 + var->getSymbol());
+					auto substitute = ConcreteIntTypeParam::get(manager, 1000000000 + var->getSymbol()->getValue());
 					argumentMapping.addMapping(var, substitute);
 					break;
 				}
