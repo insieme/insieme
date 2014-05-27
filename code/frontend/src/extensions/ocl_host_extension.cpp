@@ -84,8 +84,8 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-
 //std::cout << printer::PrettyPrinter(root) << std::endl;
+
 	prog = builder.program(list);
 
 	return prog;
@@ -130,8 +130,8 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 			}
 		}
 	});
-	if(!replacements.empty())
-		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
+//	if(!replacements.empty())
+//		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
 	return irExpr;
 }

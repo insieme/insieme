@@ -50,7 +50,7 @@ class TypeFixer {
 	core::NodeMap a;
 
 	bool isClType(core::TypePtr type);
-	core::StructTypePtr cleanStructures(core::StructTypePtr& st);
+	void cleanStructures(const core::StructTypePtr& st, core::NodeMap& ptrReplacements);
 	void removeClVars();
 	void fixDecls(core::NodeAddress pA, core::TypePtr type);
 	void updateTemps(core::TypePtr type, core::VariableMap& varReplacements);
