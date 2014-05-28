@@ -120,8 +120,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 	NodeMap replacements;
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
-		// remove deref from kernel
-		replacements[runKernel["derefKernel"].getValue()] = runKernel["kernel"].getValue();
 		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
@@ -130,8 +128,8 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 			}
 		}
 	});
-//	if(!replacements.empty())
-//		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
+	if(!replacements.empty())
+		return transform::replaceAll(mgr, irExpr, replacements).as<ExpressionPtr>();
 
 	return irExpr;
 }
