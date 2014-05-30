@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#define IRT_LIBRARY_MAIN 
 #include "irt_library.hxx"
 
 #include <iostream>
