@@ -39,6 +39,8 @@
 
 #include <string>
 #include <vector>
+
+#include "insieme/utils/logging.h"
 using namespace std;
 
 namespace insieme {
@@ -51,6 +53,7 @@ namespace integration {
 
 		bool success;
 		map<string,float> metricResults;
+		map<string,float> metricDeviation;
 
 		string output;
 		string errorOut;
@@ -66,9 +69,10 @@ namespace integration {
 
 	public:
 
-		TestResult(bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd=""
-			,std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
-			: success(success),metricResults(metricResults),errorOut(errorOut),cmd(cmd),producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
+		TestResult(bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd="",
+		std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
+			: success(success),metricResults(metricResults),metricDeviation(map<string,float>()),errorOut(errorOut),cmd(cmd),
+				producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
 
 		static TestResult userAborted(map<string,float> metricResults, string output="", string errorOut="", string cmd="") {
 			TestResult res(false, metricResults, output, errorOut, cmd);
@@ -89,6 +93,84 @@ namespace integration {
 
 		operator bool() const {
 			return success;
+		}
+
+		static TestResult returnAVG(vector<TestResult> t){
+			TestResult ret;
+			TestResult front=t.front();
+			map<string,float> frontResults=front.getMetrics();
+			float sum=0,avg,var;
+
+			//iterate over all collected metrics
+			for (auto metr=frontResults.begin();metr!=frontResults.end();metr++){
+				vector<float> metricResults;
+				sum=0;
+
+				//iterate over all testRuns
+				for(auto result=t.begin();result!=t.end();result++){
+					map<string,float> testResults=result->getMetrics();
+					
+					//check if results are comparable
+					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads() || front.getScheduling()!=result->getScheduling() 
+						|| !front || !(*result)){
+						LOG(WARNING) << "Test results of a metric not comparable, no median calculated!";
+						return front;
+					}
+					sum+=testResults[metr->first];
+					metricResults.push_back(testResults[metr->first]);
+				}
+				
+				// calc avg
+				avg=sum/t.size();
+
+				//calc stddev
+				float tmp=0;
+				for(float val: metricResults)
+					tmp+=(val-avg)*(val-avg);
+				tmp/=t.size();
+				var=sqrt(tmp);
+
+				//insert into ret
+				ret.insertMetric(metr->first,avg,var);
+			}
+
+			return ret;
+		}
+
+
+		static TestResult returnMedian(vector<TestResult> t){
+			TestResult ret;
+			TestResult front=t.front();
+			map<string,float> frontResults=front.getMetrics();
+
+			//iterate over all collected metrics
+			for (auto metr=frontResults.begin();metr!=frontResults.end();metr++){
+				vector<float> metricResults;
+
+				//iterate over all testRuns
+				for(auto result=t.begin();result!=t.end();result++){
+					map<string,float> testResults=result->getMetrics();
+					
+					//check if results are comparable
+					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads() || front.getScheduling()!=result->getScheduling() 
+						|| !front || !(*result)){
+						LOG(WARNING) << "Test results of a metric not comparable, no median calculated!";
+						return front;
+					}
+					metricResults.push_back(testResults[metr->first]);
+				}
+				
+				//calc median and insert into ret
+				std::sort(metricResults.begin(),metricResults.end());
+				int size=metricResults.size();
+				if(size%2!=0)
+					ret.insertMetric(metr->first,metricResults[size/2]);	
+				else
+					ret.insertMetric(metr->first,(metricResults[(size+1)/2]+metricResults[(size-1)/2])/2);	
+
+			}
+
+			return ret;
 		}
 
 		string getCmd() const{
@@ -117,6 +199,31 @@ namespace integration {
 
 		float getMemory() const{
 			return metricResults.find("mem")->second;
+		}
+
+		float getRuntimeDev() const{
+			return metricDeviation.find("time")->second;
+		}
+
+		float getMemoryDev() const{
+			return metricDeviation.find("mem")->second;
+		}
+
+		void insertMetric(string name,float val){
+			metricResults[name]=val;
+		}
+
+		void insertMetric(string name,float val, float dev){
+			metricResults[name]=val;
+			metricDeviation[name]=dev;
+		}
+
+		SchedulingPolicy getScheduling() const{
+			return sched;
+		}
+
+		bool deviationAvailable() const{
+			return metricResults.size()==metricDeviation.size();
 		}
 
 		string getSchedulingString() const{
