@@ -117,13 +117,18 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->_num_active_children = 0;
 	wi->num_active_children = &(wi->_num_active_children);
 	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
-	// TODO store size in LWDT
 	if(params != NULL) {
-		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-		if(size <= IRT_WI_PARAM_BUFFER_SIZE) 
+		uint32 size = 0;
+		if(params->type_id < 0) { // if <0, it's not an id but -(size)
+			size = - params->type_id;
+		} else {
+			size = self->cur_context.cached->type_table[params->type_id].bytes;
+		}
+		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
-		else 
+		} else { 
 			wi->parameters = (irt_lw_data_item*)malloc(size); 
+		}
 		memcpy(wi->parameters, params, size); 
 	} else {
 		wi->parameters = NULL;
