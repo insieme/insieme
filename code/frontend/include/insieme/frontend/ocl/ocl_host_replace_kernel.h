@@ -96,6 +96,7 @@ typedef boost::unordered_map<core::ExpressionPtr, core::TypeList> KernelTypes;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelFunctions;
 typedef boost::unordered_map<core::ExpressionPtr, std::set<unsigned int> > LocalMemArgs;
 typedef std::map<core::NodeAddress, core::NodePtr> NodeAddressMap;
+typedef std::map<core::ExpressionPtr, core::ExpressionPtr> KernelFields;
 
 /*
  * Collects cl_kernel expressions, identifies all the arguments for the corresponding kernel functions and replaces it with a tuple, holding the arguments
@@ -111,6 +112,7 @@ protected:
 	KernelNames kernelNames;
 	KernelTypes kernelTypes;
 	KernelFunctions kernelFunctions;
+	KernelFields kernelFields;
 	LocalMemArgs localMemArgs;
 	const std::vector<boost::filesystem::path>& includeDirs;
 	std::set<string> kernelFileCache;

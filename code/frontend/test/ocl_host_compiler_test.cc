@@ -86,13 +86,13 @@ void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
 
 }
 
-TEST(OclHostCompilerTest, HelloHostTest) {
+void runOclTest(const std::string inputFile) {
 	Logger::get(std::cerr, ERROR, 0);
 
 	core::NodeManager manager;
 
 	// create and customize conversion job
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello_host.c");
+	fe::ConversionJob job(inputFile);
 	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.addIncludeDirectory(CLANG_SRC_DIR);
 	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
@@ -149,10 +149,19 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	EXPECT_EQ(1u, cnt);
 */
+
+}
+
+TEST(OclHostCompilerTest, HelloHostTest) {
+	runOclTest(CLANG_SRC_DIR "inputs/hello_host.c");
+}
+
+TEST(OclHostCompilerTest, HelloHostStructTest) {
+//	runOclTest(CLANG_SRC_DIR "inputs/hello_host_structs.c");
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
-	Logger::get(std::cerr, INFO);
+	Logger::get(std::cerr, ERROR);
 
 	core::NodeManager manager;
 
@@ -173,7 +182,6 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-	//    LOG(INFO) << pp;
 
 	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());

@@ -35,39 +35,31 @@
  */
 
 /**
- * A header file forming the interface for the CBA test cases.
+ * A simple test case covering some arithmetic.
  */
 
-#define bool int
-#define true (1)
-#define false (0)
+#include "cba.h"
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+int fib(int x) {
+	if (x == 0) return 0;
+	if (x == 1) return 1;
 
-// integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+	int a = spawn fib(x-1);
+	int b = spawn fib(x-2);
 
-// debugging
-void cba_print_code();
-void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
+	sync;
+	return a + b;
+}
 
-void cba_dump_execution_net();
-void cba_dump_state_graph();
-void cba_dump_thread_regions();
 
-void cba_expect_execution_net_num_places(int);
-void cba_expect_execution_net_num_transitions(int);
+int main(int argc, char** argv) {
 
-// boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+	fib(2);
+
+	// check the execution net
+	cba_dump_thread_regions();
+	cba_expect_execution_net_num_places(6);
+	cba_dump_execution_net();
+	cba_dump_equations();
+
+}

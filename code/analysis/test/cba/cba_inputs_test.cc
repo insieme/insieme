@@ -75,6 +75,25 @@ namespace cba {
 	// the type definition (specifying the parameter type)
 	class CBAInputTest : public ::testing::TestWithParam<string> { };
 
+	namespace {
+
+		bool containsValue(const std::set<Formula>& formula, int value) {
+			for(const auto& cur : formula) {
+				// if it is the unknown value => fits
+				if (!cur) return true;
+
+				// get the formula
+				const core::arithmetic::Formula& f = *cur.formula;
+
+				// check current value
+				if (f.isInteger() && f.getIntegerValue() == value) return true;
+				if (!f.isConstant()) return true;
+			}
+			return false;
+		}
+
+	}
+
 	// define the test case pattern
 	TEST_P(CBAInputTest, C_Code) {
 
@@ -151,6 +170,19 @@ namespace cba {
 							<< *core::annotations::getLocation(call) << "\n"
 							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
 							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+
+			} else if (name == "cba_expect_execution_net_num_places") {
+				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumPlaces())
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "number of places " << net.getNumPlaces() << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+			} else if (name == "cba_expect_execution_net_num_transitions") {
+				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumTransitions())
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "number of transitions " << net.getNumTransitions() << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
 
 			// debugging
 			} else if (name == "cba_print_code") {

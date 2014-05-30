@@ -122,7 +122,8 @@ class SingleNodeReplacer : public CachedNodeMapping {
 public:
 
 	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit)
-		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam), limitScope(limit){ }
+		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type ||
+				target->getNodeCategory() == NC_IntTypeParam || target->getNodeCategory() == NC_Support), limitScope(limit){ }
 
 private:
 

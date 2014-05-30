@@ -150,6 +150,7 @@ namespace{
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 		res.num_repeditions = map["repeat"].as<int>();
+		res.perf = false;
 
 		res.list_only = map.count("list");
 
@@ -215,6 +216,7 @@ int main(int argc, char** argv) {
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
+	setup.perf=options.perf;
 
 	tf::Colorize colorize(options.color);
 

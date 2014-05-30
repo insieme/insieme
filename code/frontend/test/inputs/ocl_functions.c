@@ -29,45 +29,38 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+#include <stdlib.h>
+#include "CL/cl.h"
 
-/**
- * A header file forming the interface for the CBA test cases.
- */
+struct Kernel {
+	cl_kernel fct;
+	cl_command_queue queue;
+};
 
-#define bool int
-#define true (1)
-#define false (0)
+cl_kernel kernel1;
+struct Kernel kernel2;
+cl_kernel* kernel3;
+struct Kernel* kernel4;
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+cl_mem dev_ptr1;
+int main() {
 
-// integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+	cl_kernel kernel5;
+	struct Kernel kernel6;
+	cl_kernel* kernel7;
+	struct Kernel* kernel8;
 
-// debugging
-void cba_print_code();
-void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
+	clSetKernelArg(kernel1, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel2.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel3[0], 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel4[0].fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel5, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel6.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel7[0], 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	clSetKernelArg(kernel8[0].fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
 
-void cba_dump_execution_net();
-void cba_dump_state_graph();
-void cba_dump_thread_regions();
-
-void cba_expect_execution_net_num_places(int);
-void cba_expect_execution_net_num_transitions(int);
-
-// boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+}

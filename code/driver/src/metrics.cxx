@@ -287,6 +287,7 @@ namespace {
 				("flops",			bpo::value<string>(),"the perf code for the number of floating point operations")
 				("perf-metric,P",		bpo::value<vector<string>>(),"a perf code to be measured")
 				("output,o",			bpo::value<vector<string>>(),"output formats, currently supported: SQL,CSV")
+				("force,f",			"force to execute all tests (even those uncommented with #)")
 		;
 
 		// define positional options (all options not being named)
@@ -344,6 +345,7 @@ namespace {
 		res.color=true;
 		res.panic_mode = map.count("panic");
 		res.num_threads = 1;
+		res.force=map.count("force");
 		//res.num_repeditions = map["repeat"].as<int>();
 		res.statThreads=map["threads"].as<int>();
 		res.overwrite=!map.count("no-overwrite");
