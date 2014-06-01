@@ -69,6 +69,18 @@ namespace lang {
 		EXPECT_TRUE(isDerived(element));
 	}
 
+	TEST(IRppExtensions, VectorCtor2D) {
+		NodeManager nm;
+
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getVectorCtor2D();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+		EXPECT_TRUE(isDerived(element));
+	}
+
 	TEST(IRppExtensions, ArrayDtor) {
 		NodeManager nm;
 

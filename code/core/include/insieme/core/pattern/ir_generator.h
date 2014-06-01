@@ -106,6 +106,10 @@ namespace irg {
 		return literal(type, atom(value));
 	}
 
+	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, const string& value) {
+		return literal(type, stringValue(value));
+	}
+
 	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, int value) {
 		return literal(type, stringValue(toString(value)));
 	}
@@ -120,6 +124,10 @@ namespace irg {
 
 	inline TreeGeneratorPtr callExpr(const TreeGeneratorPtr& type, const TreeGeneratorPtr& function, const ListGeneratorPtr& parameters = generator::empty) {
 		return node(core::NT_CallExpr, type << single(function) << parameters);
+	}
+
+	inline TreeGeneratorPtr callExpr(const TreeGeneratorPtr& type, const NodePtr& function, const ListGeneratorPtr& parameters = generator::empty) {
+		return callExpr(type, atom(function), parameters);
 	}
 
 	inline TreeGeneratorPtr bindExpr(const ListGeneratorPtr& parameters, const TreeGeneratorPtr& call) {

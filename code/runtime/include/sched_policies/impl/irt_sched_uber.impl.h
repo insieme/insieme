@@ -64,18 +64,18 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
-	return irt_scheduling_optional(target, &wi->range, wi->impl_id, wi->parameters);
+	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
 irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
-		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+		irt_wi_implementation* impl, irt_lw_data_item* args) {
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
-		irt_worker_run_immediate(target, range, impl_id, args);
+		irt_worker_run_immediate(target, range, impl, args);
 		return NULL;
 	}
 	else {
-		irt_work_item *real_wi = _irt_wi_create(target, range, impl_id, args);
+		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
 		irt_scheduling_generate_wi(target, real_wi);
 		return real_wi;
 	}

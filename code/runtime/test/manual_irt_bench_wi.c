@@ -75,9 +75,9 @@ irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { &insieme_wi_be
 irt_wi_implementation_variant g_insieme_wi_opt_bench_variants[] = { { &insieme_wi_opt_bench_implementation } };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_bench_variants },
-	{ 1, g_insieme_wi_opt_bench_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_bench_variants },
+	{ 3, 1, g_insieme_wi_opt_bench_variants }
 };
 
 // initialization
@@ -101,7 +101,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		uint64 check_val = 0;
 		insieme_wi_bench_params bench_params = { 1, NUM_LEVELS, &check_val };
 		for(int i=0; i<NUM_REPEATS; ++i) {
-			irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
+			irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, &g_insieme_impl_table[1], (irt_lw_data_item*)&bench_params);
 			irt_scheduling_assign_wi(irt_worker_get_current(), bench_wi);
 			irt_wi_join(bench_wi);
 		}
@@ -138,7 +138,7 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 		insieme_wi_bench_params bench_params = { 1, params->count-1, params->check };
 		irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
 		for(int i=0; i<NUM_ITER; ++i) {
-			bench_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
+			bench_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, &g_insieme_impl_table[1], (irt_lw_data_item*)&bench_params);
 			irt_scheduling_assign_wi(irt_worker_get_current(), bench_wis[i]);
 		}
 
@@ -159,7 +159,7 @@ void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
 		insieme_wi_bench_params bench_params = { 1, params->count-1, params->check };
 		irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
 		for(int i=0; i<NUM_ITER; ++i) {
-			bench_wis[i] = irt_wi_run_optional(irt_g_wi_range_one_elem, 2, (irt_lw_data_item*)&bench_params);
+			bench_wis[i] = irt_wi_run_optional(irt_g_wi_range_one_elem, &g_insieme_impl_table[2], (irt_lw_data_item*)&bench_params);
 		}
 
 		//irt_wi_multi_join(NUM_ITER, bench_wis);

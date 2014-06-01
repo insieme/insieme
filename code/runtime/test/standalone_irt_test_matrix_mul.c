@@ -115,9 +115,9 @@ irt_wi_implementation_variant g_insieme_wi_mul_variants[] = {
 // The implementation table:
 // # of variants, array of variants
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_init_variants },
-	{ 2, g_insieme_wi_mul_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_init_variants },
+	{ 3, 2, g_insieme_wi_mul_variants }
 };
 
 // OpenCL Kernel table
@@ -170,7 +170,7 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
 
@@ -189,7 +189,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
 	irt_work_item_range wi_range = {0,N,1};
-	irt_work_item* init_wi = irt_wi_create(wi_range, INSIEME_WI_INIT_INDEX, (irt_lw_data_item*)&init_params);
+	irt_work_item* init_wi = irt_wi_create(wi_range, &g_insieme_impl_table[INSIEME_WI_INIT_INDEX], (irt_lw_data_item*)&init_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), init_wi);
 
 	// wait until finished
@@ -198,7 +198,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// conduct the multiplication
 	insieme_wi_mul_params mul_params = {INSIEME_WI_MUL_PARAM_T_INDEX, A->id, B->id, C->id};
 	irt_work_item_range wi_range_2 = {0,N,1};
-	irt_work_item* mul_wi = irt_wi_create(wi_range_2, INSIEME_WI_MUL_INDEX, (irt_lw_data_item*)&mul_params);
+	irt_work_item* mul_wi = irt_wi_create(wi_range_2, &g_insieme_impl_table[INSIEME_WI_MUL_INDEX], (irt_lw_data_item*)&mul_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), mul_wi);
 
 	// wait until finished

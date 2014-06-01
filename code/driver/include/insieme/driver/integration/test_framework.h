@@ -64,23 +64,32 @@ namespace testFramework{
 		bool mockrun;
 		int num_threads;
 		int num_repeditions;
+		bool use_median;
 		bool statistics;
 		bool scheduling;
 		bool print_configs;
 		int statThreads;
 		bool panic_mode;
+		bool force;
 		bool list_only;
 		bool clean;
 		bool color;
-		bool perf;
 		bool overwrite;
 		vector<string> cases;
 		vector<string> steps;
+		vector<string> outputFormats;
+
+		//perf metrics
+		bool perf;
+		string load_miss;
+		string store_miss;
+		string flops;
+		vector<string> perf_metrics;
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
-			  num_threads(1), num_repeditions(1), statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
-			  panic_mode(false), list_only(false), clean(false), color(true),perf(true),overwrite(false) {}
+			  num_threads(1), num_repeditions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
+			  panic_mode(false),force(false), list_only(false), clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
 	};
 
 	namespace fs = boost::filesystem;
@@ -133,16 +142,16 @@ namespace testFramework{
 
 	vector<TestCase> loadCases(const Options& options) {
 
-		// of no test is specified explicitly load all of them
+		// if no test is specified explicitly load all of them
 		if (options.cases.empty()) {
-				return itc::getAllCases();
+				return itc::getAllCases(options.force);
 		}
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = itc::getTestSuite(cur);
+			auto curSuite = itc::getTestSuite(cur,options.force);
 			for(const auto& cur : curSuite) {
 				if (!contains(cases, cur)) {		// make sure every test is only present once
 					cases.push_back(cur);
@@ -161,17 +170,20 @@ namespace testFramework{
 		else
 			all = itc::getFullStepList();
 
+
 		// load steps selected by the options
 		if (!options.steps.empty()) {
 			for(const auto& cur : options.steps) {
-				auto pos = all.find(cur);
-				if (pos != all.end()) {
-					steps.push_back(pos->second);
-					continue;
-				}
-				std::cout << "WARNING: Unknown test step: " << cur << "\n";
+				bool found=false;
+				for(auto step : all){
+					if(step.first.find(cur)!=std::string::npos){
+						steps.push_back(step.second);
+						found=true;
+					}
+				}				
+				if(!found)
+					std::cout << "WARNING: Unknown test step: " << cur << "\n";
 			}
-
 			return steps;
 		}
 

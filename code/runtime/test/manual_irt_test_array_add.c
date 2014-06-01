@@ -103,8 +103,8 @@ irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 2, g_insieme_wi_add_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 2, g_insieme_wi_add_variants }
 };
 
 // OpenCL Kernel table
@@ -172,7 +172,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	uint64 start_time = irt_time_ms();
 
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
-	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
+	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, &g_insieme_impl_table[INSIEME_ADD_WI_INDEX], (irt_lw_data_item*)&addition_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), addition_wi);
 
 	irt_wi_join(addition_wi);

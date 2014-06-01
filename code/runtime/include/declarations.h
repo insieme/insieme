@@ -114,7 +114,7 @@ typedef struct _irt_apd_table irt_apd_table;
 
 /* ------------------------------ types ----- */
 
-typedef uint32 irt_type_id;
+typedef int32 irt_type_id;
 typedef struct _irt_type irt_type;
 
 /* ------------------------------ work groups ----- */

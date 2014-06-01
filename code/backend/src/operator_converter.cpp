@@ -1300,6 +1300,33 @@ namespace backend {
 				return res;
 			});
 
+			res[irppExt.getVectorCtor2D()] = OP_CONVERTER({
+
+				// init vector using a vector expression
+				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+				auto type = CONVERT_TYPE(objType);
+				auto sizeA = CONVERT_ARG(2);
+				auto sizeB = CONVERT_ARG(3);
+				c_ast::ExpressionPtr res = c_ast::initArray(type, sizeB, sizeA);
+
+				// add dependency to class declaration
+				context.addDependency(GET_TYPE_INFO(objType).declaration);
+
+				// convert default constructor
+				auto ctor = CONVERT_ARG(1);
+
+				// add new if required
+				const auto& basic = LANG_BASIC;
+				if (basic.isRefVar(ARG(0))) {
+					// nothing to do
+				} else if (basic.isRefNew(ARG(0))) {
+					res = c_ast::newCall(res);
+				} else {
+					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+				}
+				return res;
+			});
+
 			res[irppExt.getArrayDtor()] = OP_CONVERTER({
 				// create a node representing a delete operation
 				return c_ast::deleteArrayCall(CONVERT_ARG(0));

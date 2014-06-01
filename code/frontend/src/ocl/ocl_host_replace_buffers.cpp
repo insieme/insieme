@@ -285,7 +285,6 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
 		if(subscript) {
-			std::cout << "MATCH: " << *(subscript.get()["operation"].getValue()) << std::endl;
 			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
@@ -299,18 +298,16 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			return;
 		}
 
-		const TypePtr newType = transform::replaceAll(mgr, meta.first->getType(), clMemTy, meta.second.type).as<TypePtr>();
+		ExpressionAddress rootExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
+		const TypePtr newType = transform::replaceAll(mgr, rootExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 
-//std::cout << "var: " << *bufferExpr << " root " << *utils::getRootVariable(bufferExpr) << std::endl;
-		bufferExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
-
-		if(alreadyThereAndCorrect(bufferExpr, newType)) return;
+		if(alreadyThereAndCorrect(rootExpr, newType)) return;
 
 		// local variable case
 		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
 
 			VariablePtr newBuffer = builder.variable(newType);
-			clMemReplacements[variable] = newBuffer;
+			clMemReplacements[rootExpr] = newBuffer;
 
 			// if clCreateBuffer was called at initialization, update it now
 			if(meta.second.initExpr) {
@@ -325,21 +322,23 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 		// global variable case
 		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
-			clMemReplacements[lit] = builder.literal(newType, lit->getStringValue());
+			clMemReplacements[rootExpr] = builder.literal(newType, lit->getStringValue());
 			return;
 		}
 	});
-
+/*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
 		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
 	});
+*/
+
 }
 
 void BufferReplacer::performReplacements() {
 	ExpressionMap em;
 	for_each(clMemReplacements, [&](std::pair<core::ExpressionPtr, core::ExpressionPtr> replacement){
-			std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
-		// use pointer in replacements to replace all occurences of the addressed expression
+//			std::cout << "toll " << (replacement.first) << " -> " << (replacement.second) << std::endl;
+		// use pointer in replacements to replace all occurrences of the addressed expression
 	//		prog = transform::replaceAll(prog->getNodeManager(), prog, NodePtr(replacement.first), replacement.second, false);
 		em[replacement.first] = replacement.second;
 	});

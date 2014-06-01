@@ -66,10 +66,10 @@
   * worker_count : number of workers to start
   * init_context_fun : fills type tables in context
   * cleanup_context_fun : cleans up the context
-  * impl_id : the id of the work-item implementation to be started
+  * impl : a pointer to the work-item implementation to be started
   * startup_params : parameter struct for the startup work item (impl_id)
   */
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params);
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation* impl, irt_lw_data_item *startup_params);
 
 // globals
 irt_tls_key irt_g_error_key;
@@ -85,10 +85,10 @@ irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 mqd_t irt_g_message_queue;
 #endif
 
-IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 static bool irt_g_exit_handling_done;
 
@@ -344,15 +344,14 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 	return false;
 }
 
-void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *params) {
-	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl_id, params);
+void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
+	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl, params);
 	// create work group for outermost wi
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
 	irt_cond_bundle condbundle;
-	irt_mutex_init(&condbundle.mutex);
-	irt_cond_var_init(&condbundle.condvar);
+	irt_cond_bundle_init(&condbundle);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
 	handler.data = &condbundle;
@@ -363,7 +362,7 @@ void irt_runtime_run_wi(irt_wi_implementation_id impl_id, irt_lw_data_item *para
 
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&condbundle.mutex);
-	irt_cond_wait(&condbundle.condvar, &condbundle.mutex);
+	irt_cond_bundle_wait(&condbundle);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -382,7 +381,7 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	return context;
 }
 
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation* impl, irt_lw_data_item *startup_params) {
 	irt_context* context = irt_runtime_start_in_context(worker_count, init_fun, cleanup_fun, true);
 
 	if(getenv(IRT_REPORT_ENV)) {
@@ -390,7 +389,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 		exit(0);
 	}
 
-	irt_runtime_run_wi(impl_id, startup_params);
+	irt_runtime_run_wi(impl, startup_params);
 
 	// shut-down context
 	irt_context_destroy(context);

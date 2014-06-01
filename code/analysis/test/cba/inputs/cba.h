@@ -63,6 +63,9 @@ void cba_dump_execution_net();
 void cba_dump_state_graph();
 void cba_dump_thread_regions();
 
+void cba_expect_execution_net_num_places(int);
+void cba_expect_execution_net_num_transitions(int);
+
 // boolean tests (mapped to integer tests, since in C everything is an int)
 #define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
 #define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)

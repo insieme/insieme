@@ -83,7 +83,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(int<4> v1, int<4> v2) -> int<4> { (( *( var(v1)))+1); return (( *( var(v2)))-1);}(( *v100), ( *v101))"
+	"fun(int<4> v1, int<4> v2) -> int<4> { (( *( var(v1)))+1); return (v2-1);}(( *v100), ( *v101))"
 	(a+1, b-1);
 }
 
@@ -178,15 +178,15 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"((int.to.bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))-1);}(( *v100))})"
+	"((int.to.bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"(((( *v100)==0))?bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (( *( var(v1)))-1);}(( *v100))})"
+	"(((( *v100)==0))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v100)>0) && bind(){fun(int<4> v1) -> bool { return (( *( var(v1)))!=1);}(( *v100))})) { }"
+	"if(((( *v100)>0) && bind(){fun(int<4> v1) -> bool { return (v1!=1);}(( *v100))})) { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 

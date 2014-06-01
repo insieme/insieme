@@ -95,8 +95,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	// TODO [_GEMS]: we need +4 because of gemsclaim compiler generated instruction: when entering a function call the sp is stored on the stack
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE + 4);
 		
-	if (ret == NULL)
-		perror("FAIL");
+    IRT_ASSERT(ret != NULL, IRT_ERR_IO, "Malloc of lwt stack failed.\n");
 		
 	ret->next = NULL;
 	return ret;

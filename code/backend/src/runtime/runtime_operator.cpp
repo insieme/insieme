@@ -56,6 +56,19 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
+	namespace {
+
+		c_ast::ExpressionPtr getWorkItemPointer(ConversionContext& context, const c_ast::ExpressionPtr& index) {
+			auto implTableFragment = ImplementationTable::get(context.getConverter());
+			context.addDependency(implTableFragment->getDeclaration());
+			return c_ast::ref(c_ast::subscript(
+					c_ast::deref(implTableFragment->getTable()),
+					index
+			));
+		}
+
+	}
+
 
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfigPtr& config) {
 
@@ -81,7 +94,7 @@ namespace runtime {
 			c_ast::ExpressionPtr numThreads = c_ast::call(C_NODE_MANAGER->create("irt_get_default_worker_count"));
 			c_ast::ExpressionPtr initContext = c_ast::ref(fragment->getInitFunctionName());
 			c_ast::ExpressionPtr cleanupContext = c_ast::ref(fragment->getCleanupFunctionName());
-			c_ast::ExpressionPtr impl = CONVERT_ARG(0);
+			c_ast::ExpressionPtr impl = getWorkItemPointer(context, CONVERT_ARG(0));
 			c_ast::ExpressionPtr args = CONVERT_ARG(1);
 
 			// produce call
@@ -156,7 +169,7 @@ namespace runtime {
 			c_ast::ExpressionPtr max = CONVERT_ARG(1);
 			c_ast::ExpressionPtr mod = CONVERT_ARG(2);
 
-			c_ast::ExpressionPtr wi = CONVERT_ARG(3);
+			c_ast::ExpressionPtr wi = getWorkItemPointer(context, CONVERT_ARG(3));
 			c_ast::ExpressionPtr data = CONVERT_ARG(4);
 
 			return c_ast::init(CONVERT_TYPE(ext.jobType), min, max, mod, wi, data);
@@ -192,7 +205,7 @@ namespace runtime {
 			c_ast::ExpressionPtr max = CONVERT_ARG(2);
 			c_ast::ExpressionPtr step = CONVERT_ARG(3);
 			c_ast::ExpressionPtr range = c_ast::init(C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("irt_work_item_range")), min, max, step);
-			c_ast::ExpressionPtr body = CONVERT_ARG(4);
+			c_ast::ExpressionPtr body = getWorkItemPointer(context, CONVERT_ARG(4));
 			c_ast::ExpressionPtr data = CONVERT_ARG(5);
 			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
 		});
@@ -340,6 +353,7 @@ namespace runtime {
 		});
 
         if(!config->areShiftOpsSupported) {
+            // TODO: parenthesize ARG(0)
 		    #define SHIFT_OP_CONVERTER(__IRNAME, __OP) \
 		    table[basic.get##__IRNAME()] = OP_CONVERTER({ \
                 ADD_HEADER("math.h"); \

@@ -59,8 +59,8 @@ void irt_optimizer_context_startup(irt_context *context) {
     irt_optimizer_objective_init(context);
 }
 
-void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) { }
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time, irt_loop_sched_data *sched_data) { }
+void irt_optimizer_starting_pfor(irt_wi_implementation *impl, irt_work_item_range range, irt_work_group* group) { }
+void irt_optimizer_completed_pfor(irt_wi_implementation *impl, uint64 time, irt_loop_sched_data *sched_data) { }
 
 #else // ifndef IRT_RUNTIME_TUNING
 
@@ -74,8 +74,7 @@ void irt_optimizer_context_startup(irt_context *context) {
 
 ///////////////////////////////////// Loops ===========================================================================
 
-void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
-	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
+void irt_optimizer_starting_pfor(irt_wi_implementation *impl, irt_work_item_range range, irt_work_group* group) {
 
 	if(irt_meta_info_is_opencl_available(impl->variants[0].meta_info) && irt_meta_info_get_opencl(impl->variants[0].meta_info)->opencl) {
 		irt_opencl_optimizer_starting_pfor(impl, range, group);
@@ -86,15 +85,15 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 
 #ifndef IRT_RUNTIME_TUNING_EXTENDED
 
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 walltime, irt_loop_sched_data* sched_data) { }
+void irt_optimizer_completed_pfor(irt_wi_implementation *impl, uint64 walltime, irt_loop_sched_data* sched_data) { }
 
 #else
 
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
-	if(impl[0].features.opencl) {
+void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
+	if(impl->features.opencl) {
 		// nothing
 	} else {
-		irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(impl_id, range, total_time, sched_data);
+		irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(impl, range, total_time, sched_data);
 	}
 }
 
@@ -120,7 +119,9 @@ void irt_optimizer_objective_init(irt_context *context) {
         }
     }
 
+#ifndef _GEMS
     irt_cpu_freq_get_available_frequencies_worker(irt_worker_get_current(), irt_g_available_freqs, &irt_g_available_freqs_count);
+#endif
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {

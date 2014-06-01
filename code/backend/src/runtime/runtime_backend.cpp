@@ -90,7 +90,8 @@ namespace runtime {
         if(isGemsclaim) {
             config->mainFunctionName = "insieme_main";
             config->additionalHeaderFiles.push_back("input_file.h");
-            config->areShiftOpsSupported = false;
+            // Jan fixed the issue but let's keep the code for a while
+            //config->areShiftOpsSupported = false;
         }
 
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);

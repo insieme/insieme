@@ -42,6 +42,7 @@
 #include <boost/tokenizer.hpp>
 
 #include <boost/optional.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
@@ -241,7 +242,8 @@ namespace integration {
 		}
 
 
-		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "") {
+		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "", bool forceCommented = false) {
+
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -271,14 +273,18 @@ namespace integration {
 
 			string testCase ;
 			while ( getline(configFile, testCase) ) {
-				// remove any comments
-				testCase = testCase.substr(0,testCase.find("#",0));
+
+				// remove any comments, except if commented tests should be included
+				if(!forceCommented || !boost::starts_with(boost::algorithm::trim_copy(testCase),"#"))
+					testCase = testCase.substr(0,testCase.find("#",0));
+				else		//only remove first "#"
+					testCase=testCase.substr(testCase.find("#")+1);
+				
 				// trim
 				testCase.erase(0, testCase.find_first_not_of(" "));
 				testCase.erase(testCase.find_last_not_of(" ")+1);
 
 				if (!testCase.empty() && fs::is_directory(testDir / testCase)) {
-
 					testCases.push_back(testCase);
 				}
 			}
@@ -298,7 +304,7 @@ namespace integration {
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
 					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
-					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/");
+					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/",forceCommented);
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 					continue;
 				}
@@ -315,10 +321,10 @@ namespace integration {
 	// a global variable containing the list of test cases after they have been loaded the first time
 	boost::optional<vector<IntegrationTestCase>> TEST_CASES = 0;
 
-	const vector<IntegrationTestCase>& getAllCases() {
+	const vector<IntegrationTestCase>& getAllCases(bool forceCommented) {
 		// check whether cases have been loaded before
 		if (!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR));
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR,"",forceCommented));
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
@@ -382,10 +388,10 @@ namespace integration {
 
 	}
 
-	vector<IntegrationTestCase> getTestSuite(const string& path) {
+	vector<IntegrationTestCase> getTestSuite(const string& path, bool forceCommented) {
 
 		// load list of test cases
-		const vector<IntegrationTestCase>& cases = getAllCases();
+		const vector<IntegrationTestCase>& cases = getAllCases(forceCommented);
 
 		// convert the path into an absolute path
 		frontend::path absolute_path = fs::canonical(fs::absolute(path));

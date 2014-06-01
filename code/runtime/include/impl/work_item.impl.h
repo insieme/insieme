@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
@@ -107,23 +107,28 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 }
 
 static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 
-		irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+		irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
 	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
-	wi->impl_id = impl_id;
+	wi->impl = impl;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;
 	wi->num_active_children = &(wi->_num_active_children);
 	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
-	// TODO store size in LWDT
 	if(params != NULL) {
-		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-		if(size <= IRT_WI_PARAM_BUFFER_SIZE) 
+		uint32 size = 0;
+		if(params->type_id < 0) { // if <0, it's not an id but -(size)
+			size = - params->type_id;
+		} else {
+			size = self->cur_context.cached->type_table[params->type_id].bytes;
+		}
+		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
-		else 
+		} else { 
 			wi->parameters = (irt_lw_data_item*)malloc(size); 
+		}
 		memcpy(wi->parameters, params, size); 
 	} else {
 		wi->parameters = NULL;
@@ -140,9 +145,9 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	irt_inst_region_wi_init(wi);
 }
 
-irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
-	_irt_wi_init(self, retval, range, impl_id, params);
+	_irt_wi_init(self, retval, range, impl, params);
 	if(self->cur_wi != NULL) {
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children, uint32_t);
@@ -154,10 +159,10 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	_irt_wi_event_register_only(reg);
 	return retval;
 }
-static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params) {
 	// instrumentation
 	irt_worker* self = irt_worker_get_current();
-	irt_work_item* wi = _irt_wi_create(self, &range, impl_id, params);
+	irt_work_item* wi = _irt_wi_create(self, &range, impl, params);
 	irt_inst_region_list_copy(wi, self->cur_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, wi->id);
 	return wi;
@@ -200,11 +205,11 @@ _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func) {
 #endif
 
 
-irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params) {
 	irt_worker *worker = irt_worker_get_current();
 	irt_work_item *wi = &worker->lazy_wi;
 	wi->range = range;
-	wi->impl_id = impl_id;
+	wi->impl = impl;
 	wi->parameters = params;
 	return irt_scheduling_optional_wi(worker, wi);
 }
@@ -328,7 +333,7 @@ void irt_wi_end(irt_work_item* wi) {
 	
 	IRT_DEBUG(" ! %p end\n", wi);
 
-    irt_wi_implementation *wimpl = &(irt_context_table_lookup(worker->cur_context)->impl_table[wi->impl_id]);
+    irt_wi_implementation *wimpl = wi->impl;
     irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
         wimpl->variants[0].rt_data.optimizer_rt_data.data_last, true);
 	// end

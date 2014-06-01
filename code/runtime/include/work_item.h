@@ -74,7 +74,7 @@ struct _irt_work_item {
 	irt_work_item_id id;
 	irt_work_item_id parent_id;
 	irt_context_id context_id;
-	irt_wi_implementation_id impl_id;
+	irt_wi_implementation* impl;
 	irt_work_item_range range;
 	uint32 num_groups;
 	volatile uint32 _num_active_children;
@@ -114,8 +114,8 @@ static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);
 static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
-irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
-static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* params);
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params);
 
 // on the WIN64 platform, function _irt_wi_trampoline will be called from a linked obj-file, which implements some 
 // functionality in assembly code for  -> thus its name must not be mangled by a c++ compiler -> wrap extern "C" around
@@ -133,7 +133,7 @@ extern "C" {
 #endif
 
 
-irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params);
 
 void irt_wi_join(irt_work_item* wi);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea

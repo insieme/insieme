@@ -63,8 +63,8 @@ irt_wi_implementation_variant g_insieme_wi_hw_variants[] = {
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_hw_variants }
+	{ 1, 1, g_insieme_wi_startup_variants },
+	{ 2, 1, g_insieme_wi_hw_variants }
 };
 
 // initialization
@@ -84,7 +84,7 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
 
@@ -110,7 +110,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	range.begin = 0;
 	range.end = irt_g_worker_count;
 	range.step = 1;
-	irt_work_item* child = irt_wi_create(range, INSIEME_HW_WI_INDEX, NULL);
+	irt_work_item* child = irt_wi_create(range, &g_insieme_impl_table[INSIEME_HW_WI_INDEX], NULL);
 	irt_scheduling_assign_wi(irt_worker_get_current(), child);
 	irt_wi_join(child);
 

@@ -62,6 +62,11 @@ namespace integration {
 				producedFiles.push_back(setup.stdOutFile);
 				producedFiles.push_back(setup.stdErrFile);
 
+				map<string,float> metricResults;
+				//insert dummy vals 
+				metricResults["time"]=0;
+				metricResults["mem"]=0;
+
 				if(!producedFile.empty()) {
 					producedFiles.push_back(producedFile);
 				}
@@ -109,15 +114,36 @@ namespace integration {
 
 				// if it is a mock-run do nothing
 				if (setup.mockRun) {
-					return TestResult(true,0,0,"","",env.str() + cmd + outfile);
+					return TestResult(true,metricResults,"","",env.str() + cmd + outfile);
 				}
 
+				string perfString("");
+				vector<string> perfCodes;
+				if(setup.perf){
+					//cache load misses
+					perfCodes.push_back(string("r")+setup.load_miss);
+
+					//cache write misses
+					perfCodes.push_back(string("r")+setup.store_miss);
+
+					//flops
+					perfCodes.push_back(string("r")+setup.flops);
+
+					//additional requested metrics
+					BOOST_FOREACH(string s,setup.perf_metrics){
+						perfCodes.push_back(string("r")+s);
+					}
+
+					//build perf command
+					perfString="perf stat -x , ";
+					BOOST_FOREACH(string s,perfCodes){
+						perfString=perfString+"-e "+s+" ";
+					}
+
+				}
 
 				//environment must be set BEFORE executables!
-				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
-
-				//TODO enable perf support
-				//if(setup.enablePerf)
+				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+ perfString +cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
 
 				//get return value, stdOut and stdErr
 				int retVal=system(realCmd.c_str());
@@ -133,30 +159,59 @@ namespace integration {
 				string output=readFile(setup.stdOutFile);
 				string error=readFile(setup.stdErrFile);
 
-				float mem=0.0;
-				float time=0.0;
-
-				//get time and memory values and remove them from stdError
+				//get time, memory and perf values and remove them from stdError
 				string stdErr;
 				boost::char_separator<char> sep("\n");
 				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
 				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
-				string token(*beg);
-				if(token.find("TIME")==0)
-					time=atof(token.substr(4).c_str());
-				else if (token.find("MEM")==0)
-					mem=atof(token.substr(3).c_str());
-				else
-					stdErr+=token+"\n";
+					string token(*beg);
+					if(token.find("TIME")==0)
+						metricResults["time"]=atof(token.substr(4).c_str());
+					else if (token.find("MEM")==0)
+						metricResults["mem"]=atof(token.substr(3).c_str());
+					else
+					//check perf metrics, otherwise append to stderr
+					{
+						bool found=false;
+						BOOST_FOREACH(string s,perfCodes){
+							if(token.find(s)){
+								string value=token.substr(0,token.find(","));
+								float intVal;
+								//try cast to int
+								try{
+									intVal=boost::lexical_cast<float>(value);
+								}catch(const boost::bad_lexical_cast &){
+									//not counted or error
+									intVal=-1;
+								}
+
+								//mark special perf metrics
+								if(s.substr(1)==setup.load_miss)
+									metricResults["load_miss"]=intVal;
+								else if (s.substr(1)==setup.store_miss)
+									metricResults["store_miss"]=intVal;
+								else if (s.substr(1)==setup.flops)
+									metricResults["flops"]=intVal;
+								else
+									metricResults[s.substr(1)]=intVal;
+
+								found=true;
+								break;
+							}
+						}	
+						//no metric -> it is stdErr	
+						if(!found)			
+							stdErr+=token+"\n";
+					}
 				}
 
 				// check whether execution has been aborted by the user
 				if (WIFSIGNALED(retVal) && (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT)) {
-					return TestResult::userAborted(time, mem, output, stdErr, cmd);
+					return TestResult::userAborted(metricResults, output, stdErr, cmd);
 				}
 
 				// produce regular result
-				return TestResult(retVal==0,time,mem,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
+				return TestResult(retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
 			}
 
 			namespace fs = boost::filesystem;
