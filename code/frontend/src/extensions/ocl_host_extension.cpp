@@ -84,8 +84,8 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-
 //std::cout << printer::PrettyPrinter(root) << std::endl;
+
 	prog = builder.program(list);
 
 	return prog;
@@ -120,8 +120,6 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 	NodeMap replacements;
 
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
-		// remove deref from kernel
-		replacements[runKernel["derefKernel"].getValue()] = runKernel["kernel"].getValue();
 		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);

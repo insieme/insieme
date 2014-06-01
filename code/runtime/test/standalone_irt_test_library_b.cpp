@@ -1,4 +1,5 @@
-/* Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -28,37 +29,18 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/node_mapper_utils.h"
+#include "irt_library.hxx"
 
-#include "insieme/frontend/ocl/ocl_host_utils.h"
+#include <iostream>
+#include <vector>
 
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-class TypeFixer {
-	core::NodePtr prog;
-	std::map<core::NodeAddress, core::NodePtr>  replacements;
-
-	core::NodeMap a;
-
-	bool isClType(core::TypePtr type);
-	void cleanStructures(const core::StructTypePtr& st, core::NodeMap& ptrReplacements);
-	void removeClVars();
-	void fixDecls(core::NodeAddress pA, core::TypePtr type);
-	void updateTemps(core::TypePtr type, core::VariableMap& varReplacements);
-public:
-	TypeFixer(core::NodePtr toTransform, std::vector<core::TypePtr> typeStrings);
-	core::NodePtr getTransformedProg() { return prog; };
-};
-
-}
-}
-}
+void different_translation_unit() {
+	irt::parallel(2, [](){ 
+		std::cout << "Hello from different_translation_unit\n"; 
+	} );
+} 

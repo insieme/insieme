@@ -49,6 +49,32 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+bool TypeFixer::isClType(TypePtr type) {
+	RefTypePtr refTy = type.isa<RefTypePtr>();
+	if(refTy) return isClType(refTy->getElementType());
+
+	if(type.isa<StructTypePtr>())
+		return false;
+	return type->toString().find("array<_cl_") != string::npos;
+}
+
+void TypeFixer::cleanStructures(const StructTypePtr& st, NodeMap& ptrReplacements) {
+	vector<NamedTypePtr> newMembers;
+	bool updated = false;
+	for(NamedTypePtr m : st->getElements()) {
+		if(isClType(m->getType())) {
+			updated = true;
+		} else
+			newMembers.push_back(m);
+	}
+
+	if(updated) {
+		NodeManager& mgr = st->getNodeManager();
+		IRBuilder builder(mgr);
+		ptrReplacements[st] = builder.structType(newMembers);
+	}
+}
+
 void TypeFixer::removeClVars() {
 	NodeMapping* h;
 	NodeManager& mgr = prog->getNodeManager();
@@ -57,8 +83,8 @@ void TypeFixer::removeClVars() {
 
 	// removes cl_* variables from argument lists of lambdas
 	auto cleaner = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
-		// stop recursion at type level
 		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			// stop recursion at type level
 			return element;
 		}
 
@@ -66,7 +92,7 @@ void TypeFixer::removeClVars() {
 		if(const DeclarationStmtPtr& decl = element.isa<DeclarationStmtPtr>()) {
 			TypePtr varType = decl->getVariable()->getType();
 			TypePtr initType = decl->getInitialization()->getType();
-			if(varType->toString().find("array<_cl_") != string::npos || initType->toString().find("array<_cl_") != string::npos ) {
+			if(isClType(varType) || isClType(initType)) {
 				return builder.getNoOp();
 			}
 			return element->substitute(builder.getNodeManager(), *h);
@@ -85,7 +111,7 @@ void TypeFixer::removeClVars() {
 
 				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
 					// do nothing if the argument type is not a cl_* type
-					if(arg->getType()->toString().find("array<_cl_") == string::npos) {
+					if(!isClType(arg->getType())) {
 						newArgs.push_back(arg);
 						newParams.push_back(oldParams.at(cnt));
 						paramTypes.push_back(oldParams.at(cnt)->getType());
@@ -109,7 +135,7 @@ void TypeFixer::removeClVars() {
 			if(gen.isRefAssign(call->getFunctionExpr())) {
 				TypePtr lhsTy = call->getArgument(0)->getType();
 				TypePtr rhsTy = call->getArgument(1)->getType();
-				if(lhsTy->toString().find("array<_cl_") != string::npos || rhsTy->toString().find("array<_cl_") != string::npos) {
+				if(isClType(lhsTy) || isClType(rhsTy)) {
 					return builder.getNoOp();
 				}
 			}
@@ -153,7 +179,7 @@ void TypeFixer::updateTemps(TypePtr type, VariableMap& varReplacements) {
 
 		VariablePtr var = decl["variable"].getValue().as<VariablePtr>();
 		TypePtr varType = var->getType();
-		TypePtr initType = decl.isVarBound("init") ?	decl["init"].getValue().as<ExpressionPtr>()->getType() :
+		TypePtr initType = decl.isVarBound("init") ? decl["init"].getValue().as<ExpressionPtr>()->getType() :
 				builder.refType(decl["rhs"].getValue().as<ExpressionPtr>()->getType());
 
 		varReplacements[var] = builder.variable(initType);
@@ -172,19 +198,13 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	NodeMap ptrReplacements;
 
 	// replace cl_program
-	TypePtr cl_program = builder.genericType("_cl_program");
-	ptrReplacements[cl_program] = int4;
-
-	prog = transform::replaceAll(mgr, prog, ptrReplacements, false);
+//	TypePtr cl_program = builder.genericType("_cl_program");
+//	ptrReplacements[cl_program] = int4;
 
 	NodeAddress pA(prog);
 	for(TypePtr typeTofix : types)
 		fixDecls(pA, typeTofix);
-//	assert(false);
-//for(std::pair<NodePtr, NodePtr> cur : this->replacements) {
-//	std::cout << std::endl;
-//	dumpPretty(cur.first);
-//}
+
 	if(!this->replacements.empty())
 		prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
 
@@ -196,6 +216,13 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, varReplacements, false);
 
 	removeClVars();
+
+	// removes cl_* variables from structures
+	visitDepthFirst(prog, [&](const StructTypePtr& st) {
+		cleanStructures(st, ptrReplacements);
+	}, true, true);
+
+	prog = transform::replaceAll(mgr, prog, ptrReplacements, false);
 }
 
 }

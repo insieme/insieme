@@ -1,4 +1,5 @@
-/* Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -28,37 +29,41 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/node_mapper_utils.h"
+#include "irt_library.h"
 
-#include "insieme/frontend/ocl/ocl_host_utils.h"
+typedef struct {
+	int num;
+} param_struct;
 
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-class TypeFixer {
-	core::NodePtr prog;
-	std::map<core::NodeAddress, core::NodePtr>  replacements;
-
-	core::NodeMap a;
-
-	bool isClType(core::TypePtr type);
-	void cleanStructures(const core::StructTypePtr& st, core::NodeMap& ptrReplacements);
-	void removeClVars();
-	void fixDecls(core::NodeAddress pA, core::TypePtr type);
-	void updateTemps(core::TypePtr type, core::VariableMap& varReplacements);
-public:
-	TypeFixer(core::NodePtr toTransform, std::vector<core::TypePtr> typeStrings);
-	core::NodePtr getTransformedProg() { return prog; };
-};
-
+void loop_body(int64 index, void* data) {
+	param_struct *params = (param_struct*)data;
+	printf("Loop body called with index %ld, data %d\n", index, params->num);
 }
+
+void para_inner(void *data) {
+	param_struct *params = (param_struct*)data;
+	printf("Hello inner world with number %d\n", params->num);
 }
+
+void para(void *data) {
+	param_struct *params = (param_struct*)data;
+	printf("Hello outer world with number %d\n", params->num);
+
+	param_struct subparams = { 666 };
+	irt_joinable *j = irt_lib_parallel(2, 2, &para_inner, &subparams, sizeof(param_struct));
+
+	param_struct loopparams = { 37 };
+	irt_lib_pfor(0, 10, 2, &loop_body, &loopparams, sizeof(param_struct));
+	irt_merge(j);
+}
+
+int main(int argc, char **argv) {
+	param_struct params = { 42 };
+	irt_lib_parallel(4, 4, &para, &params, sizeof(param_struct));
+	irt_lib_merge_all();
 }

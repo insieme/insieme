@@ -49,7 +49,7 @@ struct Kernel {
 cl_program program = NULL;
 cl_context context = NULL;
 short* short_host_ptr;
-cl_mem dev_ptr1 = NULL;
+struct Buffer dev_ptr1;
 cl_event event = NULL;
 
 cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize, size_t* localSize, cl_context context, cl_mem buf_arg) {
@@ -78,11 +78,12 @@ int main(int argc, char **argv) {
 	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
 	clReleaseMemObject(dev_ptr5);
 
-	dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
+	dev_ptr1.mem = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
+	dev_ptr1.size = 100;
 	dev_ptr4[0] = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 	dev_ptr4[1] = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
-	clEnqueueWriteBuffer(kernel.queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clEnqueueWriteBuffer(kernel.queue, dev_ptr1.mem, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
 	size_t kernelLength = 10;
 
@@ -94,7 +95,7 @@ int main(int argc, char **argv) {
 	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
 
 	kernel.fct = clCreateKernel(program, "hello", &err);
-	err = clSetKernelArg(kernel.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	err = clSetKernelArg(kernel.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1.mem);
 	for(int i = 0; i < 1; ++i)
 		err = clSetKernelArg(kernel.fct, 1, sizeof(cl_mem), (void*) &(dev_ptr4[i]));
 	// local memory
@@ -123,7 +124,7 @@ int main(int argc, char **argv) {
 	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
 
 
-	clReleaseMemObject(dev_ptr1);
+	clReleaseMemObject(dev_ptr1.mem);
 	clReleaseMemObject(dev_ptr2);
 	clReleaseMemObject(dev_ptr3);
 	for(int i = 1; i < 2; ++i)

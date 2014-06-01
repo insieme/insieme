@@ -307,7 +307,7 @@ namespace runtime {
                 return stmt;
         }
 
-		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
+		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job, bool isTask) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
@@ -378,7 +378,7 @@ namespace runtime {
 				for(const auto& cur : impls) {
                     core::StatementPtr instrumentedBody;
                     // Let's wrap task/region with instrumentation calls
-                    if(analysis::omp::isTask(job))
+                    if(isTask)
                         instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
                     else
                         instrumentedBody = fixBranch(cur);
@@ -407,7 +407,7 @@ namespace runtime {
 
                 core::StatementPtr instrumentedBody;
                 // Let's wrap task/region with instrumentation calls
-                if(analysis::omp::isTask(job))
+                if(isTask)
                     instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
                 else
                     instrumentedBody = builder.compoundStmt(body);
@@ -463,7 +463,7 @@ namespace runtime {
 
 				// test whether it is something of interest
 				if (res->getNodeType() == core::NT_JobExpr) {
-					return convertJob(static_pointer_cast<const core::JobExpr>(res));
+					return convertJob(static_pointer_cast<const core::JobExpr>(res), analysis::omp::isTask(ptr));
 				}
 
 				// handle call expressions
@@ -536,7 +536,7 @@ namespace runtime {
 
 		private:
 
-			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
+			core::ExpressionPtr convertJob(const core::JobExprPtr& job, bool isTask) {
 
 				// extract range
 				WorkItemRange range = coder::toValue<WorkItemRange>(job->getThreadNumRange());
@@ -547,7 +547,7 @@ namespace runtime {
 				core::ExpressionPtr mod = range.mod;
 
 				// creates a list of work-item implementations and the work item data record to be passed along
-				auto info = wrapJob(manager, job);
+				auto info = wrapJob(manager, job, isTask);
 				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
 				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 

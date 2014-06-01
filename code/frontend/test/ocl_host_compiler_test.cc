@@ -161,7 +161,7 @@ TEST(OclHostCompilerTest, HelloHostStructTest) {
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
-	Logger::get(std::cerr, INFO);
+	Logger::get(std::cerr, ERROR);
 
 	core::NodeManager manager;
 
@@ -182,7 +182,6 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-	//    LOG(INFO) << pp;
 
 	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
