@@ -548,7 +548,11 @@ namespace c_ast {
 	}
 
 	inline ArrayInitPtr initArray(TypePtr type, ExpressionPtr size) {
-		return type->getManager()->create<c_ast::ArrayInit>(type, size);
+		return type->getManager()->create<c_ast::ArrayInit>(type, toVector(size));
+	}
+
+	inline ArrayInitPtr initArray(TypePtr type, ExpressionPtr sizeA, ExpressionPtr sizeB) {
+		return type->getManager()->create<c_ast::ArrayInit>(type, toVector(sizeA, sizeB));
 	}
 
 	template<typename ... E>

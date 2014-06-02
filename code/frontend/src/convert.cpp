@@ -117,7 +117,8 @@ bool isCppConstructor (const core::ExpressionPtr& expr){
 	}
 	// array constructor
 	core::NodeManager&  mgr = expr->getNodeManager();
-	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()))
+	if (core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor()) ||
+			core::analysis::isCallOf(expr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor2D()))
 		return true;
 	//if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
 	//	if (*mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor() ==*call->getFunctionExpr())
