@@ -157,7 +157,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 }
 
 TEST(OclHostCompilerTest, HelloHostStructTest) {
-//	runOclTest(CLANG_SRC_DIR "inputs/hello_host_structs.c");
+	runOclTest(CLANG_SRC_DIR "inputs/hello_host_structs.c");
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {

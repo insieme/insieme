@@ -238,7 +238,6 @@ void BufferReplacer::collectInformation(TreePatternPtr& clCreateBuffer) {
 			initExpr = builder.refVar(deviceMemAlloc);
 //std::cout << "Init: " << *initExpr << std::endl;
 		}
-
 		// add gathered information to clMemMetaMap
 		clMemMeta[lhs] = ClMemMetaInfo(size, type, flags, initExpr);
 	});
@@ -297,14 +296,21 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			clMemReplacements[expr] = builder.variable(newArrType);
 			return;
 		}
-
 		ExpressionAddress rootExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
-		const TypePtr newType = transform::replaceAll(mgr, rootExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
+
+		TypePtr newType = transform::replaceAll(mgr, bufferExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
+		// update structs if required
+		if(utils::tryDeref(rootExpr)->getType().isa<StructTypePtr>()) {
+			CallExprPtr structAccess = bufferExpr.as<CallExprPtr>();
+			ExpressionPtr identifier = structAccess->getArgument(1);
+			newType = newType.as<RefTypePtr>()->getElementType().as<RefTypePtr>()->getElementType();
+			utils::updateStruct(rootExpr, newType, identifier);
+		}
 
 		if(alreadyThereAndCorrect(rootExpr, newType)) return;
 
 		// local variable case
-		if(VariableAddress variable = dynamic_address_cast<const Variable>(bufferExpr)) {
+		if(VariableAddress variable = dynamic_address_cast<const Variable>(rootExpr)) {
 
 			VariablePtr newBuffer = builder.variable(newType);
 			clMemReplacements[rootExpr] = newBuffer;
@@ -319,13 +325,13 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			}
 			return;
 		}
-
 		// global variable case
-		if(LiteralAddress lit = dynamic_address_cast<const Literal>(bufferExpr)) {
+		if(LiteralAddress lit = dynamic_address_cast<const Literal>(rootExpr)) {
 			clMemReplacements[rootExpr] = builder.literal(newType, lit->getStringValue());
 			return;
 		}
 	});
+
 /*
 	for_each(clMemReplacements, [&](std::pair<NodePtr, ExpressionPtr> replacement) {
 		std::cout << printer::PrettyPrinter(replacement.first.as<ExpressionPtr>()) << " -> " << printer::PrettyPrinter(replacement.second) << std::endl;
