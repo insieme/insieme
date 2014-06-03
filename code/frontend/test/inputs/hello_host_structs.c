@@ -72,7 +72,9 @@ int main(int argc, char **argv) {
 	kernel.queue = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
 	float* host_ptr;
-	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, NULL);
+	struct Buffer dev_ptr2;
+	dev_ptr2.mem = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, NULL);
+	dev_ptr2.size = 100;
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4[2];
 	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
@@ -125,7 +127,7 @@ int main(int argc, char **argv) {
 
 
 	clReleaseMemObject(dev_ptr1.mem);
-	clReleaseMemObject(dev_ptr2);
+	clReleaseMemObject(dev_ptr2.mem);
 	clReleaseMemObject(dev_ptr3);
 	for(int i = 1; i < 2; ++i)
 		clReleaseMemObject(dev_ptr4[i]);

@@ -103,6 +103,11 @@ void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varM
 
 std::string extractQuotedString(core::NodePtr kernelNameExpr);
 
+/*
+ * Changes the type of the field of a struct
+ */
+void updateStruct(const core::ExpressionPtr& structure, core::TypePtr& newType, const core::ExpressionPtr& identifier);
+
 std::string whatIs(core::NodePtr node);
 }
 }
