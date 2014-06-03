@@ -232,7 +232,7 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 		if (!res->getType().isa<core::RefTypePtr>()) {
 			res = builder.refVar(res);
 		}
-		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), res);
+		return builder.toConstCppRef(res);
 	}
 	else if (core::analysis::isAnyCppRef(type)) {
 		res =  core::analysis::unwrapCppRef(res);
