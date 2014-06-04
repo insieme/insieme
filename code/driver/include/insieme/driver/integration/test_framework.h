@@ -64,6 +64,7 @@ namespace testFramework{
 		bool mockrun;
 		int num_threads;
 		int num_repeditions;
+		bool use_median;
 		bool statistics;
 		bool scheduling;
 		bool print_configs;
@@ -87,7 +88,7 @@ namespace testFramework{
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
-			  num_threads(1), num_repeditions(1), statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
+			  num_threads(1), num_repeditions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
 			  panic_mode(false),force(false), list_only(false), clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
 	};
 
@@ -169,17 +170,20 @@ namespace testFramework{
 		else
 			all = itc::getFullStepList();
 
+
 		// load steps selected by the options
 		if (!options.steps.empty()) {
 			for(const auto& cur : options.steps) {
-				auto pos = all.find(cur);
-				if (pos != all.end()) {
-					steps.push_back(pos->second);
-					continue;
-				}
-				std::cout << "WARNING: Unknown test step: " << cur << "\n";
+				bool found=false;
+				for(auto step : all){
+					if(step.first.find(cur)!=std::string::npos){
+						steps.push_back(step.second);
+						found=true;
+					}
+				}				
+				if(!found)
+					std::cout << "WARNING: Unknown test step: " << cur << "\n";
 			}
-
 			return steps;
 		}
 

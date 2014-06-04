@@ -21,7 +21,6 @@ Name 		| Version | What's for |
 [Google Test](https://code.google.com/p/googletest/)                | >= 1.6  | Unit testing |
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)  	  | = 1.50 | Utilities, regex, filesystem, program options|
 [LLVM/Clang](http://llvm.org/) 	                                    | = 3.4 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.4.patch)) | C/C++ frontend | 
-[Xerces-C++](http://xerces.apache.org/xerces-c/)                    | >= 3.1.1 | XML dump of the INSPIRE |
 [ISL](http://garage.kotnet.org/~skimo/isl/)			                    | = 0.10 | Polyhedral model representation & analysis |
 [CLooG](http://www.cloog.org/)		                                  | = 0.17 | Polyhedral model code generation |
 [Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35 | Polyhedral model cardinality |
@@ -58,8 +57,7 @@ CXX=$PREFIX/gcc-latest/bin/g++ INSIEME_LIBS_HOME=$PREFIX $PREFIX/cmake-latest/bi
 
 Several other options can be provided to enable/disable some of the compiler features:
 - ``-DDOC=ON|OFF`` -- Enable/disable generation of documentation 
-- ``-DUSE_XML=ON|OFF`` -- Enable/disable XML support 
-- ``-DMAKE_BUILD_TYPE=Debug|Release`` -- Set the build to be in Debug or Release mode 
+- ``-DCMAKE_BUILD_TYPE=Debug|Release`` -- Set the build to be in Debug or Release mode 
 - ``-DUSE_OPENCL=ON|OFF`` -- Enabe/disable OpenCL support (in both frontend/backend/runtime)
 (note: this variables must be passed as parameters of the cmake command, not set as environment variables)
 
@@ -94,7 +92,7 @@ Integration tests can be executed in parallel (``-w SLOTS``), and multiple times
 If everything was successful... **congratulation!**
 **You may start enjoying Insieme now!**
 
-## Using Insieme 
+
 
 
 

@@ -87,7 +87,6 @@ namespace{
 		desc.add_options()
 				("help,h", 				"produce help message")
 				("config,c", 			"print the configuration of the selected test cases")
-                                ("liststeps",                   "list all the available steps")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
 				("panic,p", 			"panic on first sign of trouble and stop execution")
 				("list,l", 				"just list the targeted test cases")
@@ -108,11 +107,14 @@ namespace{
 		bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
 		bpo::notify(map);
 
-		// check whether step list was requested
-		if (map.count("liststeps")) {
-			std::cout << "Available steps:\n";
+
+		// check whether help was requested
+		if (map.count("help")) {
+			std::cout << desc << "\n";
+
+			std::cout << " ------------- Steps -----------------\n";
 			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << std::setw(32) << entry.first;
+				std::cout << "\t" << std::setw(20) << entry.first;
 				auto deps = entry.second.getDependencies();
 				if(!deps.empty()) {
 					std::cout << " <- [ ";
@@ -123,14 +125,7 @@ namespace{
 				}
 				std::cout << "\n";
 			}
-			return fail;
-		}
 
-		// -- processing -----------------------------------------
-
-		// check whether help was requested
-		if (map.count("help")) {
-			std::cout << desc << "\n";
 			return fail;
 		}
 

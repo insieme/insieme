@@ -117,6 +117,9 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 	return getFunctionArguments(callExpr, funcTy);
 }
 
+core::ExpressionPtr fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType);
+
+
 template<class ClangExprTy>
 ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 									const core::FunctionTypePtr& funcTy){
@@ -144,33 +147,8 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-		core::TypePtr&& argTy = arg->getType();
 		if ( argId < funcTy->getParameterTypes().size() ) {
-			const core::TypePtr& funcParamTy = funcTy->getParameterTypes()[argId+off];
-
-			if (*funcParamTy != *argTy){
-				// if is a CPP ref, do not cast, do a transformation
-				if (core::analysis::isCppRef(funcParamTy)) {
-					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), arg);
-				}
-				else if (core::analysis::isConstCppRef(funcParamTy)) {
-					// Note, const refs extend lifetime of values, therefore materialize the value into a ref
-					if (!arg->getType().isa<core::RefTypePtr>()) {
-						arg = builder.refVar(arg);
-					}
-					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
-				}
-				else if (core::analysis::isAnyCppRef(argTy)) {
-					arg =  core::analysis::unwrapCppRef(arg);
-				}
-				else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)) {
-					arg = insieme::frontend::utils::castScalar(funcParamTy, arg);
-				}
-				else{
-					arg = utils::cast(arg, funcParamTy);
-				}
-
-			}
+			arg = fixType(arg, funcTy->getParameterTypes()[argId+off]);
 		} else {
 			arg = utils::cast(arg, builder.getNodeManager().getLangBasic().getVarList());
 		}

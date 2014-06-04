@@ -122,6 +122,32 @@ namespace lang {
 		);
 
 		/**
+		 * A construct supporting the construction and initialization of a vector
+		 * of objects.
+		 */
+		LANG_EXT_DERIVED(VectorCtor2D,
+				"let int = uint<8> in "
+				""
+				"(('a)->ref<'a> allocator, 'b::() ctor, intTypeParam<#m> sizeA, intTypeParam<#n> sizeB)->ref<vector<vector<'b,#m>,#n>> { "
+				"	// define the type to be allocated \n"
+				"	let wrapper = struct { vector<vector<'b,#m>,#n> data; }; "
+				"	"
+				"	// allocate the memory \n"
+				"	ref<wrapper> res = allocator((wrapper){ undefined(lit(vector<vector<'b,#m>,#n>)) });"
+				"	"
+				"	// init elements \n"
+				"	for(int i=0u .. to.uint(sizeA)) {"
+				"		for(int j=0u .. to.uint(sizeB)) {"
+				"			ctor(res->data[i][j]);"
+				"		}"
+				"	}"
+				"	"
+				"	// return array reference \n"
+				"	return res->data;"
+				"}"
+		);
+
+		/**
 		 * A destructor supporting the destruction of an array of objects.
 		 */
 		LANG_EXT_DERIVED(ArrayDtor,
