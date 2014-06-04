@@ -379,6 +379,27 @@ std::string extractQuotedString(core::NodePtr kernelNameExpr) {
 	return quotedString;
 }
 
+/*
+ * Changes the type of the field of a struct
+ */
+void updateStruct(const ExpressionPtr& structure, TypePtr& type, const ExpressionPtr& identifier) {
+	NodeManager& mgr = structure->getNodeManager();
+	IRBuilder builder(mgr);
+
+	TypePtr baseType = structure->getType();
+	RefTypePtr refTy = baseType.isa<RefTypePtr>();
+	StructTypePtr kst = refTy ? refTy->getElementType().as<StructTypePtr>() : structure->getType().as<StructTypePtr>();
+	std::string name = identifier->toString();
+	NamedTypePtr oldType = kst->getNamedTypeEntryOf(name);
+	NamedTypePtr newType = builder.namedType(name, refTy ? builder.refType(type) : type);
+
+	TypePtr newStructType = transform::replaceAll(mgr, baseType, oldType, newType).as<TypePtr>();
+
+	type = newStructType;
+}
+
+
+
 #define NTtoString(NodeType) if(node->getNodeType() == NT_##NodeType) return #NodeType;
 std::string whatIs(NodePtr node) {
 	NTtoString(TypeVariable)

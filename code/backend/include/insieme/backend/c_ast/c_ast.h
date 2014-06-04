@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -407,8 +407,8 @@ namespace c_ast {
 
 	struct ArrayInit : public Expression {
 		TypePtr type;
-		ExpressionPtr size;
-		ArrayInit(TypePtr type, ExpressionPtr size)
+		vector<ExpressionPtr> size;
+		ArrayInit(TypePtr type, vector<ExpressionPtr> size)
 			: Expression(NT_ArrayInit), type(type), size(size) {};
 		virtual bool equals(const Node& node) const;
 	};

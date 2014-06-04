@@ -86,7 +86,10 @@ int main(int argc, char** argv) {
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
 	std::cout << format("#                 Insieme version: %-43s #\n", tf::getGitVersion());
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
-	std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
+	if(options.num_repeditions==1)
+		std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
+	else
+		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);		
 	std::cout <<        "#------------------------------------------------------------------------------#\n";	
 	
 
@@ -139,7 +142,6 @@ int main(int argc, char** argv) {
 	vector<TestCase> failed;
 
 	bool panic = false;
-	int totalTests=cases.size() * options.num_repeditions;
 	int act=0;
 	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
 
@@ -156,18 +158,35 @@ int main(int argc, char** argv) {
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
-		for(const auto& step : list) {
-			auto res = step.run(setup, cur);
-			results.push_back(std::make_pair(step, res));
-			if (!res || res.hasBeenAborted()) {
-				success = false;
-				break;
+
+		map<TestStep,vector<TestResult>> curRes;
+		for(int rep=0;rep<options.num_repeditions;rep++){
+			for(const auto& step : list) {
+				auto res = step.run(setup, cur);
+				curRes[step].push_back(res);
+				if (!res || res.hasBeenAborted()) {
+					success = false;
+					break;
+				}
 			}
+			if(!success)
+				break;
+		}
+
+		for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
+			TestResult res=steps->second.front();
+			if(options.use_median){
+				std::cout<<"0\n";
+				res=TestResult::returnMedian(steps->second);
+			}
+			else
+				res=TestResult::returnAVG(steps->second);
+			results.push_back(std::make_pair(steps->first,res));
 		}
 		
 		// print test info
 		std::cout << "#------------------------------------------------------------------------------#\n";
-		std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getName()) << "#\n";
+		std::cout << "#\t" << ++act << "/"<< cases.size() << "\t" << format("%-63s",cur.getName()) << "#\n";
 		std::cout << "#------------------------------------------------------------------------------#\n";
 
 		for(const auto& curRes : results) {
@@ -184,8 +203,13 @@ int main(int argc, char** argv) {
 					line <<  colorize.bold() << colorize.blue();
 				}
 
-				line << "# " << curRes.first.getName() <<
-					format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
+				if(curRes.second.deviationAvailable() && options.num_repeditions>1)
+					line << "# " << curRes.first.getName() <<
+						format(colOffset.c_str(),format("[%.3f secs (+/- %.3f), %.3f MB (+/- %.3f)]",curRes.second.getRuntime(), curRes.second.getRuntimeDev(),
+						curRes.second.getMemory()/1024/1024,curRes.second.getMemoryDev()/1024/1024)) << colorize.reset() << "\n";
+				else
+					line << "# " << curRes.first.getName() <<
+						format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
 
 				if(curRes.second.wasSuccessfull()){
 					std::cout << line.str();
@@ -247,7 +271,7 @@ int main(int argc, char** argv) {
 	
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
-	std::cout << format("# TOTAL:          %60d #\n", cases.size()*options.num_repeditions);
+	std::cout << format("# TOTAL:          %60d #\n", cases.size());
 	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
 	std::cout << "# FAILED:         " << colorize.red() << format("%60d", failed.size()) << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
@@ -276,7 +300,8 @@ namespace {
 				("panic,p", 			"panic on first sign of trouble and stop execution")
 				("mock,m", 				"make it a mock run just printing commands not really executing those")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-				//("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shall be repeated")
+				("use-median",				"use median instead of avg if multiple runs are required")
 				("no-perf",				"disable perf metrics")
 				("scheduling,S",			"enable runs on all scheduling variants (static,dynamic,guided)")
 				("no-overwrite",			"do not overwrite existing output data")
@@ -346,9 +371,10 @@ namespace {
 		res.panic_mode = map.count("panic");
 		res.num_threads = 1;
 		res.force=map.count("force");
-		//res.num_repeditions = map["repeat"].as<int>();
+		res.num_repeditions = map["repeat"].as<int>();
 		res.statThreads=map["threads"].as<int>();
 		res.overwrite=!map.count("no-overwrite");
+		res.use_median=map.count("use-median");
 
 		if (map.count("step")) {
 			res.steps.push_back(map["step"].as<string>());

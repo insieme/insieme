@@ -512,7 +512,10 @@ namespace backend {
 			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
 			// check whether it is a array ctor call
-			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor()) && !core::analysis::isCallOf(initValue, ext.getVectorCtor())) {
+			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor())
+				&& !core::analysis::isCallOf(initValue, ext.getVectorCtor())
+				&& !core::analysis::isCallOf(initValue, ext.getVectorCtor2D())
+			) {
 				return false;
 			}
 
@@ -552,7 +555,10 @@ namespace backend {
 
 		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
 			assert(isStackBasedCppArray(init) && "Invalid input parameter!");
-			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(2));
+			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(
+					(core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2
+			));
 		}
 
 		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {

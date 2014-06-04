@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -357,7 +357,7 @@ namespace c_ast {
 	bool ArrayInit::equals(const Node& node) const {
 		assert(dynamic_cast<const ArrayInit*>(&node));
 		auto other = static_cast<const ArrayInit&>(node);
-		return *type==*other.type && *size == *other.size;
+		return *type==*other.type && ::equals(size, other.size, equal_target<NodePtr>());
 	}
 
 	bool VectorInit::equals(const Node& node) const {

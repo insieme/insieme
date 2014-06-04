@@ -442,7 +442,11 @@ namespace c_ast {
 			}
 
 			PRINT(ArrayInit) {
-				return out << print(node->type) << "[" << print(node->size) << "]";
+				out << print(node->type);
+				for(auto cur : node->size) {
+					out << "[" << print(cur) << "]";
+				}
+				return out;
 			}
 
 			PRINT(VectorInit) {
