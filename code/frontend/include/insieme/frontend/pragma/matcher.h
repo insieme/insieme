@@ -197,12 +197,35 @@ class MatchObject {
         core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
     public:
         MatchObject() : called(false) { }
+
         const VarList& getVars(const std::string& s) {
             return varList[s];
         }
         const ExprList& getExprs(const std::string& s) {
             return exprList[s];
         }
+
+		const core::ExpressionPtr getSingleExpr(const std::string& key) {
+			auto fitV = getVars(key);
+			auto fitE = getExprs(key);
+
+			if(fitE.empty() && fitV.empty())
+				return core::ExpressionPtr();
+
+			// we have an expression
+			if(fitV.empty()) {
+				assert(fitE.size() == 1);
+				return fitE[0];
+			}
+			// we have a variable
+			if(fitE.empty()) {
+				assert(fitV.size() == 1);
+				return fitV[0];
+			}
+			assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
+			return core::ExpressionPtr();
+		}
+
         const StringList& getStrings(const std::string& k) {
             return stringList[k];
         }
