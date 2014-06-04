@@ -44,11 +44,12 @@ namespace backend {
 	 */
 	class BackendConfig {
 	public:
-        BackendConfig() : mainFunctionName("main"), areShiftOpsSupported(true) {};
+        BackendConfig() : mainFunctionName("main"), areShiftOpsSupported(true), instrumentMainFunction(false) {};
 
         std::string mainFunctionName;
         std::vector<std::string> additionalHeaderFiles;
         bool areShiftOpsSupported;
+        bool instrumentMainFunction;
 	};
 
 	typedef std::shared_ptr<BackendConfig> BackendConfigPtr;

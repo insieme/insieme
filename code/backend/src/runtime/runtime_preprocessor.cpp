@@ -110,7 +110,7 @@ namespace runtime {
 		}
 
 
-		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program) {
+		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program, const backend::Converter& converter) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
 			auto& extensions = manager.getLangExtension<Extensions>();
@@ -131,7 +131,19 @@ namespace runtime {
 
 			vector<core::ExpressionPtr> workItemImpls;
 			for_each(program->getEntryPoints(), [&](const core::ExpressionPtr& entry) {
-				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, entry));
+                core::ExpressionPtr newEntry = entry;
+
+                if(stmts.empty() && converter.getConverterConfig()->instrumentMainFunction) {
+                    auto lambda = entry.as<core::LambdaExprPtr>()->getLambda();
+                    core::StatementList newBody;
+                    newBody.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(0)));
+                    newBody.push_back(lambda->getBody());
+                    newBody.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(0)));
+
+                    newEntry = builder.lambdaExpr(lambda->getType(), lambda->getParameters(), builder.compoundStmt(newBody));
+                }
+
+				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, newEntry));
 				workItemImpls.push_back(impl);
 				stmts.push_back(registerEntryPoint(manager, impl));
 			});
@@ -176,12 +188,12 @@ namespace runtime {
 
 		// handle programs specially
 		if (nodeType == core::NT_Program) {
-			return replaceMain(manager, static_pointer_cast<const core::Program>(node));
+			return replaceMain(manager, static_pointer_cast<const core::Program>(node), converter);
 		}
 
 		// if it is a expression, wrap it within a program and resolve equally
 		if (core::ExpressionPtr expr = dynamic_pointer_cast<const core::Expression>(node)) {
-			return replaceMain(manager, core::Program::get(manager, toVector(expr)));
+			return replaceMain(manager, core::Program::get(manager, toVector(expr)), converter);
 		}
 
 		// nothing to do otherwise
@@ -307,7 +319,7 @@ namespace runtime {
                 return stmt;
         }
 
-		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job, bool isTask) {
+		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
@@ -376,13 +388,7 @@ namespace runtime {
 				assert(!impls.empty() && "There must be at least one implementation!");
 
 				for(const auto& cur : impls) {
-                    core::StatementPtr instrumentedBody;
-                    // Let's wrap task/region with instrumentation calls
-                    if(isTask)
-                        instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
-                    else
-                        instrumentedBody = fixBranch(cur);
-
+                    core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
 					auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
 					annotations::migrateMetaInfos(job, impl);
 					variants.push_back(WorkItemVariant(impl));
@@ -405,12 +411,7 @@ namespace runtime {
 				// add default branch
 				body.push_back(fixBranch(job->getDefaultExpr()));
 
-                core::StatementPtr instrumentedBody;
-                // Let's wrap task/region with instrumentation calls
-                if(isTask)
-                    instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
-                else
-                    instrumentedBody = builder.compoundStmt(body);
+                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
 
 				// build implementation
 				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
@@ -463,7 +464,7 @@ namespace runtime {
 
 				// test whether it is something of interest
 				if (res->getNodeType() == core::NT_JobExpr) {
-					return convertJob(static_pointer_cast<const core::JobExpr>(res), analysis::omp::isTask(ptr));
+					return convertJob(static_pointer_cast<const core::JobExpr>(res));
 				}
 
 				// handle call expressions
@@ -498,27 +499,12 @@ namespace runtime {
 					// handle merge call
 					if (basic.isMerge(fun)) {
 						const auto& arg = core::analysis::getArgument(res, 0);
- 
-                        // OMP+ instrumentation
-					    const auto& mergeArg = ptr.as<core::CallExprPtr>()->getArgument(0);
-				        if (mergeArg->getNodeType() == core::NT_CallExpr) {
-                            const auto& parCall = mergeArg.as<core::CallExprPtr>();
-                            if(basic.isParallel(parCall->getFunctionExpr())) {
-                                const auto& parArg = parCall->getArgument(0);
-                                if(basic.isJob(parArg->getType())) {
-                                    const auto& job = parArg.as<core::JobExprPtr>();
-                                    return wrapWithInstrumentationRegion(manager, job, builder.callExpr(basic.getUnit(), ext.merge, arg));
-                                }
-                            }
-                        }
-
 						return builder.callExpr(basic.getUnit(), ext.merge, arg);
 					}
 
 					// handle pfor calls
 					if (basic.isPFor(fun)) {
-						auto pFor = convertPfor(call).as<core::CallExprPtr>();
-                        return wrapWithInstrumentationRegion(manager, call, pFor);
+						return convertPfor(call).as<core::CallExprPtr>();
 					}
 				}
 
@@ -536,7 +522,7 @@ namespace runtime {
 
 		private:
 
-			core::ExpressionPtr convertJob(const core::JobExprPtr& job, bool isTask) {
+			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
 
 				// extract range
 				WorkItemRange range = coder::toValue<WorkItemRange>(job->getThreadNumRange());
@@ -547,7 +533,7 @@ namespace runtime {
 				core::ExpressionPtr mod = range.mod;
 
 				// creates a list of work-item implementations and the work item data record to be passed along
-				auto info = wrapJob(manager, job, isTask);
+				auto info = wrapJob(manager, job);
 				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
 				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 
@@ -942,6 +928,7 @@ namespace runtime {
         // so we have to check annotations on JobExpr
 		core::visitDepthFirstOnce(node, [&](const core::ExpressionPtr& cur) {
             if(cur->hasAttachedValue<annotations::ompp_objective_info>()) {
+                converter.getConverterConfig()->instrumentMainFunction = true;
                 unsigned regionId = cur->getAttachedValue<annotations::ompp_objective_info>().region_id;
 			    if (max < regionId) max = regionId;
             }

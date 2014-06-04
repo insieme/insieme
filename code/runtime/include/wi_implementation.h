@@ -66,7 +66,10 @@ struct _irt_wi_implementation_runtime_data {
 	bool tested;
 	bool force_dyn;
 	double distribution[IRT_MAX_WORKERS];
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER
     irt_optimizer_runtime_data optimizer_rt_data;
+    irt_optimizer_runtime_data* wrapping_optimizer_rt_data;
+#endif
 	uint32 chunk_size;
 };
 
