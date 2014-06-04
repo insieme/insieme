@@ -276,8 +276,8 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 	NodeManager& mgr = prog.getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr subscriptPattern = irp::subscript1D("operation",
-			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable())));
+	TreePatternPtr subscriptPattern = aT(irp::subscript1D("operation",
+			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable()))));
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
 		ExpressionAddress bufferExpr = utils::extractVariable(meta.first);
