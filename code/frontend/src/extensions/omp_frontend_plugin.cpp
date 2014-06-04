@@ -286,24 +286,7 @@ namespace {
      *  the match object. (e.g. num_threads, if, ...)
      */
     core::ExpressionPtr handleSingleExpression(MatchObject& m, const std::string& key) {
-        auto fitV = m.getVars(key);
-        auto fitE = m.getExprs(key);
-
-        if(fitE.empty() && fitV.empty())
-            return core::ExpressionPtr();
-
-        // we have an expression
-        if(fitV.empty()) {
-            assert(fitE.size() == 1);
-            return fitE[0];
-        }
-        // we have a variable
-        if(fitE.empty()) {
-            assert(fitV.size() == 1);
-            return fitV[0];
-        }
-        assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
-        return core::ExpressionPtr();
+        return m.getSingleExpr(key);
     }
 
     /**
