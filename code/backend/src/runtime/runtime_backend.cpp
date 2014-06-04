@@ -92,6 +92,7 @@ namespace runtime {
             config->additionalHeaderFiles.push_back("input_file.h");
             // Jan fixed the issue but let's keep the code for a while
             //config->areShiftOpsSupported = false;
+            config->instrumentMainFunction = true;
         }
 
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);

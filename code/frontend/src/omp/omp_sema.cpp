@@ -848,7 +848,8 @@ protected:
         objective.time_min   = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
         objective.time_max   = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
 
-        static unsigned regionId = 0;
+        // regionId 0 is reserved for main work item
+        static unsigned regionId = 1;
         objective.region_id = regionId ++;
 
         node->attachValue(objective);

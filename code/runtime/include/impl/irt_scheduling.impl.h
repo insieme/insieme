@@ -75,6 +75,9 @@ void irt_scheduling_loop(irt_worker* self) {
 				self->share_stack_wi = NULL;
 			}
 			#endif //IRT_ASTEROIDEA_STACKS
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+            irt_optimizer_apply_dct(self);
+#endif
 		}
 #ifdef IRT_WORKER_SLEEPING
 		irt_mutex_lock(&irt_g_active_worker_mutex);

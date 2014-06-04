@@ -334,8 +334,9 @@ void irt_wi_end(irt_work_item* wi) {
 	IRT_DEBUG(" ! %p end\n", wi);
 
     irt_wi_implementation *wimpl = wi->impl;
-    irt_optimizer_remove_optimizations(&(wimpl->variants[0]),
-        wimpl->variants[0].rt_data.optimizer_rt_data.data_last, true);
+    irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
+    irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi);
+
 	// end
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");

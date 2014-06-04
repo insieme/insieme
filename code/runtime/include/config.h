@@ -134,9 +134,21 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
+// gemsclaim
 #ifdef _GEMS
 	#define	GEMS_CORE_FREQ_MHZ 100
 #endif
 
+//optimizer
+//enable optimizations based on openmp+ (DCT excluded)
+//#define IRT_ENABLE_OMPP_OPTIMIZER
+//enable DCT optimizations based on openmp+
+//#define IRT_ENABLE_OMPP_OPTIMIZER_DCT
+// defines how many work items must be completed before updating optimizer settings
+#define IRT_OPTIMIZER_FREQUENCY   irt_g_worker_count
+// lookup table size
+#define IRT_OPTIMIZER_LT_BUCKETS 97
+// the index of the frequency (among the vector of available ones) used by the rt
+#define IRT_OPTIMIZER_RT_FREQ   1
 
 #endif // ifndef __GUARD_CONFIG_H
