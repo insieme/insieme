@@ -284,7 +284,7 @@ void irt_papi_finalize(irt_context* context) {
  */
 
 void irt_papi_start() {
-	uint64 worker_id = irt_worker_get_current()->id.full;
+	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int32 retval = 0;
 
 	if((retval = PAPI_start(irt_context_get_current()->inst_region_metric_group_support_data.papi_eventset[worker_id])) != PAPI_OK)
@@ -296,7 +296,7 @@ void irt_papi_start() {
  */
 
 void irt_papi_stop(long long int* papi_values) {
-	uint64 worker_id = irt_worker_get_current()->id.full;
+	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int32 retval = 0;
 	irt_inst_region_context_declarations* papi_data = &irt_context_get_current()->inst_region_metric_group_support_data;
 
@@ -311,7 +311,7 @@ void irt_papi_stop(long long int* papi_values) {
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) {
 	char event_name_copy[strlen(event_name)];
 	strcpy(event_name_copy, event_name);
-	uint64 worker_id = irt_worker_get_current()->id.full;
+	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int64 retval = 0;
 	int32 eventset = context->inst_region_metric_group_support_data.papi_eventset[worker_id];
 	int32 num_present_events = PAPI_num_events(eventset);
