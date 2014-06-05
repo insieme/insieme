@@ -468,6 +468,22 @@ using insieme::core::pattern::anyList;
 
 
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
+		// Semantic check on code
+		auto s = core::checks::check(code, insieme::core::checks::getFullCheck());
+		auto w = s.getWarnings();
+		std::sort(w.begin(), w.end());
+		for_each(w, [](const core::checks::Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
+
+		auto e = s.getErrors();
+		std::sort(e.begin(), e.end());
+		std::cout << "** Error before host preprocessing: " << std::endl;
+		for_each(e, [](const core::checks::Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
+
+
 		auto& manager = converter.getNodeManager();
 
 		core::IRBuilder builder(manager);
@@ -764,7 +780,8 @@ using insieme::core::pattern::anyList;
 		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
         // REMOVE COMMENT TO STOP THE SPLITTING
-        //return code2;
+		return code2;
+
 
 		// add kernel data range annotation
         insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
