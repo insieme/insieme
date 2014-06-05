@@ -302,7 +302,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #endif
 
 	irt_log_comment("starting worker threads");
-	irt_log_setting_u("irt_g_worker_count", worker_count);
+	irt_log_setting_u("IRT_NUM_WORKERS", worker_count);
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;

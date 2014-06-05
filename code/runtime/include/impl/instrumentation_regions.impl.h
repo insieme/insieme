@@ -393,7 +393,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 
 void irt_inst_region_select_metrics_from_env() {
 #ifndef _GEMS
-	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "true") == 0) {
+	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
 		char* metrics = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);

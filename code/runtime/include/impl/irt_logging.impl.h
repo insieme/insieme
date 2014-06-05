@@ -106,6 +106,11 @@ void irt_log_init() {
 #else
 	irt_log_setting_s("USE_OPENCL", "disabled");
 #endif
+#ifdef IRT_USE_PAPI
+	irt_log_setting_s("IRT_USE_PAPI", "enabled");
+#else
+	irt_log_setting_s("IRT_USE_PAPI", "disabled");
+#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_INSTRUMENTATION", "enabled");
 #else
