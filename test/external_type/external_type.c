@@ -2,10 +2,10 @@
 #include <X11/extensions/XShm.h>
 
 int main() {
-    Display *display = NULL;
+    Display *display = XOpenDisplay("");
 
     if (XShmQueryExtension(display))
+        return 0;
+    else
         return 1;
-
-    return 0;
 }
