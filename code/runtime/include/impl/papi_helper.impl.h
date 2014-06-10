@@ -388,12 +388,19 @@ void irt_papi_select_events_from_env(irt_context* context) {
 }
 
 /*
- * allocates memory and selects events from environment variable
+ * allocates memory
  */
 
 void irt_papi_setup(irt_context* context) {
 	context->inst_region_metric_group_support_data.papi_eventset = (int32*)malloc(sizeof(int32) * irt_g_worker_count);
+}
 
+/*
+ * papi thread specific setup, selects events from environment variable
+ */
+
+void irt_papi_setup_thread(irt_worker* worker) {
+	irt_context* context = irt_context_get_current();
 	irt_papi_select_events_from_env(context);
 }
 
@@ -414,5 +421,7 @@ void irt_papi_select_events(irt_context* context, const char* papi_events_string
 void irt_papi_select_events_from_env(irt_context* context) { }
 
 void irt_papi_setup(irt_context* context) { }
+
+void irt_papi_setup_thread(irt_worker* worker) { }
 
 #endif // IRT_USE_PAPI

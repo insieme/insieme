@@ -85,4 +85,6 @@ void irt_papi_select_events_from_env(irt_context* context);
 
 void irt_papi_setup(irt_context* context);
 
+void irt_papi_setup_thread(irt_worker* worker);
+
 #endif // ifndef __GUARD_PAPI_HELPER_H
