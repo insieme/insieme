@@ -55,7 +55,7 @@ static void reco _ANSI_ARGS_((unsigned char *s, int *d, int lx, int lx2, int add
 static void rech _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
 static void rechc _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
 static void recho _ANSI_ARGS_((unsigned char *s, int *d, int lx, int lx2, int addflag,int c, int xa, int xb, int ya, int yb));
-static void recv _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
+static void tmndec_recv _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
 static void recvc _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
 static void recvo _ANSI_ARGS_((unsigned char *s, int *d, int lx, int lx2, int addflag,int c, int xa, int xb, int ya, int yb));
 static void rec4 _ANSI_ARGS_((unsigned char *s, unsigned char *d, int lx, int lx2, int h));
@@ -245,7 +245,7 @@ int chroma;
       recc(s,d,lx,lx2,h);
   else if (!xh && yh)
     if (w!=8)
-      recv(s,d,lx,lx2,h);
+      tmndec_recv(s,d,lx,lx2,h);
     else 
       recvc(s,d,lx,lx2,h);
   else if (xh && !yh)
@@ -437,7 +437,7 @@ int lx,lx2,addflag,c,xa,xb,ya,yb;
   }
 }
 
-static void recv(s,d,lx,lx2,h)
+static void tmndec_recv(s,d,lx,lx2,h)
 unsigned char *s, *d;
 int lx,lx2,h;
 {

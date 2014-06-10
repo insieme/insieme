@@ -1,0 +1,11 @@
+#include <X11/Xutil.h>
+#include <X11/extensions/XShm.h>
+
+int main() {
+    Display *display = XOpenDisplay("");
+
+    if (XShmQueryExtension(display))
+        return 0;
+    else
+        return 1;
+}

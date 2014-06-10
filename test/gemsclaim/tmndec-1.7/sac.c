@@ -84,7 +84,7 @@ int decode_a_symbol(int cumul_freq[ ])
   high = low - 1 + (length * cumul_freq[sacindex-1]) / cumul_freq[0];
   low += (length * cumul_freq[sacindex]) / cumul_freq[0];
 
-  while(1) {  
+  for ( ; ; ) {  
     if (high < q2) ;
     else if (low >= q2) {
       code_value -= q2; 
