@@ -1,0 +1,18 @@
+tmndec.c
+
+while(frame) {
+    getpic.c:getpicture();
+    frame++;
+}
+
+DECODE: 
+    getpic.c:interpolate_...
+        candidate for parallelization
+
+
+DISPLAY:
+
+store.c:storeframe()
+    store.c:store_one()
+        display.c:dither()
+            display.c:display_image()

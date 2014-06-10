@@ -61,14 +61,6 @@
 #include "tmndec.h"
 #include "global.h"
 
-#ifdef DISPLAY
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#endif
-
 
 #ifdef DISPLAY
 
@@ -210,12 +202,12 @@ static long *b_2_pix_alloc;
  *--------------------------------------------------------------
  */
 
+    extern XImage *ximage;
+    extern unsigned long wpixel[3];
 void
 InitColorDither(thirty2)
 int thirty2;
 {
-    extern XImage *ximage;
-    extern unsigned long wpixel[3];
     /*
      * misuse of the wpixel array for the pixel masks. Note that this
      * implies that the window is created before this routine is called
