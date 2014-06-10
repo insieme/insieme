@@ -1093,17 +1093,19 @@ unsigned char *in, *out;
 int width, height;
 {
 
-  int x,xx,y,w2;
+  int x,y,w2;
 
-  unsigned char *pp,*ii;
 
   w2 = 2*width;
 
   /* Horizontally */
-  pp = out;
-  ii = in;
   for (y = 0; y < height-1; y++) {
-    for (x = 0,xx=0; x < width-1; x++,xx+=2) {
+    unsigned char *pp = out + (w2<<1) * y;
+    unsigned char *ii = in + width * y;
+
+    #pragma omp parallel for
+    for (x = 0; x < width-1; x++) {
+      int xx = x * 2;
       *(pp + xx) = *(ii + x);
       *(pp + xx+1) = ((unsigned int)(*(ii + x)  + *(ii + x + 1)))>>1;
       *(pp + w2 + xx) = ((unsigned int)(*(ii + x) + *(ii + x + width)))>>1;
@@ -1119,8 +1121,13 @@ int width, height;
     ii += width;
   }
 
+  unsigned char *pp = out + (w2<<1) * (height-1);
+  unsigned char *ii = in + width * (height-1);
+
   /* last lines */
-  for (x = 0,xx=0; x < width-1; x++,xx+=2) {
+  #pragma omp parallel for
+  for (x = 0; x < width-1; x++) {
+    int xx = x * 2;
     *(pp+ xx) = *(ii + x);    
     *(pp+ xx+1) = ((unsigned int)(*(ii + x) + *(ii + x + 1) + 1))>>1;
     *(pp+ w2+ xx) = *(ii + x);    
