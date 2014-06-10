@@ -3,14 +3,10 @@
 #include <X11/extensions/XShm.h>
 
 int main() {
-    Display *display = NULL;
-
-    display = XOpenDisplay(NULL);
-    if(!display) 
-    	return 1;
+    Display *display = XOpenDisplay("");
 
     if (XShmQueryExtension(display))
         return 0;
-
-    return 1;
+    else
+        return 1;
 }

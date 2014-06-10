@@ -373,7 +373,7 @@ void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {}
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {}
 void irt_optimizer_apply_dct(irt_worker* self) {}
 void irt_optimizer_remove_dct(uint32 outer_worker_to_enable_count) {}
-irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var) {}
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var) { return NULL; }
 void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data) {}
 
 #endif // IRT_ENABLE_OMPP_OPTIMIZER

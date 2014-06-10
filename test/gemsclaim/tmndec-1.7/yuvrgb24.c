@@ -77,6 +77,12 @@ void init_dither_tab()
  *
  ***********************************************************************/
 
+  extern long int crv_tab[];
+  extern long int cbu_tab[];
+  extern long int cgu_tab[];
+
+  extern long int cgv_tab[];
+  extern long int tab_76309[];
 
 
 void ConvertYUVtoRGB(src0,src1,src2,dst_ori,width,height)
@@ -84,12 +90,6 @@ unsigned char *src0, *src1, *src2;
 unsigned char *dst_ori;
 int width, height;
 {       
-  extern long int crv_tab[];
-  extern long int cbu_tab[];
-  extern long int cgu_tab[];
-
-  extern long int cgv_tab[];
-  extern long int tab_76309[];
 
   int y11,y21;
 	int y12,y22;
