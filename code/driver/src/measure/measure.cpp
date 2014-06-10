@@ -1016,7 +1016,7 @@ namespace measure {
 
 				// setup runtime system metric selection
 				std::map<string,string> mod_env = env;
-				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "true";
+				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
 				for(auto metric : metrics) {

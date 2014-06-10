@@ -79,7 +79,7 @@ namespace runtime {
 			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, workItemImpl);
 		}
 
-		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
+		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry, bool instrumentBody) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
@@ -105,8 +105,20 @@ namespace runtime {
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
-			WorkItemVariant variant(builder.lambdaExpr(unit, call, toVector(workItem)));
-			return WorkItemImpl(toVector(variant));
+
+            if(instrumentBody) {
+                core::StatementList stmts;
+                stmts.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(0)));
+                stmts.push_back(call);
+                stmts.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(0)));
+                auto instrumentedBody = builder.compoundStmt(stmts);
+			    WorkItemVariant variant(builder.lambdaExpr(unit, instrumentedBody, toVector(workItem)));
+			    return WorkItemImpl(toVector(variant));
+            }
+            else {
+			    WorkItemVariant variant(builder.lambdaExpr(unit, call, toVector(workItem)));
+			    return WorkItemImpl(toVector(variant));
+            }
 		}
 
 
@@ -131,19 +143,7 @@ namespace runtime {
 
 			vector<core::ExpressionPtr> workItemImpls;
 			for_each(program->getEntryPoints(), [&](const core::ExpressionPtr& entry) {
-                core::ExpressionPtr newEntry = entry;
-
-                if(stmts.empty() && converter.getConverterConfig()->instrumentMainFunction) {
-                    auto lambda = entry.as<core::LambdaExprPtr>()->getLambda();
-                    core::StatementList newBody;
-                    newBody.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(0)));
-                    newBody.push_back(lambda->getBody());
-                    newBody.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(0)));
-
-                    newEntry = builder.lambdaExpr(lambda->getType(), lambda->getParameters(), builder.compoundStmt(newBody));
-                }
-
-				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, newEntry));
+				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, entry, stmts.empty() && converter.getConverterConfig()->instrumentMainFunction));
 				workItemImpls.push_back(impl);
 				stmts.push_back(registerEntryPoint(manager, impl));
 			});

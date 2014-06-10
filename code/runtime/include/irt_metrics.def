@@ -192,7 +192,7 @@ METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_
 )
 #endif
 
-GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS], { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(context); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
+GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS] = {0}, { irt_papi_init(); irt_papi_setup(context); }, { irt_papi_finalize(context); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_TCM)
 METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
