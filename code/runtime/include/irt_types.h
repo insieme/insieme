@@ -91,6 +91,7 @@ static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
 	case IRT_T_CHANNEL: return "IRT_T_CHANNEL"; 
 	case IRT_T_BASIC: return "IRT_T_BASIC"; 
 	}
+	return "IRT_T_UNKNOWN_TYPE";
 }
 
 #endif // ifndef __GUARD_IRT_TYPES_H
