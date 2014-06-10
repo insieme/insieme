@@ -514,20 +514,10 @@ Color32DitherImage(src, out)
 unsigned char *src[];
 unsigned char *out;
 {
-    unsigned char *lum = src[0];
-    unsigned char *cb = src[1];
-    unsigned char *cr = src[2];
     int cols;
     int rows;
 
-    int L, CR, CB;
-    unsigned int *row1, *row2;
-    unsigned char *lum2;
     int x, y;
-    int cr_r;
-    int cr_g;
-    int cb_g;
-    int cb_b;
     int cols_2;
 
     cols = coded_picture_width;
@@ -538,12 +528,24 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    row1 = (unsigned int *)out;
-    row2 = row1 + cols_2 + cols_2;
-    lum2 = lum + cols_2 + cols_2;
     for (y=0; y<rows; y+=2) {
+        #pragma omp parallel for
         for (x=0; x<cols_2; x++) {
             int R, G, B;
+
+            int L, CR, CB;
+            int cr_r;
+            int cr_g;
+            int cb_g;
+            int cb_b;
+
+            int offset = y/2 * cols_2 + x;
+            unsigned char *cb = src[1] + offset;
+            unsigned char *cr = src[2] + offset;
+            unsigned char *lum = src[0] + 2*(offset + (y/2) * cols_2);
+            unsigned char *lum2 = src[0] + (offset + (y/2) * cols_2 + cols_2)*2;
+            unsigned int *row1 = (unsigned int*)out + 2*(offset + (y/2) * cols_2); 
+            unsigned int *row2 = (unsigned int*)out + (cols_2 + offset + (y/2) * cols_2)*2; 
 
             CR = *cr++;
             CB = *cb++;
@@ -608,10 +610,6 @@ unsigned char *out;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
         }
-        lum += cols_2 + cols_2;
-        lum2 += cols_2 + cols_2;
-        row1 += cols_2 + cols_2;
-        row2 += cols_2 + cols_2;
     }
 }
 
