@@ -333,21 +333,22 @@ int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_value
 }
 
 /*
- * select papi events from a comma-delimited string
+ * select papi events from a comma-delimited string, needs to be thread-safe because it is executed by each worker
  */
 
-void irt_papi_select_events(irt_context* context, const char* papi_events_string) {
+void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string) {
 	if(!papi_events_string)
 		return;
 
 	int32 retval = 0;
 
-	for(int i = 0; i < irt_g_worker_count; ++i) {
+	uint16 id = worker->id.thread;
+	char* saveptr = NULL;
 
-		context->inst_region_metric_group_support_data.papi_eventset[i] = PAPI_NULL;
-		
-		if((retval = PAPI_create_eventset(&context->inst_region_metric_group_support_data.papi_eventset[i])) != PAPI_OK) {
-			IRT_DEBUG("Instrumentation: Error creating PAPI event set! Reason: %s\n", PAPI_strerror(retval));
+		context->inst_region_metric_group_support_data.papi_eventset[id] = PAPI_NULL;
+
+		if((retval = PAPI_create_eventset(&context->inst_region_metric_group_support_data.papi_eventset[id])) != PAPI_OK) {
+			IRT_DEBUG("Instrumentation: Error creating PAPI event set for worker %hd! Reason: %s\n", id, PAPI_strerror(retval));
 			return;
 		}
 
@@ -355,36 +356,34 @@ void irt_papi_select_events(irt_context* context, const char* papi_events_string
 
 		strcpy(papi_events_string_copy, papi_events_string);
 
-		char* current_event = strtok(papi_events_string_copy, ",");
+		char* current_event = strtok_r(papi_events_string_copy, ",", &saveptr);
 
 		while(current_event != NULL) {
 			// skip all non-papi events
 			if(strncmp(current_event, "PAPI", 4) != 0) {
-				current_event = strtok(NULL, ",");
+				current_event = strtok_r(NULL, ",", &saveptr);
 				continue;
 			}
 			// skip event types unknown to papi
 			if((retval = PAPI_query_named_event(current_event)) != PAPI_OK) {
 				IRT_INFO("Instrumentation: Unknown PAPI event: %s! Reason: %s\n", current_event, PAPI_strerror(retval));
-				current_event = strtok(NULL, ",");
+				current_event = strtok_r(NULL, ",", &saveptr);
 				continue;
 			}
-			if((retval = PAPI_add_named_event(context->inst_region_metric_group_support_data.papi_eventset[i], current_event)) != PAPI_OK)
-				IRT_INFO("Instrumentation: Error adding PAPI event %s! Reason: %s\n", current_event, PAPI_strerror(retval));
-			current_event = strtok(NULL, ",");
+			if((retval = PAPI_add_named_event(context->inst_region_metric_group_support_data.papi_eventset[id], current_event)) != PAPI_OK)
+				IRT_INFO("Instrumentation: Error adding PAPI event %s for worker %hd! Reason: %s\n", current_event, id, PAPI_strerror(retval));
+			current_event = strtok_r(NULL, ",", &saveptr);
 		}
-
-	}
 }
 
 /*
  * select papi events from region instrumentation types environment variable
  */
 
-void irt_papi_select_events_from_env(irt_context* context) {
+void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) {
 	const char* papi_events_string = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);
 	if(papi_events_string && strcmp(papi_events_string, "") != 0)
-		irt_papi_select_events(context, papi_events_string);
+		irt_papi_select_events(worker, context, papi_events_string);
 }
 
 /*
@@ -401,7 +400,7 @@ void irt_papi_setup(irt_context* context) {
 
 void irt_papi_setup_thread(irt_worker* worker) {
 	irt_context* context = irt_context_get_current();
-	irt_papi_select_events_from_env(context);
+	irt_papi_select_events_from_env(worker, context);
 }
 
 #else //IRT_USE_PAPI
@@ -416,9 +415,9 @@ void irt_papi_stop(long long int* papi_values) { }
 
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) { return -1; }
 
-void irt_papi_select_events(irt_context* context, const char* papi_events_string) { }
+void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string) { }
 
-void irt_papi_select_events_from_env(irt_context* context) { }
+void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) { }
 
 void irt_papi_setup(irt_context* context) { }
 

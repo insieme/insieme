@@ -79,9 +79,9 @@ void irt_papi_stop(long long int* papi_values);
 
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name);
 
-void irt_papi_select_events(irt_context* context, const char* papi_events_string);
+void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string);
 
-void irt_papi_select_events_from_env(irt_context* context);
+void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context);
 
 void irt_papi_setup(irt_context* context);
 
