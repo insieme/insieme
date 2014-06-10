@@ -391,7 +391,7 @@ void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) {
  */
 
 void irt_papi_setup(irt_context* context) {
-	context->inst_region_metric_group_support_data.papi_eventset = (int32*)malloc(sizeof(int32) * irt_g_worker_count);
+	context->inst_region_metric_group_support_data.papi_eventset = (int32*)malloc(sizeof(int32) * IRT_MAX_WORKERS);
 }
 
 /*

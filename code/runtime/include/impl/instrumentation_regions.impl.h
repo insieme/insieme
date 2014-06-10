@@ -231,6 +231,10 @@ void irt_inst_region_finalize(irt_context* context) {
 	free(context->inst_region_data);
 }
 
+void irt_inst_region_finalize_worker(irt_worker* worker) {
+	_irt_inst_region_metrics_finalize_worker(worker);
+}
+
 void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi) {
 	irt_inst_region_list* list = wi->inst_region_list;
 
