@@ -117,7 +117,6 @@ static void DeInstallXErrorHandler()
 void init_display(name)
 char *name;
 {
-  int shmemerror_flag = 0; 
   int crv, cbu, cgu, cgv;
   int y, u, v, r, g, b;
   int i;
@@ -308,7 +307,7 @@ char *name;
 
   InstallXErrorHandler();
 
-  while(shmem_flag)
+  if (shmem_flag)
   {
 
     if (expand)
@@ -329,8 +328,7 @@ char *name;
         XDestroyImage(ximage);
       if (!quiet)
         fprintf(stderr, "Shared memory error, disabling (Ximage error)\n");
-      shmemerror_flag = 1;
-      break;
+      goto shmemerror;
     }
 
     /* Success here, continue. */
@@ -344,8 +342,7 @@ char *name;
       XDestroyImage(ximage);
       if (!quiet)
         fprintf(stderr, "Shared memory error, disabling (seg id error)\n");
-      shmemerror_flag = 1;
-      break;
+      goto shmemerror;
     }
 
     shminfo1.shmaddr = (char *) shmat(shminfo1.shmid, 0, 0);
@@ -360,8 +357,7 @@ char *name;
       {
         fprintf(stderr, "Shared memory error, disabling (address error)\n");
       }
-      shmemerror_flag = 1;
-      break;
+      goto shmemerror;
     }
 
     ximage->data = shminfo1.shmaddr;
@@ -379,8 +375,7 @@ char *name;
       if (!quiet)
         fprintf(stderr, "Shared memory error, disabling.\n");
       gXErrorFlag = 0;
-      shmemerror_flag = 1;
-      break;
+      goto shmemerror;
     }
     else
     {
@@ -391,13 +386,10 @@ char *name;
     {
       fprintf(stderr, "Sharing memory.\n");
     }
-    break;
   }
-
-  if(!shmem_flag || shmemerror_flag)
+  else
   {
-//shmemerror:
-    shmemerror_flag = 0;
+shmemerror:
     shmem_flag = 0;
 #endif
 

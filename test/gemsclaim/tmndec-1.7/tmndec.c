@@ -47,22 +47,7 @@
 #include "tmndec.h"
 #include "global.h"
 
-#ifdef USE_TIME
-#ifndef WIN32
-#include <sys/time.h>
-#else
-#include <windows.h>
-#endif
-#endif
-#ifdef WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
-#ifndef GLOBAL
-char* outputname = NULL;
-#endif
 
 #ifdef WINDOWS
 int initDisplay (int pels, int lines);
@@ -101,7 +86,7 @@ char *argv[];
   /* pointer to name of output files */
 #if (defined DISPLAY || defined WINDOWS)
   if (outtype==T_X11 || outtype == T_WIN)
-    outputname = NULL;
+    outputname = "";
   else
 #endif
     outputname = argv[argc-1];
@@ -276,8 +261,7 @@ static void initdecoder()
 
   /* Clear output file for concatenated storing */
   if (outtype == T_YUV_CONC) {
-    cleared = fopen(outputname,"wb");
-    if (cleared == NULL) 
+    if ((cleared = fopen(outputname,"wb")) == NULL) 
       error("couldn't clear outputfile\n");
     else
       fclose(cleared);

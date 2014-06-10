@@ -60,32 +60,76 @@ void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_ran
 /* OpenMP+ */
 
 typedef struct _irt_optimizer_resources {
-    double energy;
+    #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+    _data_type__ cpu_energy;
+    #define ISOLATE_METRIC
+    #define ISOLATE_CPU_ENERGY
+    #include "irt_metrics.def"
+
+    #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+    _data_type__ cpu_time;
+    #define ISOLATE_METRIC
+    #define ISOLATE_CPU_TIME
+    #include "irt_metrics.def"
+
+    // TODO: power data type?
     float power;
-    float time;
 } irt_optimizer_resources;
 
 // Data types for runtime collected data 
 
+// An id is needed because of hashmap (lookup_table) implementations
+struct _irt_optimizer_wi_data;
+typedef struct _irt_optimizer_wi_data_id {
+    union {
+        uint64 full;
+        struct {
+            // TODO: only a single param clause per region is supported 
+            uint32 param_value;
+            uint16 frequency;
+            uint16 thread_count;
+        };
+    };
+    struct _irt_optimizer_wi_data* cached;
+} irt_optimizer_wi_data_id;
+
 typedef struct _irt_optimizer_wi_data {
-    int frequency;
-    int outer_frequency;
-    int workers_count;
-    int *param_values;  // the list of picked values (indexes) for the variables in a param clause
-    irt_optimizer_resources resources;
+    irt_optimizer_wi_data_id id;
+    struct _irt_optimizer_wi_data* lookup_table_next;
 } irt_optimizer_wi_data;
 
+uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
+    // Python integer tuple hash
+    uint32 value = 0x345678;
+
+    value = (1000003 * value) ^ id.param_value;
+    value = (1000003 * value) ^ id.thread_count;
+    value = (1000003 * value) ^ id.frequency;
+    value = value ^ (3);
+
+    return (value == -1) ? -2 : value;
+}
+
 typedef struct _irt_optimizer_runtime_data {
-    irt_optimizer_wi_data* data;
-    size_t data_size;
-    size_t data_last;
-    size_t completed_wi_count;
+    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS);
+    irt_optimizer_wi_data_id best;
+    irt_optimizer_resources best_resources;
+    irt_optimizer_wi_data_id cur;
+    irt_optimizer_resources cur_resources;
     irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER
+IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS, 0);
+#endif
+
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant);
-void irt_optimizer_apply_optimizations(irt_wi_implementation_variant* variant);
-void irt_optimizer_remove_optimizations(irt_wi_implementation_variant* variant, int pos, bool wi_finalized);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi);
+void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
+void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
+void irt_optimizer_apply_dct(irt_worker* self);
+void irt_optimizer_remove_dct(uint32 outer_worker_to_enable_count);
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var);
+void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H

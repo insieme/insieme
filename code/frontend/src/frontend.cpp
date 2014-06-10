@@ -63,6 +63,7 @@
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
+#include "insieme/frontend/extensions/instrumentation_region_plugin.h"
 
 namespace insieme {
 namespace frontend {
@@ -92,7 +93,8 @@ namespace frontend {
         registerFrontendPlugin<VariadicArgumentsPlugin>();
         registerFrontendPlugin<extensions::ASMExtension>();
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
-        registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
+		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
+		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();

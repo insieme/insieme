@@ -119,7 +119,7 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 						}
 						// convert form non ref to const ref
 						else if (!core::analysis::isConstCppRef(expr->getType())){
-							expr = builder.callExpr(retType, ext.getRefIRToConstCpp(), expr);
+							expr = builder.toConstCppRef(expr);
 						}
 					}
 					else

@@ -403,11 +403,11 @@ void irt_inst_set_all_instrumentation(bool enable) {
 
 void irt_inst_set_all_instrumentation_from_env() {
 	// set whether worker event logging is enabled, and if so, what event types will be logged
-	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
+	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_WORKER_EVENT_LOGGING_ENV, "enabled");
 		
 		// set whether binary format is enabled
-		if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0)) {
+		if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "enabled") == 0)) {
 			irt_g_instrumentation_event_output_is_binary = true;
 			irt_log_setting_s(IRT_INST_BINARY_OUTPUT_ENV, "enabled");
 		} else {

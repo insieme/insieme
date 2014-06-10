@@ -35,30 +35,86 @@
  */
 
 #pragma once
-#ifndef __GUARD_GLOBALS_H
-#define __GUARD_GLOBALS_H
 
-#include "config.h" // required to make the switch in threads.h work
-#include "abstraction/threads.h"
 #include "irt_inttypes.h"
-#include "runtime.h"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <stdio.h>
 
-extern irt_tls_key irt_g_error_key;
-extern irt_mutex_obj irt_g_error_mutex;
+static inline uint32_t cp15_read_cbar(void)
+{
+	uint32_t cbar;
+	__asm volatile ("mrc p15, 4, %[cbar], c15, c0, 0" : [cbar] "=r" (cbar));
+	return cbar & ~0x1FFF; // Only [31:13] is valid
+}
 
-extern irt_tls_key irt_g_worker_key;
-extern uint32 irt_g_worker_count;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-extern uint32 irt_g_enabled_worker_count;
-extern uint32 irt_g_worker_to_enable_count;
-extern irt_cond_bundle irt_g_enable_worker_cond;
+uint64 irt_time_ticks(void) {
+
+#define MAP_SIZE 4096UL
+#define MAP_MASK (MAP_SIZE - 1)
+
+#define GLOBAL_TIMER_BASE 0X48240200U
+	return 0;
+
+	int fd;
+	void *map_base, *virt_addr;
+	uint64 l, u;
+
+	//printf("base = %u\n", cp15_read_cbar());
+
+	if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1)
+	{
+		printf("open\n");
+		return 0;
+	}
+
+	map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, GLOBAL_TIMER_BASE & ~MAP_MASK);
+	if(map_base == (void *) -1) 
+	{
+		printf("mmap\n");
+		return 0;
+	}
+
+	virt_addr = map_base + (GLOBAL_TIMER_BASE & MAP_MASK);
+	
+	for(int i=0; i<500; i++)
+	printf("%d ",*(((char*) map_base) + i));
+	printf("\n");
+
+	l = *((uint64*)virt_addr);
+	u = *(((uint32*)virt_addr) +1);
+
+	if(munmap(map_base, MAP_SIZE) == -1)
+	{
+		printf("munmap\n");
+		return 0;
+	}
+	close(fd);
+
+	return ((u << 32) | l);
+}
+
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+#if 0
+	volatile unsigned d;
+	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
 #endif
-extern uint32 irt_g_active_worker_count;
-extern irt_mutex_obj irt_g_active_worker_mutex;
-struct _irt_worker;
-extern struct _irt_worker **irt_g_workers;
+	return 0;
+}
 
-extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
-
-
-#endif // ifndef __GUARD_GLOBALS_H
+bool irt_time_ticks_constant() {
+#if 0
+	volatile unsigned d;
+	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+#endif
+	return 1;
+}

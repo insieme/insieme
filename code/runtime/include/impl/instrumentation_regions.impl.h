@@ -59,13 +59,6 @@
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
-#ifndef _GEMS
-	// make sure scheduling policy is fixed to static
-	#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
-		#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
-	#endif
-#endif
-
 void _irt_inst_region_stack_push(irt_work_item* wi, irt_inst_region_context_data* region) {
 	irt_inst_region_list* list = wi->inst_region_list;
 
@@ -92,7 +85,10 @@ irt_inst_region_context_data* _irt_inst_region_stack_pop(irt_work_item* wi) {
 
 void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	irt_inst_region_context_data* rg = irt_inst_region_get_current(wi);
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#pragma GCC diagnostic push
+// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_region_early_start_code__; \
@@ -104,6 +100,7 @@ void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	}
 #include "irt_metrics.def"
 }
+#pragma GCC diagnostic pop // needs to be done after ending the function scope
 
 void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 	irt_inst_region_list* list = wi->inst_region_list;
@@ -113,7 +110,10 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
 #include "irt_metrics.def"
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#pragma GCC diagnostic push
+// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_region_late_end_code__; \
@@ -134,6 +134,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 #include "irt_metrics.def"
 	}
 }
+#pragma GCC diagnostic pop // needs to be done after ending the function scope
 
 void _irt_inst_region_metrics_init(irt_context* context) {
 	// initialize IDs
@@ -141,21 +142,36 @@ void _irt_inst_region_metrics_init(irt_context* context) {
 	int group_id = 0;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	irt_g_region_metric_##_name__##_id = metric_id++;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	irt_g_region_metric_group_##_name__##_id = group_id++;
 #include "irt_metrics.def"
 	irt_g_inst_region_metric_count = metric_id;
 	irt_g_inst_region_metric_group_count = group_id;
 	// initialize groups
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_init_code__;
+#include "irt_metrics.def"
+}
+
+
+void _irt_inst_region_metrics_init_worker(irt_worker* worker) {
+	// thread-specific initialization of groups
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_init_code_worker__;
 #include "irt_metrics.def"
 }
 
 void _irt_inst_region_metrics_finalize(irt_context* context) {
 	// finalize groups
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_finalize_code__;
+#include "irt_metrics.def"
+}
+
+void _irt_inst_region_metrics_finalize_worker(irt_worker* worker) {
+	// thread-specific finalization of groups
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+	_finalize_code_worker__;
 #include "irt_metrics.def"
 }
 
@@ -208,6 +224,10 @@ void irt_inst_region_init(irt_context* context) {
 	irt_inst_region_select_metrics_from_env();
 }
 
+void irt_inst_region_init_worker(irt_worker* worker) {
+	_irt_inst_region_metrics_init_worker(worker);
+}
+
 void irt_inst_region_finalize(irt_context* context) {
 	_irt_inst_region_metrics_finalize(context);
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
@@ -217,6 +237,10 @@ void irt_inst_region_finalize(irt_context* context) {
 		irt_spin_destroy(&context->inst_region_data[i].lock);
 	}
 	free(context->inst_region_data);
+}
+
+void irt_inst_region_finalize_worker(irt_worker* worker) {
+	_irt_inst_region_metrics_finalize_worker(worker);
 }
 
 void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi) {
@@ -253,8 +277,10 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 		return;
 
 	irt_context* context = irt_context_table_lookup(wi->context_id);
-
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#pragma GCC diagnostic push
+// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		_wi_start_code__; \
@@ -271,6 +297,7 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 	}
 #include "irt_metrics.def"
 }
+#pragma GCC diagnostic pop // needs to be done after ending the function scope
 
 void irt_inst_region_end_measurements(irt_work_item* wi) {
 	if(wi->inst_region_list->length <= 0)
@@ -278,7 +305,10 @@ void irt_inst_region_end_measurements(irt_work_item* wi) {
 
 	irt_context* context = irt_context_table_lookup(wi->context_id);
 
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#pragma GCC diagnostic push
+// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_local_var_decls__; \
 	if(irt_g_inst_region_metric_group_##_name__##membership_count > 0) { /* only count if enabled dynamically (e.g. via env var) */ \
 		wi_end_code__; \
@@ -291,6 +321,7 @@ void irt_inst_region_end_measurements(irt_work_item* wi) {
 	}
 #include "irt_metrics.def"
 }
+#pragma GCC diagnostic pop // needs to be done after ending the function scope
 
 // start a region and push it to the region stack of the WI
 void irt_inst_region_start(const irt_inst_region_id id) {
@@ -400,7 +431,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 
 void irt_inst_region_select_metrics_from_env() {
 #ifndef _GEMS
-	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "true") == 0) {
+	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
 		char* metrics = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);
@@ -508,7 +539,9 @@ void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source
 void irt_inst_region_wi_init(irt_work_item* wi) { }
 void irt_inst_region_wi_finalize(irt_work_item* wi) { }
 void irt_inst_region_init(irt_context* context) { }
+void irt_inst_region_init_worker(irt_worker* worker) { }
 void irt_inst_region_finalize(irt_context* context) { }
+void irt_inst_region_finalize_worker(irt_worker* worker) { }
 void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi) { }
 void irt_inst_region_start_measurements(irt_work_item* wi) { }
 void irt_inst_region_end_measurements(irt_work_item* wi) { }

@@ -79,6 +79,11 @@ irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+uint32 irt_g_enabled_worker_count;
+uint32 irt_g_worker_to_enable_count;
+irt_cond_bundle irt_g_enable_worker_cond;
+#endif
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -91,9 +96,15 @@ IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 static bool irt_g_exit_handling_done;
+static bool irt_g_globals_initialization_done = false;
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+	if(irt_g_globals_initialization_done)
+		return;
+
+	irt_g_globals_initialization_done = true;
+
 	irt_g_exit_handling_done = false;
 
 	irt_log_init();
@@ -112,6 +123,9 @@ void irt_init_globals() {
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
 	irt_mutex_init(&irt_g_active_worker_mutex);
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+	irt_cond_bundle_init(&irt_g_enable_worker_cond);
+#endif
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
@@ -137,6 +151,7 @@ void irt_cleanup_globals() {
 	irt_tls_key_delete(irt_g_error_key);
 	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
+	irt_g_globals_initialization_done = false;
 }
 
 // exit handling
@@ -280,8 +295,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		atexit(&irt_exit_handler);
 	}
 #endif
+
 	// initialize globals
 	irt_init_globals();
+	// TODO: superfluous?
 	irt_g_exit_handling_done = false;
 
 	_irt_setup_hardware_info();
@@ -294,10 +311,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #endif
 
 	irt_log_comment("starting worker threads");
-	irt_log_setting_u("irt_g_worker_count", worker_count);
+	irt_log_setting_u("IRT_NUM_WORKERS", worker_count);
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+    irt_g_enabled_worker_count = irt_g_worker_count;
+    irt_g_worker_to_enable_count = irt_g_worker_count;
+#endif
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 
 	// initialize affinity mapping & load affinity policy
@@ -370,9 +391,14 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
         irt_mutex_init(&print_mutex);
     #endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);
+	// initialize globals
+	irt_init_globals();
+	irt_worker tempw;
+	tempw.generator_id = 0;
+	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
-	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;

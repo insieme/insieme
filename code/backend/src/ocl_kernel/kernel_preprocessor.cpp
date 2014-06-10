@@ -68,12 +68,10 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-
 	using namespace insieme::annotations::ocl;
 	namespace irp =  insieme::core::pattern::irp;
 	namespace tr = insieme::core::pattern;
     namespace rb = insieme::transform::rulebased;
-	//using namespace insieme::core;
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -438,7 +436,6 @@ namespace {
 
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
-
 				// check whether this is the call to a kernel
 				if (res->getNodeType() == core::NT_CallExpr) {
 					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
@@ -495,7 +492,8 @@ namespace {
 				// - get_num_groups => first declaration
 				// - get_*_size => last two parameters
 
-				//LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Errors Before: " << core::checks::check(core, core::checks::getFullCheck());
 
 				// ------------------ Update variable names within kernel core -------------------
 
@@ -514,16 +512,16 @@ namespace {
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
                         core::VariablePtr var = cur.second.as<core::VariablePtr>();
-                        if(core::annotations::hasNameAttached(cur.first)) {
-                            core::annotations::attachName(var, core::annotations::getAttachedName(cur.first));
-                        }
+						if(core::annotations::hasNameAttached(cur.first)) {
+							core::annotations::attachName(var, core::annotations::getAttachedName(cur.first));
+						}
 
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
                             // create a new variable with the right address space
-                            var = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
+							var = builder.variable(extensions.getType(pos->second, var->getType()), var->getId()); // FIXME: BUG!!
 						}
-                        parameters.insert(std::make_pair(cur.first, var));
+						parameters.insert(std::make_pair(cur.first, var));
 					} else {
                         // we are in the case of local variables, for example:
                         // cur.first => v86 cur.second => ref.var(undefined(vector<int<4>,258>
@@ -543,7 +541,11 @@ namespace {
                 //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
 
                 // unwrap types before being passed to build-in / external functions
+				LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
                 core = unwrapTypes(core);
+				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Errors Before: " << core::checks::check(core, core::checks::getFullCheck());
 
                 // search for float* gl = &g[0]; || float* gl = &g[3]; where g is global
                 // so we can add then the __global to gl
@@ -666,8 +668,9 @@ namespace {
 					out.close();
 				}
 
-				//LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
-				//LOG(INFO) << "Errors: " << core::check(newKernel, core::checks::getFullCheck());
+				LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
+				LOG(INFO) << "Errors After Kernel preprocess: " << core::checks::check(newKernel, core::checks::getFullCheck());
+				exit(0); // To remove
 				return res;
 			}
 		};
