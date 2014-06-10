@@ -247,7 +247,7 @@ METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METR
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_TOT_INS)
 METRIC(PAPI_TOT_INS,			330,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_TOT_INS = 0; }, \
-	{ wi->inst_region_data->aggregated_PAPI_TOT_INS = irt_papi_get_value_by_name(context, papi_values, "PAPI_TOT_INS");  printf("current papi values: %lld, %lld, %lld, %lld\n", papi_values[0], papi_values[1], papi_values[2], papi_values[3]); }, \
+	{ wi->inst_region_data->aggregated_PAPI_TOT_INS = irt_papi_get_value_by_name(context, papi_values, "PAPI_TOT_INS"); }, \
 	{  }, \
 	{  }, \
 	1 \
