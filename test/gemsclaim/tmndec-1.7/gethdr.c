@@ -149,12 +149,12 @@ static void getpicturehdr()
 #endif	
 
   pei = getbits(1);
-//pspare:
-  while (pei) {
+pspare:
+  if (pei) {
      /* extra info for possible future backward compatible additions */
     getbits(8);  /* not used */
     pei = getbits(1);
-//    if (pei) goto pspare; /* keep on reading pspare until pei=0 */
+    if (pei) goto pspare; /* keep on reading pspare until pei=0 */
   }
 
 

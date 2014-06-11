@@ -129,9 +129,6 @@ int *framenum;
 static void getMBs(framenum)
 int framenum;
 {
-  int resync_flag = 0;
-  int read_cod_flag = 0;
-  int reconstruct_mb_flag = 0;
   int comp;
   int MBA, MBAmax;
   int bx, by;
@@ -176,14 +173,9 @@ int framenum;
   
   while(1) {
 
-    if(!reconstruct_mb_flag) {
-    if(!read_cod_flag) {
-    if(!resync_flag) {
     if (trace)
       printf("frame %d, MB %d\n",framenum,MBA);
-   }
-//  resync:
-	resync_flag = 0;
+  resync:
 
     /* This version of the decoder does not resync on every possible
        error, and it does not do all possible error checks. It is not
@@ -218,41 +210,40 @@ int framenum;
 
           if (syntax_arith_coding) {   /* SAC hack to finish GOBs which   */
             gob = (showbits(22) & 31); /* end with MBs coded with no bits */
+            if (gob * mb_width != MBA) 
+              goto finish_gob;
           }
 
-          if (!(syntax_arith_coding && gob * mb_width != MBA)) 
-          {
-          	gob = getheader() - 1;
-          	if (gob > mb_height) {
-          	  if (!quiet)
-          	    printf("GN out of range\n");
-          	  return;
-          	}
-          	
-          	/* GFID is not allowed to change unless PTYPE in picture header 
-          	   changes */
-          	gfid = getbits(2);
-          	/* NB: in error-prone environments the decoder can use this
-          	   value to determine whether a picture header where the PTYPE
-          	   has changed, has been lost */
-          	
-          	quant = getbits(5);
-          	if (trace)
-          	  printf("GQUANT: %d\n", quant);
-          	xpos = 0;
-          	ypos = gob;
-          	MBA = ypos * mb_width;
-          	
-          	newgob = 1;
-          	gobheader_read = 1;
-          	if (syntax_arith_coding) 
-          	  decoder_reset();	/* init. arithmetic decoder buffer after gob */
-	  }
+          gob = getheader() - 1;
+          if (gob > mb_height) {
+            if (!quiet)
+              printf("GN out of range\n");
+            return;
+          }
+          
+          /* GFID is not allowed to change unless PTYPE in picture header 
+             changes */
+          gfid = getbits(2);
+          /* NB: in error-prone environments the decoder can use this
+             value to determine whether a picture header where the PTYPE
+             has changed, has been lost */
+          
+          quant = getbits(5);
+          if (trace)
+            printf("GQUANT: %d\n", quant);
+          xpos = 0;
+          ypos = gob;
+          MBA = ypos * mb_width;
+          
+          newgob = 1;
+          gobheader_read = 1;
+          if (syntax_arith_coding) 
+            decoder_reset();	/* init. arithmetic decoder buffer after gob */
         }
       }
     }
 
- // finish_gob:  /* SAC specific label */
+  finish_gob:  /* SAC specific label */
 
     if (!gobheader_read) {
       xpos = MBA%mb_width;
@@ -265,10 +256,8 @@ int framenum;
 
     if (MBA>=MBAmax) 
       return; /* all macroblocks decoded */
-    }
 
- // read_cod:
-    read_cod_flag = 0;
+  read_cod:
     if (syntax_arith_coding) { 
       if (pict_type == PCT_INTER) {
         COD_index = decode_a_symbol(cumf_COD);
@@ -312,14 +301,10 @@ int framenum;
           MCBPC = getMCBPC();
       }
 
-      if (fault) {
-		resync_flag = 1;
-		continue;
-	}
+      if (fault) goto resync;
       
       if (MCBPC == 255) { /* stuffing */
-	read_cod_flag = 1;
-	continue;
+        goto read_cod;   /* read next COD without advancing MB count */
       }
 
       else {             /* normal MB data */
@@ -517,10 +502,7 @@ int framenum;
         }
       }
 
-      if (fault) {
-		resync_flag = 1;
-		continue;
-	}
+      if (fault) goto resync;
 
     }
     else { /* COD == 1 --> skipped MB */
@@ -549,9 +531,9 @@ int framenum;
       if (!pb_frame)
         MV[0][0][ypos+1][xpos+1]=MV[1][0][ypos+1][xpos+1] = 0;
 
-     }
-//  reconstruct_mb:
-    reconstruct_mb_flag = 0;
+
+  reconstruct_mb:
+
     /* pixel coordinates of top left corner of current macroblock */
     /* one delayed because of OBMC */
     if (xpos > 0) {
@@ -660,14 +642,8 @@ int framenum;
           }
 
         }
-        if (fault){
-		resync_flag = 1;
-		break;
-		}
+        if (fault) goto resync;
       }
-	
-      if(fault && resync_flag)
-		continue;
 
       /* Decode B blocks */
       if (pb_frame) {
@@ -679,13 +655,8 @@ int framenum;
             else
               get_sac_block(comp,1);
           }
-          if (fault) {
-		resync_flag = 1;
-		break;
-		}
+          if (fault) goto resync;
         }
-	if (fault && resync_flag)
-		continue;
       }
           
     }
@@ -702,8 +673,7 @@ int framenum;
       xpos = 0;
       ypos++;
       last_done = 1;
-      reconstruct_mb_flag = 1;
-      continue;
+      goto reconstruct_mb;
     }
 
   }
@@ -1123,17 +1093,19 @@ unsigned char *in, *out;
 int width, height;
 {
 
-  int x,xx,y,w2;
+  int x,y,w2;
 
-  unsigned char *pp,*ii;
 
   w2 = 2*width;
 
   /* Horizontally */
-  pp = out;
-  ii = in;
   for (y = 0; y < height-1; y++) {
-    for (x = 0,xx=0; x < width-1; x++,xx+=2) {
+    unsigned char *pp = out + (w2<<1) * y;
+    unsigned char *ii = in + width * y;
+
+    #pragma omp parallel for
+    for (x = 0; x < width-1; x++) {
+      int xx = x * 2;
       *(pp + xx) = *(ii + x);
       *(pp + xx+1) = ((unsigned int)(*(ii + x)  + *(ii + x + 1)))>>1;
       *(pp + w2 + xx) = ((unsigned int)(*(ii + x) + *(ii + x + width)))>>1;
@@ -1149,8 +1121,13 @@ int width, height;
     ii += width;
   }
 
+  unsigned char *pp = out + (w2<<1) * (height-1);
+  unsigned char *ii = in + width * (height-1);
+
   /* last lines */
-  for (x = 0,xx=0; x < width-1; x++,xx+=2) {
+  #pragma omp parallel for
+  for (x = 0; x < width-1; x++) {
+    int xx = x * 2;
     *(pp+ xx) = *(ii + x);    
     *(pp+ xx+1) = ((unsigned int)(*(ii + x) + *(ii + x + 1) + 1))>>1;
     *(pp+ w2+ xx) = *(ii + x);    

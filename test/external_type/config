@@ -1,1 +1,1 @@
-libNames="Xext"
+libNames="Xext","X11"

@@ -49,6 +49,29 @@
 #define EXTERN
 #endif
 
+#include <unistd.h>
+#ifdef USE_TIME
+#ifndef WIN32
+#include <sys/time.h>
+#else
+#include <windows.h>
+#endif
+#endif
+#ifdef WIN32
+#include <io.h>
+#endif
+
+#ifdef DISPLAY
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xlibint.h>
+#endif
+
+
+
 /* Some macros */
 #define mmax(a, b)        ((a) > (b) ? (a) : (b))
 #define mmin(a, b)        ((a) < (b) ? (a) : (b))
@@ -133,13 +156,14 @@ void ConvertYUVtoRGB(
   int width,
   int height
 );
+void init_dither_tab();
 #endif
 
 
 
 /* global variables */
 
-EXTERN char version[64]
+EXTERN char version[]
 #ifdef GLOBAL
   ="tmndecode v1.7\n(C) 1995, 1996 Telenor R&D\n"
 #endif
@@ -287,11 +311,7 @@ EXTERN int roundtab[16]
 ;
 
 /* output */
-#ifndef GLOBAL
 EXTERN char *outputname;
-#else
-char *outputname = NULL;
-#endif
 EXTERN int outtype;
 #define T_YUV      0
 #define T_SIF      1
