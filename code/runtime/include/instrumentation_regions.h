@@ -58,14 +58,14 @@ uint32 irt_g_inst_region_metric_group_count = 0;
 
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 uint32 irt_g_region_metric_##_name__##_id;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_region_metric_group_##_name__##_id;
 #include "irt_metrics.def"
 
 // create metric flags and group counts for selectively enabling/disabling instrumentation
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 bool irt_g_inst_region_metric_measure_##_name__ = false;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 uint32 irt_g_inst_region_metric_group_##_name__##membership_count = 0;
 #include "irt_metrics.def"
 
@@ -103,7 +103,7 @@ typedef struct {
 } irt_inst_region_wi_data;
 
 typedef struct {
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _finalize_code__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
 	_global_var_decls__;
 #include "irt_metrics.def"
 } irt_inst_region_context_declarations;
@@ -122,7 +122,11 @@ void irt_inst_region_wi_finalize(irt_work_item* wi);
 
 void irt_inst_region_init(irt_context* context);
 
+void irt_inst_region_init_worker(irt_worker* worker);
+
 void irt_inst_region_finalize(irt_context* context);
+
+void irt_inst_region_finalize_worker(irt_worker* worker);
 
 void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi);
 

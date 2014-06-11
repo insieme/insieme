@@ -148,6 +148,9 @@ void* _irt_worker_func(void *argvp) {
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_inst_region_init_worker(self);
+#endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif

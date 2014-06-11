@@ -107,7 +107,7 @@ uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
     value = (1000003 * value) ^ id.frequency;
     value = value ^ (3);
 
-    return (value == -1) ? -2 : value;
+    return (value == (uint32)-1) ? -2 : value;
 }
 
 typedef struct _irt_optimizer_runtime_data {
@@ -119,7 +119,9 @@ typedef struct _irt_optimizer_runtime_data {
     irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER
 IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS, 0);
+#endif
 
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi);

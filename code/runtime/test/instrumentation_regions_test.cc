@@ -365,7 +365,7 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 	irt_inst_region_select_metrics(env_string);
 	// explicit call to papi necessary because we do not have an env var 
 	// set as it would be the case for normal apps running in the runtime
-	irt_papi_select_events(irt_context_get_current(), env_string);
+	irt_papi_select_events(irt_worker_get_current(), irt_context_get_current(), env_string);
 	
 	double a = 2.0;
 	double b = 1.0;

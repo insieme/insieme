@@ -307,10 +307,11 @@ namespace backend {
 			}
 
 			// check whether there is an annotated include file (intercepted type) [avoir primitives and unit, those could have header as well]
-			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !gen.isIRBuiltin(type)) {
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !core::annotations::hasNameAttached(type) && !gen.isIRBuiltin(type)) {
 				auto genericType = type.as<core::GenericTypePtr>();
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
+
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 
 				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
@@ -376,7 +377,6 @@ namespace backend {
 			if (annotations::c::hasIncludeAttached(type) && core::annotations::hasNameAttached(type) && !gen.isPrimitive(type)) {
 				const string& name  = core::annotations::getAttachedName(type);
 				const string& header = annotations::c::getAttachedInclude(type);
-				//std::cout << "system header type " << name << " - " << header << " " << type << std::endl;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 				addInfo(type, info);
 				return info;

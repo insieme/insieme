@@ -71,7 +71,7 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		uint32 coreid = irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity);
-		if(coreid != -1)
+		if(coreid != (uint32)-1)
 			socket_mask[coreid / irt_get_num_cores_per_socket()] = true;
 	}
 
