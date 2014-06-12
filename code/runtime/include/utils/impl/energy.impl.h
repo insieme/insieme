@@ -62,6 +62,8 @@ void irt_energy_select_instrumentation_method() {
 #endif
 	if(irt_rapl_is_supported() && papi_available) {
 		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
+		irt_g_inst_rapl_in_use = true;
+		irt_rapl_init();
 		irt_log_setting_s("irt energy measurement method", "rapl");
 	} else {
 		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
