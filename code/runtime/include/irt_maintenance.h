@@ -49,7 +49,7 @@
 // Each event is defined by a "irt_maintenance_lambda" structure which needs to be maintained 
 // in user code. Its "irt_maintenance_func" will be called at the specified interval and
 // should return either the new desired interval (changing intervals incurs a small
-// perormance overhead and should be avoided).
+// performance overhead and should be avoided).
 //
 // Events can be asynchronously added by any threads using "irt_maintenance_register"
 // and can be removed from the system by returning a new interval time to 0.
@@ -173,7 +173,7 @@ void irt_maintenance_register(irt_maintenance_lambda *lam) {
 }
 
 // maintenance thread function
-void* irt_maintenance_thread_func(void *) {
+void* irt_maintenance_thread_func(void * data) {
 	// consecutive maintenance counter to determine events to execute
 	uint64 maintenance_count = 0;
 
