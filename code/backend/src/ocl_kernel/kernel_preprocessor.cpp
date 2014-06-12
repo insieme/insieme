@@ -383,9 +383,17 @@ namespace {
 
 				core::CallExprPtr call = res.as<core::CallExprPtr>();
                 core::ExpressionPtr fun = call->getFunctionExpr();
-                if (fun->getNodeType() != core::NT_Literal) {
+				//if (fun->getNodeType() != core::NT_Literal) {
+				//	return res;
+				//}
+				if (manager.getLangBasic().isBuiltIn(fun)) {
+					std::cout << "              BUILTIN: " << fun << std::endl;
 					return res;
 				}
+				std::cout << "               NOOOT BUILTIN: " << fun << std::endl;
+
+
+				//if (!core::analysis::isCallOf(fun, manager.getLangBasic().getArrayRefElem1D())) return res;
 
 				// so, it is a literal => we have to unwrap potentially wrapped arguments
 				vector<core::ExpressionPtr> newArgs;
@@ -395,9 +403,12 @@ namespace {
                         newArgs.push_back(extensions.unWrapExpr(cur));
                     else
                         newArgs.push_back(cur);
+					std::cout << "EEEE" << cur << " " << newArgs.back() << std::endl;
 				});
-
-				return builder.callExpr(call->getType(), fun, newArgs);
+				std::cout << "!!! " << fun << " xxx " << fun->getType() << fun->getNodeType() << std::endl;
+				//std::cout << "ECCO" << newArgs[0] << " " << newArgs[1] << newArgs[2] << std::endl;
+				//return builder.arrayAccess(newArgs[1], newArgs[0]);
+				return builder.callExpr(fun, newArgs);
 			}
 		};
 
@@ -535,17 +546,18 @@ namespace {
 						parameters.insert(std::make_pair(cur.first, var));
 					}
 				});
+				std::cout << "      PARAM" << parameters << std::endl;
 
                 // replace parameters by variables with wrapped types
-                core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::no_type_fixes);
+				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::defaultTypeRecovery);
                 //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
 
                 // unwrap types before being passed to build-in / external functions
 				LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
 				LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
                 core = unwrapTypes(core);
-				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
-				LOG(INFO) << "Errors Before: " << core::checks::check(core, core::checks::getFullCheck());
+				LOG(INFO) << "After Unwrap: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Errors After Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
 
                 // search for float* gl = &g[0]; || float* gl = &g[3]; where g is global
                 // so we can add then the __global to gl
