@@ -151,7 +151,7 @@ GROUP(energy_group, int eg_dummy, rapl_energy_data rapl_data, { irt_energy_selec
 )
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_ENERGY)
-METRIC(cpu_energy,					100,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
+METRIC(cpu_energy,					100,	kg*m^2*s^-2,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{}, \
 	{}, \
 	{ rg->last_cpu_energy = rapl_data.package; }, \
@@ -161,7 +161,7 @@ METRIC(cpu_energy,					100,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CORES_ENERGY)
-METRIC(cores_energy,				101,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
+METRIC(cores_energy,				101,	kg*m^2*s^-2,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{}, \
 	{}, \
 	{ rg->last_cores_energy = rapl_data.cores; }, \
@@ -171,7 +171,7 @@ METRIC(cores_energy,				101,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_MEMORY_CONTROLLER_ENERGY)
-METRIC(memory_controller_energy,	102,	j,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
+METRIC(memory_controller_energy,	102,	kg*m^2*s^-2,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	energy_group, \
 	{}, \
 	{}, \
 	{ rg->last_memory_controller_energy = rapl_data.mc; }, \
