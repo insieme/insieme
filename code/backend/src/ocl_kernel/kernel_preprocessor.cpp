@@ -519,7 +519,8 @@ namespace {
 
 				// Separate variable map into local variable declarations and parameters
 				VariableMap localVars;
-				utils::map::PointerMap<core::VariablePtr, core::VariablePtr> parameters;
+				core::NodeMap  parameters;
+
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
                         core::VariablePtr var = cur.second.as<core::VariablePtr>();
@@ -530,9 +531,12 @@ namespace {
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
                             // create a new variable with the right address space
-							var = builder.variable(extensions.getType(pos->second, var->getType()), var->getId()); // FIXME: BUG!!
+							var = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
+							// add the unwrap in front of the variable to maintain the correct semantic
+							parameters.insert(std::make_pair(cur.first, extensions.unWrapExpr(var)));
+						} else {
+							parameters.insert(std::make_pair(cur.first, var));
 						}
-						parameters.insert(std::make_pair(cur.first, var));
 					} else {
                         // we are in the case of local variables, for example:
                         // cur.first => v86 cur.second => ref.var(undefined(vector<int<4>,258>
@@ -549,15 +553,16 @@ namespace {
 				std::cout << "      PARAM" << parameters << std::endl;
 
                 // replace parameters by variables with wrapped types
-				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::defaultTypeRecovery);
+				//core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::defaultTypeRecovery);
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, parameters, false));
                 //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
 
                 // unwrap types before being passed to build-in / external functions
 				LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
 				LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
-                core = unwrapTypes(core);
-				LOG(INFO) << "After Unwrap: " << core::printer::PrettyPrinter(core);
-				LOG(INFO) << "Errors After Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
+				//core = unwrapTypes(core);
+				//LOG(INFO) << "After Unwrap: " << core::printer::PrettyPrinter(core);
+				//LOG(INFO) << "Errors After Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
 
                 // search for float* gl = &g[0]; || float* gl = &g[3]; where g is global
                 // so we can add then the __global to gl
@@ -682,7 +687,6 @@ namespace {
 
 				LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
 				LOG(INFO) << "Errors After Kernel preprocess: " << core::checks::check(newKernel, core::checks::getFullCheck());
-				exit(0); // To remove
 				return res;
 			}
 		};
