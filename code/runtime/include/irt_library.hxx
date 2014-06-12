@@ -70,17 +70,23 @@ namespace irt {
 	template<class LoopCallable>
 	inline void pfor(int64 begin, int64 end, int64 step, const LoopCallable& fun) {
 		if(irt_wi_get_wg_size(irt_wi_get_current(), 0) < 1) {
-			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
-		} else {
 			irt::merge( irt::parallel([&](){ irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable)); } ) );
+		} else {
+			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
 		}
 		return;
 	}
 
-	// Executes "fun" for each element of the given container
+	// Executes "fun" for each element of the given container in parallel
 	template<class ElemCallable, class Container>
 	inline void pfor(Container& container, ElemCallable fun) {
 		pfor(0, container.size(), 1, [&](int64 i) { fun(container[i]); });
+	}
+
+	// Executes "fun" for each element of the given container in parallel
+	template<class Iter, class ElemCallable>
+	inline void pfor(const Iter& begin, const Iter& end, ElemCallable fun) {
+		pfor(0, std::distance(end,begin), 1, [&](int64 i) { fun(begin + i); });
 	}
 
 	// Maps each element of the given container to the result of executing "mapper" on it (in place)
@@ -89,4 +95,17 @@ namespace irt {
 		pfor(0, container.size(), 1, [&](int64 i) { container[i] = mapper(container[i]); });
 	}
 
+	// a barrier for the current work group
+	inline void barrier() {
+		irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(),0));
+	}
+
+
+	inline void critical_start() {
+		irt_lib_critical_start();
+	}
+
+	inline void critical_end() {
+		irt_lib_critical_end();
+	}
 };

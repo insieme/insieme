@@ -107,7 +107,7 @@ uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
     value = (1000003 * value) ^ id.frequency;
     value = value ^ (3);
 
-    return (value == -1) ? -2 : value;
+    return (value == (uint32)-1) ? -2 : value;
 }
 
 typedef struct _irt_optimizer_runtime_data {

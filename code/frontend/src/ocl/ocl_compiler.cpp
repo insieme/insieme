@@ -1123,7 +1123,9 @@ public:
 
                         //declare and set the local range if provided by work group size attribute
                         core::DeclarationStmtPtr lrd = builder.declarationStmt(kd.localRange, builder.vectorExpr(toVector<core::ExpressionPtr>(
-                                builder.uintLit(wgs[0]), builder.uintLit(wgs[1]), builder.uintLit(wgs[2]))));
+                                builder.literal(BASIC.getUInt8(), toString(wgs[0])),
+                                builder.literal(BASIC.getUInt8(), toString(wgs[1])),
+                                builder.literal(BASIC.getUInt8(), toString(wgs[2])))));
                         newBodyStmts.push_back(lrd);
                     }
                     //declare group range TODO fix error of checker
