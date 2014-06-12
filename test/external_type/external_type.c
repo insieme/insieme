@@ -3,7 +3,10 @@
 #include <X11/extensions/XShm.h>
 
 int main() {
+    XEvent xev;
     Display *display = XOpenDisplay("");
+
+    XCheckMaskEvent(display, 0, &xev);
 
     if (XShmQueryExtension(display))
         return 0;
