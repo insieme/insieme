@@ -245,6 +245,7 @@ void* irt_maintenance_thread_func(void * data) {
 			irt_mutex_unlock(&irt_g_maintenance_mutex);
 		}
 	}
+	return NULL;
 }
 
 
