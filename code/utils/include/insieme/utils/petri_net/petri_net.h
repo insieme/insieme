@@ -327,8 +327,10 @@ namespace petri_net {
 		template<typename T>
 		bool isEnabled(const T& t) const {
 			// check pre- and post-places
-			return	all(net->getPrePlaces(t),  [&](place_idx p)->bool { return marking[p] > 0; }) &&
-					all(net->getPostPlaces(t), [&](place_idx p)->bool { return marking[p] < net->getCapacity(p); });
+			const auto& pre  = net->getPrePlaces(t);
+			const auto& post = net->getPostPlaces(t);
+			return	all(pre,  [&](place_idx p)->bool { return marking[p] > 0; }) &&
+					all(post, [&](place_idx p)->bool { return marking[p] < net->getCapacity(p) + (contains(pre,p)?1:0) ; });
 		}
 
 		template<typename ... Ts>
