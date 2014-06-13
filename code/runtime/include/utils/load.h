@@ -58,12 +58,11 @@ void get_load_own(unsigned long* time) {
 	unsigned long user_time, kernel_time;
 	file = fopen("/proc/self/stat", "r");
 	if(file == 0) {
-		IRT_DEBUG("Instrumentation: Unable to open file for process load readings\n");
-		IRT_DEBUG_ONLY(strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open file for process load readings, reason: %s\n", strerror(errno));
 		return;
 	}
 	//            pid com sta ppi pgr ses tty tpg flg mflt cmlt jflt cjlt usr sys cusr csys
-	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) { IRT_DEBUG("Instrumentation: Unable to read process load data\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
+	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) { IRT_DEBUG("Instrumentation: Unable to read process load data, reason: %s\n", strerror(errno)); fclose(file); return; }
 	fclose(file);
 	// overflow "handling"
 	if(user_time < last_user_time || kernel_time < last_kernel_time)
@@ -86,11 +85,10 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 	unsigned long total_user, total_user_low, total_system, total_idle;
 	file = fopen("/proc/stat", "r");
 	if(file == 0) {
-		IRT_DEBUG("Instrumentation: Unable to open file for system load readings\n");
-		IRT_DEBUG_ONLY(strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open file for system load readings, reason: %s\n", strerror(errno));
 		return;
 	}
-	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) { IRT_DEBUG("Instrumentation: Unable to read system load data\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
+	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) { IRT_DEBUG("Instrumentation: Unable to read system load data, reason: %s\n", strerror(errno)); fclose(file); return; }
 	fclose(file);
 	// overflow "handling"
 	if(total_user < last_total_user || total_user_low < last_total_user_low || total_system < last_total_system || total_idle < last_total_idle) {
