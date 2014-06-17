@@ -63,7 +63,7 @@ int64 _irt_read_msr(int32 file, int32 subject) {
 	int64 data;
 
 	if (pread(file, &data, sizeof data, subject) != sizeof data) {
-		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read MSR file descriptor %d, reason: %s\n", file, strerror(errno));
 		return -1.0;
 	}
 

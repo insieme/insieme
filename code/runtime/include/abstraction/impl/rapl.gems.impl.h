@@ -47,4 +47,12 @@ bool irt_rapl_is_supported() {
 	return false;
 }
 
+bool irt_rapl_is_used() {
+	return false;
+}
+
+void irt_rapl_init() { }
+
+void irt_rapl_finalize() { }
+
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H

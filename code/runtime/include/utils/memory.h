@@ -58,21 +58,20 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
 	// ok, I am checking here for something that CAN'T happen but apparently it still does happen sometimes
 	// if I am a process I can read my own stats in /proc/self - therefore this path must always exist...theoretically...
 	if(file == 0) {
-		IRT_DEBUG("Instrumentation: Unable to open file for memory consumption readings\n");
-		IRT_DEBUG_ONLY(strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open file for memory consumption readings, reason: %s\n", strerror(errno));
 		return;
 	} else if(position_cache_virt == 0) { // first call, no position cached
-                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmSize\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }// lookup entry
-                if((position_cache_virt = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmSize\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; } // save stream position
-                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmRSS\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; } // skip useless info and read VmRSS
-                if((position_cache_res = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmRSS\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; } // save stream position
+                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmSize, reason: %s\n", strerror(errno)); fclose(file); return; }// lookup entry
+                if((position_cache_virt = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmSize, reason: %s\n", strerror(errno)); fclose(file); return; } // save stream position
+                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmRSS, reason: %s\n", strerror(errno)); fclose(file); return; } // skip useless info and read VmRSS
+                if((position_cache_res = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmRSS, reason: %s\n", strerror(errno)); fclose(file); return; } // save stream position
         } else { // if not first call, use cached positions, assumes max 8 digits
                 char str[9];
-                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmSize position\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
-                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmSize\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
+                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmSize position, reason: %s\n", strerror(errno)); fclose(file); return; }
+                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmSize, reason: %s\n", strerror(errno)); fclose(file); return; }
                 *virt_size = atol(str);
-                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmRSS position\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
-                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmRSS\n"); IRT_DEBUG_ONLY(strerror(errno)); fclose(file); return; }
+                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmRSS position, reason: %s\n", strerror(errno)); fclose(file); return; }
+                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmRSS\n, reason: %s\n", strerror(errno)); fclose(file); return; }
                 *res_size = atol(str);
         }   
         fclose(file);
