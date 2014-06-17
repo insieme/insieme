@@ -85,8 +85,8 @@ namespace irt {
 	}
 
 	// Executes "fun" for each element of the given container in parallel
-	template<class Iter, class ElemCallable>
-	inline void pfor(const Iter& begin, const Iter& end, int64 step, ElemCallable fun) {
+	template<class IterA, class IterB, class StepType, class ElemCallable>
+	inline void pfor(const IterA& begin, const IterB& end, StepType step, ElemCallable fun) {
 		pfor_impl(0, end - begin, step, [=](int64 i) { fun(begin + i); });
 	}
 
