@@ -64,7 +64,7 @@ namespace petri_net {
 		net.addPrePlace("Inner", "Step2");
 		net.addPostPlace("Step2", "End");
 
-		plot(net);
+		// plot(net);
 
 	}
 
@@ -124,7 +124,7 @@ namespace petri_net {
 		// create full state graph
 		auto stateGraph = extractStateGraph(Marking(net, {1,0,0}));
 		EXPECT_EQ(3, stateGraph.getNumStates());
-		plot(stateGraph, "stateGraph.svg");
+		// plot(stateGraph, "stateGraph.svg");
 	}
 
 	TEST(PetriNet, StateGraphComplex) {
@@ -153,7 +153,7 @@ namespace petri_net {
 		net.addPostPlace("Step5", "Inner");
 
 		// create full state graph
-		plot(net);
+		// plot(net);
 		auto stateGraph = extractStateGraph(Marking(net, {1,0,0,0}));
 
 		EXPECT_EQ(4, stateGraph.getNumStates());
@@ -163,7 +163,8 @@ namespace petri_net {
 		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,1,0})));
 		EXPECT_TRUE(stateGraph.containsMarking(Marking(net, {0,0,0,1})));
 
-		plot(stateGraph, "stateGraph.svg");
+		// plot(net, "net.svg");
+		// plot(stateGraph, "stateGraph.svg");
 	}
 
 	TEST(PetriNet, StateGraphComplex2) {
@@ -193,7 +194,7 @@ namespace petri_net {
 		net.addPostPlace(4,"D");
 
 		// create full state graph
-		plot(net);
+		// plot(net);
 		auto stateGraph = extractStateGraph(Marking(net, {1,0,0,0,0}));
 
 		EXPECT_EQ(5, stateGraph.getNumStates());
@@ -206,7 +207,8 @@ namespace petri_net {
 
 		EXPECT_FALSE(stateGraph.containsMarking(Marking(net, {0,0,0,0,1})));
 
-		plot(stateGraph, "stateGraph.svg");
+		// plot(net, "net.svg");
+		// plot(stateGraph, "stateGraph.svg");
 	}
 
 	TEST(PetriNet, StateGraphComplex3) {
@@ -229,15 +231,85 @@ namespace petri_net {
 		net.addPrePlace("A",4);
 
 		// create full state graph
-		plot(net);
+		// plot(net);
 		auto stateGraph = extractStateGraph(Marking(net, {0,0,0}));
 
 		EXPECT_EQ(16, stateGraph.getNumStates());
 
-		plot(stateGraph, "stateGraph.svg");
+		// plot(net, "net.svg");
+		// plot(stateGraph, "stateGraph.svg");
+	}
+
+	TEST(PetriNet, StateGraphComplex4) {
+
+		typedef PetriNet<string,int> PetriNet;
+		typedef PetriNet::marking_type Marking;
+
+		PetriNet net;
+
+		net.addPlace("A");
+		net.addPlace("B");
+		net.addPlace("C");
+
+		net.addPlace("A1");
+		net.addPlace("B1");
+		net.addPlace("C1");
+
+		net.addPlace("A2");
+		net.addPlace("B2");
+		net.addPlace("C2");
+
+		net.addPlace("Ch",2);
+
+		net.addPrePlace("A",1);
+		net.addPostPlace(1,"B");
+		net.addPostPlace(1,"A1");
+		net.addPostPlace(1,"A2");
+
+		net.addPrePlace("B",2);
+		net.addPrePlace("C1",2);
+		net.addPrePlace("C2",2);
+		net.addPostPlace(2,"C");
+
+		{
+			net.addPrePlace("A1",3);
+			net.addPostPlace(3,"B1");
+			net.addPostPlace(3,"Ch");
+
+			net.addPrePlace("B1",4);
+			net.addPostPlace(4,"B1");
+			net.addPostPlace(4,"Ch");
+
+			net.addPrePlace("B1",5);
+			net.addPostPlace(5,"C1");
+			net.addPostPlace(5,"Ch");
+		}
+
+		{
+			net.addPrePlace("A2",6);
+			net.addPostPlace(6,"B2");
+			net.addPrePlace("Ch",6);
+
+			net.addPrePlace("B2",7);
+			net.addPostPlace(7,"B2");
+			net.addPrePlace("Ch",7);
+
+			net.addPrePlace("B2",8);
+			net.addPostPlace(8,"C2");
+			net.addPrePlace("Ch",8);
+		}
+		// plot(net, "net.svg");
+
+		// create full state graph
+//		plot(net);
+		auto stateGraph = extractStateGraph(Marking(net, {1,0,0,0,0,0,0,0,0,0}));
+
+		EXPECT_EQ(20, stateGraph.getNumStates());
+//		plot(stateGraph, "stateGraph.svg");
 	}
 
 } // end namespace petri_net
 } // end namespace core
 } // end namespace insieme
+
 
