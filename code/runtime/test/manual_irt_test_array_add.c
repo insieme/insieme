@@ -173,9 +173,10 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
 	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, &g_insieme_impl_table[INSIEME_ADD_WI_INDEX], (irt_lw_data_item*)&addition_params);
+	irt_work_item_id add_id = addition_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), addition_wi);
 
-	irt_wi_join(addition_wi);
+	irt_wi_join(add_id);
 
 	uint64 end_time = irt_time_ms();
 

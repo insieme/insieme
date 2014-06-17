@@ -135,7 +135,7 @@ extern "C" {
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params);
 
-void irt_wi_join(irt_work_item* wi);
+void irt_wi_join(irt_work_item_id wi_id);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
 void irt_wi_join_all(irt_work_item* wi);
 void irt_wi_end(irt_work_item* wi);

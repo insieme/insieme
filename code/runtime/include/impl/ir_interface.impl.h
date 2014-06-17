@@ -79,7 +79,7 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 }
 
 
-irt_joinable* irt_parallel(const irt_parallel_job* job) {
+irt_joinable irt_parallel(const irt_parallel_job* job) {
 	//irt_work_item *self = target->cur_wi;
 	//irt_lw_data_item *prev_args = self->parameters;
 	//irt_work_item_range prev_range = self->range;
@@ -111,13 +111,17 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	// alloca is implemented as malloc
 	free(wis);
 #endif
-	return IRT_TAG_WG_PTR(retwg);
+	irt_joinable ret;
+	ret.wg_id = retwg->id;
+	return ret;
 }
 
-irt_joinable* irt_task(const irt_parallel_job* job) {
+irt_joinable irt_task(const irt_parallel_job* job) {
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");
-    return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
+	// TODO potential race condition
+	irt_work_item * wi = irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
+	return wi ? (irt_joinable) { wi->id } : irt_joinable_null();
 }
 
 void irt_region(const irt_parallel_job* job) {
@@ -135,17 +139,17 @@ void irt_region(const irt_parallel_job* job) {
     free(wis);
 }
 
-void irt_merge(irt_joinable* joinable) {
-	if(joinable == NULL) return;
+void irt_merge(irt_joinable joinable) {
+	if(joinable.wi_id.full == irt_work_item_null_id().full ) return;
    
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
     uint32 outer_worker_count = irt_g_worker_to_enable_count;
 #endif
 
-	if(IRT_IS_WG_PTR(joinable)) {
-		irt_wg_join(IRT_UNTAG_WG_PTR(joinable));
+	if(joinable.wi_id.id_type == IRT_ID_work_group) {
+		irt_wg_join(joinable.wg_id);
 	} else {
-		irt_wi_join((irt_work_item*)joinable);
+		irt_wi_join(joinable.wi_id);
 	}
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT

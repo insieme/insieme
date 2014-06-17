@@ -40,6 +40,12 @@
 
 #include "irt_globals.h"
 
+typedef enum {
+	IRT_ID_id_gen_test, IRT_ID_lookup_test,
+	IRT_ID_channel, IRT_ID_client_app, IRT_ID_context, IRT_ID_data_item, IRT_ID_wi_event_register,
+	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
+} irt_id_type;
+
 #define IRT_DECLARE_ID_TYPE(__type) \
 typedef struct _irt_##__type##_id irt_##__type##_id;
 
@@ -51,7 +57,8 @@ struct _irt_##__type##_id { \
 		struct { \
 			uint32 index; \
 			uint16 thread; \
-			uint16 node; \
+			uint8 node; \
+			irt_id_type id_type : 8; \
 		}; \
 	}; \
 	struct _irt_##__type* cached; \
@@ -61,6 +68,8 @@ static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_pt
 	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
 	id.full = gen_id->full; \
 	id.index = gen_id->index++; \
+	id.node = 0; \
+	id.id_type = IRT_ID_##__type; \
 	id.cached = NULL; \
 	return id; \
 } \

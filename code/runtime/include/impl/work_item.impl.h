@@ -226,12 +226,12 @@ bool _irt_wi_join_event(irt_wi_event_register* source_event_register, void *user
 	return false;
 }
 
-void irt_wi_join(irt_work_item* wi) {
+void irt_wi_join(irt_work_item_id wi_id) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
 	_irt_wi_join_event_data clo = {swi, self};
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
-	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
+	int64 occ = irt_wi_event_check_exists_and_register(wi_id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
 		//irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);

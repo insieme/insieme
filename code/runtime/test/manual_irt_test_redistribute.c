@@ -101,8 +101,10 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	test_params->type_id = 1;
 	test_params->wg = wg1;
 	irt_work_item **test_wis = (irt_work_item **)malloc(NUM_WIS*sizeof(irt_work_item*));
+	irt_work_item_id *test_wi_ids = (irt_work_item_id *)malloc(NUM_WIS*sizeof(irt_work_item_id));
 	for(int i=0; i<NUM_WIS; ++i) {
 		test_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, &g_insieme_impl_table[1], (irt_lw_data_item*)test_params);
+		test_wi_ids[i] = test_wis[i]->id;
 		irt_wg_insert(wg1, test_wis[i]);
 		test_params->vals[i] = 0;
 	}
@@ -111,7 +113,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	}
 
 	for(int i=0; i<NUM_WIS; ++i) {
-		irt_wi_join(test_wis[i]);
+		irt_wi_join(test_wi_ids[i]);
 	}
 
 	uint64 end_time = irt_time_ms();
@@ -129,6 +131,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
 
 	free(test_wis);
+	free(test_wi_ids);
 	free(test_params);
 }
 

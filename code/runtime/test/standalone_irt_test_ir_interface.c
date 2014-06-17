@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_parallel_job job = { 8,8,1, &g_insieme_impl_table[INSIEME_TEST_WI_INDEX], NULL };
-	irt_joinable* joinable = irt_parallel(&job);
+	irt_joinable joinable = irt_parallel(&job);
 	irt_merge(joinable);
 }
 
