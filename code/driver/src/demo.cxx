@@ -120,7 +120,8 @@ int main(int argc, char** argv) {
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
 	cout << "Building binaries ...\n";
-	cp::Compiler compiler = cp::Compiler::getDefaultC99CompilerO3();
+	cp::Compiler compiler = cp::Compiler::getDefaultC99Compiler();
+	compiler = cp::Compiler::getOptimizedCompiler(compiler);
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 

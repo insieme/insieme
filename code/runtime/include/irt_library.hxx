@@ -20,6 +20,7 @@ void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, s
 #endif
 
 #include <iostream>
+#include <iterator>
 
 namespace irt {
 
@@ -68,25 +69,60 @@ namespace irt {
 	// Executes "fun" for each loop iteration from "begin" to "end" with step "step",
 	// on the current team of parallel threads, or a new one if there isn't any
 	template<class LoopCallable>
-	inline void pfor(int64 begin, int64 end, int64 step, const LoopCallable& fun) {
+	inline void pfor_impl(int64 begin, int64 end, int64 step, const LoopCallable& fun) {
 		if(irt_wi_get_wg_size(irt_wi_get_current(), 0) < 1) {
-			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
-		} else {
 			irt::merge( irt::parallel([&](){ irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable)); } ) );
+		} else {
+			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
 		}
 		return;
 	}
 
-	// Executes "fun" for each element of the given container
+	// Executes "fun" for each element of the given container in parallel
 	template<class ElemCallable, class Container>
 	inline void pfor(Container& container, ElemCallable fun) {
-		pfor(0, container.size(), 1, [&](int64 i) { fun(container[i]); });
+		pfor_impl(0, container.size(), 1, [&](int64 i) { fun(container[i]); });
+	}
+
+	// Executes "fun" for each element of the given container in parallel
+	template<class IterA, class IterB, class StepType, class ElemCallable>
+	inline void pfor(const IterA& begin, const IterB& end, StepType step, ElemCallable fun) {
+		pfor_impl(0, end - begin, step, [=](int64 i) { fun(begin + i); });
+	}
+
+	// Executes "fun" for each element of the given container in parallel
+	template<class Iter, class ElemCallable>
+	inline void pfor(const Iter& begin, const Iter& end, ElemCallable fun) {
+		pfor(begin, end, 1, fun);
 	}
 
 	// Maps each element of the given container to the result of executing "mapper" on it (in place)
 	template<class MapCallable, class Container>
 	inline void pmap(Container& container, MapCallable mapper) {
-		pfor(0, container.size(), 1, [&](int64 i) { container[i] = mapper(container[i]); });
+		pfor_impl(0, container.size(), 1, [&](int64 i) { container[i] = mapper(container[i]); });
+	}
+
+	// a barrier for the current work group
+	inline void barrier() {
+		irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(),0));
+	}
+
+	// a function to mark the start of a critical section
+	inline void critical_start() {
+		irt_lib_critical_start();
+	}
+
+	// a function to mark the end of a critical section
+	inline void critical_end() {
+		irt_lib_critical_end();
+	}
+
+	// a higher-order function processing the given block in isolation
+	template<typename Block>
+	void critical(Block& block) {
+		critical_start();
+		block();
+		critical_end();
 	}
 
 };

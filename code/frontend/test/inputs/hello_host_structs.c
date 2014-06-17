@@ -76,14 +76,14 @@ int main(int argc, char **argv) {
 	dev_ptr2.mem = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, NULL);
 	dev_ptr2.size = 100;
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
-	cl_mem dev_ptr4[2];
+	struct Buffer dev_ptr4[2];
 	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
 	clReleaseMemObject(dev_ptr5);
 
 	dev_ptr1.mem = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
 	dev_ptr1.size = 100;
-	dev_ptr4[0] = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
-	dev_ptr4[1] = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	dev_ptr4[0].mem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	dev_ptr4[1].mem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
 	clEnqueueWriteBuffer(kernel.queue, dev_ptr1.mem, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 	kernel.fct = clCreateKernel(program, "hello", &err);
 	err = clSetKernelArg(kernel.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1.mem);
 	for(int i = 0; i < 1; ++i)
-		err = clSetKernelArg(kernel.fct, 1, sizeof(cl_mem), (void*) &(dev_ptr4[i]));
+		err = clSetKernelArg(kernel.fct, 1, sizeof(cl_mem), (void*) &(dev_ptr4[i].mem));
 	// local memory
 	clSetKernelArg(kernel.fct, 2, sizeof(float) * n, 0);
 	// private memory
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 
 	err = clWaitForEvents(1, &event);
 
-	clEnqueueReadBuffer(kernel.queue, dev_ptr4[0], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clEnqueueReadBuffer(kernel.queue, dev_ptr4[0].mem, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 	clFinish(kernel.queue);
 
 	cl_ulong start, end;
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 	clReleaseMemObject(dev_ptr2.mem);
 	clReleaseMemObject(dev_ptr3);
 	for(int i = 1; i < 2; ++i)
-		clReleaseMemObject(dev_ptr4[i]);
+		clReleaseMemObject(dev_ptr4[i].mem);
 	clReleaseMemObject(dev_ptr5);
 
 	clReleaseCommandQueue(kernel.queue);

@@ -133,10 +133,12 @@
 std::cout << *code;
 
 		// pick C / C++ compiler depending on IR
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99CompilerO3();
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler = utils::compiler::Compiler::getOptimizedCompiler(compiler);
 		if (core::analysis::isIRpp(res)) {
 			std::cout << "Compiling using C++ compiler ...\n";
-			compiler = utils::compiler::Compiler::getDefaultCppCompilerO3();
+			compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+			compiler = utils::compiler::Compiler::getOptimizedCompiler(compiler);
 		} else {
 			std::cout << "Compiling using C compiler ...\n";
 		}

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -53,7 +53,6 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/const_extension.h"
-#include "insieme/core/annotations/naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -168,6 +167,9 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 		VLOG(2) << " ==  == ";
 
 		// obtain type name
+		// NOTE: do not attach a NameAnnotation! interceptedTypes have the name in the GenericType
+		//		 if a name is attached it will be confused with an SystemHeader defined type in the
+		//		 Backend!
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
 
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
@@ -184,8 +186,6 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 			// generate a type with the inner elements, and no integer literal
 			irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 		}
-
-        core::annotations::attachName(irType, typeName);
 
 		// add header file
 		convFact.getHeaderTagger().addHeaderForDecl(irType, tagDecl, true);

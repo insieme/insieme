@@ -51,6 +51,7 @@
 #include "client_app.h"
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
+#include "irt_maintenance.h"
 
 #ifdef _GEMS
 	#include "include_gems/stdlib.h"
@@ -96,15 +97,24 @@ IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 static bool irt_g_exit_handling_done;
+static bool irt_g_globals_initialization_done = false;
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+	if(irt_g_globals_initialization_done)
+		return;
+
+	irt_g_globals_initialization_done = true;
+
 	irt_g_exit_handling_done = false;
 
 	irt_log_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
+
+	_irt_setup_hardware_info();
+	irt_maintenance_init();
 
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -145,6 +155,7 @@ void irt_cleanup_globals() {
 	irt_tls_key_delete(irt_g_error_key);
 	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
+	irt_g_globals_initialization_done = false;
 }
 
 // exit handling
@@ -185,6 +196,8 @@ void irt_exit_handler() {
 	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
 		irt_cpu_freq_reset_frequencies();
 #endif
+
+	irt_maintenance_cleanup();
 
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
@@ -288,11 +301,11 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		atexit(&irt_exit_handler);
 	}
 #endif
+
 	// initialize globals
 	irt_init_globals();
+	// TODO: superfluous?
 	irt_g_exit_handling_done = false;
-
-	_irt_setup_hardware_info();
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
@@ -382,9 +395,15 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
         irt_mutex_init(&print_mutex);
     #endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);
+	// initialize globals
+	irt_init_globals();
+	irt_worker tempw;
+	tempw.generator_id = 0;
+	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
+
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
-	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;

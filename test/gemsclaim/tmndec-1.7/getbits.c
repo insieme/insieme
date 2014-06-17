@@ -39,15 +39,12 @@
 
 
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "config.h"
 #include "tmndec.h"
 #include "global.h"
 #ifdef WIN32
 #include <io.h>
-#else
-#include <unistd.h>
 #endif
 
 

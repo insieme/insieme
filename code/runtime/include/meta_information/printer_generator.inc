@@ -39,16 +39,16 @@
 
 #define INFO_STRUCT_BEGIN(__name) \
 void irt_meta_info_print_##__name(FILE* dest, irt_meta_info_table_entry* entry) { \
+/* Need to ingore seemingly possible printf format specifier type mismatches because we do type-checking at run time */ \
+/* Also, since we are inside a macro definition, we need to use _Pragma("<options>") instead of #pragma <options> */ \
+_Pragma("GCC diagnostic push") \
+_Pragma("GCC diagnostic ignored \"-Wformat\"") \
 	fprintf(dest, #__name ": "); \
 	__name##_info* i = &entry->__name; \
 	if(!i->available) { fprintf(dest, "Not available"); return; } \
 	fprintf(dest, "Available: { ");	\
 
 #define INFO_FIELD(__id, __type, __val) { \
-/* Need to ingore seemingly possible printf format specifier type mismatches because we do type-checking at run time */ \
-/* Also, since we are inside a macro definition, we need to use _Pragma("<options>") instead of #pragma <options> */ \
-_Pragma("GCC diagnostic push") \
-_Pragma("GCC diagnostic ignored \"-Wformat\"") \
 		fprintf(dest, #__id " = "); \
 		const char *ts = #__type; \
 		if(strcmp(ts, "int") == 0) fprintf(dest, "%d", i->__id); \
@@ -56,9 +56,9 @@ _Pragma("GCC diagnostic ignored \"-Wformat\"") \
 		else if(strcmp(ts, "bool") == 0) fprintf(dest, "%s", i->__id ? "true" : "false"); \
 		else fprintf(dest, "%s", (i->__id == __val) ? "default" : "set"); \
 		fprintf(dest, ", "); \
-_Pragma("GCC diagnostic pop") \
 	}
 
 #define INFO_STRUCT_END() \
 	fprintf(dest, " } "); \
+_Pragma("GCC diagnostic pop") \
 }

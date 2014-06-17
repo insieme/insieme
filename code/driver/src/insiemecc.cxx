@@ -248,11 +248,11 @@ int main(int argc, char** argv) {
 
 	cp::Compiler compiler =
 			(options.job.isCxx())
-				? cp::Compiler::getDefaultCppCompilerO3()
-				: cp::Compiler::getDefaultC99CompilerO3();
+				? cp::Compiler::getDefaultCppCompiler()
+				: cp::Compiler::getDefaultC99Compiler();
 
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	
+
     //add needed library flags
     for(auto cur : extLibs) {
 		string libname = cur.filename().string();

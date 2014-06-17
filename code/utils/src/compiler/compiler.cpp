@@ -62,12 +62,6 @@ namespace compiler {
 		return res;
 	}
 
-	Compiler Compiler::getDefaultC99CompilerO3() {
-		Compiler res = getDefaultC99Compiler();
-		//res.addFlag("-O3");
-		return res;
-	}
-
 	Compiler Compiler::getDefaultCppCompiler() {
 		Compiler res("gcc");
 		res.addFlag("-x c++");
@@ -80,16 +74,21 @@ namespace compiler {
 		return res;
 	}
 
-
-	Compiler Compiler::getDefaultCppCompilerO3() {
-		Compiler res = getDefaultCppCompiler();
-		//res.addFlag("-O3");
-		return res;
-	}
-
 	Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 		Compiler res = base;
 		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "meta_information/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+		return res;
+	}
+
+	Compiler Compiler::getOptimizedCompiler(const Compiler& base, const string& level) {
+		Compiler res = base;
+		res.addFlag("-O" + level);
+		return res;
+	}
+
+	Compiler Compiler::getDebugCompiler(const Compiler& base, const string& level) {
+		Compiler res = base;
+		res.addFlag("-g" + level);
 		return res;
 	}
 
