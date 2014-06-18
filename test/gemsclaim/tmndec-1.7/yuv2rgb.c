@@ -118,7 +118,7 @@ double chromaCorrect = 1.0;
  * How many 1 bits are there in the longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 number_of_bits_set(a)
 unsigned long a;
 {
@@ -144,7 +144,7 @@ unsigned long a;
  * How many 0 bits are there at most significant end of longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 free_bits_at_top(a)
 unsigned long a;
 {
@@ -159,7 +159,7 @@ unsigned long a;
  * How many 0 bits are there at least significant end of longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 free_bits_at_bottom(a)
 unsigned long a;
 {
@@ -528,8 +528,10 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
+    //#pragma omp parallel for objective(0*E+1*P+0*T)
+    #pragma omp parallel 
     for (y=0; y<rows; y+=2) {
-        #pragma omp parallel for
+        #pragma omp for schedule(dynamic) nowait 
         for (x=0; x<cols_2; x++) {
             int R, G, B;
 
@@ -549,12 +551,13 @@ unsigned char *out;
 
             CR = *cr++;
             CB = *cb++;
-            cr_r = Cr_r_tab[CR];
-            cr_g = Cr_g_tab[CR];
-            cb_g = Cb_g_tab[CB];
-            cb_b = Cb_b_tab[CB];
+            cr_r =  (0.419/0.299) * (CR-128);
+            cr_g = -(0.299/0.419) * (CR-128);
+            cb_g = -(0.114/0.331) * (CB-128); 
+            cb_b =  (0.587/0.331) * (CB-128);
 
-            L = L_tab[(int) *lum++];
+
+            L = *lum++;
 
             R = L + cr_r;
             G = L + cr_g + cb_g;
@@ -573,7 +576,7 @@ unsigned char *out;
             }
 #endif
 
-            L = L_tab[(int) *lum++];
+            L = *lum++;
 
             R = L + cr_r;
             G = L + cr_g + cb_g;
@@ -596,14 +599,14 @@ unsigned char *out;
             }
 #endif
 
-            L = L_tab [(int) *lum2++];
+            L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
-            L = L_tab [(int) *lum2++];
+            L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;

@@ -1099,11 +1099,12 @@ int width, height;
   w2 = 2*width;
 
   /* Horizontally */
+  #pragma omp parallel
   for (y = 0; y < height-1; y++) {
     unsigned char *pp = out + (w2<<1) * y;
     unsigned char *ii = in + width * y;
 
-    #pragma omp parallel for
+    #pragma omp for schedule(dynamic) nowait
     for (x = 0; x < width-1; x++) {
       int xx = x * 2;
       *(pp + xx) = *(ii + x);
@@ -1117,15 +1118,13 @@ int width, height;
     *(pp + w2 - 1) = *(ii + width - 1);
     *(pp + w2 + w2 - 2) = *(ii + width + width - 1);
     *(pp + w2 + w2 - 1) = *(ii + width + width - 1);
-    pp += w2<<1;
-    ii += width;
   }
 
   unsigned char *pp = out + (w2<<1) * (height-1);
   unsigned char *ii = in + width * (height-1);
 
   /* last lines */
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic)
   for (x = 0; x < width-1; x++) {
     int xx = x * 2;
     *(pp+ xx) = *(ii + x);    
