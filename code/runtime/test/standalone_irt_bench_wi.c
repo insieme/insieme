@@ -161,7 +161,7 @@ void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
 		insieme_wi_bench_params bench_params = { 1, params->count - 1, params->check };
 		irt_work_item_id *bench_wi_ids = (irt_work_item_id*)malloc(NUM_ITER*sizeof(irt_work_item_id));
 		for (int i = 0; i<NUM_ITER; ++i) {
-			bench_wi_ids[i] = irt_wi_run_optional(irt_g_wi_range_one_elem, &g_insieme_impl_table[2], (irt_lw_data_item*)&bench_params)->id;
+			bench_wi_ids[i] = irt_wi_run_optional(irt_g_wi_range_one_elem, &g_insieme_impl_table[2], (irt_lw_data_item*)&bench_params).wi_id;
 		}
 
 		//irt_wi_multi_join(NUM_ITER, bench_wis);

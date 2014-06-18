@@ -205,7 +205,7 @@ _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func) {
 #endif
 
 
-irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params) {
+irt_joinable irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params) {
 	irt_worker *worker = irt_worker_get_current();
 	irt_work_item *wi = &worker->lazy_wi;
 	wi->range = range;

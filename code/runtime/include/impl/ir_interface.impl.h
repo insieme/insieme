@@ -94,6 +94,8 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
 	irt_work_group* retwg = irt_wg_create();
+	irt_joinable ret;
+	ret.wg_id = retwg->id;
 	uint32 num_threads = (job->max/2+job->min/2);
 	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
 	num_threads -= num_threads%job->mod;
@@ -111,17 +113,13 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	// alloca is implemented as malloc
 	free(wis);
 #endif
-	irt_joinable ret;
-	ret.wg_id = retwg->id;
 	return ret;
 }
 
 irt_joinable irt_task(const irt_parallel_job* job) {
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");
-	// TODO potential race condition
-	irt_work_item * wi = irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
-	return wi ? (irt_joinable) { wi->id } : irt_joinable_null();
+	return irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
 }
 
 void irt_region(const irt_parallel_job* job) {

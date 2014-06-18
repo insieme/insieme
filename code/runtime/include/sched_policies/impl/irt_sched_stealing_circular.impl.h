@@ -42,6 +42,8 @@
 #include "sched_policies/irt_sched_stealing_circular.h"
 #include "impl/worker.impl.h"
 
+#include "ir_interface.h"
+
 #ifdef _WIN32
 	#include "../../include_win32/rand_r.h"
 #elif defined(_GEMS)
@@ -87,32 +89,35 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 	_irt_cwb_try_push_front(target, wi, true);
 }
 
-irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
+irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
-irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
 		irt_wi_implementation* impl, irt_lw_data_item* args) {
 #ifndef IRT_TASK_OPT
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
 		irt_worker_run_immediate(target, range, impl, args);
-		return NULL;
+		return irt_joinable_null();
 	}
 	else {
 		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+		irt_joinable joinable;
+		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
+		return joinable;
 	}
 #else //!IRT_TASK_OPT
 	int64 demand = --target->sched_data.demand;
 	if(demand > IRT_CWBUFFER_LENGTH/2) {
 		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+		irt_work_item_id real_wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
+		return irt_joinable{ real_wi_id };
 	} else {
 		irt_worker_run_immediate(target, range, impl, args);
-		return NULL;
+		return irt_joinable_null();
 	}
 #endif //!IRT_TASK_OPT
 }

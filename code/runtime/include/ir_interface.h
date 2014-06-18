@@ -42,6 +42,8 @@
 #include "instrumentation_regions.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
+#include "work_item.h"
+#include "work_group.h"
 
 #include "irt_context.h"
 #include "worker.h"
@@ -56,10 +58,10 @@ typedef struct _irt_parallel_job {
 
 /** Ids of either work items or work groups are joinable. These will be casted as required.
  */
-typedef union {
+union _irt_joinable {
 	irt_work_item_id wi_id;
 	irt_work_group_id wg_id;
-} irt_joinable;
+};
 
 irt_joinable irt_joinable_null() {
 	static irt_joinable null_joinable = { 0 };

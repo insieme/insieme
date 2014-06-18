@@ -7,7 +7,7 @@
 // IRT
 struct irt_joinable;
 struct irt_work_item;
-void irt_merge(irt_joinable*);
+void irt_merge(irt_joinable);
 irt_work_item* irt_wi_get_current();
 uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);

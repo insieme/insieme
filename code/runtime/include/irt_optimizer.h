@@ -39,6 +39,9 @@
 #define __GUARD_IRT_OPTIMIZER_H
 
 #include "declarations.h"
+
+#include "utils/lookup_tables.h"
+
 //#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 
