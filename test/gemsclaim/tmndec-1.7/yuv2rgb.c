@@ -517,7 +517,7 @@ unsigned char *out;
     int cols;
     int rows;
 
-    int x, y;
+    int y;
     int cols_2;
 
     cols = coded_picture_width;
@@ -529,10 +529,9 @@ unsigned char *out;
     cols_2 = cols/2;
 
     //#pragma omp parallel for objective(0*E+1*P+0*T)
-    #pragma omp parallel 
+    #pragma omp parallel for schedule(dynamic) 
     for (y=0; y<rows; y+=2) {
-        #pragma omp for schedule(dynamic) nowait 
-        for (x=0; x<cols_2; x++) {
+        for (int x=0; x<cols_2; x++) {
             int R, G, B;
 
             int L, CR, CB;

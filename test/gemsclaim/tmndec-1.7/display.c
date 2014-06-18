@@ -482,7 +482,7 @@ unsigned char *dithered_image;
   if (shmem_flag)
   {
     static int init_flag = 0;
-    if(init_flat) {
+    if(init_flag) {
       while (1)
       {
         XEvent xev;
