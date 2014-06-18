@@ -49,9 +49,8 @@ static inline irt_work_group* _irt_wg_new() {
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg->redistribute_data_array);
-	// TODO
-	// we cannot just delete the wg here, it might be joined on later
-	//free(wg);
+	// TODO reuse list?
+	free(wg);
 }
 
 irt_work_group* _irt_wg_create(irt_worker* self) {
@@ -160,12 +159,10 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
 		// suspend
-//		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		// suspend until allowed to leave barrier
         _irt_worker_switch_from_wi(self, swi);
-//		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
@@ -220,10 +217,8 @@ void irt_wg_barrier_timed_busy(irt_work_group* wg) {
 					IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
 					irt_spin_unlock(&wg->lock);
 					// suspend
-//					irt_inst_region_suspend(swi);
 					irt_inst_region_end_measurements(swi);
                     _irt_worker_switch_from_wi(self, swi);
-//					irt_inst_region_continue(swi);
 					irt_inst_region_start_measurements(swi);
 					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 					return;
@@ -278,11 +273,9 @@ void irt_wg_join(irt_work_group_id wg_id) {
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
 	int64 occ = irt_wg_event_check_exists_and_register(wg_id, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-//		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
         _irt_worker_switch_from_wi(self, swi);
-//		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
