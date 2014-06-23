@@ -211,7 +211,6 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
 #ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = wi->impl;
-        irt_optimizer_set_wrapping_optimizations(&(wi->impl->variants[0]), (!wi->parent_id.cached) ? NULL : &(wi->parent_id.cached->impl->variants[0]));
 		if(self->default_variant < wimpl->num_variants) {
             irt_optimizer_apply_dvfs(&(wimpl->variants[self->default_variant]));
 			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
