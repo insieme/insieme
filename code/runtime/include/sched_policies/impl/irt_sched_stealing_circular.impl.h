@@ -81,11 +81,13 @@ void irt_scheduling_init_worker(irt_worker* self) {
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
 	_irt_cwb_try_push_back(self, yielding_wi, true);
     _irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_POOLED, wi->id);
 	_irt_cwb_try_push_front(target, wi, true);
 }
 
@@ -112,9 +114,10 @@ irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_ran
 	int64 demand = --target->sched_data.demand;
 	if(demand > IRT_CWBUFFER_LENGTH/2) {
 		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
-		irt_work_item_id real_wi_id = real_wi->id;
+		irt_joinable joinable;
+		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
-		return irt_joinable{ real_wi_id };
+		return joinable;
 	} else {
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
@@ -202,6 +205,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 #if 1
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_QUEUED, wi->id);
 #ifdef IRT_STEAL_SELF_PUSH_FRONT
 	_irt_cwb_try_push_front(target, wi, false);
 #else

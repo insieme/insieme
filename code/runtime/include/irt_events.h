@@ -101,6 +101,8 @@ IRT_MAKE_ID_TYPE(wg_event_register)
 typedef enum _irt_wg_event_code {
 	IRT_WG_EV_COMPLETED,				// used for WI joining
 	IRT_WG_EV_BARRIER_COMPLETE,			// indicates all WIs have reached a barrier
+	IRT_WG_EV_BARRIER_ENTERED,			// indicates how many wis have entered a barrier
+	IRT_WG_EV_BARRIER_EXITED,			// indicates how many wis have exited a barrier
 	IRT_WG_EV_NUM // sentinel
 } irt_wg_event_code;
 

@@ -64,7 +64,7 @@ union _irt_joinable {
 };
 
 irt_joinable irt_joinable_null() {
-	static irt_joinable null_joinable = { 0 };
+	static irt_joinable null_joinable = { { { 0 } } };
 	return null_joinable;
 }
 

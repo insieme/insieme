@@ -163,7 +163,7 @@ static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_imp
 	// instrumentation
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* wi = _irt_wi_create(self, &range, impl, params);
-	irt_inst_region_list_copy(wi, self->cur_wi);
+	irt_inst_region_list_copy(wi, self->cur_wi); // TODO philipp fix your shit
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, wi->id);
 	return wi;
 }
@@ -222,6 +222,7 @@ typedef struct __irt_wi_join_event_data {
 } _irt_wi_join_event_data;
 bool _irt_wi_join_event(irt_wi_event_register* source_event_register, void *user_data) {
 	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN, join_data->joining_wi->id);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
 }
@@ -233,12 +234,10 @@ void irt_wi_join(irt_work_item_id wi_id) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	int64 occ = irt_wi_event_check_exists_and_register(wi_id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		//irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
         _irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
-		//irt_inst_region_continue(swi);
 	}
 }
 
@@ -249,6 +248,7 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 	// do not join wrong sink if multi-level optional wi in progress
 	// (signal received from inlined sibling child)
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
 	IRT_DEBUG(" > %p releasing %p\n", irt_worker_get_current()->finalize_wi, join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
@@ -272,7 +272,6 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-//		irt_inst_region_suspend(wi);
 		irt_inst_region_end_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 #ifdef IRT_ASTEROIDEA_STACKS
@@ -283,7 +282,6 @@ void irt_wi_join_all(irt_work_item* wi) {
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
-//		irt_inst_region_continue(wi);
 		irt_inst_region_start_measurements(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi
@@ -299,7 +297,6 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
-//	irt_inst_region_suspend(wi);
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
@@ -329,7 +326,6 @@ void irt_wi_end(irt_work_item* wi) {
 	_irt_del_wi_event_register(wi->id);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
-	worker->finalize_wi = wi;
 	
 	IRT_DEBUG(" ! %p end\n", wi);
 
@@ -338,6 +334,7 @@ void irt_wi_end(irt_work_item* wi) {
     irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi);
 
 	// end
+	worker->finalize_wi = wi;
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
