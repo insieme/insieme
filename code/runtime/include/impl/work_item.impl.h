@@ -331,7 +331,7 @@ void irt_wi_end(irt_work_item* wi) {
 
     irt_wi_implementation *wimpl = wi->impl;
     irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
-    irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi);
+    irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi, false);
 
 	// end
 	worker->finalize_wi = wi;

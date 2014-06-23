@@ -34,19 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/integration/test_step.h"
+#include <sys/stat.h>
+#include <sys/fcntl.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <csignal>
-
+#include <cerrno>
 #include <sstream>
-#include <regex>
+
+#include "insieme/driver/integration/test_step.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/config.h"
 
-#include<boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
-
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
+#include <boost/tokenizer.hpp>
 
 namespace insieme {
 namespace driver {
@@ -56,6 +64,139 @@ namespace integration {
 
 		namespace {
 
+			int executeWithTimeout(const string& executableParam, const string& argumentsParam, const string& environmentParam, const string& outFilePath, const string& errFilePath, unsigned cpuTimeLimit) {
+
+				/*
+				 * Setup arguments
+				 */
+
+				// quick and dirty: have boost split everything and then reassemble tokens that were quoted
+				vector<string> argumentsVecTemp;
+				vector<string> argumentsVec;
+				typedef boost::tokenizer<boost::escaped_list_separator<char> > so_tokenizer;
+				boost::split(argumentsVecTemp, argumentsParam, boost::is_any_of(" "));
+
+				bool insideQuote = false;
+
+				for(unsigned i = 0; i < argumentsVecTemp.size(); ++i) {
+					if(argumentsVecTemp[i].empty())
+						continue;
+					string temp = boost::replace_all_copy(argumentsVecTemp[i], "\"", "");
+					if(insideQuote)
+						argumentsVec.back().append(" " + temp);
+					else
+						argumentsVec.push_back(temp);
+					size_t pos = string::npos;
+					if((pos = argumentsVecTemp[i].find_first_of("\"\'")) != string::npos) {
+						// in case a single word was quoted
+						if(argumentsVecTemp[i].find_first_of("\"\'", pos + 1) != string::npos)
+							continue;
+						else
+							insideQuote = !insideQuote;
+					}
+				}
+
+				// convert arguments to char**
+				vector<char*> argumentsForExec;
+				// argv[0] needs to be the executable itself
+				argumentsForExec.push_back(const_cast<char*>(executableParam.c_str()));
+				for(auto s : argumentsVec)
+					if(!s.empty())
+						argumentsForExec.push_back(const_cast<char*>(s.c_str()));
+				// terminate with nullptr
+				argumentsForExec.push_back(nullptr);
+
+				/*
+				 * Setup environment
+				 */
+
+				vector<string> environmentVec;
+				boost::split(environmentVec, environmentParam, boost::is_any_of(" "));
+				vector<char*> environmentForExec;
+				std::map<string,string> environmentMap;
+
+				// convert environment variables to char**
+				// add existing environment variables of the current shell session we are running in
+				unsigned i = 0;
+				while(environ[i] != nullptr) {
+					string current(environ[i]);
+					string varName = current.substr(0, current.find("="));
+					string varValue = string(getenv(varName.c_str()));
+					environmentMap[varName] = varValue;
+					i++;
+				}
+
+				// match the name of each environment variable with the syntax ${NAME}
+				boost::regex reg("\\$\\{([^\\}]*)");
+				boost::match_flag_type flags = boost::match_default;
+
+				// iterate through Insieme environment setup, expand variables and merge everything with the environment map
+				for(auto s : environmentVec) {
+					if(!s.empty()) {
+						string varName = s.substr(0, s.find("="));
+						string varValue = s.substr(s.find("=")+1, string::npos);
+						string expandedVarValue;
+						boost::match_results<std::string::const_iterator> what;
+						string::const_iterator begin = varValue.begin();
+						string::const_iterator end = varValue.end();
+						while (boost::regex_search(begin, end, what, reg, flags)) {
+							boost::replace_all(varValue, string("${" + what[1] + "}"), environmentMap[what[1]]);
+							begin = what[0].second;
+						}
+						// replace if already present, i.e. normal shell behavior
+						environmentMap[varName] = varValue;
+					}
+				}
+
+				// convert environment to char**
+				// temp vector to be able to use c_str() later
+				vector<string> environmentTemp;
+				for(auto e : environmentMap) {
+					environmentTemp.push_back(string(e.first + "=" + e.second));
+					environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
+				}
+				// terminate
+				environmentForExec.push_back(nullptr);
+
+				/*
+				 * Fork, setup timeout, stdout and sterr redirection, execute and wait
+				 */
+
+				int retVal = 0;
+
+				// create child to execute current step within CPU time limit, have parent wait for its exit/termination
+				pid_t pid = fork();
+				if(pid == -1) {
+					std::cerr << "Unable to fork, reason: " << strerror(errno) << "\n";
+				} else if(pid == 0) {
+					// soft and hard limit in seconds, will raise SIGXCPU and SIGKILL respectively afterwards, or only SIGKILL if they are equal
+					const struct rlimit cpuLimit = { cpuTimeLimit, cpuTimeLimit + 5};
+					if(setrlimit(RLIMIT_CPU, &cpuLimit) != 0)
+						std::cerr << strerror(errno);
+					// stdout and stderr redirection
+					int fdOut, fdErr;
+					if((fdOut = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR )) == -1)
+						std::cerr << "Unable to create stdout file " << outFilePath << ", reason: " << strerror(errno) << "\n";
+					if((fdErr = open(errFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR )) == -1)
+						std::cerr << "Unable to create stderr file " << errFilePath << ", reason: " << strerror(errno) << "\n";
+					if(dup2(fdOut, STDOUT_FILENO) == -1)
+						std::cerr << "Unable to redirect stdout, reason: " << strerror(errno) << "\n";
+					if(dup2(fdErr, STDERR_FILENO) == -1)
+						std::cerr << "Unable to redirect stderr, reason: " << strerror(errno) << "\n";
+					if(close(fdOut) == -1)
+						std::cerr << "Unable to close stdout file descriptor, reason: " << strerror(errno) << "\n";
+					if(close(fdErr) == -1)
+						std::cerr << "Unable to close stderr file descriptor, reason: " << strerror(errno) << "\n";
+					// execute
+					if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1)
+						std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
+				} else {
+					if(waitpid(pid, &retVal, 0) == -1)
+						std::cerr << "Unable to wait for child process " << pid << ", reason: " << strerror(errno) << "\n";
+				}
+				return retVal;
+			}
+
 			TestResult runCommand(const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
 
 				vector<string> producedFiles;
@@ -63,7 +204,7 @@ namespace integration {
 				producedFiles.push_back(setup.stdErrFile);
 
 				map<string,float> metricResults;
-				//insert dummy vals 
+				//insert dummy vals
 				metricResults["time"]=0;
 				metricResults["mem"]=0;
 
@@ -91,7 +232,7 @@ namespace integration {
 					// set number of threads
 					if(setup.numThreads){
 						env<<"OMP_NUM_THREADS="<<setup.numThreads<<" ";
-						env<<"IRT_NUM_WORKERS="<<setup.numThreads<<" ";			
+						env<<"IRT_NUM_WORKERS="<<setup.numThreads<<" ";
 					}
 
 					// set scheduling policy
@@ -142,19 +283,32 @@ namespace integration {
 
 				}
 
-				//environment must be set BEFORE executables!
-				string realCmd = env.str() + string(testConfig["time_executable"])+string(" -f \"\nTIME%e\nMEM%M\" ")+ perfString +cmd + outfile +" >"+setup.stdOutFile+" 2>"+setup.stdErrFile;
+				string executable = string(testConfig["time_executable"]);
+				string envString = env.str();
+				string argumentString = string(" -f \'\nTIME%e\nMEM%M\' ") + perfString + cmd + outfile;
 
-				//get return value, stdOut and stdErr
-				int retVal=system(realCmd.c_str());
+				// cpu time limit in seconds
+				unsigned cpuTimeLimit = 300;
+
+				int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
+
+				/*
+				 * NOTE: Ordinarily, one would use WIFSIGNALED(int exitCode) to check whether a child process was terminated by a signal.
+				 *
+				 * However, since our child process executes /usr/bin/time, the information that a signal was received is hidden and the
+				 * return/exit code of the client application + 128 is returned instead. As a result, we need to manually check for the
+				 * signal received. Note that this can cause problems for applications that return higher exit codes (i.e. exit(9) and SIGKILL
+				 * cannot be distinguished).
+				 */
+
+				int actualReturnCode = WEXITSTATUS(retVal) - 128;
+
+				if(actualReturnCode > 0)
+					std::cerr << "Killed by signal " << actualReturnCode << "\n";
 
 				//TODO change this to handle SIGINT signal
 				if(retVal==512)
 					exit(0);
-
-			  	if (WIFSIGNALED(retVal) &&
-				   (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT))
-				   	   std::cout<<"killed"<<std::endl;
 
 				string output=readFile(setup.stdOutFile);
 				string error=readFile(setup.stdErrFile);
@@ -165,9 +319,12 @@ namespace integration {
 				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
 				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
 					string token(*beg);
-					if(token.find("TIME")==0)
+					if(token.find("TIME")==0) {
 						metricResults["time"]=atof(token.substr(4).c_str());
-					else if (token.find("MEM")==0)
+						// check if we approached the cpu time limit. If so, print a warning
+						if(((metricResults["time"]))/cpuTimeLimit > 0.95)
+							std::cerr << "Killed by timeout, CPU time was " << metricResults["time"] << ", limit was " << cpuTimeLimit << " seconds\n";
+					} else if (token.find("MEM")==0)
 						metricResults["mem"]=atof(token.substr(3).c_str());
 					else
 					//check perf metrics, otherwise append to stderr
@@ -665,8 +822,8 @@ namespace integration {
 
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
-					string outputAwk = props["outputAwk"].substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
-					cmd << " '"<< outputAwk << "'";
+					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
+					cmd << " "<< outputAwk;
 
 					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
@@ -701,8 +858,8 @@ namespace integration {
 
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
-					string outputAwk = props["outputAwk"].substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
-					cmd << " '"<< outputAwk << "'";
+					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
+					cmd << " "<< outputAwk;
 
 					// disable multithreading
 					set.numThreads=0;
@@ -984,7 +1141,7 @@ namespace integration {
 
 		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false) {
 			// check whether test is already present
-			if (contains(res, step)) return;
+			if (::contains(res, step)) return;
 			auto props = test.getProperties();
 
 			// check that all dependencies are present
@@ -1030,3 +1187,4 @@ namespace integration {
 } // end namespace integration
 } // end namespace driver
 } // end namespace insieme
+
