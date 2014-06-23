@@ -191,6 +191,9 @@ namespace cba {
 			} else if (name == "cba_dump_equations") {
 				// dump the dot plot
 				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+			} else if (name == "cba_dump_sync_points") {
+				// dump sync points
+				std::cout << "Sync Points:\n\t" << ::join("\n\t", getSyncPoints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
 			} else if (name == "cba_dump_execution_net") {
 				// dump the dot plot of the execution net
 				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
@@ -203,7 +206,7 @@ namespace cba {
 				utils::petri_net::plot(states, "state_graph.svg");
 			} else if (name == "cba_dump_thread_regions") {
 				// dump the list of thread regions
-				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n";
+				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
 			} else if (name == "cba_print_ref") {
 				// print the result of the reference analysis
 				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";

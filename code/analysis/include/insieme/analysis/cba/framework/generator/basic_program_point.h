@@ -271,13 +271,19 @@ namespace cba {
 				// if the call context is empty, we are probably in the root of a thread
 				if (ctxt.isEmptyThreadContext()) return;	// if context is empty, we are not in a thread!
 
-				// get thread call context
+				// get spawning point
 				const auto& spawnID = ctxt.threadContext.front();
 				const auto& spwanStmt = cba.getStmt(spawnID.getSpawnLabel());
-				const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+				const auto& spawnCallCtxt = spawnID.getSpawnContext();
 
-				assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
+				// get thread context of spawning point
+				auto spawnThreadCtxt = ctxt.threadContext << typename Context::thread_id();
+
+				assert_true(spawnThreadCtxt == typename Context::thread_context())
 					<< "Not yet supporting nested threads!\n";
+
+				// construct context of spawn call
+				const auto& spawnCtxt = Context(spawnCallCtxt, spawnThreadCtxt);
 
 				// connect to spawn location (but we have to guess the thread context)
 				// TODO: this should actually be Atmp ...
