@@ -111,8 +111,9 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	range.end = irt_g_worker_count;
 	range.step = 1;
 	irt_work_item* child = irt_wi_create(range, &g_insieme_impl_table[INSIEME_HW_WI_INDEX], NULL);
+	irt_work_item_id child_id = child->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), child);
-	irt_wi_join(child);
+	irt_wi_join(child_id);
 
 	uint64 endms = irt_time_ms();
 

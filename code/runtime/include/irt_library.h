@@ -103,7 +103,7 @@ void _irt_lib_wi_implementation_func(irt_work_item* wi) {
 
 // Execute between "min" and "max" parallel instances of "fun",
 // passing "data" of size "data_size" to each of them
-irt_joinable* irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size) {
+irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size) {
 
 	// static wi implementation (immutable)
 	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };

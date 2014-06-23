@@ -97,15 +97,19 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	}
 }
 
-irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
-	if(target->sched_data.queue.size >= irt_g_worker_count) {
+irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
+	if (target->sched_data.queue.size >= irt_g_worker_count) {
+		irt_joinable joinable;
+		joinable.wi_id = wi->id;
 		irt_worker_run_immediate_wi(target, wi);
-		return wi;
+		return joinable;
 	}
 	else {
 		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
+		irt_joinable joinable;
+		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
+		return joinable;
 	}
 }
 

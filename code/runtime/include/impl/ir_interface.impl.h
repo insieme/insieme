@@ -79,7 +79,7 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 }
 
 
-irt_joinable* irt_parallel(const irt_parallel_job* job) {
+irt_joinable irt_parallel(const irt_parallel_job* job) {
 	//irt_work_item *self = target->cur_wi;
 	//irt_lw_data_item *prev_args = self->parameters;
 	//irt_work_item_range prev_range = self->range;
@@ -94,6 +94,8 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
 	irt_work_group* retwg = irt_wg_create();
+	irt_joinable ret;
+	ret.wg_id = retwg->id;
 	uint32 num_threads = (job->max/2+job->min/2);
 	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
 	num_threads -= num_threads%job->mod;
@@ -118,13 +120,13 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	// alloca is implemented as malloc
 	free(wis);
 #endif
-	return IRT_TAG_WG_PTR(retwg);
+	return ret;
 }
 
-irt_joinable* irt_task(const irt_parallel_job* job) {
+irt_joinable irt_task(const irt_parallel_job* job) {
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");
-    return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
+	return irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
 }
 
 void irt_region(const irt_parallel_job* job) {
@@ -142,16 +144,18 @@ void irt_region(const irt_parallel_job* job) {
     free(wis);
 }
 
-void irt_merge(irt_joinable* joinable) {
-	if(joinable == NULL) return;
+void irt_merge(irt_joinable joinable) {
+	if(joinable.wi_id.full == irt_work_item_null_id().full ) return;
    
-	if(IRT_IS_WG_PTR(joinable)) {
-		irt_wg_join(IRT_UNTAG_WG_PTR(joinable));
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+    uint32 outer_worker_count = irt_g_worker_to_enable_count;
+#endif
+
+	if(joinable.wi_id.id_type == IRT_ID_work_group) {
+		irt_wg_join(joinable.wg_id);
 	} else {
-		irt_wi_join((irt_work_item*)joinable);
+		irt_wi_join(joinable.wi_id);
 	}
 }
-
-
 
 #endif // ifndef __GUARD_IMPL_IR_INTERFACE_IMPL_H

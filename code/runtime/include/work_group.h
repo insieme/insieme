@@ -94,8 +94,6 @@ static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg,
 void irt_wg_barrier(irt_work_group* wg);
 void irt_wg_joining_barrier(irt_work_group* wg);
 void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
-void irt_wg_join(irt_work_group* wg);
-
-
+void irt_wg_join(irt_work_group_id wg_id);
 
 #endif // ifndef __GUARD_WORK_GROUP_H
