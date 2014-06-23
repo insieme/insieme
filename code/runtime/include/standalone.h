@@ -80,11 +80,6 @@ irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-uint32 irt_g_enabled_worker_count;
-uint32 irt_g_worker_to_enable_count;
-irt_cond_bundle irt_g_enable_worker_cond;
-#endif
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -127,9 +122,6 @@ void irt_init_globals() {
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
 	irt_mutex_init(&irt_g_active_worker_mutex);
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-	irt_cond_bundle_init(&irt_g_enable_worker_cond);
-#endif
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
@@ -319,10 +311,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    irt_g_enabled_worker_count = irt_g_worker_count;
-    irt_g_worker_to_enable_count = irt_g_worker_count;
-#endif
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 
 	// initialize affinity mapping & load affinity policy
