@@ -68,7 +68,7 @@ static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_pt
 	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
 	id.full = gen_id->full; \
 	id.index = gen_id->index++; \
-	id.node = 0; \
+	id.node = gen_id->node; \
 	id.id_type = IRT_ID_##__type; \
 	id.cached = NULL; \
 	return id; \
