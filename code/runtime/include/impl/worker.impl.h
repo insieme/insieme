@@ -92,6 +92,7 @@ typedef struct __irt_worker_func_arg {
 	irt_affinity_mask affinity;
 	uint16 index;
 	irt_worker_init_signal *signal;
+	irt_context* context;
 } _irt_worker_func_arg;
 
 
@@ -129,7 +130,7 @@ void* _irt_worker_func(void *argvp) {
 	self->id.cached = self;
 	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
-	self->cur_context = irt_context_null_id();
+	self->cur_context = arg->context->id;
 	self->cur_wi = NULL;
 	self->finalize_wi = NULL;
 	self->default_variant = 0;
@@ -192,7 +193,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
 	// wait for previous operations on WI to complete
 	while(wi->state != IRT_WI_STATE_NEW && wi->state != IRT_WI_STATE_SUSPENDED);
-	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED, 
+	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED,
 		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", self, wi);
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
@@ -200,18 +201,16 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		wi->state = IRT_WI_STATE_STARTED;
 		lwt_prepare(self->id.thread, wi, &self->basestack);
 		self->cur_wi = wi;
-#ifdef USING_MINLWT
+		#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
-#else
+		#else
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
-#endif
+		#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-//		irt_inst_region_continue(wi);
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
-#ifndef IRT_TASK_OPT
+		#ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = wi->impl;
-        irt_optimizer_set_wrapping_optimizations(&(wi->impl->variants[0]), (!wi->parent_id.cached) ? NULL : &(wi->parent_id.cached->impl->variants[0]));
 		if(self->default_variant < wimpl->num_variants) {
             irt_optimizer_apply_dvfs(&(wimpl->variants[self->default_variant]));
 			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
@@ -219,30 +218,25 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
             irt_optimizer_apply_dvfs(&(wimpl->variants[0]));
 			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
 		}
-#else // !IRT_TASK_OPT
+		#else // !IRT_TASK_OPT
         irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
         uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
         irt_optimizer_apply_dvfs(&(wimpl->variants[opt]));
 		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);
-#endif // !IRT_TASK_OPT
+		#endif // !IRT_TASK_OPT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
 		wi->state = IRT_WI_STATE_STARTED;
 		self->cur_wi = wi;
-#ifdef USING_MINLWT
+		#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
-#else
+		#else
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, &(wi->stack_ptr));
-#endif
+		#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		// philgs TODO: do we need to start measurements here? if yes, previous measurements must be ended before, but where?
-//		irt_inst_region_continue(wi);
-//		irt_inst_region_start_measurements(wi);
-#endif
-		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, wi->id);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_UNKNOWN, wi->id);
 		irt_wi_implementation *wimpl = wi->impl;
         irt_optimizer_apply_dvfs(&(wimpl->variants[0]));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
@@ -300,11 +294,12 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_fragments = prev_fragments;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
+	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
 }
 

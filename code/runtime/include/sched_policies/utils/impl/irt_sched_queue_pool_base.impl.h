@@ -39,6 +39,7 @@
 #define __GUARD_SCHED_POLICIES_UTILS_IMPL_IRT_SCHED_QUEUE_POOL_BASE_IMPL_H
 
 #include "sched_policies/utils/irt_sched_queue_pool_base.h"
+#include "ir_interface.h"
 
 IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
 IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
@@ -48,7 +49,7 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 	irt_signal_worker(target);
 }
 
-irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
 		//printf("WO %d lazy: queued %d, address: %p\n", target->id.index, target->sched_data.queue.size,
 		//	&target->sched_data.queue.size);
@@ -60,12 +61,14 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 		(impl->variants[0].implementation)(self);
 		self->parameters = prev_args;
 		self->range = prev_range;
-		return NULL;
+		return irt_joinable_null();
 	}
 	else {
 		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+		irt_joinable joinable;
+		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
+		return joinable;
 	}
 }
 

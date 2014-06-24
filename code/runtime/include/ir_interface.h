@@ -42,6 +42,8 @@
 #include "instrumentation_regions.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
+#include "work_item.h"
+#include "work_group.h"
 
 #include "irt_context.h"
 #include "worker.h"
@@ -54,16 +56,17 @@ typedef struct _irt_parallel_job {
 	irt_lw_data_item* args;
 } irt_parallel_job;
 
-/** Pointers to irt_joinable can either point to work items or work group, depending on whether
- *  the bit flag IRT_WG_PTR_FLAG is set. They can also be NULL, indicating a immediately evaluated 
- *  (and thus already joined) task.
+/** Ids of either work items or work groups are joinable. These will be casted as required.
  */
-typedef void irt_joinable;
+union _irt_joinable {
+	irt_work_item_id wi_id;
+	irt_work_group_id wg_id;
+};
 
-#define IRT_WG_PTR_FLAG ((intptr_t)0x0001)
-#define IRT_TAG_WG_PTR(__ptr) (irt_joinable*)((intptr_t)(__ptr) ^ IRT_WG_PTR_FLAG)
-#define IRT_UNTAG_WG_PTR(__ptr) (irt_work_group*)((intptr_t)(__ptr) ^ IRT_WG_PTR_FLAG)
-#define IRT_IS_WG_PTR(__ptr) ((intptr_t)(__ptr) & IRT_WG_PTR_FLAG)
+irt_joinable irt_joinable_null() {
+	static irt_joinable null_joinable = { { { 0 } } };
+	return null_joinable;
+}
 
 /** Distributes the provided work range over the given group. 
  *  Needs to be called by every work item within the group! (OMP semantics)
@@ -75,14 +78,14 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
  *  The return value is a pointer to either a work item or a work group.
  *  To wait for the completion of the whole parallel job, use "irt_merge".
  */
-irt_joinable* irt_parallel(const irt_parallel_job* job);
+irt_joinable irt_parallel(const irt_parallel_job* job);
 
 /** From a job description structure, generates a single work item to perform the job.
  *  No group is created.
  *  The return value is a pointer to a work item.
  *  To wait for the completion of the whole parallel job, use "irt_merge".
  */
-irt_joinable* irt_task(const irt_parallel_job* job);
+irt_joinable irt_task(const irt_parallel_job* job);
 
 /** From a job description structure, generates a single work item to perform the job,
  *  and immediately executes it. 
@@ -91,7 +94,7 @@ void irt_region(const irt_parallel_job* job);
 
 /** Waits until a job launched by irt_parallel is finished.
  */
-void irt_merge(irt_joinable* joinable);
+void irt_merge(irt_joinable joinable);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
 

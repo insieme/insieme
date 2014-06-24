@@ -197,25 +197,28 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
 	irt_work_item* init_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_INIT_INDEX], (irt_lw_data_item*)&init_params);
+	irt_work_item_id init_wi_id = init_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), init_wi);
 
 	// wait until finished
-	irt_wi_join(init_wi);
+	irt_wi_join(init_wi_id);
 
 	// conduct the addition
 	insieme_wi_add_params add_params = {INSIEME_WI_ADD_PARAM_T_INDEX, A->id, B->id, C->id};
-	irt_work_item* add_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_ADD_INDEX], (irt_lw_data_item*)&add_params);
+	irt_work_item* add_wi = irt_wi_create((irt_work_item_range){ 0, N, 1 }, &g_insieme_impl_table[INSIEME_WI_ADD_INDEX], (irt_lw_data_item*)&add_params);
+	irt_work_item_id add_wi_id = add_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), add_wi);
 
 	// wait until finished
-	irt_wi_join(add_wi);
+	irt_wi_join(add_wi_id);
 
 	// conduct the check
 	insieme_wi_check_params check_params = {INSIEME_WI_CHECK_PARAM_T_INDEX, C->id};
-	irt_work_item* check_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_CHECK_INDEX], (irt_lw_data_item*)&check_params);
+	irt_work_item* check_wi = irt_wi_create((irt_work_item_range){ 0, N, 1 }, &g_insieme_impl_table[INSIEME_WI_CHECK_INDEX], (irt_lw_data_item*)&check_params);
+	irt_work_item_id check_wi_id = check_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), check_wi);
 
-	irt_wi_join(check_wi);
+	irt_wi_join(check_wi_id);
 
 	// cleanup
 	irt_di_destroy(A);

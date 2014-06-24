@@ -121,7 +121,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	//	irt_wi_join(test_wis[i]);
 	//	ERR("Z4");
 	//}
-	irt_wg_join(wg1);
+	irt_wg_join(wg1->id);
 	ERR("Z5 ---");
 
 	uint64 end_time = irt_time_ms();

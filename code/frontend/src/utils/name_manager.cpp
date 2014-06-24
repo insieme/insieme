@@ -286,6 +286,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 	ss << sm.getFilename(varDecl->getLocStart()).str();   //.getHashValue();
 	ss << sm.getExpansionLineNumber (varDecl->getLocStart());
 	ss << sm.getExpansionColumnNumber(varDecl->getLocStart());
+	ss << sm.getExpansionColumnNumber(varDecl->getLocEnd());
 
 	std::string name =  ss.str();
 	REMOVE_SYMBOLS(name);

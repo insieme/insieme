@@ -7,7 +7,7 @@
 // IRT
 struct irt_joinable;
 struct irt_work_item;
-void irt_merge(irt_joinable*);
+void irt_merge(irt_joinable);
 irt_work_item* irt_wi_get_current();
 uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);
@@ -41,7 +41,7 @@ namespace irt {
 		irt_lib_merge_all();
 	}
 
-	inline void merge(irt_joinable* target) {
+	inline void merge(irt_joinable target) {
 		irt_merge(target);
 	}
 
@@ -55,14 +55,14 @@ namespace irt {
 
 	// Executes "num" parallel instances of the callable "fun"
 	template<class Callable>
-	inline irt_joinable* parallel(int64 num, const Callable& fun) {
+	inline irt_joinable parallel(int64 num, const Callable& fun) {
 		return irt_lib_parallel(num, num, &detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
 	}
 
 	// Executes "fun" in parallel with the default number of instances
 	// (set via environment variables, or lacking that to the number of CPUs in the system)
 	template<class Callable>
-	inline irt_joinable* parallel(const Callable& fun) {
+	inline irt_joinable parallel(const Callable& fun) {
 		return parallel(irt_g_worker_count, fun);
 	}
 

@@ -39,6 +39,9 @@
 #define __GUARD_IRT_OPTIMIZER_H
 
 #include "declarations.h"
+
+#include "utils/lookup_tables.h"
+
 //#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 
@@ -124,11 +127,10 @@ IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_opti
 #endif
 
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
-void irt_optimizer_apply_dct(irt_worker* self);
-void irt_optimizer_remove_dct(uint32 outer_worker_to_enable_count);
+uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant);
 irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var);
 void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data);
 
