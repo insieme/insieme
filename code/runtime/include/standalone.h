@@ -376,6 +376,8 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&condbundle.mutex);
 	irt_cond_bundle_wait(&condbundle);
+	irt_mutex_unlock(&condbundle.mutex);
+	irt_mutex_destroy(&condbundle.mutex);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -413,8 +415,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
-	//irt_mutex_unlock(&condbundle.mutex);
-	//irt_mutex_destroy(&condbundle.mutex);
 	IRT_DEBUG("Exiting ...\n");
 	irt_exit_handler();
 }
