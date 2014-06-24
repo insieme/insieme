@@ -335,7 +335,7 @@ void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* v
 
 #ifndef IRT_ENABLE_OMPP_OPTIMIZER_DCT
 
-uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) {}
+uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) { return 0; }
 
 #endif // IRT_ENABLE_OMPP_OPTIMIZER_DCT
 

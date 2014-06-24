@@ -80,5 +80,4 @@ static inline irt_##__type##_id irt_##__type##_null_id() { \
 
 #define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
 
-
 #endif // ifndef __GUARD_ID_GENERATION_H

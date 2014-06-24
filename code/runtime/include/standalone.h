@@ -272,7 +272,7 @@ void _irt_wake_sleeping_workers(irt_worker_init_signal *signal, void *ev_handle)
 	#endif
 }
 
-void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals) {
+void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals, irt_context* context) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
 		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...\n", IRT_MAX_WORKERS, worker_count);
@@ -324,7 +324,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	void* ev_handle = _irt_init_signalable(&signal);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal, context);
 	}
 
 	// wait until all workers have signaled readyness
@@ -376,6 +376,8 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&condbundle.mutex);
 	irt_cond_bundle_wait(&condbundle);
+	irt_mutex_unlock(&condbundle.mutex);
+	irt_mutex_destroy(&condbundle.mutex);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -390,7 +392,7 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
 
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
-	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
+	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals, context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -413,8 +415,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
-	//irt_mutex_unlock(&condbundle.mutex);
-	//irt_mutex_destroy(&condbundle.mutex);
 	IRT_DEBUG("Exiting ...\n");
 	irt_exit_handler();
 }
