@@ -56,8 +56,12 @@
 
 #else
 	// also gcc for windows (MinGW, cygwin) will come with the required header files
-	#define __STDC_LIMIT_MACROS 1
-	#define __STDC_CONSTANT_MACROS 1
+	#ifndef __STDC_LIMIT_MACROS
+		#define __STDC_LIMIT_MACROS 1
+	#endif
+	#ifndef __STDC_CONSTANT_MACROS
+		#define __STDC_CONSTANT_MACROS 1
+	#endif
 	#ifdef _GEMS
 		#include "include_gems/inttypes.h"
 	#else
