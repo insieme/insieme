@@ -131,7 +131,7 @@ void irt_optimizer_objective_init(irt_context *context) {
     }
 
 #ifndef _GEMS
-    irt_cpu_freq_get_available_frequencies_worker(irt_worker_get_current(), irt_g_available_freqs, &irt_g_available_freq_count);
+	irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count);
 #endif
 }
 
