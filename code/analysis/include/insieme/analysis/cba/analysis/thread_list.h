@@ -158,7 +158,7 @@ namespace cba {
 					if (isSpawnPoint(cur.getStatement().template isa<ExpressionPtr>())) {
 
 						// add variable describing bodies to dependencies
-						auto tb_var = cba.getValueID<thread_body_analysis,analysis_config<Context>>(cur.getStatement(), cur.getContext());
+						auto tb_var = cba.getSet(ThreadBodies, cur.getStatement(), cur.getContext());
 						if (contains(thread_body_variables, tb_var)) continue;
 
 						// add current variable to list of dependencies
@@ -170,34 +170,6 @@ namespace cba {
 
 				// return whether dependencies have changed
 				return changed;
-//
-//				// collect all preceding sync-point sets
-//				bool changed = false;
-//				for(const auto& cur : all_sync_points) {
-//
-//					// get set of preceding sync points
-//					auto stmt = cur.getStatement();
-//
-//					// extract the current set
-//					SyncPointSetType cur_set;
-//					auto call = stmt.template isa<CallExprInstance>();
-//					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
-//						// for call expressions it is the set of sync points reaching the tmp-state
-//						// (after arguments, before processing the function itself)
-//						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
-//					} else {
-//						// for rest it is the out state
-//						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
-//					}
-//
-//					if (!contains(sync_points,cur_set)) {
-//						sync_points.push_back(cur_set);
-//						inputs.push_back(cur_set);
-//						changed = true;
-//					}
-//				}
-//
-//				return changed;
 			}
 
 			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
@@ -223,14 +195,11 @@ namespace cba {
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				// print dependencies to thread-body variables
+				for(const auto& cur : thread_body_variables) {
+					out << cur << " -> " << TL << "[label=\"effects\"]\n";
+				}
 				return out;
-//				// print merged in thread dependencies
-//				for(const auto& cur : sync_points) {
-//					out << cur << " -> " << SPs << "[label=\"subset\"]\n";
-//				}
-//
-//				// and the default dependencies
-//				return out << SPs << " -> " << SPs << "[label=\"reaching sync closure\"]\n";
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -253,7 +222,7 @@ namespace cba {
 						res.insert(cur.getContext().threadContext);
 					}
 				}
-std::cout << "Updated dependency list: " << thread_body_variables << "\n";
+
 				// return list of threads
 				return res;
 			}
@@ -265,245 +234,6 @@ std::cout << "Updated dependency list: " << thread_body_variables << "\n";
 		ConstraintPtr createThreadCollectorConstraint(CBA& cba, const ThreadListVarType& set) {
 			return std::make_shared<ThreadCollector<Context,ThreadListVarType>>(cba, set);
 		}
-
-
-//		template<typename Context, typename SyncPointSetType>
-//		class ReachingSyncPointsClosureConstraint : public utils::constraint::Constraint {
-//
-//			CBA& cba;
-//
-//			SyncPointSetType SPs;
-//
-//			mutable std::vector<SyncPointSetType> sync_points;
-//
-//			mutable std::vector<ValueID> inputs;
-//
-//		public:
-//
-//			ReachingSyncPointsClosureConstraint(CBA& cba, const SyncPointSetType& set) :
-//				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set) {
-//				inputs.push_back(SPs);
-//			}
-//
-//			virtual UpdateResult update(Assignment& ass) const {
-//
-//				// get the set to be modified
-//				set<ProgramPoint<Context>>& set = ass[SPs];
-//
-//				// just collect all values from the input sets
-//				bool newElement = false;
-//				for(const auto& cur : sync_points) {
-//					for(const auto& point : ass[cur]) {
-//						newElement = set.insert(point).second || newElement;
-//					}
-//				}
-//
-//				// done
-//				return (newElement) ? Incremented : Unchanged;
-//			}
-//
-//			virtual bool updateDynamicDependencies(const Assignment& ass) const {
-//
-//				// get current set of sync points
-//				const set<ProgramPoint<Context>>& all_sync_points = ass[SPs];
-//
-//				// collect all preceding sync-point sets
-//				bool changed = false;
-//				for(const auto& cur : all_sync_points) {
-//
-//					// get set of preceding sync points
-//					auto stmt = cur.getStatement();
-//
-//					// extract the current set
-//					SyncPointSetType cur_set;
-//					auto call = stmt.template isa<CallExprInstance>();
-//					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
-//						// for call expressions it is the set of sync points reaching the tmp-state
-//						// (after arguments, before processing the function itself)
-//						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
-//					} else {
-//						// for rest it is the out state
-//						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
-//					}
-//
-//					if (!contains(sync_points,cur_set)) {
-//						sync_points.push_back(cur_set);
-//						inputs.push_back(cur_set);
-//						changed = true;
-//					}
-//				}
-//
-//				return changed;
-//			}
-//
-//			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
-//				return inputs;
-//			}
-//
-//			virtual bool check(const Assignment& ass) const {
-//
-//				// check whether dependencies are fixed
-//				if (updateDynamicDependencies(ass)) return false;
-//
-//				// get the resulting set
-//				const set<ProgramPoint<Context>>& set = ass[SPs];
-//
-//				// check whether all expected values are present
-//				for(const auto& cur : sync_points) {
-//					for(const auto& point : ass[cur]) {
-//						// if not present => fail
-//						if (set.find(point) == set.end()) return false;
-//					}
-//				}
-//
-//				// everything is fine
-//				return true;
-//			}
-//
-//			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-//
-//				// print merged in thread dependencies
-//				for(const auto& cur : sync_points) {
-//					out << cur << " -> " << SPs << "[label=\"subset\"]\n";
-//				}
-//
-//				// and the default dependencies
-//				return out << SPs << " -> " << SPs << "[label=\"reaching sync closure\"]\n";
-//			}
-//
-//			virtual std::ostream& printTo(std::ostream& out) const {
-//				return out << "ReachingSyncClosure";
-//			}
-//		};
-//
-//
-//		template<typename Context, typename SyncPointSetType>
-//		ConstraintPtr createReachingSyncPointsClosureConstraint(CBA& cba, const SyncPointSetType& set) {
-//			return std::make_shared<ReachingSyncPointsClosureConstraint<Context,SyncPointSetType>>(cba, set);
-//		}
-//
-//
-//		template<typename Context, typename SyncPointSetType>
-//		class AddInnerThreadConstraint : public utils::constraint::Constraint {
-//
-//			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> thread_body_set_id_type;
-//
-//			CBA& cba;
-//
-//			SyncPointSetType SPs;
-//
-//			// the sets containing sets of spanned thread bodies
-//			mutable std::vector<thread_body_set_id_type> thread_bodies;
-//
-//			mutable std::vector<ValueID> inputs;
-//
-//			const core::lang::BasicGenerator& basic;
-//
-//		public:
-//
-//			AddInnerThreadConstraint(CBA& cba, const SyncPointSetType& set) :
-//				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set), basic(cba.getRoot()->getNodeManager().getLangBasic()) {
-//				inputs.push_back(SPs);
-//			}
-//
-//			virtual UpdateResult update(Assignment& ass) const {
-//
-//				// get the set to be modified
-//				set<ProgramPoint<Context>>& set = ass[SPs];
-//
-//				// for all thread bodies in the program => add the end-point of the thread to the list of sync points
-//				bool newElement = false;
-//				for(const auto& cur : thread_bodies) {
-//					for(const auto& body : ass[cur]) {
-//
-//						// build a program point marking the end of the thread body
-//						auto end = ProgramPoint<Context>(ProgramPoint<Context>::Out, body.getBody(), body.getContext());
-//
-//						// add end of thread to program point
-//						newElement = set.insert(end).second || newElement;
-//					}
-//				}
-//
-//				// done
-//				return (newElement) ? Incremented : Unchanged;
-//			}
-//
-//			virtual bool updateDynamicDependencies(const Assignment& ass) const {
-//
-//				// get current set of sync points
-//				const set<ProgramPoint<Context>>& all_sync_points = ass[SPs];
-//
-//				// for all sync points ...
-//				bool changed = false;
-//				for(const auto& cur : all_sync_points) {
-//					// ... that are spawn points ...
-//					auto call = cur.getStatement().template isa<CallExprInstance>();
-//					if (call && basic.isParallelOp(call->getFunctionExpr())) {
-//
-//						// ... add the list of potential spanned bodies to the inputs
-//						auto cur_bodies = cba.getSet(ThreadBodies, call, cur.getContext());
-//
-//						// add it if not already present
-//						if (!contains(thread_bodies, cur_bodies)) {
-//							thread_bodies.push_back(cur_bodies);
-//							inputs.push_back(cur_bodies);
-//							changed = true;
-//						}
-//					}
-//				}
-//
-//				// cone
-//				return changed;
-//			}
-//
-//			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
-//				return inputs;
-//			}
-//
-//			virtual bool check(const Assignment& ass) const {
-//
-//				// check whether dependencies are fixed
-//				if (updateDynamicDependencies(ass)) return false;
-//
-//				// get the set to be modified
-//				const set<ProgramPoint<Context>>& set = ass[SPs];
-//
-//				// for all thread bodies in the program => add the end-point of the thread to the list of sync points
-//				for(const auto& cur : thread_bodies) {
-//					for(const auto& body : ass[cur]) {
-//
-//						// build a program point marking the end of the thread body
-//						auto end = ProgramPoint<Context>(ProgramPoint<Context>::Out, body.getBody(), body.getContext());
-//
-//						// check whether this sync point is present
-//						if (set.find(end) == set.end()) return false;
-//					}
-//				}
-//
-//				// everything is fine
-//				return true;
-//			}
-//
-//			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-//
-//				// print merged in thread dependencies
-//				for(const auto& cur : thread_bodies) {
-//					out << cur << " -> " << SPs << "[label=\"reaches thread\"]\n";
-//				}
-//
-//				out << SPs << " -> " << SPs << "[label=\"for all spawn points\"]\n";
-//				return out;
-//			}
-//
-//			virtual std::ostream& printTo(std::ostream& out) const {
-//				return out << "AddInnerThreadConstraint";
-//			}
-//		};
-//
-//		template<typename Context, typename SyncPointSetType>
-//		ConstraintPtr createAddInnerThreadConstraint(CBA& cba, const SyncPointSetType& set) {
-//			return std::make_shared<AddInnerThreadConstraint<Context,SyncPointSetType>>(cba, set);
-//		}
 
 	}
 

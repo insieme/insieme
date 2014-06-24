@@ -58,6 +58,14 @@ namespace cba {
 
 	std::set<SyncPoint> getSyncPoints(const core::StatementAddress& root);
 
+	// *************************************************************************************
+	//									   List of Threads
+	// *************************************************************************************
+
+	typedef typename DefaultContext::thread_context ThreadContext;
+
+	std::set<ThreadContext> getThreadList(const core::StatementAddress& root);
+
 
 	// *************************************************************************************
 	//										Thread Regions

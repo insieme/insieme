@@ -632,9 +632,11 @@ namespace cba {
 //					return ExecutionNet<Context>();		// return default value
 //				}
 
-//				// value is valid (and hence more likely to be stabel)
-//				// => remove dummy node
-//				res.removePlace(dummy);
+				// value is valid (and hence more likely to be stable)
+				// => remove dummy node
+				if (res.getNumPreTransitions(dummy) == 0 && res.getNumPostTransitions(dummy) == 0) {
+					res.removePlace(dummy);
+				}
 
 				// done
 				return res;

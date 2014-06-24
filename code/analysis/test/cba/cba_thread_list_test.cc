@@ -50,6 +50,23 @@ namespace cba {
 
 	using namespace core;
 
+	namespace {
+
+		int fixLabels(CBA& analysis, const CompoundStmtAddress& code) {
+			// fix labels for the thread spawning calls
+			int i = 0;
+			visitDepthFirst(code, [&](const CallExprAddress& cur) {
+				auto parallel = cur.getNodeManager().getLangBasic().getParallel();
+				if (cur.as<CallExprPtr>()->getFunctionExpr() != parallel) return;
+				i++;
+				EXPECT_EQ(i, analysis.getLabel(cur));
+			});
+			return i;
+		}
+
+	}
+
+
 	TEST(CBA, SimpleSequential) {
 
 		// a simple test cases checking the handling of simple value structs
@@ -95,7 +112,7 @@ namespace cba {
 		CBA analysis(code);
 
 		// fix some labels
-		EXPECT_EQ(1, analysis.getLabel(code[1]));
+		EXPECT_EQ(1, fixLabels(analysis, code));
 
 		auto threads = analysis.getValuesOf(ThreadList);
 		EXPECT_EQ(2, threads.size());
@@ -125,14 +142,13 @@ namespace cba {
 		CBA analysis(code);
 
 		// just fix some labels (for the thread spawning calls)
-		EXPECT_EQ(1,analysis.getLabel(code[1]));
-		EXPECT_EQ(2,analysis.getLabel(code[3]));
+		EXPECT_EQ(2,fixLabels(analysis, code));
 
 		auto threads = analysis.getValuesOf(ThreadList);
 		EXPECT_EQ(3, threads.size());
 		EXPECT_EQ("{[<0,[0,0],0>,<0,[0,0],0>],[<1,[0,0],0>,<0,[0,0],0>],[<2,[0,0],0>,<0,[0,0],0>]}", toString(threads));
 
-		createDotDump(analysis);
+//		createDotDump(analysis);
 	}
 
 	TEST(CBA, NestedSpawn) {
@@ -157,62 +173,76 @@ namespace cba {
 		CBA analysis(code);
 
 		// just fix some labels (for the thread spawning calls)
-		int i = 0;
-		visitDepthFirst(code, [&](const CallExprAddress& cur) {
-			auto parallel = cur.getNodeManager().getLangBasic().getParallel();
-			if (cur->getFunctionExpr() != parallel) return;
-			i++;
-			EXPECT_EQ(i, analysis.getLabel(cur));
-		});
+		EXPECT_EQ(3,fixLabels(analysis, code));
 
 		auto threads = analysis.getValuesOf(ThreadList);
 		EXPECT_EQ(4, threads.size());
-		EXPECT_EQ("{[<0,[0,0],0>,<0,[0,0],0>],[<1,[0,0],0>,<0,[0,0],0>],[<2,[0,0],0>,<0,[0,0],0>]}", toString(threads));
+		EXPECT_EQ("{[<0,[0,0],0>,<0,[0,0],0>],[<1,[0,0],0>,<0,[0,0],0>],[<2,[0,0],0>,<1,[0,0],0>],[<3,[0,0],0>,<2,[0,0],0>]}", toString(threads));
 
-		createDotDump(analysis);
+//		createDotDump(analysis);
 	}
-//
-//	TEST(CBA, SimpleParallelGroup) {
-//
-//		// a simple test cases checking the handling of simple value structs
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				" 	merge(parallel(job {"
-//				"		int<4> a = 1;"
-//				"	}));"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		CompoundStmtAddress code(in);
-//
-//		CBA analysis(code);
-//
-////		dumpPretty(code);
-//
-//		// just fix some labels (for the thread spawning calls)
-//		EXPECT_EQ(1,analysis.getLabel(code[0].as<CallExprAddress>()[0]));
-//
-//		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
-//
-//		EXPECT_EQ(8, syncPoints.size());
-//		auto resStr = toString(syncPoints);
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
-//		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
-//		EXPECT_PRED2(containsSubString, resStr, "T0-0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");	// spawning the thread group
-//		EXPECT_PRED2(containsSubString, resStr, "T0-0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// merging the thread group
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the thread group - thread 0
-//		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the end of the thread group - thread 0
-//
-//		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the begin of the thread group - thread 1
-//		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the end of the thread group - thread 1
-//
-////		createDotDump(code);
-//	}
+
+	TEST(CBA, SimpleParallelGroup) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				" 	merge(parallel(job {"
+				"		int<4> a = 1;"
+				"	}));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(1,fixLabels(analysis, code));
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+
+		auto threads = analysis.getValuesOf(ThreadList);
+		EXPECT_EQ(3, threads.size());
+		EXPECT_EQ("{[<0,[0,0],0>,<0,[0,0],0>],[<1,[0,0],0>,<0,[0,0],0>],[<1,[0,0],1>,<0,[0,0],0>]}", toString(threads));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, NestedParallelGroup) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	merge(parallel(job {"
+				" 		merge(parallel(job {"
+				"			int<4> a = 1;"
+				"		}));"
+				"	}));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// just fix some labels (for the thread spawning calls)
+		EXPECT_EQ(2,fixLabels(analysis, code));
+
+		set<ProgramPoint<DefaultContext>> syncPoints = analysis.getValuesOf(SyncPoints);
+
+		auto threads = analysis.getValuesOf(ThreadList);
+		EXPECT_EQ(7, threads.size());
+		EXPECT_EQ("{[<0,[0,0],0>,<0,[0,0],0>],[<1,[0,0],0>,<0,[0,0],0>],[<1,[0,0],1>,<0,[0,0],0>],[<2,[0,0],0>,<1,[0,0],0>],[<2,[0,0],0>,<1,[0,0],1>],[<2,[0,0],1>,<1,[0,0],0>],[<2,[0,0],1>,<1,[0,0],1>]}", toString(threads));
+
+//		createDotDump(analysis);
+	}
 
 } // end namespace cba
 } // end namespace analysis

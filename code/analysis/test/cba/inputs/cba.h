@@ -65,6 +65,7 @@ void cba_dump_thread_regions();
 void cba_dump_sync_points();
 void cba_dump_thread_list();
 
+void cba_expect_num_threads(int);
 void cba_expect_execution_net_num_places(int);
 void cba_expect_execution_net_num_transitions(int);
 

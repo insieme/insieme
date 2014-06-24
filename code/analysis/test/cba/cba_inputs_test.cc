@@ -183,6 +183,12 @@ namespace cba {
 							<< *core::annotations::getLocation(call) << "\n"
 							<< "number of transitions " << net.getNumTransitions() << "\n"
 							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+			} else if (name == "cba_expect_num_threads") {
+				const auto& list = getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), list.size())
+							<< *core::annotations::getLocation(call) << "\n"
+							<< "number of threads " << list.size() << "\n"
+							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
 
 			// debugging
 			} else if (name == "cba_print_code") {
@@ -194,6 +200,9 @@ namespace cba {
 			} else if (name == "cba_dump_sync_points") {
 				// dump sync points
 				std::cout << "Sync Points:\n\t" << ::join("\n\t", getSyncPoints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
+			} else if (name == "cba_dump_thread_list") {
+				// dump the list of threads
+				std::cout << "List of Threads:\n\t" << join("\n\t", getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
 			} else if (name == "cba_dump_execution_net") {
 				// dump the dot plot of the execution net
 				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
