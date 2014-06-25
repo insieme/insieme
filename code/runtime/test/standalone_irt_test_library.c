@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <stdio.h>
+
 #include "irt_library.h"
 
 typedef struct {

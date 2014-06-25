@@ -3,20 +3,27 @@
 #ifdef IRT_LIBRARY_MAIN
 #include "irt_library.h"
 #else
+
+extern "C" {
+
 #include "irt_globals.h"
 // IRT
 struct irt_joinable;
 struct irt_work_item;
-void irt_merge(irt_joinable);
-irt_work_item* irt_wi_get_current();
-uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
-uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);
+void irt_merge(irt_joinable*);
 // IRT lib
 void irt_lib_merge_all();
 typedef void (*voidfp)(void*);
 irt_joinable* irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size);
 typedef void (*loopfp)(int64 index, void* data);
 void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, size_t data_size);
+void irt_lib_barrier();
+void irt_lib_critical_start();
+void irt_lib_critical_end();
+irt_work_item* irt_lib_wi_get_current();
+uint32 irt_lib_wi_get_wg_size(irt_work_item *wi, uint32 index);
+uint32 irt_lib_wi_get_wg_num (irt_work_item *wi, uint32 index);
+}
 #endif
 
 #include <iostream>
@@ -46,11 +53,11 @@ namespace irt {
 	}
 
 	inline uint32 thread_num() {
-		return irt_wi_get_wg_num(irt_wi_get_current(), 0);
+		return irt_lib_wi_get_wg_num(irt_lib_wi_get_current(), 0);
 	}
 
 	inline uint32 group_size() {
-		return irt_wi_get_wg_size(irt_wi_get_current(), 0);
+		return irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0);
 	}
 
 	// Executes "num" parallel instances of the callable "fun"
@@ -70,7 +77,7 @@ namespace irt {
 	// on the current team of parallel threads, or a new one if there isn't any
 	template<class LoopCallable>
 	inline void pfor_impl(int64 begin, int64 end, int64 step, const LoopCallable& fun) {
-		if(irt_wi_get_wg_size(irt_wi_get_current(), 0) < 1) {
+		if(irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0) < 1) {
 			irt::merge( irt::parallel([&](){ irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable)); } ) );
 		} else {
 			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
@@ -104,7 +111,7 @@ namespace irt {
 
 	// a barrier for the current work group
 	inline void barrier() {
-		irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(),0));
+		irt_lib_barrier();
 	}
 
 	// a function to mark the start of a critical section

@@ -277,9 +277,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 	}
 
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), pimpl->TO) );  //FIXME 3.4 pointer?
-
-
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), pimpl->TO) );  
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
 	// add user provided headers
@@ -340,12 +338,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
 	}
-	/*
-	 FIXME: decide if we need this or not
-	LO.GNUMode = 1;
-	LO.Bool = 1;
-	LO.POSIXThreads = 1;
-	*/
 
 	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {
@@ -365,31 +357,28 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 
 		// use the cxx header of the backend c++ compiler
+		pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 1;
 		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0;
 
 		this->pimpl->clang.getPreprocessorOpts().UsePredefines = true;
 
-		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
-		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(const path& cur : config.getSystemHeadersDirectories()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, false, false);
-		}
-
+		LO.CPlusPlus = 1;
 		LO.Exceptions = 1;
 		LO.CXXExceptions = 1;
-
-		// FIXME:  if we need this or not
-		//	LO.CXXOperatorNames = 1;
+		LO.Bool = 1;
 	}
 	else{
 		LO.CPlusPlus = 0;
+	}
 
-		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
-		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
-		}
+
+	for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
+		pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
+	}
+	for(const path& cur : config.getSystemHeadersDirectories()) {
+		std::cout << " add header: " << cur.string() << std::endl;
+		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
 	}
 
 	// Do this AFTER setting preprocessor options
