@@ -252,10 +252,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	// THE USER KIDNAPPED HEADER FILES WON'T BE RECOGNIZED
 	for(auto plugin : config.getPlugins()) {
         for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
-            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::Angled, false, false);   // FIXME 3.4 check this flags
+			std::cout << " ADD header path: " << kidnappedHeader << std::endl;
+            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::System, false, false);   // FIXME 3.4 check this flags
         }
 	}
-
 
 	// Add default header, for non-Windows target
 	if(!config.hasOption(ConversionJob::WinCrossCompile)) {
@@ -283,7 +283,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	// add user provided headers
 	for (const path& cur : config.getIncludeDirectories()){
 		//instead "Angled" was "System"
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, false, false); // FIXME 3.4 check this flags
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::System, false, false); // FIXME 3.4 check this flags
 	}
 
     // ******************** FRONTEND PLUGIN ********************
@@ -376,10 +376,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
 		pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
 	}
-	for(const path& cur : config.getSystemHeadersDirectories()) {
-		std::cout << " add header: " << cur.string() << std::endl;
-		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
-	}
+//	for(const path& cur : config.getSystemHeadersDirectories()) {
+//		std::cout << " add header: " << cur.string() << std::endl;
+//		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
+//	}
 
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
@@ -401,7 +401,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
-
 	if (VLOG_IS_ON(2)) {
 		printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
 		/* print preprocessed stuff
