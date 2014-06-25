@@ -47,6 +47,9 @@
 
 #include "irt_context.h"
 #include "worker.h"
+#include "irt_joinable.h"
+
+
 
 typedef struct _irt_parallel_job {
 	uint32 min;
@@ -55,13 +58,6 @@ typedef struct _irt_parallel_job {
 	irt_wi_implementation* impl;
 	irt_lw_data_item* args;
 } irt_parallel_job;
-
-/** Ids of either work items or work groups are joinable. These will be casted as required.
- */
-union _irt_joinable {
-	irt_work_item_id wi_id;
-	irt_work_group_id wg_id;
-};
 
 irt_joinable irt_joinable_null() {
 	static irt_joinable null_joinable = { { { 0 } } };
