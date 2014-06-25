@@ -52,6 +52,7 @@
 
 
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
@@ -156,6 +157,7 @@ namespace{
 		return res;
 	}
 }
+
 int main(int argc, char** argv) {
 	//TODO custom root config file
 
@@ -164,17 +166,25 @@ int main(int argc, char** argv) {
 	// parse parameters
 	tf::Options options = parseCommandLine(argc, argv);
 
+	// output width in characters
+	unsigned screenWidth = 120;
+	// formatting string for center aligned output
+	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
+
 	// check whether the options have been valid
 	if (!options.valid) return 1;		// fail otherwise
 
 	// get list of test cases
 	auto cases = tf::loadCases(options);
 
-	std::cout <<        "#------------------------------------------------------------------------------#\n";
-	std::cout << format("#                 Insieme version: %-43s #\n", tf::getGitVersion());
-	std::cout <<        "#------------------------------------------------------------------------------#\n";
-	std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
-	std::cout <<        "#------------------------------------------------------------------------------#\n";
+	string insiemeVersion("Insieme version: " + tf::getGitVersion());
+
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "#" << boost::format(centerAlign) % insiemeVersion << "#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s)");
+	std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
 	// check whether only the configurations are requested
 	if (options.print_configs) {
@@ -192,18 +202,20 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	int maxCounterStringLength = to_string(cases.size()).length();
+	string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
+
 	// only list test cases if requested so
 	if (options.list_only) {
 		int counter = 0;
 		for(const auto& cur : cases) {
-			std::cout << format("| %4d/%4d - %-65s|\n", ++counter, cases.size(), cur.getName());
+			string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
+			std::cout << boost::format("# %" + maxCounterStringLengthAsString + "d/%" + maxCounterStringLengthAsString + "d - %-" + paddingWidth + "s") % ++counter % cases.size() % cur.getName() << " #\n";
 		}
-		std::cout <<        "#------------------------------------------------------------------------------#\n";
+		std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
 		return 0;
 	}
-
-
 
 	// load list of test steps
 	auto steps = tf::getTestSteps(options);
@@ -232,8 +244,8 @@ int main(int argc, char** argv) {
 	omp_set_num_threads(options.num_threads);
 
 	bool panic = false;
-	int totalTests=cases.size() * options.num_repeditions;
-	int act=0;
+	int totalTests = cases.size() * options.num_repeditions;
+	int act = 0;
 
 	for(int i=0; i<options.num_repeditions; i++) {
 
@@ -264,10 +276,12 @@ int main(int argc, char** argv) {
 			// all steps done - print summary
 			#pragma omp critical
 			{
+				string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
 				// print test info
-				std::cout << "#------------------------------------------------------------------------------#\n";
-				std::cout << "#\t" << ++act << "/"<< totalTests << "\t" << format("%-63s",cur.getName()) << "#\n";
-				std::cout << "#------------------------------------------------------------------------------#\n";
+				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+				std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests
+						<< " " << boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
+				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
 				for(const auto& curRes : results) {
 					if(options.mockrun){
@@ -275,7 +289,7 @@ int main(int argc, char** argv) {
 						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
 					} else {
 						string colOffset;
-						colOffset=string("%")+std::to_string(78-curRes.first.size())+"s";
+						colOffset=string("%")+std::to_string(screenWidth-4-curRes.first.size())+"s";
 						std::stringstream line;
 					
 						// color certain passes:
@@ -283,14 +297,14 @@ int main(int argc, char** argv) {
 							line <<  colorize.bold() << colorize.blue();
 						}
 
-						line << "# " << curRes.first <<
-							format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
+						line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory()/1024/1024))
+								<< " #" << colorize.reset() << "\n";
 
 						if(curRes.second.wasSuccessfull()){
 							std::cout << line.str();
 						} else {
-							std::cout << colorize.red() <<line.str();
-							std::cout << "#------------------------------------------------------------------------------#" << colorize.reset() << std::endl;
+							std::cout << colorize.red() << line.str();
+							std::cout << "#" << std::string(screenWidth-2,'-') << colorize.reset() << std::endl;
 							std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
 							std::cout << curRes.second.getFullOutput();
 						}
@@ -308,29 +322,29 @@ int main(int argc, char** argv) {
 
 				if(!options.mockrun){
 
-					if(success) 
-						std::cout << colorize.green();
-					else 
-						std::cout << colorize.red();
-
-					std::cout << "#------------------------------------------------------------------------------#\n";
-					if(success)
-						std::cout << "#\tSUCCESS -- "<<format("%-60s",cur.getName())<<"#\n";
-					else
-						std::cout << "#\tFAILED  -- "<<format("%-60s",cur.getName())<<"#\n";
-					std::cout << "#------------------------------------------------------------------------------#\n";
-
-					if (success) {
+					if(success) {
 						ok.push_back(cur);
+						std::cout << colorize.green();
 					} else {
 						failed.push_back(cur);
+						std::cout << colorize.red();
+					}
 
+					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+					int failedStringLength = to_string(failed.size()).length();
+
+					if(success)
+						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
+					else
+						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
+					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+
+					if(!success) {
 						// trigger panic mode and graceful shutdown
 						if (options.panic_mode) {
 							panic = true;
 						}
 					}
-					std::cout << colorize.reset();
 				}
 
 				//reset color to default value
@@ -341,14 +355,19 @@ int main(int argc, char** argv) {
 
 	} // end repetition loop
 
-	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
-	std::cout << format("# TOTAL:          %60d #\n", cases.size()*options.num_repeditions);
-	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
-	std::cout << "# FAILED:         " << colorize.red() << format("%60d", failed.size()) << colorize.reset() << " #\n";
+	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
+	string footerFailedListFormat("   - %-" + to_string(screenWidth-8) + "s");
+
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
+	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
+	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
-	std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
+		std::cout << "#" << colorize.red() << boost::format(footerFailedListFormat) % cur.getName() << colorize.reset() << " #\n";
 	}
-	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
 	// done
 	return (failed.empty())?0:1;
