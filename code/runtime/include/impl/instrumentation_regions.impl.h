@@ -107,6 +107,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 	uint64 length = list->length;
 	IRT_ASSERT(length > 0, IRT_ERR_INSTRUMENTATION, "Tried to get region data from a WI that has no region data")
 	irt_inst_region_context_data* rg = list->items[length-1];
+	irt_spin_lock(&(rg->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
 #include "irt_metrics.def"
@@ -125,6 +126,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 		rg->last_##_name__ = 0; \
 	}
 #include "irt_metrics.def"
+	irt_spin_unlock(&(rg->lock));
 	for(uint64 i = 0; i < length - 1; ++i) {
 		irt_inst_region_context_data* current_region = list->items[i];
 		irt_spin_lock(&(current_region->lock));
@@ -335,23 +337,30 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Start of region id %lu requested, but only %u region(s) present", id, context->num_regions)
 	irt_inst_region_context_data* inner_region = &(context->inst_region_data[id]);
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64_t);
-	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
-
 	if(outer_region) {
 		IRT_ASSERT(outer_region != inner_region, IRT_ERR_INSTRUMENTATION, "Region %u start encountered, but this region was already started", id)
 		irt_inst_region_end_measurements(wi);
 		irt_inst_region_propagate_data_from_wi_to_regions(wi);
+	}
 
-		if(inner_first_entry)
+	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64_t);
+	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
+
+	if(outer_region) {
+		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64_t) == 0) {
 			_irt_inst_region_end_late_exit_measurements(wi);
+			uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
+			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64_t);
+			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64_t);
+		}
 	}
 
 	_irt_inst_region_stack_push(wi, inner_region);
-	irt_inst_region_start_measurements(wi);
 
 	if(inner_first_entry)
 		_irt_inst_region_start_early_entry_measurements(wi);
+
+	irt_inst_region_start_measurements(wi);
 }
 
 // stop a region and remove it from the region stack of the WI
@@ -365,32 +374,33 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	IRT_ASSERT(inner_region, IRT_ERR_INSTRUMENTATION, "Region end occurred while no region was started")
 	IRT_ASSERT(inner_region->id == id, IRT_ERR_INSTRUMENTATION, "Region end id %lu did not match currently open region id %lu", id, inner_region->id)
 	
-	bool inner_last_exit = false;
-
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 
-	uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-
 	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64_t) == 0) {
 		_irt_inst_region_end_late_exit_measurements(wi);
-		inner_last_exit = true;
+		uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
 		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64_t);
 		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64_t);
+	}
+
+	_irt_inst_region_stack_pop(wi);
+
+	if(wi->inst_region_list->length > 0) {
+		irt_inst_region_context_data* outer_region = irt_inst_region_get_current(wi);
+		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64_t);
+		bool outer_first_entry = ((outer_entry_count - outer_region->num_exits) == 0);
+		if(outer_first_entry)
+			_irt_inst_region_start_early_entry_measurements(wi);
 	}
 
 	// only increase count if wi is not member in any work group or has wg id == 0
 	if(wi->num_groups == 0 || (wi->num_groups > 0 && wi->wg_memberships[0].num == 0))
 		inner_region->num_executions++;
 
-	_irt_inst_region_stack_pop(wi);
-
 	// if there is a region left open, continue old measurements
-	if(wi->inst_region_list->length > 0) {
+	if(wi->inst_region_list->length > 0)
 		irt_inst_region_start_measurements(wi);
-		if(inner_last_exit)
-			_irt_inst_region_start_early_entry_measurements(wi);
-	}
 }
 
 // selectively enable region instrumentation metrics - NOTE: a NULL pointer or an empty string as an argument will enable all metrics!
