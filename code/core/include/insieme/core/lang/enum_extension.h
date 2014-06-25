@@ -96,10 +96,11 @@ namespace lang {
          * @param type Enumeration type pointer
          * @return TypePtr that contains the enumeration name literal
          */
-		TypePtr getEnumName(const TypePtr& type) const {
+		std::string getEnumName(const TypePtr& type) const {
             assert(isEnumType(type) && "this is no enumeration type");
             core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
-            return gt->getTypeParameter()[0];
+            auto name = gt->getTypeParameter()[0].as<GenericTypePtr>()->getName();
+			return name->getValue();
 		}
 
         /**

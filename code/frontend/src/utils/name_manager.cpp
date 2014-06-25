@@ -303,16 +303,17 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
     //std::string name = type->getDecl()->getNameAsString();
 	REMOVE_SYMBOLS(name);
     if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
-		name = createNameForAnnon( "_anonEnum", enumDecl, sm);
+    	//name = createNameForAnnon( "_anonEnum", enumDecl, sm);
+    	name = "";
     }
     return name;
 }
 
 std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd) {
-    std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
-	REMOVE_SYMBOLS(name);
-    assert(!ecd->getQualifiedNameAsString().empty() && "what kind of enumconstant has no name?");
-    return name;
+   // std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
+   // REMOVE_SYMBOLS(name);
+   // assert(!ecd->getQualifiedNameAsString().empty() && "what kind of enumconstant has no name?");
+    return ecd->getNameAsString();
 }
 
 } // End utils namespace

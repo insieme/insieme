@@ -1524,7 +1524,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 	}
 
 	if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
-		return (retIr = convFact.convertEnumConstantDecl(enumConstant));
+		retIr = convFact.convertEnumConstantDecl(enumConstant);
+		return retIr;
 	}
 
 	frontend_assert(false ) <<"clang::DeclRefExpr not supported!\n";

@@ -50,6 +50,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
@@ -118,6 +119,9 @@ namespace {
 	}
 
 	core::TypePtr attachEnumName( const core::TypePtr& enumTy, const clang::EnumDecl* enumDecl){
+
+		std::cout << "ataching enum names : " << enumTy << " : "  << enumDecl->getNameAsString() << std::endl;
+
 		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
 					const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(ecd);
 					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
@@ -410,9 +414,27 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-	core::TypePtr retTy = convert( typedefType->getDecl()->getUnderlyingType());
+	auto underType = typedefType->getDecl()->getUnderlyingType();
+	core::TypePtr retTy = convert(underType);
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
+
+
+	const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
+	if(ext.isEnumType(retTy)){
+		std::cout<< "typedef type: " << typedefType->getDecl()->getNameAsString() << " ->  " << retTy << std::endl;
+
+		if(ext.getEnumName(retTy).empty()) {
+			core::TypePtr newEnum = ext.getEnumType(typedefType->getDecl()->getNameAsString() );
+			core::transform::utils::migrateAnnotations(retTy, newEnum);
+			retTy = newEnum;
+
+			//// we can poison the cache with this type, 
+			//assert(convFact.typeCache.find(underType) != convFact.typeCache.end() && "typedef of a type we never saw before?");
+			//convFact.typeCache[underType] = retTy;
+		}
+	}
+
 
     return  retTy;
 }
@@ -478,7 +500,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
 
-       	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
+    //   	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
 
 
         const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
@@ -487,14 +509,17 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
 		LOG_TYPE_CONVERSION( tagType, enumTy );
 
-		if(systemHeaderOrigin) {
-			//if the enumType comes from a system provided header we don't convert it
-			//TODO let interceptor take care of
-       		return enumTy;
-		}
+	//	if(systemHeaderOrigin) {
+	//		//if the enumType comes from a system provided header we don't convert it
+	//		//TODO let interceptor take care of
+	//		//
+	//		abort();
+    //   		return enumTy;
+	//	}
 
 		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream
 		enumTy =  attachEnumName( enumTy, enumDecl);
+		std::cout << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")" << std::endl;
 		VLOG(2) << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")";
 
 		//return enum type
