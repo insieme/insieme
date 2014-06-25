@@ -36,9 +36,9 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/program_point.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
 #include "insieme/analysis/cba/analysis/reaching_sync_points.h"
 #include "insieme/analysis/cba/analysis/thread_bodies.h"
@@ -177,7 +177,7 @@ namespace cba {
 						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
 					}
 
-					if (!contains(sync_points,cur_set)) {
+					if (!::contains(sync_points,cur_set)) {
 						sync_points.push_back(cur_set);
 						inputs.push_back(cur_set);
 						changed = true;
@@ -295,7 +295,7 @@ namespace cba {
 						auto cur_bodies = cba.getSet(ThreadBodies, call, cur.getContext());
 
 						// add it if not already present
-						if (!contains(thread_bodies, cur_bodies)) {
+						if (!::contains(thread_bodies, cur_bodies)) {
 							thread_bodies.push_back(cur_bodies);
 							inputs.push_back(cur_bodies);
 							changed = true;

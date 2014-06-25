@@ -62,13 +62,12 @@ int main(int argc, char** argv) {
 //	cba_dump_thread_regions();
 //	cba_dump_execution_net();
 //	cba_dump_state_graph();
-//	cba_dump_equations();
 //	cba_print_code();
-	cba_dump_thread_list();
-	cba_dump_execution_net();
+//	cba_dump_thread_list();
+//	cba_dump_execution_net();
 
 	cba_expect_num_threads(21);
-	cba_expect_execution_net_num_places(65);
+	cba_expect_execution_net_num_places(89);
 
 	#pragma omp parallel
 	{
@@ -78,4 +77,6 @@ int main(int argc, char** argv) {
 	}
 
 	f(g);
+
+//	cba_dump_equations();
 }

@@ -626,11 +626,11 @@ namespace cba {
 					}
 				}
 
-//				// check whether somebody is referencing the dummy place
-//				if (res.getNumPreTransitions(dummy) != 0 || res.getNumPostTransitions(dummy) != 0) {
-//					// dummy is referenced => invalid value
-//					return ExecutionNet<Context>();		// return default value
-//				}
+				// check whether somebody is referencing the dummy place
+				if (res.getNumPreTransitions(dummy) != 0 || res.getNumPostTransitions(dummy) != 0) {
+					// dummy is referenced => invalid value
+					return ExecutionNet<Context>();		// return default value
+				}
 
 				// value is valid (and hence more likely to be stable)
 				// => remove dummy node

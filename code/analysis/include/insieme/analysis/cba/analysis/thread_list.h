@@ -36,12 +36,12 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/program_point.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
 
-#include "insieme/analysis/cba/analysis/sync_points.h"
 #include "insieme/analysis/cba/analysis/thread_bodies.h"
+#include "insieme/analysis/cba/analysis/sync_points.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/utils/constraint_utils.h"
@@ -159,7 +159,7 @@ namespace cba {
 
 						// add variable describing bodies to dependencies
 						auto tb_var = cba.getSet(ThreadBodies, cur.getStatement(), cur.getContext());
-						if (contains(thread_body_variables, tb_var)) continue;
+						if (::contains(thread_body_variables, tb_var)) continue;
 
 						// add current variable to list of dependencies
 						thread_body_variables.push_back(tb_var);
