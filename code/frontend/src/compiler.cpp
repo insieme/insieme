@@ -376,6 +376,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
 		pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
 	}
+	for(const path& cur : config.getSystemHeadersDirectories()) {
+		std::cout << " add header: " << cur.string() << std::endl;
+		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
+	}
 //	for(const path& cur : config.getSystemHeadersDirectories()) {
 //		std::cout << " add header: " << cur.string() << std::endl;
 //		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
