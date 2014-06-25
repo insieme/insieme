@@ -46,8 +46,11 @@ int _irt_lib_renamed_main(int argc, char** argv);
 #ifdef __cplusplus 
 extern "C" {
 #endif
+
+
 #include "irt_all_impls.h"
 #include "standalone.h"
+#include "irt_joinable.h"
 
 ////////////////////////////////////////////////////////////////// Forward Declarations
 

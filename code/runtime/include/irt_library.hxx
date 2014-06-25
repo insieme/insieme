@@ -7,14 +7,15 @@
 extern "C" {
 
 #include "irt_globals.h"
+#include "irt_joinable.h"
+
+
 // IRT
-struct irt_joinable;
-struct irt_work_item;
-void irt_merge(irt_joinable*);
+void irt_merge(irt_joinable);
 // IRT lib
 void irt_lib_merge_all();
 typedef void (*voidfp)(void*);
-irt_joinable* irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size);
+irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size);
 typedef void (*loopfp)(int64 index, void* data);
 void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, size_t data_size);
 void irt_lib_barrier();
@@ -48,7 +49,7 @@ namespace irt {
 		irt_lib_merge_all();
 	}
 
-	inline void merge(irt_joinable* target) {
+	inline void merge(irt_joinable target) {
 		irt_merge(target);
 	}
 
@@ -62,14 +63,14 @@ namespace irt {
 
 	// Executes "num" parallel instances of the callable "fun"
 	template<class Callable>
-	inline irt_joinable* parallel(int64 num, const Callable& fun) {
+	inline irt_joinable parallel(int64 num, const Callable& fun) {
 		return irt_lib_parallel(num, num, &detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
 	}
 
 	// Executes "fun" in parallel with the default number of instances
 	// (set via environment variables, or lacking that to the number of CPUs in the system)
 	template<class Callable>
-	inline irt_joinable* parallel(const Callable& fun) {
+	inline irt_joinable parallel(const Callable& fun) {
 		return parallel(irt_g_worker_count, fun);
 	}
 
