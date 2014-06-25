@@ -131,7 +131,7 @@ void irt_optimizer_objective_init(irt_context *context) {
     }
 
 #ifndef _GEMS
-    irt_cpu_freq_get_available_frequencies_worker(irt_worker_get_current(), irt_g_available_freqs, &irt_g_available_freq_count);
+	irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count);
 #endif
 }
 
@@ -335,7 +335,7 @@ void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* v
 
 #ifndef IRT_ENABLE_OMPP_OPTIMIZER_DCT
 
-uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) {}
+uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) { return 0; }
 
 #endif // IRT_ENABLE_OMPP_OPTIMIZER_DCT
 

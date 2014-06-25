@@ -73,7 +73,6 @@ namespace integration {
 				// quick and dirty: have boost split everything and then reassemble tokens that were quoted
 				vector<string> argumentsVecTemp;
 				vector<string> argumentsVec;
-				typedef boost::tokenizer<boost::escaped_list_separator<char> > so_tokenizer;
 				boost::split(argumentsVecTemp, argumentsParam, boost::is_any_of(" "));
 
 				bool insideQuote = false;
@@ -112,7 +111,6 @@ namespace integration {
 
 				vector<string> environmentVec;
 				boost::split(environmentVec, environmentParam, boost::is_any_of(" "));
-				vector<char*> environmentForExec;
 				std::map<string,string> environmentMap;
 
 				// convert environment variables to char**
@@ -151,6 +149,7 @@ namespace integration {
 				// convert environment to char**
 				// temp vector to be able to use c_str() later
 				vector<string> environmentTemp;
+				vector<char*> environmentForExec;
 				for(auto e : environmentMap) {
 					environmentTemp.push_back(string(e.first + "=" + e.second));
 					environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
@@ -285,10 +284,10 @@ namespace integration {
 
 				string executable = string(testConfig["time_executable"]);
 				string envString = env.str();
-				string argumentString = string(" -f \'\nTIME%e\nMEM%M\' ") + perfString + cmd + outfile;
+				string argumentString = string(" -f TIME%e\nMEM%M ") + perfString + cmd + outfile;
 
 				// cpu time limit in seconds
-				unsigned cpuTimeLimit = 300;
+				unsigned cpuTimeLimit = 1200;
 
 				int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
 
@@ -324,14 +323,13 @@ namespace integration {
 						// check if we approached the cpu time limit. If so, print a warning
 						if(((metricResults["time"]))/cpuTimeLimit > 0.95)
 							std::cerr << "Killed by timeout, CPU time was " << metricResults["time"] << ", limit was " << cpuTimeLimit << " seconds\n";
-					} else if (token.find("MEM")==0)
+					} else if (token.find("MEM")==0) {
 						metricResults["mem"]=atof(token.substr(3).c_str());
-					else
-					//check perf metrics, otherwise append to stderr
-					{
+					} else {
+						//check perf metrics, otherwise append to stderr
 						bool found=false;
-						BOOST_FOREACH(string s,perfCodes){
-							if(token.find(s)){
+						for(auto code : perfCodes) {
+							if(token.find(code)){
 								string value=token.substr(0,token.find(","));
 								float intVal;
 								//try cast to int
@@ -343,27 +341,27 @@ namespace integration {
 								}
 
 								//mark special perf metrics
-								if(s.substr(1)==setup.load_miss)
+								if(code.substr(1)==setup.load_miss)
 									metricResults["load_miss"]=intVal;
-								else if (s.substr(1)==setup.store_miss)
+								else if (code.substr(1)==setup.store_miss)
 									metricResults["store_miss"]=intVal;
-								else if (s.substr(1)==setup.flops)
+								else if (code.substr(1)==setup.flops)
 									metricResults["flops"]=intVal;
 								else
-									metricResults[s.substr(1)]=intVal;
+									metricResults[code.substr(1)]=intVal;
 
 								found=true;
 								break;
 							}
 						}	
 						//no metric -> it is stdErr	
-						if(!found)			
+						if(!found)
 							stdErr+=token+"\n";
 					}
 				}
 
 				// check whether execution has been aborted by the user
-				if (WIFSIGNALED(retVal) && (WTERMSIG(retVal) == SIGINT || WTERMSIG(retVal) == SIGQUIT)) {
+				if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
 					return TestResult::userAborted(metricResults, output, stdErr, cmd);
 				}
 

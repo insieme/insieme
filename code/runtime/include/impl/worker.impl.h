@@ -92,6 +92,7 @@ typedef struct __irt_worker_func_arg {
 	irt_affinity_mask affinity;
 	uint16 index;
 	irt_worker_init_signal *signal;
+	irt_context* context;
 } _irt_worker_func_arg;
 
 
@@ -129,7 +130,7 @@ void* _irt_worker_func(void *argvp) {
 	self->id.cached = self;
 	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
-	self->cur_context = irt_context_null_id();
+	self->cur_context = arg->context->id;
 	self->cur_wi = NULL;
 	self->finalize_wi = NULL;
 	self->default_variant = 0;
@@ -293,11 +294,12 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_fragments = prev_fragments;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
+	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
 }
 

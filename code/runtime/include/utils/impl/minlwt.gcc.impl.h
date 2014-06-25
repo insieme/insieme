@@ -36,7 +36,7 @@
 
 // currently only a 64 bit implementation exists
 
-__attribute__ ((noinline))
+__attribute__ ((noinline,optimize(0)))
 void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
 		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
 	__asm__ (
