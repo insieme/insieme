@@ -73,7 +73,6 @@ namespace integration {
 				// quick and dirty: have boost split everything and then reassemble tokens that were quoted
 				vector<string> argumentsVecTemp;
 				vector<string> argumentsVec;
-				typedef boost::tokenizer<boost::escaped_list_separator<char> > so_tokenizer;
 				boost::split(argumentsVecTemp, argumentsParam, boost::is_any_of(" "));
 
 				bool insideQuote = false;
@@ -112,7 +111,6 @@ namespace integration {
 
 				vector<string> environmentVec;
 				boost::split(environmentVec, environmentParam, boost::is_any_of(" "));
-				vector<char*> environmentForExec;
 				std::map<string,string> environmentMap;
 
 				// convert environment variables to char**
@@ -151,6 +149,7 @@ namespace integration {
 				// convert environment to char**
 				// temp vector to be able to use c_str() later
 				vector<string> environmentTemp;
+				vector<char*> environmentForExec;
 				for(auto e : environmentMap) {
 					environmentTemp.push_back(string(e.first + "=" + e.second));
 					environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
@@ -288,7 +287,7 @@ namespace integration {
 				string argumentString = string(" -f \'\nTIME%e\nMEM%M\' ") + perfString + cmd + outfile;
 
 				// cpu time limit in seconds
-				unsigned cpuTimeLimit = 300;
+				unsigned cpuTimeLimit = 1200;
 
 				int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
 
