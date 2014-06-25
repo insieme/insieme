@@ -73,7 +73,6 @@ namespace integration {
 				// quick and dirty: have boost split everything and then reassemble tokens that were quoted
 				vector<string> argumentsVecTemp;
 				vector<string> argumentsVec;
-				typedef boost::tokenizer<boost::escaped_list_separator<char> > so_tokenizer;
 				boost::split(argumentsVecTemp, argumentsParam, boost::is_any_of(" "));
 
 				bool insideQuote = false;
