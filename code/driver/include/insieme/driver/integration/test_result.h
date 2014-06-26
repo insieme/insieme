@@ -71,7 +71,7 @@ namespace integration {
 
 		TestResult(bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd="",
 		std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
-			: success(success),metricResults(metricResults),metricDeviation(map<string,float>()),errorOut(errorOut),cmd(cmd),
+			: success(success),metricResults(metricResults),metricDeviation(map<string,float>()),output(output),errorOut(errorOut),cmd(cmd),
 				producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
 
 		static TestResult userAborted(map<string,float> metricResults, string output="", string errorOut="", string cmd="") {

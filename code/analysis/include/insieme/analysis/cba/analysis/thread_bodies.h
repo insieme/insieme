@@ -345,7 +345,7 @@ namespace cba {
 
 					// add dependency to spawn point of current group
 					auto curBodySet = cba.getSet(ThreadBodies, group.getCreationPoint(), group.getContext());
-					if (!contains(bodies, curBodySet)) {
+					if (!::contains(bodies, curBodySet)) {
 						bodies.push_back(curBodySet);
 						inputs.push_back(curBodySet);
 						changed = true;
