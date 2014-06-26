@@ -191,9 +191,9 @@ void mem_alloc() {
 enum E{ ON, OFF=10 };
 
 void test_enum() {
-	#pragma test "decl ref<enum<E>> v0 =  var(__insieme_enum_constant_E_ON)"
+	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9)"
 	enum E a = ON;
-	#pragma test "decl ref<enum<E>> v0 =  var(__insieme_enum_constant_E_OFF)"
+	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17)"
 	enum E b = OFF;
 }
 
