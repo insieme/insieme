@@ -68,10 +68,23 @@ namespace lang {
 
         LANG_EXT_DERIVED(EnumElementAsBool,      "('a i) -> bool { return lit(\"enum.to.int\":('a)->int<4>)(i) != 0; }");
 
+
+// STEFAN: 
+//
+//	for constants
+//    builder.genericType(genType(CTANT_NAME), intParam(val))
+//
+//	For the enum type:
+//		builder.genericType("enum", { genType(ENUM_NAE) : Ctants_types  }, emptyIntPAram)
+//
+//
+//		//// TypePtr getEnumCtantType (string name, int val=0);
+//		//// typePtr getEnumType (String name, ctantTypeList());
+
         /**
-         * Creates an enum type out a literal.
-         * @param lit The name of the enumeration
-         * @return TypePtr that contains an enum type (e.g. enum<Colors>)
+         * Creates an enum type out a literal. 
+         * @param lit The name (co
+         * @return the enum type
          */
 		TypePtr getEnumType(const string& lit) const {
 		    IRBuilder builder(getNodeManager());

@@ -974,12 +974,11 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 ///
 core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
 	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-	assert(enumType);
-
-	const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-	core::TypePtr enumTy = ext.getEnumType(enumType->getCanonicalTypeInternal().getAsString ());
+	assert(enumType && "not an enum type?");
 	string enumConstantName = enumConstant->getNameAsString();
-	return builder.literal(enumConstantName, enumTy);
+	auto expType = convertType(enumType->getCanonicalTypeInternal());
+	std::cout << " building enum ctant " << enumConstantName << " with type: " << expType << std::endl;
+	return builder.literal(enumConstantName, expType);
 }
 
 	//////////////////////////////////////////////////////////////////

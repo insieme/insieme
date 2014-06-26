@@ -418,24 +418,6 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	core::TypePtr retTy = convert(underType);
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
-
-
-	const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-	if(ext.isEnumType(retTy)){
-		std::cout<< "typedef type: " << typedefType->getDecl()->getNameAsString() << " ->  " << retTy << std::endl;
-
-		if(ext.getEnumName(retTy).empty()) {
-			core::TypePtr newEnum = ext.getEnumType(typedefType->getDecl()->getNameAsString() );
-			core::transform::utils::migrateAnnotations(retTy, newEnum);
-			retTy = newEnum;
-
-			//// we can poison the cache with this type, 
-			//assert(convFact.typeCache.find(underType) != convFact.typeCache.end() && "typedef of a type we never saw before?");
-			//convFact.typeCache[underType] = retTy;
-		}
-	}
-
-
     return  retTy;
 }
 
@@ -493,34 +475,17 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		return retTy;
 	}
 
+	//TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
 	// handle enums => always just integers
 	if(def->getTagKind() == clang::TTK_Enum) {
-		//TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
-
 		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
-
-    //   	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
-
-
         const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-
 		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
-		LOG_TYPE_CONVERSION( tagType, enumTy );
 
-	//	if(systemHeaderOrigin) {
-	//		//if the enumType comes from a system provided header we don't convert it
-	//		//TODO let interceptor take care of
-	//		//
-	//		abort();
-    //   		return enumTy;
-	//	}
-
-		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream
+		// Fills the enum values from the original declaration
 		enumTy =  attachEnumName( enumTy, enumDecl);
-		std::cout << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")" << std::endl;
-		VLOG(2) << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")";
 
 		//return enum type
         return enumTy;

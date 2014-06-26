@@ -49,6 +49,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/backend/name_manager.h"
 
 
 namespace insieme {
@@ -73,6 +74,7 @@ namespace addons {
 			//get name of enum
 			const auto& ext = converter.getNodeManager().getLangExtension<core::lang::EnumExtension>();
 			string name = ext.getEnumName(type);
+			if(name.empty()) name = converter.getNameManager().getName(type);
 
 			//create declaration
 			c_ast::NodePtr ctr;
