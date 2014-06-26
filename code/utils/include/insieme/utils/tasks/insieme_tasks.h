@@ -38,7 +38,9 @@
 #pragma once
 
 
-#define _GLIBCXX_USE_NANOSLEEP
+#ifndef _GLIBCXX_USE_NANOSLEEP
+	#define _GLIBCXX_USE_NANOSLEEP
+#endif
 #include <functional>
 #include <iostream>
 #include <vector>

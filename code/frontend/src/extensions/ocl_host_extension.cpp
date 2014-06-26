@@ -106,7 +106,7 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	if(derefOfIclBuffer == nullptr)
+	if(!derefOfIclBuffer)
 		derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
 				pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
 
