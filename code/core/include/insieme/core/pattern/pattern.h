@@ -66,9 +66,6 @@ namespace pattern {
 	class ListPattern;
 	typedef std::shared_ptr<ListPattern> ListPatternPtr;
 
-//	class Filter;
-//	typedef std::shared_ptr<Filter> FilterPtr;
-
 	namespace details {
 
 		bool isTypeOrValueOrParam(const core::NodeType type);
@@ -103,10 +100,10 @@ namespace pattern {
 	};
 
 
-	// The abstract base class for tree patterns
+	/// The abstract base class for tree patterns
 	struct TreePattern : public Pattern {
 
-		// a list of all types of tree pattern constructs
+		/// List of all types of tree pattern constructs
 		enum Type {
 			Value, Constant, LazyConstant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
 		};
@@ -135,7 +132,7 @@ namespace pattern {
 	};
 
 
-	// An abstract base node for node patterns
+	/// An abstract base node for node patterns
 	struct ListPattern : public Pattern {
 
 		enum Type {
@@ -169,7 +166,7 @@ namespace pattern {
 
 		};
 
-		// An constant value - a pure IR node
+		/// A constant value - a pure IR node
 		struct Constant : public TreePattern {
 
 			// kind of a hack - but the easiest solution
@@ -188,7 +185,7 @@ namespace pattern {
 			}
 		};
 
-		// A constant value - that is lazyly evaluated
+		/// A constant value - that is lazily evaluated
 		struct LazyConstant : public TreePattern {
 
 			typedef std::function<core::NodePtr(core::NodeManager&)> factory_type;
@@ -211,7 +208,7 @@ namespace pattern {
 			}
 		};
 
-		// A wildcard for the pattern matching of a tree - accepts everything
+		/// A wildcard (_) for the pattern matching of a tree - accepts everything
 		struct Wildcard : public TreePattern {
 
 			Wildcard() : TreePattern(TreePattern::Wildcard, true) {}
@@ -222,7 +219,7 @@ namespace pattern {
 		};
 
 
-		// A simple variable
+		/// A simple variable, such as $x
 		struct Variable : public TreePattern {
 			const static TreePatternPtr any;
 			const std::string name;
@@ -241,7 +238,7 @@ namespace pattern {
 
 		};
 
-		// Depth recursion (downward * operator)
+		/// Depth recursion (downward * operator)
 		struct Recursion : public TreePattern {
 			const string name;
 			const bool terminal;
@@ -288,7 +285,7 @@ namespace pattern {
 		};
 
 
-		// Negation
+		/// Negation (!) operator
 		struct Negation : public TreePattern {
 			const TreePatternPtr pattern;
 
@@ -301,7 +298,7 @@ namespace pattern {
 
 		};
 
-		// Conjunction
+		/// Conjunction (&) operator
 		struct Conjunction : public TreePattern {
 			const TreePatternPtr pattern1;
 			const TreePatternPtr pattern2;
@@ -315,7 +312,7 @@ namespace pattern {
 
 		};
 
-		// Disjunction
+		/// Disjunction (|) operator
 		struct Disjunction : public TreePattern {
 			const TreePatternPtr pattern1;
 			const TreePatternPtr pattern2;
@@ -354,7 +351,7 @@ namespace pattern {
 			}
 		};
 
-		// The most simple node pattern covering a single tree
+		/// The most simple node pattern covering a single tree
 		struct Single : public ListPattern {
 			const TreePatternPtr element;
 
@@ -367,7 +364,7 @@ namespace pattern {
 
 		};
 
-		// A sequence node pattern representing the composition of two node patterns
+		/// A sequence node pattern representing the composition of two node patterns
 		struct Sequence : public ListPattern {
 			const ListPatternPtr left;
 			const ListPatternPtr right;
@@ -386,7 +383,7 @@ namespace pattern {
 
 		};
 
-		// A node pattern alternative
+		/// Implements the node pattern "alternative" (|) operator
 		struct Alternative : public ListPattern {
 			const ListPatternPtr alternative1;
 			const ListPatternPtr alternative2;
@@ -406,7 +403,7 @@ namespace pattern {
 
 		};
 
-		// Realizes the star operator for node patterns
+		/// Implements the star operator (repetition, *) for node patterns
 		struct Repetition : public ListPattern {
 			const ListPatternPtr pattern;
 			const unsigned minRep;			// minimum number of repetitions
@@ -431,7 +428,7 @@ namespace pattern {
 
 		};
 
-		// A simple variable
+		/// A list pattern can also represent a simple variable.
 		struct Variable : public ListPattern {
 			const static ListPatternPtr any;
 			const std::string name;
@@ -458,9 +455,11 @@ namespace pattern {
 
 	}
 	
+	/// any matches any element in the IR
 	extern const TreePatternPtr any;
 	extern const TreePatternPtr recurse;
 
+	/// anyList matches multiple elements in the IR
 	extern const ListPatternPtr anyList;
 	extern const ListPatternPtr empty;
 
@@ -498,18 +497,27 @@ namespace pattern {
 		return std::make_shared<tree::Disjunction>(a,b);
 	}
 
+	/// node matches any node with a given child list.
 	inline TreePatternPtr node(const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(pattern);
 	}
+
+	/// node matches any node with a given child list.
 	inline TreePatternPtr node(const char id, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(id, pattern);
 	}
+
+	/// node matches any node with a given child list.
 	inline TreePatternPtr node(const char id, const TreePatternPtr& pattern) {
 		return node(id, single(pattern));
 	}
+
+	/// node matches any node with a given child list.
 	inline TreePatternPtr node(const core::NodeType type, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(type, pattern);
 	}
+
+	/// node matches any node with a given child list.
 	inline TreePatternPtr node(const core::NodeType type, const TreePatternPtr& pattern) {
 		return node(type, single(pattern));
 	}
@@ -526,17 +534,26 @@ namespace pattern {
 		return std::make_shared<list::Variable>(name, pattern);
 	}
 
+	/// The given expression may appear Anywhere in the Tree.
 	template<typename ... Patterns>
 	inline TreePatternPtr aT(Patterns ... patterns) {
 		return std::make_shared<tree::Descendant>(patterns...);
 	}
 
+	/// Recursive Tree pattern is used for nesting statements, e.g. nested for-loops.
 	inline TreePatternPtr rT(const TreePatternPtr& pattern, const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName, pattern);
 	}
+
+	/// Recursive Tree pattern is used for nesting statements, e.g. nested for-loops.
 	inline TreePatternPtr rT(const ListPatternPtr& pattern, const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName, node(pattern));
 	}
+
+	/// Recursive Tree pattern is used for nesting statements, e.g. nested
+	/// for-loops. The function rec is just like rT with the notable difference
+	/// that the pattern from rec is derived from the outer loop pattern, given
+	/// to rT.
 	inline TreePatternPtr rec(const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName);
 	}
@@ -603,22 +620,25 @@ namespace pattern {
 
 	// more complex stuff ...
 
+	/// step matches pattern a as a child of the current pattern iteration
+	/// space; the tree pattern "a" needs not be complete, but can be
+	/// surrounded by any elements
 	inline TreePatternPtr step(const TreePatternPtr& a) {
 		return node(anyList << a << anyList);
 	}
 
+	/// "all" collects all occurrences of pattern a.
 	inline TreePatternPtr all(const TreePatternPtr& a) {
-		// collect all occurs of pattern a
 		return rT((a & node(*recurse)) | (!a & node(*recurse)));
 	}
 
+	/// it is the outer most or not, then the next is nested
 	inline TreePatternPtr outermost(const TreePatternPtr& a) {
-		// it is the outer most or not, then the next is nested
 		return rT(a | (!a & node(*recurse)));
 	}
 
+	/// select all that do not contain another a
 	inline TreePatternPtr innermost(const TreePatternPtr& a) {
-		// select all that do not contain another a
 		return rT((!step(aT(a)) & a) | node(*recurse));
 	}
 

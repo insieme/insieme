@@ -224,7 +224,7 @@ core::ProgramPtr applyTransformations(const core::ProgramPtr& program) {
 	core::visitDepthFirstOnce(program, core::makeLambdaVisitor( transformer ) );
 
 	return static_pointer_cast<const core::ProgramPtr>( 
-			core::transform::replaceAll(program->getNodeManager(), program, replacements)
+			core::transform::replaceAll(program->getNodeManager(), program, replacements, false)
 		);
 
 }

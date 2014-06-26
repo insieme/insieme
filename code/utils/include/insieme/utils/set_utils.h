@@ -54,6 +54,7 @@ namespace insieme {
 namespace utils {
 namespace set {
 
+/// PointerSet is based upon unordered_set, so there is no way to insert elements in a given order. See unordered_set::insert.
 template<class Ptr>
 class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { 
 	typedef boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> base;

@@ -48,6 +48,7 @@
 namespace insieme {
 namespace core {
 namespace pattern {
+/// Namespace for constructing/search for IR Patterns: irp
 namespace irp {
 	using std::make_shared;
 
@@ -84,22 +85,27 @@ namespace irp {
 		return node(single(type) << *any);
 	}
 
+	/// match a literal with the given type and TreePatternPtr value
 	inline TreePatternPtr literal(const TreePatternPtr& type, const TreePatternPtr& value) {
 		return node(core::NT_Literal, single(type) << single(value));
 	}
 
+	/// match a literal with the given type and StringValuePtr value
 	inline TreePatternPtr literal(const TreePatternPtr& type, const core::StringValuePtr& value) {
 		return literal(type, atom(value.as<core::NodePtr>()));
 	}
 
+	/// match a literal with the given type and the given value, the latter parsed as a NodePtr atom
 	inline TreePatternPtr literal(const TreePatternPtr& type, const string& str) {
 		return literal(type, value(str));
 	}
 
+	/// match a literal with the given value, parsed as a NodePtr atom
 	inline TreePatternPtr literal(const string& str) {
 		return literal(any, str);
 	}
 
+	/// match a literal (with any type and any value)
 	inline TreePatternPtr literal() {
 		return literal(any, any);
 	}
