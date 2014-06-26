@@ -69,6 +69,8 @@ protected:
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
+	std::map<clang::QualType, core::TypePtr> anonimousNamedTypes;
+
 public:
 	TypeConverter(Converter& fact);
 

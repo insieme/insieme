@@ -36,6 +36,7 @@
 
 #include <stdio.h>
 
+#define IRT_LIBRARY_MAIN
 #include "irt_library.h"
 
 typedef struct {

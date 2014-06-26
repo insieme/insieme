@@ -974,12 +974,10 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 ///
 core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
 	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-	assert(enumType);
-	core::TypePtr enumTy = convertType(enumType->getCanonicalTypeInternal());
-
-	bool systemHeaderOrigin = getSourceManager().isInSystemHeader(enumConstant->getCanonicalDecl()->getSourceRange().getBegin());
-	string enumConstantName = (systemHeaderOrigin ? enumConstant->getNameAsString() : utils::buildNameForEnumConstant(enumConstant));
-	return builder.literal(enumConstantName, enumTy);
+	assert(enumType && "not an enum type?");
+	string enumConstantName = enumConstant->getNameAsString();
+	auto expType = convertType(enumType->getCanonicalTypeInternal());
+	return builder.literal(enumConstantName, expType);
 }
 
 	//////////////////////////////////////////////////////////////////
@@ -1436,7 +1434,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
 		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
 			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
-
 
 				VLOG(2) << "typedef of an anonymous type, forward the name: ";
 				VLOG(2) << "    -" << res;
