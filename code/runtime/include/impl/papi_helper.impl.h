@@ -309,12 +309,16 @@ void irt_papi_stop(long long int* papi_values) {
  */
 
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) {
-	char event_name_copy[strlen(event_name)];
+	char event_name_copy[strlen(event_name)+1];
 	strcpy(event_name_copy, event_name);
 	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int64 retval = 0;
 	int32 eventset = context->inst_region_metric_group_support_data.papi_eventset[worker_id];
 	int32 num_present_events = PAPI_num_events(eventset);
+
+	if(num_present_events < 1)
+		return -1;
+
 	int32 present_events[num_present_events];
 	int32 target_event_code = 0;
 
@@ -352,7 +356,7 @@ void irt_papi_select_events(irt_worker* worker, irt_context* context, const char
 			return;
 		}
 
-		char papi_events_string_copy[strlen(papi_events_string)];
+		char papi_events_string_copy[strlen(papi_events_string)+1];
 
 		strcpy(papi_events_string_copy, papi_events_string);
 
@@ -391,7 +395,7 @@ void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) {
  */
 
 void irt_papi_setup(irt_context* context) {
-	context->inst_region_metric_group_support_data.papi_eventset = (int32*)malloc(sizeof(int32) * IRT_MAX_WORKERS);
+	context->inst_region_metric_group_support_data.papi_eventset = (int32*)calloc(IRT_MAX_WORKERS, sizeof(int32));
 }
 
 /*
