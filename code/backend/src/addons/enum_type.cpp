@@ -146,7 +146,9 @@ namespace addons {
 
 
 			if( type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type) ) {
-				auto toLiteral = [&](const string& value) { return context.getConverter().getCNodeManager()->create<c_ast::Literal>(value); };
+				auto toLiteral = [&](const string& value) { 
+						return context.getConverter().getCNodeManager()->create<c_ast::Literal>(value); 
+					};
 				c_ast::ExpressionPtr res = toLiteral(ptr.as<core::LiteralPtr>()->getStringValue());
 
 				auto typeInfo = context.getConverter().getTypeManager().getTypeInfo(literal->getType());

@@ -74,6 +74,7 @@
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/annotations/c/include.h"
 
 #include <iconv.h>
 
@@ -1523,9 +1524,17 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 		return (retIr = convFact.getCallableExpression(funcDecl).as<core::ExpressionPtr>());
 	}
 
-	if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
-		retIr = convFact.convertEnumConstantDecl(enumConstant);
-		return retIr;
+	if (const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl() ) ) {
+		string enumConstantname = insieme::frontend::utils::buildNameForEnumConstant(decl, convFact.getSourceManager());
+	    const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
+
+		// Just dont you mesh with sys headers stuff
+		auto expType = convFact.convertType(enumType->getCanonicalTypeInternal());
+		if (annotations::c::hasIncludeAttached(expType)){
+			enumConstantname = decl->getNameAsString();
+		}
+
+		return builder.literal(enumConstantname, expType);
 	}
 
 	frontend_assert(false ) <<"clang::DeclRefExpr not supported!\n";

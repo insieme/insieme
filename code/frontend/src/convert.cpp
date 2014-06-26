@@ -969,17 +969,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 	return retStmt;
 }
 
-
-//////////////////////////////////////////////////////////////////
-///
-core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstantDecl* enumConstant) {
-	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-	assert(enumType && "not an enum type?");
-	string enumConstantName = enumConstant->getNameAsString();
-	auto expType = convertType(enumType->getCanonicalTypeInternal());
-	return builder.literal(enumConstantName, expType);
-}
-
 	//////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
@@ -1414,7 +1403,6 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //////////////////////////////////////////////////////////////////
 //
 void Converter::convertTypeDecl(const clang::TypeDecl* decl){
-
 	core::TypePtr res = nullptr;
     for(auto plugin : this->getConversionSetup().getPlugins()) {
         core::NodePtr result = plugin->Visit(decl, *this);
@@ -1428,7 +1416,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	if(!res) {
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
-
+		getHeaderTagger().addHeaderForDecl(res, decl);
 		// NOTE:
 		// it might be that a the typedef encloses an anonymous struct declaration, in that case
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
@@ -1480,11 +1468,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 					res = gen;
 				}
 			}
-		//	else if
-		//	}
 		}
-		//std::cout << " - fixed? into: " << res << std::endl;
-		//std::cout << " - implementation: " << lookupTypeDetails(res) << std::endl;
 	}
 
     // frequently structs and their type definitions have the same name
@@ -1711,7 +1695,6 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 		auto symbol = builder.literal(utils::buildNameForFunction(funcDecl), funcTy);
 
 		// attach header file info
-		// TODO: check if we can optimize the usage of this, consumes too much time
 		getHeaderTagger().addHeaderForDecl(symbol, funcDecl);
 		lambdaExprCache[funcDecl] = symbol;
 		return ;
