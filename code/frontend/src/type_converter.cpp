@@ -93,7 +93,7 @@ namespace {
 		for(i = decl->redecls_begin(); i != e; ++i) {
 
 			if (llvm::isa<clang::TypedefDecl> (*i)) {
-				std::cout << "this is a typedef aliased type" << std::endl;
+				std::cerr << "this is a typedef aliased type" << std::endl;
 				assert(false);
 			}
 
@@ -118,42 +118,6 @@ namespace {
 		return NULL;
 	}
 
-	core::TypePtr attachEnumName( const core::TypePtr& enumTy, const clang::EnumDecl* enumDecl){
-
-		std::cout << "ataching enum names : " << enumTy << " : "  << enumDecl->getNameAsString() << std::endl;
-
-		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
-					const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(ecd);
-					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
-					out << enumConstantName << "=" << enumConstantInitVal;
-				};
-
-		//enumTypes can be shadowed if redeclared in different scope (similar to variables)
-		//we add all enumTypes to the global scope so the enumconstants need a distinguishable name
-		//(delivered by buildNameForEnumConstant)
-		if(!core::annotations::hasNameAttached(enumTy)) {
-			std::stringstream ss;
-			ss << join(", ", enumDecl->enumerator_begin(), enumDecl->enumerator_end(), enumConstantPrinter);
-			core::annotations::attachName(enumTy, ss.str());
-		} else {
-			std::stringstream annotation;
-			annotation << core::annotations::getAttachedName(enumTy);
-			// go through all possible enumConstants and attach them to the enumTy, if they aren't
-			// there already
-			for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
-				const clang::EnumConstantDecl* enumConstant = *it;
-				std::stringstream attachment;
-                enumConstantPrinter(attachment, enumConstant);
-
-                //check if element is already in enum list
-                if(annotation.str().find(attachment.str()) == std::string::npos) {
-                    annotation << ", " << attachment.str();
-                }
-			}
-			core::annotations::attachName(enumTy, annotation.str());
-		}
-		return enumTy;
-	}
 } // end anonymous namespace
 
 namespace insieme {
@@ -482,19 +446,20 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
         const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-        std::vector<core::GenericTypePtr> enumCtants;
+        std::vector<core::TypePtr> enumCtants;
         for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
 			const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it);
-			const string& enumConstantInitVal = (*it)->getInitVal().toString(10);
-			ext.getEnumCtantType(enumConstantName, atoi(enumConstantInitVal.c_str()));
+			enumCtants.push_back(ext.getEnumConstantType(enumConstantName, (*it)->getInitVal().toString(10)));
 		};
 
 		core::TypePtr enumTy = ext.getEnumType(enumTypeName, enumCtants);
 
+		// enums will have the folowing shape: 
+		//   enum<NAME, { constants } >
+		//   where constants are a type literal with the shape: 
+		//   	Name<integer value> 
+
 		//return enum type
-        std::cout << "generated enum type: \n";
-        dumpPretty(enumTy);
-        std::cout << std::endl;
         return enumTy;
    	}
 

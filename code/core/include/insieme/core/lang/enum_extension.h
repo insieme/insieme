@@ -69,60 +69,22 @@ namespace lang {
         LANG_EXT_DERIVED(EnumElementAsBool,      "('a i) -> bool { return lit(\"enum.to.int\":('a)->int<4>)(i) != 0; }");
 
 
-// STEFAN: 
-//
-//	for constants
-//    builder.genericType(genType(CTANT_NAME), intParam(val))
-//
-//	For the enum type:
-//		builder.genericType("enum", { genType(ENUM_NAE) : Ctants_types  }, emptyIntPAram)
-//
-//
-//		//// TypePtr getEnumCtantType (string name, int val=0);
-//		//// typePtr getEnumType (String name, ctantTypeList());
-
         /**
          * Creates an enum type out a literal. 
          * @param lit The name (co
          * @param elements vector of elements
          * @return the enum type
          */
-		TypePtr getEnumType(const string& lit, const std::vector<GenericTypePtr> elements) const {
+		TypePtr getEnumType(const string& lit, const std::vector<TypePtr> elements) const {
 		    IRBuilder builder(getNodeManager());
 		    TypeList typeList;
 		    typeList.insert(typeList.end(), builder.genericType(lit));
-            for(GenericTypePtr gt : elements) {
+            for(TypePtr gt : elements) {
+				assert(gt.isa<GenericTypePtr>());
                 typeList.insert(typeList.end(), gt);
             }
-            return builder.genericType("enum", typeList, insieme::core::IntParamList());
+            return builder.genericType("__insieme_enum", typeList, IntParamList());
 		}
-
-        TypePtr getEnumCtantType(const string& lit) const { 
-		    IRBuilder builder(getNodeManager());
-		    TypeList typeList;
-            return builder.genericType(lit, typeList, insieme::core::IntParamList());
-        }
-
-        TypePtr getEnumCtantType(const string& lit, const int val) const { 
-		    IRBuilder builder(getNodeManager());
-		    TypeList typeList;
-            IntParamList intList;
-            intList.push_back(builder.concreteIntTypeParam(val));
-            return builder.genericType(lit, typeList, intList);
-        } 
-
-        /**
-         * Retrieve the name of an enumeration.
-         * @param type Enumeration type pointer
-         * @return TypePtr that contains the enumeration name literal
-         */
-		std::string getEnumName(const TypePtr& type) const {
-            assert(isEnumType(type) && "this is no enumeration type");
-            core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
-            auto name = gt->getTypeParameter()[0].as<GenericTypePtr>()->getName();
-			return name->getValue();
-		}
-
         /**
          * Check if a type is an enumeration type
          * @param type TypePtr that should be checked
@@ -133,10 +95,7 @@ namespace lang {
             if(!type.isa<core::GenericTypePtr>())
                 return false;
             gt = static_pointer_cast<const core::GenericType>(type);
-            return  (gt->getName()->getValue() == "enum" &&
-                     gt->getTypeParameter().size() == 1u &&
-                     gt->getIntTypeParameter().empty()
-                    );
+            return  (gt->getName()->getValue() == "__insieme_enum");
 		}
 
 		bool isEnumConstant (const NodePtr& node) const{
@@ -147,7 +106,31 @@ namespace lang {
 			return false;
 		}
 
+        /**
+         * Retrieve the name of an enumeration.
+         * @param type Enumeration type pointer
+         * @return TypePtr that contains the enumeration name literal
+         */
+		std::string getEnumName(const TypePtr& type) const {
+            assert(isEnumType(type) && "this is no enumeration type");
+            core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
+            return gt->getFamilyName();
+		}
+
+        TypePtr getEnumConstantType(const string& lit) const { 
+		    IRBuilder builder(getNodeManager());
+		    TypeList typeList;
+            return builder.genericType(lit, typeList, IntParamList());
+        }
+
+        TypePtr getEnumConstantType(const string& lit, const string& val) const { 
+		    IRBuilder builder(getNodeManager());
+		    TypeList typeList;
+			typeList.push_back(builder.genericType(lit));
+            typeList.push_back(builder.genericType(val));
+			return builder.genericType("__insieme_enum_constant__", typeList, IntParamList() );
+        } 
 	};
-}
-}
-}
+} // lang
+} // core
+} // insieme

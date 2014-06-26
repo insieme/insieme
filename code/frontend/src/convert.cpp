@@ -977,7 +977,6 @@ core::ExpressionPtr Converter::convertEnumConstantDecl(const clang::EnumConstant
 	assert(enumType && "not an enum type?");
 	string enumConstantName = enumConstant->getNameAsString();
 	auto expType = convertType(enumType->getCanonicalTypeInternal());
-	std::cout << " building enum ctant " << enumConstantName << " with type: " << expType << std::endl;
 	return builder.literal(enumConstantName, expType);
 }
 

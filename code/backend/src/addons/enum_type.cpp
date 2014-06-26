@@ -33,6 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+#include <sstream>
 
 #include "insieme/backend/addons/enum_type.h"
 
@@ -70,21 +71,23 @@ namespace addons {
 			
 			// create constructor (C-style)
 			core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
+			auto enumParams  = gt->getTypeParameter();
 
-			//get name of enum
-			const auto& ext = converter.getNodeManager().getLangExtension<core::lang::EnumExtension>();
-			string name = ext.getEnumName(type);
-			if(name.empty()) name = converter.getNameManager().getName(type);
+			string name = enumParams[0].as<core::GenericTypePtr>()->getFamilyName();
+
+			if (name.empty()) name = converter.getNameManager().getName(type);
+
+			// get enum constants as string
+			std::stringstream enumConstants;
+			for (unsigned i=1; i < enumParams.size(); ++i){
+				auto constantParams =enumParams[i].as<core::GenericTypePtr>()->getTypeParameter();
+				enumConstants << constantParams[0].as<core::GenericTypePtr>()->getFamilyName() << " = " << 
+								 constantParams[1].as<core::GenericTypePtr>()->getFamilyName();
+				if (i<enumParams.size()-1) enumConstants << ", ";
+			}
 
 			//create declaration
-			c_ast::NodePtr ctr;
-
- 			if(core::annotations::hasNameAttached(type)){
-                 ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
-			}
-            else{
-			    return type_info_utils::createUnsupportedInfo(manager, toString(*type));
-			}
+			c_ast::NodePtr ctr = manager.create<c_ast::EnumType>(name, enumConstants.str());
 
 			// add constructor (C-style)
 			TypeInfo* info = new TypeInfo();
