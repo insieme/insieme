@@ -49,6 +49,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/backend/name_manager.h"
 
 
 namespace insieme {
@@ -71,15 +72,19 @@ namespace addons {
 			core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
 
 			//get name of enum
-			string name = static_pointer_cast<const core::GenericType>(gt->getTypeParameter()[0])->getName()->getValue();
+			const auto& ext = converter.getNodeManager().getLangExtension<core::lang::EnumExtension>();
+			string name = ext.getEnumName(type);
+			if(name.empty()) name = converter.getNameManager().getName(type);
 
 			//create declaration
 			c_ast::NodePtr ctr;
 
-			if(core::annotations::hasNameAttached(type))
-				ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
-			else
+ 			if(core::annotations::hasNameAttached(type)){
+                 ctr = manager.create<c_ast::EnumType>(name, core::annotations::getAttachedName(gt));
+			}
+            else{
 			    return type_info_utils::createUnsupportedInfo(manager, toString(*type));
+			}
 
 			// add constructor (C-style)
 			TypeInfo* info = new TypeInfo();

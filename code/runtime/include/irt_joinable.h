@@ -35,49 +35,19 @@
  */
 
 #pragma once
-#ifndef __GUARD_ID_GENERATION_H
-#define __GUARD_ID_GENERATION_H
+#ifndef __GUARD_IRT_JOINABLE_H
+#define __GUARD_IRT_JOINABLE_H
 
-#include "irt_globals.h"
+#include "declarations.h"
 
-typedef enum {
-	IRT_ID_id_gen_test, IRT_ID_lookup_test,
-	IRT_ID_channel, IRT_ID_client_app, IRT_ID_context, IRT_ID_data_item, IRT_ID_wi_event_register,
-	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
-} irt_id_type;
+/** Ids of either work items or work groups are joinable. These will be casted as required.
+ */
+union _irt_joinable {
+	irt_work_item_id wi_id;
+	irt_work_group_id wg_id;
+};
 
-#define IRT_DECLARE_ID_TYPE(__type) \
-struct _irt_##__type; \
-struct _irt_##__type##_id { \
-	union { \
-		uint64 full; \
-		struct { \
-			uint32 index; \
-			uint16 thread; \
-			uint8 node; \
-			irt_id_type id_type : 8; \
-		}; \
-	}; \
-	struct _irt_##__type* cached; \
-}; \
-typedef struct _irt_##__type##_id irt_##__type##_id;
 
-#define IRT_MAKE_ID_TYPE(__type) \
-static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
-	irt_##__type##_id id; \
-	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
-	id.full = gen_id->full; \
-	id.index = gen_id->index++; \
-	id.node = gen_id->node; \
-	id.id_type = IRT_ID_##__type; \
-	id.cached = NULL; \
-	return id; \
-} \
-static inline irt_##__type##_id irt_##__type##_null_id() { \
-	irt_##__type##_id null_id = { { 0 }, NULL }; \
-	return null_id; \
-}
 
-#define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
 
-#endif // ifndef __GUARD_ID_GENERATION_H
+#endif 

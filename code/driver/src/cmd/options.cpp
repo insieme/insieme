@@ -58,10 +58,11 @@ namespace cmd {
 			// define options
 			desc.add_options()
 					("help,h", "produce this help message")
-					("input-file,i", bpo::value<vector<frontend::path>>(), "input files - required!")
+					("input-file", bpo::value<vector<frontend::path>>(), "input files - required!")
 					("library-file,l", bpo::value<vector<frontend::path>>(), "linker flags - optional")
-					("library-path,L", bpo::value<vector<frontend::path>>(), "library paths - optional")
-					("include-path,I", bpo::value<vector<frontend::path>>(), "include files - optional")
+					("library-path,L", bpo::value<vector<frontend::path>>(), "library search path -optional")
+					("include-path,I", bpo::value<vector<frontend::path>>(), "user defined include search path - optional")
+					("isystem", bpo::value<vector<frontend::path>>(), "system include search path - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
                     ("fopt,f", bpo::value<vector<string>>(), "optimization flags - optional")
 					("std", bpo::value<string>()->default_value("auto"), "determines the language standard")
@@ -132,9 +133,17 @@ namespace cmd {
 				res.valid = false;
 				return res;
 			}
-			// include path
+
+			// user include path
 			if (map.count("include-path")) {
 				res.job.setIncludeDirectories(map["include-path"].as<vector<frontend::path>>());
+			}
+
+			// system include path
+			if (map.count("isystem")) {
+				for (auto path : map["isystem"].as<vector<frontend::path>>()){
+					res.job.addSystemHeadersDirectory(path);
+				}
 			}
 
 			// output file (optional)

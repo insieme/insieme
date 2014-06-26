@@ -33,35 +33,35 @@ int main() {
 	//enum used in struct
 	Source s1;
 	s1.type = Magnet;
-	printf("%i\n", s1.type);
-	if(s1.type == Magnet) {
-		s1.type = Linear;
-	}
-    printf("%i\n", s1.type);
-	
-	//extern enum
-	int x = sysconf(_SC_NPROCESSORS_CONF);
-	printf("%i\n", x);
-	
-	//normal anon. enum
-	Kind k1 = Linear;
-	printf("%i\n", k1);
-
-	// globals
-	var1 = ONE;
-	printf("%i\n", var1);	
-
-	var2 = GREEN;
-	printf("%i\n", var2);	
-
-	//enum in struct
-	EnumStruct es;
-	es.e = E;
-	printf("%i\n", es.e);
-	
-	//enum shadowing
-	enum ThingWithE e = E;
-	printf("%i\n", e);
-	f();
-	return 0;
+//	printf("%i\n", s1.type);
+//	if(s1.type == Magnet) {
+//		s1.type = Linear;
+//	}
+//    printf("%i\n", s1.type);
+//	
+//	//extern enum
+//	int x = sysconf(_SC_NPROCESSORS_CONF);
+//	printf("%i\n", x);
+//	
+//	//normal anon. enum
+//	Kind k1 = Linear;
+//	printf("%i\n", k1);
+//
+//	// globals
+//	var1 = ONE;
+//	printf("%i\n", var1);	
+//
+//	var2 = GREEN;
+//	printf("%i\n", var2);	
+//
+//	//enum in struct
+//	EnumStruct es;
+//	es.e = E;
+//	printf("%i\n", es.e);
+//	
+//	//enum shadowing
+//	enum ThingWithE e = E;
+//	printf("%i\n", e);
+//	f();
+//	return 0;
 }

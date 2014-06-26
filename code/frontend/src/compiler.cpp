@@ -248,44 +248,26 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 
     // ******************** FRONTEND PLUGIN ********************
-	// THIS MUST BE THE FIRST CALL OF AddPath OTHERWISE
-	// THE USER KIDNAPPED HEADER FILES WON'T BE RECOGNIZED
+	// this must be the first call of addpath otherwise
+	// the user kidnapped header files won't be recognized
 	for(auto plugin : config.getPlugins()) {
         for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
-            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::Angled, false, false);   // FIXME 3.4 check this flags
+            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::System, false, false);  
         }
 	}
 
-
-	// Add default header, for non-Windows target
-	if(!config.hasOption(ConversionJob::WinCrossCompile)) {
-		//FIXME: check if this is still valid
-		//	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER,
-		//												clang::frontend::CSystem, true, false, false);
-		//pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu",
-		//												clang::frontend::System, true, false, false);
-	}
-
-
 	if(config.hasOption(ConversionJob::WinCrossCompile)) {
-		// fix the target architecture to be a 64 bit machine
-		// triplestrings have to be lower case
 		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
 	} else {
-		// TO.Triple = llvm::sys::getHostTriple();
-		// triplestrings have to be lower case
 		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 	}
 
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), pimpl->TO) );  //FIXME 3.4 pointer?
-
-
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), pimpl->TO) );  
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
 	// add user provided headers
 	for (const path& cur : config.getIncludeDirectories()){
-		//instead "Angled" was "System"
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::Angled, false, false); // FIXME 3.4 check this flags
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::System, false, false); 
 	}
 
     // ******************** FRONTEND PLUGIN ********************
@@ -340,12 +322,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
 	}
-	/*
-	 FIXME: decide if we need this or not
-	LO.GNUMode = 1;
-	LO.Bool = 1;
-	LO.POSIXThreads = 1;
-	*/
 
 	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {
@@ -365,31 +341,27 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 
 		// use the cxx header of the backend c++ compiler
+		pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 1;
 		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0;
 
 		this->pimpl->clang.getPreprocessorOpts().UsePredefines = true;
 
-		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
-		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(const path& cur : config.getSystemHeadersDirectories()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, false, false);
-		}
-
+		LO.CPlusPlus = 1;
 		LO.Exceptions = 1;
 		LO.CXXExceptions = 1;
-
-		// FIXME:  if we need this or not
-		//	LO.CXXOperatorNames = 1;
+		LO.Bool = 1;
 	}
 	else{
 		LO.CPlusPlus = 0;
+	}
 
-		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
-		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
-		}
+
+	for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
+		pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
+	}
+	for(const path& cur : config.getSystemHeadersDirectories()) {
+		pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System,  false, false);
 	}
 
 	// Do this AFTER setting preprocessor options
@@ -413,15 +385,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
 
-	if (VLOG_IS_ON(2)) {
-		printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
-		/* print preprocessed stuff
-		pimpl->clang.getPreprocessorOutputOpts().ShowMacros = 1;
-		pimpl->clang.getPreprocessorOutputOpts().ShowCPP = 1;
-		llvm::raw_os_ostream out(std::cerr);
-		clang::DoPrintPreprocessedInput(getPreprocessor(), &out, pimpl->clang.getPreprocessorOutputOpts());
-		*/
-	}
+	if (VLOG_IS_ON(2)) printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
