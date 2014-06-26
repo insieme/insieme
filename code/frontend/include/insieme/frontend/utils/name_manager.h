@@ -118,7 +118,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
  * @param tagType clang TagType pointer
  * @return name for enumeration
  */
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) ;
+std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
 
 /**
  * build names for enumeration constants.
@@ -126,7 +126,7 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
  * @param ecd enumConstantDecl pointer
  * @return name for enumeration
  */
-std::string buildNameForEnumConstant (const clang::EnumConstantDecl* ecd);
+std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

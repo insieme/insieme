@@ -444,23 +444,17 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 	if(def->getTagKind() == clang::TTK_Enum) {
 		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
-        const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
         std::vector<core::TypePtr> enumCtants;
         for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
-			const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it);
+			const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it, convFact.getSourceManager());
 			enumCtants.push_back(ext.getEnumConstantType(enumConstantName, (*it)->getInitVal().toString(10)));
 		};
 
-		core::TypePtr enumTy = ext.getEnumType(enumTypeName, enumCtants);
-
-		// enums will have the folowing shape: 
-		//   enum<NAME, { constants } >
-		//   where constants are a type literal with the shape: 
-		//   	Name<integer value> 
-
-		//return enum type
-        return enumTy;
+        const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getSourceManager());
+        auto enumType = ext.getEnumType(enumTypeName, enumCtants);
+		core::annotations::attachName(enumType, enumDecl->getNameAsString());
+		return enumType;
    	}
 
 	// handle struct/union/class
