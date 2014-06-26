@@ -857,10 +857,16 @@ namespace cba {
 								// if the call context is empty, we are probably in the root of a thread
 								if (ctxt.isEmptyThreadContext()) continue;	// if context is empty, we are not in a thread!
 
+								typename Context::thread_id rootThreadContext;
+
 								// get thread call context
 								const auto& spawnID = ctxt.threadContext.front();
 								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprInstance>();
-								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+								const auto& spawnCtxt = Context(spawnID.getSpawnContext(), ctxt.threadContext << rootThreadContext);
+
+								assert_eq(ctxt.threadContext.back(), rootThreadContext)
+									<< "Deeper Nested parallelism not yet supported!\n"
+									<< "Context: " << ctxt.threadContext << "\n";
 
 								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
 
