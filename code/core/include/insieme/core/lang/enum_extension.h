@@ -84,26 +84,33 @@ namespace lang {
         /**
          * Creates an enum type out a literal. 
          * @param lit The name (co
+         * @param elements vector of elements
          * @return the enum type
          */
-		TypePtr getEnumType(const string& lit) const {
+		TypePtr getEnumType(const string& lit, const std::vector<GenericTypePtr> elements) const {
 		    IRBuilder builder(getNodeManager());
 		    TypeList typeList;
 		    typeList.insert(typeList.end(), builder.genericType(lit));
+            for(GenericTypePtr gt : elements) {
+                typeList.insert(typeList.end(), gt);
+            }
             return builder.genericType("enum", typeList, insieme::core::IntParamList());
 		}
 
-		/**
-         * Creates an enum type out of a genericType.
-         * @param gt The generic type representing the enumeration
-         * @return TypePtr that contains an enum type (e.g. enum<Colors>)
-         */
-		TypePtr getEnumType(const GenericTypePtr& gt) const {
+        TypePtr getEnumCtantType(const string& lit) const { 
 		    IRBuilder builder(getNodeManager());
 		    TypeList typeList;
-		    typeList.insert(typeList.end(), gt);
-            return builder.genericType("enum", typeList, insieme::core::IntParamList());
-		}
+            return builder.genericType(lit, typeList, insieme::core::IntParamList());
+        }
+
+        TypePtr getEnumCtantType(const string& lit, const int val) const { 
+		    IRBuilder builder(getNodeManager());
+		    TypeList typeList;
+            IntParamList intList;
+            intList.push_back(builder.concreteIntTypeParam(val));
+            return builder.genericType(lit, typeList, intList);
+        } 
+
         /**
          * Retrieve the name of an enumeration.
          * @param type Enumeration type pointer

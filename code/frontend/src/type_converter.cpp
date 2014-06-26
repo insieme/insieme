@@ -482,12 +482,19 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
         const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
-		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
+        std::vector<core::GenericTypePtr> enumCtants;
+        for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
+			const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it);
+			const string& enumConstantInitVal = (*it)->getInitVal().toString(10);
+			ext.getEnumCtantType(enumConstantName, atoi(enumConstantInitVal.c_str()));
+		};
 
-		// Fills the enum values from the original declaration
-		enumTy =  attachEnumName( enumTy, enumDecl);
+		core::TypePtr enumTy = ext.getEnumType(enumTypeName, enumCtants);
 
 		//return enum type
+        std::cout << "generated enum type: \n";
+        dumpPretty(enumTy);
+        std::cout << std::endl;
         return enumTy;
    	}
 
