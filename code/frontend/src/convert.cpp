@@ -1416,7 +1416,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	if(!res) {
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
-		getHeaderTagger().addHeaderForDecl(res, decl);
+
 		// NOTE:
 		// it might be that a the typedef encloses an anonymous struct declaration, in that case
 		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it

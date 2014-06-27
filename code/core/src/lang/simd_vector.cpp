@@ -49,6 +49,7 @@ namespace lang {
 		   (gt = static_pointer_cast<const core::GenericType>(type), 
 				gt->getName()->getValue() == "simd" && 
 				gt->getTypeParameter().size() == 1u && 
+				gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
 				gt->getIntTypeParameter().empty()
 		   );
 	}
@@ -59,6 +60,7 @@ namespace lang {
 	}
 
 	GenericTypePtr toSIMDVector(const VectorTypePtr& type) {
+		assert(type.isa<core::VectorTypePtr>() && "no SIMD type can be made out of a vector type");
 		insieme::core::IRBuilder builder(type.getNodeManager());
 		return builder.genericType("simd", {type}, IntParamList());
 	}
