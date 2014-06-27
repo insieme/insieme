@@ -179,10 +179,10 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 			convFact.getHeaderTagger().addHeaderForDecl(gt, tagDecl, true);
 
 			// for intercepted 3rdparty stuff we need to use the actual enum
-//			irType = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(gt);
-			//return irType;
-			std::cout << "this is not implemented yet" << std::endl;
-			abort();
+			//irType = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(gt);
+			return gt;
+			//std::cout << "this is not implemented yet" << std::endl;
+			//abort();
 		}
 		else{
 			// generate a type with the inner elements, and no integer literal
