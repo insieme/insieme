@@ -67,7 +67,6 @@ private:
 class IclHostPlugin : public FrontendPlugin {
 	const std::vector<boost::filesystem::path>& includeDirs;
 	core::pattern::TreePatternPtr iclRunKernel;
-	core::pattern::TreePatternPtr derefOfIclBuffer;
 
 public:
 	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
