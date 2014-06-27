@@ -41,6 +41,7 @@
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "sched_policies/irt_sched_uber.h"
 #include "impl/worker.impl.h"
+#include "ir_interface.h"
 
 #ifdef _WIN32
 	#include "../../include_win32/rand_r.h"
@@ -63,21 +64,23 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 	irt_scheduling_assign_wi(target, wi);
 }
 
-irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
+irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
-irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
 		irt_wi_implementation* impl, irt_lw_data_item* args) {
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
 		irt_worker_run_immediate(target, range, impl, args);
-		return NULL;
+		return irt_joinable_null();
 	}
 	else {
 		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+		irt_joinable joinable;
+		joinable.wi_id = real_wi->id;
 		irt_scheduling_generate_wi(target, real_wi);
-		return real_wi;
+		return joinable;
 	}
 }
 

@@ -287,6 +287,12 @@ namespace cba {
 				base.isRedistribute(fun);
 	}
 
+	bool isSpawnPoint(const core::ExpressionPtr& call) {
+		if (!call.isa<CallExprPtr>()) return false;
+		const auto& base = call->getNodeManager().getLangBasic();
+		return base.isParallel(call.as<CallExprPtr>()->getFunctionExpr());
+	}
+
 	namespace detail {
 
 		bool isThreadBody(const StatementInstance& stmt) {

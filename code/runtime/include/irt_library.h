@@ -41,6 +41,10 @@
 #include "irt_all_impls.h"
 #include "standalone.h"
 
+////////////////////////////////////////////////////////////////// Forward Declarations
+
+void irt_lib_critical_init();
+
 /////////////////////////////////////////////////////////////////////////////// Startup
 
 // This is what the original program main will be renamed to
@@ -73,10 +77,12 @@ int main(int argc, char **argv) {
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	_irt_lib_startup_lwdi params = { - (int32)sizeof(_irt_lib_startup_lwdi), argc, argv };
 
+	irt_lib_critical_init();
+
 	irt_runtime_standalone(irt_get_default_worker_count(), &_irt_lib_context_fun, &_irt_lib_context_fun, &impl, (irt_lw_data_item*)&params);
 }
 // Rename original main in order to embed execution in a worker
-#define main(__argc, __argv) _irt_lib_renamed_main(__argc, __argv)
+#define main _irt_lib_renamed_main
 
 /////////////////////////////////////////////////////////////////////////////// Parallel
 
@@ -97,7 +103,7 @@ void _irt_lib_wi_implementation_func(irt_work_item* wi) {
 
 // Execute between "min" and "max" parallel instances of "fun",
 // passing "data" of size "data_size" to each of them
-irt_joinable* irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size) {
+irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size) {
 
 	// static wi implementation (immutable)
 	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };
@@ -155,4 +161,24 @@ void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, s
 	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, range, &impl, (irt_lw_data_item*)lwdi);
 }
 
+// a "private" function maintaining the global lock instance
+irt_lock* _irt_lib_get_critical_lock() {
+	static irt_lock lock;
+	return &lock;
+}
+
+// inits the critical lock
+void irt_lib_critical_init() {
+	irt_lock_init(_irt_lib_get_critical_lock());
+}
+
+// a function to mark the begin of a critical region
+void irt_lib_critical_start() {
+	irt_lock_acquire(_irt_lib_get_critical_lock());
+}
+
+// a function to mark the end of a critical region
+void irt_lib_critical_end() {
+	irt_lock_release(_irt_lib_get_critical_lock());
+}
 #endif // ifndef __GUARD_IRT_LIBRARY_H

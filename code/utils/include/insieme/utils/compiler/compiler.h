@@ -98,13 +98,14 @@ namespace compiler {
 		Compiler(const string& executable) : executable(executable), libs(), incDirs(), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
-		static Compiler getDefaultC99CompilerO3();
 
 		static Compiler getDefaultCppCompiler();
-		static Compiler getDefaultCppCompilerO3();
-
 
 		static Compiler getRuntimeCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
+
+		static Compiler getOptimizedCompiler(const Compiler& base, const string& level = "3");
+
+		static Compiler getDebugCompiler(const Compiler& base, const string& level = "3");
 
 		const string& getExecutable() const {
 			return executable;

@@ -55,6 +55,9 @@
 METRIC(WALL_TIME,			"wall_time",			ns,			none);
 METRIC(CPU_TIME,			"cpu_time",				ns,			none);
 METRIC(NUM_EXEC,			"num_executions",			unit,		none);
+METRIC(CPU_ENERGY,			"cpu_energy",				j, 			none);
+METRIC(CORES_ENERGY,		"cores_energy",				j, 			none);
+METRIC(MC_ENERGY,			"mc_energy",				j, 			none);
 
 // TODO: re-enable when available again
 // METRIC(NUM_WORKERS,			"num_workers",				unit,		none);

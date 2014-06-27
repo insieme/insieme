@@ -53,7 +53,7 @@ irt_id_gen_test_id gen_id;
 
 TEST(id_generation, sequential_ops) {
 	gen_id.thread = 7;
-	gen_id.node = 42;
+	gen_id.node = 4;
 
 	irt_id_gen_test_id test1 = irt_generate_id_gen_test_id(&gen_id);
 	EXPECT_EQ(test1.thread, gen_id.thread);

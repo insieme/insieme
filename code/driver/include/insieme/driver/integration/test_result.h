@@ -51,6 +51,8 @@ namespace integration {
 
 	class TestResult {
 
+		string stepName;
+		int retVal;
 		bool success;
 		map<string,float> metricResults;
 		map<string,float> metricDeviation;
@@ -69,13 +71,13 @@ namespace integration {
 
 	public:
 
-		TestResult(bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd="",
+		TestResult(string stepName="", int retVal = 0, bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd="",
 		std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
-			: success(success),metricResults(metricResults),metricDeviation(map<string,float>()),errorOut(errorOut),cmd(cmd),
+			: stepName(stepName),retVal(retVal),success(success),metricResults(metricResults),metricDeviation(map<string,float>()),output(output),errorOut(errorOut),cmd(cmd),
 				producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
 
-		static TestResult userAborted(map<string,float> metricResults, string output="", string errorOut="", string cmd="") {
-			TestResult res(false, metricResults, output, errorOut, cmd);
+		static TestResult userAborted(string stepName, map<string,float> metricResults, string output="", string errorOut="", string cmd="") {
+			TestResult res(stepName, -1, false, metricResults, output, errorOut, cmd);
 			res.userabort = true;
 			return res;
 		}
@@ -175,6 +177,14 @@ namespace integration {
 
 		string getCmd() const{
 			return cmd;
+		}
+
+		string getStepName() const{
+			return stepName;
+		}
+
+		int getRetVal() const{
+			return retVal;
 		}
 
 		int getNumThreads() const{

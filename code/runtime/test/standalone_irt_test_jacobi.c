@@ -43,8 +43,8 @@
 #ifdef _MSC_VER
 #include <Windows.h> // WINFIX
 #endif
-#include <ir_interface.h>
 #include <irt_all_impls.h>
+#include <ir_interface.h>
 #include <standalone.h>
 //#include <stdint.h> WINFIX
 #include <stdio.h>

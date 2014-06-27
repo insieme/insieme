@@ -450,7 +450,8 @@ void irt_inst_set_all_instrumentation_from_env() {
 				log_output_counter += sprintf(&(log_output[log_output_counter]), "DB,");
 			}
 		} while((tok = strtok(NULL, ",")) != NULL);
-		log_output[log_output_counter-1] = '\0';  // remove the last comma and replace with termination symbol
+		if(log_output_counter>0) log_output[log_output_counter-1] = '\0';  // remove the last comma and replace with termination symbol
+		else log_output[0] = '\0';
 		irt_log_setting_s(IRT_INST_WORKER_EVENT_TYPES_ENV, log_output);
 		return;
 	}

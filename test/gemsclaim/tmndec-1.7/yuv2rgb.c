@@ -61,14 +61,6 @@
 #include "tmndec.h"
 #include "global.h"
 
-#ifdef DISPLAY
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#endif
-
 
 #ifdef DISPLAY
 
@@ -126,7 +118,7 @@ double chromaCorrect = 1.0;
  * How many 1 bits are there in the longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 number_of_bits_set(a)
 unsigned long a;
 {
@@ -152,7 +144,7 @@ unsigned long a;
  * How many 0 bits are there at most significant end of longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 free_bits_at_top(a)
 unsigned long a;
 {
@@ -167,7 +159,7 @@ unsigned long a;
  * How many 0 bits are there at least significant end of longword.
  * Low performance, do not call often.
  */
-static int
+static inline int
 free_bits_at_bottom(a)
 unsigned long a;
 {
@@ -210,12 +202,12 @@ static long *b_2_pix_alloc;
  *--------------------------------------------------------------
  */
 
+    extern XImage *ximage;
+    extern unsigned long wpixel[3];
 void
 InitColorDither(thirty2)
 int thirty2;
 {
-    extern XImage *ximage;
-    extern unsigned long wpixel[3];
     /*
      * misuse of the wpixel array for the pixel masks. Note that this
      * implies that the window is created before this routine is called
@@ -522,20 +514,10 @@ Color32DitherImage(src, out)
 unsigned char *src[];
 unsigned char *out;
 {
-    unsigned char *lum = src[0];
-    unsigned char *cb = src[1];
-    unsigned char *cr = src[2];
     int cols;
     int rows;
 
-    int L, CR, CB;
-    unsigned int *row1, *row2;
-    unsigned char *lum2;
-    int x, y;
-    int cr_r;
-    int cr_g;
-    int cb_g;
-    int cb_b;
+    int y;
     int cols_2;
 
     cols = coded_picture_width;
@@ -546,21 +528,35 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    row1 = (unsigned int *)out;
-    row2 = row1 + cols_2 + cols_2;
-    lum2 = lum + cols_2 + cols_2;
+    //#pragma omp parallel for objective(0*E+1*P+0*T)
+    #pragma omp parallel for schedule(dynamic) 
     for (y=0; y<rows; y+=2) {
-        for (x=0; x<cols_2; x++) {
+        for (int x=0; x<cols_2; x++) {
             int R, G, B;
+
+            int L, CR, CB;
+            int cr_r;
+            int cr_g;
+            int cb_g;
+            int cb_b;
+
+            int offset = y/2 * cols_2 + x;
+            unsigned char *cb = src[1] + offset;
+            unsigned char *cr = src[2] + offset;
+            unsigned char *lum = src[0] + 2*(offset + (y/2) * cols_2);
+            unsigned char *lum2 = src[0] + (offset + (y/2) * cols_2 + cols_2)*2;
+            unsigned int *row1 = (unsigned int*)out + 2*(offset + (y/2) * cols_2); 
+            unsigned int *row2 = (unsigned int*)out + (cols_2 + offset + (y/2) * cols_2)*2; 
 
             CR = *cr++;
             CB = *cb++;
-            cr_r = Cr_r_tab[CR];
-            cr_g = Cr_g_tab[CR];
-            cb_g = Cb_g_tab[CB];
-            cb_b = Cb_b_tab[CB];
+            cr_r =  (0.419/0.299) * (CR-128);
+            cr_g = -(0.299/0.419) * (CR-128);
+            cb_g = -(0.114/0.331) * (CB-128); 
+            cb_b =  (0.587/0.331) * (CB-128);
 
-            L = L_tab[(int) *lum++];
+
+            L = *lum++;
 
             R = L + cr_r;
             G = L + cr_g + cb_g;
@@ -579,7 +575,7 @@ unsigned char *out;
             }
 #endif
 
-            L = L_tab[(int) *lum++];
+            L = *lum++;
 
             R = L + cr_r;
             G = L + cr_g + cb_g;
@@ -602,24 +598,20 @@ unsigned char *out;
             }
 #endif
 
-            L = L_tab [(int) *lum2++];
+            L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
-            L = L_tab [(int) *lum2++];
+            L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
         }
-        lum += cols_2 + cols_2;
-        lum2 += cols_2 + cols_2;
-        row1 += cols_2 + cols_2;
-        row2 += cols_2 + cols_2;
     }
 }
 

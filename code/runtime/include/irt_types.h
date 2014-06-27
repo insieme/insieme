@@ -89,8 +89,11 @@ static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
 	case IRT_T_VECTOR: return "IRT_T_VECTOR"; 
 	case IRT_T_VAR_VECTOR: return "IRT_T_VAR_VECTOR"; 
 	case IRT_T_CHANNEL: return "IRT_T_CHANNEL"; 
-	case IRT_T_BASIC: return "IRT_T_BASIC"; 
+	case IRT_T_BASIC: return "IRT_T_BASIC";
+	// to silence compiler warnings
+	default: return "IRT_T_UNKNOWN";
 	}
+	return "IRT_T_UNKNOWN_TYPE";
 }
 
 #endif // ifndef __GUARD_IRT_TYPES_H

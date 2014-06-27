@@ -49,9 +49,8 @@ static inline irt_work_group* _irt_wg_new() {
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg->redistribute_data_array);
-	// TODO
-	// we cannot just delete the wg here, it might be joined on later
-	//free(wg);
+	// TODO reuse list?
+	free(wg);
 }
 
 irt_work_group* _irt_wg_create(irt_worker* self) {
@@ -138,18 +137,20 @@ typedef struct __irt_wg_barrier_event_data {
 } _irt_wg_barrier_event_data;
 bool _irt_wg_barrier_event_complete(irt_wg_event_register* source_event_register, void *user_data) {
 	_irt_wg_barrier_event_data* data = (_irt_wg_barrier_event_data*)user_data;
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_GROUPJOIN, data->involved_wi->id);
 	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
 	return false;
 }
 void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	irt_worker* self = irt_worker_get_current();
- 	irt_work_item* swi = self->cur_wi;
+	irt_work_item* swi = self->cur_wi;
 	// enter barrier
 	IRT_ASSERT(wg->id.index != 0, IRT_ERR_INTERNAL, "WG 0 barrier");
-	_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
-	irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
+	_irt_wg_barrier_event_data barrier_ev_data = { swi, self };
+	irt_wg_event_lambda barrier_lambda = { _irt_wg_barrier_event_complete, &barrier_ev_data, NULL };
 	//IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
-	irt_wg_event_register_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
+	int64 ret = irt_wg_event_check_exists_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
+	if(ret != 0) return;
 	// check if last
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
 		// remove own handler from event register
@@ -158,18 +159,56 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
 		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
-	} else {
+	}
+	else {
 		// suspend
-//		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		// suspend until allowed to leave barrier
-        _irt_worker_switch_from_wi(self, swi);
-//		irt_inst_region_continue(swi);
+		_irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
-		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
+		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_BARRIER, swi->id); // self might no longer be self!
 	}
 }
+//void irt_wg_barrier_scheduled(irt_work_group* wg) {
+//	irt_worker* self = irt_worker_get_current();
+//	irt_work_item* swi = self->cur_wi;
+//	irt_work_group_id wg_id = wg->id;
+//	IRT_ASSERT(wg_id.index != 0, IRT_ERR_INTERNAL, "WG 0 barrier");
+//	// enter barrier
+//	_irt_wg_barrier_event_data barrier_ev_data = { swi, self };
+//	irt_wg_event_lambda barrier_lambda = { _irt_wg_barrier_event_complete, &barrier_ev_data, NULL };
+//	int64 ret = irt_wg_event_check_exists_gt_and_register(wg_id, IRT_WG_EV_BARRIER_ENTERED, &barrier_lambda, wg->local_member_count-1);
+//	if(ret == -1) return;
+//	if(ret == 0) {
+//		// suspend
+//		irt_inst_region_end_measurements(swi);
+//		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+//		// suspend until allowed to leave barrier
+//		_irt_worker_switch_from_wi(self, swi);
+//		irt_inst_region_start_measurements(swi);
+//	}
+//	else {
+//		irt_wg_event_set_occurrence_count(wg_id, IRT_WG_EV_BARRIER_ENTERED, 0);
+//		irt_wg_event_trigger_existing_no_count(wg_id, IRT_WG_EV_BARRIER_ENTERED);
+//	}
+//	// exit barrier
+//	self = irt_worker_get_current(); // might have switched worker
+//	ret = irt_wg_event_check_exists_gt_and_register(wg_id, IRT_WG_EV_BARRIER_EXITED, &barrier_lambda, wg->local_member_count-1);
+//	if(ret == -1) return;
+//	if(ret == 0) {
+//		// suspend
+//		irt_inst_region_end_measurements(swi);
+//		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+//		// suspend until allowed to leave barrier
+//		_irt_worker_switch_from_wi(self, swi);
+//		irt_inst_region_start_measurements(swi);
+//	}
+//	else {
+//		irt_wg_event_set_occurrence_count(wg_id, IRT_WG_EV_BARRIER_EXITED, 0);
+//		irt_wg_event_trigger_existing_no_count(wg_id, IRT_WG_EV_BARRIER_EXITED);
+//	}
+//}
 void irt_wg_barrier_busy(irt_work_group* wg) {
 	irt_worker* self = irt_worker_get_current();
  	irt_work_item* swi = self->cur_wi;
@@ -186,55 +225,53 @@ void irt_wg_barrier_busy(irt_work_group* wg) {
 			irt_busy_ticksleep(1000);
 			irt_thread_yield();
 		}
-		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_BARRIER, swi->id);
 	}
 }
-void irt_wg_barrier_timed_busy(irt_work_group* wg) {
-	irt_worker* self = irt_worker_get_current();
- 	irt_work_item* swi = self->cur_wi;
-	int64 barrier_start_ticks = irt_time_ticks();
-	// check if last
-	uint32 pre_barrier_count = wg->tot_barrier_count;
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
-		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
-		irt_spin_lock(&wg->lock);
-		// trigger waiting busy wis
-		irt_atomic_inc(&wg->tot_barrier_count, uint32_t);
-		// trigger suspended wis
-		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
-		irt_spin_unlock(&wg->lock);
-	} else {
-		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
-		while(wg->tot_barrier_count == pre_barrier_count) {
-			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
-			irt_busy_ticksleep(1000);
-			// check if timeout up, if so suspend
-			if(irt_time_ticks() - barrier_start_ticks > IRT_BARRIER_HYBRID_TICKS) {
-				irt_spin_lock(&wg->lock);
-				if(wg->tot_barrier_count == pre_barrier_count) {
-					// register callback
-					//printf("TIMED OUT, going into callback, Talpha: %lu | T: %lu | diff: %lu\n", barrier_start_ticks, irt_time_ticks(), irt_time_ticks() - barrier_start_ticks);
-					_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
-					irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
-					IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
-					irt_spin_unlock(&wg->lock);
-					// suspend
-//					irt_inst_region_suspend(swi);
-					irt_inst_region_end_measurements(swi);
-                    _irt_worker_switch_from_wi(self, swi);
-//					irt_inst_region_continue(swi);
-					irt_inst_region_start_measurements(swi);
-					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
-					return;
-				} else {
-					irt_spin_unlock(&wg->lock);
-				}
-			}
-		}
-		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
-	}
-}
+//void irt_wg_barrier_timed_busy(irt_work_group* wg) {
+//	irt_worker* self = irt_worker_get_current();
+// 	irt_work_item* swi = self->cur_wi;
+//	int64 barrier_start_ticks = irt_time_ticks();
+//	// check if last
+//	uint32 pre_barrier_count = wg->tot_barrier_count;
+//	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32_t) == wg->local_member_count) {
+//		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32_t), IRT_ERR_INTERNAL, "Barrier count reset failed");
+//		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
+//		irt_spin_lock(&wg->lock);
+//		// trigger waiting busy wis
+//		irt_atomic_inc(&wg->tot_barrier_count, uint32_t);
+//		// trigger suspended wis
+//		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+//		irt_spin_unlock(&wg->lock);
+//	} else {
+//		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+//		while(wg->tot_barrier_count == pre_barrier_count) {
+//			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
+//			irt_busy_ticksleep(1000);
+//			// check if timeout up, if so suspend
+//			if(irt_time_ticks() - barrier_start_ticks > IRT_BARRIER_HYBRID_TICKS) {
+//				irt_spin_lock(&wg->lock);
+//				if(wg->tot_barrier_count == pre_barrier_count) {
+//					// register callback
+//					//printf("TIMED OUT, going into callback, Talpha: %lu | T: %lu | diff: %lu\n", barrier_start_ticks, irt_time_ticks(), irt_time_ticks() - barrier_start_ticks);
+//					_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
+//					irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
+//					IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
+//					irt_spin_unlock(&wg->lock);
+//					// suspend
+//					irt_inst_region_end_measurements(swi);
+//                    _irt_worker_switch_from_wi(self, swi);
+//					irt_inst_region_start_measurements(swi);
+//					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_BARRIER, swi->id); // self might no longer be self!
+//					return;
+//				} else {
+//					irt_spin_unlock(&wg->lock);
+//				}
+//			}
+//		}
+//		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_BARRIER, swi->id);
+//	}
+//}
 void irt_wg_barrier_smart(irt_work_group* wg) {
 	if(wg->local_member_count <= irt_g_worker_count) {
 		irt_wg_barrier_busy(wg);
@@ -268,24 +305,21 @@ typedef struct __irt_wg_join_event_data {
 } _irt_wg_join_event_data;
 bool _irt_wg_join_event(irt_wg_event_register* wg_event_register, void *user_data) {
 	_irt_wg_join_event_data* join_data = (_irt_wg_join_event_data*)user_data;
+	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_GROUPJOIN, join_data->joining_wi->id);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
 }
-void irt_wg_join(irt_work_group* wg) {
+void irt_wg_join(irt_work_group_id wg_id) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
 	_irt_wg_join_event_data clo = {swi, self};
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
-	irt_work_group_id wgid = wg->id;
-	int64 occ = irt_wg_event_check_exists_and_register(wgid, IRT_WG_EV_COMPLETED, &lambda);
+	int64 occ = irt_wg_event_check_exists_and_register(wg_id, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-//		irt_inst_region_suspend(swi);
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
         _irt_worker_switch_from_wi(self, swi);
-//		irt_inst_region_continue(swi);
 		irt_inst_region_start_measurements(swi);
-		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }
 

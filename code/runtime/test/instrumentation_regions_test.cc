@@ -37,8 +37,8 @@
 #define IRT_ENABLE_REGION_INSTRUMENTATION
 #define IRT_USE_PAPI
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-#define IRT_RUNTIME_TUNING
 
+#include <sys/utsname.h>
 #include <gtest/gtest.h>
 #include "standalone.h"
 #include "irt_all_impls.h"
@@ -365,7 +365,7 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 	irt_inst_region_select_metrics(env_string);
 	// explicit call to papi necessary because we do not have an env var 
 	// set as it would be the case for normal apps running in the runtime
-	irt_papi_select_events(irt_context_get_current(), env_string);
+	irt_papi_select_events(irt_worker_get_current(), irt_context_get_current(), env_string);
 	
 	double a = 2.0;
 	double b = 1.0;
@@ -444,6 +444,21 @@ TEST(region_instrumentation, rapl) {
 		printf("warning: RAPL not available, not testing it\n");
 		return;
 	}
+
+	// check if capabilities are required (kernel versions 3.7 and olders that have the CAP_SYS_RAWIO security fix)
+
+	struct stat info = { 0 };
+	int32 retval = stat("/dev/cpu/0/msr", &info);
+	ASSERT_EQ(retval, 0); // check whether file is present (and we have execute permissions on the parent directory)
+	ASSERT_NE(info.st_mode & S_IROTH, 0); // check whether file has o+r permission (assuming that it is owned by root:root)
+
+	int32 file = _irt_open_msr(0);
+
+	// if this fails although the file was present and permissions were set correctly, we are working on a system
+	// where the CAP_SYS_RAWIO capability is necessary (i.e. Linux kernels 3.7 and newer)
+	ASSERT_NE(file, -1); // check if file could be opened
+	_irt_close_msr(file);
+
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[4], NULL);
 	irt_context_destroy(context);

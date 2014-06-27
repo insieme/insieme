@@ -191,18 +191,20 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
 	irt_work_item* init_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_INIT_INDEX], (irt_lw_data_item*)&init_params);
+	irt_work_item_id init_id = init_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), init_wi);
 
 	// wait until finished
-	irt_wi_join(init_wi);
+	irt_wi_join(init_id);
 
 	// conduct the multiplication
 	insieme_wi_mul_params mul_params = {INSIEME_WI_MUL_PARAM_T_INDEX, A->id, B->id, C->id};
-	irt_work_item* mul_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_MUL_INDEX], (irt_lw_data_item*)&mul_params);
+	irt_work_item* mul_wi = irt_wi_create((irt_work_item_range){ 0, N, 1 }, &g_insieme_impl_table[INSIEME_WI_MUL_INDEX], (irt_lw_data_item*)&mul_params);
+	irt_work_item_id mul_id = mul_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), mul_wi);
 
 	// wait until finished
-	irt_wi_join(mul_wi);
+	irt_wi_join(mul_id);
 
 	// stop the time
 	uint64 end_time = irt_time_ms();

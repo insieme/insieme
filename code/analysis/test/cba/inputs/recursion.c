@@ -54,12 +54,18 @@ int fib(int x) {
 
 int main(int argc, char** argv) {
 
+	fib(1);
 	fib(2);
+	fib(3);
+	fib(4);
 
 	// check the execution net
-	cba_dump_thread_regions();
-	cba_expect_execution_net_num_places(6);
-	cba_dump_execution_net();
-	cba_dump_equations();
+//	cba_print_code();
+//	cba_dump_thread_regions();
+	cba_expect_execution_net_num_places(90);
+//	cba_dump_execution_net();
+//	cba_dump_thread_list();
+//	cba_dump_sync_points();
+//	cba_dump_equations();
 
 }

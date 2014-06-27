@@ -64,8 +64,6 @@
  * * Actually, no utility should depend on irt_* functionality accoring to Peter T.
  *
  * * verify equal results for all cores (since we measure the entire package)
- * * determine which core's MSR should be read (doesn't matter?)
- * * determine if write permissions to msr files are necessary
  * * unify all functions and document them
  * * add dram and other parts? (gpu? probably not)
  * * ...
@@ -114,6 +112,8 @@
 //#define TIME_UNIT_OFFSET	0x10
 //#define TIME_UNIT_MASK		0xF000
 
+#define IRT_RAPL_REGISTER_READ_INTERVAL 32786
+
 /*
  * struct to hold RAPL data for all sockets/CPUs
  */
@@ -138,6 +138,24 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data *data);
  */
 
 bool irt_rapl_is_supported();
+
+/*
+ * checks if RAPL is in use
+ */
+
+bool irt_rapl_is_used();
+
+/*
+ * initialize RAPL support (allocate spinlock, register maintenance thread)
+ */
+
+void irt_rapl_init();
+
+/*
+ * cleanup function, destroys spinlock
+ */
+
+void irt_rapl_finalize();
 
 
 #endif // ifndef __GUARD_ABSTRACTION_RAPL_H

@@ -706,7 +706,12 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 			if(systemHeaderOrigin) {
 				VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
 				if( core::annotations::hasNameAttached(symbol) ) {
-					name  = (recDecl->isStruct() ? "struct " : "" ) + core::annotations::getAttachedName(symbol);
+                    if(recDecl->isStruct())
+					    name  = "struct " + core::annotations::getAttachedName(symbol);
+                    else if(recDecl->isUnion())
+					    name  = "union " + core::annotations::getAttachedName(symbol);
+                    else
+					    name  = core::annotations::getAttachedName(symbol);
 					core::annotations::attachName(symbol,name);
 				}
 				convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);

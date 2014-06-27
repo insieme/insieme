@@ -84,16 +84,16 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
 	prog = builder.program(list);
+
+//std::cout << printer::PrettyPrinter(root) << std::endl;
 
 	return prog;
 }
 
 IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
-	iclRunKernel = NULL;
-	derefOfIclBuffer = NULL;
+	iclRunKernel = nullptr;
+	derefOfIclBuffer = nullptr;
 }
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
@@ -106,7 +106,7 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	if(derefOfIclBuffer == NULL)
+	if(!derefOfIclBuffer)
 		derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
 				pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
 

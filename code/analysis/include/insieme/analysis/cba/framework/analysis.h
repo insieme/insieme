@@ -99,6 +99,22 @@ namespace cba {
 	extern const thread_group_analysis_data ThreadGroups;
 	extern const thread_group_analysis_var  threadGroups;
 
+	struct thread_body_analysis;
+	extern const thread_body_analysis ThreadBodies;
+
+	struct sync_points_analysis;
+	extern const sync_points_analysis SyncPoints;
+
+	struct thread_list_analysis;
+	extern const thread_list_analysis ThreadList;
+
+	struct reaching_sync_points_in_analysis;
+	extern const reaching_sync_points_in_analysis  RSPin;
+	struct reaching_sync_points_tmp_analysis;
+	extern const reaching_sync_points_tmp_analysis RSPtmp;
+	struct reaching_sync_points_out_analysis;
+	extern const reaching_sync_points_out_analysis RSPout;
+
 	// -- memory location data analysis --
 
 	template<typename A> struct location_data_in_analysis;
