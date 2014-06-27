@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % insiemeVersion << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s)");
+	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repeditions) + " time(s)");
 	std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
@@ -202,7 +202,8 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	int maxCounterStringLength = to_string(cases.size()).length();
+	int totalTests = cases.size() * options.num_repeditions;
+	int maxCounterStringLength = to_string(totalTests).length();
 	string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
 
 	// only list test cases if requested so
@@ -241,10 +242,10 @@ int main(int argc, char** argv) {
 	// run test cases in parallel
 	vector<TestCase> ok;
 	vector<TestCase> failed;
+	map<TestCase,TestResult> failedSteps;
 	omp_set_num_threads(options.num_threads);
 
 	bool panic = false;
-	int totalTests = cases.size() * options.num_repeditions;
 	int act = 0;
 
 	for(int i=0; i<options.num_repeditions; i++) {
@@ -268,6 +269,7 @@ int main(int argc, char** argv) {
 				auto res = step.run(setup, cur);
 				results.push_back(std::make_pair(step.getName(), res));
 				if (!res || res.hasBeenAborted()) {
+					failedSteps[cur] = res;
 					success = false;
 					break;
 				}
@@ -304,7 +306,7 @@ int main(int argc, char** argv) {
 							std::cout << line.str();
 						} else {
 							std::cout << colorize.red() << line.str();
-							std::cout << "#" << std::string(screenWidth-2,'-') << colorize.reset() << std::endl;
+							std::cout << "#" << std::string(screenWidth-2,'-') << "#" << colorize.reset() << std::endl;
 							std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
 							std::cout << curRes.second.getFullOutput();
 						}
@@ -333,10 +335,15 @@ int main(int argc, char** argv) {
 					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 					int failedStringLength = to_string(failed.size()).length();
 
-					if(success)
-						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
-					else
+					if(success) {
+						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName();
+						if(failed.size() > 0)
+							std::cout << colorize.red();
+						std::cout << " (failed so far: " << failed.size() << ")";
+						std::cout << colorize.green() << " #\n";
+					} else {
 						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
+					}
 					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
 					if(!success) {
@@ -356,7 +363,7 @@ int main(int argc, char** argv) {
 	} // end repetition loop
 
 	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
-	string footerFailedListFormat("   - %-" + to_string(screenWidth-8) + "s");
+
 
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
@@ -365,7 +372,10 @@ int main(int argc, char** argv) {
 	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
 	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
-		std::cout << "#" << colorize.red() << boost::format(footerFailedListFormat) % cur.getName() << colorize.reset() << " #\n";
+		TestResult failedStep = failedSteps[cur];
+		string failedStepInfo(failedStep.getStepName() + ": exit code " + to_string(failedStep.getRetVal()));
+		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
+		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
 	}
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
