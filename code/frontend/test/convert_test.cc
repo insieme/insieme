@@ -93,7 +93,7 @@ namespace frontend {
 		EXPECT_PRED2(containsSubString, res, "counter := 10;");
 		// split up this assertions because the local static
 		// variables have some random suffix
-		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp113221, 3.0);");
+		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1132_21, 3.0);");
 
 
 	}
