@@ -367,6 +367,15 @@ vector<StatementAddress> getExitPoints(const StatementPtr& stmt);
 vector<StatementAddress> getExitPoints(const StatementAddress& stmt);
 
 /**
+ * Retrieves the name of variable in all the outer scopes up to his declaration.
+ *
+ * @param var is the variable
+ * @code is the scope
+ * @return a vector of names of the variable from the inner scope up to the declaration
+ */
+std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code);
+
+/**
  * Retrieves the name of variable in the outer scope where it has been declared.
  *
  * @param varlist the list of adresses of renamed variables

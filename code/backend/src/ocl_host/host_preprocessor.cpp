@@ -100,12 +100,19 @@ using insieme::core::pattern::anyList;
 		return expr;
 	}
 
-
 	void printVarAddressMap(utils::map::PointerMap<VariableAddress, VariableAddress> varMap){
 		for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> vp){
 				 std::cout << *vp.first << " = " << *vp.second << "; ";
 		});
 		std::cout << "\n";
+	}
+
+	void printVarAddressVec(std::vector<VariableAddress> varVec){
+		std::cout << "[ ";
+		for_each(varVec, [&](VariableAddress var){
+				 std::cout << *var << " ";
+		});
+		std::cout << "]" << std::endl;
 	}
 
 	void printVarVector(std::vector<VariableAddress> varVec){
@@ -463,26 +470,10 @@ using insieme::core::pattern::anyList;
 
 
 
-
-
-
-
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
 		// Semantic check on code
-		auto s = core::checks::check(code, insieme::core::checks::getFullCheck());
-		auto w = s.getWarnings();
-		std::sort(w.begin(), w.end());
-		for_each(w, [](const core::checks::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-
-		auto e = s.getErrors();
-		std::sort(e.begin(), e.end());
-		std::cout << "** Error before host preprocessing: " << std::endl;
-		for_each(e, [](const core::checks::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-
+		LOG(INFO) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code);
+		LOG(INFO) << "Errors: " << core::checks::check(code, core::checks::getFullCheck());
 
 		auto& manager = converter.getNodeManager();
 
@@ -493,93 +484,108 @@ using insieme::core::pattern::anyList;
 		// create new buffer type
 		TypePtr bufType = ext.bufferType;
 		TypePtr refBufType = ext.refBufferType;
-		std::vector<VariablePtr> bufVars; // vector of buffer variable
-
-		// Used only in case of tuple (not for icl library)
-		std::vector<LiteralPtr> litVec;
-		VariablePtr tupleVar;
 		TypePtr newTupleType;
+		std::vector<VariablePtr> bufVarNames; // vector of buffer variables
+		VariablePtr tupleVar;
+		std::vector<VariablePtr> tupleVarNameVec;
+		utils::map::PointerMap<VariableAddress, VariableAddress> bufferVarNameMap;
 
-		// Extract the tuple and the access num from the kernel call
-		TreePatternPtr wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(any, irp::literal("tuple.member.access"),
-									irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any)
-									<< var("num") << *any) << *any);
+		// find the tuple variable in the call of the kernel and all the index that are global buffers
+		TreePatternPtr callKernel = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
+										single(var("kernLambda")))) << *any << var("offset") << any << any << var("varlist"));
 
-        TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) | // add the reinterpret cast
-									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
-                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any) |
-                                    irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.deref"),
-                                    irp::callExpr(irp::literal("ref.reinterpret"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any);
+		TreePatternPtr wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"), aT(irp::callExpr(irp::literal("tuple.member.access"), var("tupleVar") << var("index") << any)));
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
-			auto&& match = wrapGlobalTuple->matchPointer(call);
-			if (match) {
-				tupleVar = getVar(match, "tupleVar");
-				litVec.push_back(static_pointer_cast<const Literal>(match->getVarBinding("num").getValue()));
-			}
-			match = wrapGlobalVar->matchPointer(call);
-			if (match) {
-				bufVars.push_back(getVar(match, "bufVar"));
+			auto&& matchKernel = callKernel->matchPointer(call);
+			if (matchKernel) {
+				std::vector<LiteralPtr> tupleAccessVec;
+				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
+				visitDepthFirst(varlist, [&](const CallExprPtr& call) {
+					auto&& matchGlobalWrap = wrapGlobalTuple->matchPointer(call);
+					if (matchGlobalWrap) {
+						VariablePtr tupleTmp = getVar(matchGlobalWrap, "tupleVar");
+						if (tupleVar != tupleTmp) {
+							tupleVar = tupleTmp;
+							tupleVarNameVec = core::analysis::getVariableNames(tupleVar, code);
+							std::cout << "== Kernel Call Parameter Tuple == \nTupleVar-> " << tupleVar << std::endl;
+							std::cout << tupleVarNameVec << std::endl;
+						}
+						std::cout << "Index -> " << matchGlobalWrap->getVarBinding("index").getValue() << std::endl;
+						tupleAccessVec.push_back(static_pointer_cast<const Literal>(matchGlobalWrap->getVarBinding("index").getValue()));
+					}
+				});
+
+				// Create new type for the tuple (with Buffers)
+				const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(tupleVar.getType());
+				std::vector<TypePtr> oldTypeList = oldTupleType.getElementTypes();
+				std::vector<TypePtr> newTypeList;
+				for (uint i = 0; i < tupleAccessVec.size(); ++i) newTypeList.push_back(refBufType);
+				for (uint i = tupleAccessVec.size(); i < oldTypeList.size(); ++i) newTypeList.push_back(oldTypeList[i]);
+				newTupleType = builder.tupleType(newTypeList);
+
+				// Collect all the buffer names in the different scopes
+				std::vector<TreePatternPtr> treeVecInsertTuple;
+				for_each(tupleVarNameVec, [&](const VariablePtr& v) {
+					for_each(tupleAccessVec, [&](const LiteralPtr& lit) {
+					 treeVecInsertTuple.push_back(irp::assignment(irp::tupleRefElem(atom(v), atom(lit), any), irp::scalarToArray(var("bufVar"))));
+					});
+				});
+
+				visitDepthFirst(code, [&](const CallExprPtr& call) {
+					for_each(treeVecInsertTuple, [&](const TreePatternPtr& pattern) {
+						auto&& match = pattern->matchPointer(call);
+						if (match) {
+							std::vector<VariablePtr> bufVarNameVec = core::analysis::getVariableNames(getVar(match, "bufVar"), code);
+							// will contain the name of the buffer variables present in the different scopes
+							bufVarNames.insert(std::end(bufVarNames), std::begin(bufVarNameVec), std::end(bufVarNameVec));
+						}
+					});
+				});
+				std::cout << bufVarNames << std::endl;
 			}
 		});
 
-		if(tupleVar) {
-			// inserts in bufVars all the variables of type array(will become buffers) getting them from the tuple
-			std::vector<TreePatternPtr> treeVecInsertTuple;
-			for_each(litVec, [&](const LiteralPtr& lit) {
-				treeVecInsertTuple.push_back(irp::callExpr(
-						aT(irp::callExpr(any, irp::literal("tuple.ref.elem"), any << atom(lit) << *any)),
-						atom(tupleVar) << irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any)));
-			});
 
-			visitDepthFirst(code, [&](const CallExprPtr& call) {
-				for_each(treeVecInsertTuple, [&](const TreePatternPtr& pattern) {
-					auto&& match = pattern->matchPointer(call);
-					if (match) {
-						bufVars.push_back(getVar(match, "bufVar"));
-					}
-				});
-			});
+		TreePatternPtr bufDecl = irp::declarationStmt(var("Var"), aT(irp::literal("undefined")));
+		TreePatternPtr bufDeclAndInit = irp::declarationStmt(var("Var"), aT(irp::scalarToArray(aT(irp::literal("undefined")))));
 
-			const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(static_pointer_cast<const RefType>(tupleVar.getType())->getElementType());
-			std::vector<TypePtr> oldTypeList = oldTupleType.getElementTypes();
-			std::vector<TypePtr> newTypeList;
-			for (uint i = 0; i < litVec.size(); ++i)
-				newTypeList.push_back(refBufType);
-			for (uint i = litVec.size(); i < oldTypeList.size(); ++i)
-				newTypeList.push_back(oldTypeList[i]);
-			// create the new tuple type
-			newTupleType = builder.tupleType(newTypeList);
-		}
-
-		// modify buffer declaration (map to new one)
 		utils::map::PointerMap<NodePtr, NodePtr> nodeMap;
 		auto& basic = manager.getLangBasic();
 		visitDepthFirst(code, [&](const DeclarationStmtPtr& decl) {
-			auto&& fit = std::find_if(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){ return *vr == *(decl->getVariable());});
-			if (fit != bufVars.end()) {
-				CallExprPtr init = static_pointer_cast<const CallExpr>(decl->getInitialization());
-				if (core::analysis::isCallOf(init->getArgument(0), builder.getLangBasic().getUndefined())) {
-					DeclarationStmtPtr newDecl = builder.declarationStmt(
-							builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-							builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType))));
-					nodeMap.insert(std::make_pair(decl, newDecl));
-					return;
+			auto&& match = bufDecl->matchPointer(decl);
+			if (match) {
+				VariablePtr tmpVar = getVar(match, "Var");
+
+				auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), [&](const VariablePtr& vr){ return vr == tmpVar;});
+				if (fit != end(bufVarNames)) {
+					auto&& matchDeclInit = bufDeclAndInit->matchPointer(decl);
+					if (matchDeclInit) {
+						std::cout << "-> icl_buffer* " << tmpVar << " = create_buffer (...); \n";
+						CallExprPtr init = static_pointer_cast<const CallExpr>(decl->getInitialization());
+						CallExprPtr tmp = static_pointer_cast<const CallExpr>((init->getArgument(0)));
+
+						VariablePtr newVar = builder.variable(builder.refType(refBufType), decl.getVariable().getID());
+						ExpressionPtr size = builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(1));
+						DeclarationStmtPtr newDecl = builder.declarationStmt(
+								newVar, // left side
+								builder.refVar(builder.callExpr(ext.createBuffer, builder.uintLit(0), size))); // right side
+						nodeMap.insert(std::make_pair(decl, newDecl));
+						return;
+					} else {
+						std::cout << "-> icl_buffer* " << tmpVar << ";\n";
+						VariablePtr newVar = builder.variable(builder.refType(refBufType), decl.getVariable().getID());
+						DeclarationStmtPtr newDecl = builder.declarationStmt(
+								newVar, // left side
+								builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType)))); // right side
+						nodeMap.insert(std::make_pair(decl, newDecl));
+						return;
+					}
 				}
 
-				CallExprPtr tmp = static_pointer_cast<const CallExpr>((init->getArgument(0)));
-				DeclarationStmtPtr newDecl = builder.declarationStmt(
-						builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-						builder.refVar(builder.callExpr(ext.createBuffer, tmp->getArgument(1),
-						builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2)))));
-				nodeMap.insert(std::make_pair(decl, newDecl));
-				return;
-			}
-
-			if (tupleVar) { // modify tuple declaration
-				if (*tupleVar == *(decl->getVariable())) {
+				fit = std::find_if(begin(tupleVarNameVec), end(tupleVarNameVec), [&](const VariablePtr& vr){ return vr == tmpVar;});
+				if (fit != end(tupleVarNameVec)) {
+					std::cout << "Tuple Declaration: " << tmpVar << std::endl;
 					DeclarationStmtPtr newDecl = builder.declarationStmt(
 						builder.variable(builder.refType(newTupleType), decl.getVariable().getID()),
 						builder.refNew(builder.callExpr(newTupleType, basic.getUndefined(),builder.getTypeLiteral(newTupleType))));
@@ -588,6 +594,31 @@ using insieme::core::pattern::anyList;
 				}
 			}
 		});
+
+		visitDepthFirst(code, [&](const CallExprPtr& call) {
+			// Modify buffer assignment operation
+			if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
+				auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), [&](const VariablePtr& vr){ return vr == call->getArgument(0);});
+				if (fit != end(bufVarNames)) {
+					// skip cast expression
+					CastExprPtr tmpCast = static_pointer_cast<const CastExpr>((call->getArgument(1)));
+					CallExprPtr tmp = static_pointer_cast<const CallExpr>(tmpCast->getSubExpression());
+
+					VariablePtr newVar = builder.variable(builder.refType(refBufType), static_pointer_cast<const Variable>(call->getArgument(0)).getID());
+					ExpressionPtr size = builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(1));
+					CallExprPtr newCall = builder.callExpr(call->getFunctionExpr(), newVar, builder.callExpr(ext.createBuffer, builder.uintLit(0), size));
+					nodeMap.insert(std::make_pair(call, newCall));
+					return;
+				}
+			}
+		});
+
+		NodePtr codeXXX = core::transform::replaceAll(manager, code, nodeMap, true);
+		std::cout << "CODE XXX" << std::endl;
+		std::cout << core::printer::PrettyPrinter(codeXXX, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		assert(false);
+
+
 
 		TreePatternPtr bufVarIntuple = irp::callExpr(aT(irp::lambda(any, any << var("oldpar2"), irp::compoundStmt(
 											irp::callExpr(any, irp::callExpr(any, any << var("lit") << *any) << *any) << *any))),
@@ -610,9 +641,11 @@ using insieme::core::pattern::anyList;
 		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
 
+
+		std::vector<VariablePtr> bufVars;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			// modify buffer assignment operation
-			if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
+			/*if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
 				auto&& fit = std::find_if(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){ return *vr == *(call->getArgument(0));});
 				if (fit != bufVars.end()) {
 					CallExprPtr tmp = static_pointer_cast<const CallExpr>((call->getArgument(1)));
@@ -623,7 +656,7 @@ using insieme::core::pattern::anyList;
 					nodeMap.insert(std::make_pair(call, newCall));
 					return;
 				}
-			}
+			}*/
 
 			if (tupleVar) { // modify insert in the callExprtuple
 				auto&& matchBuf = bufVarIntuple->matchPointer(call);
@@ -745,7 +778,7 @@ using insieme::core::pattern::anyList;
 					}
 
 					// replace the buffer type in the kernel call
-					matchAccess = wrapGlobalVar->matchPointer(call);
+					matchAccess = wrapGlobalTuple->matchPointer(call);
 					if (matchAccess) {
 						VariablePtr bufVar = getVar(matchAccess, "bufVar");
 						ExpressionPtr newVar = builder.variable(builder.refType(refBufType), bufVar.getID());

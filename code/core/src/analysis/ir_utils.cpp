@@ -677,7 +677,7 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 					  if (*varAddr == *pair.second) {
 							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
 								varAddr = tmp;
-//							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
 						}
 			});
 		}
@@ -712,6 +712,65 @@ public:
 
 }
 
+namespace {
+class VariableNameVisitor: public core::IRVisitor<void, Address> {
+	core::VariableAddress varAddr;
+	std::vector<VariablePtr>& varVec;
+
+	void visitCallExpr(const CallExprAddress& call) {
+		if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
+			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
+					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					  if (*varAddr == *pair.second) {
+							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
+								varAddr = tmp;
+							VariableAddress second = dynamic_address_cast<const Variable>(extractVariable(pair.second));
+
+							if(std::find(std::begin(varVec), std::end(varVec), second.getAddressedNode()) == std::end(varVec))
+								varVec.push_back(second.getAddressedNode());
+
+							if(std::find(std::begin(varVec), std::end(varVec), varAddr.getAddressedNode()) == std::end(varVec))
+								varVec.push_back(varAddr.getAddressedNode());
+					}
+			});
+		}
+	}
+
+	ExpressionAddress extractVariable(ExpressionAddress exp){
+		if(VariableAddress var = dynamic_address_cast<const Variable>(exp))
+			return var;
+
+		if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp))
+			return extractVariable(cast->getSubExpression());
+
+		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)){
+			NodeManager& manager = exp->getNodeManager();
+			if (manager.getLangBasic().isRefDeref(call->getFunctionExpr())){
+				return extractVariable(call->getArgument(0));
+			}
+
+		}
+
+		return exp;
+	}
+
+public:
+	VariableNameVisitor(const core::VariableAddress& va, std::vector<VariablePtr>& vv): IRVisitor<void, Address>(false), varAddr(va), varVec(vv){}
+};
+
+}
+
+
+std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code) {
+	VariableAddress varAddr = core::Address<const core::Variable>::find(var, code);
+
+	std::vector<VariablePtr> varVec;
+	VariableNameVisitor rvv(varAddr, varVec);
+	visitPathBottomUp(varAddr, rvv);
+
+	return varVec;
+}
+
 utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist){
 	utils::map::PointerMap<VariableAddress, VariableAddress> varMap;
 	for_each(varlist, [&](const VariableAddress& add) {
@@ -723,7 +782,6 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 				}
 			}
 	});
-
 
 	return varMap;
 }
