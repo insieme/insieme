@@ -9,10 +9,13 @@ VERSION=4.6.3
 PACKAGE=gcc-$VERSION
 FILE=gcc-$VERSION.tar.bz2
 
-if [ -x "`which ${NEW_CXX}`" -a `${NEW_CXX} --version | head -n1 |  sed 's/^.* //g'` = ${VERSION} ]
+if [ -n "$NEW_CXX" ]
 then
-    echo "GCC version $VERSION already installed - using `which ${NEW_CXX}`"
-    exit 0
+	if [ -x "`which ${NEW_CXX}`" -a `${NEW_CXX} --version | head -n1 |  sed 's/^.* //g'` = ${VERSION} ]
+	then
+	    echo "GCC version $VERSION already installed - using `which ${NEW_CXX}`"
+	    exit 0
+	fi
 fi
 
 echo "#### Downloading GCC ####"

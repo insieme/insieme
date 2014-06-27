@@ -29,43 +29,46 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+//#include "insieme/core/ir_visitor.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
-#include "cba.h"
+#include "insieme/transform/datalayout/aos_to_soa.h"
 
-int fib(int x) {
-	if (x == 0) return 0;
-	if (x == 1) return 1;
+namespace insieme {
+namespace transform {
+namespace datalayout {
 
-	int a = spawn fib(x-1);
-	int b = spawn fib(x-2);
+using namespace core;
 
-	sync;
-	return a + b;
+AosToSoa::AosToSoa(core::NodePtr toTransform) {
+	std::set<VariablePtr> structs;
+
+	pattern::TreePatternPtr structVar = pattern::irp::variable(pattern::aT(pattern::irp::refType(pattern::irp::arrayType(
+			pattern::irp::structType(*pattern::any)))));
+
+	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
+		structs.insert(match.as<VariablePtr>());
+
+	});
+
+	std::map<VariablePtr, StructTypePtr> newStructTypes;
+	for(VariablePtr struct_ : structs) {
+
+
+		StructTypePtr oldType = struct_->getType();
+		for(TypePtr memberType) {
+			std::cout << *struct_->getType() << std::endl;
+		}
+	}
 }
 
 
-int main(int argc, char** argv) {
-
-	fib(1);
-	fib(2);
-	fib(3);
-	fib(4);
-
-	// check the execution net
-//	cba_print_code();
-//	cba_dump_thread_regions();
-	cba_expect_execution_net_num_places(90);
-//	cba_dump_execution_net();
-//	cba_dump_thread_list();
-//	cba_dump_sync_points();
-//	cba_dump_equations();
-
-}
+} // datalayout
+} // transform
+} // insieme

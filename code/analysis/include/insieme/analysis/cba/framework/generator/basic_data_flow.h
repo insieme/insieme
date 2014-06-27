@@ -605,6 +605,198 @@ namespace cba {
 		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedValueID<JobLattice>& jobs, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
 			return std::make_shared<JobValueCollectorConstraint<ValueAnalysisType,ValueLattice,JobLattice,Context>>(cba, jobs, bind, capturedValue, res);
 		}
+
+
+
+		/**
+		 * ----------------------- Job Value Collector Constraint for Nested Threads ---------------------------
+		 */
+
+		/**
+		 * A custom constraint collecting values bound at the creation point of a job.
+		 */
+		template<typename ValueAnalysisType, typename ValueLattice, typename Context>
+		struct NestedJobValueCollectorConstraint : public Constraint {
+
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::projection_op_type projection_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			typedef typename lattice<job_analysis_data, analysis_config<Context>>::type JobLattice;
+			typedef typename lattice<job_analysis_data, analysis_config<Context>>::type CallableLattice;
+
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the context of the nested threads
+			Context nestedContext;
+
+			// the bind expression looking for
+			BindExprInstance bind;
+
+			// the address of the captured value to be collected (with unspecified context)
+			ExpressionInstance capturedValue;
+
+			// the set to be updated
+			TypedValueID<ValueLattice> res;
+
+			// the list of jobs triggered by potential call sites
+			mutable std::vector<TypedValueID<JobLattice>> jobs;
+
+			// the list of referenced thread bodies
+			mutable std::vector<TypedValueID<CallableLattice>> bodies;
+
+			// the list of captured values
+			mutable std::vector<TypedValueID<ValueLattice>> sources;
+
+			// the inputs referenced by this constraint
+			mutable std::vector<ValueID> inputs;
+
+		public:
+
+			NestedJobValueCollectorConstraint(
+					CBA& cba, const Context& nestedContext,
+					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
+					const TypedValueID<ValueLattice>& res
+				) : Constraint(toVector<ValueID>(cba.getSet<Context>(ThreadList)), toVector<ValueID>(res), true, true),
+				  cba(cba), nestedContext(nestedContext), bind(bind), capturedValue(capturedValue), res(res)
+			{
+				inputs.push_back(cba.getSet<Context>(ThreadList));
+			}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				// the operator merging values
+				meet_assign_op_type meet_assign_op;
+
+				// update the value by merging all known sources
+				auto& value = ass[res];
+				bool changed = false;
+				for(const auto& cur : sources) {
+					changed = meet_assign_op(value, ass[cur]) || changed;
+				}
+
+				// check whether something has changed
+				return (changed) ? Constraint::Incremented : Constraint::Unchanged;
+			}
+
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				const auto& threadID = nestedContext.threadContext.front();
+
+				// get the list of all jobs
+				const auto& threads = ass[cba.getSet<Context>(ThreadList)];
+
+				// for each of those
+				bool changed = false;
+				for (const auto& cur : threads) {
+
+					// check whether the thread is a potential parent thread
+					if ((cur >> threadID) != nestedContext.threadContext) continue;
+
+					// we have a winner => get set of spawned jobs
+					// get thread call context
+					const auto& spawnStmt = cba.getStmt(threadID.getSpawnLabel()).template as<CallExprInstance>();
+					const auto& spawnCtxt = Context(threadID.getSpawnContext(), cur);
+
+					// get the variable representing the set of jobs
+					auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+
+					// check whether this one has already been processed
+					if (::contains(jobs, J_spawned_job)) continue;
+
+					jobs.push_back(J_spawned_job);
+					inputs.push_back(J_spawned_job);
+					changed = true;
+				}
+
+				// for each potentially spawn site
+				for (const auto& job : jobs) {
+
+					// get list of covered jobs
+					const set<Job<Context>>& job_set = ass[job];
+
+					for(const auto& j : job_set) {
+
+						// get set of job-bodies
+						auto body = cba.getSet(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
+
+						// register body
+						if (!::contains(bodies, body)) {
+							bodies.push_back(body);
+							inputs.push_back(body);
+							changed = true;
+						}
+
+						// get list of references
+						const set<Callable<Context>>& funs = ass[body];
+
+						for(const auto& cur : funs) {
+
+							// just interested in the processed bind
+							if (cur.getDefinition() != bind) continue;
+
+							// get the set representing the value captured by the current bind
+							auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+
+							// add it to the source-list
+							if (::contains(sources, captured)) continue;
+							sources.push_back(captured);
+							inputs.push_back(captured);
+							changed = true;
+						}
+
+					}
+
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
+				// check whether data to be read is in result set
+				less_op_type less_op;
+				const auto& value = ass[res];
+				for(const auto& cur : sources) {
+					if (!less_op(ass[cur], value)) return false;
+				}
+
+				// everything is fine
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				for(const auto& cur : jobs) {
+					out << cur << " -> " << res << "[label=\"may spawns\"]\n";
+				}
+				for(const auto& cur : bodies) {
+					out << cur << " -> " << res << "[label=\"depends\"]\n";
+				}
+				for(const auto& cur : sources) {
+					out << cur << " -> " << res << "[label=\"passed to\"]\n";
+				}
+				return out;
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "boundValues(bodiesOf(" << jobs << ")) in " << res;
+			}
+
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				return inputs;
+			}
+
+		};
+
+		template<typename ValueAnalysisType, typename Context, typename ValueLattice>
+		ConstraintPtr collectCapturedNestedJobValues(CBA& cba, const Context& nestedCtxt, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
+			return std::make_shared<NestedJobValueCollectorConstraint<ValueAnalysisType,ValueLattice,Context>>(cba, nestedCtxt, bind, capturedValue, res);
+		}
 	}
 
 
@@ -857,14 +1049,25 @@ namespace cba {
 								// if the call context is empty, we are probably in the root of a thread
 								if (ctxt.isEmptyThreadContext()) continue;	// if context is empty, we are not in a thread!
 
-								// get thread call context
-								const auto& spawnID = ctxt.threadContext.front();
-								const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprInstance>();
-								const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+								typename Context::thread_id rootThreadContext;
 
-								auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+								// utilize a special handling for known parent thread contexts
+								if (ctxt.threadContext.back() == rootThreadContext) {
 
-								constraints.add(collectCapturedJobValues<ValueAnalysisType,Context>(cba, J_spawned_job, bind, arg, a_var));
+									// get thread call context
+									const auto& spawnID = ctxt.threadContext.front();
+									const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprInstance>();
+									const auto& spawnCtxt = Context(spawnID.getSpawnContext(), ctxt.threadContext << rootThreadContext);
+
+									auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+
+									constraints.add(collectCapturedJobValues<ValueAnalysisType,Context>(cba, J_spawned_job, bind, arg, a_var));
+
+								} else {
+
+									// built a constraint that is also collecting all potential parent threads
+									constraints.add(collectCapturedNestedJobValues<ValueAnalysisType>(cba, ctxt, bind, arg, a_var));
+								}
 
 							}
 

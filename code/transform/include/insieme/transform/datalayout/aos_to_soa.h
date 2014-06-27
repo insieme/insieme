@@ -29,43 +29,26 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#pragma once
 
-#include "cba.h"
+#include "insieme/core/ir_builder.h"
 
-int fib(int x) {
-	if (x == 0) return 0;
-	if (x == 1) return 1;
+namespace insieme {
+namespace transform {
+namespace datalayout {
 
-	int a = spawn fib(x-1);
-	int b = spawn fib(x-2);
+class AosToSoa {
 
-	sync;
-	return a + b;
-}
+public:
+	AosToSoa(core::NodePtr toTransform);
+};
 
 
-int main(int argc, char** argv) {
-
-	fib(1);
-	fib(2);
-	fib(3);
-	fib(4);
-
-	// check the execution net
-//	cba_print_code();
-//	cba_dump_thread_regions();
-	cba_expect_execution_net_num_places(90);
-//	cba_dump_execution_net();
-//	cba_dump_thread_list();
-//	cba_dump_sync_points();
-//	cba_dump_equations();
-
-}
+} // datalayout
+} // transform
+} // insieme

@@ -29,43 +29,42 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include <gtest/gtest.h>
 
-#include "cba.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/logging.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/simplify.h"
 
-int fib(int x) {
-	if (x == 0) return 0;
-	if (x == 1) return 1;
+#include "insieme/transform/datalayout/aos_to_soa.h"
 
-	int a = spawn fib(x-1);
-	int b = spawn fib(x-2);
+namespace insieme {
+namespace transform {
 
-	sync;
-	return a + b;
+using namespace core;
+
+TEST(ConstProp, Simple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto code = builder.normalize(builder.parseStmt(
+		"{"
+		"	let twoElem = struct{int<4> int; real<4> float;};"
+		"	ref<ref<array<twoElem,1>>> a = array.create.1D( lit(int<4>), 100u ) ; "
+		"	for(int<4> i = 0 .. 100 : 1) {"
+		"		ref<twoElem> tmp = ref.deref(a)[i];"
+		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
+		"	}"
+		"}"
+	));
+
+	datalayout::AosToSoa ats(code);
 }
 
-
-int main(int argc, char** argv) {
-
-	fib(1);
-	fib(2);
-	fib(3);
-	fib(4);
-
-	// check the execution net
-//	cba_print_code();
-//	cba_dump_thread_regions();
-	cba_expect_execution_net_num_places(90);
-//	cba_dump_execution_net();
-//	cba_dump_thread_list();
-//	cba_dump_sync_points();
-//	cba_dump_equations();
-
-}
+} // transform
+} // insieme
