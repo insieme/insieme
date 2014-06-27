@@ -300,10 +300,13 @@ namespace integration {
 				 * cannot be distinguished).
 				 */
 
-				int actualReturnCode = WEXITSTATUS(retVal) - 128;
+				int actualReturnCode = WEXITSTATUS(retVal);
 
-				if(actualReturnCode > 0)
-					std::cerr << "Killed by signal " << actualReturnCode << "\n";
+				if(actualReturnCode > 128) {
+					actualReturnCode -= 128;
+					if(actualReturnCode > 0)
+						std::cerr << "Killed by signal " << actualReturnCode << "\n";
+				}
 
 				//TODO change this to handle SIGINT signal
 				if(retVal==512)

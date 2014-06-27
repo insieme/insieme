@@ -373,8 +373,9 @@ int main(int argc, char** argv) {
 	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
 		TestResult failedStep = failedSteps[cur];
-		string footerFailedListFormat("%-" + to_string(screenWidth-21-cur.getName().length()-failedStep.getStepName().length()-to_string(failedStep.getRetVal()).length()) + "s");
-		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << failedStep.getStepName() << ": exit code " << boost::format(footerFailedListFormat) % failedStep.getRetVal() << " #\n";
+		string failedStepInfo(failedStep.getStepName() + ": exit code " + to_string(failedStep.getRetVal()));
+		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
+		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
 	}
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
