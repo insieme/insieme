@@ -173,16 +173,9 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
 
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
-			core::GenericTypePtr gt = builder.genericType(typeName);
-
-			//tag the genericType used inside the enum to pass this to the backend
-			convFact.getHeaderTagger().addHeaderForDecl(gt, tagDecl, true);
-
-			// for intercepted 3rdparty stuff we need to use the actual enum
-			//irType = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(gt);
-			return gt;
-			//std::cout << "this is not implemented yet" << std::endl;
-			//abort();
+			auto type = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
+			convFact.getHeaderTagger().addHeaderForDecl(type, tagDecl, true);
+			return type;
 		}
 		else{
 			// generate a type with the inner elements, and no integer literal

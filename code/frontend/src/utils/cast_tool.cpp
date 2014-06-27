@@ -563,6 +563,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
 		{
+			std::cout << " cast " << expr << " : "  <<  expr->getType() << std::endl;
 		    assert(builder.getLangBasic().isPrimitive(expr->getType())
                 || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType())
 				|| core::analysis::isLongLong (expr->getType()));

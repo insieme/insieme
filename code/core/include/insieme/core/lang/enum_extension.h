@@ -75,7 +75,7 @@ namespace lang {
          * @param elements vector of elements
          * @return the enum type
          */
-		TypePtr getEnumType(const string& lit, const std::vector<TypePtr> elements) const {
+		TypePtr getEnumType(const string& lit, const std::vector<TypePtr> elements = std::vector<TypePtr>()) const {
 		    IRBuilder builder(getNodeManager());
 		    TypeList typeList;
 		    typeList.insert(typeList.end(), builder.genericType(lit));
