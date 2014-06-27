@@ -132,6 +132,20 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 
+	// check if capabilities are required (kernel versions 3.7 and olders that have the CAP_SYS_RAWIO security fix)
+
+	struct stat info = { 0 };
+	int32 retval = stat("/dev/cpu/0/msr", &info);
+	ASSERT_EQ(retval, 0); // check whether file is present (and we have execute permissions on the parent directory)
+	ASSERT_NE(info.st_mode & S_IROTH, 0); // check whether file has o+r permission (assuming that it is owned by root:root)
+
+	int32 file = _irt_open_msr(0);
+
+	// if this fails although the file was present and permissions were set correctly, we are working on a system
+	// where the CAP_SYS_RAWIO capability is necessary (i.e. Linux kernels 3.7 and newer)
+	ASSERT_NE(file, -1); // check if file could be opened
+	_irt_close_msr(file);
+
 	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
 
 	// try each socket once
