@@ -386,12 +386,10 @@ namespace {
 				//if (fun->getNodeType() != core::NT_Literal) {
 				//	return res;
 				//}
+
 				if (manager.getLangBasic().isBuiltIn(fun)) {
-					std::cout << "              BUILTIN: " << fun << std::endl;
 					return res;
 				}
-				std::cout << "               NOOOT BUILTIN: " << fun << std::endl;
-
 
 				//if (!core::analysis::isCallOf(fun, manager.getLangBasic().getArrayRefElem1D())) return res;
 
@@ -403,11 +401,8 @@ namespace {
                         newArgs.push_back(extensions.unWrapExpr(cur));
                     else
                         newArgs.push_back(cur);
-					std::cout << "EEEE" << cur << " " << newArgs.back() << std::endl;
 				});
-				std::cout << "!!! " << fun << " xxx " << fun->getType() << fun->getNodeType() << std::endl;
-				//std::cout << "ECCO" << newArgs[0] << " " << newArgs[1] << newArgs[2] << std::endl;
-				//return builder.arrayAccess(newArgs[1], newArgs[0]);
+				//std::cout << "!!! " << fun << " " << fun->getType() << fun->getNodeType() << std::endl;
 				return builder.callExpr(fun, newArgs);
 			}
 		};
@@ -550,7 +545,7 @@ namespace {
 						parameters.insert(std::make_pair(cur.first, var));
 					}
 				});
-				std::cout << "      PARAM" << parameters << std::endl;
+				//std::cout << "      PARAM" << parameters << std::endl;
 
                 // replace parameters by variables with wrapped types
 				//core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::defaultTypeRecovery);

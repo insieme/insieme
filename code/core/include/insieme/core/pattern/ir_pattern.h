@@ -309,6 +309,10 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); }), data, idx);
 	}
 
+	inline TreePatternPtr tupleRefElem(const TreePatternPtr& data = any, const TreePatternPtr& idx = any, const TreePatternPtr& type = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getTupleRefElem(); }), data, idx, type);
+	}
+
 	inline TreePatternPtr vectorRefElem(const TreePatternPtr& data = any, const TreePatternPtr& idx = any) {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorRefElem(); }), data, idx);
 	}
@@ -326,6 +330,10 @@ namespace irp {
 				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); })) |
 				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorRefElem(); })) |
 				var(operation, lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getVectorSubscript(); })), data, idx);
+	}
+
+	inline TreePatternPtr scalarToArray(const TreePatternPtr& data = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getScalarToArray(); }), data);
 	}
 
 
