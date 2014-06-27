@@ -92,7 +92,7 @@ namespace cba {
 
 		public:
 
-			StaticReachabilityCheck(const Filter& filter) : filter(filter) {}
+			StaticReachabilityCheck(const Filter& filter) : core::IRVisitor<bool>(false), filter(filter) {}
 
 
 			bool visitVariable(const core::VariablePtr& var) {
@@ -130,8 +130,8 @@ namespace cba {
 				if (fun.isa<core::VariablePtr>()) return true;
 
 				// if the target is anything else => check whether synchronizing expressions are included
-				return visitDepthFirstOnceInterruptible(fun, [&](const core::LiteralPtr& lit){
-					return filter(lit);
+				return visitDepthFirstOnceInterruptible(fun, [&](const core::CallExprPtr& call) {
+					return mayReachCallTo(call, filter);
 				});
 			}
 
@@ -219,9 +219,14 @@ namespace cba {
                 return false;
             }
 
-			bool visitNode(const core::NodePtr& node) {
-				assert_fail() << "Unsupported Node Type encountered: " << node->getNodeType();
+            bool visitStatement(const StatementPtr& stmt) {
+            	assert_fail() << "Unsupported Statement Type encountered: " << stmt->getNodeType();
 				return false;
+            }
+
+			bool visitNode(const core::NodePtr& node) {
+            	// the rest we ignore
+            	return false;
 			}
 		};
 
