@@ -54,18 +54,20 @@ AosToSoa::AosToSoa(core::NodePtr toTransform) {
 
 	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
 		structs.insert(match.as<VariablePtr>());
-
 	});
 
 	std::map<VariablePtr, StructTypePtr> newStructTypes;
 	for(VariablePtr struct_ : structs) {
 
-
-		StructTypePtr oldType = struct_->getType();
-		for(TypePtr memberType) {
-			std::cout << *struct_->getType() << std::endl;
+		std::cout << *struct_->getType() << std::endl;
+/*
+		StructTypePtr oldType = struct_->getType().as<StructTypePtr>();
+		NodeRange<NamedTypePtr> member = oldType->getElements();
+		for(NamedTypePtr memberType : member) {
+			std::cout << "member: " << memberType << std::endl;
 		}
 	}
+	*/
 }
 
 

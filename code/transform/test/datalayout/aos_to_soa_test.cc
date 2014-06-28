@@ -48,7 +48,7 @@ namespace transform {
 
 using namespace core;
 
-TEST(ConstProp, Simple) {
+TEST(DataLayout, AosToSoa) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
