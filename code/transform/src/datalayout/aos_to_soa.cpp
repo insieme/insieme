@@ -67,7 +67,6 @@ AosToSoa::AosToSoa(core::NodePtr toTransform) {
 			std::cout << "member: " << memberType << std::endl;
 		}
 */	}
-
 }
 
 
