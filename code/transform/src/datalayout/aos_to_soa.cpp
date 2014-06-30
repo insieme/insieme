@@ -37,6 +37,7 @@
 //#include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -47,26 +48,35 @@ namespace datalayout {
 using namespace core;
 
 AosToSoa::AosToSoa(core::NodePtr toTransform) {
-	std::set<VariablePtr> structs;
+	NodeManager& mgr = toTransform->getNodeManager();
+	IRBuilder builder(mgr);
 
-	pattern::TreePattern structVar = pattern::irp::variable(pattern::aT(pattern::irp::refType(pattern::irp::arrayType(
-			pattern::irp::structType(*pattern::any)))));
+	std::set<std::pair<VariablePtr, RefTypePtr>> structs;
+
+	pattern::TreePattern structVar = pattern::irp::variable(pattern::aT(var("structType", pattern::irp::refType(pattern::irp::arrayType(
+			pattern::irp::structType(*pattern::any))))));
 
 	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
-		structs.insert(match.as<VariablePtr>());
+		structs.insert(std::make_pair(match.as<VariablePtr>(), nm["structType"].getValue().as<RefTypePtr>()));
 	});
 
-	std::map<VariablePtr, StructTypePtr> newStructTypes;
-	for(VariablePtr struct_ : structs) {
+	std::map<VariablePtr, TypePtr> newStructTypes;
+	for(std::pair<VariablePtr, RefTypePtr> struct_ : structs) {
 
-		std::cout << *struct_->getType() << std::endl;
-/*
-		StructTypePtr oldType = struct_->getType().as<StructTypePtr>();
+//		std::cout << *struct_.first->getType() << std::endl;
+
+		StructTypePtr oldType = struct_.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 		NodeRange<NamedTypePtr> member = oldType->getElements();
+		std::vector<NamedTypePtr> newMember;
 		for(NamedTypePtr memberType : member) {
-			std::cout << "member: " << memberType << std::endl;
+//			std::cout << "member: " << memberType << std::endl;
+			newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
+
 		}
-*/	}
+		newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
+
+//		std::cout << struct_.first->getType() << std::endl << newStructTypes[struct_.first] << std::endl;
+	}
 }
 
 

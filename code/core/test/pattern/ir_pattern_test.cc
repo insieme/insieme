@@ -130,6 +130,30 @@ TEST(IRPattern, Types) {
 }
 
 
+
+TEST(IRPattern, Structtypes) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto pt = [&builder](const string& typespec) {
+		return builder.parseType(typespec);
+	};
+
+	TypePtr int4Type = pt("int<4>");
+	TypePtr structScalar = pt("ref<struct{int<4> int; real<4> float;}>");
+	TypePtr structArray = pt("ref<ref<array<struct{int<4> int; real<4> float;},1>>>");
+
+	TreePattern patternA = aT(irp::structType(*any));
+	EXPECT_PRED2(noMatch, patternA, int4Type);
+	EXPECT_PRED2(isMatch, patternA, structScalar);
+	EXPECT_PRED2(isMatch, patternA, structArray);
+
+	TreePattern patternB = aT(irp::refType(irp::arrayType(irp::structType(*any), atom(builder.concreteIntTypeParam(1)))));
+	EXPECT_PRED2(noMatch, patternB, int4Type);
+	EXPECT_PRED2(noMatch, patternB, structScalar);
+	EXPECT_PRED2(isMatch, patternB, structArray);
+}
+
+
 TEST(IRPattern, literal) {
 	NodeManager manager;
 	auto pe = [&manager](const string& typespec) { 

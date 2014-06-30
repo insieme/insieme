@@ -112,12 +112,12 @@ namespace irp {
 		return node(core::NT_StructType, pattern);
 	}
 
-	inline TreePattern arrayType(const TreePattern& pattern) {
-		return node(core::NT_ArrayType, single(pattern));
+	inline TreePattern arrayType(const TreePattern& pattern, const TreePattern& dim = pattern::any) {
+		return node(core::NT_ArrayType, pattern << dim);
 	}
 
-	inline TreePattern refType(const TreePattern& pattern) {
-		return node(core::NT_RefType, single(pattern));
+	inline TreePattern refType(const TreePattern& elementType, const TreePattern& refKind = pattern::any) {
+		return node(core::NT_RefType, elementType << refKind);
 	}
 
 	inline TreePattern variable(const TreePattern& type = pattern::any, const TreePattern& id = pattern::any) {
