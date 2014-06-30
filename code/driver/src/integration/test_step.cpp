@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -165,6 +165,10 @@ namespace integration {
 
 				// create child to execute current step within CPU time limit, have parent wait for its exit/termination
 				pid_t pid = fork();
+
+				#pragma omp critical
+				pids.push_back(pid);
+
 				if(pid == -1) {
 					std::cerr << "Unable to fork, reason: " << strerror(errno) << "\n";
 				} else if(pid == 0) {
@@ -353,8 +357,8 @@ namespace integration {
 								found=true;
 								break;
 							}
-						}	
-						//no metric -> it is stdErr	
+						}
+						//no metric -> it is stdErr
 						if(!found)
 							stdErr+=token+"\n";
 					}
@@ -477,7 +481,7 @@ namespace integration {
 					return runCommand(set, props, cmd.str());
 				}, deps,RUN);
 			}
-			
+
 			TestStep createInsiemeccCompStep(const string& name, Language l) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
 					auto props = test.getPropertiesFor(name);
@@ -791,7 +795,7 @@ namespace integration {
 						schedString="dyn_";
 					else if(sched==GUIDED)
 						schedString="guid_";
-					
+
 
 					std::stringstream cmd;
 					TestSetup set=setup;
@@ -830,7 +834,7 @@ namespace integration {
 					return runCommand(set, props, cmd.str());
 				}, deps,CHECK);
 			}
-			
+
 			TestStep createInsiemeccCheckStep(const string& name, Language l, const Dependencies& deps = Dependencies(), int numThreads=0) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test)->TestResult {
 					auto props = test.getPropertiesFor(name);
@@ -885,7 +889,7 @@ namespace integration {
 					cmd << props["sortdiff"];
 
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";				
+					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";
 
 					// pipe result to output file
 					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute_"<<std::to_string(numThreads)<<".out";
@@ -909,7 +913,7 @@ namespace integration {
 
 
 		//create steps for statistics mode
-		std::map<std::string,TestStep> createFullStepList(int statThreads,bool schedule) {		
+		std::map<std::string,TestStep> createFullStepList(int statThreads,bool schedule) {
 			std::map<std::string,TestStep> list;
 
 			vector<int> threadList;
@@ -927,16 +931,16 @@ namespace integration {
 			add(createRefCompStep("ref_c++_compile", CPP));
 
 			//add steps for each number of threads
-			
+
 			add(createRefRunStep("ref_c_execute", { "ref_c_compile" },1));
-			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" },1));	
+			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" },1));
 
 			//iterate over whole vector starting with second element (> 1 thread)
 			for(int i:vector<int>(++threadList.begin(),threadList.end())){
 				add(createRefRunStep(std::string("ref_c_execute_")+std::to_string(i), { "ref_c_compile" },i));
 				add(createRefRunStep(std::string("ref_c++_execute_")+std::to_string(i), { "ref_c++_compile" },i));
 			}
-			
+
 
 			add(createInsiemeccCompStep("insiemecc_c_compile", C));
 			add(createInsiemeccCompStep("insiemecc_c++_compile", CPP));
@@ -979,11 +983,11 @@ namespace integration {
 					add(createRefCheckStep(std::string("ref_c_check_")+std::to_string(i),C,{ "ref_c_execute",std::string("ref_c_execute_")+std::to_string(i) },i));
 					add(createRefCheckStep(std::string("ref_c++_check_")+std::to_string(i),CPP,{"ref_c++_execute",std::string("ref_c++_execute_")+std::to_string(i)},i));
 				}
-	
+
 				// main_run check
 				add(createMainCheckStep(std::string("main_run_check_")+std::to_string(i), Runtime, C, { std::string("main_run_execute_")+std::to_string(i), "ref_c_execute" },i));
 				add(createMainCheckStep(std::string("main_run_c++_check_")+std::to_string(i), Runtime, CPP, { std::string("main_run_c++_execute_")+std::to_string(i), "ref_c++_execute"},i));
-			
+
 				// insiemecc check
 				add(createInsiemeccCheckStep(std::string("insiemecc_c_check_")+std::to_string(i), C, { std::string("insiemecc_c_execute_")+std::to_string(i), "ref_c_execute" },i));
 				add(createInsiemeccCheckStep(std::string("insiemecc_c++_check_")+std::to_string(i), CPP, { std::string("insiemecc_c++_execute_")+std::to_string(i), "ref_c++_execute" },i));
@@ -994,15 +998,15 @@ namespace integration {
 				// main run execute STATIC
 				add(createMainExecuteStep(std::string("main_run_execute_stat_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,STATIC));
 				add(createMainExecuteStep(std::string("main_run_c++_execute_stat_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,STATIC));
-	
+
 				// main_run check STATIC
 				add(createMainCheckStep(std::string("main_run_check_stat_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_stat_")+std::to_string(statThreads),"ref_c_execute" },statThreads,STATIC));
-				add(createMainCheckStep(std::string("main_run_c++_check_stat_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_stat_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,STATIC));	
+				add(createMainCheckStep(std::string("main_run_c++_check_stat_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_stat_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,STATIC));
 
 				// main run execute DYNAMIC
 				add(createMainExecuteStep(std::string("main_run_execute_dyn_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,DYNAMIC));
 				add(createMainExecuteStep(std::string("main_run_c++_execute_dyn_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,DYNAMIC));
-	
+
 				// main_run check DYNAMIC
 				add(createMainCheckStep(std::string("main_run_check_dyn_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_dyn_")+std::to_string(statThreads), "ref_c_execute"},statThreads,DYNAMIC));
 				add(createMainCheckStep(std::string("main_run_c++_check_dyn_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_dyn_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,DYNAMIC));
@@ -1010,10 +1014,10 @@ namespace integration {
 				// main run execute GUIDED
 				add(createMainExecuteStep(std::string("main_run_execute_guid_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,GUIDED));
 				add(createMainExecuteStep(std::string("main_run_c++_execute_guid_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,GUIDED));
-	
+
 				// main_run check GUIDED
 				add(createMainCheckStep(std::string("main_run_check_guid_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_guid_")+std::to_string(statThreads), "ref_c_execute"},statThreads,GUIDED));
-				add(createMainCheckStep(std::string("main_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));			
+				add(createMainCheckStep(std::string("main_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));
 			}
 
 			return list;
@@ -1070,7 +1074,7 @@ namespace integration {
 
 			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
 			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
-			
+
 			add(createInsiemeccCheckStep("insiemecc_c_check", C, { "insiemecc_c_execute", "ref_c_execute" }));
 			add(createInsiemeccCheckStep("insiemecc_c++_check", CPP, { "insiemecc_c++_execute", "ref_c++_execute" }));
 
@@ -1107,7 +1111,7 @@ namespace integration {
 			auto pos = list.find(name);
 			if (pos != list.end()) {
 				return pos->second;
-			}	
+			}
 		}
 		assert_fail() << "Requested unknown step: " << name;
 		return fail;
