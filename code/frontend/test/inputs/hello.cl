@@ -75,6 +75,8 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	a = convert_float4(d);
 	
 	float16 sixteen;
+	ulong ao = 7;
+	ao = atom_or(&ao, factor);
 
 #pragma insieme iterations 7
 	for(int i = 0; i < factor; ++i)
