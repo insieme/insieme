@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -49,7 +49,7 @@ using namespace core;
 AosToSoa::AosToSoa(core::NodePtr toTransform) {
 	std::set<VariablePtr> structs;
 
-	pattern::TreePatternPtr structVar = pattern::irp::variable(pattern::aT(pattern::irp::refType(pattern::irp::arrayType(
+	pattern::TreePattern structVar = pattern::irp::variable(pattern::aT(pattern::irp::refType(pattern::irp::arrayType(
 			pattern::irp::structType(*pattern::any)))));
 
 	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {

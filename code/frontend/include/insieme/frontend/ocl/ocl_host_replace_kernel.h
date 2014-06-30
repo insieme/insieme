@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -52,7 +52,7 @@ namespace {
  *
 class FindKernelNames: public core::transform::CachedNodeMapping {
 	std::map<core::ExpressionPtr, std::string> kernelNames;
-	core::pattern::TreePatternPtr clCreateKernel;
+	core::pattern::TreePattern clCreateKernel;
 
 	const core::NodePtr resolveElement(const core::CallExprPtr& ptr);
 
@@ -117,12 +117,12 @@ protected:
 	const std::vector<boost::filesystem::path>& includeDirs;
 	std::set<string> kernelFileCache;
 
-	std::vector<std::string> findKernelNames(core::pattern::TreePatternPtr);
+	std::vector<std::string> findKernelNames(core::pattern::TreePattern);
 	virtual core::ExpressionPtr handleArgument(const core::TypePtr& argTy, const core::TypePtr& memberTy, const core::ExpressionPtr& tupleMemberAccess,
 			core::StatementList& body);
 	virtual void collectArguments();
 	void replaceKernels();
-	virtual void loadKernelCode(core::pattern::TreePatternPtr);
+	virtual void loadKernelCode(core::pattern::TreePattern);
 	void storeKernelLambdas(std::vector<core::ExpressionPtr>& kernelEntries, std::map<string, int>& checkDuplicates);
 	virtual void inlineKernelCode();
 	core::ProgramPtr findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
@@ -137,7 +137,7 @@ class IclKernelReplacer : public KernelReplacer {
 public:
 	IclKernelReplacer(core::NodePtr prog, const std::vector<boost::filesystem::path>& includeDirs) : KernelReplacer(prog, includeDirs) {}
 	virtual core::NodePtr getTransformedProgram();
-	virtual void loadKernelCode(core::pattern::TreePatternPtr);
+	virtual void loadKernelCode(core::pattern::TreePattern);
 	virtual void inlineKernelCode();
 };
 

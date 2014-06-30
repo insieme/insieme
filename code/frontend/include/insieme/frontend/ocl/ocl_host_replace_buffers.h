@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -45,8 +45,7 @@ namespace insieme {
 
 namespace core {
 namespace pattern {
-class TreePattern;
-typedef std::shared_ptr<TreePattern> TreePatternPtr;
+	class TreePattern;
 }
 }
 
@@ -103,7 +102,7 @@ protected:
 	core::NodePtr prog;
 
 	bool alreadyThereAndCorrect(core::ExpressionAddress& bufferExpr, const core::TypePtr& newType);
-	void collectInformation(core::pattern::TreePatternPtr& clCreateBuffer);
+	void collectInformation(core::pattern::TreePattern& clCreateBuffer);
 	void generateReplacements(core::TypePtr clMemTy);
 	void performReplacements();
 

@@ -106,9 +106,9 @@ class IndexExprEvaluator : public IRVisitor<void> {
 	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
 	AccessMap& accesses;
 	// pattern that describes an subscript access to an opencl global variable
-	insieme::core::pattern::TreePatternPtr globalAccess;
+	insieme::core::pattern::TreePattern globalAccess;
 	// pattern that describes a use of an opencl global variable
-	insieme::core::pattern::TreePatternPtr globalUsed;
+	insieme::core::pattern::TreePattern globalUsed;
 	// list of aliases of global variables
 	utils::map::PointerMap<ExpressionPtr, VariablePtr> globalAliases;
 

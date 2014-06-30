@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -71,7 +71,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	core::NodeAddress root(core::analysis::normalize(program->getElement(0)));
 
-	p::TreePatternPtr clSetKernelArg =  p::irp::callExpr(p::any, p::irp::literal("clSetKernelArg"), var("kernel", p::any) << var("idx", p::any) <<
+	p::TreePattern clSetKernelArg =  p::irp::callExpr(p::any, p::irp::literal("clSetKernelArg"), var("kernel", p::any) << var("idx", p::any) <<
 			var("size", p::any) << var("arg", p::any));
 
 	std::string kernelString = "ref<array<_cl_kernel,1>>";

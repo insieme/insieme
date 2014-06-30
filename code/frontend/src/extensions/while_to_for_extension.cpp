@@ -97,7 +97,7 @@ namespace {
 				for(auto cvar : cvarSet) {
 					std::cout << "- Working on cvar: " << pp(cvar) << "\n";
 					auto write = p::aT(p::var("assignment", irp::assignment(p::aT(irp::atom(cvar)), p::any)));
-					auto assMatch = write->matchAddress(core::NodeAddress(body.getAddressedNode()));
+					auto assMatch = write.matchAddress(core::NodeAddress(body.getAddressedNode()));
 					if(assMatch) {
 						auto asses = assMatch.get()["assignment"].getFlattened();
 						if(asses.size() != 1) throw NotForException(string("More than one assignment to variable ") + toString(*cvar));

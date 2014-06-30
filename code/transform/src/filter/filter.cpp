@@ -56,10 +56,10 @@ namespace filter {
 	extern const TargetFilter root("root", [](const core::NodePtr& node){ return toVector(core::NodeAddress(node)); });
 
 
-	TargetFilter pattern(const string& name, const core::pattern::TreePatternPtr& pattern, const string& var) {
+	TargetFilter pattern(const string& name, const core::pattern::TreePattern& pattern, const string& var) {
 		return TargetFilter(name,
 				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
-					auto res = pattern->matchAddress(core::NodeAddress(node));
+					auto res = pattern.matchAddress(core::NodeAddress(node));
 					if (!res || !res->isVarBound(var)) {
 						return vector<core::NodeAddress>();
 					}
@@ -76,14 +76,14 @@ namespace filter {
 	}
 
 
-	TargetFilter allMatches(const string& name, const core::pattern::TreePatternPtr& pattern, bool ignoreTypes) {
+	TargetFilter allMatches(const string& name, const core::pattern::TreePattern& pattern, bool ignoreTypes) {
 		return TargetFilter(name,
 				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
 					vector<core::NodeAddress> res;
 
 					// search for all matching candidates
 					core::visitDepthFirst(core::NodeAddress(node), [&](const core::NodeAddress& candidate) {
-						if (pattern->match(candidate.getAddressedNode())) {
+						if (pattern.match(candidate.getAddressedNode())) {
 							res.push_back(candidate);
 						}
 					}, ignoreTypes);
