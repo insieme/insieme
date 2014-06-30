@@ -59,12 +59,12 @@ namespace pattern {
 
 		TreePtr a = makeTree('a');
 
-		TreeGeneratorPtr gen;
+		TreeGenerator gen;
 		Match<tree_target> match;
 
 		gen = g::atom(a);
 
-		EXPECT_EQ(a, g::generate(gen,match));
+		EXPECT_EQ(a, g::impl::generate(gen,match));
 
 	}
 
@@ -86,26 +86,26 @@ namespace pattern {
 
 		LiteralPtr one = builder.intLit(1);
 
-		TreePatternPtr pattern =
+		TreePattern pattern =
 				irp::forStmt(p::var("i"), p::var("s1"), p::var("e1"), p::atom(one),
 						irp::forStmt(var("j"), p::var("s2"), p::var("e2"), p::atom(one),
 								*p::var("b", p::any)
 						)
 				);
 
-		auto match = pattern->matchPointer(stmt);
+		auto match = pattern.matchPointer(stmt);
 
-		TreeGeneratorPtr generator =
+		TreeGenerator generator =
 				irg::forStmt(g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
 						irg::forStmt(g::var("i"), g::var("s1"), g::var("e1"), g::atom(one),
 								g::listVar("b")
 						)
 				);
 
-		NodePtr res = generator->generate(*match);
+		NodePtr res = generator.generate(*match);
 
 		// switch again
-		NodePtr final = generator->generate(*pattern->matchPointer(res));
+		NodePtr final = generator.generate(*pattern.matchPointer(res));
 
 		EXPECT_NE(*stmt, *res);
 		EXPECT_EQ(*stmt, *final);

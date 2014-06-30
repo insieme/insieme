@@ -66,8 +66,8 @@ namespace pattern {
 
 	TEST(Rule, Replace) {
 
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
+		TreePattern pattern;
+		TreeGenerator generator;
 		Rule rule;
 
 		TreePtr a = makeTree('a');
@@ -89,8 +89,8 @@ namespace pattern {
 		TreePtr a = makeTree('a');
 		TreePtr b = makeTree('b');
 
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
+		TreePattern pattern;
+		TreeGenerator generator;
 
 		pattern   = p::node(0, p::single(p::var("x")) << p::single(p::var("y")));
 		generator = g::node(0, g::single(g::var<tree_target>("y")) << g::single(g::var<tree_target>("x")));
@@ -119,8 +119,8 @@ namespace pattern {
 		TreePtr b = makeTree('b');
 		TreePtr c = makeTree('c');
 
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
+		TreePattern pattern;
+		TreeGenerator generator;
 
 		pattern   = p::node(0, *(p::var("x")));
 		generator = g::node(0, g::forEach("y", g::reverse(g::varExpr<tree_target>("x")), g::var<tree_target>("y")));
@@ -163,7 +163,7 @@ namespace pattern {
 	    auto generator = irg::callExpr(typeR, irg::literal(typeF,"int.sub"), arg1 << arg2);
 
 	    // check that the pattern is right
-	    ASSERT_TRUE(pattern->matchPointer(code));
+	    ASSERT_TRUE(pattern.matchPointer(code));
 
 	    // create and apply a rule
 	    Rule rule(pattern, generator);
@@ -193,7 +193,7 @@ namespace pattern {
 		auto g = irg::callExpr(t, mad, a << b << c);
 
 		auto c1 = builder.parseExpr("(1*2)+3");
-		ASSERT_TRUE(p->matchPointer(c1));
+		ASSERT_TRUE(p.matchPointer(c1));
 
 		Rule rule(p, g);
 		EXPECT_EQ("mad(1, 2, 3)", toString(*rule(c1)));
@@ -214,7 +214,7 @@ namespace pattern {
 				"}"
 		);
 
-		ASSERT_TRUE(p2->matchPointer(c2));
+		ASSERT_TRUE(p2.matchPointer(c2));
 
 		Rule r2(p2,g2);
 		NodePtr res = r2.fixpoint(c2);
