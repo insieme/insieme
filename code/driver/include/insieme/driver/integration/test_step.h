@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -67,6 +67,9 @@ namespace integration {
 
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
+
+	//vector that stores the pids of the test steps
+	std::vector<pid_t> pids;
 
 	// ------------------------------------------------------------------------
 
