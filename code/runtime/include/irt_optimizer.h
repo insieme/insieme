@@ -70,6 +70,12 @@ typedef struct _irt_optimizer_resources {
     #include "irt_metrics.def"
 
     #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+    _data_type__ wall_time;
+    #define ISOLATE_METRIC
+    #define ISOLATE_WALL_TIME
+    #include "irt_metrics.def"
+
+    #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
     _data_type__ cpu_time;
     #define ISOLATE_METRIC
     #define ISOLATE_CPU_TIME

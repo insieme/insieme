@@ -111,6 +111,11 @@ uint64_t irt_optimizer_pick_in_range(uint64_t max) {
 
 uint32 irt_g_available_freqs[128];
 uint32 irt_g_available_freq_count = UINT_MAX;
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+float irt_g_dvfs_eval_energy[128];
+float irt_g_dvfs_eval_time[128];
+int irt_g_dvfs_eval_count[128];
+#endif
 
 void get_available_freqs() {
     if(!irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count))
@@ -141,6 +146,7 @@ void irt_optimizer_objective_init(irt_context *context) {
             new_element->id.thread_count = irt_g_worker_count;
             irt_optimizer_wi_data_table_insert_impl(context->impl_table[i].variants[j].rt_data.optimizer_rt_data.irt_g_optimizer_wi_data_table, NULL, new_element);   
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur.full = new_element->id.full;
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur_resources.wall_time = 0;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur_resources.cpu_time = 0;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur_resources.power = 0;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur_resources.cpu_energy = 0;
@@ -210,38 +216,63 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             #define ISOLATE_METRIC
             #define ISOLATE_CPU_TIME
             #include "irt_metrics.def"
-	
-            //if(wi != NULL) {
-            //        printf("test %p\n", wi->inst_region_list);
-            //
-            //        printf("test 2 %p\n", wi->inst_region_list->items[0]);
-            //        printf("region %f energy %d \n", wi->inst_region_list->items[0]->aggregated_cpu_energy, /* wi->inst_region_data->last_cpu_energy, */ variant->meta_info->ompp_objective.region_id);
-            //}
 
-            //printf("freq %d energy %f (%f- %f) %lu\n", variant->rt_data.optimizer_rt_data.cur.frequency, cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy, cur_resources.cpu_energy, variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy, cur_resources.cpu_time - variant->rt_data.optimizer_rt_data.cur_resources.cpu_time);
+
+            #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+	        if(irt_g_inst_region_metric_measure_wall_time) { \
+                cur_resources.wall_time = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_wall_time * _output_conversion_code__); \
+	        }
+            #define ISOLATE_METRIC
+            #define ISOLATE_WALL_TIME
+            #include "irt_metrics.def"
+
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+            if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
+                irt_g_dvfs_eval_energy[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
+                irt_g_dvfs_eval_time[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
+                if(regions[variant->meta_info->ompp_objective.region_id].num_executions == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
+                    printf("frequency: energy - time - power (num of executions)\n");
+                    for(int k=0; k<irt_g_available_freq_count; k++)
+                        printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
+                    printf("\n");
+                }
+            }
+            else if(irt_g_dvfs_eval_count[variant->rt_data.optimizer_rt_data.cur.frequency])
+                irt_g_dvfs_eval_count[variant->rt_data.optimizer_rt_data.cur.frequency] --;
+#endif
+	
             // Update best
             if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
                 if(variant->rt_data.optimizer_rt_data.best.full == ULONG_MAX || cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy < variant->rt_data.optimizer_rt_data.best_resources.cpu_energy) {
                     variant->rt_data.optimizer_rt_data.best_resources.cpu_energy = cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
                     variant->rt_data.optimizer_rt_data.best = variant->rt_data.optimizer_rt_data.cur;
+                    //printf("next freq %d next thread count %d\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count);
                 }
             }
 
-            //printf(" energy %f\n", cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy);
             // Computing new settings
 
             variant->rt_data.optimizer_rt_data.cur_resources = cur_resources;
 
+#ifndef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
             if(regions[variant->meta_info->ompp_objective.region_id].num_executions > IRT_OMPP_OPTIMIZER_BEST) { // let's just stick to the best after some iterations
                 variant->rt_data.optimizer_rt_data.cur.full = variant->rt_data.optimizer_rt_data.best.full;
-                static bool flag = false; 
-                if(!flag) {
-                    printf("next freq %d next thread count %d\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count);
-                    flag = true;
-                }
             }
-            else {
-                new_element->id.frequency = rand() % irt_g_available_freq_count;
+            else
+#endif
+            {
+                new_element->id.frequency = rand() % irt_g_available_freq_count;                                                                                                                                                                                                                                      
+
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+                static int next_freq = 0;
+                irt_g_dvfs_eval_count[next_freq] ++;
+                if(irt_g_dvfs_eval_count[next_freq] == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS / irt_g_available_freq_count) {
+                    next_freq ++;
+                    if(next_freq > irt_g_available_freq_count-1)
+                        next_freq = irt_g_available_freq_count-1;
+                }
+                new_element->id.frequency = next_freq;
+#endif
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
                 new_element->id.thread_count = rand() % irt_g_worker_count + 1;
