@@ -53,6 +53,9 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_visitor.h"
+
+#include "insieme/annotations/c/include.h"
 
 #include "insieme/utils/logging.h"
 
@@ -68,6 +71,7 @@
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
+using namespace insieme::annotations::c;
 namespace fe = insieme::frontend;
 
 void checkSemanticErrors(const NodePtr& node) {
@@ -164,3 +168,274 @@ TEST(Interception, SimpleInterception) {
 	code = toString(getPrettyPrinted(res));
 	EXPECT_EQ(mf2_expected, code);
 }
+
+TEST(Interception, SimpleFunction1) {
+	fe::Source src(
+		R"(
+			namespace ns{
+				void intercept_simpleFunc() {
+					int a,b,c,d;
+				}
+			}
+
+			// only for manual compilation
+			int main() {
+				ns::intercept_simpleFunc();
+			};
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	auto retTy = builder.getLangBasic().getUnit(); 
+	auto funcTy = builder.functionType( TypeList(), retTy);
+
+
+	//intercept_simpleFunc
+	auto sf = builder.literal("ns_intercept_simpleFunc", funcTy);
+	EXPECT_TRUE(tu[sf]);
+	if (!tu[sf]) std::cout << "the translation unit contains: \n" << tu;
+}
+
+TEST(Interception, SimpleFunction2) {
+	fe::Source src(
+		R"(
+			namespace ns{
+				void intercept_simpleFunc() {
+					int a,b,c,d;
+				}
+			}
+
+			// only for manual compilation
+			int main() {
+				ns::intercept_simpleFunc();
+			};
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
+	job.addInterceptedNameSpacePattern( "ns::.*" );
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	auto tu = job.toIRTranslationUnit(mgr);
+	//LOG(INFO) << tu;
+
+	auto retTy = builder.getLangBasic().getUnit(); 
+	auto funcTy = builder.functionType( TypeList(), retTy);
+
+	//intercept_simpleFunc
+	auto sf = builder.literal("intercept_simpleFunc", funcTy);
+	EXPECT_FALSE(tu[sf]);
+}
+
+
+/////////////////////////////////////////////////////////////////////
+//   This check just assures that everithing is in there, so 
+//   the interceped one can be thrusted
+
+TEST(Interception, Types) {
+	fe::Source src(
+		R"(
+			namespace ns{
+
+				enum SomeEnum { One =15, Two =2 };
+
+				struct SomeStruct {
+					int a,b,c;
+				};
+
+				class SomeClass {
+					int b,c,d;
+				public:
+					int sum() { return b+c+d; }
+				};
+
+				union SomeUnion{
+					int a;
+					SomeClass obj;
+				};
+
+				typedef int BuiltinAllias;
+			}
+
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	{
+		auto t = builder.genericType("ns_SomeStruct");
+		EXPECT_TRUE(tu[t]);
+		if (!tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto t = builder.genericType("ns_SomeUnion");
+		EXPECT_TRUE(tu[t]);
+		if (!tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto t = builder.genericType("ns_SomeClass");
+		EXPECT_TRUE(tu[t]);
+		if (!tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto owner = builder.genericType("ns_SomeClass");
+		TypeList list;
+		list.push_back(builder.refType(owner));
+		auto retTy = builder.getLangBasic().getInt4(); 
+		auto funcTy = builder.functionType( list, retTy, FK_MEMBER_FUNCTION);
+		auto func = builder.literal("ns_SomeClass_sum", funcTy);
+
+		EXPECT_TRUE(tu[func]);
+		if (!tu[func]) std::cout << "the translation unit contains: \n" << tu;
+	}
+}
+
+TEST(Interception, TypesIntercepted) {
+	fe::Source src(
+		R"(
+			namespace ns{
+
+				enum SomeEnum { One =15, Two =2 };
+
+				struct SomeStruct {
+					int a,b,c;
+				};
+
+				class SomeClass {
+					int b,c,d;
+				public:
+					int sum() { return b+c+d; }
+				};
+
+				union SomeUnion{
+					int a;
+					SomeClass obj;
+				};
+
+				typedef int BuiltinAllias;
+			}
+
+
+			void function(){
+				ns::SomeEnum e = ns::One;
+
+				ns::SomeStruct a;
+				ns::SomeClass b;
+				ns::SomeUnion c;
+			}
+
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
+	job.addInterceptedNameSpacePattern( "ns::.*" );
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	auto tu = job.toIRTranslationUnit(mgr);
+
+	{
+		auto t = builder.genericType("ns_SomeStruct");
+		EXPECT_FALSE(tu[t]);
+		if (tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto t = builder.genericType("ns_SomeUnion");
+		EXPECT_FALSE(tu[t]);
+		if (tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto t = builder.genericType("ns_SomeClass");
+		EXPECT_FALSE(tu[t]);
+		if (tu[t]) std::cout << "the translation unit contains: \n" << tu;
+	}
+	{
+		auto owner = builder.genericType("ns_SomeClass");
+		TypeList list;
+		list.push_back(builder.refType(owner));
+		auto retTy = builder.getLangBasic().getInt4(); 
+		auto funcTy = builder.functionType( list, retTy, FK_MEMBER_FUNCTION);
+		auto func = builder.literal("ns_SomeClass_sum", funcTy);
+
+		EXPECT_FALSE(tu[func]);
+		if (tu[func]) std::cout << "the translation unit contains: \n" << tu;
+	}
+
+	// ok, now check who do the ussages look like:
+	auto retTy = builder.getLangBasic().getUnit(); 
+	auto funcTy = builder.functionType( TypeList(), retTy);
+
+	//intercept_simpleFunc
+	auto func = tu[builder.literal("function", funcTy)];
+	EXPECT_TRUE(func);
+
+	auto IRcode = getPrettyPrinted(func);
+	EXPECT_TRUE ( IRcode.find("ref<__insieme_enum<ns::SomeEnum>>") != std::string::npos);
+	EXPECT_TRUE ( IRcode.find("ns::One") != std::string::npos);
+	EXPECT_TRUE ( IRcode.find("ref<ns::SomeStruct>") != std::string::npos);
+	EXPECT_TRUE ( IRcode.find("ref<ns::SomeClass>") != std::string::npos);
+	EXPECT_TRUE ( IRcode.find("ref<ns::SomeUnion>") != std::string::npos);
+}
+
+//		contain the appropiate header????
+TEST(Interception, AttachedHeader) {
+	fe::Source src(
+		R"(
+			#include "interceptor_header.h"
+
+			// only for manual compilation
+			void func() {
+				ns::S obj;
+			};
+		)"
+	,fe::CPP);
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	fe::ConversionJob job(src);
+    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
+	job.addInterceptedNameSpacePattern( "ns::.*" );
+	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	auto tu = job.toIRTranslationUnit(mgr);
+	//LOG(INFO) << tu;
+
+	auto retTy = builder.getLangBasic().getUnit(); 
+	auto funcTy = builder.functionType( TypeList(), retTy);
+
+	//intercept_simpleFunc
+	auto symb = builder.literal("func", funcTy);
+
+	auto node = tu[symb];
+	auto checkDecl = [&](const NodePtr& node) {
+		if(node.isa<LambdaExprPtr>()) return true;
+		if (auto var  = node.isa<VariablePtr>()){
+			auto inTy = var->getType().as<RefTypePtr>()->getElementType();
+			EXPECT_TRUE (hasIncludeAttached(inTy)) << "var: "<< inTy<<" has no header annotation when used in var: "<<var<< std::endl;
+		}
+		return false;
+	};
+	
+	visitDepthFirstPrunable(node.as<LambdaExprPtr>()->getBody(), checkDecl);
+
+	std::cout << tu << std::endl;
+}
+
+//TODO:
+//    initialization
+//    templates
+//
+//    casts?

@@ -41,6 +41,7 @@
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/analysis/thread_regions.h"
 #include "insieme/analysis/cba/analysis/sync_points.h"
+#include "insieme/analysis/cba/analysis/thread_list.h"
 #include "insieme/analysis/cba/analysis/execution_nets.h"
 #include "insieme/analysis/cba/analysis/execution_states.h"
 
@@ -55,6 +56,10 @@ namespace cba {
 
 	std::set<SyncPoint> getSyncPoints(const core::StatementAddress& root) {
 		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(SyncPoints);
+	}
+
+	std::set<ThreadContext> getThreadList(const core::StatementAddress& root) {
+		return getCBA(StatementAddress(root.getAddressedNode())).getValuesOf(ThreadList);
 	}
 
 	std::set<ThreadRegion<DefaultContext>> getThreadRegions(const core::StatementAddress& root) {

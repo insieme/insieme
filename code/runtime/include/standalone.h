@@ -51,6 +51,7 @@
 #include "client_app.h"
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
+#include "irt_maintenance.h"
 
 #ifdef _GEMS
 	#include "include_gems/stdlib.h"
@@ -79,11 +80,6 @@ irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-uint32 irt_g_enabled_worker_count;
-uint32 irt_g_worker_to_enable_count;
-irt_cond_bundle irt_g_enable_worker_cond;
-#endif
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -112,6 +108,9 @@ void irt_init_globals() {
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
+	_irt_setup_hardware_info();
+	irt_maintenance_init();
+
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -123,9 +122,6 @@ void irt_init_globals() {
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
 	irt_mutex_init(&irt_g_active_worker_mutex);
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-	irt_cond_bundle_init(&irt_g_enable_worker_cond);
-#endif
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
@@ -192,6 +188,8 @@ void irt_exit_handler() {
 	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
 		irt_cpu_freq_reset_frequencies();
 #endif
+
+	irt_maintenance_cleanup();
 
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
@@ -274,7 +272,7 @@ void _irt_wake_sleeping_workers(irt_worker_init_signal *signal, void *ev_handle)
 	#endif
 }
 
-void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals) {
+void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals, irt_context* context) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
 		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...\n", IRT_MAX_WORKERS, worker_count);
@@ -301,8 +299,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// TODO: superfluous?
 	irt_g_exit_handling_done = false;
 
-	_irt_setup_hardware_info();
-
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
 	#ifdef _GEMS
@@ -315,10 +311,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    irt_g_enabled_worker_count = irt_g_worker_count;
-    irt_g_worker_to_enable_count = irt_g_worker_count;
-#endif
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 
 	// initialize affinity mapping & load affinity policy
@@ -332,7 +324,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	void* ev_handle = _irt_init_signalable(&signal);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal, context);
 	}
 
 	// wait until all workers have signaled readyness
@@ -384,6 +376,8 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	// wait for workers to finish the main work-item
 	irt_mutex_lock(&condbundle.mutex);
 	irt_cond_bundle_wait(&condbundle);
+	irt_mutex_unlock(&condbundle.mutex);
+	irt_mutex_destroy(&condbundle.mutex);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -396,8 +390,9 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	irt_worker tempw;
 	tempw.generator_id = 0;
 	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
+
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
-	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
+	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals, context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -420,8 +415,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// shut-down context
 	irt_context_destroy(context);
 
-	//irt_mutex_unlock(&condbundle.mutex);
-	//irt_mutex_destroy(&condbundle.mutex);
 	IRT_DEBUG("Exiting ...\n");
 	irt_exit_handler();
 }

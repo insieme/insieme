@@ -273,12 +273,12 @@ main()
 
     printf(HLINE);
 
-    if  ( (quantum = checktick()) >= 1) 
-	printf("Your clock granularity/precision appears to be "
-	    "%d microseconds.\n", quantum);
-    else {
-	printf("Your clock granularity appears to be "
-	    "less than one microsecond.\n");
+    if  ( (quantum = checktick()) >= 1) {
+//	printf("Your clock granularity/precision appears to be "
+//	    "%d microseconds.\n", quantum);
+    } else {
+//	printf("Your clock granularity appears to be "
+//	    "less than one microsecond.\n");
 	quantum = 1;
     }
 

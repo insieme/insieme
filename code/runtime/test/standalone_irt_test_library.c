@@ -34,6 +34,9 @@
  * regarding third party software licenses.
  */
 
+#include <stdio.h>
+
+#define IRT_LIBRARY_MAIN
 #include "irt_library.h"
 
 typedef struct {
@@ -55,7 +58,7 @@ void para(void *data) {
 	printf("Hello outer world with number %d\n", params->num);
 
 	param_struct subparams = { 666 };
-	irt_joinable *j = irt_lib_parallel(2, 2, &para_inner, &subparams, sizeof(param_struct));
+	irt_joinable j = irt_lib_parallel(2, 2, &para_inner, &subparams, sizeof(param_struct));
 
 	param_struct loopparams = { 37 };
 	irt_lib_pfor(0, 10, 2, &loop_body, &loopparams, sizeof(param_struct));

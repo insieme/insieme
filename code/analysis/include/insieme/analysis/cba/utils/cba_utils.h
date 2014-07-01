@@ -74,6 +74,10 @@ namespace cba {
 	 */
 	bool isSynchronizingFunction(const core::ExpressionPtr& expr);
 
+	/**
+	 * Checks whether the given expression is a spawn point.
+	 */
+	bool isSpawnPoint(const core::ExpressionPtr& expr);
 
 	namespace detail {
 		/**

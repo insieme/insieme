@@ -140,12 +140,25 @@
 #endif
 
 //optimizer
-//enable optimizations based on openmp+ (DCT excluded)
+//enables optimizations based on openmp+ (DCT excluded)
 //#define IRT_ENABLE_OMPP_OPTIMIZER
-//enable DCT optimizations based on openmp+
+//enables DCT optimizations based on openmp+
 //#define IRT_ENABLE_OMPP_OPTIMIZER_DCT
-// defines how many work items must be completed before updating optimizer settings
-#define IRT_OPTIMIZER_FREQUENCY   irt_g_worker_count
+//enables measurments of resource compsumption with different frequencies
+//#defines IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+//defines how many times a new frequency will be picked
+//#define IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+    #define IRT_ENABLE_OMPP_OPTIMIZER
+#endif
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+    #define IRT_ENABLE_OMPP_OPTIMIZER
+#endif
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER
+    #define IRT_WORKER_SLEEPING
+#endif
+// defines how many settings must be evaluated before sticking to the best one
+#define IRT_OMPP_OPTIMIZER_BEST (irt_g_worker_count * 40)
 // lookup table size
 #define IRT_OPTIMIZER_LT_BUCKETS 97
 // the index of the frequency (among the vector of available ones) used by the rt

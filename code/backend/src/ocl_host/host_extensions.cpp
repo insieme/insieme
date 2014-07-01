@@ -64,6 +64,7 @@ namespace ocl_host{
 			return core::lang::getLiteral(manager, "('a,ref<vector<uint<8>,#l>>,vector<uint<8>,#l>,vector<uint<8>,#l>,var_list)->unit", "call_kernel");
 		}
 
+		//irt_ocl_buffer* irt_ocl_rt_create_buffer(irt_ocl_mem_flag flags, size_t size)
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();

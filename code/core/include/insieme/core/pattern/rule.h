@@ -53,12 +53,12 @@ namespace pattern {
 	 */
 	class Rule : public utils::Printable {
 
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
+		TreePattern pattern;
+		TreeGenerator generator;
 
 	public:
 
-		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
+		Rule(const TreePattern& pattern = any, const TreeGenerator& generator = generator::root)
 			: pattern(pattern), generator(generator) {}
 
 		/**
@@ -80,8 +80,8 @@ namespace pattern {
 		 */
 		core::NodePtr fixpoint(const core::NodePtr& tree) const;
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return pattern->printTo(out) << " -> " << *generator;
+		std::ostream& printTo(std::ostream& out) const {
+			return out << pattern << " -> " << generator;
 		}
 
 		// for testing only ...
@@ -89,7 +89,7 @@ namespace pattern {
 
 	};
 
-    inline core::NodePtr apply(const core::NodePtr& node, const TreePatternPtr& pattern, const TreeGeneratorPtr& generator) {
+    inline core::NodePtr apply(const core::NodePtr& node, const TreePattern& pattern, const TreeGenerator& generator) {
         return Rule(pattern, generator).applyTo(node);
     }
 

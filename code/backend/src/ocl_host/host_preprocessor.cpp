@@ -100,12 +100,19 @@ using insieme::core::pattern::anyList;
 		return expr;
 	}
 
-
 	void printVarAddressMap(utils::map::PointerMap<VariableAddress, VariableAddress> varMap){
 		for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> vp){
 				 std::cout << *vp.first << " = " << *vp.second << "; ";
 		});
 		std::cout << "\n";
+	}
+
+	void printVarAddressVec(std::vector<VariableAddress> varVec){
+		std::cout << "[ ";
+		for_each(varVec, [&](VariableAddress var){
+				 std::cout << *var << " ";
+		});
+		std::cout << "]" << std::endl;
 	}
 
 	void printVarVector(std::vector<VariableAddress> varVec){
@@ -121,9 +128,9 @@ using insieme::core::pattern::anyList;
 
 	ExpressionPtr replaceGetId(ExpressionPtr expr, ExpressionPtr replacement) {
 		// TODO: Handle multi-dimensional cases, handle get local & group id
-		TreePatternPtr getId = aT(var("id_call", irp::castExpr(any, irp::callExpr(irp::literal("get_global_id"), *any))));
+		TreePattern getId = aT(var("id_call", irp::castExpr(any, irp::callExpr(irp::literal("get_global_id"), *any))));
 
-		auto&& match = getId->matchPointer(expr);
+		auto&& match = getId.matchPointer(expr);
 		if (match){
 			return core::transform::replaceAll(expr->getNodeManager(), expr, match->getVarBinding("id_call").getValue(), replacement).as<ExpressionPtr>();
 		}
@@ -145,7 +152,7 @@ using insieme::core::pattern::anyList;
 		VariablePtr originalSize;
 		DataToTransfer dataToTransfer;
 
-		TreePatternPtr sizeOfPattern;
+		TreePattern sizeOfPattern;
 
 		/*
 		 * adds an expression to another expression
@@ -194,7 +201,7 @@ using insieme::core::pattern::anyList;
 		}
 
         ExpressionPtr getElemsCreateBuf(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
-			auto&& match = sizeOfPattern->matchPointer(expr);
+			auto&& match = sizeOfPattern.matchPointer(expr);
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
@@ -208,7 +215,7 @@ using insieme::core::pattern::anyList;
 		}
 
 		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
-			auto&& match = sizeOfPattern->matchPointer(expr);
+			auto&& match = sizeOfPattern.matchPointer(expr);
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
@@ -463,26 +470,10 @@ using insieme::core::pattern::anyList;
 
 
 
-
-
-
-
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
 		// Semantic check on code
-		auto s = core::checks::check(code, insieme::core::checks::getFullCheck());
-		auto w = s.getWarnings();
-		std::sort(w.begin(), w.end());
-		for_each(w, [](const core::checks::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-
-		auto e = s.getErrors();
-		std::sort(e.begin(), e.end());
-		std::cout << "** Error before host preprocessing: " << std::endl;
-		for_each(e, [](const core::checks::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-
+		LOG(INFO) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code);
+		LOG(INFO) << "Errors: " << core::checks::check(code, core::checks::getFullCheck());
 
 		auto& manager = converter.getNodeManager();
 
@@ -493,93 +484,108 @@ using insieme::core::pattern::anyList;
 		// create new buffer type
 		TypePtr bufType = ext.bufferType;
 		TypePtr refBufType = ext.refBufferType;
-		std::vector<VariablePtr> bufVars; // vector of buffer variable
-
-		// Used only in case of tuple (not for icl library)
-		std::vector<LiteralPtr> litVec;
-		VariablePtr tupleVar;
 		TypePtr newTupleType;
+		std::vector<VariablePtr> bufVarNames; // vector of buffer variables
+		VariablePtr tupleVar;
+		std::vector<VariablePtr> tupleVarNameVec;
+		utils::map::PointerMap<VariableAddress, VariableAddress> bufferVarNameMap;
 
-		// Extract the tuple and the access num from the kernel call
-		TreePatternPtr wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(any, irp::literal("tuple.member.access"),
-									irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any)
-									<< var("num") << *any) << *any);
+		// find the tuple variable in the call of the kernel and all the index that are global buffers
+		TreePattern callKernel = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
+										single(var("kernLambda")))) << *any << var("offset") << any << any << var("varlist"));
 
-        TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) | // add the reinterpret cast
-									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
-                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any) |
-                                    irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.deref"),
-                                    irp::callExpr(irp::literal("ref.reinterpret"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any);
+		TreePattern wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"), aT(irp::callExpr(irp::literal("tuple.member.access"), var("tupleVar") << var("index") << any)));
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
-			auto&& match = wrapGlobalTuple->matchPointer(call);
-			if (match) {
-				tupleVar = getVar(match, "tupleVar");
-				litVec.push_back(static_pointer_cast<const Literal>(match->getVarBinding("num").getValue()));
-			}
-			match = wrapGlobalVar->matchPointer(call);
-			if (match) {
-				bufVars.push_back(getVar(match, "bufVar"));
+			auto&& matchKernel = callKernel.matchPointer(call);
+			if (matchKernel) {
+				std::vector<LiteralPtr> tupleAccessVec;
+				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
+				visitDepthFirst(varlist, [&](const CallExprPtr& call) {
+					auto&& matchGlobalWrap = wrapGlobalTuple.matchPointer(call);
+					if (matchGlobalWrap) {
+						VariablePtr tupleTmp = getVar(matchGlobalWrap, "tupleVar");
+						if (tupleVar != tupleTmp) {
+							tupleVar = tupleTmp;
+							tupleVarNameVec = core::analysis::getVariableNames(tupleVar, code);
+							std::cout << "== Kernel Call Parameter Tuple == \nTupleVar-> " << tupleVar << std::endl;
+							std::cout << tupleVarNameVec << std::endl;
+						}
+						std::cout << "Index -> " << matchGlobalWrap->getVarBinding("index").getValue() << std::endl;
+						tupleAccessVec.push_back(static_pointer_cast<const Literal>(matchGlobalWrap->getVarBinding("index").getValue()));
+					}
+				});
+
+				// Create new type for the tuple (with Buffers)
+				const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(tupleVar.getType());
+				std::vector<TypePtr> oldTypeList = oldTupleType.getElementTypes();
+				std::vector<TypePtr> newTypeList;
+				for (uint i = 0; i < tupleAccessVec.size(); ++i) newTypeList.push_back(refBufType);
+				for (uint i = tupleAccessVec.size(); i < oldTypeList.size(); ++i) newTypeList.push_back(oldTypeList[i]);
+				newTupleType = builder.tupleType(newTypeList);
+
+				// Collect all the buffer names in the different scopes
+				std::vector<TreePattern> treeVecInsertTuple;
+				for_each(tupleVarNameVec, [&](const VariablePtr& v) {
+					for_each(tupleAccessVec, [&](const LiteralPtr& lit) {
+					 treeVecInsertTuple.push_back(irp::assignment(irp::tupleRefElem(atom(v), atom(lit), any), irp::scalarToArray(var("bufVar"))));
+					});
+				});
+
+				visitDepthFirst(code, [&](const CallExprPtr& call) {
+					for_each(treeVecInsertTuple, [&](const TreePattern& pattern) {
+						auto&& match = pattern.matchPointer(call);
+						if (match) {
+							std::vector<VariablePtr> bufVarNameVec = core::analysis::getVariableNames(getVar(match, "bufVar"), code);
+							// will contain the name of the buffer variables present in the different scopes
+							bufVarNames.insert(std::end(bufVarNames), std::begin(bufVarNameVec), std::end(bufVarNameVec));
+						}
+					});
+				});
+				std::cout << bufVarNames << std::endl;
 			}
 		});
 
-		if(tupleVar) {
-			// inserts in bufVars all the variables of type array(will become buffers) getting them from the tuple
-			std::vector<TreePatternPtr> treeVecInsertTuple;
-			for_each(litVec, [&](const LiteralPtr& lit) {
-				treeVecInsertTuple.push_back(irp::callExpr(
-						aT(irp::callExpr(any, irp::literal("tuple.ref.elem"), any << atom(lit) << *any)),
-						atom(tupleVar) << irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any)));
-			});
 
-			visitDepthFirst(code, [&](const CallExprPtr& call) {
-				for_each(treeVecInsertTuple, [&](const TreePatternPtr& pattern) {
-					auto&& match = pattern->matchPointer(call);
-					if (match) {
-						bufVars.push_back(getVar(match, "bufVar"));
-					}
-				});
-			});
+		TreePattern bufDecl = irp::declarationStmt(var("Var"), aT(irp::literal("undefined")));
+		TreePattern bufDeclAndInit = irp::declarationStmt(var("Var"), aT(irp::scalarToArray(aT(irp::literal("undefined")))));
 
-			const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(static_pointer_cast<const RefType>(tupleVar.getType())->getElementType());
-			std::vector<TypePtr> oldTypeList = oldTupleType.getElementTypes();
-			std::vector<TypePtr> newTypeList;
-			for (uint i = 0; i < litVec.size(); ++i)
-				newTypeList.push_back(refBufType);
-			for (uint i = litVec.size(); i < oldTypeList.size(); ++i)
-				newTypeList.push_back(oldTypeList[i]);
-			// create the new tuple type
-			newTupleType = builder.tupleType(newTypeList);
-		}
-
-		// modify buffer declaration (map to new one)
 		utils::map::PointerMap<NodePtr, NodePtr> nodeMap;
 		auto& basic = manager.getLangBasic();
 		visitDepthFirst(code, [&](const DeclarationStmtPtr& decl) {
-			auto&& fit = std::find_if(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){ return *vr == *(decl->getVariable());});
-			if (fit != bufVars.end()) {
-				CallExprPtr init = static_pointer_cast<const CallExpr>(decl->getInitialization());
-				if (core::analysis::isCallOf(init->getArgument(0), builder.getLangBasic().getUndefined())) {
-					DeclarationStmtPtr newDecl = builder.declarationStmt(
-							builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-							builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType))));
-					nodeMap.insert(std::make_pair(decl, newDecl));
-					return;
+			auto&& match = bufDecl.matchPointer(decl);
+			if (match) {
+				VariablePtr tmpVar = getVar(match, "Var");
+
+				auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), [&](const VariablePtr& vr){ return vr == tmpVar;});
+				if (fit != end(bufVarNames)) {
+					auto&& matchDeclInit = bufDeclAndInit.matchPointer(decl);
+					if (matchDeclInit) {
+						std::cout << "-> icl_buffer* " << tmpVar << " = create_buffer (...); \n";
+						CallExprPtr init = static_pointer_cast<const CallExpr>(decl->getInitialization());
+						CallExprPtr tmp = static_pointer_cast<const CallExpr>((init->getArgument(0)));
+
+						VariablePtr newVar = builder.variable(builder.refType(refBufType), decl.getVariable().getID());
+						ExpressionPtr size = builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(1));
+						DeclarationStmtPtr newDecl = builder.declarationStmt(
+								newVar, // left side
+								builder.refVar(builder.callExpr(ext.createBuffer, builder.uintLit(0), size))); // right side
+						nodeMap.insert(std::make_pair(decl, newDecl));
+						return;
+					} else {
+						std::cout << "-> icl_buffer* " << tmpVar << ";\n";
+						VariablePtr newVar = builder.variable(builder.refType(refBufType), decl.getVariable().getID());
+						DeclarationStmtPtr newDecl = builder.declarationStmt(
+								newVar, // left side
+								builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType)))); // right side
+						nodeMap.insert(std::make_pair(decl, newDecl));
+						return;
+					}
 				}
 
-				CallExprPtr tmp = static_pointer_cast<const CallExpr>((init->getArgument(0)));
-				DeclarationStmtPtr newDecl = builder.declarationStmt(
-						builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-						builder.refVar(builder.callExpr(ext.createBuffer, tmp->getArgument(1),
-						builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2)))));
-				nodeMap.insert(std::make_pair(decl, newDecl));
-				return;
-			}
-
-			if (tupleVar) { // modify tuple declaration
-				if (*tupleVar == *(decl->getVariable())) {
+				fit = std::find_if(begin(tupleVarNameVec), end(tupleVarNameVec), [&](const VariablePtr& vr){ return vr == tmpVar;});
+				if (fit != end(tupleVarNameVec)) {
+					std::cout << "Tuple Declaration: " << tmpVar << std::endl;
 					DeclarationStmtPtr newDecl = builder.declarationStmt(
 						builder.variable(builder.refType(newTupleType), decl.getVariable().getID()),
 						builder.refNew(builder.callExpr(newTupleType, basic.getUndefined(),builder.getTypeLiteral(newTupleType))));
@@ -589,30 +595,57 @@ using insieme::core::pattern::anyList;
 			}
 		});
 
-		TreePatternPtr bufVarIntuple = irp::callExpr(aT(irp::lambda(any, any << var("oldpar2"), irp::compoundStmt(
+		visitDepthFirst(code, [&](const CallExprPtr& call) {
+			// Modify buffer assignment operation
+			if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
+				auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), [&](const VariablePtr& vr){ return vr == call->getArgument(0);});
+				if (fit != end(bufVarNames)) {
+					// skip cast expression
+					CastExprPtr tmpCast = static_pointer_cast<const CastExpr>((call->getArgument(1)));
+					CallExprPtr tmp = static_pointer_cast<const CallExpr>(tmpCast->getSubExpression());
+
+					VariablePtr newVar = builder.variable(builder.refType(refBufType), static_pointer_cast<const Variable>(call->getArgument(0)).getID());
+					ExpressionPtr size = builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(1));
+					CallExprPtr newCall = builder.callExpr(call->getFunctionExpr(), newVar, builder.callExpr(ext.createBuffer, builder.uintLit(0), size));
+					nodeMap.insert(std::make_pair(call, newCall));
+					return;
+				}
+			}
+		});
+
+		NodePtr codeXXX = core::transform::replaceAll(manager, code, nodeMap, true);
+		std::cout << "CODE XXX" << std::endl;
+		std::cout << core::printer::PrettyPrinter(codeXXX, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		assert(false);
+
+
+
+		TreePattern bufVarIntuple = irp::callExpr(aT(irp::lambda(any, any << var("oldpar2"), irp::compoundStmt(
 											irp::callExpr(any, irp::callExpr(any, any << var("lit") << *any) << *any) << *any))),
 											var("tuple", irp::variable(any, any)) << irp::callExpr(irp::literal("ref.deref"),
 											single(var("bufVar", irp::variable(any, any)))));
 
 		// Tree to match write buffer
-		TreePatternPtr readWriteBuf = irp::callExpr(aT(irp::lambda(any, var("1var") << *any, aT(irp::callExpr(atom(builder.getLangBasic().getRefAssign()),
+		TreePattern readWriteBuf = irp::callExpr(aT(irp::lambda(any, var("1var") << *any, aT(irp::callExpr(atom(builder.getLangBasic().getRefAssign()),
 								irp::callExpr(irp::literal("array.ref.elem.1D"), var("2var") << *any) <<
 								irp::callExpr(irp::literal("ref.deref"), single(irp::callExpr(irp::literal("array.ref.elem.1D"), var("3var") << *any))))))),
 								irp::callExpr(irp::literal("ref.deref"), single(var("bufVar", irp::variable(any, any)))) <<
 								irp::exprOfType(atom(builder.getLangBasic().getUInt4())) << *any);
 
-		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
+		TreePattern delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 
 		// Tree to match the kernel call
-		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
+		TreePattern kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
 										single(var("kernLambda")))) << *any << var("offset") << any << any << var("varlist"));
 
-		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
+		TreePattern tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
 
+
+		std::vector<VariablePtr> bufVars;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			// modify buffer assignment operation
-			if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
+			/*if (core::analysis::isCallOf(call, builder.getLangBasic().getRefAssign())) {
 				auto&& fit = std::find_if(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){ return *vr == *(call->getArgument(0));});
 				if (fit != bufVars.end()) {
 					CallExprPtr tmp = static_pointer_cast<const CallExpr>((call->getArgument(1)));
@@ -623,10 +656,10 @@ using insieme::core::pattern::anyList;
 					nodeMap.insert(std::make_pair(call, newCall));
 					return;
 				}
-			}
+			}*/
 
 			if (tupleVar) { // modify insert in the callExprtuple
-				auto&& matchBuf = bufVarIntuple->matchPointer(call);
+				auto&& matchBuf = bufVarIntuple.matchPointer(call);
 				if (matchBuf) { // TODO: WRITE IN A BETTER WAY
 					if (*tupleVar == *(getVar(matchBuf, "tuple"))) {
 						VariablePtr newTupleVar = builder.variable(builder.refType(newTupleType), tupleVar.getID());
@@ -680,7 +713,7 @@ using insieme::core::pattern::anyList;
 			}
 
 			// modify read write buffer
-			auto&& matchReadWriteBuf = readWriteBuf->matchPointer(call);
+			auto&& matchReadWriteBuf = readWriteBuf.matchPointer(call);
 			if (matchReadWriteBuf) {
 				for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
 					if (*vr == *(getVar(matchReadWriteBuf, "bufVar"))) {
@@ -701,7 +734,7 @@ using insieme::core::pattern::anyList;
 			}
 
 			// modify delete buffer
-			auto&& matchDel = delTree->matchPointer(call);
+			auto&& matchDel = delTree.matchPointer(call);
 			if (matchDel) {
 				for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
 					VariablePtr tmpVar = getVar(matchDel, "bufVar");
@@ -724,11 +757,11 @@ using insieme::core::pattern::anyList;
 			}
 
 			// replace tuple type in the kernel call
-			auto&& matchKernel = kernelCall->matchPointer(call);
+			auto&& matchKernel = kernelCall.matchPointer(call);
 			if (matchKernel) {
 				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
 				visitDepthFirst(varlist, [&](const CallExprPtr& call) {
-					auto&& matchAccess = tupleAccess->matchPointer(call);
+					auto&& matchAccess = tupleAccess.matchPointer(call);
 					if (matchAccess) {
 						VariablePtr tupleVar = getVar(matchAccess, "tupleVar");
 						VariablePtr newTuple = builder.variable(builder.refType(newTupleType), tupleVar.getID());
@@ -745,7 +778,7 @@ using insieme::core::pattern::anyList;
 					}
 
 					// replace the buffer type in the kernel call
-					matchAccess = wrapGlobalVar->matchPointer(call);
+					matchAccess = wrapGlobalTuple.matchPointer(call);
 					if (matchAccess) {
 						VariablePtr bufVar = getVar(matchAccess, "bufVar");
 						ExpressionPtr newVar = builder.variable(builder.refType(refBufType), bufVar.getID());
@@ -787,11 +820,11 @@ using insieme::core::pattern::anyList;
         insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		TreePatternPtr splitPoint = irp::ifStmt(at("1u != (uint<4>)0"), any, any);
+		TreePattern splitPoint = irp::ifStmt(at("1u != (uint<4>)0"), any, any);
 
 		bool foundErrors = false;
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
-			auto&& matchIf = splitPoint->matchPointer(ifSplit);
+			auto&& matchIf = splitPoint.matchPointer(ifSplit);
 			if (matchIf) {
 				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody()); // create the new isolated call
 
@@ -799,7 +832,7 @@ using insieme::core::pattern::anyList;
 
 				CallExprPtr varlist;
 				visitDepthFirst(call, [&](const CallExprPtr& cl) {
-					auto&& matchKernel = kernelCall->matchPointer(cl);
+					auto&& matchKernel = kernelCall.matchPointer(cl);
 					if (matchKernel) varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
 				});
 
@@ -821,7 +854,7 @@ using insieme::core::pattern::anyList;
 				LambdaExprPtr kernLambda;
 				annotations::DataRangeAnnotationPtr dataRangeAn;
 				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
-					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
+					auto&& matchKernel = kernelCall.matchPointer(kernelCandidate);
                     if (matchKernel) {
 						kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
 						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
@@ -1033,7 +1066,7 @@ using insieme::core::pattern::anyList;
 											builder.deref(sizeVar), builder.sub(end, begin)).as<CompoundStmtPtr>();
 
 				visitDepthFirst(newBody2, [&](const CallExprPtr& cl) {
-					auto&& matchKernel = kernelCall->matchPointer(cl);
+					auto&& matchKernel = kernelCall.matchPointer(cl);
 					if (matchKernel) {
 						// replace the previous inserted end-begin with the correct end because of the offset
 						CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
@@ -1052,7 +1085,7 @@ using insieme::core::pattern::anyList;
 					CallExprPtr varlist, kernelWrapper;
 					LambdaExprPtr kernLambda;
 					if(visitDepthFirstInterruptible(newBody2, [&](const CallExprPtr& cl)->bool {
-						auto&& matchKernel = kernelCall->matchPointer(cl);
+						auto&& matchKernel = kernelCall.matchPointer(cl);
 						if (matchKernel) {
 							varlist = matchKernel->getVarBinding("varlist").getValue().as<CallExprPtr>();
 							kernLambda = matchKernel->getVarBinding("kernLambda").getValue().as<LambdaExprPtr>();

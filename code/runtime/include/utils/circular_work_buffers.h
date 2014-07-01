@@ -48,7 +48,9 @@
 
 #define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
 
-#if 1
+#if 0
+// NOTE TODO 
+// CWB implementation not working in /omp/private_iterator test case
 
 // ============================================================================ Circular work buffers
 // front = top, back = bottom
@@ -68,6 +70,7 @@
 //  1 |       |
 //    |-------|
 //  0 |       |  <- bot_update
+
 
 typedef union _irt_cwb_state {
 	uint64 all;
@@ -106,6 +109,7 @@ static inline void irt_cwb_init(irt_circular_work_buffer* wb) {
 static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
 	return (wb->state.top_val - wb->state.bot_val) & IRT_CWBUFFER_MASK;
 }
+
 
 static inline bool irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
@@ -227,32 +231,28 @@ static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
 	return (wb->top - wb->bot) & IRT_CWBUFFER_MASK;
 }
 
-static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
-	for(;;) {
-		irt_spin_lock(&wb->lock);
-		if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
-			irt_spin_unlock(&wb->lock);
-			continue;
-		}
-		wb->top = (wb->top+1) & IRT_CWBUFFER_MASK;
-		wb->items[wb->top] = wi;
+static inline bool irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
+	irt_spin_lock(&wb->lock);
+	if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
 		irt_spin_unlock(&wb->lock);
-		break;
+		return false;
 	}
+	wb->top = (wb->top+1) & IRT_CWBUFFER_MASK;
+	wb->items[wb->top] = wi;
+	irt_spin_unlock(&wb->lock);
+	return true;
 }
 
-static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
-	for(;;) {
-		irt_spin_lock(&wb->lock);
-		if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
-			irt_spin_unlock(&wb->lock);
-			continue;
-		}
-		wb->items[wb->bot] = wi;
-		wb->bot = (wb->bot-1) & IRT_CWBUFFER_MASK;
+static inline bool irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
+	irt_spin_lock(&wb->lock);
+	if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
 		irt_spin_unlock(&wb->lock);
-		break;
+		return false;
 	}
+	wb->items[wb->bot] = wi;
+	wb->bot = (wb->bot-1) & IRT_CWBUFFER_MASK;
+	irt_spin_unlock(&wb->lock);
+	return true;
 }
 
 static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {

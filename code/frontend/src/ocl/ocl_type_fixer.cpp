@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -153,7 +153,7 @@ void TypeFixer::fixDecls(NodeAddress pA, TypePtr type) {
 	NodeManager& mgr = pA->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr decls = irp::declarationStmt(var("variable", pattern::any),
+	TreePattern decls = irp::declarationStmt(var("variable", pattern::any),
 			irp::callExpr(aT(pattern::atom(type)), pattern::atom(BASIC.getRefVar()), pattern::single(var("init", pattern::any))));
 
 	irp::matchAllPairs(decls, pA, [&](const NodeAddress& matchAddress, const AddressMatch& decl) {
@@ -171,9 +171,9 @@ void TypeFixer::updateTemps(TypePtr type, VariableMap& varReplacements) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr decls = irp::declarationStmt(var("variable", irp::variable(aT(pattern::atom(type)))), (var("init", pattern::any)));
-	TreePatternPtr assigns = irp::assignment(var("variable", irp::variable(aT(pattern::atom(type)))), (var("rhs", pattern::any)));
-	TreePatternPtr oneFitsAll = decls | assigns;
+	TreePattern decls = irp::declarationStmt(var("variable", irp::variable(aT(pattern::atom(type)))), (var("init", pattern::any)));
+	TreePattern assigns = irp::assignment(var("variable", irp::variable(aT(pattern::atom(type)))), (var("rhs", pattern::any)));
+	TreePattern oneFitsAll = decls | assigns;
 
 	irp::matchAllPairs(oneFitsAll, prog, [&](const NodePtr& matchPtr, const NodeMatch& decl) {
 

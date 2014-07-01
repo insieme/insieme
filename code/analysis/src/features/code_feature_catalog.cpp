@@ -42,6 +42,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace itpi = insieme::core::pattern::irp;
 
 namespace insieme {
@@ -273,7 +275,7 @@ using insieme::core::pattern::any;
 		// add features that count occurrences of certain patterns
 		void addPatternFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 			// create lists of considered operations
-			std::map<string, core::pattern::TreePatternPtr> patterns;
+			std::map<string, core::pattern::TreePattern> patterns;
 			patterns["function"] = itpi::callExpr(any, *any);
 			// TODO: @Klaus: I had to change this pattern due to added casts - hope this is still OK ...
 			patterns["globalMemoryAccess"] = itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any);
@@ -292,7 +294,7 @@ using insieme::core::pattern::any;
 
 
 			// create the actual features
-			for_each(patterns, [&](const std::pair<string, core::pattern::TreePatternPtr>& cur_pattern){
+			for_each(patterns, [&](const std::pair<string, core::pattern::TreePattern>& cur_pattern){
 				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
 
 					string name = format("SCF_NUM_%s_calls_%s",
@@ -312,8 +314,8 @@ using insieme::core::pattern::any;
 			std::map<string, std::function<simple_feature_value_type(const core::NodePtr)> > lambdas;
 			lambdas["variables"] = [=](core::NodePtr node) { if(node->getNodeType() == core::NT_Variable) return true; return false; };
 			lambdas["pattern"] = [=](core::NodePtr node) {
-				core::pattern::TreePatternPtr pattern = itpi::callExpr(any, *any);
-				insieme::core::pattern::MatchOpt&& match = pattern->matchPointer(node);
+				core::pattern::TreePattern pattern = itpi::callExpr(any, *any);
+				insieme::core::pattern::MatchOpt&& match = pattern.matchPointer(node);
 				return !!match;
 			};
 			lambdas["externalFunction"] = [&](core::NodePtr node) {

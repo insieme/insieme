@@ -88,10 +88,10 @@ using namespace driver::integration;
 			return load(manager, *getCase(name));
 		}
 
-		vector<Match<ptr_target>> findAllMatches(const TreePatternPtr& pattern, const NodePtr& tree) {
+		vector<Match<ptr_target>> findAllMatches(const TreePattern& pattern, const NodePtr& tree) {
 			vector<Match<ptr_target>> res;
 			visitDepthFirstOnce(tree, [&](const NodePtr& cur){
-				MatchOpt curMatch = pattern->matchPointer(cur);
+				MatchOpt curMatch = pattern.matchPointer(cur);
 				if (curMatch) {
 					res.push_back(*curMatch);
 				}
@@ -116,7 +116,7 @@ using namespace driver::integration;
 			}
 		}
 
-		void runCheck(const TreePatternPtr& pattern, const string& testCase) {
+		void runCheck(const TreePattern& pattern, const string& testCase) {
 			NodeManager manager;
 
 			// load program
@@ -145,7 +145,7 @@ using namespace driver::integration;
 		// Example: find all literals within code
 
 		// create pattern
-		TreePatternPtr pattern = irp::literal(var("value"),var("type"));
+		TreePattern pattern = irp::literal(var("value"),var("type"));
 
 		// run checks
 		runCheck(pattern, "hello_world");
@@ -158,7 +158,7 @@ using namespace driver::integration;
 		// Example: find all for loops within code and get iterator / start / end / step / body
 
 		// create pattern
-		TreePatternPtr pattern = irp::forStmt(var("iterator"), var("begin"), var("end"), var("step"), var("body"));
+		TreePattern pattern = irp::forStmt(var("iterator"), var("begin"), var("end"), var("step"), var("body"));
 
 		// run checks
 		runCheck(pattern, "matrix_mul_static");
@@ -182,7 +182,7 @@ using namespace driver::integration;
 //		core::ProgramPtr code = load(mgr, "pendulum");
 
 		std::cout << "Running match ... \n";
-		auto res = pattern->matchPointer(code);
+		auto res = pattern.matchPointer(code);
 		std::cout << "Done!\n";
 
 		ASSERT_TRUE(res);
@@ -207,7 +207,7 @@ using namespace driver::integration;
 		core::ProgramPtr code = load(mgr, "pendulum");
 
 		std::cout << "Running match ... \n";
-		auto res = pattern->matchPointer(code);
+		auto res = pattern.matchPointer(code);
 		std::cout << "Done!\n";
 
 		// there should not be a unused variable

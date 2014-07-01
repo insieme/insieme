@@ -286,6 +286,8 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 	ss << sm.getFilename(varDecl->getLocStart()).str();   //.getHashValue();
 	ss << sm.getExpansionLineNumber (varDecl->getLocStart());
 	ss << sm.getExpansionColumnNumber(varDecl->getLocStart());
+	ss << "_";
+	ss << sm.getExpansionColumnNumber(varDecl->getLocEnd());
 
 	std::string name =  ss.str();
 	REMOVE_SYMBOLS(name);
@@ -298,19 +300,39 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 
 
 std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
-    std::string name = enumDecl->getQualifiedNameAsString();
-    //std::string name = type->getDecl()->getNameAsString();
+	std::stringstream ss;
+	ss << "_enum";
+
+	ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
+	ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
+	ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
+	ss << "_";
+	ss << sm.getExpansionColumnNumber(enumDecl->getLocEnd());
+
+	std::string name =  ss.str();
 	REMOVE_SYMBOLS(name);
-    if(name.empty() || name == "_anonymous_") {   // clang 3.4 might return _annonymous_ instad of empty
-		name = createNameForAnnon( "_anonEnum", enumDecl, sm);
-    }
-    return name;
+	boost::replace_all(name, ".", "_");  // names have full path, remove symbols
+	boost::replace_all(name, "/", "_");
+    boost::replace_all(name, "-", "_");
+
+	return name;
+
 }
 
-std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd) {
-    std::string name = "__insieme_enum_constant_" + ecd->getQualifiedNameAsString();
+std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm){
+	std::stringstream ss;
+	ss << "_enumCtnt";
+	ss << sm.getFilename(ecd->getLocStart()).str();   //.getHashValue();
+	ss << sm.getExpansionLineNumber (ecd->getLocStart());
+	ss << sm.getExpansionColumnNumber(ecd->getLocStart());
+	ss << "_";
+	ss << sm.getExpansionColumnNumber(ecd->getLocEnd());
+
+	std::string name =  ss.str();
 	REMOVE_SYMBOLS(name);
-    assert(!ecd->getQualifiedNameAsString().empty() && "what kind of enumconstant has no name?");
+	boost::replace_all(name, ".", "_");  // names have full path, remove symbols
+	boost::replace_all(name, "/", "_");
+    boost::replace_all(name, "-", "_");
     return name;
 }
 

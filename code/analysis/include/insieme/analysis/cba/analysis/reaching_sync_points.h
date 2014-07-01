@@ -36,9 +36,10 @@
 
 #pragma once
 
+#include "insieme/analysis/cba/framework/cba.h"
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/entities/program_point.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
+#include "insieme/analysis/cba/framework/generator/basic_program_point.h"
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/analysis/cba/utils/constraint_utils.h"

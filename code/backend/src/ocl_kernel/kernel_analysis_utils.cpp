@@ -295,7 +295,7 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 			if(globalAliases.find(pair.second) != globalAliases.end()) { // TODO test multiple levels of aliasing
 				globalAliases[pair.first] = globalAliases[pair.second];
 			} else {
-				MatchOpt&& match = globalUsed->matchPointer(pair.second);
+				MatchOpt&& match = globalUsed.matchPointer(pair.second);
 				if(match) {
 					globalAliases[pair.first] = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
 				}
@@ -309,7 +309,7 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 		ExpressionPtr idxExpr;
 
 		// check if access is to a global variable
-		MatchOpt&& match = globalAccess->matchPointer(idx);
+		MatchOpt&& match = globalAccess.matchPointer(idx);
 
 		if(match) {
 			globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());

@@ -41,24 +41,26 @@
 namespace insieme {
 namespace core {
 namespace pattern {
-namespace generator {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
-	const ListGeneratorPtr empty = std::make_shared<list::Empty>();
+	namespace generator {
 
-} // end namespace generator
+		const TreeGenerator root = TreeGenerator(std::make_shared<impl::tree::Root>());
+		const ListGenerator empty = ListGenerator(std::make_shared<impl::list::Empty>());
+
+
+	} // end namespace generator
+
+	TreeGenerator::TreeGenerator() : generator(generator::root.generator) {}
+
+	std::ostream& TreeGenerator::printTo(std::ostream& out) const {
+		return out << *generator;
+	}
+
+	std::ostream& ListGenerator::printTo(std::ostream& out) const {
+		return out << *generator;
+	}
+
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std

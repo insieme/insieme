@@ -59,7 +59,7 @@ TEST(id_generation, parallel_ops) {
 
 	#pragma omp parallel
 	{
-		gen_id.node = 42;
+		gen_id.node = 4;
 		gen_id.thread = omp_get_thread_num();
 		#pragma omp parallel
 		for(int i=0; i<TEST_COUNT; ++i) {

@@ -120,11 +120,11 @@ LoopInterchange::LoopInterchange(unsigned src, unsigned dest)
 core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress) const {
 	auto target = targetAddress.as<core::NodePtr>();
 
-	TreePatternPtr pattern = 
+	TreePattern pattern =
 		rT (
 			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		);
-	auto&& match = pattern->matchPointer( target );
+	auto&& match = pattern.matchPointer( target );
 
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
@@ -200,12 +200,12 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
 	}
 
-	TreePatternPtr pattern = 
+	TreePattern pattern =
 		rT ( 
 			var("loop", irp::forStmt( var("iter"), any, any, any, aT( recurse ) | any) ) 
 		);
 
-	auto&& match = pattern->matchPointer( target );
+	auto&& match = pattern.matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
@@ -259,13 +259,13 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 	//Scop scop = extractScopFrom(target);
 
 	//// Match non-perfectly nested loops
-	//TreePatternPtr pattern = 
+	//TreePattern pattern =
 		//rT ( 
 			//irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		//);
 	//LOG(DEBUG) << pattern;
 
-	//auto&& match = pattern->matchPointer( target );
+	//auto&& match = pattern.matchPointer( target );
 	//if (!match || !match->isVarBound("iter")) {
 		//throw InvalidTargetException("Invalid application point for loop  tiling");
 	//}
@@ -359,11 +359,11 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 	}
 	
 	// Match a non-perfectly nested loops
-	TreePatternPtr&& pattern = 
+	TreePattern&& pattern =
 		rT ( 
 			var("loop", irp::forStmt( any, any, any, any, aT(recurse) | aT(!irp::forStmt() ) ))
 		);
-	auto&& match = pattern->matchPointer( trg );
+	auto&& match = pattern.matchPointer( trg );
 
 	if (!match || !match->isVarBound("loop")) {
 		throw InvalidTargetException("Invalid application point for loop  tiling");
@@ -455,12 +455,12 @@ core::NodeAddress LoopFusion::apply(const core::NodeAddress& targetAddress) cons
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
-	TreePatternPtr pattern = 
+	TreePattern pattern =
 		aT(irp::compoundStmt(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		));
 
-	auto&& match = pattern->matchPointer( target );
+	auto&& match = pattern.matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}

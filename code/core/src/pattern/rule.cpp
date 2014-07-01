@@ -44,9 +44,9 @@ namespace core {
 namespace pattern {
 
 	core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
-		auto match = pattern->matchPointer(tree);
+		auto match = pattern.matchPointer(tree);
 		if (!match) return core::NodePtr();
-		return generator->generate(*match);
+		return generator.generate(*match);
 	}
 
 	core::NodePtr Rule::fixpoint(const core::NodePtr& tree) const {
@@ -66,9 +66,9 @@ namespace pattern {
 	}
 
 	TreePtr Rule::applyTo(const TreePtr& tree) const {
-		auto match = pattern->matchTree(tree);
+		auto match = pattern.matchTree(tree);
 		if (!match) return TreePtr();
-		return generator->generate(*match);
+		return generator.generate(*match);
 	}
 
 } // end namespace pattern

@@ -48,6 +48,7 @@
 #include "insieme/analysis/cba/analysis/reachability.h"
 #include "insieme/analysis/cba/analysis/jobs.h"
 #include "insieme/analysis/cba/analysis/thread_groups.h"
+#include "insieme/analysis/cba/analysis/thread_list.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
@@ -68,7 +69,6 @@ namespace cba {
 	// ----------------------------------------------------------------------------------------------------------------------------
 
 	// TODO: rewrite Collector => Derived
-
 
 	template<
 		typename InSetIDType,			// the type of the in-set handled by this constraint generator
@@ -189,6 +189,25 @@ namespace cba {
 	};
 
 
+
+	namespace {
+
+		/**
+		 * A factory function for a constrain linking the head of a thread to its spawn point(s).
+		 */
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp);
+
+		// an overload for one extra parameter
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&);
+
+		// an overload for two extra parameter
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0, typename Arg1>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&, const Arg1&);
+
+	}
+
 	template<
 		typename InSetIDType,
 		typename TmpSetIDType,
@@ -271,20 +290,32 @@ namespace cba {
 				// if the call context is empty, we are probably in the root of a thread
 				if (ctxt.isEmptyThreadContext()) return;	// if context is empty, we are not in a thread!
 
-				// get thread call context
+				// get spawning point
 				const auto& spawnID = ctxt.threadContext.front();
 				const auto& spwanStmt = cba.getStmt(spawnID.getSpawnLabel());
-				const auto& spawnCtxt = Context(spawnID.getSpawnContext());
+				const auto& spawnCallCtxt = spawnID.getSpawnContext();
 
-				assert_true(ctxt.threadContext << typename Context::thread_id() == typename Context::thread_context())
-					<< "Not yet supporting nested threads!\n";
+				// special case: if the last component is the root thread => use root thread
+				typename Context::thread_id mainThread;
+				if (ctxt.threadContext.back() == mainThread) {
 
-				// connect to spawn location (but we have to guess the thread context)
-				// TODO: this should actually be Atmp ...
-				this->connectSets(this->Ain, spwanStmt, spawnCtxt, this->Ain, call, ctxt, args..., constraints);
+					// get thread context of spawning point
+					auto spawnThreadCtxt = ctxt.threadContext << typename Context::thread_id();
 
+					// construct context of spawn call
+					const auto& spawnCtxt = Context(spawnCallCtxt, spawnThreadCtxt);
 
-//				assert_not_implemented() << "Return from thread not supported yet!";
+					// connect to spawn location (but we have to guess the thread context)
+					// TODO: this should actually be Atmp ...
+					this->connectSets(this->Atmp, spwanStmt, spawnCtxt, this->Ain, call, ctxt, args..., constraints);
+
+				} else {
+
+					// use a custom constraint collecting all potential spawn points
+					auto head = cba.getSet(this->Ain, call, ctxt, args...);
+					constraints.add(createSpawnPointConnectorConstraint<Context>(cba, ctxt.threadContext, head, this->Atmp, args...));
+
+				}
 
 			} else {
 
@@ -1152,7 +1183,177 @@ namespace cba {
 
 	};
 
+	namespace {
+
+		/**
+		 * ----------------------------- a Constraint Connecting the start of a thread with it's spawn point --------------------------------
+		 */
+
+		/**
+		 * A custom constraint connecting a thread to its spawn point(s).
+		 */
+		template<typename ValueLattice, typename Context>
+		struct SpawnPointConnector : public Constraint {
+
+			typedef typename ValueLattice::value_type value_type;
+			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
+			typedef typename ValueLattice::less_op_type less_op_type;
+
+			typedef std::function<TypedValueID<ValueLattice>(CBA&, const StatementInstance&, const Context&)> var_resolver_function_type;
+
+			typedef typename lattice<thread_list_analysis,analysis_config<Context>>::type thread_list_lattice;
+			typedef typename thread_list_lattice::value_type thread_list;
+			typedef typename Context::thread_context thread_type;
+
+			// the enclosing analysis instance
+			CBA& cba;
+
+			// the program point marking the start of the linked thread
+			TypedValueID<ValueLattice> head;
+
+			// the id of the nested thread
+			thread_type nestedThread;
+
+			// the variable listing all threads in the program
+			TypedValueID<thread_list_lattice> threadList;
+
+			// a function generation variables describing state of a given point
+			var_resolver_function_type varGen;
+
+			// the list of variables describing the state at potential spawn points
+			mutable std::vector<TypedValueID<ValueLattice>> spawns;
+
+			// the inputs referenced by this constraint
+			mutable std::vector<ValueID> inputs;
+
+		public:
+
+			SpawnPointConnector(
+					CBA& cba, const thread_type& nestedThread, const TypedValueID<ValueLattice>& head, const TypedValueID<thread_list_lattice>& threadList, const var_resolver_function_type& varGen
+				) : Constraint(toVector<ValueID>(threadList), toVector<ValueID>(head), true, true),
+				  cba(cba), head(head), nestedThread(nestedThread), threadList(threadList), varGen(varGen)
+			{
+				inputs.push_back(threadList);
+			}
+
+			virtual Constraint::UpdateResult update(Assignment& ass) const {
+				// the operator merging values
+				meet_assign_op_type meet_assign_op;
+
+				// update the value by merging all known sources
+				auto& value = ass[head];
+				bool changed = false;
+				for(const auto& cur : spawns) {
+					changed = meet_assign_op(value, ass[cur]) || changed;
+				}
+
+				// check whether something has changed
+				return (changed) ? Constraint::Incremented : Constraint::Unchanged;
+			}
+
+			virtual bool updateDynamicDependencies(const Assignment& ass) const {
+
+				// get list of threads
+				const thread_list& threads = ass[threadList];
+
+				bool changed = false;
+				for(const auto& t : threads) {
+
+					// check whether this thread is a potential parent thread
+					if ((t >> nestedThread.front()) == nestedThread) {
+
+						// get spawning statement
+						const auto& spawnStmt = cba.getStmt(nestedThread.front().getSpawnLabel());
+
+						// construct context of spawn call
+						const auto& spawnCtxt = Context(nestedThread.front().getSpawnContext(), t);
+
+						// get variable referencing spawn point
+						auto var = varGen(cba, spawnStmt, spawnCtxt);
+
+						// check whether this location is already linked
+						if (::contains(spawns, var)) continue;
+
+						// add to list of potential spawning locations
+						spawns.push_back(var);
+						inputs.push_back(var);
+						changed = true;
+					}
+				}
+
+				// indicated whether some dependencies have changed
+				return changed;
+			}
+
+			virtual bool check(const Assignment& ass) const {
+
+				// check whether dependencies are up-to-date
+				if (updateDynamicDependencies(ass)) return false;
+
+				// check whether data to be read is in result set
+				less_op_type less_op;
+				const auto& value = ass[head];
+				for(const auto& cur : spawns) {
+					if (!less_op(ass[cur], value)) return false;
+				}
+
+				// everything is fine
+				return true;
+			}
+
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				for(const auto& cur : spawns) {
+					out << cur << " -> " << head << "[label=\"spawns\"]\n";
+				}
+				return out;
+//				return out << threadList << " -> " << head << "[label=\"defines\"]\n";
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "union({" << ::join(",", spawns) << "}) sub " << head;
+			}
+
+			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+				return inputs;
+			}
+
+		};
+
+		template<typename Context>
+		TypedValueID<typename lattice<thread_list_analysis,analysis_config<Context>>::type>
+		getThreadListVariable(CBA& cba) {
+			return cba.getSet<Context>(ThreadList);
+		}
+
+		/**
+		 * A factory function for a constrain linking the head of a thread to its spawn point(s).
+		 */
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp) {
+			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
+				return cba.getSet(tmp, stmt, ctxt);
+			});
+		}
+
+		// an overload for one extra parameter
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0) {
+			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
+				return cba.getSet(tmp, stmt, ctxt, arg0);
+			});
+		}
+
+		// an overload for two extra parameter
+		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0, typename Arg1>
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0, const Arg1& arg1) {
+			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
+				return cba.getSet(tmp, stmt, ctxt, arg0, arg1);
+			});
+		}
+
+	}
 
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
+

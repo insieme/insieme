@@ -481,18 +481,23 @@ unsigned char *dithered_image;
 #ifdef SH_MEM
   if (shmem_flag)
   {
+    static int init_flag = 0;
+    if(init_flag) {
+      while (1)
+      {
+        XEvent xev;
+          
+        XNextEvent(display, &xev);
+        if (xev.type == CompletionType)
+          break;
+      }
+    }
+    else 
+      init_flag = 1;
+
     XShmPutImage(display, window, gc, ximage, 
                  0, 0, 0, 0, ximage->width, ximage->height, True);
     XFlush(display);
-      
-    while (1)
-    {
-      XEvent xev;
-        
-      XNextEvent(display, &xev);
-      if (xev.type == CompletionType)
-        break;
-    }
   }
   else 
 #endif

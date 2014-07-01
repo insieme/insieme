@@ -39,6 +39,9 @@
 #define __GUARD_IRT_OPTIMIZER_H
 
 #include "declarations.h"
+
+#include "utils/lookup_tables.h"
+
 //#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 
@@ -64,6 +67,12 @@ typedef struct _irt_optimizer_resources {
     _data_type__ cpu_energy;
     #define ISOLATE_METRIC
     #define ISOLATE_CPU_ENERGY
+    #include "irt_metrics.def"
+
+    #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+    _data_type__ wall_time;
+    #define ISOLATE_METRIC
+    #define ISOLATE_WALL_TIME
     #include "irt_metrics.def"
 
     #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
@@ -107,7 +116,7 @@ uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
     value = (1000003 * value) ^ id.frequency;
     value = value ^ (3);
 
-    return (value == -1) ? -2 : value;
+    return (value == (uint32)-1) ? -2 : value;
 }
 
 typedef struct _irt_optimizer_runtime_data {
@@ -124,11 +133,10 @@ IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_opti
 #endif
 
 uint64_t irt_optimizer_pick_in_range(uint64_t max);
-void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi);
+void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
-void irt_optimizer_apply_dct(irt_worker* self);
-void irt_optimizer_remove_dct(uint32 outer_worker_to_enable_count);
+uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant);
 irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var);
 void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data);
 

@@ -50,6 +50,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
@@ -92,7 +93,7 @@ namespace {
 		for(i = decl->redecls_begin(); i != e; ++i) {
 
 			if (llvm::isa<clang::TypedefDecl> (*i)) {
-				std::cout << "this is a typedef aliased type" << std::endl;
+				std::cerr << "this is a typedef aliased type" << std::endl;
 				assert(false);
 			}
 
@@ -117,39 +118,6 @@ namespace {
 		return NULL;
 	}
 
-	core::TypePtr attachEnumName( const core::TypePtr& enumTy, const clang::EnumDecl* enumDecl){
-		auto enumConstantPrinter = [&](std::ostream& out, const clang::EnumConstantDecl* ecd) {
-					const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(ecd);
-					const string& enumConstantInitVal = ecd->getInitVal().toString(10);
-					out << enumConstantName << "=" << enumConstantInitVal;
-				};
-
-		//enumTypes can be shadowed if redeclared in different scope (similar to variables)
-		//we add all enumTypes to the global scope so the enumconstants need a distinguishable name
-		//(delivered by buildNameForEnumConstant)
-		if(!core::annotations::hasNameAttached(enumTy)) {
-			std::stringstream ss;
-			ss << join(", ", enumDecl->enumerator_begin(), enumDecl->enumerator_end(), enumConstantPrinter);
-			core::annotations::attachName(enumTy, ss.str());
-		} else {
-			std::stringstream annotation;
-			annotation << core::annotations::getAttachedName(enumTy);
-			// go through all possible enumConstants and attach them to the enumTy, if they aren't
-			// there already
-			for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
-				const clang::EnumConstantDecl* enumConstant = *it;
-				std::stringstream attachment;
-                enumConstantPrinter(attachment, enumConstant);
-
-                //check if element is already in enum list
-                if(annotation.str().find(attachment.str()) == std::string::npos) {
-                    annotation << ", " << attachment.str();
-                }
-			}
-			core::annotations::attachName(enumTy, annotation.str());
-		}
-		return enumTy;
-	}
 } // end anonymous namespace
 
 namespace insieme {
@@ -410,10 +378,10 @@ core::TypePtr Converter::TypeConverter::VisitVectorType(const VectorType* vecTy)
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-	core::TypePtr retTy = convert( typedefType->getDecl()->getUnderlyingType());
+	auto underType = typedefType->getDecl()->getUnderlyingType();
+	core::TypePtr retTy = convert(underType);
 	LOG_TYPE_CONVERSION( typedefType, retTy );
 	frontend_assert(retTy);
-
     return  retTy;
 }
 
@@ -471,34 +439,22 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		return retTy;
 	}
 
+	//TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
 	// handle enums => always just integers
 	if(def->getTagKind() == clang::TTK_Enum) {
-		//TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
-
 		const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
 		frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
-
-       	bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(enumDecl->getSourceRange().getBegin());
-
-
-        const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getCompiler().getSourceManager());
 		const auto& ext= mgr.getLangExtension<core::lang::EnumExtension>();
+        std::vector<core::TypePtr> enumCtants;
+        for(EnumDecl::enumerator_iterator it=enumDecl->enumerator_begin(), end=enumDecl->enumerator_end();it!=end;it++) {
+			const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it, convFact.getSourceManager());
+			enumCtants.push_back(ext.getEnumConstantType(enumConstantName, (*it)->getInitVal().toString(10)));
+		};
 
-		core::TypePtr enumTy = ext.getEnumType(enumTypeName);
-		LOG_TYPE_CONVERSION( tagType, enumTy );
-
-		if(systemHeaderOrigin) {
-			//if the enumType comes from a system provided header we don't convert it
-			//TODO let interceptor take care of
-       		return enumTy;
-		}
-
-		//takes a enumConstantDecl and appends "enumConstantName=enumConstantInitValue" to the stream
-		enumTy =  attachEnumName( enumTy, enumDecl);
-		VLOG(2) << "enumType " << enumTy << " attachedName: " << core::annotations::getAttachedName(enumTy) << "(" << tagType << ")";
-
-		//return enum type
-        return enumTy;
+        const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getSourceManager());
+        auto enumType = ext.getEnumType(enumTypeName, enumCtants);
+		core::annotations::attachName(enumType, enumDecl->getNameAsString());
+		return enumType;
    	}
 
 	// handle struct/union/class
@@ -706,7 +662,12 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 			if(systemHeaderOrigin) {
 				VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
 				if( core::annotations::hasNameAttached(symbol) ) {
-					name  = (recDecl->isStruct() ? "struct " : "" ) + core::annotations::getAttachedName(symbol);
+                    if(recDecl->isStruct())
+					    name  = "struct " + core::annotations::getAttachedName(symbol);
+                    else if(recDecl->isUnion())
+					    name  = "union " + core::annotations::getAttachedName(symbol);
+                    else
+					    name  = core::annotations::getAttachedName(symbol);
 					core::annotations::attachName(symbol,name);
 				}
 				convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);

@@ -66,6 +66,8 @@ void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *re
 /* Registers a new event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code \
  * If the event has already occurred the handler will not be registered and the amount of occurrences will be returned */ \
 uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
+/* Checks if event handler exists, otherwise returns -1; returns the number of occurances and registers the event */ \
+int64 irt_##__short__##_event_check_exists_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
 /* Removes a given event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code */ \
 void irt_##__short__##_event_remove(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
 /* Triggers the event event_code on ##__short__##_id. \
@@ -99,6 +101,8 @@ IRT_MAKE_ID_TYPE(wg_event_register)
 typedef enum _irt_wg_event_code {
 	IRT_WG_EV_COMPLETED,				// used for WI joining
 	IRT_WG_EV_BARRIER_COMPLETE,			// indicates all WIs have reached a barrier
+	IRT_WG_EV_BARRIER_ENTERED,			// indicates how many wis have entered a barrier
+	IRT_WG_EV_BARRIER_EXITED,			// indicates how many wis have exited a barrier
 	IRT_WG_EV_NUM // sentinel
 } irt_wg_event_code;
 

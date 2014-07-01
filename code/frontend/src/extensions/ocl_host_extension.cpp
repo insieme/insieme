@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -84,16 +84,14 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	core::ExpressionList list;
 	list.push_back(root.as<core::ExpressionPtr>());
 
-//std::cout << printer::PrettyPrinter(root) << std::endl;
-
 	prog = builder.program(list);
+
+//std::cout << printer::PrettyPrinter(root) << std::endl;
 
 	return prog;
 }
 
 IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
-	iclRunKernel = NULL;
-	derefOfIclBuffer = NULL;
 }
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
@@ -106,23 +104,18 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	if(derefOfIclBuffer == NULL)
-		derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
-				pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
+	core::pattern::TreePattern derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(
+																					builder.arrayType(builder.genericType("_icl_buffer")))),
+																					pattern::atom(gen.getRefDeref()), 
+																					pattern::single(var("buffer", pattern::any)));
 
-//	if(CallExprPtr call = irExpr.isa<CallExprPtr>()) {
-//		if(core::analysis::isCallOf(call, builder.literal("icl_run_kernel", call->getFunctionExpr()->getType()))) {
-//			// remove deref on icl_buffers to fake non const behavior
-//dumpPretty(call);
-//		}
-//	}
 
 	NodeMap replacements;
-
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
+
 		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
-			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
+			MatchOpt match = derefOfIclBuffer.matchPointer(arg);
 			if(match) {
 				replacements[match.get().getRoot()] = match.get()["buffer"].getValue();
 			}
