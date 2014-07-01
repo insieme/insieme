@@ -112,6 +112,23 @@ uint64_t irt_optimizer_pick_in_range(uint64_t max) {
 uint32 irt_g_available_freqs[128];
 uint32 irt_g_available_freq_count = UINT_MAX;
 
+void get_available_freqs() {
+    if(!irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count))
+        return;
+
+    // scaling_available_frequencies not available
+    
+    uint32 max = _irt_cpu_freq_get(0, "cpuinfo_max_freq");
+    uint32 min = _irt_cpu_freq_get(0, "cpuinfo_min_freq");
+
+    irt_g_available_freq_count = 0;
+    do {
+        irt_g_available_freqs[irt_g_available_freq_count++] = max;
+        max -= 100;
+    } while(max >= min);
+}
+
+
 void irt_optimizer_objective_init(irt_context *context) {
     for(int i=0; i<context->impl_table_size; i++) { 
         for(int j=0; j<context->impl_table[i].num_variants; j++) { 
@@ -131,7 +148,7 @@ void irt_optimizer_objective_init(irt_context *context) {
     }
 
 #ifndef _GEMS
-	irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count);
+    get_available_freqs();
 #endif
 }
 
