@@ -38,6 +38,9 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_visitor.h"
+
+
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -46,6 +49,12 @@ namespace transform {
 namespace datalayout {
 
 using namespace core;
+
+//ExpressionPtr removeRevVar(ExpressionPtr refVar) {
+//	if(CallExprPtr call = isCall)
+//
+//	return refVar;
+//}
 
 AosToSoa::AosToSoa(core::NodePtr toTransform) {
 	NodeManager& mgr = toTransform->getNodeManager();
@@ -75,8 +84,34 @@ AosToSoa::AosToSoa(core::NodePtr toTransform) {
 		}
 		newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
 
-//		std::cout << struct_.first->getType() << std::endl << newStructTypes[struct_.first] << std::endl;
+//std::cout << struct_.first->getType() << std::endl << newStructTypes[struct_.first] << std::endl;
 	}
+
+	NodeMap replacements;
+	visitDepthFirst(toTransform, [&](const DeclarationStmtPtr& decl) {
+		VariablePtr oldVar = decl->getVariable();
+		if(newStructTypes.find(oldVar) != newStructTypes.end()) {
+			RefTypePtr newType = newStructTypes[oldVar].as<RefTypePtr>();
+			VariablePtr newStruct = builder.variable(newType);
+
+			std::vector<StatementPtr> allDecls;
+			allDecls.push_back(decl);
+			allDecls.push_back(builder.declarationStmt(newStruct, builder.undefinedVar(newType)));
+
+			// split up initialization expressions
+			StructTypePtr newStructType = newType->getElementType().as<StructTypePtr>();
+			for(NamedTypePtr memberType : newStructType->getElements()) {
+				allDecls.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
+						core::transform::replaceAll(mgr, decl->getInitialization(), oldVar->getType(), memberType->getType()).as<ExpressionPtr>()));
+			}
+
+			replacements[decl] = builder.compoundStmt(allDecls);
+		}
+	});
+
+//	NodePtr a = core::transform::replaceAll(mgr, toTransform, replacements);
+//
+//	dumpPretty(a);
 }
 
 
