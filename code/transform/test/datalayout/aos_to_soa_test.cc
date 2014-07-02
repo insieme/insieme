@@ -55,7 +55,8 @@ TEST(DataLayout, AosToSoa) {
 	auto code = builder.normalize(builder.parseStmt(
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
-		"	ref<ref<array<twoElem,1>>> a = var(var(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
+		"	ref<ref<array<twoElem,1>>> a;"// = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
+		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp = ref.deref(a)[i];"
 		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
