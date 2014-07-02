@@ -93,7 +93,6 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 
 IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
 	iclRunKernel = nullptr;
-	derefOfIclBuffer = nullptr;
 }
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
@@ -106,20 +105,16 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	if(derefOfIclBuffer == nullptr)
-		derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(builder.arrayType(builder.genericType("_icl_buffer")))),
-				pattern::atom(gen.getRefDeref()), pattern::single(var("buffer", pattern::any)));
+	core::pattern::TreePatternPtr derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(
+																					builder.arrayType(builder.genericType("_icl_buffer")))),
+																					pattern::atom(gen.getRefDeref()), 
+																					pattern::single(var("buffer", pattern::any)));
 
-//	if(CallExprPtr call = irExpr.isa<CallExprPtr>()) {
-//		if(core::analysis::isCallOf(call, builder.literal("icl_run_kernel", call->getFunctionExpr()->getType()))) {
-//			// remove deref on icl_buffers to fake non const behavior
-//dumpPretty(call);
-//		}
-//	}
 
 	NodeMap replacements;
-
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
+		assert(derefOfIclBuffer.get());
+
 		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
 			MatchOpt match = derefOfIclBuffer->matchPointer(arg);

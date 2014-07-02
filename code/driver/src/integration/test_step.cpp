@@ -200,7 +200,7 @@ namespace integration {
 				return retVal;
 			}
 
-			TestResult runCommand(const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
+			TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig, const string& cmd, const string& producedFile="") {
 
 				vector<string> producedFiles;
 				producedFiles.push_back(setup.stdOutFile);
@@ -258,7 +258,7 @@ namespace integration {
 
 				// if it is a mock-run do nothing
 				if (setup.mockRun) {
-					return TestResult(true,metricResults,"","",env.str() + cmd + outfile);
+					return TestResult(stepName,0,true,metricResults,"","",env.str() + cmd + outfile);
 				}
 
 				string perfString("");
@@ -304,10 +304,13 @@ namespace integration {
 				 * cannot be distinguished).
 				 */
 
-				int actualReturnCode = WEXITSTATUS(retVal) - 128;
+				int actualReturnCode = WEXITSTATUS(retVal);
 
-				if(actualReturnCode > 0)
-					std::cerr << "Killed by signal " << actualReturnCode << "\n";
+				if(actualReturnCode > 128) {
+					actualReturnCode -= 128;
+					if(actualReturnCode > 0)
+						std::cerr << "Killed by signal " << actualReturnCode << "\n";
+				}
 
 				//TODO change this to handle SIGINT signal
 				if(retVal==512)
@@ -366,11 +369,11 @@ namespace integration {
 
 				// check whether execution has been aborted by the user
 				if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
-					return TestResult::userAborted(metricResults, output, stdErr, cmd);
+					return TestResult::userAborted(stepName,metricResults, output, stdErr, cmd);
 				}
 
 				// produce regular result
-				return TestResult(retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
+				return TestResult(stepName,actualReturnCode,retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
 			}
 
 			namespace fs = boost::filesystem;
@@ -454,7 +457,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				},std::set<std::string>(),COMPILE);
 			}
 
@@ -478,7 +481,7 @@ namespace integration {
 					set.numThreads=numThreads;
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -541,7 +544,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				},std::set<std::string>(),COMPILE);
 			}
 
@@ -565,7 +568,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -624,7 +627,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str(),irFile);
+					return runCommand(name, set, props, cmd.str(),irFile);
 				}, deps,COMPILE);
 			}
 
@@ -681,7 +684,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -747,7 +750,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,COMPILE);
 			}
 
@@ -776,7 +779,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,RUN);
 			}
 
@@ -831,7 +834,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,CHECK);
 			}
 
@@ -870,7 +873,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,CHECK);
 			}
 
@@ -904,7 +907,7 @@ namespace integration {
 					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runCommand(set, props, cmd.str());
+					return runCommand(name, set, props, cmd.str());
 				}, deps,CHECK);
 			}
 

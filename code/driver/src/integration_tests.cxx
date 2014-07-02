@@ -194,16 +194,20 @@ void signal_callback_handler(int signum) {
     #pragma omp master
     {
         if(running) {
+            //make sure that no other processes are forked anymore
             running=false;
             for(auto pid : itc::pids) {
-                kill(pid, signum);
+                kill(pid, SIGKILL);
             }
-            //print statistics
-            printSummary();
-            //exit
-            exit(signum);
         }
     }
+
+    sleep(3);
+
+    //print statistics
+    printSummary();
+
+    exit(0);
 }
 
 int main(int argc, char** argv) {
@@ -236,7 +240,7 @@ int main(int argc, char** argv) {
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % insiemeVersion << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s)");
+	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repeditions) + " time(s)");
 	std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
@@ -256,7 +260,8 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	int maxCounterStringLength = to_string(cases.size()).length();
+	int totalTests = cases.size() * options.num_repeditions;
+	int maxCounterStringLength = to_string(totalTests).length();
 	string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
 
 	// only list test cases if requested so
