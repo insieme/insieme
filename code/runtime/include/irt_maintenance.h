@@ -130,8 +130,10 @@ void irt_maintenance_init() {
 
 // cleanup maintenance data structures
 void irt_maintenance_cleanup() {
+	irt_mutex_lock(&irt_g_maintenance_mutex);
 	irt_g_maintenance_thread_active = false;
 	irt_cond_wake_one(&irt_g_maintenance_cond);
+	irt_mutex_unlock(&irt_g_maintenance_mutex);
 	irt_thread_join(&irt_g_maintenance_thread);
 	for(uint32 i=0; i<IRT_MAINTENANCE_SLOTS; ++i) {
 		irt_spin_destroy(&irt_g_maintenance_events[i].lock);
@@ -230,8 +232,8 @@ void* irt_maintenance_thread_func(void * data) {
 		}
 
 		// sleep until next required timestep, if maintenance is still active
+		irt_mutex_lock(&irt_g_maintenance_mutex);
 		if(irt_g_maintenance_thread_active) {
-			irt_mutex_lock(&irt_g_maintenance_mutex);
 			uint64 maintenance_time_ns = (irt_time_ns() - starttime_ns);
 			uint64 interval_ns = irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval * 1000 * 1000;
 			if(maintenance_time_ns < interval_ns) {
@@ -242,8 +244,8 @@ void* irt_maintenance_thread_func(void * data) {
 			} else {
 				IRT_WARN("Maintenance time (%lu ns) exceeded required time slot (%lu ns)", maintenance_time_ns, interval_ns);
 			}
-			irt_mutex_unlock(&irt_g_maintenance_mutex);
 		}
+		irt_mutex_unlock(&irt_g_maintenance_mutex);
 	}
 	return NULL;
 }
