@@ -25,7 +25,7 @@ macro ( add_unit_test case_name )
 					--show-reachable=no
 					--track-fds=yes
 					--error-exitcode=1
-					--track-origins=yes
+					--track-origins=no
 					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 				WORKING_DIRECTORY
@@ -44,7 +44,7 @@ macro ( add_unit_test case_name )
 					--show-reachable=no
 					--track-fds=yes
 					--error-exitcode=1
-					--track-origins=yes
+					--track-origins=no
 					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 				WORKING_DIRECTORY
