@@ -231,19 +231,19 @@ namespace ocl_kernel {
 		bool isGetIDHelper(const core::ExpressionPtr& fun, int value) {
 			core::NodeManager manager;
 			core::IRBuilder builder(manager);
-			insieme::core::pattern::TreePatternPtr functionID = irp::lambdaExpr(tr::any, aT(tr::any,
+			insieme::core::pattern::TreePattern functionID = irp::lambdaExpr(tr::any, aT(tr::any,
 									  irp::lambda(tr::any, *tr::any, var("body", irp::compoundStmt(*tr::any)))));
 
-			insieme::core::pattern::TreePatternPtr getThreadID = tr::aT(irp::callExpr(irp::literal("getThreadID"), tr::var("lit") << *tr::any));
+			insieme::core::pattern::TreePattern getThreadID = tr::aT(irp::callExpr(irp::literal("getThreadID"), tr::var("lit") << *tr::any));
 
-			auto&& matchFunctionID = functionID->matchPointer(fun);
+			auto&& matchFunctionID = functionID.matchPointer(fun);
 			if (matchFunctionID) {
 				core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(matchFunctionID->getVarBinding("body").getValue());
 				if(body->getStatements().size() >= 2) {
 					core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
 					core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
-					auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
-					auto&& matchGetThreadID2 = getThreadID->matchPointer(stmt2);
+					auto&& matchGetThreadID1 = getThreadID.matchPointer(stmt1);
+					auto&& matchGetThreadID2 = getThreadID.matchPointer(stmt2);
 					if(matchGetThreadID1) {
 						core::LiteralPtr lit = static_pointer_cast<const core::Literal>(matchGetThreadID1->getVarBinding("lit").getValue());
 						if (value == 0 && matchGetThreadID1 && matchGetThreadID2)			  return true;
@@ -563,14 +563,14 @@ namespace {
                 // so we can add then the __global to gl
                 utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varToGlobalize;
                 std::vector<core::VariablePtr> varVec;
-                insieme::core::pattern::TreePatternPtr declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
+                insieme::core::pattern::TreePattern declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
                 visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
                     auto&& var = decl->getVariable();
                     auto&& init = decl->getInitialization();
 
                     const core::TypePtr elementType = core::analysis::getReferencedType(core::analysis::getReferencedType(var->getType()));
                     if (elementType && elementType->getNodeType() == core::NT_ArrayType){
-                        auto&& match = declUnwrapGlobal->matchPointer(init);
+                        auto&& match = declUnwrapGlobal.matchPointer(init);
                         if (match) {
                             core::VariablePtr newVar = builder.variable(extensions.getType(AddressSpace::GLOBAL, var->getType()));
                             varToGlobalize.insert(std::make_pair(var, newVar));
@@ -623,11 +623,11 @@ namespace {
 				//std::cout << "Core Before: " << core << std::endl;
 				utils::map::PointerMap<core::NodePtr, core::NodePtr> nodeMap;
 				// TODO: improve pattern
-				insieme::core::pattern::TreePatternPtr convertPattern = irp::callExpr(tr::any, tr::any,
+				insieme::core::pattern::TreePattern convertPattern = irp::callExpr(tr::any, tr::any,
 					tr::var("expr") << irp::literal(irp::genericType("type", *tr::any, *tr::any), tr::any)); // list 2 arguments
 
 				visitDepthFirst(core, [&](const core::CallExprPtr& call) {
-					auto&& match = convertPattern->matchPointer(call);
+					auto&& match = convertPattern.matchPointer(call);
 					if (match) {
 						core::ExpressionPtr exp = static_pointer_cast<const core::Expression>(match->getVarBinding("expr").getValue());
 						core::CallExprPtr convert =  builder.callExpr(call->getType(), ext.convertBuiltin, exp, builder.getTypeLiteral(call->getType()));

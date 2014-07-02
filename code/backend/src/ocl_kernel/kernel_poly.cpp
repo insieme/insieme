@@ -128,9 +128,9 @@ ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
  */
 ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
 
-	TreePatternPtr kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
+	TreePattern kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
 
-	MatchOpt&& match = kernelCall->matchPointer(call);
+	MatchOpt match = kernelCall.matchPointer(call);
 	if(match) {
 		return dynamic_pointer_cast<const Expression>(match->getVarBinding("kernel").getValue());
 	}

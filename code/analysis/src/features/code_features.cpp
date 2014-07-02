@@ -793,10 +793,10 @@ namespace {
 		return std::make_shared<PatternCodeFeature>(name, desc, spec);
 	}
 
-	PatternCodeFeatureSpec::PatternCodeFeatureSpec(const core::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode) :
+	PatternCodeFeatureSpec::PatternCodeFeatureSpec(const core::pattern::TreePattern& pattern, FeatureAggregationMode mode) :
 		CodeFeatureSpec(extractor_function(
 			generalizeNodeType([=](const core::CallExprPtr& node)->simple_feature_value_type {
-				insieme::core::pattern::MatchOpt&& match = pattern->matchPointer(node);
+				insieme::core::pattern::MatchOpt&& match = pattern.matchPointer(node);
 				return !!match;
 			})
 	  ), mode) {}

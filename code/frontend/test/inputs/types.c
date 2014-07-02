@@ -189,12 +189,14 @@ void mem_alloc() {
 }
 /*
 enum E{ ON, OFF=10 };
-
-void test_enum() {
-	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9)"
-	enum E a = ON;
-	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17)"
-	enum E b = OFF;
+//
+//	COMMENTED AS LONG AS THERE IS NOT A BETTER WAY TO HANDLE THIS
+//
+//void test_enum() {
+//	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9)"
+//	enum E a = ON;
+//	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17)"
+//	enum E b = OFF;
 }
 */
 

@@ -51,7 +51,6 @@ namespace insieme {
 namespace core {
 namespace pattern {
 	class TreePattern;
-	typedef std::shared_ptr<TreePattern> TreePatternPtr;
 }
 }
 
@@ -214,7 +213,7 @@ namespace features {
 
 	public:
 
-		PatternCodeFeatureSpec(const core::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode = FA_Weighted);
+		PatternCodeFeatureSpec(const core::pattern::TreePattern& pattern, FeatureAggregationMode mode = FA_Weighted);
 
 		PatternCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : CodeFeatureSpec(extractor, mode) {}
 	};

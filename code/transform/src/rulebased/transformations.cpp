@@ -188,7 +188,7 @@ namespace rulebased {
 		 * start, end and step.
 		 */
 		MatchExpressionPtr deltaRange(const string& var_start, const string& var_end, const string& var_step) {
-			return std::make_shared<expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+			return std::make_shared<generator::impl::expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
 				core::NodeManager& manager = match.getRoot()->getNodeManager();
 				core::IRBuilder builder(manager);
 

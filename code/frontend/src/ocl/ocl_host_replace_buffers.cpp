@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -163,7 +163,7 @@ core::NodePtr BufferReplacer::getTransformedProgram() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
+	TreePattern clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
 			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) <<
 			pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
 	collectInformation(clCreateBuffer);
@@ -179,18 +179,18 @@ core::NodePtr BufferReplacer::getTransformedProgram() {
 	return prog;
 }
 
-void BufferReplacer::collectInformation(TreePatternPtr& clCreateBuffer) {
+void BufferReplacer::collectInformation(TreePattern& clCreateBuffer) {
 	NodeManager& mgr = prog->getNodeManager();
 	NodeAddress pA(prog);
 	IRBuilder builder(mgr);
 
 	const lang::BasicGenerator& gen = builder.getLangBasic();
 
-	TreePatternPtr bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
+	TreePattern bufferDecl = pattern::var("type", irp::declarationStmt(pattern::var("buffer", pattern::any),
 			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateBuffer))));
-	TreePatternPtr bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(gen.getRefAssign())),
+	TreePattern bufferAssign = irp::callExpr(pattern::any, pattern::var("type", irp::atom(gen.getRefAssign())),
 			pattern::var("buffer", pattern::any) << clCreateBuffer);
-	TreePatternPtr bufferPattern = bufferDecl | bufferAssign;
+	TreePattern bufferPattern = bufferDecl | bufferAssign;
 
 	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
 		NodePtr flagArg = createBuffer["flags"].getValue();
@@ -276,13 +276,13 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 	NodeManager& mgr = prog.getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePatternPtr subscriptPattern = aT(irp::subscript1D("operation",
+	TreePattern subscriptPattern = aT(irp::subscript1D("operation",
 			pattern::var("variable", irp::variable()) | irp::callExpr(pattern::any, pattern::var("variable", irp::variable()))));
 
 	for_each(clMemMeta, [&](std::pair<ExpressionAddress, ClMemMetaInfo> meta) {
 		ExpressionAddress bufferExpr = utils::extractVariable(meta.first);
 
-		AddressMatchOpt subscript = subscriptPattern->matchAddress(bufferExpr);
+		AddressMatchOpt subscript = subscriptPattern.matchAddress(bufferExpr);
 		if(subscript) {
 			ExpressionAddress expr = dynamic_address_cast<const Expression>(subscript.get()["variable"].getValue());
 			TypePtr newArrType = transform::replaceAll(mgr, expr->getType(), clMemTy, meta.second.type).as<TypePtr>();
@@ -406,7 +406,7 @@ TypePtr IclBufferReplacer::getIclBufferType() {
 	return iclBufferTy;
 }
 core::NodePtr IclBufferReplacer::getTransformedProgram() {
-	TreePatternPtr iclCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
+	TreePattern iclCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("icl_create_buffer"),
 			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any)));
 
 	collectInformation(iclCreateBuffer);

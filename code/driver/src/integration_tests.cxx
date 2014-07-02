@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,6 @@
 #include <iostream>
 #include <iomanip>
 #include <utility>
-#include <signal.h>
 
 #include <omp.h>
 
@@ -78,12 +77,6 @@ using itc::TestStep;
 using itc::TestResult;
 
 namespace tf = itc::testFramework;
-
-bool running;
-int totalTests;
-vector<TestCase> ok;
-vector<TestCase> failed;
-
 namespace{
 	tf::Options parseCommandLine(int argc, char** argv) {
 		static const tf::Options fail(false);
@@ -165,57 +158,7 @@ namespace{
 	}
 }
 
-
-void printSummary() {
-    // output width in characters
-	unsigned screenWidth = 120;
-    tf::Colorize colorize(true);
-
-	// formatting string for center aligned output
-	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
-
-	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
-	string footerFailedListFormat("   - %-" + to_string(screenWidth-8) + "s");
-
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
-	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
-	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
-	for(const auto& cur : failed) {
-		std::cout << "#" << colorize.red() << boost::format(footerFailedListFormat) % cur.getName() << colorize.reset() << " #\n";
-	}
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-}
-
-
-void signal_callback_handler(int signum) {
-    #pragma omp master
-    {
-        if(running) {
-            //make sure that no other processes are forked anymore
-            running=false;
-            for(auto pid : itc::pids) {
-                kill(pid, SIGKILL);
-            }
-        }
-    }
-
-    sleep(3);
-
-    //print statistics
-    printSummary();
-
-    exit(0);
-}
-
 int main(int argc, char** argv) {
-    //register custom signal handler
-    signal(SIGINT, signal_callback_handler);
-    //signal(SIGABRT, signal_callback_handler);
-    running = true;
-
 	//TODO custom root config file
 
 	Logger::setLevel(WARNING);
@@ -225,7 +168,6 @@ int main(int argc, char** argv) {
 
 	// output width in characters
 	unsigned screenWidth = 120;
-
 	// formatting string for center aligned output
 	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
 
@@ -298,123 +240,144 @@ int main(int argc, char** argv) {
 	highlight.insert("insiemecc_c++_execute");
 
 	// run test cases in parallel
+	vector<TestCase> ok;
+	vector<TestCase> failed;
+	map<TestCase,TestResult> failedSteps;
 	omp_set_num_threads(options.num_threads);
 
 	bool panic = false;
-	totalTests = cases.size() * options.num_repeditions;
 	int act = 0;
 
 	for(int i=0; i<options.num_repeditions; i++) {
 
 		#pragma omp parallel for schedule(dynamic)
 		for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
-            if(running) {
-                const auto& cur = *it;
+			const auto& cur = *it;
 
-                if (panic) continue;
+			if (panic) continue;
 
-                // filter applicable steps based on test case
-                vector<TestStep> list = itc::filterSteps(steps, cur);
+			// filter applicable steps based on test case
+			vector<TestStep> list = itc::filterSteps(steps, cur);
 
-                // schedule resulting steps
-                list = itc::scheduleSteps(list,cur);
+			// schedule resulting steps
+			list = itc::scheduleSteps(list,cur);
 
-                // run steps
-                vector<pair<string, TestResult>> results;
-                bool success = true;
-                for(const auto& step : list) {
-                    auto res = step.run(setup, cur);
-                    results.push_back(std::make_pair(step.getName(), res));
-                    if (!res || res.hasBeenAborted()) {
-                        success = false;
-                        break;
-                    }
-                }
+			// run steps
+			vector<pair<string, TestResult>> results;
+			bool success = true;
+			for(const auto& step : list) {
+				auto res = step.run(setup, cur);
+				results.push_back(std::make_pair(step.getName(), res));
+				if (!res || res.hasBeenAborted()) {
+					failedSteps[cur] = res;
+					success = false;
+					break;
+				}
+			}
 
-                // all steps done - print summary
-                #pragma omp critical
-                {
-                    string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
-                    // print test info
-                    std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-                    std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests
-                            << " " << boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
-                    std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+			// all steps done - print summary
+			#pragma omp critical
+			{
+				string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
+				// print test info
+				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+				std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests
+						<< " " << boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
+				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
-                    for(const auto& curRes : results) {
-                        if(options.mockrun){
-                            std::cout << colorize.blue() << curRes.first<< std::endl;
-                            std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
-                        } else {
-                            string colOffset;
-                            colOffset=string("%")+std::to_string(screenWidth-4-curRes.first.size())+"s";
-                            std::stringstream line;
+				for(const auto& curRes : results) {
+					if(options.mockrun){
+						std::cout << colorize.blue() << curRes.first<< std::endl;
+						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
+					} else {
+						string colOffset;
+						colOffset=string("%")+std::to_string(screenWidth-4-curRes.first.size())+"s";
+						std::stringstream line;
+					
+						// color certain passes:
+						if (highlight.find (curRes.first) != highlight.end()) {
+							line <<  colorize.bold() << colorize.blue();
+						}
 
-                            // color certain passes:
-                            if (highlight.find (curRes.first) != highlight.end()) {
-                                line <<  colorize.bold() << colorize.blue();
-                            }
+						line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory()/1024/1024))
+								<< " #" << colorize.reset() << "\n";
 
-                            line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory()/1024/1024))
-                                    << " #" << colorize.reset() << "\n";
+						if(curRes.second.wasSuccessfull()){
+							std::cout << line.str();
+						} else {
+							std::cout << colorize.red() << line.str();
+							std::cout << "#" << std::string(screenWidth-2,'-') << "#" << colorize.reset() << std::endl;
+							std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
+							std::cout << curRes.second.getFullOutput();
+						}
 
-                            if(curRes.second.wasSuccessfull()){
-                                std::cout << line.str();
-                            } else {
-                                std::cout << colorize.red() << line.str();
-                                std::cout << "#" << std::string(screenWidth-2,'-') << colorize.reset() << std::endl;
-                                std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
-                                std::cout << curRes.second.getFullOutput();
-                            }
+						success = success && curRes.second.wasSuccessfull();
+					}
+					if(options.clean) {
+						curRes.second.clean();
+					}
 
-                            success = success && curRes.second.wasSuccessfull();
-                        }
-                        if(options.clean) {
-                            curRes.second.clean();
-                        }
+					if (curRes.second.hasBeenAborted()) {
+						panic = true;
+					}
+				}
 
-                        if (curRes.second.hasBeenAborted()) {
-                            panic = true;
-                        }
-                    }
+				if(!options.mockrun){
 
-                    if(!options.mockrun){
+					if(success) {
+						ok.push_back(cur);
+						std::cout << colorize.green();
+					} else {
+						failed.push_back(cur);
+						std::cout << colorize.red();
+					}
 
-                        if(success) {
-                            ok.push_back(cur);
-                            std::cout << colorize.green();
-                        } else {
-                            failed.push_back(cur);
-                            std::cout << colorize.red();
-                        }
+					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+					int failedStringLength = to_string(failed.size()).length();
 
-                        std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-                        int failedStringLength = to_string(failed.size()).length();
+					if(success) {
+						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName();
+						if(failed.size() > 0)
+							std::cout << colorize.red();
+						std::cout << " (failed so far: " << failed.size() << ")";
+						std::cout << colorize.green() << " #\n";
+					} else {
+						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
+					}
+					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
-                        if(success)
-                            std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
-                        else
-                            std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
-                        std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
+					if(!success) {
+						// trigger panic mode and graceful shutdown
+						if (options.panic_mode) {
+							panic = true;
+						}
+					}
+				}
 
-                        if(!success) {
-                            // trigger panic mode and graceful shutdown
-                            if (options.panic_mode) {
-                                panic = true;
-                            }
-                        }
-                    }
+				//reset color to default value
+				std::cout << colorize.reset();
+			}
 
-                    //reset color to default value
-                    std::cout << colorize.reset();
-                }
+		} // end test case loop
 
-            } // end test case loop
-		}
 	} // end repetition loop
 
-    //print summary
-    printSummary();
+	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
+
+
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
+	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
+	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
+	for(const auto& cur : failed) {
+		TestResult failedStep = failedSteps[cur];
+		string failedStepInfo(failedStep.getStepName() + ": exit code " + to_string(failedStep.getRetVal()));
+		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
+		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
+	}
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
 	// done
 	return (failed.empty())?0:1;

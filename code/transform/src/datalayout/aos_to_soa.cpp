@@ -29,14 +29,18 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 //#include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_visitor.h"
+
+
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -46,27 +50,68 @@ namespace datalayout {
 
 using namespace core;
 
-AosToSoa::AosToSoa(core::NodePtr toTransform) {
-	std::set<VariablePtr> structs;
+//ExpressionPtr removeRevVar(ExpressionPtr refVar) {
+//	if(CallExprPtr call = isCall)
+//
+//	return refVar;
+//}
 
-	pattern::TreePatternPtr structVar = pattern::irp::variable(pattern::aT(pattern::irp::refType(pattern::irp::arrayType(
-			pattern::irp::structType(*pattern::any)))));
+AosToSoa::AosToSoa(core::NodePtr toTransform) {
+	NodeManager& mgr = toTransform->getNodeManager();
+	IRBuilder builder(mgr);
+
+	std::set<std::pair<VariablePtr, RefTypePtr>> structs;
+
+	pattern::TreePattern structVar = pattern::irp::variable(pattern::aT(var("structType", pattern::irp::refType(pattern::irp::arrayType(
+			pattern::irp::structType(*pattern::any))))));
 
 	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
-		structs.insert(match.as<VariablePtr>());
+		structs.insert(std::make_pair(match.as<VariablePtr>(), nm["structType"].getValue().as<RefTypePtr>()));
 	});
 
-	std::map<VariablePtr, StructTypePtr> newStructTypes;
-	for(VariablePtr struct_ : structs) {
+	std::map<VariablePtr, TypePtr> newStructTypes;
+	for(std::pair<VariablePtr, RefTypePtr> struct_ : structs) {
 
-		std::cout << *struct_->getType() << std::endl;
-/*
-		StructTypePtr oldType = struct_->getType().as<StructTypePtr>();
+//		std::cout << *struct_.first->getType() << std::endl;
+
+		StructTypePtr oldType = struct_.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 		NodeRange<NamedTypePtr> member = oldType->getElements();
+		std::vector<NamedTypePtr> newMember;
 		for(NamedTypePtr memberType : member) {
-			std::cout << "member: " << memberType << std::endl;
+//			std::cout << "member: " << memberType << std::endl;
+			newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
+
 		}
-*/	}
+		newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
+
+//std::cout << struct_.first->getType() << std::endl << newStructTypes[struct_.first] << std::endl;
+	}
+
+	NodeMap replacements;
+	visitDepthFirst(toTransform, [&](const DeclarationStmtPtr& decl) {
+		VariablePtr oldVar = decl->getVariable();
+		if(newStructTypes.find(oldVar) != newStructTypes.end()) {
+			RefTypePtr newType = newStructTypes[oldVar].as<RefTypePtr>();
+			VariablePtr newStruct = builder.variable(newType);
+
+			std::vector<StatementPtr> allDecls;
+			allDecls.push_back(decl);
+			allDecls.push_back(builder.declarationStmt(newStruct, builder.undefinedVar(newType)));
+
+			// split up initialization expressions
+			StructTypePtr newStructType = newType->getElementType().as<StructTypePtr>();
+			for(NamedTypePtr memberType : newStructType->getElements()) {
+				allDecls.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
+						core::transform::replaceAll(mgr, decl->getInitialization(), oldVar->getType(), memberType->getType()).as<ExpressionPtr>()));
+			}
+
+			replacements[decl] = builder.compoundStmt(allDecls);
+		}
+	});
+
+//	NodePtr a = core::transform::replaceAll(mgr, toTransform, replacements);
+//
+//	dumpPretty(a);
 }
 
 

@@ -29,10 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 #include <fstream>
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -52,6 +53,8 @@
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -414,7 +417,7 @@ for_each(kernelFunctions, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr>
 	return builder.callExpr(gen.getInt4(), innerLambda, builder.deref(localKernel), global, local);
 }
 
-std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreateKernel) {
+std::vector<std::string> KernelReplacer::findKernelNames(TreePattern clCreateKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
@@ -423,11 +426,11 @@ std::vector<std::string> KernelReplacer::findKernelNames(TreePatternPtr clCreate
 	// vector to store filenames in case of icl_lib compilation
 	std::vector<std::string> kernelFileNames;
 
-	TreePatternPtr kernelDecl = irp::declarationStmt(pattern::var("kernel", pattern::any),
+	TreePattern kernelDecl = irp::declarationStmt(pattern::var("kernel", pattern::any),
 			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateKernel)));
-	TreePatternPtr kernelAssign = var("assignment", irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
+	TreePattern kernelAssign = var("assignment", irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
 			pattern::var("kernel", pattern::any) << clCreateKernel));
-	TreePatternPtr createKernelPattern = kernelDecl | kernelAssign;
+	TreePattern createKernelPattern = kernelDecl | kernelAssign;
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
 		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
@@ -460,12 +463,12 @@ void KernelReplacer::collectArguments() {
 	NodeAddress pA(prog);
 	NodeMap replacements;
 
-//	TreePatternPtr localOrGlobalVar = node(node(node(single(aT(irp::genericType("_cl_kernel"))) << single(pattern::any))
+//	TreePattern localOrGlobalVar = node(node(node(single(aT(irp::genericType("_cl_kernel"))) << single(pattern::any))
 //			<< single(pattern::any)) << single(pattern::any));
-	TreePatternPtr eventualSturctureAccess = aT(irp::callExpr(pattern::any, irp::atom(gen.getCompositeRefElem()) | irp::atom(gen.getCompositeMemberAccess()),
+	TreePattern eventualSturctureAccess = aT(irp::callExpr(pattern::any, irp::atom(gen.getCompositeRefElem()) | irp::atom(gen.getCompositeMemberAccess()),
 			pattern::any << var("identifier", pattern::any) << pattern::any)) | pattern::any;
 
-	TreePatternPtr clSetKernelArg = var("clSetKernelArg", irp::callExpr(pattern::any, irp::literal("clSetKernelArg"),
+	TreePattern clSetKernelArg = var("clSetKernelArg", irp::callExpr(pattern::any, irp::literal("clSetKernelArg"),
 			pattern::var("kernel", eventualSturctureAccess) << pattern::var("arg_index", irp::literal())
 			<< pattern::var("arg_size", pattern::any) << pattern::var("arg_value", pattern::any) ));
 
@@ -637,20 +640,20 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
 	});
 }
 
-void KernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
+void KernelReplacer::loadKernelCode(core::pattern::TreePattern createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	NodeAddress pA(prog);
 
 	findKernelNames(createKernel);
 
-	TreePatternPtr clCreateProgramWithSource = var("cpws", irp::callExpr(irp::atom(builder.refType(builder.arrayType(builder.genericType("_cl_program")))),
+	TreePattern clCreateProgramWithSource = var("cpws", irp::callExpr(irp::atom(builder.refType(builder.arrayType(builder.genericType("_cl_program")))),
 			irp::literal("clCreateProgramWithSource"), pattern::any <<
 			pattern::any << var("kernelCodeString", pattern::any) << pattern::any << pattern::var("err", pattern::any) ));
-	TreePatternPtr kernelAssign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()),
+	TreePattern kernelAssign = irp::callExpr(irp::atom(mgr.getLangBasic().getRefAssign()),
 			var("kernelVar", pattern::any), (clCreateProgramWithSource));
-	TreePatternPtr kernelDecl = irp::declarationStmt(aT(var("kernelVar", pattern::any)) ,aT(clCreateProgramWithSource));
-	TreePatternPtr clCreateProgramWithSourcePattern = kernelAssign | kernelDecl;
+	TreePattern kernelDecl = irp::declarationStmt(aT(var("kernelVar", pattern::any)) ,aT(clCreateProgramWithSource));
+	TreePattern clCreateProgramWithSourcePattern = kernelAssign | kernelDecl;
 
 	std::map<string, int> checkDuplicates;
 	irp::matchAllPairs(clCreateProgramWithSourcePattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createProgram) {
@@ -669,7 +672,7 @@ void KernelReplacer::inlineKernelCode() {
 
 	NodeMap replacements;
 	// Replace clEnqueueNDRangeKernel calls with calls to the associated function
-	TreePatternPtr clEnqueueNDRangeKernel = var("enrk", irp::callExpr(pattern::any, irp::literal("clEnqueueNDRangeKernel"),	pattern::any <<
+	TreePattern clEnqueueNDRangeKernel = var("enrk", irp::callExpr(pattern::any, irp::literal("clEnqueueNDRangeKernel"),	pattern::any <<
 			var("kernel", pattern::any) << var("work_dim", pattern::any) << pattern::var("global_work_offset", pattern::any) <<
 			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
 			pattern::any << pattern::any << pattern::var("err", pattern::any) ));
@@ -774,8 +777,8 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 }
 
 NodePtr KernelReplacer::getTransformedProgram() {
-	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
-	TreePatternPtr clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
+	TreePattern nameLiteral = pattern::var("kernel_name", pattern::any);
+	TreePattern clCreateKernel = irp::callExpr(pattern::any, irp::literal("clCreateKernel"),	pattern::any <<
 			nameLiteral << pattern::var("err", pattern::any) );
 	loadKernelCode(clCreateKernel);
 	collectArguments();
@@ -788,8 +791,8 @@ NodePtr KernelReplacer::getTransformedProgram() {
 }
 
 NodePtr IclKernelReplacer::getTransformedProgram() {
-	TreePatternPtr nameLiteral = pattern::var("kernel_name", pattern::any);
-	TreePatternPtr icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
+	TreePattern nameLiteral = pattern::var("kernel_name", pattern::any);
+	TreePattern icl_create_kernel = irp::callExpr(pattern::any, irp::literal("icl_create_kernel"), pattern::any << pattern::var("file_name", pattern::any) <<
 			nameLiteral << pattern::any <<	pattern::any);
 	loadKernelCode(icl_create_kernel);
 	inlineKernelCode();
@@ -800,7 +803,7 @@ NodePtr IclKernelReplacer::getTransformedProgram() {
 	return prog;
 }
 
-void IclKernelReplacer::loadKernelCode(core::pattern::TreePatternPtr createKernel) {
+void IclKernelReplacer::loadKernelCode(core::pattern::TreePattern createKernel) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -832,7 +835,7 @@ void IclKernelReplacer::inlineKernelCode() {
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	NodeAddressMap replacements;
 
-	TreePatternPtr iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
+	TreePattern iclRunKernel = irp::callExpr(pattern::any, irp::literal("icl_run_kernel"),
 			(var("kernel", pattern::any)) << var("work_dim", pattern::any) <<
 			pattern::var("global_work_size", pattern::any) << pattern::var("local_work_size", pattern::any) <<
 			pattern::any << pattern::any << var("num_args", pattern::any ) << //var("args", pattern::any) );

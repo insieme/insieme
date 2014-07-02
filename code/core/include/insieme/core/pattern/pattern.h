@@ -38,50 +38,34 @@
 
 #include <string>
 #include <memory>
-#include <ostream>
-#include <unordered_map>
 
 #include <boost/optional.hpp>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/pattern/structure.h"
 #include "insieme/core/pattern/match.h"
 #include "insieme/core/pattern/match_target.h"
 
-#include "insieme/utils/logging.h"
-#include "insieme/utils/math.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
 namespace pattern {
 
-	class Pattern;
-	typedef std::shared_ptr<Pattern> PatternPtr;
+	namespace impl {
 
-	class TreePattern;
-	typedef std::shared_ptr<TreePattern> TreePatternPtr;
+		// --- forward declarations (pimpl) ---
 
-	class ListPattern;
-	typedef std::shared_ptr<ListPattern> ListPatternPtr;
+		class TreePattern;
+		typedef std::shared_ptr<TreePattern> TreePatternPtr;
 
-//	class Filter;
-//	typedef std::shared_ptr<Filter> FilterPtr;
-
-	namespace details {
-
-		bool isTypeOrValueOrParam(const core::NodeType type);
-		inline bool isTypeOrValueOrParam(const int type) { return false; }
-
-		inline bool isTypeOrValueOrParam(const core::NodeAddress node) {
-			return isTypeOrValueOrParam(node->getNodeType());
-		}
-
-		inline bool isTypeOrValueOrParam(const TreePtr&) { return false; }
+		class ListPattern;
+		typedef std::shared_ptr<ListPattern> ListPatternPtr;
 
 	}
-	
+
+	// TODO: clean this up
 	typedef Match<ptr_target> NodeMatch;
 	typedef boost::optional<NodeMatch> MatchOpt;
 	typedef Match<address_target> AddressMatch;
@@ -90,38 +74,52 @@ namespace pattern {
 	typedef boost::optional<TreeMatch> TreeMatchOpt;
 
 
-	struct Pattern : public utils::Printable {
+	/**
+	 * The type utilized to represent tree patterns matching tree structures.
+	 */
+	class TreePattern : public utils::Printable {
 
 		/**
-		 * A flag indicating that this pattern does not contain any variables.
+		 * The internal implementation of the represented pattern.
 		 */
-		bool isVariableFree;
+		impl::TreePatternPtr pattern;
 
-		Pattern(bool isVariableFree) : isVariableFree(isVariableFree) {}
-
-		virtual std::ostream& printTo(std::ostream& out) const = 0;
-	};
-
-
-	// The abstract base class for tree patterns
-	struct TreePattern : public Pattern {
-
-		// a list of all types of tree pattern constructs
-		enum Type {
-			Value, Constant, LazyConstant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
-		};
+	public:
 
 		/**
-		 * The type of this tree pattern
+		 * A default constructed pattern matching everything -- equals the any pattern.
 		 */
-		const Type type;
+		TreePattern();
 
 		/**
-		 * A flag indicating whether the matched tree may be a type or a type parameter.
+		 * A copy constructor for patterns.
 		 */
-		bool mayBeType;
+		TreePattern(const TreePattern& other) : pattern(other.pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
 
-		TreePattern(const Type type, bool isVariableFree, bool mayBeType = true) : Pattern(isVariableFree), type(type), mayBeType(mayBeType) {};
+		/**
+		 * A r-value move constructor for patterns.
+		 */
+		TreePattern(TreePattern&& other) : pattern(other.pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
+
+		/**
+		 * A constructor to be utilized by factories to create a pattern based on the implementation.
+		 */
+		TreePattern(const impl::TreePatternPtr& pattern) : pattern(pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
+
+
+		/**
+		 * An implicit conversion to the internal implementation structure.
+		 */
+		operator const impl::TreePatternPtr&() const {
+			return pattern;
+		}
+
 
 		bool match(const core::NodePtr& node) const {
 			return matchPointer(node);
@@ -132,492 +130,197 @@ namespace pattern {
 		AddressMatchOpt matchAddress(const core::NodeAddress& node) const;
 
 		TreeMatchOpt matchTree(const TreePtr& tree) const;
+
+		/**
+		 * Prints this pattern to the given output stream -- implements the Printable interface.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
+
 	};
 
 
-	// An abstract base node for node patterns
-	struct ListPattern : public Pattern {
+	/**
+	 * The type utilized to represent list patterns matching list of trees (forests).
+	 */
+	class ListPattern : public utils::Printable {
 
-		enum Type {
-			Empty, Single, Variable, Alternative, Sequence, Repetition
-		};
+		/**
+		 * The internal implementation of the represented pattern.
+		 */
+		impl::ListPatternPtr pattern;
 
-		const Type type;
+	public:
 
-		unsigned minLength;
-		unsigned maxLength;
+		/**
+		 * A default constructed pattern matching every list.
+		 */
+		ListPattern();
 
-		ListPattern(const Type type, bool isVariableFree, unsigned min, unsigned max = std::numeric_limits<unsigned>::max())
-			: Pattern(isVariableFree), type(type), minLength(min), maxLength(max) {};
+		/**
+		 * A copy constructor for list patterns.
+		 */
+		ListPattern(const ListPattern& other)
+			: pattern(other.pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
+
+		/**
+		 * A r-value move constructor for patterns.
+		 */
+		ListPattern(ListPattern&& other)
+			: pattern(other.pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
+
+		/**
+		 * A constructor to be utilized by factories to create a pattern based on the implementation.
+		 */
+		ListPattern(const impl::ListPatternPtr& pattern) : pattern(pattern) {
+			assert_true(pattern) << "Pattern pointer must not be null!";
+		}
+
+		/**
+		 * An implicit conversion to the internal implementation structure.
+		 */
+		operator const impl::ListPatternPtr() const {
+			return pattern;
+		}
 
 		TreeMatchOpt match(const vector<TreePtr>& trees) const;
+
+		/**
+		 * Prints this pattern to the given output stream -- implements the Printable interface.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
-	namespace tree {
+	// -- some constants --
 
-		// For convenience - could also be handled by a Constant but would require a NodeManager
-		struct Value : public TreePattern {
+	extern const TreePattern any;
+	extern const TreePattern recurse;
 
-			const core::NodeValue value;
+	extern const ListPattern anyList;
+	extern const ListPattern empty;
 
-			Value(const core::NodeValue& value) : TreePattern(TreePattern::Value, true), value(value) {}
 
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << value;
-			}
+	// -- some factories --
 
-		};
+	TreePattern value(const core::NodeValue& value);
 
-		// An constant value - a pure IR node
-		struct Constant : public TreePattern {
 
-			// kind of a hack - but the easiest solution
-			const core::NodePtr nodeAtom;
-			const TreePtr treeAtom;
+	TreePattern atom(const TreePtr& tree);
 
-			Constant(const core::NodePtr& atom)
-				: TreePattern(TreePattern::Constant, true, details::isTypeOrValueOrParam(atom->getNodeType())), nodeAtom(atom) {}
-			Constant(const TreePtr& atom) : TreePattern(TreePattern::Constant, true), treeAtom(atom) {}
+	TreePattern atom(const core::NodePtr& tree);
 
-			virtual std::ostream& printTo(std::ostream& out) const {
-				if (nodeAtom) {
-					return out << *nodeAtom;
-				}
-				return out << *treeAtom;
-			}
-		};
+	TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory);
 
-		// A constant value - that is lazyly evaluated
-		struct LazyConstant : public TreePattern {
 
-			typedef std::function<core::NodePtr(core::NodeManager&)> factory_type;
+	ListPattern single(const TreePattern& pattern);
 
-			factory_type factory;
+	inline ListPattern single(const TreePtr& tree) { return single(atom(tree)); }
 
-			LazyConstant(const factory_type& factory)
-				: TreePattern(TreePattern::LazyConstant, true, isType(factory)), factory(factory) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				core::NodeManager mgr;
-				return out << *factory(mgr);
-			}
-
-		private:
-
-			static bool isType(const factory_type& factory) {
-				core::NodeManager mgr;
-				return details::isTypeOrValueOrParam(factory(mgr));
-			}
-		};
-
-		// A wildcard for the pattern matching of a tree - accepts everything
-		struct Wildcard : public TreePattern {
-
-			Wildcard() : TreePattern(TreePattern::Wildcard, true) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "_";
-			}
-		};
-
-
-		// A simple variable
-		struct Variable : public TreePattern {
-			const static TreePatternPtr any;
-			const std::string name;
-			const TreePatternPtr pattern;
-
-			Variable(const std::string& name, const TreePatternPtr& pattern = any)
-				: TreePattern(TreePattern::Variable, false, pattern->mayBeType), name(name), pattern(pattern) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "$" << name;
-				if(pattern && pattern != any) {
-					out << ":" << *pattern;
-				}
-				return out;
-			}
-
-		};
-
-		// Depth recursion (downward * operator)
-		struct Recursion : public TreePattern {
-			const string name;
-			const bool terminal;
-			const TreePatternPtr pattern;
-
-			Recursion(const string& name)
-				: TreePattern(TreePattern::Recursion, false), name(name), terminal(true) {}
-			Recursion(const string& name, const TreePatternPtr& pattern)
-				: TreePattern(TreePattern::Recursion, pattern->isVariableFree, pattern->mayBeType), name(name), terminal(false), pattern(pattern) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				if(terminal) return out << "rec." << name;
-				return out << "rT." << name << "(" << *pattern << ")";
-			}
-		};
-
-		// bridge to Node Pattern
-		struct Node : public TreePattern {
-
-			const int id;
-			const int type;
-			const ListPatternPtr pattern;
-
-			Node(const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node, pattern->isVariableFree), id(-1), type(-1), pattern(pattern) {}
-
-			Node(char id, const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node, pattern->isVariableFree), id(id), type(-1), pattern(pattern) {}
-
-			Node(const core::NodeType type, const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node, pattern->isVariableFree, details::isTypeOrValueOrParam(type)), id(-1), type(type), pattern(pattern) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				if(id != -1) {
-					out << "(" << id << "|";
-				} else if (type != -1) {
-					out << "(" << ((core::NodeType)type) << "|";
-				} else {
-					out << "(";
-				}
-				return out << *pattern << ")";
-			}
-
-		};
-
-
-		// Negation
-		struct Negation : public TreePattern {
-			const TreePatternPtr pattern;
-
-			Negation(const TreePatternPtr& pattern)
-				: TreePattern(TreePattern::Negation, pattern->isVariableFree), pattern(pattern) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "!(" << *pattern << ")";
-			}
-
-		};
-
-		// Conjunction
-		struct Conjunction : public TreePattern {
-			const TreePatternPtr pattern1;
-			const TreePatternPtr pattern2;
-
-			Conjunction(const TreePatternPtr& a, const TreePatternPtr& b)
-				: TreePattern(TreePattern::Conjunction, a->isVariableFree && b->isVariableFree, a->mayBeType && b->mayBeType), pattern1(a), pattern2(b) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *pattern1 << " & " << *pattern2;
-			}
-
-		};
-
-		// Disjunction
-		struct Disjunction : public TreePattern {
-			const TreePatternPtr pattern1;
-			const TreePatternPtr pattern2;
-
-			Disjunction(const TreePatternPtr& a, const TreePatternPtr& b)
-				: TreePattern(TreePattern::Disjunction, a->isVariableFree && b->isVariableFree, a->mayBeType || b->mayBeType), pattern1(a), pattern2(b) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *pattern1 << " | " << *pattern2;
-			}
-
-		};
-
-
-		struct Descendant : public TreePattern {
-			const std::vector<TreePatternPtr> subPatterns;
-
-			template<typename ... Patterns>
-			Descendant(Patterns ... patterns)
-				: TreePattern(TreePattern::Descendant, all(toVector<TreePatternPtr>(patterns...), [](const TreePatternPtr& cur) { return cur->isVariableFree; })),
-				  subPatterns(toVector<TreePatternPtr>(patterns...)) {};
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "aT(" << join(",", subPatterns, print<id<TreePatternPtr>>()) << ")";
-			}
-		};
-
-	}
-
-	namespace list {
-
-		struct Empty : public ListPattern {
-			Empty() : ListPattern(ListPattern::Empty, true, 0, 0) {}
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "[]";
-			}
-		};
-
-		// The most simple node pattern covering a single tree
-		struct Single : public ListPattern {
-			const TreePatternPtr element;
-
-			Single(const TreePatternPtr& element)
-			: ListPattern(ListPattern::Single, element->isVariableFree, 1, 1), element(element) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *element;
-			}
-
-		};
-
-		// A sequence node pattern representing the composition of two node patterns
-		struct Sequence : public ListPattern {
-			const ListPatternPtr left;
-			const ListPatternPtr right;
-
-			Sequence(const ListPatternPtr& left, const ListPatternPtr& right)
-				: ListPattern(ListPattern::Sequence,
-						left->isVariableFree && right->isVariableFree,
-						left->minLength + right->minLength, 								// sum up lower boundaries
-						utils::saturating_add(left->maxLength, right->maxLength)			// sum up upper boundaries (saturation add)
-				  ),
-				  left(left), right(right) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *left << "," << *right;
-			}
-
-		};
-
-		// A node pattern alternative
-		struct Alternative : public ListPattern {
-			const ListPatternPtr alternative1;
-			const ListPatternPtr alternative2;
-
-			Alternative(const ListPatternPtr& A, const ListPatternPtr& B)
-				: ListPattern(ListPattern::Alternative,
-						A->isVariableFree && B->isVariableFree,
-						std::min(A->minLength, B->minLength),
-						std::max(A->maxLength, B->maxLength)
-				  ),
-				  alternative1(A),
-				  alternative2(B) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *alternative1 << "|" << *alternative2;
-			}
-
-		};
-
-		// Realizes the star operator for node patterns
-		struct Repetition : public ListPattern {
-			const ListPatternPtr pattern;
-			const unsigned minRep;			// minimum number of repetitions
-
-			Repetition(const ListPatternPtr& pattern, unsigned minRep = 0)
-				: ListPattern(ListPattern::Repetition,
-						pattern->isVariableFree,
-						pattern->minLength * minRep
-				  ),
-				  pattern(pattern),
-				  minRep(minRep) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				if (minRep == 0) {
-					return out << "[" << *pattern << "]*";
-				}
-				if (minRep == 1) {
-					return out << "[" << *pattern << "]+";
-				}
-				return out << "[" << *pattern << "]*{" << minRep << "}";
-			}
-
-		};
-
-		// A simple variable
-		struct Variable : public ListPattern {
-			const static ListPatternPtr any;
-			const std::string name;
-			const ListPatternPtr pattern;
-
-			Variable(const std::string& name, const ListPatternPtr& pattern = any)
-				: ListPattern(ListPattern::Variable,
-						false,
-						pattern->minLength,
-						pattern->maxLength
-				  ),
-				  name(name),
-				  pattern(pattern) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "$" << name;
-				if(pattern && pattern != any) {
-					out << ":" << *pattern;
-				}
-				return out;
-			}
-
-		};
-
-	}
 	
-	extern const TreePatternPtr any;
-	extern const TreePatternPtr recurse;
+	TreePattern operator!(const TreePattern& a);
 
-	extern const ListPatternPtr anyList;
-	extern const ListPatternPtr empty;
+	TreePattern operator&(const TreePattern& a, const TreePattern& b);
 
-	inline TreePatternPtr value(const core::NodeValue& value) {
-		return std::make_shared<tree::Value>(value);
-	}
+	TreePattern operator|(const TreePattern& a, const TreePattern& b);
 
-	inline TreePatternPtr atom(const TreePtr& tree) {
-		return std::make_shared<tree::Constant>(tree);
-	}
-	inline TreePatternPtr atom(const core::NodePtr& tree) {
-		return std::make_shared<tree::Constant>(tree);
-	}
 
-	inline TreePatternPtr lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {
-		return std::make_shared<tree::LazyConstant>(factory);
-	}
+	TreePattern node(const ListPattern& pattern = empty);
 
-	inline ListPatternPtr single(const TreePatternPtr& pattern) {
-		return std::make_shared<list::Single>(pattern);
-	}
-	inline ListPatternPtr single(const TreePtr& tree) {
-		return single(atom(tree));
-	}
+	TreePattern node(const char id, const ListPattern& pattern = empty);
 
-	inline TreePatternPtr operator!(const TreePatternPtr& a) {
-		return std::make_shared<tree::Negation>(a);
-	}
-	
-	inline TreePatternPtr operator&(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<tree::Conjunction>(a,b);
-	}
+	TreePattern node(const core::NodeType type, const ListPattern& pattern = empty);
 
-	inline TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<tree::Disjunction>(a,b);
-	}
-
-	inline TreePatternPtr node(const ListPatternPtr& pattern = empty) {
-		return std::make_shared<tree::Node>(pattern);
-	}
-	inline TreePatternPtr node(const char id, const ListPatternPtr& pattern = empty) {
-		return std::make_shared<tree::Node>(id, pattern);
-	}
-	inline TreePatternPtr node(const char id, const TreePatternPtr& pattern) {
+	inline TreePattern node(const char id, const TreePattern& pattern) {
 		return node(id, single(pattern));
 	}
-	inline TreePatternPtr node(const core::NodeType type, const ListPatternPtr& pattern = empty) {
-		return std::make_shared<tree::Node>(type, pattern);
-	}
-	inline TreePatternPtr node(const core::NodeType type, const TreePatternPtr& pattern) {
+
+	inline TreePattern node(const core::NodeType type, const TreePattern& pattern) {
 		return node(type, single(pattern));
 	}
 
-	inline TreePatternPtr var(const std::string& name, const TreePatternPtr& pattern = any) {
-		return std::make_shared<tree::Variable>(name, pattern);
-	}
+	TreePattern var(const std::string& name, const TreePattern& pattern = any);
 
-	inline TreePatternPtr treeVar(const std::string& name, const TreePatternPtr& pattern = any) {
+	inline TreePattern treeVar(const std::string& name, const TreePattern& pattern = any) {
 		return var(name, pattern);
 	}
 
-	inline ListPatternPtr listVar(const std::string& name, const ListPatternPtr& pattern = anyList) {
-		return std::make_shared<list::Variable>(name, pattern);
-	}
+	ListPattern listVar(const std::string& name, const ListPattern& pattern = anyList);
+
+
+	TreePattern aT(const std::vector<TreePattern>& patterns);
 
 	template<typename ... Patterns>
-	inline TreePatternPtr aT(Patterns ... patterns) {
-		return std::make_shared<tree::Descendant>(patterns...);
+	inline TreePattern aT(Patterns ... patterns) {
+		return aT(toVector<TreePattern>(patterns...));
 	}
 
-	inline TreePatternPtr rT(const TreePatternPtr& pattern, const string& varName = "x") {
-		return std::make_shared<tree::Recursion>(varName, pattern);
-	}
-	inline TreePatternPtr rT(const ListPatternPtr& pattern, const string& varName = "x") {
-		return std::make_shared<tree::Recursion>(varName, node(pattern));
-	}
-	inline TreePatternPtr rec(const string& varName = "x") {
-		return std::make_shared<tree::Recursion>(varName);
-	}
+	TreePattern rT(const TreePattern& pattern, const string& varName = "x");
 
-	inline ListPatternPtr operator|(const ListPatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Alternative>(a,b);
-	}
-	inline ListPatternPtr operator|(const TreePatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Alternative>(single(a),b);
-	}
-	inline ListPatternPtr operator|(const ListPatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<list::Alternative>(a,single(b));
-	}
+	TreePattern rT(const ListPattern& pattern, const string& varName = "x");
 
-	inline ListPatternPtr opt(const ListPatternPtr& pattern) {
+	TreePattern rec(const string& varName = "x");
+
+	ListPattern operator|(const ListPattern& a, const ListPattern& b);
+
+	ListPattern operator|(const TreePattern& a, const ListPattern& b);
+
+	ListPattern operator|(const ListPattern& a, const TreePattern& b);
+
+	inline ListPattern opt(const ListPattern& pattern) {
 		return empty | pattern;
 	}
-	inline ListPatternPtr opt(const TreePatternPtr& pattern) {
+	inline ListPattern opt(const TreePattern& pattern) {
 		return opt(single(pattern));
 	}
-	inline ListPatternPtr opt(const TreePtr& tree) {
+	inline ListPattern opt(const TreePtr& tree) {
 		return opt(atom(tree));
 	}
 
-	inline ListPatternPtr operator*(const ListPatternPtr& pattern) {
-		return std::make_shared<list::Repetition>(pattern);
-	}
-	inline ListPatternPtr operator*(const TreePatternPtr& pattern) {
-		return std::make_shared<list::Repetition>(single(pattern));
-	}
+	ListPattern operator*(const ListPattern& pattern);
 
-	inline ListPatternPtr operator+(const ListPatternPtr& pattern) {
-		return std::make_shared<list::Repetition>(pattern, 1);
-	}
-	inline ListPatternPtr operator+(const TreePatternPtr& pattern) {
-		return std::make_shared<list::Repetition>(single(pattern), 1);
-	}
+	ListPattern operator*(const TreePattern& pattern);
 
-	inline ListPatternPtr operator<<(const ListPatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Sequence>(a,b);
-	}
-	inline ListPatternPtr operator<<(const TreePatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Sequence>(single(a),b);
-	}
-	inline ListPatternPtr operator<<(const ListPatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<list::Sequence>(a,single(b));
-	}
-	inline ListPatternPtr operator<<(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<list::Sequence>(single(a),single(b));
-	}
+	ListPattern operator+(const ListPattern& pattern);
 
-	inline ListPatternPtr operator>>(const ListPatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Sequence>(a,b);
-	}
-	inline ListPatternPtr operator>>(const TreePatternPtr& a, const ListPatternPtr& b) {
-		return std::make_shared<list::Sequence>(single(a),b);
-	}
-	inline ListPatternPtr operator>>(const ListPatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<list::Sequence>(a,single(b));
-	}
-	inline ListPatternPtr operator>>(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<list::Sequence>(single(a),single(b));
-	}
+	ListPattern operator+(const TreePattern& pattern);
+
+	ListPattern operator<<(const ListPattern& a, const ListPattern& b);
+
+	ListPattern operator<<(const TreePattern& a, const ListPattern& b);
+
+	ListPattern operator<<(const ListPattern& a, const TreePattern& b);
+
+	ListPattern operator<<(const TreePattern& a, const TreePattern& b);
+
+	ListPattern operator>>(const ListPattern& a, const ListPattern& b);
+
+	ListPattern operator>>(const TreePattern& a, const ListPattern& b);
+
+	ListPattern operator>>(const ListPattern& a, const TreePattern& b);
+
+	ListPattern operator>>(const TreePattern& a, const TreePattern& b);
 
 	// more complex stuff ...
 
-	inline TreePatternPtr step(const TreePatternPtr& a) {
+	inline TreePattern step(const TreePattern& a) {
 		return node(anyList << a << anyList);
 	}
 
-	inline TreePatternPtr all(const TreePatternPtr& a) {
+	inline TreePattern all(const TreePattern& a) {
 		// collect all occurs of pattern a
 		return rT((a & node(*recurse)) | (!a & node(*recurse)));
 	}
 
-	inline TreePatternPtr outermost(const TreePatternPtr& a) {
+	inline TreePattern outermost(const TreePattern& a) {
 		// it is the outer most or not, then the next is nested
 		return rT(a | (!a & node(*recurse)));
 	}
 
-	inline TreePatternPtr innermost(const TreePatternPtr& a) {
+	inline TreePattern innermost(const TreePattern& a) {
 		// select all that do not contain another a
 		return rT((!step(aT(a)) & a) | node(*recurse));
 	}
@@ -625,11 +328,3 @@ namespace pattern {
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::PatternPtr& pattern);
-	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::TreePatternPtr& pattern);
-	std::ostream& operator<<(std::ostream& out, const insieme::core::pattern::ListPatternPtr& pattern);
-
-} // end namespace std
