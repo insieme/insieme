@@ -66,10 +66,10 @@ namespace {
 
 /// Determines the maximum node path depth given node n as the root node. This procedure is most likely be
 /// used before or during a PrintNodes invocation.
-unsigned int MaxDepth(const insieme::core::Address<const insieme::core::Node> n) {
+unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
 	unsigned max = 0;
 	for (auto c: n.getChildAddresses()) {
-		unsigned now=MaxDepth(c);
+		unsigned now=maxDepth(c);
 		if (now>max) max=now;
 	}
 	return max+1;
@@ -78,21 +78,63 @@ unsigned int MaxDepth(const insieme::core::Address<const insieme::core::Node> n)
 /// Print the nodes to std::cout starting from root n, one by one, displaying the node path
 /// and the visual representation. The output can be prefixed by a string, and for visually unifying several
 /// PrintNodes invocations the maximum (see MaxDepth) and current depth may also be given.
-void PrintNodes(const insieme::core::Address<const insieme::core::Node> n, std::string prefix="        @\t",
+void printNodes(const insieme::core::Address<const insieme::core::Node> n, std::string prefix="        @\t",
 				unsigned int max=0, unsigned int depth=0) {
-	if (!max) max=MaxDepth(n);
+	if (!max) max=maxDepth(n);
 	for (auto c: n.getChildAddresses()) {
 		std::cout << prefix << c << std::setw(2*(max-depth-1)) << "+"
 				  << std::setw(2*depth+1) << "" << *c << std::endl;
-		PrintNodes(c, prefix, max, depth+1);
+		printNodes(c, prefix, max, depth+1);
 	}
 }
 
-/// Given a node a, verify that it is a self-assignment to the variable with an added constant value,
+/// From the given set of condition variables, return a set of VariablePtr for further consumption.
+insieme::utils::set::PointerSet<core::VariablePtr> extractCondVars(std::vector<core::NodeAddress> cvars) {
+	insieme::utils::set::PointerSet<core::VariablePtr> cvarSet;
+
+	// iterate over all condition variables
+	for(core::Address<const core::Node> cvar: cvars) {
+		core::Pointer<const core::Variable> varptr=cvar.getAddressedNode().as<core::VariablePtr>();
+
+		// do some output for debugging purposes
+//		std::cout << " - new:      " << *varptr << " type: " << *varptr->getType()
+//				  << " from: " << cvar.getParentNode() << std::endl;
+//		for (auto existing: cvarSet) {
+//			std::cout << " - existing: " << *existing << " type: " << *existing->getType()
+//					  << "   equals: " << (varptr==existing) << "\n";
+//		}
+//		std::cout << std::endl;
+
+		if (!cvarSet.contains(varptr) && varptr->getType()->getNodeType()==core::NT_RefType)
+			cvarSet.insert(varptr);
+	}
+	return cvarSet;
+}
+
+/// For a given variable, find all assignments in the loop body.
+std::vector<core::NodeAddress> getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var) {
+	std::vector<core::Address<const core::Node> > assignments;
+
+	// match all assignments where "var" occurs at the LHS
+	// do not consider the rhs in the pattern, as the rhs not necessarily includes the variable in question
+	// and/or an addition/subtraction expression
+	auto assignpat=irp::assignment(irp::atom(var), pattern::any);                  // one single assignment
+	auto assignall=pattern::aT(pattern::all(pattern::var("assignment", assignpat)));     // all assignments
+	pattern::AddressMatchOpt nodes=assignall->matchAddress(core::NodeAddress(body.getAddressedNode()));
+
+	// if the variable matched the pattern in the loop body, save the assignment
+	if (nodes && nodes.get().isVarBound("assignment")) {
+		auto myassignments=nodes.get()["assignment"].getFlattened();
+		assignments.insert(assignments.end(), myassignments.begin(), myassignments.end());
+	}
+	return assignments;
+}
+
+/// Given a node "a", verify that it is a self-assignment to the variable with an added constant value,
 /// and then extract the integer value (the step size in a for loop), returning it. As an example,
-/// given the assignment "x = x - 5", this function would return the integer "-5".
-int extractStepFromAssignment(core::Address<const core::Node> a) {
-	std::cout << std::endl << "assignment: " << pp(a) << std::endl;
+/// given the assignment "x = x - 5", this function would return the integer "-5". Additionally, it will
+/// return a boolean as a the second tuple element, to indicate whether there was any error.
+std::pair<int, bool> extractStepFromAssignment(core::Address<const core::Node> a) {
 
 	// set up the patterns and do the matching
 	auto operatorpat=pattern::single(irp::literal("int.sub")|irp::literal("int.add"));
@@ -147,9 +189,22 @@ int extractStepFromAssignment(core::Address<const core::Node> a) {
 	int step=0;
 	if (ok) {
 		step=(*addsub==*intsub?-1:1)*op2ptr.as<core::Pointer<const core::Literal> >().getValueAs<int>();
-		//std::cout << "\tstep size: " << step << std::endl;
 	}
 
+	return std::pair<int, bool>(step, ok);
+}
+
+/// For a given variable, try to extract the step size from a loop body, and return a value != zero if successful.
+int extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
+	std::vector<core::Address<const core::Node> > assignments=getAssignmentsForVar(body, var);
+	int step=0;
+	bool ok=true;
+	for (auto a: assignments) {
+		std::cout << "assignment: " << pp(a) << std::endl;
+		auto astep=extractStepFromAssignment(a);
+		ok&=astep.second;
+		if (ok) step+=astep.first;
+	}
 	return step;
 }
 
@@ -162,56 +217,23 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 		irp::replaceAll(whilepat, prog, [&](pattern::AddressMatch match) {
 			auto condition = match["condition"].getValue();
 			auto body = match["body"].getValue();
-			unsigned int varcount=0, maxassign=0;
 
 			std::cout << std::endl
 					  << "while-to-for Transformation (condition " << pp(condition) << "):" << std::endl
 					  << pp(match.getRoot()) << std::endl << std::endl;
 
 			// collect all variables from the loop condition, and store them in a PointerSet
-			insieme::utils::set::PointerSet<core::VariablePtr> cvarSet;
-			for(auto cvar: match["cvar"].getFlattened()) {
-				auto varptr=cvar.getAddressedNode().as<core::VariablePtr>();
-				if (!cvarSet.contains(varptr)) cvarSet.insert(varptr);
-			}
-			//std::cout << "condition variables: " << cvarSet << std::endl << std::endl;
+			insieme::utils::set::PointerSet<core::VariablePtr> cvarSet=extractCondVars(match["cvar"].getFlattened());
 
-			// for each condition variable, find its assignments in the loop body
-			// do not consider the rhs here, as the rhs not necessarily includes the variable in question and/or
-			// an addition/subtraction expression
-			std::vector<insieme::core::Address<const insieme::core::Node> > assignments;
-			for(core::VariablePtr var: cvarSet) {
-				// do pattern matching for one variable
-				auto assignpat=irp::assignment(irp::atom(var), pattern::any);
-				auto assignall=pattern::aT(pattern::all(pattern::var("assignment", assignpat)));
-				pattern::AddressMatchOpt nodes=assignall->matchAddress(core::NodeAddress(body.getAddressedNode()));
-
-				// if the variable matched the pattern in the loop body, save the assignment
-				if (nodes && nodes.get().isVarBound("assignment")) {
-					auto myassignments=nodes.get()["assignment"].getFlattened();
-					assignments.insert(assignments.end(), myassignments.begin(), myassignments.end());
-					++varcount;
-					if (myassignments.size()>maxassign) maxassign=myassignments.size();
-				}
-			}
-
-			// TODO
-			for (auto a: assignments) {
-				int step=extractStepFromAssignment(a);
-
-				std::vector<insieme::core::Address<const insieme::core::Node> > blacklist;
-				if (step) {
-					std::cout << "step size is " << step << std::endl;
-				} else {
-					std::cout << "loop is no for loop!" << std::endl;
-					blacklist.push_back(a);
-				}
+			// for each condition variable, find its assignments in the loop body, and derive a step size
+			for (core::VariablePtr var: cvarSet) {
+				int step=extractStepForVar(body, var);
+				if (step) std::cout << "step size is " << step << std::endl << std::endl;
+				else      std::cout << "loop is no for loop!"  << std::endl << std::endl;
 			}
 
 			// debug information: print the modified loop
-			std::cout << std::endl << varcount << " vars encountered, maximum "
-					  << maxassign << " assignments" << std::endl
-					  << "Loop is now:\n" << pp(match.getRoot()) << std::endl << std::endl;
+			std::cout << "Loop is now:\n" << pp(match.getRoot()) << std::endl << std::endl;
 			return match.getRoot().getAddressedNode();
 		} );
 		
