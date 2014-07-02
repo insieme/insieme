@@ -204,7 +204,8 @@ namespace integration {
 
 				map<string,float> metricResults;
 				//insert dummy vals
-				metricResults["time"]=0;
+				metricResults["walltime"]=0;
+				metricResults["cputime"]=0;
 				metricResults["mem"]=0;
 
 				if(!producedFile.empty()) {
@@ -284,7 +285,7 @@ namespace integration {
 
 				string executable = string(testConfig["time_executable"]);
 				string envString = env.str();
-				string argumentString = string(" -f TIME%e\nMEM%M ") + perfString + cmd + outfile;
+				string argumentString = string(" -f WALLTIME%e\nCPUTIME%U\nMEM%M\n ") + perfString + cmd + outfile;
 
 				// cpu time limit in seconds
 				unsigned cpuTimeLimit = 1200;
@@ -321,11 +322,13 @@ namespace integration {
 				boost::tokenizer<boost::char_separator<char>> tok(error,sep);
 				for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
 					string token(*beg);
-					if(token.find("TIME")==0) {
-						metricResults["time"]=atof(token.substr(4).c_str());
+					if(token.find("WALLTIME")==0) {
+						metricResults["walltime"]=atof(token.substr(8).c_str());
+					} else if(token.find("CPUTIME")==0) {
+						metricResults["cputime"]=atof(token.substr(7).c_str());
 						// check if we approached the cpu time limit. If so, print a warning
-						if(((metricResults["time"]))/cpuTimeLimit > 0.95)
-							std::cerr << "Killed by timeout, CPU time was " << metricResults["time"] << ", limit was " << cpuTimeLimit << " seconds\n";
+						if(((metricResults["cputime"]))/cpuTimeLimit > 0.95)
+							std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
 					} else if (token.find("MEM")==0) {
 						metricResults["mem"]=atof(token.substr(3).c_str());
 					} else {

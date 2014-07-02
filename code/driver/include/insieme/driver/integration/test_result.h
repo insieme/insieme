@@ -204,7 +204,7 @@ namespace integration {
 		}
 
 		float getRuntime() const{
-			return metricResults.find("time")->second;
+			return metricResults.find("walltime")->second;
 		}
 
 		float getMemory() const{
@@ -212,7 +212,7 @@ namespace integration {
 		}
 
 		float getRuntimeDev() const{
-			return metricDeviation.find("time")->second;
+			return metricDeviation.find("walltime")->second;
 		}
 
 		float getMemoryDev() const{
