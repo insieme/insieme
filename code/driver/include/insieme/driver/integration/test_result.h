@@ -66,6 +66,23 @@ namespace integration {
 	
 		bool userabort;
 
+	private:
+		friend class boost::serialization::access;		
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version)
+		{
+		        ar & success;
+		        ar & metricResults;
+		        ar & metricDeviation;
+			ar & output;
+			ar & errorOut;
+			ar & cmd;
+			ar & producedFiles;
+			ar & numThreads;
+			ar & sched;
+			ar & userabort;
+		}
+
 	protected:
 		map<string,string> staticResults;
 
