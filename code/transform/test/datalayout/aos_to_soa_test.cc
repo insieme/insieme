@@ -40,6 +40,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/simplify.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -52,11 +53,15 @@ TEST(DataLayout, AosToSoa) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto code = builder.normalize(builder.parseStmt(
+	NodePtr code = builder.normalize(builder.parseStmt(
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
 		"	ref<ref<array<twoElem,1>>> a;"// = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
+//		"	for(int<4> i = 0 .. 100 : 1) {"
+//		"		a[i].int = i;"
+//		"		a[i].float = 7.0f;"
+//		"	}"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp = ref.deref(a)[i];"
 		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
@@ -65,6 +70,24 @@ TEST(DataLayout, AosToSoa) {
 	));
 
 	datalayout::AosToSoa ats(code);
+
+	dumpPretty(code);
+
+	auto semantic = core::checks::check(code);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const core::checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) ;
+
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const core::checks::Message& cur) {
+		std::cout << cur << std::endl;
+	});
+
 }
 
 } // transform
