@@ -824,7 +824,7 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
 	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
 	if(aType)
-		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArraySubscript1D(), array, index);
+		return callExpr(aType->getElementType(), manager.getLangBasic().getArraySubscript1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
