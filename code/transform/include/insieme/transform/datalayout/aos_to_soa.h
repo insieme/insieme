@@ -48,6 +48,7 @@ class AosToSoa {
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
 	core::StatementPtr generateMarshalling(core::VariablePtr oldVar, core::VariablePtr newVar, core::ExpressionPtr start, core::ExpressionPtr end,
 			core::StructTypePtr structType);
+	core::NodePtr addMarshalling(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>> newMemberAccesses, core::NodePtr toTransform);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 };
