@@ -43,9 +43,12 @@ namespace transform {
 namespace datalayout {
 
 class AosToSoa {
+	core::NodeManager& mgr;
 
+	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
+	core::StatementPtr generateMarshalling(core::VariablePtr oldVar, core::VariablePtr newVar, core::ExpressionPtr nElems, core::StructTypePtr structType);
 public:
-	AosToSoa(core::NodePtr toTransform);
+	AosToSoa(core::NodePtr& toTransform);
 };
 
 

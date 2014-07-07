@@ -90,6 +90,34 @@ namespace testFramework{
 			: valid(valid), mockrun(false),
 			  num_threads(1), num_repeditions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
 			  panic_mode(false),force(false), list_only(false), clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
+
+		bool operator==(Options a) const{
+		    return a.mockrun==mockrun && a.num_threads==num_threads && a.num_repeditions == num_repeditions && a.use_median==use_median
+			&& a.statistics==statistics && a.scheduling==scheduling && a.statThreads==statThreads && a.force==force && a.cases==cases && 
+			a.perf==perf && a.load_miss==load_miss && a.store_miss==store_miss && a.flops == flops && a.perf_metrics==perf_metrics && a.steps==steps;
+		}
+
+		private:
+		friend class boost::serialization::access;		
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version)
+		{
+		        ar & mockrun;
+		        ar & num_threads;
+		        ar & num_repeditions;
+			ar & use_median;
+			ar & statistics;
+			ar & scheduling;
+			ar & statThreads;
+			ar & force;
+			ar & cases;
+			ar & perf;
+			ar & load_miss;
+			ar & store_miss;
+			ar & flops;
+			ar & perf_metrics;
+			ar & steps;
+		}
 	};
 
 	namespace fs = boost::filesystem;

@@ -68,7 +68,7 @@ namespace metrics{
 	class SQLOutput : public TestOutput{
 		public:
 		SQLOutput(map<TestCase,vector<pair<TestStep, TestResult>>> results) : TestOutput(results){};
-		
+	
 		void writeOutput(bool overwrite){
 			string sql=getSQLInit(true);
 			for(auto it = allResults.begin(); it != allResults.end(); it++)

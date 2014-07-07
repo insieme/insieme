@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -68,9 +68,6 @@ namespace integration {
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
 
-	//vector that stores the pids of the test steps
-	std::vector<pid_t> pids;
-
 	// ------------------------------------------------------------------------
 
 
@@ -101,6 +98,16 @@ namespace integration {
 	{
 
 		typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test)> StepOp;
+
+	protected:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version) {
+			ar & name;
+			//ar & step;
+			ar & dependencies;
+			ar & type;
+		}
 
 	public:
 
