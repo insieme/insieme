@@ -59,6 +59,7 @@ TEST(WhileToFor, CountUp) {
 						ref<int<4>> i2 = i;
 						i = 1 + i + 1;
 						j = j - 2;
+						if (j == 2) { i = i + 1; }
 						i = i - 1;
 					}
 					return 0;

@@ -43,6 +43,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -143,7 +144,7 @@ std::pair<int, bool> extractStepFromAssignment(core::Address<const core::Node> a
 				 pattern::any									// any type will do (could be integer)
 				 << pattern::listVar("addsub", operatorpat)		// operation plus or minus, determines step
 				 << pattern::listVar("ops", *pattern::any)));	// operation arguments
-	pattern::AddressMatchOpt m=assignpat->matchAddress(core::NodeAddress(a));
+	pattern::AddressMatchOpt m=assignpat->matchAddress(a);
 
 	// check whether we have a match, and can assign the nodes to the variables for further investigation
 	// consider for now only IRs in the form: v1 = v1 +/- ...
@@ -208,15 +209,58 @@ int extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
 	return step;
 }
 
+/// For a given variable, try to find its initialization value outside of the loop body.
+std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var) {
+	core::NodeAddress node;
+	int initial=0;
+	bool ok=true;
+
+	// visitor who will collect all instances (node addresses) from a given variable into a vector
+	std::vector<core::VariableAddress> allvars;
+	core::visitDepthFirst(loop.getRootAddress(), [&](const core::VariableAddress &x) {
+		// add the variable to the vector only if it occurrs outside of the loop
+		if (x.getAddressedNode()==var && !core::isChildOf(loop, x)) allvars.push_back(x);
+	});
+
+	// there are eventually more references to this variable; we need to check that there is only one single
+	// assignment - other constructs may be added later
+	for (core::VariableAddress x: allvars) {
+		core::NodeAddress mynode=x.getParentAddress(), literal=mynode.getAddressOfChild(1);
+
+		// allow only declarations
+		if (x.getParentNode()->getNodeType()==core::NT_DeclarationStmt &&
+			literal.getAddressedNode()->getNodeType()==core::NT_Literal) {
+			node=mynode;
+			initial=literal.as<core::Pointer<const core::Literal> >().getValueAs<int>();
+		} else
+			ok=false;
+	}
+
+	// the node to replace/remove is stored in "node"
+	// for now, just return the result
+	ok&=allvars.size()==1;
+	std::cout << "found decl of variable " << *var << " in: " << pp(node) << std::endl;
+	return std::pair<int, bool>(initial, ok);
+}
+
+/// For a given variable, try to find its target value which should be given in the loop condition.
+std::pair<int, bool> extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
+	//printNodes(cond);
+	return std::pair<int, bool>(0, false);
+}
+
 /// while statements can be for statements iff only one variable used in the condition is
 /// altered within the statement, and this alteration satisfies certain conditions
 insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
-		auto whilepat = irp::whileStmt(pattern::var("condition", pattern::all(pattern::var("cvar", irp::variable()))),
-									   pattern::var("body"));
+		auto whilepat = irp::whileStmt(
+					pattern::var("condition", pattern::all(pattern::var("cvar", irp::variable()))),
+					pattern::var("body"));
 
-		irp::replaceAll(whilepat, prog, [&](pattern::AddressMatch match) {
-			auto condition = match["condition"].getValue();
-			auto body = match["body"].getValue();
+		// match all while statements while making sure that we have access to their superior nodes -> ...Pairs
+		irp::matchAllPairs(whilepat, core::NodeAddress(prog),
+						   [&](core::NodeAddress whileaddr, pattern::AddressMatch match) {
+			auto condition=match["condition"].getValue();
+			auto body=match["body"].getValue();
 
 			std::cout << std::endl
 					  << "while-to-for Transformation (condition " << pp(condition) << "):" << std::endl
@@ -228,8 +272,15 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 			// for each condition variable, find its assignments in the loop body, and derive a step size
 			for (core::VariablePtr var: cvarSet) {
 				int step=extractStepForVar(body, var);
-				if (step) std::cout << "step size is " << step << std::endl << std::endl;
-				else      std::cout << "loop is no for loop!"  << std::endl << std::endl;
+				if (step) std::cout << "step size is " << step << std::endl;
+				else      std::cout << "step size cannot be determined" << std::endl;
+				auto initial=extractInitialValForVar(whileaddr, var);
+				if (initial.second) std::cout << "initial value is " << initial.first << std::endl;
+				else                std::cout << "no initial value found" << std::endl;
+				auto target=extractTargetValForVar(condition, var);
+				if (target.second)  std::cout << "target value is " << target.first << std::endl;
+				else                std::cout << "target size cannot be determined" << std::endl;
+				std::cout << std::endl;
 			}
 
 			// debug information: print the modified loop
