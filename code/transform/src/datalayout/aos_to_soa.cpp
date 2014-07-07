@@ -49,6 +49,7 @@ namespace transform {
 namespace datalayout {
 
 using namespace core;
+namespace pirp = pattern::irp;
 
 ExpressionPtr removeRefVar(ExpressionPtr refVar) {
 //	std::cout << "remvoing var from " << refVar << std::endl;
@@ -93,7 +94,10 @@ ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValueP
 	NodeManager& mgr = thing->getNodeManager();
 	IRBuilder builder(mgr);
 
-	if(thing->getType().isa<RefTypePtr>()) {
+	if(RefTypePtr ref = thing->getType().isa<RefTypePtr>()) {
+		if(ref->getElementType().isa<ArrayTypePtr>())
+			return valueAccess(builder.deref(builder.arrayRefElem(thing, index)), index, field);
+
 		return valueAccess(builder.deref(thing), index, field);
 	}
 
@@ -123,7 +127,6 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 		if(ref->getElementType().isa<StructTypePtr>())
 			return refAccess(builder.refMember(thing, field), index, field);
 
-std::cout << "ref: " << thing->getType() << std::endl;
 		return refAccess(builder.deref(thing), index, field);
 	}
 
@@ -135,10 +138,10 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	std::map<VariablePtr, RefTypePtr> structs;
 
-	pattern::TreePattern structVar = pattern::irp::variable(pattern::aT(var("structType", pattern::irp::refType(pattern::irp::arrayType(
-			pattern::irp::structType(*pattern::any))))));
+	pattern::TreePattern structVar = pirp::variable(pattern::aT(var("structType", pirp::refType(pirp::arrayType(
+			pirp::structType(*pattern::any))))));
 
-	pattern::irp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
+	pirp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
 		structs[match.as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
 	});
 /*
@@ -225,41 +228,75 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		}
 	});
 
-	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
-
-//	dumpPretty(toTransform);
 
 
-	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
-		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(100), oldToNew.second.second);
+	//searching places to introduce marshalling
+	std::map<StatementAddress, StatementAddress> doMarshall;
+	std::map<ExpressionPtr, bool> checkMarshalling;
+
+	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
+			pattern::any, pattern::aT(pattern::var("variable", pirp::variable(pattern::any))) << *pattern::any)), pattern::any);
+	pattern::TreePattern assignToStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
+			pattern::any, *pattern::any << assignToStruct << *pattern::any);
+
+
+//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
+//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
+//	}
+
+	pirp::matchAllPairs(assignToStructInLoop, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
+		StatementAddress insertAfter = match.as<StatementAddress>();
+
+		if(newMemberAccesses.find(am["variable"].getValue().as<VariablePtr>()) != newMemberAccesses.end()) {
+			VariablePtr oldVar = am["variable"].getValue().as<VariablePtr>();
+			VariablePtr newVar = newMemberAccesses[oldVar].first;
+			StructTypePtr newStructType = newMemberAccesses[oldVar].second;
+
+			StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
+					am["end"].getValue().as<ExpressionPtr>(), newStructType);
+
+			StatementList initAndMarshall;
+			initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
+			initAndMarshall.push_back(marshalling);
+
+			replacements[match] = builder.compoundStmt(initAndMarshall);
+
+			//remember that this variable was marshaled
+			checkMarshalling[oldVar] = true;
+		}
+	});
+
+	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
+		assert(checkMarshalling.find(c.first) != checkMarshalling.end() && "didn't marshal all variables");
 	}
 
+	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
+	dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
 
-StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr nElems, StructTypePtr structType) {
+StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr start, ExpressionPtr end, StructTypePtr structType) {
 	IRBuilder builder(mgr);
 
-//	pattern::TreePattern structTypePattern = pattern::aT(pattern::irp::structType(*pattern::any));
+//	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
 //	pattern::MatchOpt stMatch = structTypePattern.matchPointer(oldVar->getType());
 //	StructTypePtr structType = stMatch.get().getRoot().as<StructTypePtr>();
 
 
 	std::vector<StatementPtr> loopBody;
-	VariablePtr iterator = builder.variable(builder.getLangBasic().getUInt8());
+	VariablePtr iterator = builder.variable(start->getType());
 
 	for(NamedTypePtr memberType : structType->getElements()) {
 
-		ExpressionPtr aosAccess = valueAccess(oldVar, iterator, memberType->getName());
-		ExpressionPtr soaAccess = refAccess(newVar, iterator, memberType->getName());
-
+		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
 		loopBody.push_back(builder.assign(soaAccess, aosAccess));
 	}
 
-	return builder.forStmt(builder.declarationStmt(iterator, builder.intLit(0)), nElems, builder.intLit(1), builder.compoundStmt(loopBody));
+	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
 }
 
 } // datalayout
