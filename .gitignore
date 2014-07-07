@@ -7,6 +7,7 @@ build*/
 *.bin
 *~
 *.match
+*.swp
 /nbproject/private/
 create*.sh
 worker_event_log.*
