@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -89,9 +89,9 @@ int main(int argc, char** argv) {
 	if(options.num_repeditions==1)
 		std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
 	else
-		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);		
-	std::cout <<        "#------------------------------------------------------------------------------#\n";	
-	
+		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+
 
 	// load list of test steps
 	auto steps = tf::getTestSteps(options);
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 		highlight.insert(std::string("main_run_c++_execute_stat_")+std::to_string(options.statThreads));
 		highlight.insert(std::string("main_run_execute_guid_")+std::to_string(options.statThreads));
 		highlight.insert(std::string("main_run_c++_execute_guid_")+std::to_string(options.statThreads));
-	}	
+	}
 
 
 	// run test cases in parallel
@@ -144,8 +144,8 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int act=0;
 	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
-
-	for(auto it = cases.begin(); it < cases.end(); it++) {			
+    itc::TestRunner& runner = itc::TestRunner::getInstance();
+	for(auto it = cases.begin(); it < cases.end(); it++) {
 		const auto& cur = *it;
 
 		if (panic) continue;
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 		map<TestStep,vector<TestResult>> curRes;
 		for(int rep=0;rep<options.num_repeditions;rep++){
 			for(const auto& step : list) {
-				auto res = step.run(setup, cur);
+				auto res = step.run(setup, cur, runner);
 				curRes[step].push_back(res);
 				if (!res || res.hasBeenAborted()) {
 					success = false;
@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
 				res=TestResult::returnAVG(steps->second);
 			results.push_back(std::make_pair(steps->first,res));
 		}
-		
+
 		// print test info
 		std::cout << "#------------------------------------------------------------------------------#\n";
 		std::cout << "#\t" << ++act << "/"<< cases.size() << "\t" << format("%-63s",cur.getName()) << "#\n";
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
 				string colOffset;
 				colOffset=string("%")+std::to_string(78-curRes.first.getName().size())+"s";
 				std::stringstream line;
-				
+
 				// color certain passes:
 				if (highlight.find (curRes.first.getName()) != highlight.end()) {
 					line <<  colorize.bold() << colorize.blue();
@@ -236,9 +236,9 @@ int main(int argc, char** argv) {
 		//save results into global map
 		allResults[cur]=results;
 
-		if(success) 
+		if(success)
 			std::cout << colorize.green();
-		else 
+		else
 			std::cout << colorize.red();
 
 		std::cout << "#------------------------------------------------------------------------------#\n";
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 		output->writeOutput(options.overwrite);
 	}
 
-	
+
 
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size());
@@ -354,7 +354,7 @@ namespace {
 			res.load_miss=map["load-miss"].as<string>();
 			res.store_miss=map["store-miss"].as<string>();
 			res.flops=map["flops"].as<string>();
-		
+
 			if(map.count("perf-metric")){
 				res.perf_metrics=map["perf-metric"].as<vector<string>>();
 			}
