@@ -40,6 +40,7 @@
 
 #include "insieme/analysis/cba/analysis.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {

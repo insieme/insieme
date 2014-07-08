@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -38,17 +38,10 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "insieme/core/pattern/pattern.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
-
-namespace core {
-namespace pattern {
-class TreePattern;
-typedef std::shared_ptr<TreePattern> TreePatternPtr;
-}
-}
-
 namespace frontend {
 namespace extensions {
 
@@ -66,7 +59,7 @@ private:
 
 class IclHostPlugin : public FrontendPlugin {
 	const std::vector<boost::filesystem::path>& includeDirs;
-	core::pattern::TreePatternPtr iclRunKernel;
+	core::pattern::TreePattern iclRunKernel;
 
 public:
 	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);

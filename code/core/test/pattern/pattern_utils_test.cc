@@ -55,11 +55,11 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-bool isMatch(const TreePatternPtr& pattern, const NodePtr& node) {
-	return pattern->match(node);
+bool isMatch(const TreePattern& pattern, const NodePtr& node) {
+	return pattern.match(node);
 }
 
-bool noMatch(const TreePatternPtr& pattern, const NodePtr& node) {
+bool noMatch(const TreePattern& pattern, const NodePtr& node) {
 	return !isMatch(pattern, node);
 }
 
@@ -115,7 +115,7 @@ TEST(PatternUtils, basic) {
 	EXPECT_EQ(core::NT_ForStmt, for5->getNodeType());
 
 	// collect all
-	TreePatternPtr pattern = irp::forStmt();
+	TreePattern pattern = irp::forStmt();
 	EXPECT_EQ(allFors, irp::collectAll(pattern, root));
 	pattern = irp::whileStmt();
 	EXPECT_TRUE(irp::collectAll(pattern, root).empty());

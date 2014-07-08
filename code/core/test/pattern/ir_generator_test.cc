@@ -52,8 +52,8 @@ namespace generator {
 		// create some dummy match
 		Match<ptr_target> match(core::IntValue::get(manager, 1));
 
-		TreeGeneratorPtr gen = irg::stringValue("Hello");
-		core::NodePtr res = gen->generate(match);
+		TreeGenerator gen = irg::stringValue("Hello");
+		core::NodePtr res = gen.generate(match);
 
 		EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
 
@@ -66,8 +66,8 @@ namespace generator {
 		// create some dummy match
 		Match<ptr_target> match(core::IntValue::get(manager, 1));
 
-		TreeGeneratorPtr gen = irg::int4();
-		core::NodePtr res = gen->generate(match);
+		TreeGenerator gen = irg::int4();
+		core::NodePtr res = gen.generate(match);
 
 		EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
 

@@ -47,6 +47,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/normalize.h"
 
+#include "insieme/utils/logging.h"
+
 using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
 
@@ -76,8 +78,8 @@ TEST(Transform, InterchangeManual) {
 
 	scop::mark(forStmt);
 
-	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
-	auto match = pattern->matchPointer(forStmt);
+	TreePattern pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
+	auto match = pattern.matchPointer(forStmt);
 
 	VariablePtr i = match->getVarBinding("i").getList()[0].as<VariablePtr>();
 

@@ -88,8 +88,8 @@ namespace ocl_kernel {
                 varTy = refTy->getElementType();
 
             if (varTy->getNodeType() == core::NT_VectorType) {
-                itp::TreePatternPtr vecExpr = aT(itp::irp::vectorExpr(*itp::any));
-                auto&& match = vecExpr->matchPointer(init);
+                itp::TreePattern vecExpr = aT(itp::irp::vectorExpr(*itp::any));
+                auto&& match = vecExpr.matchPointer(init);
                 if (match) { // if it's a vector expression
                     std::string str = oclRefTypeToString(man.getLangBasic(), var->getType());
                     if(!str.empty()){

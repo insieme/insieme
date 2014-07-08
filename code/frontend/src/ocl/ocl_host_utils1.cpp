@@ -29,13 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace icp = insieme::core::pattern;
 namespace pirp = insieme::core::pattern::irp;
@@ -245,13 +246,13 @@ NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
 	// search in declaration in siblings
 	NodeManager& mgr = var.getNodeManager();
 
-	icp::TreePatternPtr localOrGlobalVar = pirp::variable() | pirp::literal(pirp::refType(icp::any), icp::any);
-	icp::TreePatternPtr valueCopy = icp::var("val", pirp::variable()) |
+	icp::TreePattern localOrGlobalVar = pirp::variable() | pirp::literal(pirp::refType(icp::any), icp::any);
+	icp::TreePattern valueCopy = icp::var("val", pirp::variable()) |
 			pirp::callExpr(mgr.getLangBasic().getRefDeref(), icp::var("val", pirp::variable())) |
 			pirp::callExpr(mgr.getLangBasic().getRefNew(), icp::var("val", pirp::variable())) |
 			pirp::callExpr(mgr.getLangBasic().getRefVar(), icp::var("val", pirp::variable()));
-//	icp::TreePatternPtr valueCopyCast = valueCopy | pirp::castExpr(icp::any, valueCopy);
-//	icp::TreePatternPtr assign = pirp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(icp::any));
+//	icp::TreePattern valueCopyCast = valueCopy | pirp::castExpr(icp::any, valueCopy);
+//	icp::TreePattern assign = pirp::callExpr((mgr.getLangBasic().getRefAssign()), //	single(icp::any));
 //			icp::var("lhs", pirp::variable()) << valueCopyCast);
 
 //std::cout << "var: " << *var << std::endl;
@@ -265,7 +266,7 @@ NodeAddress getRootVariable(NodeAddress scope, NodeAddress var) {
 		/* will be implplemented when a propper testcase can be found
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(child)) {
 			// if there is an assignment, continue with the variable found at the right hand side
-			if(AddressMatchOpt assignment = assign->matchAddress(call)){
+			if(AddressMatchOpt assignment = assign.matchAddress(call)){
 std::cout << "assigning  " << printer::PrettyPrinter(assignment->getVarBinding("val").getValue()) << std::endl;
 std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").getValue()) << std::endl;
 				if(assignment->getVarBinding("lhs").getValue() == var) {
@@ -301,7 +302,7 @@ std::cout << " to " << printer::PrettyPrinter(assignment->getVarBinding("lhs").g
 		if(DeclarationStmtAddress decl = child.isa<DeclarationStmtAddress>()) {
 			if(*(decl->getVariable()) == *var) {
 				// check if init expression is another variable
-				if(icp::AddressMatchOpt valueInit = valueCopy->matchAddress(decl->getInitialization())) {
+				if(icp::AddressMatchOpt valueInit = valueCopy.matchAddress(decl->getInitialization())) {
 					// if so, continue walk with other variable
 					return getRootVariable(scope, valueInit->getVarBinding("val").getValue());
 				}

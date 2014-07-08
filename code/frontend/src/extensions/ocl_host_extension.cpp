@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -92,7 +92,6 @@ core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 }
 
 IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
-	iclRunKernel = nullptr;
 }
 
 ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
@@ -105,7 +104,7 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 				*pattern::any << irp::callExpr(pattern::any, pattern::atom(gen.getVarlistPack()),
 				pattern::single(irp::tupleExpr(pattern::any << irp::expressions(*var("args", pattern::any))))));
 
-	core::pattern::TreePatternPtr derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(
+	core::pattern::TreePattern derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(
 																					builder.arrayType(builder.genericType("_icl_buffer")))),
 																					pattern::atom(gen.getRefDeref()), 
 																					pattern::single(var("buffer", pattern::any)));
@@ -113,11 +112,10 @@ ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::c
 
 	NodeMap replacements;
 	irp::matchAllPairs(iclRunKernel, irExpr, [&](const NodePtr& matchPtr, const NodeMatch& runKernel) {
-		assert(derefOfIclBuffer.get());
 
 		// remove deref from buffers
 		for(NodePtr arg : runKernel["args"].getFlattened()) {
-			MatchOpt match = derefOfIclBuffer->matchPointer(arg);
+			MatchOpt match = derefOfIclBuffer.matchPointer(arg);
 			if(match) {
 				replacements[match.get().getRoot()] = match.get()["buffer"].getValue();
 			}

@@ -64,32 +64,32 @@ namespace pattern {
 		/**
 		 * The pattern version of this variable.
 		 */
-		TreePatternPtr pVar;
+		TreePattern pVar;
 
 		/**
 		 * The generator version of this variable.
 		 */
-		TreeGeneratorPtr gVar;
+		TreeGenerator gVar;
 
 	public:
 
-		Variable(const string& name, const TreePatternPtr& pattern = any)
+		Variable(const string& name, const TreePattern& pattern = any)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
-		Variable(const char* name, const TreePatternPtr& pattern = any)
+		Variable(const char* name, const TreePattern& pattern = any)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
 		/**
 		 * The implicit conversion support to convert instances to tree patterns.
 		 */
-		operator const TreePatternPtr&() const {
+		operator const TreePattern&() const {
 			return pVar;
 		}
 
 		/**
 		 * The implicit conversion support to convert instances to tree generators.
 		 */
-		operator const TreeGeneratorPtr&() const {
+		operator const TreeGenerator&() const {
 			return gVar;
 		}
 
@@ -131,7 +131,7 @@ namespace pattern {
 			VarList(const VarList& a, const VarList& b)
 				: vars(a.vars) { vars.insert(vars.end(),b.vars.begin(), b.vars.end()); }
 
-			operator ListPatternPtr() const {
+			operator ListPattern() const {
 				auto cur = vars.begin();
 				auto res = single(*cur); ++cur;
 				for(; cur != vars.end(); ++cur) {
@@ -140,7 +140,7 @@ namespace pattern {
 				return res;
 			}
 
-			operator ListGeneratorPtr() const {
+			operator ListGenerator() const {
 				auto cur = vars.begin();
 				auto res = generator::single(*cur); ++cur;
 				for(; cur != vars.end(); ++cur) {
