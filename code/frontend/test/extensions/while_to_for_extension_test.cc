@@ -46,7 +46,34 @@ namespace pattern {
 
 using namespace core;
 
-TEST(WhileToFor, CountUp) {
+TEST(WhileToFor, Simple) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i = 0;
+					ref<int<4>> j = 4;
+					while (i < 10) {
+						ref<int<4>> i2 = i;
+						i = i + 3;
+					}
+					while (j!=0) {
+						j = j - 2;
+					}
+					return i;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
+}
+
+TEST(WhileToFor, DISABLED_MultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
 
@@ -59,7 +86,6 @@ TEST(WhileToFor, CountUp) {
 						ref<int<4>> i2 = i;
 						i = 1 + i + 1;
 						j = j - 2;
-						if (j == 2) { i = i + 1; }
 						i = i - 1;
 					}
 					return 0;
@@ -73,7 +99,7 @@ TEST(WhileToFor, CountUp) {
 	plugin.IRVisit(program);
 }
 
-TEST(WhileToFor, DISABLED_ConfusedCountUp) {
+TEST(WhileToFor, DISABLED_ConfusedMultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
 
@@ -85,6 +111,7 @@ TEST(WhileToFor, DISABLED_ConfusedCountUp) {
 					while (i < 10 && j!=0) {
 						ref<int<4>> i2 = i;
 						i = i + 2 - i;
+						if (j == 2) { i = i + 1; }
 						j = j - 1;
 					}
 					return 0;
@@ -98,33 +125,63 @@ TEST(WhileToFor, DISABLED_ConfusedCountUp) {
 	plugin.IRVisit(program);
 }
 
-	TEST(WhileToFor, DISABLED_Complex) {
-		NodeManager man;
-		IRBuilder builder(man);
+TEST(WhileToFor, Nested) {
+	NodeManager man;
+	IRBuilder builder(man);
 
-		core::ProgramPtr program = builder.parseProgram(
-			"int<4> main() {"
-			"   ref<int<4>> i1 = 0;"
-			"	while (i1 < 10) {"
-			"		ref<int<4>> i2 = i1;"
-			"		while(i2 > 5) {"
-			"			i2 = i2 - 1;"
-			"		}"
-			"		i1 = i1 + 2;"
-			"	}"
-			"   ref<int<4>> i3 = 2;"
-			"	while (i1 > 4) {"
-			"      i1 = i1 - i3;"
-			"   }"
-			"	return 0;"
-			"}"
-		);
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i1 = 0;
+					while (i1 < 10) {
+						ref<int<4>> i2 = 8;
+						while(i2 > 5) {
+							i2 = i2 - 1;
+						}
+						i1 = i1 + 2;
+					}
+					ref<int<4>> i3 = 2;
+					while (i3 > 4) {
+						i3 = i3 - 2;
+					}
+					return 0;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
+}
+
+TEST(WhileToFor, DISABLED_NestedDeps) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				"int<4> main() {"
+				"	ref<int<4>> i1 = 0;"
+				"	while (i1 < 10) {"
+				"		ref<int<4>> i2 = i1;"
+				"		while(i2 > 5) {"
+				"			i2 = i2 - 1;"
+				"		}"
+				"		i1 = i1 + 2;"
+				"	}"
+				"   ref<int<4>> i3 = 2;"
+				"	while (i1 > 4) {"
+				"      i1 = i1 - i3;"
+				"   }"
+				"	return 0;"
+				"}"
+				);
 		
-		ASSERT_TRUE(program);
+	ASSERT_TRUE(program);
 
-		frontend::WhileToForPlugin plugin;
-		plugin.IRVisit(program);
-	}
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
+}
 	
 	TEST(WhileToFor, DISABLED_NonConvertible) {
 		NodeManager man;

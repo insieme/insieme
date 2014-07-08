@@ -82,10 +82,11 @@ unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n)
 void printNodes(const insieme::core::Address<const insieme::core::Node> n, std::string prefix="        @\t",
 				unsigned int max=0, unsigned int depth=0) {
 	if (!max) max=maxDepth(n);
+	int depth0=n.getDepth()-depth;
 	for (auto c: n.getChildAddresses()) {
-		std::cout << prefix << c << std::setw(2*(max-depth-1)) << "+"
+		std::cout << prefix << c << std::setw(2*(depth0+max-depth-1)) << "+"
 				  << std::setw(2*depth+1) << "" << *c << std::endl;
-		printNodes(c, prefix, max, depth+1);
+		if (depth<max) printNodes(c, prefix, max, depth+1);
 	}
 }
 
@@ -201,7 +202,7 @@ int extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
 	int step=0;
 	bool ok=true;
 	for (auto a: assignments) {
-		std::cout << "assignment: " << pp(a) << std::endl;
+		//std::cout << "assignment: " << pp(a) << std::endl;
 		auto astep=extractStepFromAssignment(a);
 		ok&=astep.second;
 		if (ok) step+=astep.first;
@@ -219,7 +220,8 @@ std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::Varia
 	std::vector<core::VariableAddress> allvars;
 	core::visitDepthFirst(loop.getRootAddress(), [&](const core::VariableAddress &x) {
 		// add the variable to the vector only if it occurrs outside of the loop
-		if (x.getAddressedNode()==var && !core::isChildOf(loop, x)) allvars.push_back(x);
+		if (x.getAddressedNode()==var && !core::isChildOf(loop, x) &&
+			x.getParentAddress().getChildAddresses().size()>=2) allvars.push_back(x);
 	});
 
 	// there are eventually more references to this variable; we need to check that there is only one single
@@ -236,17 +238,66 @@ std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::Varia
 			ok=false;
 	}
 
+	// For now, make sure that no value will be assigned to the loop variable except the initial declaration
+	// and the assignment in the while loop. Otherwise, we would have to check whether assignments happen
+	// only after the loop has been executed (easy), or which effect the assignment (in front of the loop)
+	// to the variable has (anything else than a single literal -> hard: have to evaluate expressions in this case)
+	ok&=allvars.size()==1;
+
 	// the node to replace/remove is stored in "node"
 	// for now, just return the result
-	ok&=allvars.size()==1;
-	std::cout << "found decl of variable " << *var << " in: " << pp(node) << std::endl;
+	/*std::cout << "found decl of variable " << *var << " in: " << pp(node)
+			  << " (#assignments = " << allvars.size() << ")" << std::endl; */
 	return std::pair<int, bool>(initial, ok);
 }
 
 /// For a given variable, try to find its target value which should be given in the loop condition.
 std::pair<int, bool> extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
-	//printNodes(cond);
-	return std::pair<int, bool>(0, false);
+	bool ok=false;
+	int targetval=0;
+
+	// visitor who will collect all accesses (node addresses) to a given variable and will try to find the target value
+	core::visitDepthFirst(cond, [&](const core::VariableAddress &x) {
+		auto& basic=x->getNodeManager().getLangBasic();
+
+		// the variable is only considered if it is contained within a ref.deref and a logic operator
+		core::CallExprPtr refderef;
+		if (x.getAddressedNode()==var &&
+			x.getDepth()>2 &&
+			x.getParentNode()->getNodeType() == core::NT_CallExpr &&
+			x.getParentAddress().getParentNode()->getNodeType() == core::NT_CallExpr &&
+			basic.isRefDeref((refderef=x.getParentNode().as<core::CallExprPtr>()).getFunctionExpr())) {
+
+			// now we need to extract the logic operator and its argument, a literal
+			core::CallExprAddress comperator=x.getParentAddress().getParentAddress().as<core::CallExprAddress>();
+			core::NodeAddress arg;
+			ok=comperator.getChildAddresses().size()==4 &&
+					(arg=comperator.getAddressOfChild(3)).getNodeType()==core::NT_Literal;
+			if (ok) {
+				targetval=arg.as<core::Address<const core::Literal> >().getValueAs<int>();
+				/* std::cout << "comparison " << comperator << ":" << *comperator
+						  << " is function " << *comperator.getFunctionExpr()
+						  << " with argument " << targetval
+						  << std::endl; */
+
+				// adjust target value depending on the comparison operator
+				/**/ if (basic.isSignedIntLe(comperator.getFunctionExpr())) targetval+=1;
+				else if (basic.isSignedIntGe(comperator.getFunctionExpr())) targetval-=1;
+				else if (basic.isSignedIntLt(comperator.getFunctionExpr()) ||
+						 basic.isSignedIntGt(comperator.getFunctionExpr()) ||
+						 basic.isSignedIntNe(comperator.getFunctionExpr()));
+				else ok=false; // unhandled for now
+
+				// We cannot handle while loops with multiple conditions right now, as we would have to replace
+				// the initial while-condition with a for loop and an if-statement. A while-loop with only one
+				// condition is much simpler, as we can simply drop the if-statement. Hence, indicate this
+				// deficiency for now by returning false in case we have more than one condition.
+				ok&=cond==comperator;
+			}
+		}
+	});
+
+	return std::pair<int, bool>(targetval, ok);
 }
 
 /// while statements can be for statements iff only one variable used in the condition is
@@ -265,6 +316,7 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 			std::cout << std::endl
 					  << "while-to-for Transformation (condition " << pp(condition) << "):" << std::endl
 					  << pp(match.getRoot()) << std::endl << std::endl;
+			//printNodes(condition, "  conds\t", 1);
 
 			// collect all variables from the loop condition, and store them in a PointerSet
 			insieme::utils::set::PointerSet<core::VariablePtr> cvarSet=extractCondVars(match["cvar"].getFlattened());
