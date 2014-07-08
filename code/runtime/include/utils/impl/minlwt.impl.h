@@ -202,6 +202,10 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 	
 	#include "minlwt.gems.impl.h"
 
+#elif define (__arm__)
+
+	#include "minlwt.arm.impl.h"
+
 #else // eg. GCC (on Linux), if not gcc compiler we will get an error anyway
 
 	#include "minlwt.gcc.impl.h"
