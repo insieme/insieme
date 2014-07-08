@@ -202,7 +202,7 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 	
 	#include "minlwt.gems.impl.h"
 
-#elif define (__arm__)
+#elif defined (__arm__)
 
 	#include "minlwt.arm.impl.h"
 
