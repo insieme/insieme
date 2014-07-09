@@ -38,7 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
 #define __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
 
-#if defined(_GEMS) 
+#if defined(__arm__) || defined(_GEMS) 
 	#include "rapl.gems.impl.h"
 #else
 	#include "rapl.std.impl.h"

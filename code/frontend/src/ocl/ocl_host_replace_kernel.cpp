@@ -427,12 +427,13 @@ std::vector<std::string> KernelReplacer::findKernelNames(TreePattern clCreateKer
 	std::vector<std::string> kernelFileNames;
 
 	TreePattern kernelDecl = irp::declarationStmt(pattern::var("kernel", pattern::any),
-			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(clCreateKernel)));
+			irp::callExpr(pattern::any, irp::atom(gen.getRefVar()), pattern::single(pattern::var("createKernel", clCreateKernel))));
 	TreePattern kernelAssign = var("assignment", irp::callExpr(pattern::any, irp::atom(gen.getRefAssign()),
-			pattern::var("kernel", pattern::any) << clCreateKernel));
-	TreePattern createKernelPattern = kernelDecl | kernelAssign;
+			pattern::var("kernel", pattern::any) << pattern::var("createKernel", clCreateKernel)));
+	createKernelPattern = kernelDecl | kernelAssign;
 
 	irp::matchAllPairs(createKernelPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
+
 		core::ExpressionPtr kernelNameExpr = createKernel["kernel_name"].getValue().as<core::ExpressionPtr>();
 
 		std::string kernelName = utils::extractQuotedString(kernelNameExpr);
@@ -446,7 +447,7 @@ std::vector<std::string> KernelReplacer::findKernelNames(TreePattern clCreateKer
 		NodePtr createKernelExpr = createKernel.getRoot();
 
 		// remove the clCreateKernel call including the assignment and its lhs, not the declaration
-		if(createKernel.isVarBound("assignment")) prog = transform::replaceAll(mgr, prog, createKernelExpr, (builder.getNoOp()), false);
+//		if(createKernel.isVarBound("assignment")) prog = transform::replaceAll(mgr, prog, createKernelExpr, (builder.getNoOp()), false);
 
 		if(createKernel.isVarBound("file_name")) kernelFileNames.push_back(utils::extractQuotedString(createKernel["file_name"].getValue()));
 	});
@@ -622,6 +623,18 @@ void KernelReplacer::replaceKernels() {
 		ExpressionPtr replacement = k.isa<VariablePtr>() ? builder.variable(builder.refType(tt)).as<ExpressionPtr>()
 				: builder.literal(builder.refType(tt), k.as<LiteralPtr>()->getStringValue());
 		kernelReplacements[k] = replacement;
+	});
+
+	// look for create kernel statements and replace them with new
+	irp::matchAllPairs(createKernelPattern, NodeAddress(prog), [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
+		std::cout << "found ther create Kernel\n";
+
+		ExpressionPtr cKexpr = createKernel["createKernel"].getValue().getAddressedNode().as<ExpressionPtr>();
+		ExpressionPtr k = utils::getRootVariable(matchAddress >> createKernel["kernel"].getValue()).getAddressedNode().as<ExpressionPtr>();
+
+		assert(kernelReplacements.find(k) != kernelReplacements.end() && "Found createKernel but no appropriate kernel for it");
+
+		kernelReplacements[cKexpr] = builder.refNew(builder.undefined(builder.tupleType(kernelTypes[k])));
 	});
 
 	prog = transform::replaceVarsRecursiveGen(mgr, prog, kernelReplacements, false);
@@ -888,6 +901,8 @@ void IclKernelReplacer::inlineKernelCode() {
 		// replace the kernel call by a compound statement which collects all the arguments in a tuple and does the kernel call (to be replaced later)
 		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
 	});
+
+	assert(!replacements.empty() && "No kernels found");
 
 	prog = transform::replaceAll(mgr, replacements);
 

@@ -109,7 +109,9 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 
 	_irt_setup_hardware_info();
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_maintenance_init();
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -189,7 +191,9 @@ void irt_exit_handler() {
 		irt_cpu_freq_reset_frequencies();
 #endif
 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_maintenance_cleanup();
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	

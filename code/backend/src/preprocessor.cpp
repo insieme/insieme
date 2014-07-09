@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -244,12 +244,20 @@ namespace backend {
 		const auto& base = mgr.getLangBasic();
 
 		// search for globals initialized in main body
+		bool stop = false;
 		std::map<core::LiteralPtr, core::CallExprAddress> inits;
 		core::visitDepthFirstOncePrunable(body, [&](const core::StatementAddress& stmt)->bool {
-
 			// check out
 			if (auto call = stmt.isa<core::CallExprAddress>()) {
-
+                // check if the function call is not a builtin.
+                // this is done because a function call can cause
+                // a modification of the global variable
+                if (stop) {
+                    return true;
+                }
+                if (!base.isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) {
+                    stop = true;
+                }
 				// check whether it is an assignment
 				if (core::analysis::isCallOf(call.as<core::CallExprPtr>(), base.getRefAssign())) {
 

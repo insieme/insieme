@@ -140,10 +140,17 @@
 #endif
 
 //optimizer
-//enable optimizations based on openmp+ (DCT excluded)
+//enables optimizations based on openmp+ (DCT excluded)
 //#define IRT_ENABLE_OMPP_OPTIMIZER
-//enable DCT optimizations based on openmp+
+//enables DCT optimizations based on openmp+
 //#define IRT_ENABLE_OMPP_OPTIMIZER_DCT
+//enables measurments of resource compsumption with different frequencies
+//#defines IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+//defines how many times a new frequency will be picked
+//#define IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
+    #define IRT_ENABLE_OMPP_OPTIMIZER
+#endif
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
     #define IRT_ENABLE_OMPP_OPTIMIZER
 #endif

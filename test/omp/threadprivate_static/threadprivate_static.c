@@ -3,10 +3,10 @@
 
 #define THREADS 4
 
-double gd;
-double gs;
-int ga[THREADS];
+static double gd;
+static int ga[THREADS];
 #pragma omp threadprivate(gd, ga)
+static double gs;
 
 void calc() {
 	for(int i=0; i<THREADS; ++i)
@@ -36,6 +36,6 @@ int main() {
 	if(success) {
 		printf("Success!\n");
 	} else {
-		printf("Fail!\n");
+		printf("Fail! %f\n", gs);
 	}
 }

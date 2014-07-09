@@ -40,6 +40,8 @@
 
 #include "abstraction/rapl.h"
 
+bool irt_g_inst_rapl_in_use = false;
+
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 }
 
