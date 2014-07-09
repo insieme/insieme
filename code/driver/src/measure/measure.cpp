@@ -43,6 +43,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/analysis/region/for_selector.h"
+#include "insieme/analysis/region/pfor_selector.h"
+
 #include "insieme/utils/config.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -664,6 +667,38 @@ namespace measure {
 		return measure(regions, metrices, 1, executor, compiler, env)[0];
 	}
 
+//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
+//				const core::StatementAddress& stmt,
+//				const vector<MetricPtr>& metrices,
+//				unsigned numRuns, const ExecutorPtr& executor,
+//				const utils::compiler::Compiler& compiler,
+//				const std::map<string, string>& env) {
+//
+//			namespace iar = insieme::analysis::region;
+//
+//			iar::ForSelector forSelector;
+//			vector<core::StatementAddress> regions = forSelector.getRegions(stmt.getAddressedNode());
+//
+//			// create a stmt-address <-> region_id map
+//			std::map<core::StatementAddress, region_id> mappedRegions;
+//			region_id id = 0;
+//			for(const auto& cur : regions) {
+//				mappedRegions[cur] = id++;
+//			}
+//
+//			// run measurements
+//			auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
+//
+//			// un-pack results
+//			return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> {
+//				std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
+//				for(const auto& cur : data) {
+//					res[regions[cur.first]] = cur.second;
+//				}
+//				return res;
+//			});
+//		}
+
 	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(
 			const vector<core::StatementAddress>& regions,
 			const vector<MetricPtr>& metrices,
@@ -1064,6 +1099,18 @@ namespace measure {
 		return res;
 	}
 
+	std::string buildBinaryAll(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
+		namespace iar = insieme::analysis::region;
+		std::map<core::StatementAddress, region_id> regions;
+		iar::ForSelector forSelector;
+		vector<core::StatementAddress> list = PForBodySelector.getRegions(region);
+		unsigned id = 0;
+		for(auto entry : list)
+			regions[entry] = id++;
+
+		return buildBinary(regions, compiler);
+	}
+
 	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
 		std::map<core::StatementAddress, region_id> regions;
 		regions[region] = 0;
@@ -1108,6 +1155,7 @@ namespace measure {
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_RUNTIME_TUNING");
+		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
 

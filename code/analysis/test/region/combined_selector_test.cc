@@ -34,59 +34,58 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <vector>
+#include "insieme/analysis/region/parallel_selector.h"
+#include "insieme/analysis/region/for_selector.h"
 
-#include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/normalize.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace region {
 
-	using std::vector;
+	TEST(CombinedSelector, Basic) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
+		// load some code sample ...
+		auto res = core::analysis::normalize(builder.parseProgram(
+				"let fun000 = ()->unit {"
+					"	for(int<4> i = 0..50) {"
+					"	}"
+					"ref<int<4>> v1 = var(3);"
+				"};"
 
-	/**
-	 * At the moment, no more information regarding a region is required
-	 * than an address pointing to it. Hence, regions are typedefed to be
-	 * equivalent to NodeAddresses.
-	 */
-	typedef core::StatementAddress Region;
-	typedef vector<Region> RegionList;
+				"int<4> main() {"
+					"ref<int<4>> v1 = var(0);"
+					"ref<int<4>> v5 = var(0);"
+					"for(int<4> k = 0..10) {"
+					"	for(int<4> i = 0..20) {"
+					"	}"
+					"}"
+					"{"
+						"parallel(job([1-1], fun000()));"
+					"};"
+					"return 0;"
+				"}"));
+		EXPECT_TRUE(res);
 
-	/**
-	 * An abstract base class defining the interface for any kind of region selection
-	 * mechanism to be supported.
-	 */
-	class RegionSelector {
+		ParallelSelector parSelector;
+		vector<Region> parallelRegions = parSelector.getRegions(res);
+		ForSelector forSelector;
+		vector<Region> forRegions = forSelector.getRegions(res);
+		parallelRegions.insert(parallelRegions.end(), forRegions.begin(), forRegions.end());
 
-	public:
+		for(auto reg : parallelRegions)
+			std::cout << dumpPretty(reg) << "\n";
 
-		/**
-		 * A virtual destructor for this abstract, virtual base class.
-		 */
-		virtual ~RegionSelector() {};
+		EXPECT_EQ(parallelRegions.size(), 4);
+	}
 
-		/**
-		 * This method is determining a list of regions within the given code fragment.
-		 * The method represents the sole functionality of a region extractor. Implementations
-		 * of this abstract base class have to provide corresponding implementations for
-		 * this method.
-		 *
-		 * @param code the code fragment within which regions should be determined
-		 * @return a list of addresses to the nodes forming the selected regions. The root
-		 * 		of all obtained addresses has to be equivalent to the given code region.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const =0;
-
-	};
-
-
-} // end namespace region
+} // end namespace features
 } // end namespace analysis
 } // end namespace insieme

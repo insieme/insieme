@@ -34,59 +34,44 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/region/parallel_selector.h"
 
-#include <vector>
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace analysis {
 namespace region {
 
-	using std::vector;
+	RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
 
+		RegionList res;
+		auto parallel = node->getNodeManager().getLangBasic().getParallel();
+		core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
+			if (*cur.getAddressedNode()->getFunctionExpr() != *parallel) {
+				return false;
+			}
 
-	/**
-	 * At the moment, no more information regarding a region is required
-	 * than an address pointing to it. Hence, regions are typedefed to be
-	 * equivalent to NodeAddresses.
-	 */
-	typedef core::StatementAddress Region;
-	typedef vector<Region> RegionList;
+			core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
+			core::ExpressionAddress addr = job->getDefaultExpr();
 
-	/**
-	 * An abstract base class defining the interface for any kind of region selection
-	 * mechanism to be supported.
-	 */
-	class RegionSelector {
+			if(addr->getNodeType() == core::NT_BindExpr) {
+				addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
+			}
 
-	public:
+			if (addr->getNodeType() == core::NT_LambdaExpr) {
+				res.push_back(addr.as<core::LambdaExprAddress>()->getBody());
+			}
 
-		/**
-		 * A virtual destructor for this abstract, virtual base class.
-		 */
-		virtual ~RegionSelector() {};
+			return true;
 
-		/**
-		 * This method is determining a list of regions within the given code fragment.
-		 * The method represents the sole functionality of a region extractor. Implementations
-		 * of this abstract base class have to provide corresponding implementations for
-		 * this method.
-		 *
-		 * @param code the code fragment within which regions should be determined
-		 * @return a list of addresses to the nodes forming the selected regions. The root
-		 * 		of all obtained addresses has to be equivalent to the given code region.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const =0;
+		}, false);
 
-	};
-
+		return res;
+	}
 
 } // end namespace region
 } // end namespace analysis
 } // end namespace insieme
+

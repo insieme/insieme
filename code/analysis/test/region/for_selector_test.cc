@@ -34,59 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <vector>
+#include "insieme/analysis/region/for_selector.h"
 
-#include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace region {
 
-	using std::vector;
+	TEST(ForSelector, Basic) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
+		// load some code sample ...
+		auto stmt = builder.parseStmt(
+			"for(int<4> k = 0..10) {"
+			"	for(int<4> i = 0..20) {"
+			"	}"
+			"}").as<core::ForStmtPtr>();
+		EXPECT_TRUE(stmt);
 
-	/**
-	 * At the moment, no more information regarding a region is required
-	 * than an address pointing to it. Hence, regions are typedefed to be
-	 * equivalent to NodeAddresses.
-	 */
-	typedef core::StatementAddress Region;
-	typedef vector<Region> RegionList;
+		ForSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
 
-	/**
-	 * An abstract base class defining the interface for any kind of region selection
-	 * mechanism to be supported.
-	 */
-	class RegionSelector {
+		EXPECT_EQ(regions.size(), 2);
+	}
 
-	public:
-
-		/**
-		 * A virtual destructor for this abstract, virtual base class.
-		 */
-		virtual ~RegionSelector() {};
-
-		/**
-		 * This method is determining a list of regions within the given code fragment.
-		 * The method represents the sole functionality of a region extractor. Implementations
-		 * of this abstract base class have to provide corresponding implementations for
-		 * this method.
-		 *
-		 * @param code the code fragment within which regions should be determined
-		 * @return a list of addresses to the nodes forming the selected regions. The root
-		 * 		of all obtained addresses has to be equivalent to the given code region.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const =0;
-
-	};
-
-
-} // end namespace region
+} // end namespace features
 } // end namespace analysis
 } // end namespace insieme
