@@ -67,7 +67,7 @@ namespace addons {
 			auto manager = converter.getCNodeManager();
 
 			//get VECTORTYPE (== vector<elemTy, #l>) and produce "elemTy __attribute__(vector_size(#l * sizeof(elemTy)))"
-			std::cout << " convert type: " << type << std::endl;
+			//std::cout << " convert type: " << type << std::endl;
 			
 			// check whether it is a SIMDVectorType
 			if (!(core::lang::isSIMDVector(type) )) {

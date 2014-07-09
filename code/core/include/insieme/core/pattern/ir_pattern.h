@@ -309,6 +309,10 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); }), data, idx);
 	}
 
+	inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getTupleMemberAccess(); }), data, idx, type);
+	}
+
 	inline TreePattern tupleRefElem(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getTupleRefElem(); }), data, idx, type);
 	}

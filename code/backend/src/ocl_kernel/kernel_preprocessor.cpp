@@ -553,8 +553,8 @@ namespace {
                 //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
 
                 // unwrap types before being passed to build-in / external functions
-				LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
-				LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
+				//LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
+				//LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
 				//core = unwrapTypes(core);
 				//LOG(INFO) << "After Unwrap: " << core::printer::PrettyPrinter(core);
 				//LOG(INFO) << "Errors After Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
