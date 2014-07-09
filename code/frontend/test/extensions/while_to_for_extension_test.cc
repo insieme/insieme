@@ -73,7 +73,7 @@ TEST(WhileToFor, Simple) {
 	plugin.IRVisit(program);
 }
 
-TEST(WhileToFor, DISABLED_MultipleAss) {
+TEST(WhileToFor, MultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
 

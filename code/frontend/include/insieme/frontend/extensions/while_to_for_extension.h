@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
@@ -43,6 +46,24 @@ namespace printer=insieme::core::printer;
 
 namespace insieme {
 namespace frontend {
+
+/// NodeBookmark allows to capture the status related to a list of nodes, by allowing to store the list of nodes
+/// together with some integer value and an error msg, for passing around and later processing.
+class NodeBookmark {
+public:
+    std::vector<insieme::core::NodeAddress> nodes;
+    int value;
+    std::string msg;
+
+    NodeBookmark(): value(0) {}
+
+    bool ok() { return msg.empty(); }
+    bool err() { return !ok(); }
+    void err(std::string s) { if (msg.empty()) msg=s; }
+    void merge(NodeBookmark b) { if (err()) return; err(b.msg); value+=b.value;
+                                 nodes.reserve(nodes.size()+b.nodes.size());
+                                 nodes.insert(nodes.end(), b.nodes.begin(), b.nodes.end()); }
+};
 
 /**
  *
@@ -54,15 +75,16 @@ public:
 protected:
 	insieme::utils::set::PointerSet<core::VariablePtr> extractCondVars(std::vector<core::NodeAddress> cvars);
 	std::vector<core::NodeAddress> getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var);
-	std::pair<int, bool> extractStepFromAssignment(core::Address<const core::Node> a);
-	int extractStepForVar(core::NodeAddress body, core::VariablePtr var);
-	std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var);
-	std::pair<int, bool> extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var);
+	NodeBookmark extractStepFromAssignment(core::Address<const core::Node> a);
+	NodeBookmark extractStepForVar(core::NodeAddress body, core::VariablePtr var);
+	NodeBookmark extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var);
+	NodeBookmark extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var);
+	void replaceWhileByFor(core::NodeAddress whileaddr, NodeBookmark initial, NodeBookmark target, NodeBookmark step);
 private:
 	printer::PrettyPrinter pp(const core::NodePtr& n);
 	unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n);
 	void printNodes(const insieme::core::Address<const insieme::core::Node> n,
-					std::string prefix, unsigned int max, unsigned int depth);
+					std::string prefix, int max, unsigned int depth);
 };
 
 } // frontend
