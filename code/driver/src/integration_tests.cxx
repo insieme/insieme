@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,6 +47,7 @@
 #include <iostream>
 #include <iomanip>
 #include <utility>
+#include <unistd.h>
 
 #include <omp.h>
 
@@ -158,6 +159,28 @@ namespace{
 	}
 }
 
+void printSummary(const std::vector<TestCase>& ok, const std::vector<TestCase>& failed,
+                  const int& screenWidth, const std::map<TestCase, TestResult>& failedSteps,
+                  const tf::Colorize& colorize, const int& totalTests) {
+	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
+	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
+
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
+	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
+	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
+	for(auto cur : failed) {
+        std::map<TestCase, TestResult>::const_iterator failedStep = failedSteps.find(cur);
+		string failedStepInfo((*failedStep).second.getStepName() + ": exit code " + to_string((*failedStep).second.getRetVal()));
+		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
+		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
+	}
+	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+}
+
+
 int main(int argc, char** argv) {
 	//TODO custom root config file
 
@@ -249,6 +272,17 @@ int main(int argc, char** argv) {
 	int act = 0;
 
 	for(int i=0; i<options.num_repeditions; i++) {
+        //get instance of the test runner
+        itc::TestRunner& runner = itc::TestRunner::getInstance();
+        //set lambda to print some execution summary at the end
+        runner.attachExecuteOnKill([&](){
+            printSummary(ok,failed,screenWidth,failedSteps,colorize,totalTests);
+        });
+        //set lambda to set panic mode before killing all the processes
+        runner.attachExecuteBeforeKill([&](){
+            panic = true;
+        });
+
 
 		#pragma omp parallel for schedule(dynamic)
 		for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
@@ -266,7 +300,7 @@ int main(int argc, char** argv) {
 			vector<pair<string, TestResult>> results;
 			bool success = true;
 			for(const auto& step : list) {
-				auto res = step.run(setup, cur);
+				auto res = step.run(setup, cur, runner);
 				results.push_back(std::make_pair(step.getName(), res));
 				if (!res || res.hasBeenAborted()) {
 					failedSteps[cur] = res;
@@ -293,7 +327,7 @@ int main(int argc, char** argv) {
 						string colOffset;
 						colOffset=string("%")+std::to_string(screenWidth-4-curRes.first.size())+"s";
 						std::stringstream line;
-					
+
 						// color certain passes:
 						if (highlight.find (curRes.first) != highlight.end()) {
 							line <<  colorize.bold() << colorize.blue();
@@ -362,23 +396,10 @@ int main(int argc, char** argv) {
 
 	} // end repetition loop
 
-	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
-
-
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
-	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
-	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
-	for(const auto& cur : failed) {
-		TestResult failedStep = failedSteps[cur];
-		string failedStepInfo(failedStep.getStepName() + ": exit code " + to_string(failedStep.getRetVal()));
-		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
-		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
-	}
-	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
+    if(!panic)
+        printSummary(ok,failed,screenWidth,failedSteps,colorize,totalTests);
 
 	// done
 	return (failed.empty())?0:1;
 }
+
