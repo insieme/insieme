@@ -66,6 +66,23 @@ namespace integration {
 	
 		bool userabort;
 
+	private:
+		friend class boost::serialization::access;		
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version)
+		{
+		        ar & success;
+		        ar & metricResults;
+		        ar & metricDeviation;
+			ar & output;
+			ar & errorOut;
+			ar & cmd;
+			ar & producedFiles;
+			ar & numThreads;
+			ar & sched;
+			ar & userabort;
+		}
+
 	protected:
 		map<string,string> staticResults;
 
@@ -204,7 +221,7 @@ namespace integration {
 		}
 
 		float getRuntime() const{
-			return metricResults.find("time")->second;
+			return metricResults.find("walltime")->second;
 		}
 
 		float getMemory() const{
@@ -212,7 +229,7 @@ namespace integration {
 		}
 
 		float getRuntimeDev() const{
-			return metricDeviation.find("time")->second;
+			return metricDeviation.find("walltime")->second;
 		}
 
 		float getMemoryDev() const{

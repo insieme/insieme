@@ -116,6 +116,7 @@ protected:
 	LocalMemArgs localMemArgs;
 	const std::vector<boost::filesystem::path>& includeDirs;
 	std::set<string> kernelFileCache;
+	core::pattern::TreePattern createKernelPattern;
 
 	std::vector<std::string> findKernelNames(core::pattern::TreePattern);
 	virtual core::ExpressionPtr handleArgument(const core::TypePtr& argTy, const core::TypePtr& memberTy, const core::ExpressionPtr& tupleMemberAccess,

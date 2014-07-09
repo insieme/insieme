@@ -100,6 +100,16 @@ namespace integration {
 
 		typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
 
+	protected:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version) {
+			ar & name;
+			//ar & step;
+			ar & dependencies;
+			ar & type;
+		}
+
 	public:
 
 		std::string name;

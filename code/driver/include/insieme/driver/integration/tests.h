@@ -42,7 +42,8 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
-
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
@@ -125,8 +126,18 @@ namespace integration {
 		 */
 		Properties properties;
 
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int version)
+		{
+			ar & name;
+		}
+
 	public:
 
+		IntegrationTestCase(){};
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
