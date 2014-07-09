@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,8 +47,8 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/program_options.hpp>
-#include <boost/archive/binary_oarchive.hpp> 
-#include <boost/archive/binary_iarchive.hpp> 
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <omp.h>
 #include <fstream>
 
@@ -94,9 +94,9 @@ int main(int argc, char** argv) {
 	if(options.num_repeditions==1)
 		std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
 	else
-		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);		
-	std::cout <<        "#------------------------------------------------------------------------------#\n";	
-	
+		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);
+	std::cout <<        "#------------------------------------------------------------------------------#\n";
+
 
 
 	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
@@ -143,9 +143,9 @@ int main(int argc, char** argv) {
 		highlight.insert(std::string("main_run_c++_execute_stat_")+std::to_string(options.statThreads));
 		highlight.insert(std::string("main_run_execute_guid_")+std::to_string(options.statThreads));
 		highlight.insert(std::string("main_run_c++_execute_guid_")+std::to_string(options.statThreads));
-	}	
+	}
 
-	//check if backup file exists, read results	
+	//check if backup file exists, read results
         std::ifstream ifs("back.bin");
 	if(ifs.good()){
 		LOG(INFO)<<"Trying recovery from crashed run!";
@@ -167,7 +167,8 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int act=0;
 
-	for(auto it = cases.begin(); it < cases.end(); it++) {			
+    itc::TestRunner& runner = itc::TestRunner::getInstance();
+	for(auto it = cases.begin(); it < cases.end(); it++) {
 		const auto& cur = *it;
 
 		bool execute=true;
@@ -185,41 +186,40 @@ int main(int argc, char** argv) {
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
-		string name=cur.getName();
+        string name=cur.getName();
 
-		if(execute){
+        if(execute) {
+            map<TestStep,vector<TestResult>> curRes;
+            for(int rep=0;rep<options.num_repeditions;rep++){
+                for(const auto& step : list) {
+                    auto res = step.run(setup, cur, runner);
+                    curRes[step].push_back(res);
+                    if (!res || res.hasBeenAborted()) {
+                        success = false;
+                        break;
+                    }
+                if(!success)
+                    break;
+            }
 
-			map<TestStep,vector<TestResult>> curRes;
-			for(int rep=0;rep<options.num_repeditions;rep++){
-				for(const auto& step : list) {
-					auto res = step.run(setup, cur);
-					curRes[step].push_back(res);
-						if (!res || res.hasBeenAborted()) {
-						success = false;
-						break;
-					}
-				if(!success)
-					break;
-			}
-
-			for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
-				TestResult res=steps->second.front();
-				if(options.use_median){
-					std::cout<<"0\n";
-					res=TestResult::returnMedian(steps->second);
-				}
-				else
-					res=TestResult::returnAVG(steps->second);
-					results.push_back(std::make_pair(steps->first,res));
-				}
-			}
-		}
+                for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
+                    TestResult res=steps->second.front();
+                    if(options.use_median){
+                        std::cout<<"0\n";
+                        res=TestResult::returnMedian(steps->second);
+                    }
+                    else
+                        res=TestResult::returnAVG(steps->second);
+                        results.push_back(std::make_pair(steps->first,res));
+                    }
+                }
+        }
 		// get cached results
 		else{
 			results=allResults[cur];
 			name=name+" -- CACHED";
 		}
-		
+
 		// print test info
 		std::cout << "#------------------------------------------------------------------------------#\n";
 		std::cout << "#\t" << ++act << "/"<< cases.size() << "\t" << format("%-63s",name) << "#\n";
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
 				string colOffset;
 				colOffset=string("%")+std::to_string(78-curRes.first.getName().size())+"s";
 				std::stringstream line;
-				
+
 				// color certain passes:
 				if (highlight.find (curRes.first.getName()) != highlight.end()) {
 					line <<  colorize.bold() << colorize.blue();
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 		}
 
 		if(execute){
-			//execute static metrics			
+			//execute static metrics
 			results.push_back(std::make_pair(itc::StaticMetricsStep(),mr::getStaticMetrics(cur,results)));
 			//save results into global map
 			allResults[cur]=results;
@@ -276,14 +276,14 @@ int main(int argc, char** argv) {
 		//save current state into file, for crash recovery
 		remove("back.bin");
 		std::ofstream ofs("back.bin");
-		boost::archive::binary_oarchive oa(ofs); 
+		boost::archive::binary_oarchive oa(ofs);
 		oa<<options;
 		oa<<allResults;
 		ofs.close();
 
-		if(success) 
+		if(success)
 			std::cout << colorize.green();
-		else 
+		else
 			std::cout << colorize.red();
 
 		std::cout << "#------------------------------------------------------------------------------#\n";
@@ -325,7 +325,7 @@ int main(int argc, char** argv) {
 
 	//delete backup file
 	remove("back.bin");
-	
+
 	// done
 	return (failed.empty())?0:1;
 }
@@ -401,7 +401,7 @@ namespace {
 			res.load_miss=map["load-miss"].as<string>();
 			res.store_miss=map["store-miss"].as<string>();
 			res.flops=map["flops"].as<string>();
-		
+
 			if(map.count("perf-metric")){
 				res.perf_metrics=map["perf-metric"].as<vector<string>>();
 			}
