@@ -78,19 +78,21 @@ Unit tests can be executed with:
 make test
 ```
 
-Integration tests can be executed using the custom script generated in the build directory:
-```
-./integration_test.py 
-```
-Note: The integration test script requires Python 3.x, if your system uses an older version, the installation script installs a recent version in the ``$PREFIX`` folder. In such case you can run integration tests using the following line:
-```
-$PREFIX/python-latest/bin/python ./integration_test.py
-```
-Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the insieme developer documentation. 
-
-
-If everything was successful... **congratulation!**
+If everything was successful... 
+**congratulation!**
 **You may start enjoying Insieme now!**
+
+
+Please, understand that the install command is not implemented since this is an on-going development. 
+Instead of polluting your local setup, we prefer to use insieme from the build directory. 
+There is always time for install scripts in future releases.
+
+Integration tests can be executed using the custom runner compiled in the build directory:
+```
+./code/driver/integration_test
+```
+Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the insieme developer documentation. The mock run (``-m```) will give you an idea of the actual commands being invoked.
+
 
 
 
