@@ -45,7 +45,8 @@
 #endif
 #include <errno.h>
 #include "utils/timing.h"
-#include "utils/energy.h"
+#include "abstraction/measurements.h"
+#include "abstraction/impl/measurements.impl.h"
 #include "utils/memory.h"
 #include "instrumentation_regions.h"
 #include "impl/error_handling.impl.h"
