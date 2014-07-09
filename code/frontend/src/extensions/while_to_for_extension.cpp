@@ -47,27 +47,24 @@
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
-#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/utils/assert.h"
 
 namespace pattern = insieme::core::pattern;
 namespace irp = insieme::core::pattern::irp;
-namespace printer = insieme::core::printer;
 
 namespace insieme {
 namespace frontend {
 
-namespace {
-	printer::PrettyPrinter pp(const core::NodePtr& n) {
-		return printer::PrettyPrinter(n, printer::PrettyPrinter::NO_LET_BINDINGS);
-	}
+/// Pretty Printer: allows to print the given node to the output stream
+printer::PrettyPrinter WhileToForPlugin::pp(const core::NodePtr& n) {
+	return printer::PrettyPrinter(n, printer::PrettyPrinter::NO_LET_BINDINGS);
 }
 
 /// Determines the maximum node path depth given node n as the root node. This procedure is most likely be
 /// used before or during a PrintNodes invocation.
-unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
+unsigned int WhileToForPlugin::maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
 	unsigned max = 0;
 	for (auto c: n.getChildAddresses()) {
 		unsigned now=maxDepth(c);
@@ -79,8 +76,8 @@ unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n)
 /// Print the nodes to std::cout starting from root n, one by one, displaying the node path
 /// and the visual representation. The output can be prefixed by a string, and for visually unifying several
 /// PrintNodes invocations the maximum (see MaxDepth) and current depth may also be given.
-void printNodes(const insieme::core::Address<const insieme::core::Node> n, std::string prefix="        @\t",
-				unsigned int max=0, unsigned int depth=0) {
+void WhileToForPlugin::printNodes(const insieme::core::Address<const insieme::core::Node> n,
+								  std::string prefix="        @\t", unsigned int max=0, unsigned int depth=0) {
 	if (!max) max=maxDepth(n);
 	int depth0=n.getDepth()-depth;
 	for (auto c: n.getChildAddresses()) {
@@ -91,21 +88,12 @@ void printNodes(const insieme::core::Address<const insieme::core::Node> n, std::
 }
 
 /// From the given set of condition variables, return a set of VariablePtr for further consumption.
-insieme::utils::set::PointerSet<core::VariablePtr> extractCondVars(std::vector<core::NodeAddress> cvars) {
+insieme::utils::set::PointerSet<core::VariablePtr> WhileToForPlugin::extractCondVars(std::vector<core::NodeAddress> cvars) {
 	insieme::utils::set::PointerSet<core::VariablePtr> cvarSet;
 
 	// iterate over all condition variables
 	for(core::Address<const core::Node> cvar: cvars) {
 		core::Pointer<const core::Variable> varptr=cvar.getAddressedNode().as<core::VariablePtr>();
-
-		// do some output for debugging purposes
-//		std::cout << " - new:      " << *varptr << " type: " << *varptr->getType()
-//				  << " from: " << cvar.getParentNode() << std::endl;
-//		for (auto existing: cvarSet) {
-//			std::cout << " - existing: " << *existing << " type: " << *existing->getType()
-//					  << "   equals: " << (varptr==existing) << "\n";
-//		}
-//		std::cout << std::endl;
 
 		if (!cvarSet.contains(varptr) && varptr->getType()->getNodeType()==core::NT_RefType)
 			cvarSet.insert(varptr);
@@ -114,10 +102,10 @@ insieme::utils::set::PointerSet<core::VariablePtr> extractCondVars(std::vector<c
 }
 
 /// For a given variable, find all assignments in the loop body.
-std::vector<core::NodeAddress> getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var) {
+std::vector<core::NodeAddress> WhileToForPlugin::getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var) {
 	std::vector<core::Address<const core::Node> > assignments;
 
-	// match all assignments where "var" occurs at the LHS
+	// match all assignments where "var" occurs on the LHS
 	// do not consider the rhs in the pattern, as the rhs not necessarily includes the variable in question
 	// and/or an addition/subtraction expression
 	auto assignpat=irp::assignment(irp::atom(var), pattern::any);                  // one single assignment
@@ -136,7 +124,7 @@ std::vector<core::NodeAddress> getAssignmentsForVar(core::NodeAddress body, core
 /// and then extract the integer value (the step size in a for loop), returning it. As an example,
 /// given the assignment "x = x - 5", this function would return the integer "-5". Additionally, it will
 /// return a boolean as a the second tuple element, to indicate whether there was any error.
-std::pair<int, bool> extractStepFromAssignment(core::Address<const core::Node> a) {
+std::pair<int, bool> WhileToForPlugin::extractStepFromAssignment(core::Address<const core::Node> a) {
 
 	// set up the patterns and do the matching
 	auto operatorpat=pattern::single(irp::literal("int.sub")|irp::literal("int.add"));
@@ -197,7 +185,7 @@ std::pair<int, bool> extractStepFromAssignment(core::Address<const core::Node> a
 }
 
 /// For a given variable, try to extract the step size from a loop body, and return a value != zero if successful.
-int extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
+int WhileToForPlugin::extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
 	std::vector<core::Address<const core::Node> > assignments=getAssignmentsForVar(body, var);
 	int step=0;
 	bool ok=true;
@@ -211,7 +199,7 @@ int extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
 }
 
 /// For a given variable, try to find its initialization value outside of the loop body.
-std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var) {
+std::pair<int, bool> WhileToForPlugin::extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var) {
 	core::NodeAddress node;
 	int initial=0;
 	bool ok=true;
@@ -252,7 +240,7 @@ std::pair<int, bool> extractInitialValForVar(core::NodeAddress loop, core::Varia
 }
 
 /// For a given variable, try to find its target value which should be given in the loop condition.
-std::pair<int, bool> extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
+std::pair<int, bool> WhileToForPlugin::extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
 	bool ok=false;
 	int targetval=0;
 
