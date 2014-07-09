@@ -1101,6 +1101,18 @@ namespace measure {
 		return res;
 	}
 
+	std::string buildBinaryAll(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
+		namespace iar = insieme::analysis::region;
+		std::map<core::StatementAddress, region_id> regions;
+		iar::ForSelector forSelector;
+		vector<core::StatementAddress> list = PForBodySelector.getRegions(region);
+		unsigned id = 0;
+		for(auto entry : list)
+			regions[entry] = id++;
+
+		return buildBinary(regions, compiler);
+	}
+
 	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
 		std::map<core::StatementAddress, region_id> regions;
 		regions[region] = 0;
