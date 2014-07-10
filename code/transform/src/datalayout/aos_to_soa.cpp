@@ -251,16 +251,30 @@ StatementPtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<Variabl
 
 	std::map<ExpressionPtr, ExpressionPtr> replacements;
 
-	pattern::TreePattern structAccess = pattern::irp::compositeRefElem();
+	pattern::TreePattern structAccess =  pattern::var("call", pattern::irp::compositeRefElem(pattern::irp::arrayRefElem1D(pattern::irp::callExpr(
+				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::var("variable", pattern::irp::variable()))),
+				pattern::var("member", pattern::any)));
 
 //	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 //		ExpressionPtr old = builder.arrayRefElem()
 //	}
 
 
-	visitBreadthFirstInterruptible(begin, [&](const StatementAddress& expr)->bool {
-		pattern::MatchOpt match = structAccess.matchPointer(expr.getAddressedNode());
-//		if(match) dumpPretty(expr);
+	visitBreadthFirstInterruptible(begin, [&](const ExpressionAddress& expr)->bool {
+		pattern::AddressMatchOpt match = structAccess.matchAddress(expr);
+		if(match) {
+
+			ExpressionAddress structVar = match.get()["variable"].getValue().as<ExpressionAddress>();
+
+			if(newMemberAccesses.find(structVar) != newMemberAccesses.end()) {
+				dumpPretty(match.get()["variable"].getValue());
+
+				ExpressionPtr newVariable = newMemberAccesses[structVar].first;
+				ExpressionPtr replacement = builder.refMember(newVariable, match.get()["member"].getValue().as<StringValuePtr>());
+
+				dumpPretty(replacement);
+			}
+		}
 
 //		if(expr == end)
 //			return true;
