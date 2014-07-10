@@ -232,13 +232,43 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	//introducing marshalling
 	toTransform = addMarshalling(newMemberAccesses, toTransform);
-	dumpPretty(toTransform);
+
+	// replace array accesses
+
+	NodeAddress xxx(toTransform);
+	replaceAccesses(newMemberAccesses, xxx.as<StatementAddress>(), xxx.as<StatementAddress>());
+
+//	dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
 
+StatementPtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses,
+		StatementAddress begin, StatementAddress end) {
+	IRBuilder builder(mgr);
+
+	std::map<ExpressionPtr, ExpressionPtr> replacements;
+
+	pattern::TreePattern structAccess = pattern::irp::compositeRefElem();
+
+//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
+//		ExpressionPtr old = builder.arrayRefElem()
+//	}
+
+
+	visitBreadthFirstInterruptible(begin, [&](const StatementAddress& expr)->bool {
+		pattern::MatchOpt match = structAccess.matchPointer(expr.getAddressedNode());
+//		if(match) dumpPretty(expr);
+
+//		if(expr == end)
+//			return true;
+		return false;
+	});
+
+	return begin.getAddressedNode();
+}
 StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr start, ExpressionPtr end, StructTypePtr structType) {
 	IRBuilder builder(mgr);
 
