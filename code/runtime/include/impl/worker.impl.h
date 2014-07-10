@@ -130,7 +130,7 @@ void* _irt_worker_func(void *argvp) {
 	self->id.cached = self;
 	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
-	self->cur_context = arg->context->id;
+	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
 	self->finalize_wi = NULL;
 	self->default_variant = 0;
@@ -148,9 +148,6 @@ void* _irt_worker_func(void *argvp) {
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_region_init_worker(self);
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
@@ -183,6 +180,7 @@ void* _irt_worker_func(void *argvp) {
 
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
+		irt_worker_late_init(self);
 		irt_scheduling_loop(self);
 	}
 	irt_worker_cleanup(self);
@@ -301,6 +299,15 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 	arg->signal = signal;
 	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
+}
+
+void irt_worker_late_init(irt_worker* self) {
+	irt_context_id nullid = irt_context_null_id();
+	// loop until context id has been set (i.e. is not nullid), which means that the context setup is done
+	while(irt_atomic_fetch_and_add(&(self->cur_context.full), 0, uint64) == nullid.full) { }
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		irt_inst_region_init_worker(self);
+	#endif
 }
 
 void _irt_worker_cancel_all_others() {

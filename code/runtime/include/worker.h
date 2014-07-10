@@ -114,6 +114,7 @@ static inline irt_worker* irt_worker_get_current() {
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context);
+void irt_worker_late_init(irt_worker* self);
 void _irt_worker_cancel_all_others();
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
