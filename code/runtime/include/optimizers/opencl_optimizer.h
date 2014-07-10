@@ -48,7 +48,8 @@ void irt_get_split_values() {
 		  irt_g_ocl_shares_policy.param.shares[i++] = atof(tok);
 		  tok = strtok(NULL, ", ");
 		}
-		if(i != irt_g_worker_count) IRT_WARN("Splitting values specified, but not for all devices.\n");
+		if(i != irt_g_worker_count)
+			IRT_WARN("Splitting values specified, but not for all devices.\n %d splitting values\n %d devices", i, irt_g_worker_count);
 	} else {
 		float split_value = 1.0/irt_g_worker_count;
 		for(unsigned i = 0; i < irt_g_worker_count; ++i){
@@ -61,7 +62,6 @@ void irt_opencl_optimizer_context_startup(irt_context *context) {
 	//irt_loop_sched_policy shares_policy;
 	irt_g_ocl_shares_policy.type = IRT_SHARES;
 	irt_g_ocl_shares_policy.participants = irt_g_worker_count;
-
 	irt_get_split_values();
 }
 

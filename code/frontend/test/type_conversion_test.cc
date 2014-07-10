@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -186,8 +186,8 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_TYPE(UInt128, "ref<array<uint<16>,1>>");
 	CHECK_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
-	CHECK_POINTER_TYPE(LongDouble, "ref<array<real<16>,1>>");	
-	
+	CHECK_POINTER_TYPE(LongDouble, "ref<array<real<16>,1>>");
+
 	CHECK_CONST_POINTER_TYPE(Void, 		"ref<any>");
 	CHECK_CONST_POINTER_TYPE(Bool, 		"ref<array<bool,1>>");
 	CHECK_CONST_POINTER_TYPE(UChar, 	"ref<array<uint<1>,1>>");
@@ -205,7 +205,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_TYPE(UInt128, 	"ref<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_CONST_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
-	CHECK_CONST_POINTER_TYPE(LongDouble,"ref<array<real<16>,1>>");	
+	CHECK_CONST_POINTER_TYPE(LongDouble,"ref<array<real<16>,1>>");
 
 	CHECK_POINTER_CONST_TYPE(Void, 		"ref<any>");
 	CHECK_POINTER_CONST_TYPE(Bool, 		"src<array<bool,1>>");
@@ -224,7 +224,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_CONST_TYPE(UInt128, 	"src<array<uint<16>,1>>");
 	CHECK_POINTER_CONST_TYPE(Float, 	"src<array<real<4>,1>>");
 	CHECK_POINTER_CONST_TYPE(Double, 	"src<array<real<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");	
+	CHECK_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");
 
 	CHECK_CONST_POINTER_CONST_TYPE(Void, 	  "ref<any>");
 	CHECK_CONST_POINTER_CONST_TYPE(Bool, 	  "src<array<bool,1>>");
@@ -243,7 +243,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_CONST_TYPE(UInt128,   "src<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Float, 	  "src<array<real<4>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Double, 	  "src<array<real<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");	
+	CHECK_CONST_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");
 }
 
 #define CHECK_REFERENCE_TYPE(TypeName, InsiemeTypeDesc) \
@@ -288,7 +288,7 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(UInt128, 	"struct<_cpp_ref:ref<uint<16>>>");
 	CHECK_REFERENCE_TYPE(Float, 	"struct<_cpp_ref:ref<real<4>>>");
 	CHECK_REFERENCE_TYPE(Double, 	"struct<_cpp_ref:ref<real<8>>>");
-	CHECK_REFERENCE_TYPE(LongDouble,"struct<_cpp_ref:ref<real<16>>>");	
+	CHECK_REFERENCE_TYPE(LongDouble,"struct<_cpp_ref:ref<real<16>>>");
 
 	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:src<unit>>");  // <== this is actually not a type...
 	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:src<bool>>");
@@ -307,11 +307,11 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_CONST_TYPE(UInt128,   "struct<_const_cpp_ref:src<uint<16>>>");
 	CHECK_REFERENCE_CONST_TYPE(Float, 	  "struct<_const_cpp_ref:src<real<4>>>");
 	CHECK_REFERENCE_CONST_TYPE(Double, 	  "struct<_const_cpp_ref:src<real<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:src<real<16>>>");	
+	CHECK_REFERENCE_CONST_TYPE(LongDouble,"struct<_const_cpp_ref:src<real<16>>>");
 }
 
 #define CREATE_TYPE(ClangType) \
-	 convFactory.convertType( ClangType) 
+	 convFactory.convertType( ClangType)
 
 #define CREATE_PTR(ClangType) \
 	 convFactory.convertType( ASTctx.getPointerType (ClangType) )
@@ -363,36 +363,36 @@ TEST(TypeConversion, CombinedTypes) {
 	////////////////////////////////////
 	//  Create a class
 	clang::SourceLocation loc;
-	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class, 
+	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class,
 																ASTctx.getTranslationUnitDecl(), loc,
 	                                     						loc, &ASTctx.Idents.get("BaseClass"));
 	clang::BuiltinType fieldType (clang::BuiltinType::UShort);
-	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc, 
-															  &ASTctx.Idents.get("fieldA"), fieldType.getCanonicalTypeInternal(), 
+	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
+															  &ASTctx.Idents.get("fieldA"), fieldType.getCanonicalTypeInternal(),
 								 							  0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldDecl->setAccess(clang::AccessSpecifier::AS_public );
 	classDecl->startDefinition ();
 	classDecl->addDeclInternal (fieldDecl);
 	classDecl->setCompleteDefinition (true);
 
-	// some check to make sure that TU does as expeced 
-	auto  irType = convFactory.convertType( ASTctx.getRecordType(classDecl)  ); 
-	EXPECT_TRUE(irType); 
-	EXPECT_TRUE(irType.isa<core::GenericTypePtr>()); 
+	// some check to make sure that TU does as expeced
+	auto  irType = convFactory.convertType( ASTctx.getRecordType(classDecl)  );
+	EXPECT_TRUE(irType);
+	EXPECT_TRUE(irType.isa<core::GenericTypePtr>());
 	EXPECT_TRUE(convFactory.getIRTranslationUnit()[irType.as<core::GenericTypePtr>()]);
 
 	CHECK_TYPE		(ASTctx.getRecordType(classDecl),"BaseClass" ,
 												   	 "struct BaseClass <fieldA:uint<2>>");
-	CHECK_POINTER	(ASTctx.getRecordType(classDecl),"ref<array<BaseClass,1>>", 
+	CHECK_POINTER	(ASTctx.getRecordType(classDecl),"ref<array<BaseClass,1>>",
 												   	 "ref<array<struct BaseClass <fieldA:uint<2>>,1>>");
-	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl),"struct<_cpp_ref:ref<BaseClass>>", 
+	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl),"struct<_cpp_ref:ref<BaseClass>>",
 												     "struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>");
 
 	CHECK_TYPE		(ASTctx.getRecordType(classDecl).withConst(),"BaseClass",
 															     "struct BaseClass <fieldA:uint<2>>");
 	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
 															     "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
-	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>", 
+	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>",
 															     "struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
 
 	////////////////////////////////////////////////////////
@@ -404,11 +404,11 @@ TEST(TypeConversion, CombinedTypes) {
 		args.push_back( ASTctx.getLValueReferenceType(resultType));
 		args.push_back( ASTctx.getPointerType(resultType));
 		auto funcTy = ASTctx.getFunctionType (resultType, args, clang::FunctionProtoType::ExtProtoInfo() );
-		CHECK_TYPE		(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" , 
+		CHECK_TYPE		(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
 								 "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
-		CHECK_POINTER	(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" , 
+		CHECK_POINTER	(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
 								 "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
-		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" , 	
+		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" ,
 								 "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
 	}
 
@@ -422,11 +422,11 @@ TEST(TypeConversion, CombinedTypes) {
 		args.push_back( ASTctx.getPointerType( resultType));
 		args.push_back( ASTctx.getLValueReferenceType( ASTctx.getPointerType( resultType)));
 		auto funcTy = ASTctx.getFunctionType (resultType, args, clang::FunctionProtoType::ExtProtoInfo() );
-		CHECK_TYPE		(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" , 
+		CHECK_TYPE		(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
 								 "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
-		CHECK_POINTER	(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" , 
+		CHECK_POINTER	(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
 								 "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
-		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)>>" , 	
+		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)>>" ,
 								 "struct<_cpp_ref:ref<((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)>>");
 	}
 }
@@ -445,28 +445,28 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	// create rec struct
 	clang::SourceLocation loc;
 	clang::BuiltinType charTy (clang::BuiltinType::SChar);
-	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class, 
+	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class,
 																ASTctx.getTranslationUnitDecl(), loc,
 	                                     						loc, &ASTctx.Idents.get("RecClass"));
 
-	clang::FieldDecl *  fieldOne = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc, 
-															 &ASTctx.Idents.get("one"), charTy.getCanonicalTypeInternal(), 
+	clang::FieldDecl *  fieldOne = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
+															 &ASTctx.Idents.get("one"), charTy.getCanonicalTypeInternal(),
 							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldOne->setAccess(clang::AccessSpecifier::AS_public );
 
-	auto  classTy = ASTctx.getRecordType(classDecl) ; 
-	clang::FieldDecl *  fieldPtr = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc, 
-															 &ASTctx.Idents.get("rec_ptr"), ASTctx.getPointerType (classTy), 
+	auto  classTy = ASTctx.getRecordType(classDecl) ;
+	clang::FieldDecl *  fieldPtr = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
+															 &ASTctx.Idents.get("rec_ptr"), ASTctx.getPointerType (classTy),
 							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldPtr->setAccess(clang::AccessSpecifier::AS_public );
 
-	clang::FieldDecl *  fieldRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc, 
-															 &ASTctx.Idents.get("ref"), ASTctx.getLValueReferenceType (classTy), 
+	clang::FieldDecl *  fieldRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
+															 &ASTctx.Idents.get("ref"), ASTctx.getLValueReferenceType (classTy),
 							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldRef->setAccess(clang::AccessSpecifier::AS_public );
 
-	clang::FieldDecl *  fieldConstRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc, 
-															 &ASTctx.Idents.get("const_ref"), ASTctx.getLValueReferenceType (classTy.withConst()), 
+	clang::FieldDecl *  fieldConstRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
+															 &ASTctx.Idents.get("const_ref"), ASTctx.getLValueReferenceType (classTy.withConst()),
 							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
 	fieldConstRef->setAccess(clang::AccessSpecifier::AS_public );
 
@@ -513,13 +513,34 @@ TEST(TypeConversion, FileTest) {
 
 		if(tp.isStatement()) {
             StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+            std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
+   			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		} else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() ))->toString() + '\"' );
+   				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() ))->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
 			}
 		}
 	}
+}
+
+TEST(TypeConversion, EnumTest) {
+		insieme::frontend::Source file(
+				R"(
+                    enum Color {RED, BLUE=10};
+                    int main() {
+                        enum Color a;
+                        a=RED;
+                    }
+				)"
+		);
+        core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
+		auto program = insieme::frontend::tu::toProgram(manager, irtu);
+		//check for some enum features
+		EXPECT_TRUE(toString(program).find("ref<__insieme_enum<_enum_") != std::string::npos);
+		EXPECT_TRUE(toString(program).find("c221_45,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
+		EXPECT_TRUE(toString(program).find("c233_33,0>,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
 }
