@@ -231,7 +231,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
 
 	//introducing marshalling
-	toTransform = addMarshalling(newMemberAccesses, toTransform);
+	std::map<core::ExpressionPtr, core::StatementAddress> startingPoints = addMarshalling(newMemberAccesses, toTransform);
 
 	// replace array accesses
 
@@ -244,9 +244,76 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
+StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const VariablePtr& newVar, const ExpressionPtr& start,
+		const ExpressionPtr& end, const StructTypePtr& structType) {
+	IRBuilder builder(mgr);
 
-NodePtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses,
-		StatementAddress begin, StatementAddress end) {
+//	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
+//	pattern::MatchOpt stMatch = structTypePattern.matchPointer(oldVar->getType());
+//	StructTypePtr structType = stMatch.get().getRoot().as<StructTypePtr>();
+
+
+	std::vector<StatementPtr> loopBody;
+	VariablePtr iterator = builder.variable(start->getType());
+
+	for(NamedTypePtr memberType : structType->getElements()) {
+
+		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		loopBody.push_back(builder.assign(soaAccess, aosAccess));
+	}
+
+	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
+}
+
+std::map<ExpressionPtr, StatementAddress> AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses, NodePtr& toTransform) {
+	IRBuilder builder(mgr);
+	std::map<ExpressionPtr, StatementAddress> checkMarshalling;
+	NodeMap replacements;
+
+	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
+			pattern::any, pattern::aT(pattern::var("variable", pirp::variable(pattern::any))) << *pattern::any)), pattern::any);
+	pattern::TreePattern assignToStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
+			pattern::any, *pattern::any << assignToStruct << *pattern::any);
+
+
+//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
+//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
+//	}
+
+	pirp::matchAllPairs(assignToStructInLoop, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
+		StatementAddress insertAfter = match.as<StatementAddress>();
+
+		if(newMemberAccesses.find(am["variable"].getValue().as<VariablePtr>()) != newMemberAccesses.end()) {
+			VariablePtr oldVar = am["variable"].getValue().as<VariablePtr>();
+			VariablePtr newVar = newMemberAccesses[oldVar].first;
+			StructTypePtr newStructType = newMemberAccesses[oldVar].second;
+
+			StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
+					am["end"].getValue().as<ExpressionPtr>(), newStructType);
+
+			StatementList initAndMarshall;
+			initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
+			initAndMarshall.push_back(marshalling);
+
+			replacements[match] = builder.compoundStmt(initAndMarshall);
+
+			//remember that this variable was marshaled and save the address where the marshalling was inserted
+			checkMarshalling[oldVar] = insertAfter;
+		}
+	});
+
+	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
+		assert(checkMarshalling.find(c.first) != checkMarshalling.end() && "didn't marshal all variables");
+	}
+
+	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
+
+	return checkMarshalling;
+}
+
+NodePtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+		const StatementAddress& begin, const StatementAddress& end) {
 	IRBuilder builder(mgr);
 
 	std::map<NodeAddress, NodePtr> replacements;
@@ -283,72 +350,6 @@ NodePtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr,
 
 	return core::transform::replaceAll(mgr, replacements);
 }
-StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr start, ExpressionPtr end, StructTypePtr structType) {
-	IRBuilder builder(mgr);
-
-//	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
-//	pattern::MatchOpt stMatch = structTypePattern.matchPointer(oldVar->getType());
-//	StructTypePtr structType = stMatch.get().getRoot().as<StructTypePtr>();
-
-
-	std::vector<StatementPtr> loopBody;
-	VariablePtr iterator = builder.variable(start->getType());
-
-	for(NamedTypePtr memberType : structType->getElements()) {
-
-		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-		loopBody.push_back(builder.assign(soaAccess, aosAccess));
-	}
-
-	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
-}
-
-NodePtr AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses, NodePtr toTransform) {
-	IRBuilder builder(mgr);
-	std::map<ExpressionPtr, bool> checkMarshalling;
-	NodeMap replacements;
-
-	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
-			pattern::any, pattern::aT(pattern::var("variable", pirp::variable(pattern::any))) << *pattern::any)), pattern::any);
-	pattern::TreePattern assignToStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
-			pattern::any, *pattern::any << assignToStruct << *pattern::any);
-
-
-//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
-//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
-//	}
-
-	pirp::matchAllPairs(assignToStructInLoop, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
-		StatementAddress insertAfter = match.as<StatementAddress>();
-
-		if(newMemberAccesses.find(am["variable"].getValue().as<VariablePtr>()) != newMemberAccesses.end()) {
-			VariablePtr oldVar = am["variable"].getValue().as<VariablePtr>();
-			VariablePtr newVar = newMemberAccesses[oldVar].first;
-			StructTypePtr newStructType = newMemberAccesses[oldVar].second;
-
-			StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
-					am["end"].getValue().as<ExpressionPtr>(), newStructType);
-
-			StatementList initAndMarshall;
-			initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
-			initAndMarshall.push_back(marshalling);
-
-			replacements[match] = builder.compoundStmt(initAndMarshall);
-
-			//remember that this variable was marshaled
-			checkMarshalling[oldVar] = true;
-		}
-	});
-
-	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
-		assert(checkMarshalling.find(c.first) != checkMarshalling.end() && "didn't marshal all variables");
-	}
-
-	return core::transform::replaceAll(mgr, toTransform, replacements);
-
-}
-
 
 } // datalayout
 } // transform
