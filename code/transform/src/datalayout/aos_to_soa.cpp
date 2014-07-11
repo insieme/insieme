@@ -232,13 +232,57 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	//introducing marshalling
 	toTransform = addMarshalling(newMemberAccesses, toTransform);
-	dumpPretty(toTransform);
+
+	// replace array accesses
+
+	NodeAddress xxx(toTransform);
+	toTransform = replaceAccesses(newMemberAccesses, xxx.as<StatementAddress>(), xxx.as<StatementAddress>());
+
+//	dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
 
+NodePtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses,
+		StatementAddress begin, StatementAddress end) {
+	IRBuilder builder(mgr);
+
+	std::map<NodeAddress, NodePtr> replacements;
+
+	pattern::TreePattern structAccess =  pattern::var("call", pattern::irp::compositeRefElem(pattern::irp::arrayRefElem1D(pattern::irp::callExpr(
+				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::var("variable", pattern::irp::variable())), var("index", pattern::any)),
+				pattern::var("member", pattern::any)));
+
+//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
+//		ExpressionPtr old = builder.arrayRefElem()
+//	}
+
+
+	visitBreadthFirstInterruptible(begin, [&](const ExpressionAddress& expr)->bool {
+		pattern::AddressMatchOpt match = structAccess.matchAddress(expr);
+		if(match) {
+
+			ExpressionAddress structVar = match.get()["variable"].getValue().as<ExpressionAddress>();
+
+			if(newMemberAccesses.find(structVar) != newMemberAccesses.end()) {
+				ExpressionPtr newVariable = newMemberAccesses[structVar].first;
+				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
+				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVariable, member)), index);
+
+				replacements[match.get().getRoot()] = replacement;
+			}
+		}
+
+//		if(expr == end)
+//			return true;
+		return false;
+	});
+
+	return core::transform::replaceAll(mgr, replacements);
+}
 StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr start, ExpressionPtr end, StructTypePtr structType) {
 	IRBuilder builder(mgr);
 

@@ -38,7 +38,7 @@
 #ifndef __GUARD_INSTRUMENTATION_REGIONS_INCLUDES_H
 #define __GUARD_INSTRUMENTATION_REGIONS_INCLUDES_H
 
-#include "utils/energy.h"
+#include "abstraction/measurements.h"
 #include "utils/timing.h"
 #include "papi_helper.h"
 

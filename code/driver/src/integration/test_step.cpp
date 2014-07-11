@@ -1083,17 +1083,17 @@ namespace integration {
 		vector<string> perfCodes;
 		if(setup.perf){
 			//cache load misses
-			perfCodes.push_back(string("r")+setup.load_miss);
+			perfCodes.push_back(setup.load_miss);
 
 			//cache write misses
-			perfCodes.push_back(string("r")+setup.store_miss);
+			perfCodes.push_back(setup.store_miss);
 
 			//flops
-			perfCodes.push_back(string("r")+setup.flops);
+			perfCodes.push_back(setup.flops);
 
 			//additional requested metrics
 			BOOST_FOREACH(string s,setup.perf_metrics){
-				perfCodes.push_back(string("r")+s);
+				perfCodes.push_back(s);
 			}
 
 			//build perf command
@@ -1132,7 +1132,7 @@ namespace integration {
 
         string output=readFile(setup.stdOutFile);
 		string error=readFile(setup.stdErrFile);
-
+		std::cout<<error<<std::endl;
 		//get time, memory and perf values and remove them from stdError
 		string stdErr;
 		boost::char_separator<char> sep("\n");
@@ -1152,7 +1152,7 @@ namespace integration {
 				//check perf metrics, otherwise append to stderr
 				bool found=false;
 				for(auto code : perfCodes) {
-					if(token.find(code)){
+					if(token.find(code)!=token.npos){
 						string value=token.substr(0,token.find(","));
 						float intVal;
 						//try cast to int
@@ -1164,14 +1164,14 @@ namespace integration {
 						}
 
 						//mark special perf metrics
-						if(code.substr(1)==setup.load_miss)
+						if(code.compare(setup.load_miss)==0)
 							metricResults["load_miss"]=intVal;
-						else if (code.substr(1)==setup.store_miss)
+						else if (code.compare(setup.store_miss)==0)
 							metricResults["store_miss"]=intVal;
-						else if (code.substr(1)==setup.flops)
+						else if (code.compare(setup.flops)==0)
 							metricResults["flops"]=intVal;
 						else
-							metricResults[code.substr(1)]=intVal;
+							metricResults[code]=intVal;
 
 						found=true;
 						break;

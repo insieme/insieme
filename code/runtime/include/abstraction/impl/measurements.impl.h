@@ -35,41 +35,17 @@
  */
 
 #pragma once
-#ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H
-#define __GUARD_UTILS_IMPL_ENERGY_IMPL_H
+#ifndef __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H
 
-#include "utils/energy.h"
-
-#ifdef _WIN32
-	#warning "RAPL energy measurements in Windows are not supported!"
+#if defined(__arm__)
+    // nothing to include
+#elif defined(_GEMS)
+    // nothing to include
 #else
-	#include "utils/energy.h"
-	#include "abstraction/impl/rapl.impl.h"
+	#include "measurements.rapl.impl.h"
 #endif
 
-void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
-	data->package = -1.0;
-	data->mc = -1.0;
-	data->cores = -1.0;
-}
-
-void irt_energy_select_instrumentation_method() {
-	// for RAPL we need to know about the number of cores per socket, hence we need PAPI
-#ifdef IRT_USE_PAPI
-	bool papi_available = true;
-#else
-	bool papi_available = false;
-#endif
-	if(irt_rapl_is_supported() && papi_available) {
-		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
-		irt_g_inst_rapl_in_use = true;
-		irt_rapl_init();
-		irt_log_setting_s("irt energy measurement method", "rapl");
-	} else {
-		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
-		irt_log_setting_s("irt energy measurement method", "none");
-	}
-}
 
 
-#endif // ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H

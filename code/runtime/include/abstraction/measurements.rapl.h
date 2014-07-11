@@ -35,8 +35,8 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_RAPL_H
-#define __GUARD_ABSTRACTION_RAPL_H
+#ifndef __GUARD_ABSTRACTION_MEAUSEREMENTS_RAPL_H
+#define __GUARD_ABSTRACTION_MEAUSEREMENTS_RAPL_H
 
 /*
  *
@@ -158,4 +158,19 @@ void irt_rapl_init();
 void irt_rapl_finalize();
 
 
-#endif // ifndef __GUARD_ABSTRACTION_RAPL_H
+// pointer to the function that is used to obtain energy readings
+void (*irt_get_energy_consumption)(rapl_energy_data* data);
+
+/*
+ * a dummy method if no energy instrumentation is available
+ */
+
+void irt_get_energy_consumption_dummy(rapl_energy_data* data);
+
+/*
+ * selects the method used to obtain energy readings
+ */
+
+void irt_energy_select_instrumentation_method();
+
+#endif // ifndef __GUARD_ABSTRACTION_MEAUSEREMENTS_RAPL_H
