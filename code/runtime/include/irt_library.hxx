@@ -15,6 +15,7 @@ void irt_merge(irt_joinable);
 // IRT lib
 void irt_lib_merge_all();
 typedef void (*voidfp)(void*);
+void irt_lib_init_run(voidfp fun, void* data, size_t data_size);
 irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size);
 typedef void (*loopfp)(int64 index, void* data);
 void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, size_t data_size);
@@ -59,6 +60,12 @@ namespace irt {
 
 	inline uint32 group_size() {
 		return irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0);
+	}
+
+	// Initial execution (only required if not using "main" replacement
+	template<class Callable>
+	inline void init_run(const Callable& fun) {
+		return irt_lib_init_run(&detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
 	}
 
 	// Executes "num" parallel instances of the callable "fun"
@@ -127,10 +134,17 @@ namespace irt {
 
 	// a higher-order function processing the given block in isolation
 	template<typename Block>
-	void critical(Block& block) {
+	void critical(Block block) {
 		critical_start();
 		block();
 		critical_end();
 	}
 
+	// a higher-order function processing the given block only in the master of the current group
+	template<typename Block>
+	void master(Block block) {
+		if(irt_lib_wi_get_wg_num(irt_lib_wi_get_current(), 0) == 0) {
+			block();
+		}
+	}
 };
