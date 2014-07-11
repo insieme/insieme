@@ -1132,7 +1132,7 @@ namespace integration {
 
         string output=readFile(setup.stdOutFile);
 		string error=readFile(setup.stdErrFile);
-		std::cout<<error<<std::endl;
+//		std::cout<<error<<std::endl;
 		//get time, memory and perf values and remove them from stdError
 		string stdErr;
 		boost::char_separator<char> sep("\n");
