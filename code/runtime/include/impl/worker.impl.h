@@ -92,7 +92,6 @@ typedef struct __irt_worker_func_arg {
 	irt_affinity_mask affinity;
 	uint16 index;
 	irt_worker_init_signal *signal;
-	irt_context* context;
 } _irt_worker_func_arg;
 
 
@@ -178,11 +177,13 @@ void* _irt_worker_func(void *argvp) {
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
 
+	irt_worker_late_init(self);
+
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
-		irt_worker_late_init(self);
 		irt_scheduling_loop(self);
 	}
+	irt_inst_region_finalize_worker(self);
 	irt_worker_cleanup(self);
 	return NULL;
 }
@@ -292,12 +293,11 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_fragments = prev_fragments;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context) {
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
-	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
 }
 
@@ -330,12 +330,14 @@ void _irt_worker_end_all() {
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		cur->state = IRT_WORKER_STATE_STOP;
-		irt_signal_worker(cur);
+		if(cur->state != IRT_WORKER_STATE_STOP) {
+			cur->state = IRT_WORKER_STATE_STOP;
+			irt_signal_worker(cur);
 
-		// avoid calling thread awaiting its own termination
-		if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
-			irt_thread_join(&(cur->thread));   
+			// avoid calling thread awaiting its own termination
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+				irt_thread_join(&(cur->thread));
+		}
 	}
 }
 

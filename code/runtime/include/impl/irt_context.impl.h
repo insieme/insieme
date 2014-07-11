@@ -43,6 +43,7 @@
 #include "irt_optimizer.h"
 #include "irt_logging.h"
 #include "instrumentation_regions.h"
+#include "instrumentation_events.h"
 
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"
@@ -83,6 +84,12 @@ irt_context* irt_context_create(irt_client_app* app) {
 
 void irt_context_destroy(irt_context* context) {
 	irt_inst_region_finalize(context);
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	if(irt_g_instrumentation_event_output_is_enabled)
+		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
+	for(uint32 i = 0; i < irt_g_worker_count; ++i)
+		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
+#endif
 
 	irt_optimizer_context_destroy(context);
 

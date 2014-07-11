@@ -71,7 +71,11 @@
 
 void irt_papi_init();
 
-void irt_papi_finalize(irt_context* context);
+void irt_papi_shutdown();
+
+void irt_papi_finalize_context(irt_context* context);
+
+void irt_papi_finalize_worker(irt_worker* worker);
 
 void irt_papi_start();
 
@@ -83,8 +87,8 @@ void irt_papi_select_events(irt_worker* worker, irt_context* context, const char
 
 void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context);
 
-void irt_papi_setup(irt_context* context);
+void irt_papi_setup_context(irt_context* context);
 
-void irt_papi_setup_thread(irt_worker* worker);
+void irt_papi_setup_worker(irt_worker* worker);
 
 #endif // ifndef __GUARD_PAPI_HELPER_H

@@ -113,7 +113,7 @@ static inline irt_worker* irt_worker_get_current() {
 	return w;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context);
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal);
 void irt_worker_late_init(irt_worker* self);
 void _irt_worker_cancel_all_others();
 
