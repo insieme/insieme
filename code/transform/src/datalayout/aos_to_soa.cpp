@@ -266,7 +266,8 @@ StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const Vari
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
 }
 
-std::map<ExpressionPtr, StatementAddress> AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses, NodePtr& toTransform) {
+std::map<ExpressionPtr, StatementAddress> AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+		NodePtr& toTransform) {
 	IRBuilder builder(mgr);
 	std::map<ExpressionPtr, StatementAddress> checkMarshalling;
 	NodeMap replacements;
