@@ -52,6 +52,8 @@ class AosToSoa {
 			std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses, core::NodePtr& toTransform);
 	core::NodePtr replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
 			const core::StatementAddress& begin, const core::StatementAddress& end);
+	core::StatementAddress addNewDel(core::NodePtr& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
+	core::CompoundStmtPtr createDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 };
