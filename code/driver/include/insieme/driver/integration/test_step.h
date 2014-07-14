@@ -62,6 +62,7 @@ namespace integration {
 
 	// filters out test steps that are not suitable for the given tests
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting);
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
@@ -81,6 +82,7 @@ namespace integration {
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
+		std::string executionDir;
 
 		//perf metrics
 		bool perf;

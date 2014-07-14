@@ -152,7 +152,7 @@ namespace integration {
 				//insert into ret
 				ret.insertMetric(metr->first,avg,var);
 			}
-
+			ret.producedFiles=front.producedFiles;
 			return ret;
 		}
 
@@ -189,6 +189,7 @@ namespace integration {
 
 			}
 
+			ret.producedFiles=front.producedFiles;
 			return ret;
 		}
 

@@ -100,10 +100,43 @@ int main(int argc, char** argv) {
 
 
 	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
-
+	map<string,string> conflictingSteps;
 
 	// load list of test step
 	auto steps = tf::getTestSteps(options);
+	
+	//define some conflicting steps, so either c or c++ is executed (not both of them)
+	conflictingSteps["insiemecc_c++_check"]="insiemecc_c_check";
+	conflictingSteps["insiemecc_c++_compile"]="insiemecc_c_compile";
+	conflictingSteps["insiemecc_c++_execute"]="insiemecc_c_execute";
+	conflictingSteps["main_c++_sema"]="main_c_sema";
+	conflictingSteps["main_run_c++_check"]="main_run_check";
+	conflictingSteps["main_run_c++_execute"]="main_run_execute";
+	conflictingSteps["main_run_c++_compile"]="main_run_compile";
+	conflictingSteps["main_run_c++_convert"]="main_run_convert";
+	conflictingSteps["main_seq_c++_check"]="main_seq_check";
+	conflictingSteps["main_seq_c++_compile"]="main_seq_compile";
+	conflictingSteps["main_seq_c++_convert"]="main_seq_convert";
+	conflictingSteps["main_seq_c++_execute"]="main_seq_execute";
+	conflictingSteps["ref_c++_check"]="ref_c_check";
+	conflictingSteps["ref_c++_compile"]="ref_c_compile";
+	conflictingSteps["ref_c++_execute"]="ref_c_execute";
+
+	conflictingSteps["insiemecc_c_check"]="insiemecc_c++_check";
+	conflictingSteps["insiemecc_c_compile"]="insiemecc_c++_compile";
+	conflictingSteps["insiemecc_c_execute"]="insiemecc_c++_execute";
+	conflictingSteps["main_c_sema"]="main_c++_sema";
+	conflictingSteps["main_run_check"]="main_run_c++_check";
+	conflictingSteps["main_run_execute"]="main_run_c++_execute";
+	conflictingSteps["main_run_compile"]="main_run_c++_compile";
+	conflictingSteps["main_run_convert"]="main_run_c++_convert";
+	conflictingSteps["main_seq_check"]="main_seq_c++_check";
+	conflictingSteps["main_seq_compile"]="main_seq_c++_compile";
+	conflictingSteps["main_seq_convert"]="main_seq_c++_convert";
+	conflictingSteps["main_seq_execute"]="main_seq_c++_execute";
+	conflictingSteps["ref_c_check"]="ref_c++_check";
+	conflictingSteps["ref_c_compile"]="ref_c++_compile";
+	conflictingSteps["ref_c_execute"]="ref_c++_execute";
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
@@ -113,6 +146,7 @@ int main(int argc, char** argv) {
 	setup.store_miss=options.store_miss;
 	setup.flops=options.flops;
 	setup.perf_metrics=options.perf_metrics;
+	setup.executionDir=boost::filesystem::current_path().c_str();
 
 	tf::Colorize colorize(options.color);
 
@@ -120,6 +154,8 @@ int main(int argc, char** argv) {
 	std::set<std::string> highlight;
 	highlight.insert("main_seq_execute");
 	highlight.insert("main_seq_c++_execute");
+	highlight.insert("ref_c++_execute");
+	highlight.insert("ref_c_execute");
 
 	for(int i=1;i<options.statThreads;i*=2){
 		highlight.insert(std::string("main_run_execute_")+std::to_string(i));
@@ -171,6 +207,8 @@ int main(int argc, char** argv) {
 	for(auto it = cases.begin(); it < cases.end(); it++) {
 		const auto& cur = *it;
 
+		
+
 		bool execute=true;
 		//check if already executed (results in backup file)
 		if(allResults.count(cur)>0)
@@ -179,10 +217,9 @@ int main(int argc, char** argv) {
 		if (panic) continue;
 
 		// filter applicable steps based on test case
-		vector<TestStep> list = itc::filterSteps(steps, cur);
+		vector<TestStep> list = itc::filterSteps(steps, cur,conflictingSteps);
 		// schedule resulting steps
 		list = itc::scheduleSteps(list,cur,options.statThreads,options.statistics);
-
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
