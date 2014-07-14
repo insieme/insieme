@@ -346,6 +346,22 @@ namespace irp {
 		}), structVar, member, type);
 	}
 
+	inline TreePattern refVar(const TreePattern& expr = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefVar(); }), expr);
+	}
+
+	inline TreePattern refNew(const TreePattern& expr = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefNew(); }), expr);
+	}
+
+	inline TreePattern refLoc(const TreePattern& expr = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefLoc(); }), expr);
+	}
+
+	inline TreePattern refDelete(const TreePattern& refExpr = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefDelete(); }), refExpr);
+	}
+
 
 
 } // end namespace irp

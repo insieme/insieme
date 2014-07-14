@@ -139,10 +139,14 @@ namespace integration {
 						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
 					});
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+					
 					// set output file, stdOutFile and stdErrFile
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref";
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".ref";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -154,16 +158,22 @@ namespace integration {
 					std::stringstream cmd;
 					TestSetup set=setup;
 					auto props = test.getPropertiesFor(name);
+					
+					// get execution directory	
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+					
 
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".ref";
+					cmd << executionDirectory << "/" << test.getBaseName() << ".ref";
 
 					// add arguments
 					cmd << " " << props["executionFlags"];
-
+				
 					// set output files
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// set number of threads
 					set.numThreads=numThreads;
@@ -226,10 +236,14 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// set output file, stdOutFile and stdErrFile
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc";
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insiemecc";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -242,8 +256,14 @@ namespace integration {
 					TestSetup set=setup;
 					auto props = test.getPropertiesFor(name);
 
+					// get execution directory
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc";
+					cmd << executionDirectory << "/" << test.getBaseName() << ".insiemecc";
 
 					// add arguments
 					cmd << " " << props["executionFlags"];
@@ -252,8 +272,8 @@ namespace integration {
 					set.numThreads=numThreads;
 
 					// set output files
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -268,6 +288,11 @@ namespace integration {
 					std::stringstream cmd;
 					TestSetup set=setup;
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+
 					// start with executable
 					cmd << props["compiler"];
 
@@ -275,7 +300,7 @@ namespace integration {
 					cmd << " -S";
 
 					// also dump IR
-					std::string irFile=test.getDirectory().string() + "/" + test.getBaseName() + ".ir";
+					std::string irFile=executionDirectory + "/" + test.getBaseName() + ".ir";
 					cmd << " --dump-ir " << irFile;
 
 					// add include directories
@@ -311,8 +336,8 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str(),irFile);
@@ -366,10 +391,14 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// set output file, stdOut file and stdErr file
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -382,6 +411,11 @@ namespace integration {
 
 					std::stringstream cmd;
 					TestSetup set=setup;
+
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
 
 					// start with executable
 					cmd << props["compiler"];
@@ -419,7 +453,7 @@ namespace integration {
 					set.numThreads=0;
 
 					// add input file
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
@@ -433,9 +467,9 @@ namespace integration {
 					});
 
 					// set output file, stdOut file and stdErr file
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be;
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be;
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -451,8 +485,13 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+					// get execution dir	
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
+					cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
 
 					// set number of threads
 					set.numThreads=numThreads;
@@ -463,8 +502,8 @@ namespace integration {
 					// add arguments
 					cmd << " " << props["executionFlags"];
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -500,17 +539,22 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
 
 					//tweak lang string for c test cases
 					if(l==C)
 						langstr="_";
 					// pipe result to output file
 					if(numThreads)
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".main_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
 					else
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".main_"+be+langstr+"execute.out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute.out";
 
 
 					// add awk pattern
@@ -518,8 +562,8 @@ namespace integration {
 					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
 					cmd << " "<< outputAwk;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -540,14 +584,20 @@ namespace integration {
 					// define comparison script
 					cmd << props["sortdiff"];
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"+langstr+"_execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"+langstr+"_execute.out";
 
 					// pipe result to output file
 					if(numThreads)
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute_"+std::to_string(numThreads)+".out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute_"+std::to_string(numThreads)+".out";
 					else
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute.out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute.out";
 
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
@@ -557,8 +607,8 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -579,11 +629,16 @@ namespace integration {
 					// define comparison script
 					cmd << props["sortdiff"];
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";
 
 					// pipe result to output file
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute_"<<std::to_string(numThreads)<<".out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute_"<<std::to_string(numThreads)<<".out";
 
 					// add awk pattern
 					cmd << " "<< props["outputAwk"];
@@ -591,8 +646,8 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -829,6 +884,35 @@ namespace integration {
 
 		return stepsToExecute;
 	}
+
+	//filter steps based on some conflicting steps
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting) {
+		auto props = test.getProperties();
+		vector<TestStep> stepsToExecute;
+
+		for(const TestStep step:steps){
+			string conflictingStep="";
+			for (auto  confl=conflicting.begin();confl!=conflicting.end();confl++)
+				if(step.getName().find(confl->first)!=std::string::npos){
+					conflictingStep=confl->second;
+					break;
+				}
+				
+			bool conflicts=false;
+			if(!conflictingStep.empty())
+				for (const TestStep stepConfl:stepsToExecute)
+					if(stepConfl.getName().find(conflictingStep)!=std::string::npos){
+						conflicts=true;
+						break;
+					}
+			
+			if(!isExcluded(props["excludeSteps"],step) && ! conflicts)
+				stepsToExecute.push_back(step);
+		}
+		return stepsToExecute;
+	}
+
+
 
 	namespace {
 
@@ -1124,13 +1208,13 @@ namespace integration {
 
 		int actualReturnCode = WEXITSTATUS(retVal);
 
-        if(actualReturnCode > 128) {
+       		if(actualReturnCode > 128) {
 			actualReturnCode -= 128;
 			if(actualReturnCode > 0)
 				std::cerr << "Killed by signal " << actualReturnCode << "\n";
 		}
 
-        string output=readFile(setup.stdOutFile);
+	        string output=readFile(setup.stdOutFile);
 		string error=readFile(setup.stdErrFile);
 //		std::cout<<error<<std::endl;
 		//get time, memory and perf values and remove them from stdError
@@ -1144,8 +1228,10 @@ namespace integration {
 			} else if(token.find("CPUTIME")==0) {
 				metricResults["cputime"]=atof(token.substr(7).c_str());
 				// check if we approached the cpu time limit. If so, print a warning
-				if(((metricResults["cputime"]))/cpuTimeLimit > 0.95)
+				if(((metricResults["cputime"]))/cpuTimeLimit > 0.95){
 					std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
+					metricResults["timeout"]=1;
+				}
 			} else if (token.find("MEM")==0) {
 				metricResults["mem"]=atof(token.substr(3).c_str());
 			} else {
@@ -1187,7 +1273,6 @@ namespace integration {
 		if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
 			return TestResult::userAborted(stepName,metricResults, output, stdErr, cmd);
 		}
-
 		// produce regular result
 		return TestResult(stepName,actualReturnCode,retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
 	}

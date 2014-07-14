@@ -184,7 +184,6 @@ void* _irt_worker_func(void *argvp) {
 		irt_scheduling_loop(self);
 	}
 	irt_inst_region_finalize_worker(self);
-	irt_worker_cleanup(self);
 	return NULL;
 }
 
@@ -335,9 +334,15 @@ void _irt_worker_end_all() {
 			irt_signal_worker(cur);
 
 			// avoid calling thread awaiting its own termination
-			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
 				irt_thread_join(&(cur->thread));
+			}
 		}
+	}
+
+	// clean up after all workers have finished running
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_worker_cleanup(irt_g_workers[i]);
 	}
 }
 
@@ -352,6 +357,7 @@ void irt_worker_cleanup(irt_worker* self) {
 			free(cur);
 			cur = next;
 		}
+		self->wi_ev_register_list = NULL;
 	}
 	{ // wg registers
 		irt_wg_event_register *cur, *next;
@@ -361,6 +367,7 @@ void irt_worker_cleanup(irt_worker* self) {
 			free(cur);
 			cur = next;
 		}
+		self->wg_ev_register_list = NULL;
 	}
 }
 

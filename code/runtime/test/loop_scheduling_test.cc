@@ -48,7 +48,7 @@ using std::vector;
 #include "irt_library.hxx"
 
 #define VEC_SIZE 500
-#define MAX_PARA 8
+#define MAX_PARA 4
 
 struct LoopTestCase {
 	irt_loop_sched_policy policy;
@@ -114,7 +114,7 @@ vector<LoopTestCase> getAllCases() {
 
 	for(auto policy_type : policies) {
 		for(int32 chunk_size = 1; chunk_size <= 9; ++chunk_size) {
-			for(uint32 participants = 1; participants < MAX_PARA; ++participants) {
+			for(uint32 participants = 1; participants <= MAX_PARA; ++participants) {
 				LoopTestCase t;
 				t.policy = { policy_type, participants, { chunk_size } };
 
@@ -137,7 +137,7 @@ vector<LoopTestCase> getAllCases() {
 	// Not very nice
 	setenv(IRT_NUM_WORKERS_ENV, xstr(MAX_PARA), 1);
 
-	return ret;
+	return ret; 
 }
  
 INSTANTIATE_TEST_CASE_P(RangeCoverageCheck, LoopSchedTest, ::testing::ValuesIn(getAllCases()));
