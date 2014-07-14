@@ -223,34 +223,33 @@ int main(int argc, char** argv) {
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
-        string name=cur.getName();
+        	string name=cur.getName();
 
-        if(execute) {
-            map<TestStep,vector<TestResult>> curRes;
-            for(int rep=0;rep<options.num_repeditions;rep++){
-                for(const auto& step : list) {
-                    auto res = step.run(setup, cur, runner);
-                    curRes[step].push_back(res);
-                    if (!res || res.hasBeenAborted()) {
-                        success = false;
-                        break;
-                    }
-                if(!success)
-                    break;
-            }
-
-                for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
-                    TestResult res=steps->second.front();
-                    if(options.use_median){
-                        std::cout<<"0\n";
-                        res=TestResult::returnMedian(steps->second);
-                    }
-                    else
-                        res=TestResult::returnAVG(steps->second);
-                        results.push_back(std::make_pair(steps->first,res));
-                    }
-                }
-        }
+	        if(execute) {
+	            map<TestStep,vector<TestResult>> curRes;
+	            for(int rep=0;rep<options.num_repeditions;rep++){
+	                for(const auto& step : list) {
+	                    auto res = step.run(setup, cur, runner);
+	                    curRes[step].push_back(res);
+	                    if (!res || res.hasBeenAborted()) {
+	                        success = false;
+	                        break;
+	                    }
+	                    if(!success)
+	                   	 break;
+	            	}	
+			}
+	                for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
+	                    TestResult res=steps->second.front();
+	                    if(options.use_median){
+	                        res=TestResult::returnMedian(steps->second);
+	                    }
+	                    else
+	                        res=TestResult::returnAVG(steps->second);
+	                        results.push_back(std::make_pair(steps->first,res));
+	                    }
+	                }
+	        
 		// get cached results
 		else{
 			results=allResults[cur];
