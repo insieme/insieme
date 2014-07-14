@@ -92,7 +92,6 @@ typedef struct __irt_worker_func_arg {
 	irt_affinity_mask affinity;
 	uint16 index;
 	irt_worker_init_signal *signal;
-	irt_context* context;
 } _irt_worker_func_arg;
 
 
@@ -130,7 +129,7 @@ void* _irt_worker_func(void *argvp) {
 	self->id.cached = self;
 	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
-	self->cur_context = arg->context->id;
+	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
 	self->finalize_wi = NULL;
 	self->default_variant = 0;
@@ -148,9 +147,6 @@ void* _irt_worker_func(void *argvp) {
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_region_init_worker(self);
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
@@ -181,10 +177,13 @@ void* _irt_worker_func(void *argvp) {
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
 
+	irt_worker_late_init(self);
+
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 		irt_scheduling_loop(self);
 	}
+	irt_inst_region_finalize_worker(self);
 	irt_worker_cleanup(self);
 	return NULL;
 }
@@ -294,13 +293,21 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_fragments = prev_fragments;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context) {
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
-	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
+}
+
+void irt_worker_late_init(irt_worker* self) {
+	irt_context_id nullid = irt_context_null_id();
+	// loop until context id has been set (i.e. is not nullid), which means that the context setup is done
+	while(irt_atomic_fetch_and_add(&(self->cur_context.full), 0, uint64) == nullid.full) { }
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		irt_inst_region_init_worker(self);
+	#endif
 }
 
 void _irt_worker_cancel_all_others() {
@@ -323,12 +330,14 @@ void _irt_worker_end_all() {
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		cur->state = IRT_WORKER_STATE_STOP;
-		irt_signal_worker(cur);
+		if(cur->state != IRT_WORKER_STATE_STOP) {
+			cur->state = IRT_WORKER_STATE_STOP;
+			irt_signal_worker(cur);
 
-		// avoid calling thread awaiting its own termination
-		if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
-			irt_thread_join(&(cur->thread));   
+			// avoid calling thread awaiting its own termination
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+				irt_thread_join(&(cur->thread));
+		}
 	}
 }
 

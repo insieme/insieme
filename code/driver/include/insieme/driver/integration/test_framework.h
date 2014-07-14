@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -126,11 +126,11 @@ namespace testFramework{
 
 	vector<TestStep> getTestSteps(const Options& options);
 
-	struct Colorize{ 
+	struct Colorize{
 		enum Color { RED, GREEN, BLUE, BLACK, BOLD, RESET};
 		bool color;
 		Colorize(bool color) : color(color) {}
-		string getColor(Color c) {
+		string getColor(Color c) const {
 			if(color) {
 				switch(c) {
 					case RED: return "\033[31m";
@@ -145,12 +145,12 @@ namespace testFramework{
 			return "";
 		}
 
-		string red() {return getColor(RED); }
-		string green() {return getColor(GREEN); }
-		string blue() {return getColor(BLUE); }
-		string black() {return getColor(BLACK); }
-		string reset() {return getColor(RESET); }
-		string bold() {return getColor(BOLD); }
+		string red() const {return getColor(RED); }
+		string green() const {return getColor(GREEN); }
+		string blue() const {return getColor(BLUE); }
+		string black() const {return getColor(BLACK); }
+		string reset() const {return getColor(RESET); }
+		string bold() const {return getColor(BOLD); }
 	};
 
 
@@ -160,13 +160,13 @@ namespace testFramework{
 		char buff [50];
 		fgets(buff,50,pipe);
 		pclose(pipe);
-	
+
 		//remove line break
 		buff[strlen(buff)-1]='\0';
 		return string(buff);
 	}
 
-	
+
 
 	vector<TestCase> loadCases(const Options& options) {
 
@@ -208,7 +208,7 @@ namespace testFramework{
 						steps.push_back(step.second);
 						found=true;
 					}
-				}				
+				}
 				if(!found)
 					std::cout << "WARNING: Unknown test step: " << cur << "\n";
 			}

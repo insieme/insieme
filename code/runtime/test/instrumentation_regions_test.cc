@@ -410,29 +410,25 @@ void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
 TEST(region_instrumentation, simple) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[0], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, multiple_metrics) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[1], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, nested) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested_multiple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[2], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, repeated_execution) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[3], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, rapl) {
@@ -461,27 +457,23 @@ TEST(region_instrumentation, rapl) {
 
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[4], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, pfor) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[5], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, papi) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[8], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 TEST(region_instrumentation, all_metrics) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[9], NULL);
-	irt_context_destroy(context);
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }

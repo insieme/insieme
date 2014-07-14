@@ -43,6 +43,7 @@
 #include "irt_optimizer.h"
 #include "irt_logging.h"
 #include "instrumentation_regions.h"
+#include "instrumentation_events.h"
 
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"
@@ -54,17 +55,19 @@ static inline irt_context* irt_context_get_current() {
 	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
 }
 
-
-irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
+irt_context* irt_context_create_standalone(cleanup_context_fun* cleanup_fun) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->id.cached = context;
 	context->client_app = NULL;
+	irt_context_table_insert(context);
+	return context;
+}
+
+void irt_context_initialize(irt_context* context, init_context_fun* init_fun) {
 	init_fun(context);
 	irt_optimizer_context_startup(context);
 	irt_inst_region_init(context);
-	irt_context_table_insert(context);
-	return context;
 }
 
 irt_context* irt_context_create(irt_client_app* app) {
@@ -81,6 +84,12 @@ irt_context* irt_context_create(irt_client_app* app) {
 
 void irt_context_destroy(irt_context* context) {
 	irt_inst_region_finalize(context);
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	if(irt_g_instrumentation_event_output_is_enabled)
+		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
+	for(uint32 i = 0; i < irt_g_worker_count; ++i)
+		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
+#endif
 
 	irt_optimizer_context_destroy(context);
 

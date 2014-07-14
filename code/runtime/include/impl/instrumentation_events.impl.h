@@ -49,14 +49,6 @@
 #include "impl/error_handling.impl.h"
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
-// global function pointers to switch instrumentation on/off
-void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) = &_irt_inst_insert_no_wi_event;
-void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;
-void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
-void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
-void (*irt_inst_insert_db_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_db_event;
-bool irt_g_instrumentation_event_output_is_enabled = false;
-bool irt_g_instrumentation_event_output_is_binary = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable

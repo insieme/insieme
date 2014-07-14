@@ -35,26 +35,17 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
-#define __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
+#ifndef __GUARD_ABSTRACTION_MEASUREMENTS_H
+#define __GUARD_ABSTRACTION_MEASUREMENTS_H
 
-#include "abstraction/rapl.h"
+#if defined(__arm__)
+    // nothing to include
+#elif defined(_GEMS)
+    // nothing to include
+#else
+	#include "measurements.rapl.h"
+#endif
 
-bool irt_g_inst_rapl_in_use = false;
 
-void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
-}
 
-bool irt_rapl_is_supported() {
-	return false;
-}
-
-bool irt_rapl_is_used() {
-	return false;
-}
-
-void irt_rapl_init() { }
-
-void irt_rapl_finalize() { }
-
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
+#endif // ifndef __GUARD_ABSTRACTION_MEASUREMENTS_H

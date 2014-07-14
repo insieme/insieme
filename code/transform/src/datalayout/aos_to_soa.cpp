@@ -231,15 +231,21 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
 
 	//introducing marshalling
-	toTransform = addMarshalling(newMemberAccesses, toTransform);
-	dumpPretty(toTransform);
+	std::map<core::ExpressionPtr, core::StatementAddress> startingPoints = addMarshalling(newMemberAccesses, toTransform);
+
+	// replace array accesses
+
+	NodeAddress xxx(toTransform);
+	toTransform = replaceAccesses(newMemberAccesses, xxx.as<StatementAddress>(), xxx.as<StatementAddress>());
+
+//	dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
-
-StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVar, ExpressionPtr start, ExpressionPtr end, StructTypePtr structType) {
+StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const VariablePtr& newVar, const ExpressionPtr& start,
+		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
 //	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
@@ -260,9 +266,10 @@ StatementPtr AosToSoa::generateMarshalling(VariablePtr oldVar, VariablePtr newVa
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
 }
 
-NodePtr AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses, NodePtr toTransform) {
+std::map<ExpressionPtr, StatementAddress> AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+		NodePtr& toTransform) {
 	IRBuilder builder(mgr);
-	std::map<ExpressionPtr, bool> checkMarshalling;
+	std::map<ExpressionPtr, StatementAddress> checkMarshalling;
 	NodeMap replacements;
 
 	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
@@ -292,8 +299,8 @@ NodePtr AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, 
 
 			replacements[match] = builder.compoundStmt(initAndMarshall);
 
-			//remember that this variable was marshaled
-			checkMarshalling[oldVar] = true;
+			//remember that this variable was marshaled and save the address where the marshalling was inserted
+			checkMarshalling[oldVar] = insertAfter;
 		}
 	});
 
@@ -301,10 +308,49 @@ NodePtr AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, 
 		assert(checkMarshalling.find(c.first) != checkMarshalling.end() && "didn't marshal all variables");
 	}
 
-	return core::transform::replaceAll(mgr, toTransform, replacements);
+	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
 
+	return checkMarshalling;
 }
 
+NodePtr AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+		const StatementAddress& begin, const StatementAddress& end) {
+	IRBuilder builder(mgr);
+
+	std::map<NodeAddress, NodePtr> replacements;
+
+	pattern::TreePattern structAccess =  pattern::var("call", pattern::irp::compositeRefElem(pattern::irp::arrayRefElem1D(pattern::irp::callExpr(
+				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::var("variable", pattern::irp::variable())), var("index", pattern::any)),
+				pattern::var("member", pattern::any)));
+
+//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
+//		ExpressionPtr old = builder.arrayRefElem()
+//	}
+
+
+	visitBreadthFirstInterruptible(begin, [&](const ExpressionAddress& expr)->bool {
+		pattern::AddressMatchOpt match = structAccess.matchAddress(expr);
+		if(match) {
+
+			ExpressionAddress structVar = match.get()["variable"].getValue().as<ExpressionAddress>();
+
+			if(newMemberAccesses.find(structVar) != newMemberAccesses.end()) {
+				ExpressionPtr newVariable = newMemberAccesses[structVar].first;
+				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
+				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVariable, member)), index);
+
+				replacements[match.get().getRoot()] = replacement;
+			}
+		}
+
+//		if(expr == end)
+//			return true;
+		return false;
+	});
+
+	return core::transform::replaceAll(mgr, replacements);
+}
 
 } // datalayout
 } // transform
