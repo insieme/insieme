@@ -35,44 +35,38 @@
  */
 
 /**
- * A header file forming the interface for the CBA test cases.
+ * A test case verifying that malloc calls can be properly handled
  */
 
-#define bool int
-#define true (1)
-#define false (0)
+#include <stdlib.h>
+#include "cba.h"
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
 
-// integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+void f(int* data, int o) {
 
-// debugging
-void cba_print_code();
-void cba_print_constraints();
-void cba_print_solution();
-void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
+	for(int j=0; j<10; j++) {
 
-void cba_dump_execution_net();
-void cba_dump_state_graph();
-void cba_dump_thread_regions();
-void cba_dump_sync_points();
-void cba_dump_thread_list();
+		cba_print_int(j);
+		cba_print_int(o);
+		cba_print_int(j - 3);
+		cba_print_int(2*o + 2*j);
 
-void cba_expect_num_threads(int);
-void cba_expect_execution_net_num_places(int);
-void cba_expect_execution_net_num_transitions(int);
+//		a[o + j - 3] = d[2*o + 2*j];
 
-// boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+		cba_print_int((2*o + 2*j)-(j - 3));
+
+	}
+
+}
+
+
+int main(int argc, char** argv) {
+
+	int* a;
+
+	for(int i = 0; i<5; i++) {
+		cba_print_int(i);
+		f(a,2*i+1);
+	}
+
+}

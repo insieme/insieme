@@ -481,6 +481,10 @@ namespace cba {
 
 		void plotStats(std::ostream& out = std::cout) const;
 
+		void printConstraints(std::ostream& out = std::cout) const;
+
+		void printSolution(std::ostream& out = std::cout) const;
+
 		std::size_t getNumSets() const {
 			return value2generator.size();
 		}

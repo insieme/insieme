@@ -214,6 +214,14 @@ namespace cba {
 				return mayReachCallTo(stmt->getReturnExpr(), filter);
 			}
 
+			bool visitBreakStmt(const BreakStmtPtr& stmt) {
+				return false;
+			}
+
+			bool visitContinueStmt(const ContinueStmtPtr& stmt) {
+				return false;
+			}
+
             bool visitMarkerStmt(const MarkerStmtPtr& stmt) {
                 if (mayReachCallTo(stmt->getSubStatement(), filter)) return true;
                 return false;
