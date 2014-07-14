@@ -340,6 +340,13 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getScalarToArray(); }), data);
 	}
 
+	inline TreePattern compositeRefElem(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
+		return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
+			return mgr.getLangBasic().getCompositeRefElem();
+		}), structVar, member, type);
+	}
+
+
 
 } // end namespace irp
 } // end namespace pattern
