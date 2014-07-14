@@ -49,10 +49,11 @@ static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_reg
 		reg->lookup_table_next = NULL; \
 		memset(reg->occurrence_count, 0, __num_events__*sizeof(uint32)); \
 		memset(reg->handler, 0, __num_events__*sizeof(irt_##__short__##_event_lambda*)); \
+		irt_spin_init(&reg->lock); \
 		return reg; \
 	} else { \
 		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
-		irt_spin_init(&ret->lock); /* TODO check destroy */ \
+		irt_spin_init(&ret->lock); \
 		return ret; \
 	} \
 } \
@@ -248,14 +249,14 @@ void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id __short__##
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
-	nex = cur->next; \
-	if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
-	if(prev == NULL) reg->handler[event_code] = nex; \
+		nex = cur->next; \
+		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = nex; \
-	} else { /* else keep the handler in the list */ \
-	prev = cur; \
-	} \
-	cur = nex; \
+		} else { /* else keep the handler in the list */ \
+			prev = cur; \
+		} \
+		cur = nex; \
 	} \
 	irt_spin_unlock(&reg->lock); \
 } \
