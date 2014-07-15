@@ -46,13 +46,21 @@ class AosToSoa {
 	core::NodeManager& mgr;
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
+
 	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	std::map<core::ExpressionPtr, core::StatementAddress> addMarshalling(std::map<core::ExpressionPtr,
+	core::StatementPtr addMarshalling(std::map<core::ExpressionPtr,
 			std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses, core::NodePtr& toTransform);
+
+	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+	core::StatementPtr addUnmarshalling(std::map<core::ExpressionPtr,
+			std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses, core::NodePtr& toTransform);
+
 	core::NodePtr replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
-			const core::StatementAddress& begin, const core::StatementAddress& end);
-	core::StatementAddress addNewDel(core::NodePtr& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
+			core::NodePtr& toTransform, const core::StatementAddress& begin, const core::StatementAddress& end);
+
+	bool addNewDel(core::NodePtr& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
 	core::CompoundStmtPtr createDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
 public:
 	AosToSoa(core::NodePtr& toTransform);
