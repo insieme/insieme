@@ -56,6 +56,7 @@ TEST(DataLayout, AosToSoa) {
 	NodePtr code = builder.normalize(builder.parseStmt(
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
+		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	ref<ref<array<twoElem,1>>> a;"// = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	for(int<4> i = 0 .. 100 : 1) {"
@@ -67,6 +68,8 @@ TEST(DataLayout, AosToSoa) {
 //		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
+		"	store(*a);"
+		"	ref.delete(*a);"
 		"}"
 	));
 

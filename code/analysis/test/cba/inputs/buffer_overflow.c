@@ -34,45 +34,40 @@
  * regarding third party software licenses.
  */
 
-/**
- * A header file forming the interface for the CBA test cases.
- */
+#include "cba.h"
 
-#define bool int
-#define true (1)
-#define false (0)
+#define NUMBER 2
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+int buf[NUMBER] = { 0 };
 
-// integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+int main(int argc, char** argv) {
 
-// debugging
-void cba_print_code();
-void cba_print_constraints();
-void cba_print_solution();
-void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
+	int a = argc;
 
-void cba_dump_execution_net();
-void cba_dump_state_graph();
-void cba_dump_thread_regions();
-void cba_dump_sync_points();
-void cba_dump_thread_list();
+	int i;
 
-void cba_expect_num_threads(int);
-void cba_expect_execution_net_num_places(int);
-void cba_expect_execution_net_num_transitions(int);
+	if (a <= 0 || a > 3)
+		return 0;
 
-// boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+	for (i = 0; i < NUMBER; i++)
+
+	{
+
+		if (a & (1 << i))
+			break;
+
+	}
+
+	/* <bug buffer-overflow:xfp> */buf[i] = 0; /* </bug> */
+
+	cba_print_code();
+	cba_print_int(i);
+	cba_print_constraints();
+	cba_print_solution();
+	cba_dump_equations();
+
+//                         gefragt ist      cba::getValue(i,A)
+
+	return 0;
+
+}

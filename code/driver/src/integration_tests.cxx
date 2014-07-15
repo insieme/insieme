@@ -248,6 +248,7 @@ int main(int argc, char** argv) {
 	setup.mockRun = options.mockrun;
 	setup.clean=options.clean;
 	setup.perf=options.perf;
+	setup.executionDir="";
 
 	tf::Colorize colorize(options.color);
 
