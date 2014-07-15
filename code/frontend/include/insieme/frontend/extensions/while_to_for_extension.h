@@ -60,9 +60,15 @@ public:
     bool ok() { return msg.empty(); }
     bool err() { return !ok(); }
     void err(std::string s) { if (msg.empty()) msg=s; }
-    void merge(NodeBookmark b) { if (err()) return; err(b.msg); value+=b.value;
-                                 nodes.reserve(nodes.size()+b.nodes.size());
-                                 nodes.insert(nodes.end(), b.nodes.begin(), b.nodes.end()); }
+    void merge(NodeBookmark b) {
+        if (err()) return; err(b.msg); value+=b.value;
+        nodes.reserve(nodes.size()+b.nodes.size());
+        nodes.insert(nodes.end(), b.nodes.begin(), b.nodes.end()); }
+    void prependPath(insieme::core::NodeAddress newroot) {
+        std::vector<insieme::core::NodeAddress> m;
+        for (auto n: nodes) m.push_back(newroot >> n);
+        nodes=m;
+    }
 };
 
 /**
@@ -79,7 +85,8 @@ protected:
 	NodeBookmark extractStepForVar(core::NodeAddress body, core::VariablePtr var);
 	NodeBookmark extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var);
 	NodeBookmark extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var);
-	void replaceWhileByFor(core::NodeAddress whileaddr, NodeBookmark initial, NodeBookmark target, NodeBookmark step);
+	core::ProgramPtr replaceWhileByFor(core::NodeAddress whileaddr,
+									   NodeBookmark initial, NodeBookmark target, NodeBookmark step);
 private:
 	printer::PrettyPrinter pp(const core::NodePtr& n);
 	unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n);

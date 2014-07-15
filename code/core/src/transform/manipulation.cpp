@@ -169,6 +169,7 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 	});
 }
 
+/// Remove the given list of statements, the NodeManger keeping track of removals.
 NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
 	assert(!stmts.empty() && "List of statements to be removed must not be empty!");

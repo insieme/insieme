@@ -47,6 +47,7 @@
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/utils/assert.h"
@@ -109,7 +110,7 @@ std::vector<core::NodeAddress> WhileToForPlugin::getAssignmentsForVar(core::Node
 	// and/or an addition/subtraction expression
 	auto assignpat=irp::assignment(irp::atom(var), pattern::any);                  // one single assignment
 	auto assignall=pattern::aT(pattern::all(pattern::var("assignment", assignpat)));     // all assignments
-	pattern::AddressMatchOpt nodes=assignall->matchAddress(core::NodeAddress(body.getAddressedNode()));
+	pattern::AddressMatchOpt nodes=assignall->matchAddress(body);
 
 	// if the variable matched the pattern in the loop body, save the assignment
 	if (nodes && nodes.get().isVarBound("assignment")) {
@@ -193,7 +194,7 @@ NodeBookmark WhileToForPlugin::extractStepForVar(core::NodeAddress body, core::V
 	std::vector<core::Address<const core::Node> > assignments=getAssignmentsForVar(body, var);
 	NodeBookmark steps;
 	for (auto a: assignments) {
-		//std::cout << "assignment: " << pp(a) << std::endl;
+		// std::cout << "assignment: " << pp(a) << " @[" << a << "]" << std::endl;
 		steps.merge(extractStepFromAssignment(a));
 	}
 	return steps;
@@ -289,13 +290,46 @@ NodeBookmark WhileToForPlugin::extractTargetValForVar(core::NodeAddress cond, co
 }
 
 /// Rewriting of the given while loop based on the information in the NodeBookmarks.
-void WhileToForPlugin::replaceWhileByFor(core::NodeAddress whileaddr,
+core::ProgramPtr WhileToForPlugin::replaceWhileByFor(core::NodeAddress whileaddr,
 										 NodeBookmark initial, NodeBookmark target, NodeBookmark step) {
-	printNodes(whileaddr, "while:\t", 1);
-	std::cout << "initial: \t" << *initial.nodes[0] << std::endl
+	core::NodeManager& mgr=step.nodes[0]->getNodeManager();
+	core::IRBuilder builder(mgr);
+	core::StatementPtr noop=builder.getNoOp();
+
+	// convert from NodeAddress to StatementAddress
+	std::vector<core::StatementAddress> stepstmt;
+	for (core::NodeAddress n: step.nodes) stepstmt.push_back(n.isa<core::StatementAddress>());
+
+	// print some debug info
+	/* std::cout << "initial: \t" << *initial.nodes[0] << std::endl
 			  << "target:  \t" << *target.nodes[0]  << std::endl
 			  << "step:    \t" << *step.nodes[0]    << std::endl
-			  << std::endl;
+			  << std::endl; */
+
+	// first, remove the node statement that is performing the step size change
+	// replace it with a noop, otherwise the loop could become empty which leads to trouble
+	core::NodePtr root=whileaddr.getRootNode();
+	core::NodeAddress modBody;
+	for (core::NodeAddress n: step.nodes) {
+		modBody=core::transform::replaceAddress(mgr, n.switchRoot(root), noop);
+		root=modBody.getRootNode();
+	}
+	whileaddr=whileaddr.switchRoot(root);
+
+	// second, generate the component stubs for the new for-loop, and put the for-loop into place
+	core::VariablePtr   var=core::Variable::get(mgr, mgr.getLangBasic().getInt4());
+	core::LiteralPtr   start=builder.intLit(initial.value),
+						 end=builder.intLit(target.value),
+						incr=builder.intLit(step.value);
+	core::ForStmtPtr forstmt=builder.forStmt(var, start, end, incr, modBody.getAddressedNode().as<core::StatementPtr>());
+	core::NodeAddress modLoop=core::transform::replaceAddress(mgr, whileaddr, forstmt);
+	root=modLoop.getRootNode();
+
+	// third and last, replace the initial assignment with a noop as well
+	core::NodeAddress modAll=core::transform::replaceAddress(mgr, initial.nodes[0].switchRoot(root), noop);
+	root=modAll.getRootNode();
+
+	return root.as<core::ProgramPtr>();
 }
 
 /// while statements can be for statements iff only one variable used in the condition is
@@ -306,15 +340,15 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 					pattern::var("body"));
 
 		// match all while statements while making sure that we have access to their superior nodes -> ...Pairs
-		irp::matchAllPairs(whilepat, core::NodeAddress(prog),
+		irp::matchAllPairsReverse(whilepat, core::NodeAddress(prog),
 						   [&](core::NodeAddress whileaddr, pattern::AddressMatch match) {
-			auto condition=match["condition"].getValue();
-			auto body=match["body"].getValue();
+			std::cout << "Program now:" << std::endl << pp(prog);
+			whileaddr=whileaddr.switchRoot(prog);
+			auto condition=match["condition"].getValue(); // TODO: derive condition from whileaddr
+			auto body=match["body"].getValue();           // TODO: derive body from whileaddr
+			// TODO: do pattern matching of cvar based upon the new whileaddr
 
-			std::cout << std::endl
-					  << "while-to-for Transformation (condition " << pp(condition) << "):" << std::endl
-					  << pp(match.getRoot()) << std::endl << std::endl;
-			//printNodes(condition, "  conds\t", 1);
+			std::cout << "Working on loop:" << std::endl << pp(match.getRoot()) << std::endl << std::endl;
 
 			// collect all variables from the loop condition, and store them in a PointerSet
 			insieme::utils::set::PointerSet<core::VariablePtr> cvarSet=extractCondVars(match["cvar"].getFlattened());
@@ -324,10 +358,11 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 				NodeBookmark initial=extractInitialValForVar(whileaddr, var),
 						target=extractTargetValForVar(condition, var),
 						step=extractStepForVar(body, var);
+				target.prependPath(whileaddr);   // adjust root node as we examined just a subnode of the program before
+				step.prependPath(whileaddr);     // alas
 
 				if (initial.ok() && target.ok() && step.ok()) {
-					replaceWhileByFor(whileaddr, initial, target, step);
-					std::cout << "Loop is now:" << std::endl << pp(match.getRoot()) << std::endl << std::endl;
+					prog=replaceWhileByFor(whileaddr, initial, target, step);
 				} else {
 					if (initial.ok()) std::cout << "initial value is " << initial.value << std::endl;
 					else              std::cout << "no initial value found: " << initial.msg << std::endl;
@@ -340,6 +375,7 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 			}
 		} );
 		
+		std::cout << "Final program with replaced loops:" << std::endl << pp(prog);
 		return prog;
 }
 
