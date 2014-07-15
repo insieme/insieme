@@ -113,8 +113,8 @@ void irt_dbg_print_worker_state(int32 wid) {
 #endif
 		);
 #else
-	printf("Worker #%03d: %32s - q:%4d p:%4d || ", wid, irt_dbg_get_worker_state_string(irt_g_workers[wid]->state), 
-		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue), irt_cwb_size(&irt_g_workers[wid]->sched_data.pool));
+	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_g_workers[wid]->state), 
+		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue));
 #endif
 	irt_dbg_print_worker_events(wid, 1);
 }
