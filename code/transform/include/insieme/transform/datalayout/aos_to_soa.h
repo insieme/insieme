@@ -49,16 +49,17 @@ class AosToSoa {
 
 	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	core::StatementPtr addMarshalling(std::map<core::ExpressionPtr,
-			std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses, core::NodePtr& toTransform);
+	core::StatementAddress addMarshalling(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	core::StatementPtr addUnmarshalling(std::map<core::ExpressionPtr,
-			std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses, core::NodePtr& toTransform);
+	core::StatementAddress addUnmarshalling(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::NodePtr replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
-			core::NodePtr& toTransform, const core::StatementAddress& begin, const core::StatementAddress& end);
+	void replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
+			const core::NodePtr& toTransform, const core::StatementAddress& begin, const core::StatementAddress& end,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	bool addNewDel(core::NodePtr& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
 	core::CompoundStmtPtr createDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
