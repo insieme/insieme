@@ -216,7 +216,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 	irt_work_item* wi = NULL;
 
 	// try to take a work item from the queue
-#ifdef IRT_STEAL_SELF_POP_FRONT
+#ifndef IRT_STEAL_SELF_POP_BACK
 	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
 #else
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
