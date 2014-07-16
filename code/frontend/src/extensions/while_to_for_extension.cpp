@@ -336,12 +336,12 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 		// match all while statements while making sure that we have access to their superior nodes -> ...Pairs
 		irp::matchAllPairsReverse(whilepat, core::NodeAddress(prog),
 						   [&](core::NodeAddress whileaddr, pattern::AddressMatch match) {
-			std::cout << "Program now:" << std::endl << pp(prog);
+//			std::cout << "Program now:" << std::endl << pp(prog);
 			whileaddr=whileaddr.switchRoot(prog);
 			auto condition=whileaddr.getAddressOfChild(0),
 					  body=whileaddr.getAddressOfChild(1);
 
-			std::cout << "Working on loop:" << std::endl << pp(whileaddr.getAddressedNode()) << std::endl << std::endl;
+//			std::cout << "Working on loop:" << std::endl << pp(whileaddr.getAddressedNode()) << std::endl << std::endl;
 
 			// collect all variables from the loop condition, and store them in a PointerSet
 			// TODO: do pattern matching of cvar based upon the new whileaddr (with switched roots)
@@ -356,6 +356,7 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 				if (initial.ok() && target.ok() && step.ok()) {
 					prog=replaceWhileByFor(whileaddr, initial, target, step);
 				} else {
+#if 0
 					if (initial.ok()) std::cout << "initial value is " << initial.value << std::endl;
 					else              std::cout << "no initial value found: " << initial.msg << std::endl;
 					if (target.ok())  std::cout << "target value is " << target.value << std::endl;
@@ -363,11 +364,12 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 					if (step.ok())    std::cout << "step size is " << step.value << std::endl;
 					else              std::cout << "step size cannot be determined: " << step.msg << std::endl;
 					std::cout << std::endl;
+#endif
 				}
 			}
 		} );
 		
-		std::cout << "Final program with replaced loops:" << std::endl << pp(prog);
+//		std::cout << "Final program with replaced loops:" << std::endl << pp(prog);
 		return prog;
 }
 
