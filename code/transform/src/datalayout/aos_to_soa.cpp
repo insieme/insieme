@@ -144,28 +144,9 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	pirp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
 		structs[match.as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
 	});
-/*
-	std::map<VariablePtr, TypePtr> newStructTypes;
-	for(std::pair<VariablePtr, RefTypePtr> struct_ : structs) {
 
-//		std::cout << *struct_.first->getType() << std::endl;
-
-		StructTypePtr oldType = struct_.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
-		NodeRange<NamedTypePtr> member = oldType->getElements();
-		std::vector<NamedTypePtr> newMember;
-		for(NamedTypePtr memberType : member) {
-//			std::cout << "member: " << memberType << std::endl;
-			newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
-
-		}
-		newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
-
-//std::cout << struct_.first->getType() << std::endl << newStructTypes[struct_.first] << std::endl;
-	}
-*/
 	std::map<NodeAddress, NodePtr> replacements;
 	NodeAddress tta(toTransform);
-	std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses;
 
 	for(std::pair<VariablePtr, RefTypePtr> candidate : structs) {
 		VariableAddress oldVar;
@@ -186,7 +167,6 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 				newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
 
 			}
-//			newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
 
 
 			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, builder.structType(newMember)).as<RefTypePtr>();
@@ -200,16 +180,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			// split up initialization expressions
 			newStructType = newType->getElementType().as<StructTypePtr>();
 
-			// store information for future use
-			newMemberAccesses[oldVar] = std::make_pair(newVar, newStructType);
-
 			for(NamedTypePtr memberType : newStructType->getElements()) {
 				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
-//dumpPretty(removeRef(memberType->getType()));
 			}
 			replacements[decl] = builder.compoundStmt(allDecls);
-//			newStuff = core::transform::insertAfter(mgr, decl, allDecls);
 		});
 
 		// assignments to the entire struct should be ported to the new sturct members
@@ -217,16 +192,13 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 				if(*oldVar == *call[0]) {
-					VariablePtr newStruct = newMemberAccesses[call[0]].first;
-					StructTypePtr newStructType = newMemberAccesses[call[0]].second;
-
 					StatementList allAssigns;
 
 					allAssigns.push_back(call);
 
-					for(NamedTypePtr memberType : newMemberAccesses[call[0]].second->getElements()) {
+					for(NamedTypePtr memberType : newStructType->getElements()) {
 
-						allAssigns.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
+						allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 								updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
 					}
 
@@ -244,13 +216,13 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 		// replace array accesses
 
-		replaceAccesses(newMemberAccesses, toTransform, begin, end, replacements);
+		replaceAccesses(oldVar, newVar, toTransform, begin, end, replacements);
 
 	}
 
 	toTransform = core::transform::replaceAll(mgr, replacements);
 
-	dumpPretty(toTransform);
+//dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
@@ -259,11 +231,6 @@ ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr 
 StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const VariablePtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
-
-//	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
-//	pattern::MatchOpt stMatch = structTypePattern.matchPointer(oldVar->getType());
-//	StructTypePtr structType = stMatch.get().getRoot().as<StructTypePtr>();
-
 
 	std::vector<StatementPtr> loopBody;
 	VariablePtr iterator = builder.variable(start->getType());
@@ -322,11 +289,6 @@ StatementPtr AosToSoa::generateUnmarshalling(const VariablePtr& oldVar, const Va
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
-//	pattern::TreePattern structTypePattern = pattern::aT(pirp::structType(*pattern::any));
-//	pattern::MatchOpt stMatch = structTypePattern.matchPointer(oldVar->getType());
-//	StructTypePtr structType = stMatch.get().getRoot().as<StructTypePtr>();
-
-
 	std::vector<StatementPtr> loopBody;
 	VariablePtr iterator = builder.variable(start->getType());
 
@@ -369,12 +331,12 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 }
 
 
-void AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses, const NodePtr& toTransform,
+void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr& newVar, const NodePtr& toTransform,
 		const StatementAddress& begin, const StatementAddress& end, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	pattern::TreePattern structAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::callExpr(
-				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::var("variable", pirp::variable())), var("index", pattern::any)),
+				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::atom(oldVar)), var("index", pattern::any)),
 				pattern::var("member", pattern::any)));
 
 //	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
@@ -398,18 +360,13 @@ void AosToSoa::replaceAccesses(std::map<ExpressionPtr, std::pair<VariablePtr, St
 		CallExprAddress call = node.isa<CallExprAddress>();
 
 		if(match && call) {
+			StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
+			ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+			ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
 
-			ExpressionAddress structVar = match.get()["variable"].getValue().as<ExpressionAddress>();
-
-			if(newMemberAccesses.find(structVar) != newMemberAccesses.end()) {
-				ExpressionPtr newVariable = newMemberAccesses[structVar].first;
-				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
-				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVariable, member)), index);
-
-				replacements[match.get().getRoot()] = replacement;
-			}
+			replacements[match.get().getRoot()] = replacement;
 		}
+
 		return false;
 	});
 }

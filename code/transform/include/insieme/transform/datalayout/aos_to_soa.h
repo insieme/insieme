@@ -57,9 +57,8 @@ class AosToSoa {
 	core::StatementAddress addUnmarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	void replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
-			const core::NodePtr& toTransform, const core::StatementAddress& begin, const core::StatementAddress& end,
-			std::map<core::NodeAddress, core::NodePtr>& replacements);
+	void replaceAccesses(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::NodePtr& toTransform,
+			const core::StatementAddress& begin, const core::StatementAddress& end, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	bool addNewDel(core::NodePtr& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
 	core::CompoundStmtPtr createDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar);
