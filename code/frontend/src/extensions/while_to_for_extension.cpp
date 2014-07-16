@@ -147,11 +147,6 @@ NodeBookmark WhileToForPlugin::extractStepFromAssignment(core::Address<const cor
 			addsub=addsubvec[0];
 			op1=opsvec[0];
 			op2=opsvec[1];
-			// debug output: what are we processing? did the pattern matching work? don't fly blind!
-			/*std::cout << "\t# lhs(" << lhs << ")=" << *lhs
-					<< " addsub(" << addsub << ")=" << *addsub
-					<< " op1(" << op1 << ")=" << *op1
-					<< " op2(" << op2 << ")=" << *op2 << std::endl;*/
 		} else
 			step.err("more than one assignment to loop variable found");
 	} else
@@ -233,7 +228,6 @@ NodeBookmark WhileToForPlugin::extractInitialValForVar(core::NodeAddress loop, c
 	if (allvars.size()!=1) initial.err("multiple variable occurrences outside the loop");
 
 	// the node to replace/remove is stored in "node"
-	// for now, just return the result
 	/*std::cout << "found decl of variable " << *var << " in: " << pp(node)
 			  << " (#assignments = " << allvars.size() << ")" << std::endl; */
 	return initial;
@@ -321,7 +315,7 @@ core::ProgramPtr WhileToForPlugin::replaceWhileByFor(core::NodeAddress whileaddr
 	core::LiteralPtr   start=builder.intLit(initial.value),
 						 end=builder.intLit(target.value),
 						incr=builder.intLit(step.value);
-	core::ForStmtPtr forstmt=builder.forStmt(var, start, end, incr, modBody.getAddressedNode().as<core::StatementPtr>());
+	core::ForStmtPtr forstmt=builder.forStmt(var, start, end, incr, whileaddr.getAddressOfChild(1).as<core::StatementPtr>());
 	core::NodeAddress modLoop=core::transform::replaceAddress(mgr, whileaddr, forstmt);
 	root=modLoop.getRootNode();
 
@@ -344,13 +338,13 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 						   [&](core::NodeAddress whileaddr, pattern::AddressMatch match) {
 			std::cout << "Program now:" << std::endl << pp(prog);
 			whileaddr=whileaddr.switchRoot(prog);
-			auto condition=match["condition"].getValue(); // TODO: derive condition from whileaddr
-			auto body=match["body"].getValue();           // TODO: derive body from whileaddr
-			// TODO: do pattern matching of cvar based upon the new whileaddr
+			auto condition=whileaddr.getAddressOfChild(0),
+					  body=whileaddr.getAddressOfChild(1);
 
-			std::cout << "Working on loop:" << std::endl << pp(match.getRoot()) << std::endl << std::endl;
+			std::cout << "Working on loop:" << std::endl << pp(whileaddr.getAddressedNode()) << std::endl << std::endl;
 
 			// collect all variables from the loop condition, and store them in a PointerSet
+			// TODO: do pattern matching of cvar based upon the new whileaddr (with switched roots)
 			insieme::utils::set::PointerSet<core::VariablePtr> cvarSet=extractCondVars(match["cvar"].getFlattened());
 
 			// for each condition variable, find its assignments in the loop body, and derive a step size
@@ -358,8 +352,6 @@ insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& p
 				NodeBookmark initial=extractInitialValForVar(whileaddr, var),
 						target=extractTargetValForVar(condition, var),
 						step=extractStepForVar(body, var);
-				target.prependPath(whileaddr);   // adjust root node as we examined just a subnode of the program before
-				step.prependPath(whileaddr);     // alas
 
 				if (initial.ok() && target.ok() && step.ok()) {
 					prog=replaceWhileByFor(whileaddr, initial, target, step);

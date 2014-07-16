@@ -51,19 +51,28 @@ namespace frontend {
 /// together with some integer value and an error msg, for passing around and later processing.
 class NodeBookmark {
 public:
+    /// a vector of nodes which should be preserved for further actions
     std::vector<insieme::core::NodeAddress> nodes;
+    /// an integer value associated with these nodes
     int value;
+    /// an error that has been encountered while trying to compile the list of bookmarks
     std::string msg;
 
+    /// constructor to initialize the data structures (value:=0)
     NodeBookmark(): value(0) {}
 
+    /// returns true if no error has been set yet; also see err()
     bool ok() { return msg.empty(); }
+    /// err with this empty signature returns true in case at least one error has been encountered
     bool err() { return !ok(); }
+    /// use err to set an error: err comes in handy in case we want to preserve the first error encountered, as it will ignore further calls to err
     void err(std::string s) { if (msg.empty()) msg=s; }
+    /// merge two NodeBookmarks so that the nodes themselves are appended, and the integer value is added
     void merge(NodeBookmark b) {
         if (err()) return; err(b.msg); value+=b.value;
         nodes.reserve(nodes.size()+b.nodes.size());
         nodes.insert(nodes.end(), b.nodes.begin(), b.nodes.end()); }
+    /// prependPath will prefix the internally saved nodes with the node root given in newroot
     void prependPath(insieme::core::NodeAddress newroot) {
         std::vector<insieme::core::NodeAddress> m;
         for (auto n: nodes) m.push_back(newroot >> n);
