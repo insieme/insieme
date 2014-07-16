@@ -166,10 +166,19 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	std::map<NodeAddress, NodePtr> replacements;
 	NodeAddress tta(toTransform);
 	std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newMemberAccesses;
-	visitDepthFirst(tta, [&](const DeclarationStmtAddress& decl) {
-		VariableAddress oldVar = decl->getVariable();
-		if(structs.find(oldVar) != structs.end()) {
-			StructTypePtr oldType = structs[oldVar]->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+
+	for(std::pair<VariablePtr, RefTypePtr> candidate : structs) {
+		VariableAddress oldVar;
+		VariablePtr newVar;
+		StructTypePtr newStructType;
+		visitDepthFirst(tta, [&](const DeclarationStmtAddress& decl) {
+			VariableAddress check = decl->getVariable();
+			if(*check != *candidate.first)
+				return;
+
+			oldVar = check;
+
+			StructTypePtr oldType = candidate.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 			NodeRange<NamedTypePtr> member = oldType->getElements();
 			std::vector<NamedTypePtr> newMember;
 			for(NamedTypePtr memberType : member) {
@@ -180,73 +189,64 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 //			newStructTypes[struct_.first] = core::transform::replaceAll(mgr, struct_.first->getType(), struct_.second, builder.structType(newMember)).as<TypePtr>();
 
 
-			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), structs[oldVar], builder.structType(newMember)).as<RefTypePtr>();
-			VariablePtr newStruct = builder.variable(newType);
+			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, builder.structType(newMember)).as<RefTypePtr>();
+			newVar = builder.variable(newType);
 
 			// replace declaration with compound statement containing the declaration itself, the
 			StatementList allDecls;
 			allDecls.push_back(decl);
-			allDecls.push_back(builder.declarationStmt(newStruct, builder.undefinedVar(newType)));
+			allDecls.push_back(builder.declarationStmt(newVar, builder.undefinedVar(newType)));
 
 			// split up initialization expressions
-			StructTypePtr newStructType = newType->getElementType().as<StructTypePtr>();
+			newStructType = newType->getElementType().as<StructTypePtr>();
 
 			// store information for future use
-			newMemberAccesses[oldVar] = std::make_pair(newStruct, newStructType);
+			newMemberAccesses[oldVar] = std::make_pair(newVar, newStructType);
 
 			for(NamedTypePtr memberType : newStructType->getElements()) {
-				allDecls.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
+				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
 //dumpPretty(removeRef(memberType->getType()));
 			}
 			replacements[decl] = builder.compoundStmt(allDecls);
 //			newStuff = core::transform::insertAfter(mgr, decl, allDecls);
-		}
-	});
+		});
 
+		// assignments to the entire struct should be ported to the new sturct members
+		visitDepthFirst(tta, [&](const CallExprAddress& call) {
 
-	// assignments to the entire struct should be ported to the new sturct members
-	visitDepthFirst(tta, [&](const CallExprAddress& call) {
-		if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
-			if(newMemberAccesses.find(call[0]) != newMemberAccesses.end()) {
-				VariablePtr newStruct = newMemberAccesses[call[0]].first;
-				StructTypePtr newStructType = newMemberAccesses[call[0]].second;
+			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+				if(*oldVar == *call[0]) {
+					VariablePtr newStruct = newMemberAccesses[call[0]].first;
+					StructTypePtr newStructType = newMemberAccesses[call[0]].second;
 
-				StatementList allAssigns;
+					StatementList allAssigns;
 
-				allAssigns.push_back(call);
+					allAssigns.push_back(call);
 
-				for(NamedTypePtr memberType : newMemberAccesses[call[0]].second->getElements()) {
+					for(NamedTypePtr memberType : newMemberAccesses[call[0]].second->getElements()) {
 
-					allAssigns.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
-							updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
+						allAssigns.push_back(builder.assign(builder.refMember(newStruct, memberType->getName()),
+								updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
+					}
+
+					replacements[call] = builder.compoundStmt(allAssigns);
+	//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
 				}
-
-				replacements[call] = builder.compoundStmt(allAssigns);
-//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
 			}
-		}
-	});
+		});
 
-	//introducing marshalling
-	StatementAddress begin = addMarshalling(newMemberAccesses, tta, replacements);
+		//introducing marshalling
+		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, replacements);
 
-	//introducing unmarshalling
-	StatementAddress end = addUnmarshalling(newMemberAccesses, tta, replacements);
+		//introducing unmarshalling
+		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, replacements);
 
-/*	StatementAddress startAddress, endAddress;
+		// replace array accesses
 
-	visitDepthFirst(NodeAddress(toTransform), [&](const StatementAddress& stmt) {
-		if(stmt.getAddressedNode() == startPtr)
-			startAddress = stmt;
-		if(stmt.getAddressedNode() == endPtr)
-			endAddress = stmt;
-	});
-*/
+		replaceAccesses(newMemberAccesses, toTransform, begin, end, replacements);
 
-	// replace array accesses
-
-	replaceAccesses(newMemberAccesses, toTransform, begin, end, replacements);
+	}
 
 	toTransform = core::transform::replaceAll(mgr, replacements);
 
@@ -278,12 +278,12 @@ StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const Vari
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
 }
 
-StatementAddress AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+StatementAddress AosToSoa::addMarshalling(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
 		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
-	std::map<ExpressionPtr, StatementAddress> checkMarshalling;
+	bool checkMarshalling;
 
-	pattern::TreePattern aosVariable = pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+	pattern::TreePattern aosVariable = pattern::atom(oldVar);//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 	//pirp::variable(pattern::aT(pirp::refType(pirp::structType(*pattern::any))));
 	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
 			pattern::any, pattern::aT(pattern::var("variable", aosVariable)) << *pattern::any)), pattern::any);
@@ -296,30 +296,22 @@ StatementAddress AosToSoa::addMarshalling(std::map<ExpressionPtr, std::pair<Vari
 //	}
 
 	pirp::matchAllPairs(assignToStructInLoop, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
-		if(newMemberAccesses.find(am["variable"].getValue().as<VariablePtr>()) != newMemberAccesses.end()) {
-			VariablePtr oldVar = am["variable"].getValue().as<VariablePtr>();
+		StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
+				am["end"].getValue().as<ExpressionPtr>(), newStructType);
 
-			VariablePtr newVar = newMemberAccesses[oldVar].first;
-			StructTypePtr newStructType = newMemberAccesses[oldVar].second;
+		StatementList initAndMarshall;
+		initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
+		initAndMarshall.push_back(marshalling);
 
-			StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
-					am["end"].getValue().as<ExpressionPtr>(), newStructType);
+		replacements[match] = builder.compoundStmt(initAndMarshall);
 
-			StatementList initAndMarshall;
-			initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
-			initAndMarshall.push_back(marshalling);
-
-			replacements[match] = builder.compoundStmt(initAndMarshall);
-
-			//remember that this variable was marshaled and save the address where the marshalling was inserted
-			checkMarshalling[oldVar] = match.as<StatementAddress>();
-			marshalled = match.as<StatementAddress>();
-		}
+		//remember that this variable was marshaled and save the address where the marshalling was inserted
+		checkMarshalling = true;
+		marshalled = match.as<StatementAddress>();
 	});
 
-	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
-		assert(checkMarshalling.find(c.first) != checkMarshalling.end() && "didn't marshal all variables");
-	}
+	assert(checkMarshalling && "didn't marshal all variables");
+
 
 //	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
 
@@ -349,35 +341,29 @@ StatementPtr AosToSoa::generateUnmarshalling(const VariablePtr& oldVar, const Va
 
 }
 
-StatementAddress AosToSoa::addUnmarshalling(std::map<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>>& newMemberAccesses,
+StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
 		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	StatementAddress unmarshallingPoint;
 
-	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> newAccesses : newMemberAccesses) {
-		VariablePtr oldVar = newAccesses.first.as<VariablePtr>();
-		VariablePtr newVar = newAccesses.second.first;
-		StructTypePtr structType = newAccesses.second.second;
+	pattern::TreePattern externalSoaCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
+			pattern::aT(pattern::atom(oldVar)) << *pattern::any);
 
-		pattern::TreePattern externalSoaCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				pattern::aT(pattern::atom(oldVar)) << *pattern::any);
+	pirp::matchAllPairs(externalSoaCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
+		CallExprAddress call = node.as<CallExprAddress>();
 
-		pirp::matchAllPairs(externalSoaCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
-			CallExprAddress call = node.as<CallExprAddress>();
+		// filter out builtins
+		if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+			return;
 
-			// filter out builtins
-			if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
-				return;
+		StatementList unmarshallAndExternalCall;
+		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, builder.intLit(0), builder.intLit(77), newStructType));
+		unmarshallAndExternalCall.push_back(call);
 
-			StatementList unmarshallAndExternalCall;
-			unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, builder.intLit(0), builder.intLit(77), structType));
-			unmarshallAndExternalCall.push_back(call);
-
-			unmarshallingPoint = call;
-			replacements[call] = builder.compoundStmt(unmarshallAndExternalCall);;
-		});
-	}
+		unmarshallingPoint = call;
+		replacements[call] = builder.compoundStmt(unmarshallAndExternalCall);;
+	});
 
 	return unmarshallingPoint;
 }

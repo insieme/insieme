@@ -49,12 +49,12 @@ class AosToSoa {
 
 	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	core::StatementAddress addMarshalling(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
+	core::StatementAddress addMarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	core::StatementAddress addUnmarshalling(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
+	core::StatementAddress addUnmarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void replaceAccesses(std::map<core::ExpressionPtr, std::pair<core::VariablePtr, core::StructTypePtr>>& newMemberAccesses,
