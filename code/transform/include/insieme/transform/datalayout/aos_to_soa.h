@@ -39,6 +39,13 @@
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
+
+namespace core {
+namespace pattern {
+	class TreePattern;
+}
+}
+
 namespace transform {
 namespace datalayout {
 
@@ -47,7 +54,8 @@ class AosToSoa {
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
 	void replaceAssignments(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
-			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionPtr& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 
 	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
@@ -58,7 +66,7 @@ class AosToSoa {
 	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 	core::StatementAddress addUnmarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
-			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
+			const core::NodeAddress& toTransform, const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void replaceAccesses(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::NodeAddress& toTransform,
 			const core::StatementAddress& begin, const core::StatementAddress& end, std::map<core::NodeAddress, core::NodePtr>& replacements);

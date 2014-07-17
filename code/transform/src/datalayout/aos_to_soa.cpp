@@ -166,6 +166,10 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		VariableAddress oldVar;
 		VariablePtr newVar;
 		StructTypePtr newStructType;
+		ExpressionPtr nElems;
+		pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
+				pattern::any << var("nElems", pattern::any))));
+
 		visitDepthFirst(tta, [&](const DeclarationStmtAddress& decl) {
 			VariableAddress check = decl->getVariable();
 			if(*check != *candidate.first)
@@ -182,6 +186,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 			}
 
+			// check if the declaration does an allocation and try to extract the number of elements in that case
+			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
+			if(match) {
+				nElems = match.get()["nElems"].getValue().as<ExpressionPtr>();
+			}
 
 			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, builder.structType(newMember)).as<RefTypePtr>();
 			newVar = builder.variable(newType);
@@ -203,13 +212,13 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 
 		// assignments to the entire struct should be ported to the new sturct members
-		replaceAssignments(oldVar, newVar, newStructType, tta, replacements);
+		replaceAssignments(oldVar, newVar, newStructType, tta, allocPattern, nElems, replacements);
 
 		//introducing marshalling
 		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, replacements);
 
 		//introducing unmarshalling
-		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, replacements);
+		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
 
 		//replace array accesses
 		replaceAccesses(oldVar, newVar, tta, begin, end, replacements);
@@ -220,7 +229,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	toTransform = core::transform::replaceAll(mgr, replacements);
 
-dumpPretty(toTransform);
+//dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
@@ -228,13 +237,19 @@ ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr 
 }
 
 void AosToSoa::replaceAssignments(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
 
 		if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 			if(*oldVar == *call[0]) {
+				// check if the declaration does an allocation and try to extract the number of elements in that case
+				pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
+				if(match) {
+					nElems = match.get()["nElems"].getValue().as<ExpressionPtr>();
+				}
+
 				StatementList allAssigns;
 
 				allAssigns.push_back(call);
@@ -325,12 +340,12 @@ StatementPtr AosToSoa::generateUnmarshalling(const VariablePtr& oldVar, const Va
 		loopBody.push_back(builder.assign(aosAccess, soaAccess));
 	}
 
-	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
+	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 
 }
 
 StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	StatementAddress unmarshallingPoint;
@@ -346,7 +361,7 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 			return;
 
 		StatementList unmarshallAndExternalCall;
-		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, builder.intLit(0), builder.intLit(77), newStructType));
+		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, builder.literal(nElems->getType(), "0"), nElems, newStructType));
 		unmarshallAndExternalCall.push_back(call);
 
 		unmarshallingPoint = call;
