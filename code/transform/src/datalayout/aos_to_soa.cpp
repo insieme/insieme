@@ -215,7 +215,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		replaceAssignments(oldVar, newVar, newStructType, tta, allocPattern, nElems, replacements);
 
 		//introducing marshalling
-		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, replacements);
+		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
 
 		//introducing unmarshalling
 		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
@@ -283,29 +283,44 @@ StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const Vari
 		loopBody.push_back(builder.assign(soaAccess, aosAccess));
 	}
 
-	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.intLit(1), builder.compoundStmt(loopBody));
+	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 }
 
 StatementAddress AosToSoa::addMarshalling(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 	bool checkMarshalling;
 
 	pattern::TreePattern aosVariable = pattern::atom(oldVar);//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
-	//pirp::variable(pattern::aT(pirp::refType(pirp::structType(*pattern::any))));
 	pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
 			pattern::any, pattern::aT(pattern::var("variable", aosVariable)) << *pattern::any)), pattern::any);
 	pattern::TreePattern assignToStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
 			pattern::any, *pattern::any << assignToStruct << *pattern::any);
+
+	pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
+			pattern::atom(oldVar) << *pattern::any);
 
 	StatementAddress marshalled;
 //	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
 //		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
 //	}
 
-	pirp::matchAllPairs(assignToStructInLoop, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
-		StatementPtr marshalling = generateMarshalling(oldVar, newVar, am["start"].getValue().as<ExpressionPtr>(),
-				am["end"].getValue().as<ExpressionPtr>(), newStructType);
+	pirp::matchAllPairs(assignToStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
+		ExpressionPtr start, end;
+		if(am.isVarBound("start")) { // assignToStructInLoop
+			start = am["start"].getValue().as<ExpressionPtr>();
+			end = am["end"].getValue().as<ExpressionPtr>();
+		} else { // externalAosCall
+			CallExprAddress call = match.as<CallExprAddress>();
+			// filter out builtins
+			if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+				return;
+
+			start = builder.literal(nElems->getType(), "0");
+			end = nElems;
+		}
+
+		StatementPtr marshalling = generateMarshalling(oldVar, newVar, start, end, newStructType);
 
 		StatementList initAndMarshall;
 		initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
@@ -350,10 +365,10 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 
 	StatementAddress unmarshallingPoint;
 
-	pattern::TreePattern externalSoaCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
+	pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
 			pattern::aT(pattern::atom(oldVar)) << *pattern::any);
 
-	pirp::matchAllPairs(externalSoaCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
+	pirp::matchAllPairs(externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
 		CallExprAddress call = node.as<CallExprAddress>();
 
 		// filter out builtins
