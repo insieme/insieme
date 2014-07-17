@@ -102,10 +102,16 @@ ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValueP
 	}
 
 	if(thing->getType().isa<ArrayTypePtr>()) {
+		if(!index)
+			return thing;
+
 		return valueAccess(builder.arraySubscript(thing, index), index, field);
 	}
 
 	if(thing->getType().isa<StructTypePtr>()) {
+		if(!field)
+			return thing;
+
 		return valueAccess(builder.accessMember(thing, field), index, field);
 	}
 
@@ -121,11 +127,19 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 		if(builder.getLangBasic().isPrimitive(ref->getElementType()))
 			return thing;
 
-		if(ref->getElementType().isa<ArrayTypePtr>())
-			return refAccess(builder.arrayRefElem(thing, index), index, field);
+		if(ref->getElementType().isa<ArrayTypePtr>()) {
+			if(!index)
+				return thing;
 
-		if(ref->getElementType().isa<StructTypePtr>())
+			return refAccess(builder.arrayRefElem(thing, index), index, field);
+		}
+
+		if(ref->getElementType().isa<StructTypePtr>()) {
+			if(!field)
+				return thing;
+
 			return refAccess(builder.refMember(thing, field), index, field);
+		}
 
 		return refAccess(builder.deref(thing), index, field);
 	}
@@ -187,26 +201,9 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			replacements[decl] = builder.compoundStmt(allDecls);
 		});
 
+
 		// assignments to the entire struct should be ported to the new sturct members
-		visitDepthFirst(tta, [&](const CallExprAddress& call) {
-
-			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
-				if(*oldVar == *call[0]) {
-					StatementList allAssigns;
-
-					allAssigns.push_back(call);
-
-					for(NamedTypePtr memberType : newStructType->getElements()) {
-
-						allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
-								updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
-					}
-
-					replacements[call] = builder.compoundStmt(allAssigns);
-	//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
-				}
-			}
-		});
+		replaceAssignments(oldVar, newVar, newStructType, tta, replacements);
 
 		//introducing marshalling
 		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, replacements);
@@ -214,20 +211,49 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		//introducing unmarshalling
 		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, replacements);
 
-		// replace array accesses
+		//replace array accesses
+		replaceAccesses(oldVar, newVar, tta, begin, end, replacements);
 
-		replaceAccesses(oldVar, newVar, toTransform, begin, end, replacements);
-
+		//free memory of the new variable
+		addNewDel(tta, oldVar, newVar, newStructType, replacements);
 	}
 
 	toTransform = core::transform::replaceAll(mgr, replacements);
 
-//dumpPretty(toTransform);
+dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
+
+void AosToSoa::replaceAssignments(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
+		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
+	IRBuilder builder(mgr);
+
+	visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
+
+		if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+			if(*oldVar == *call[0]) {
+				StatementList allAssigns;
+
+				allAssigns.push_back(call);
+
+				for(NamedTypePtr memberType : newStructType->getElements()) {
+
+					allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
+							updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
+				}
+
+				replacements[call] = builder.compoundStmt(allAssigns);
+//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
+			}
+		}
+	});
+
+
+}
+
 StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const VariablePtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
@@ -331,7 +357,7 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 }
 
 
-void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr& newVar, const NodePtr& toTransform,
+void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr& newVar, const NodeAddress& toTransform,
 		const StatementAddress& begin, const StatementAddress& end, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
@@ -344,7 +370,7 @@ void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr&
 //	}
 	bool doSomething = false;
 
-	visitDepthFirstInterruptible(NodeAddress(toTransform), [&](const StatementAddress& node)->bool {
+	visitDepthFirstInterruptible(toTransform, [&](const StatementAddress& node)->bool {
 
 		if(!doSomething) {
 			if(node == begin)
@@ -371,13 +397,35 @@ void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr&
 	});
 }
 
-bool AosToSoa::addNewDel(NodePtr& toTransform, const ExpressionPtr& oldVar, const ExpressionPtr& newVar) {
+CompoundStmtPtr AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+		const StructTypePtr& newStructType) {
+	CompoundStmtPtr replacement;
+
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+
+	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
+
+	if(match) {
+		IRBuilder builder(mgr);
+		StatementList deletes;
+		for(NamedTypePtr memberType : newStructType->getElements()) {
+			deletes.push_back(builder.refDelete(refAccess(newVar, ExpressionPtr(), memberType->getName())));
+		}
+		deletes.push_back(stmt);
+		replacement = builder.compoundStmt(deletes);
+	}
+
+	return replacement;
+}
+
+bool AosToSoa::addNewDel(NodeAddress& toTransform, const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StructTypePtr& newStructType,
+		std::map<NodeAddress, NodePtr>& replacements) {
 	StatementAddress multiDelAddress;
 
-	return visitDepthFirstInterruptible(NodeAddress(toTransform), [&](const ExpressionAddress& call)->bool {
-		StatementPtr multiDelCompound = createDel(call, oldVar, newVar);
+	return visitDepthFirstInterruptible(toTransform, [&](const ExpressionAddress& call)->bool {
+		StatementPtr multiDelCompound = generateDel(call, oldVar, newVar, newStructType);
 		if(multiDelCompound) {
-			toTransform = core::transform::replaceNode(mgr, call.as<NodeAddress>(), multiDelCompound.as<NodePtr>());
+			replacements[call] = multiDelCompound;
 
 			return true;
 		}
@@ -385,24 +433,6 @@ bool AosToSoa::addNewDel(NodePtr& toTransform, const ExpressionPtr& oldVar, cons
 		return false;
 	});
 
-}
-
-CompoundStmtPtr AosToSoa::createDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar) {
-	CompoundStmtPtr replacement;
-
-	pattern::TreePattern delVarPattern = pirp::refDelete(pattern::atom(oldVar));
-
-	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
-
-	if(match) {
-		IRBuilder builder(mgr);
-		StatementList deletes;
-		deletes.push_back(builder.refDelete(newVar));
-		deletes.push_back(stmt);
-		replacement = builder.compoundStmt(deletes);
-	}
-
-	return replacement;
 }
 
 } // datalayout
