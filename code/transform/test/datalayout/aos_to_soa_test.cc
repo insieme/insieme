@@ -68,7 +68,11 @@ TEST(DataLayout, AosToSoa) {
 //		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
-		"	store(*a);"
+//		"	store(*a);"
+		"	for(int<4> i = 0 .. 100 : 1) {"
+		"		ref<twoElem> tmp;"
+		"		tmp = *(*a)[i];"
+		"	}"
 		"	ref.delete(*a);"
 		"}"
 	));

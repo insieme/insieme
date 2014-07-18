@@ -229,7 +229,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	toTransform = core::transform::replaceAll(mgr, replacements);
 
-//dumpPretty(toTransform);
+dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
@@ -365,22 +365,38 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 
 	StatementAddress unmarshallingPoint;
 
+	pattern::TreePattern aosVariable = pattern::atom(oldVar);//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+	pattern::TreePattern readFromStruct = pirp::assignment(pattern::any, pattern::var("struct", pirp::callExpr(pirp::structType(*pattern::any),
+			pattern::any, pattern::aT(pattern::var("variable", aosVariable)) << *pattern::any)));
+	pattern::TreePattern readFromStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
+			pattern::any, *pattern::any << readFromStruct << *pattern::any);
+
 	pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
 			pattern::aT(pattern::atom(oldVar)) << *pattern::any);
 
-	pirp::matchAllPairs(externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
-		CallExprAddress call = node.as<CallExprAddress>();
+	pirp::matchAllPairs(readFromStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
+		ExpressionPtr start, end;
 
-		// filter out builtins
-		if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
-			return;
+		if(am.isVarBound("start")) { // assignToStructInLoop
+			start = am["start"].getValue().as<ExpressionPtr>();
+			end = am["end"].getValue().as<ExpressionPtr>();
+		} else { // externalAosCall
+			CallExprAddress call = node.as<CallExprAddress>();
+
+			// filter out builtins
+			if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+				return;
+
+			start = builder.literal(nElems->getType(), "0");
+			end = nElems;
+		}
 
 		StatementList unmarshallAndExternalCall;
-		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, builder.literal(nElems->getType(), "0"), nElems, newStructType));
-		unmarshallAndExternalCall.push_back(call);
+		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, start, end, newStructType));
+		unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
 
-		unmarshallingPoint = call;
-		replacements[call] = builder.compoundStmt(unmarshallAndExternalCall);;
+		unmarshallingPoint = node.as<StatementAddress>();
+		replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);;
 	});
 
 	return unmarshallingPoint;
