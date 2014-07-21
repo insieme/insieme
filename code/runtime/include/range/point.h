@@ -70,23 +70,23 @@ typedef union {
 // ---- Printing -------
 
 inline int irt_range_point_1d_print(irt_range_point_1d a) {
-	return printf("%d", a.x);
+	return printf("%ld", a.x);
 }
 inline int irt_range_point_2d_print(irt_range_point_2d a) {
-	return printf("[%d,%d]", a.x, a.y);
+	return printf("[%ld,%ld]", a.x, a.y);
 }
 inline int irt_range_point_3d_print(irt_range_point_3d a) {
-	return printf("[%d,%d,%d]", a.x, a.y, a.z);
+	return printf("[%ld,%ld,%ld]", a.x, a.y, a.z);
 }
 
 inline int irt_range_point_1d_snprint(char* str, size_t size, irt_range_point_1d a) {
-	return snprintf(str, size, "%d", a.x);
+	return snprintf(str, size, "%ld", a.x);
 }
 inline int irt_range_point_2d_snprint(char* str, size_t size, irt_range_point_2d a) {
-	return snprintf(str, size, "[%d,%d]", a.x, a.y);
+	return snprintf(str, size, "[%ld,%ld]", a.x, a.y);
 }
 inline int irt_range_point_3d_snprint(char* str, size_t size, irt_range_point_3d a) {
-	return snprintf(str, size, "[%d,%d,%d]", a.x, a.y, a.z);
+	return snprintf(str, size, "[%ld,%ld,%ld]", a.x, a.y, a.z);
 }
 
 // ---- Equality -------
