@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -605,18 +605,6 @@ namespace {
         auto marker = MarkerTy::get(stmt->getNodeManager(), stmt);
         marker->addAnnotation(std::make_shared<frontend::omp::BaseAnnotation>(anns));
         return marker;
-    }
-
-    /**
-     *  Can be used for debugging. Print the contents
-     *  of the match object and the stmt where the match
-     *  object belongs to
-     */
-    void debug(MatchObject& object, stmtutils::StmtWrapper stmts) {
-        object.print();
-        for(auto cur : stmts) {
-            std::cout << dumpPretty(cur.as<core::StatementPtr>()) << std::endl;
-        }
     }
 
 }
