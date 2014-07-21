@@ -1149,41 +1149,6 @@ namespace {
 
 	};
 
-	vector<core::DeclarationStmtAddress> getGlobalDeclarations(const core::CompoundStmtPtr& mainBody) {
-		GlobalDeclarationCollector collector;
-		core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
-		return collector.decls;
-	}
-
-	// find global struct type of prog, if any
-	RefTypePtr findGlobalStruct(const core::ProgramPtr& prog) {
-		// check whether it is a main program ...
-		core::ProgramAddress program(prog);
-		if(!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
-			return RefTypePtr();
-		}
-
-		// extract body of main
-		const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
-		if(mainExpr->getNodeType() != core::NT_LambdaExpr) {
-			return RefTypePtr();
-		}
-		const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
-		const core::StatementAddress& bodyStmt = main->getBody();
-		if(bodyStmt->getNodeType() != core::NT_CompoundStmt) {
-			return RefTypePtr();
-		}
-		core::CompoundStmtAddress body = core::static_address_cast<const core::CompoundStmt>(bodyStmt);
-
-		// search for global structs
-		vector<core::DeclarationStmtAddress> globals = getGlobalDeclarations(body.getAddressedNode());
-		if(globals.empty()) {
-			return RefTypePtr();
-		}
-
-		return globals.front().getVariable().getType().as<RefTypePtr>();
-	}
-
 	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) { 
 
 		// search locks

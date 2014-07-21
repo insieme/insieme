@@ -1514,31 +1514,6 @@ namespace arithmetic {
 
 	namespace {
 
-		Constraint getConstraint(const Formula& a, const Formula& b, const LiteralPtr& pred) {
-			auto& lang = pred->getNodeManager().getLangBasic();
-			if (lang.isSignedIntLt(pred) || lang.isUnsignedIntLt(pred)) {
-				return a < b;
-			}
-			if (lang.isSignedIntLe(pred) || lang.isUnsignedIntLe(pred)) {
-				return a <= b;
-			}
-			if (lang.isSignedIntGt(pred) || lang.isUnsignedIntGt(pred)) {
-				return a > b;
-			}
-			if (lang.isSignedIntGe(pred) || lang.isUnsignedIntGe(pred)) {
-				return a >= b;
-			}
-			if (lang.isSignedIntEq(pred) || lang.isUnsignedIntEq(pred)) {
-				return eq(a, b);
-			}
-			if (lang.isSignedIntNe(pred) || lang.isUnsignedIntNe(pred)) {
-				return ne(a, b);
-			}
-			assert(false && "Unsupported select-predicate encountered!");
-			return a < b;		// to avoid a warning regarding no result
-		}
-
-
 		Piecewise buildMinMax(const Piecewise& a, const Piecewise& b, bool min) {
 
 			// build cross product of predicates + constraint values

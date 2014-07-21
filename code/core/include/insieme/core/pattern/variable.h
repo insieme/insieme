@@ -79,6 +79,10 @@ namespace pattern {
 		Variable(const char* name, const TreePattern& pattern = any)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
+		Variable(const Variable& other) = default;
+
+		Variable(Variable&& other) = default;
+
 		/**
 		 * The implicit conversion support to convert instances to tree patterns.
 		 */
@@ -92,6 +96,8 @@ namespace pattern {
 		operator const TreeGenerator&() const {
 			return gVar;
 		}
+
+		Variable& operator=(const Variable&) = default;
 
 		bool operator==(const Variable& other) const {
 			return this == &other || name == other.name;

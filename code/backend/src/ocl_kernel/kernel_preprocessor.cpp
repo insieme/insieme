@@ -407,11 +407,7 @@ namespace {
 			}
 		};
 
-        core::StatementPtr unwrapTypes(const core::StatementPtr body) {
-            return TypeUnwrapper(body->getNodeManager()).map(body);
-        }
-
-        core::StatementPtr unwrapTypes(const core::StatementPtr body, const std::vector<core::VariablePtr>& varVec) {
+        core::StatementPtr unwrapTypes(const core::StatementPtr body, const std::vector<core::VariablePtr>& varVec = std::vector<core::VariablePtr>()) {
             return TypeUnwrapper(body->getNodeManager(), varVec).map(body);
 		}
 

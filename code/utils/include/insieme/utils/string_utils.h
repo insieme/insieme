@@ -69,16 +69,23 @@ string format(const char* formatString, const Args& ... args) {
 	string retval;
 	int BUFFER_SIZE = 2048;
 	char buffer[BUFFER_SIZE];
-	int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
-	if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
-		BUFFER_SIZE = written>0 ? written+1 : 1024*1024*8;
-		char* heap_buffer = new char[BUFFER_SIZE];
-		snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
-		retval = string(heap_buffer);
-		delete [] heap_buffer;
-	} else {
-		retval = string(buffer);
-	}
+
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wformat-security"
+
+		int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+		if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
+			BUFFER_SIZE = written>0 ? written+1 : 1024*1024*8;
+			char* heap_buffer = new char[BUFFER_SIZE];
+			snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+			retval = string(heap_buffer);
+			delete [] heap_buffer;
+		} else {
+			retval = string(buffer);
+		}
+
+	#pragma GCC diagnostic pop
+
 	return retval;
 }
 

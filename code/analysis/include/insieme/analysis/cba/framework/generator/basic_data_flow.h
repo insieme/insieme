@@ -74,17 +74,6 @@ namespace cba {
 
 	namespace {
 
-		StatementInstance getBody(const ContextFreeCallable& fun) {
-			if (auto lambda = fun.isa<LambdaExprInstance>()) {
-				return lambda->getBody();
-			}
-			if (auto bind = fun.isa<BindExprInstance>()) {
-				return bind->getCall();
-			}
-			assert_fail() << "Unsupported function type encountered: " << fun->getNodeType();
-			return StatementInstance();
-		}
-
 		template<typename Lattice>
 		struct StructBuilder : public utils::constraint::detail::Executor {
 			typedef std::map<FieldIndex, TypedValueID<Lattice>> element_map;

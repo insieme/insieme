@@ -89,10 +89,6 @@ namespace parser {
 			return core::convertList<element>(source);	// use core converter
 		}
 
-		bool isReference(const ExpressionPtr& cur) {
-			return cur->getType()->getNodeType() == core::NT_RefType;
-		}
-
 		ExpressionPtr getOperand(Context& cur, int index) {
 			return cur.tryDeref(cur.getTerm(index).as<ExpressionPtr>());
 		};

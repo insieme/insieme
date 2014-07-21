@@ -132,6 +132,12 @@ namespace pattern {
 		TreeMatchOpt matchTree(const TreePtr& tree) const;
 
 		/**
+		 * Enable default handling of assignments.
+		 */
+		TreePattern& operator=(const TreePattern&) = default;
+
+
+		/**
 		 * Prints this pattern to the given output stream -- implements the Printable interface.
 		 */
 		std::ostream& printTo(std::ostream& out) const;
@@ -178,6 +184,11 @@ namespace pattern {
 		ListPattern(const impl::ListPatternPtr& pattern) : pattern(pattern) {
 			assert_true(pattern) << "Pattern pointer must not be null!";
 		}
+
+		/**
+		 * Utilize default assignment operator.
+		 */
+		ListPattern& operator=(const ListPattern&) = default;
 
 		/**
 		 * An implicit conversion to the internal implementation structure.
