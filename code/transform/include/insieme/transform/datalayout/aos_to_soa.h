@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 
@@ -79,6 +80,16 @@ public:
 	AosToSoa(core::NodePtr& toTransform);
 };
 
+class VariableAdder: public core::transform::CachedNodeMapping {
+	core::NodeManager& mgr;
+	core::VariablePtr oldVar;
+	core::VariablePtr newVar;
+
+	VariableAdder(core::VariablePtr oldVar, core::VariablePtr newVar) : mgr(oldVar->getNodeManager()), oldVar(oldVar), newVar(newVar) {}
+
+	const core::NodePtr resolveElement(const core::NodePtr& element);
+
+};
 
 } // datalayout
 } // transform
