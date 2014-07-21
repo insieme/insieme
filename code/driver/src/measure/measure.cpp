@@ -57,6 +57,7 @@
 
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -954,6 +955,7 @@ namespace measure {
 		}
 
 		// fix static scheduling
+		// TODO: it is no longer necessary to fix to static scheduling, should we keep it?
 		auto modifiedCompiler = compiler;
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
@@ -1099,18 +1101,6 @@ namespace measure {
 		return res;
 	}
 
-	std::string buildBinaryAll(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
-		namespace iar = insieme::analysis::region;
-		std::map<core::StatementAddress, region_id> regions;
-		iar::ForSelector PForBodySelector;
-		vector<core::StatementAddress> list = PForBodySelector.getRegions(region);
-		unsigned id = 0;
-		for(auto entry : list)
-			regions[entry] = id++;
-
-		return buildBinary(regions, compiler);
-	}
-
 	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
 		std::map<core::StatementAddress, region_id> regions;
 		regions[region] = 0;
@@ -1138,7 +1128,11 @@ namespace measure {
 		});
 
 		// create resulting program
-		core::ProgramPtr program = wrapIntoProgram(root);
+		core::ProgramPtr program;
+		if(root->getNodeType() == core::NT_LambdaExpr)
+			program = core::Program::get(manager, toVector(root.as<core::ExpressionPtr>()));
+		else
+			program = wrapIntoProgram(root);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
@@ -1162,9 +1156,6 @@ namespace measure {
 		// compile code to binary
 		return utils::compiler::compileToBinary(*targetCode, compiler);
 	}
-
-
-
 
 	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
 		workerDataStore[worker][region][metric].push_back(value);	// just add value
