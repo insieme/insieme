@@ -1149,12 +1149,6 @@ namespace {
 
 	};
 
-	vector<core::DeclarationStmtAddress> getGlobalDeclarations(const core::CompoundStmtPtr& mainBody) {
-		GlobalDeclarationCollector collector;
-		core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
-		return collector.decls;
-	}
-
 	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) { 
 
 		// search locks
