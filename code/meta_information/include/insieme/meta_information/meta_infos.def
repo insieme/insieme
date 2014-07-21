@@ -100,7 +100,7 @@ INFO_STRUCT_END()
  */
 INFO_STRUCT_BEGIN(core)
 	INFO_FIELD_EXT(map,		
-			struct { const unsigned size; const unsigned* const data; },		 	{ 0 }, 		
+			struct { unsigned size; unsigned* data; },		 						{ 0 }, 		
 			vector<unsigned>,														toVector(0u)
 	)
 INFO_STRUCT_END()
