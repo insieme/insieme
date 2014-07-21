@@ -60,73 +60,11 @@ namespace insieme { namespace transform {
 
 using namespace insieme::core;
 
-namespace {
-
-// TODO: split elimination of refs and arrays ... one after another
-
-bool isArrayType(const TypePtr& cur) {
-
-	// check for null pointer
-	if (!cur) {
-		return false;
-	}
-
-	// accept pure array type
-	if (cur->getNodeType() == NT_ArrayType) {
-		return true;
-	}
-
-	// also accept ref/array combination
-	if ((cur->getNodeType() == NT_RefType && 
-		 static_pointer_cast<const RefType>(cur)->getElementType()->getNodeType() == NT_ArrayType)) 
-	{
-		return true;
-	}
-	return false;
-}
-
-
-core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
-
-	// Step 1) search list of structs containing arrays as elements
-	utils::set::PointerSet<StructTypePtr> structs;
-
-	// search for the property
-	visitDepthFirstOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
-		if (cur->getNodeType() != NT_StructType) {
-			return;
-		}
-
-		StructTypePtr type = static_pointer_cast<const StructType>(cur);
-		if (any(type->getEntries(), [](const core::NamedTypePtr& cur)->bool { return isArrayType(cur->getType()); })) {
-			structs.insert(type);
-			return;
-		}
-
-	}, true));
-
-	// print list of structs
-	for_each(structs, [](const StructTypePtr& cur) {
-		std::cout << "Current struct: " << *cur << std::endl;
-	});
-
-	return node;
-}
-
-} // end anonymous namespace
-
 
 core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
 
 	// start by doing nothing ..
 	core::NodePtr res = node;
-
-	// remove unnecessary array indirections
-//	res = removePseudoArraysInStructs(res);
-//	res = normalizeLoops(res);
-//	res = removeUnecessaryDerefs(res);
-
-//	insieme::analysis::polyhedral::scop::mark(res);
 
 	res = deadBranchElimination(res);
 

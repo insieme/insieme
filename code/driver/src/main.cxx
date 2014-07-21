@@ -358,20 +358,6 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 				OCL: Apply the OpenCL semantics to the IR
-	//***************************************************************************************
-	void applyOpenCLFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
-		if (!options.OpenCL) { return; }
-
-		openBoxTitle("OpenCL Conversion");
-		fe::ocl::HostCompiler oclHostCompiler(program, options);
-		program = utils::measureTimeFor<core::ProgramPtr, INFO>("OpenCL ",
-				[&]() {return oclHostCompiler.compile(); }
-			);
-		closeBox();
-	}
-
-	//***************************************************************************************
 	// 				 STATS: show statistics about the IR
 	//***************************************************************************************
 	void showStatistics(const core::ProgramPtr& program, const CommandLineOptions& options) {
@@ -384,15 +370,6 @@ namespace {
 		closeBox();
 	}
 
-	void doCleanup(core::ProgramPtr& program, const CommandLineOptions& options) {
-
-		openBoxTitle("IR Cleanup");
-		program = utils::measureTimeFor<core::ProgramPtr,INFO>("ir.cleanup", [&]() {
-			 return insieme::transform::cleanup(program, options.ConstantPropagation).as<ProgramPtr>();
-		} );
-		closeBox();
-
-	}
 
 	std::pair<std::string, be::BackendPtr> selectBackend(const core::ProgramPtr& program, const CommandLineOptions& options) {
 

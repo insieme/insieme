@@ -104,7 +104,7 @@ isl_space* toIslSpace(
 
 
 // Utility function used to print to a stream the ISL internal representation of a set
-void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
+inline void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
 	isl_printer* printer = isl_printer_to_str(ctx);
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);
@@ -122,7 +122,7 @@ void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
  * Converts an AffineFunction to an isl_aff object which can be used to create sets and
  * relationships in ISL
  */
-isl_aff* toIslAff (
+inline isl_aff* toIslAff (
 		isl_space*					islSpace,
 		const AffineFunction&		func,
 		const isl_dim_type& 		type)
@@ -942,7 +942,7 @@ typedef std::tuple<
 	utils::Piecewise<arith::Formula>::Pieces
 > PiecewiseData;
 
-void print(IslCtx& ctx, std::ostream& out, isl_qpolynomial* qp) {
+inline void print(IslCtx& ctx, std::ostream& out, isl_qpolynomial* qp) {
 	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
 	isl_printer_print_qpolynomial(printer, qp);
 	char* str = isl_printer_get_str(printer);
@@ -1054,7 +1054,7 @@ namespace {
 
 typedef std::vector<double> FoldUserData;
 
-void print(IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
+inline void print(IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
 	isl_printer* printer = isl_printer_to_str(ctx.getRawContext());
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);

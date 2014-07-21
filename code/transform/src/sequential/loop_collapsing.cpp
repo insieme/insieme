@@ -130,6 +130,8 @@ ForStmtPtr collapseFor(const ForStmtPtr& outer, int collapseLevels) {
 	return collapseFor(build.forStmt(newI, build.intLit(0), newExt, build.intLit(1), newBody), collapseLevels-1);
 }
 
+} // anonymous namespace
+
 ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 	ForStmtPtr ret = outer;
 	int collapseLevels = canCollapse(ret);
@@ -143,7 +145,6 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 	return ret;
 }
 
-} // anonymous namespace
 
 	LoopCollapsing::LoopCollapsing(const parameter::Value& params)
 		: Transformation(LoopCollapsingType::getInstance(), params) {
