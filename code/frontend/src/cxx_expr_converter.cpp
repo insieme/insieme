@@ -587,7 +587,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 
 	core::ExpressionPtr dtor;
-	clang::CXXDestructorDecl* dtorDecl;
+	clang::CXXDestructorDecl* dtorDecl = nullptr;
 	// since destructor might be defined in a different translation unit or even in this one but after the usage
 	// we should retrieve a callable symbol and delay the conversion
 	if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(deleteExpr->getDestroyedType().getTypePtr())){
