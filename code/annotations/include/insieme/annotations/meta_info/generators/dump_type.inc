@@ -40,7 +40,7 @@
 	namespace _name ## _ns { \
 	typedef std::tuple<
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 	typename insieme::annotations::detail::compiler_type<_type>::type,
 
 #define INFO_STRUCT_END() \

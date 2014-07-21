@@ -56,7 +56,7 @@
 		void cloneTo(const insieme::core::NodePtr& target) const; \
 		bool operator==(const info_type& other) const; \
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 		typename detail::compiler_type<_type>::type _name;
 
 #define INFO_STRUCT_END() \

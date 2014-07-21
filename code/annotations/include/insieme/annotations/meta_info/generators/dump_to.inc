@@ -45,7 +45,7 @@
 				const auto& data = static_pointer_cast<annotation_type>(annotation)->getValue();\
 				return insieme::core::encoder::toIR(manager, tuple_type ( 
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 		data._name,
 
 #define INFO_STRUCT_END() \

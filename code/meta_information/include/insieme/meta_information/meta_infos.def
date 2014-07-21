@@ -44,8 +44,12 @@
 #define INFO_STRUCT_BEGIN(_name)
 #endif
 
+#ifndef INFO_FIELD_EXT
+#define INFO_FIELD_EXT(_name, _c_type, _c_default, _cpp_type, _cpp_default)
+#endif
+
 #ifndef INFO_FIELD
-#define INFO_FIELD(_name, _type, _default)
+#define INFO_FIELD(_name, _type, _default) INFO_FIELD_EXT(_name, _type, _default, _type, _default)
 #endif
 
 #ifndef INFO_STRUCT_END
@@ -62,7 +66,7 @@
  */
 INFO_DECL(typedef void (*estimation_function_type)(int, int))
 INFO_STRUCT_BEGIN(effort_estimation)
-	INFO_FIELD(estimation_function, 	estimation_function_type, 	NULL)
+	INFO_FIELD(estimation_function, 	estimation_function_type, 	0)
 	INFO_FIELD(fallback_estimate, 		int,						0)
 INFO_STRUCT_END()
 
@@ -90,9 +94,22 @@ INFO_STRUCT_BEGIN(opencl)
 	INFO_FIELD(opencl, 	bool,	false)
 INFO_STRUCT_END()
 
+
+/**
+ * A meta information entitiy defining the map of cores to be utilized for processing a parallel region. 
+ */
+INFO_STRUCT_BEGIN(core)
+	INFO_FIELD_EXT(map,		
+			struct { const unsigned size; const unsigned* const data; },		 	{ 0 }, 		
+			vector<unsigned>,														toVector(0u)
+	)
+INFO_STRUCT_END()
+
+
 // ------------ clear definitions ------------------
 
 #undef INFO_DECL
 #undef INFO_STRUCT_BEGIN
 #undef INFO_FIELD
+#undef INFO_FIELD_EXT
 #undef INFO_STRUCT_END

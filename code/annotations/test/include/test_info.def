@@ -36,6 +36,10 @@
 
 typedef void (*fun_type)(int, int);
 
+#ifndef INFO_FIELD
+#define INFO_FIELD(_name, _type, _default) INFO_FIELD_EXT(_name, _type, _default, _type, _default)
+#endif
+
 INFO_STRUCT_BEGIN(test)
 	INFO_FIELD(fun, 	fun_type, 				NULL)
 	INFO_FIELD(valA, 	int,					0)

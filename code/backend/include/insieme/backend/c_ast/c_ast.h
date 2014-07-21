@@ -390,7 +390,7 @@ namespace c_ast {
 		TypePtr type;
 		vector<NodePtr> values;
 		bool explicitType;
-		Initializer(TypePtr type) : Expression(NT_Initializer), type(type), explicitType(true) {};
+		Initializer(TypePtr type = TypePtr()) : Expression(NT_Initializer), type(type), explicitType(type) {};
 		Initializer(TypePtr type, const vector<NodePtr>& values, bool explicitType = true)
 			: Expression(NT_Initializer), type(type), values(values), explicitType(explicitType){};
 		virtual bool equals(const Node& node) const;
