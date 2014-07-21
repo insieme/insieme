@@ -48,7 +48,7 @@ namespace analysis {
 		/**
 		 * Tests whether the given expression is a valid attribute.
 		 */
-		bool isAttribute(const ExpressionPtr& expr) {
+		inline bool isAttribute(const ExpressionPtr& expr) {
 			if (!expr) { return false; }
 			const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
 			return expr->getType() == ext.getAttributeType();
