@@ -175,6 +175,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 		visitDepthFirst(tta, [&](const DeclarationStmtAddress& decl) {
 			VariableAddress check = decl->getVariable();
+
 			if(*check != *candidate.first)
 				return;
 
@@ -548,7 +549,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 
 		IRBuilder builder(mgr);
-		builder.callExpr(call->getType(), call->getFunctionExpr(), args);
+		return builder.callExpr(call->getType(), call->getFunctionExpr(), args);
 	}
 
 	return element;
