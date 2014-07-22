@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -318,6 +319,26 @@ namespace runtime {
             else
                 return stmt;
         }
+			
+		// migrate meta-infos from anywhere in subtree to job
+		void collectSubMetaInfos(core::NodeManager& manager, core::NodePtr job) {
+			const core::lang::BasicGenerator& basic = manager.getLangBasic();
+			auto rootMetas = annotations::getMetaInfos(job);
+			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
+				// prune for subtrees which generate their own WI description
+				if(core::analysis::isCallOf(npr, basic.getParallel()) 
+					|| core::analysis::isCallOf(npr, basic.getPFor())	
+					|| npr.isa<core::JobExprPtr>()) return true;
+				// get metainfo
+				auto metas = annotations::getMetaInfos(npr);
+				if(metas.empty()) return false;
+				// check if duplicate metainfo 
+				assert(all(rootMetas, [&](const annotations::AnnotationMap::value_type& v) { return metas.count(v.first) == 0; } ) && "Duplicate Meta Information");
+				// migrate
+				annotations::migrateMetaInfos(npr, job);
+				return true;
+			});
+		}
 
 		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
@@ -376,6 +397,9 @@ namespace runtime {
 
 			// compute work-item implementation variants
 			vector<WorkItemVariant> variants;
+
+			// migrate meta-infos from anywhere in subtree to job
+			collectSubMetaInfos(manager, job);
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
@@ -551,6 +575,9 @@ namespace runtime {
 
 				// convert pfor body
 				auto info = pforBodyToWorkItem(args[4]);
+
+				// migrate meta-infos from anywhere in subtree to job
+				collectSubMetaInfos(manager, call);
 
 				// migrate meta infos
 				for(const auto& cur : info.first.getVariants()) {

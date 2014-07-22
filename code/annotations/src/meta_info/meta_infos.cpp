@@ -56,6 +56,14 @@ namespace annotations {
 
 	}
 
+	AnnotationMap getMetaInfos(const core::NodePtr& npr) {
+		AnnotationMap ann = npr->getAnnotations();
+		AnnotationMap ret;
+		for(auto elem : ann) {
+			if(isMetaInfo(elem.second)) ret.insert(elem);
+		}
+		return ret;
+	}
 
 
 } // end namespace annotations

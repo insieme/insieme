@@ -129,7 +129,13 @@ namespace annotations {
 	 * A utility function copying all meta information from the given src to the destination node.
 	 */
 	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
+	
+	typedef utils::Annotatable<core::NodeAnnotation>::annotation_map_type AnnotationMap;
 
+	/**
+	 * A utility function returning all metainformation annotations on a node.
+	 */
+	AnnotationMap getMetaInfos(const core::NodePtr& npr);
 
 } // end namespace annotations
 } // end namespace insieme
