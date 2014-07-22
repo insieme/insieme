@@ -56,8 +56,7 @@ TEST(DataLayout, AosToSoa) {
 	NodePtr code = builder.normalize(builder.parseStmt(
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
-		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
-		"	ref<ref<array<twoElem,1>>> a;"// = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
+		"	ref<ref<array<twoElem,1>>> a = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp;"
@@ -80,6 +79,49 @@ TEST(DataLayout, AosToSoa) {
 	datalayout::AosToSoa ats(code);
 
 //	dumpPretty(code);
+
+	auto semantic = core::checks::check(code);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const core::checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) ;
+
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const core::checks::Message& cur) {
+		std::cout << cur << std::endl;
+	});
+
+}
+
+TEST(DataLayout, AosToSoa2) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	NodePtr code = builder.normalize(builder.parseStmt(
+		"{"
+		"	let twoElem = struct{int<4> int; real<4> float;};"
+		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
+		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
+		"	ref<ref<array<twoElem,1>>> a;"
+		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
+		"	load(a);"
+		"	for(int<4> i = 0 .. 42 : 1) {"
+//		"		ref<twoElem> tmp = ref.deref(a)[i];"
+//		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
+		"		ref.deref(a)[i].int = i;"
+		"	}"
+		"	store(*a);"
+		"	ref.delete(*a);"
+		"}"
+	));
+
+	datalayout::AosToSoa ats(code);
+
+	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();

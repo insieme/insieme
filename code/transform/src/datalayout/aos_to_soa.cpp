@@ -216,6 +216,10 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		});
 
 		toTransform = core::transform::replaceAll(mgr, replacements);
+
+		VariableAdder varAdd(oldVar, newVar);
+		toTransform = varAdd.mapElement(0, toTransform);
+
 		tta = NodeAddress(toTransform);
 		replacements.clear();
 
@@ -226,7 +230,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		StatementAddress begin = addMarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
 
 		//introducing unmarshalling
-		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
+		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, begin, nElems, replacements);
 
 		//free memory of the new variable
 		addNewDel(tta, oldVar, newVar, newStructType, replacements);
@@ -368,7 +372,7 @@ StatementPtr AosToSoa::generateUnmarshalling(const VariablePtr& oldVar, const Va
 }
 
 StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const VariablePtr& newVar, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const StatementAddress& begin, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	StatementAddress unmarshallingPoint;
@@ -384,6 +388,11 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 
 	pirp::matchAllPairs(readFromStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
 		ExpressionPtr start, end;
+
+		if(!(begin < node)) {
+			// do not unmarshall before marshalling
+			return;
+		}
 
 		if(am.isVarBound("start")) { // assignToStructInLoop
 			start = am["start"].getValue().as<ExpressionPtr>();
@@ -401,10 +410,22 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 
 		StatementList unmarshallAndExternalCall;
 		unmarshallAndExternalCall.push_back(generateUnmarshalling(oldVar, newVar, start, end, newStructType));
-		unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
 
 		unmarshallingPoint = node.as<StatementAddress>();
-		replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);
+
+		auto check = replacements.find(node);
+		// check if there is already a replacement for the corresponding node
+		if(check != replacements.end()) {
+			// if so, add to this replacement, assume the original call is already in the existing replacement
+			CompoundStmtPtr oldReplacement = (*check).second.as<CompoundStmtPtr>();
+			StatementList combinedReplacement(oldReplacement.getElements());
+			combinedReplacement.insert(combinedReplacement.begin(), unmarshallAndExternalCall.begin(), unmarshallAndExternalCall.end());
+			replacements[node] = builder.compoundStmt(combinedReplacement);
+		} else {
+			// add origninal call
+			unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
+			replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);
+		}
 	});
 
 	return unmarshallingPoint;
@@ -498,29 +519,33 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element->substitute(mgr, *this);
 
 	if(CallExprPtr call = element.isa<CallExprPtr>()) {
-		LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
+		LambdaExprPtr lambdaExpr = call->getFunctionExpr().isa<LambdaExprPtr>();
+
+		if(!lambdaExpr)
+			return element;
 
 		// functions with no implementation are ignored
 		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
 			return element;
 
-
 		std::vector<ExpressionPtr> args(call->getArguments());
-		bool addNew = false;
 
 		pattern::TreePattern isOldVarArg = pattern::atom(oldVar) | pirp::refDeref(pattern::atom(oldVar));
+		ExpressionPtr oldVarArg;
 
 		for(ExpressionPtr arg : args) {
-			if(isOldVarArg.match(arg))
-				addNew = true;
+			if(isOldVarArg.match(arg)) {
+				oldVarArg = arg;
+				break;
+			}
 		}
 
 		// oldVar is not an argument, nothing will be done
-		if(!addNew)
+		if(!oldVarArg)
 			return element;
 
 		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		args.push_back(newVar);
+		args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 
 		IRBuilder builder(mgr);
 		builder.callExpr(call->getType(), call->getFunctionExpr(), args);
