@@ -146,4 +146,78 @@ namespace insieme {
 		// delete binary
 		if(boost::filesystem::exists(fn)) boost::filesystem::remove(fn);
 	}
+
+	TEST(MetaInformationTest, IntegrationVectors) {
+		core::NodeManager manager;
+
+		// obtain test case & check that it's available
+		driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
+		EXPECT_FALSE(!testCaseOpt);
+		driver::integration::IntegrationTestCase testCase = *testCaseOpt;
+
+		// load the code using the frontend
+		core::ProgramPtr code = testCase.load(manager);
+
+		dumpPretty(code);
+
+		// find parallel
+		core::CallExprPtr parallel;
+		core::visitDepthFirstOnceInterruptible(code, [&](const core::CallExprPtr& call) {
+			if(core::analysis::isCallOf(call, manager.getLangBasic().getParallel())) {
+				parallel = call;
+				return true;
+			}
+			return false;
+		} );
+		EXPECT_NE(parallel, core::CallExprPtr());
+
+		// add meta information
+		annotations::core_info core_setup;
+		core_setup.map = { 3, 1, 2, 0 };
+		parallel->attachValue(core_setup);
+
+		// create target code using the runtime backend
+		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+
+		// test presence of meta information
+		EXPECT_PRED2(containsSubString, toString(*target), "{ true, {4, (uint32_t[]){3u, 1u, 2u, 0u}} }");
+
+		// see whether target code can be compiled
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+
+		// add extra compiler flags from test case
+		for(const auto& flag : testCase.getCompilerArguments("main_run_compile")) {
+			compiler.addFlag(flag);
+		}
+
+		// add includes
+		for(const auto& cur : testCase.getIncludeDirs()) {
+			compiler.addIncludeDir(cur.string());
+		}
+
+		// add library directories
+		for(const auto& cur : testCase.getLibDirs()) {
+			compiler.addFlag("-L" + cur.string());
+		}
+
+		// add libraries
+		for(const auto& cur : testCase.getLibNames()) {
+			compiler.addFlag("-l" + cur);
+		}
+
+		// build binary
+		auto fn = utils::compiler::compileToBinary(*target, compiler);
+		EXPECT_FALSE(fn.empty());
+
+		// execute
+		string command = string("IRT_REPORT=1 ") + fn;
+		auto res = exec(command.c_str());
+
+		// TODO: update runtime to dump arrays ...
+//		// search for our meta information
+//		EXPECT_NE(res.find("affinity_vector = { 3, 2, 1, 0 }"), res.npos);
+
+		// delete binary
+		if(boost::filesystem::exists(fn)) boost::filesystem::remove(fn);
+	}
 }

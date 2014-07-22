@@ -44,7 +44,7 @@
 				info_type data;
 				
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 	data._name = std::get<_name ## Idx>(tuple);
 
 #define INFO_STRUCT_END() \

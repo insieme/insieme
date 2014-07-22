@@ -42,6 +42,7 @@
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/ir.h"
 

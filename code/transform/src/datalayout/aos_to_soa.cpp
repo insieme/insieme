@@ -167,6 +167,9 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		VariablePtr newVar;
 		StructTypePtr newStructType;
 		ExpressionPtr nElems;
+
+		std::map<VariablePtr, VariablePtr> varMapping;
+
 		pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 				pattern::any << var("nElems", pattern::any))));
 
@@ -208,8 +211,13 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
 			}
 			replacements[decl] = builder.compoundStmt(allDecls);
+
+			varMapping[oldVar] = newVar;
 		});
 
+		toTransform = core::transform::replaceAll(mgr, replacements);
+		tta = NodeAddress(toTransform);
+		replacements.clear();
 
 		// assignments to the entire struct should be ported to the new sturct members
 		replaceAssignments(oldVar, newVar, newStructType, tta, allocPattern, nElems, replacements);
@@ -220,16 +228,16 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		//introducing unmarshalling
 		StatementAddress end = addUnmarshalling(oldVar, newVar, newStructType, tta, nElems, replacements);
 
+		//free memory of the new variable
+		addNewDel(tta, oldVar, newVar, newStructType, replacements);
+
 		//replace array accesses
 		replaceAccesses(oldVar, newVar, tta, begin, end, replacements);
 
-		//free memory of the new variable
-		addNewDel(tta, oldVar, newVar, newStructType, replacements);
+		toTransform = core::transform::replaceAll(mgr, replacements);
 	}
 
-	toTransform = core::transform::replaceAll(mgr, replacements);
-
-dumpPretty(toTransform);
+//dumpPretty(toTransform);
 }
 
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
@@ -396,7 +404,7 @@ StatementAddress AosToSoa::addUnmarshalling(const VariableAddress& oldVar, const
 		unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
 
 		unmarshallingPoint = node.as<StatementAddress>();
-		replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);;
+		replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);
 	});
 
 	return unmarshallingPoint;
@@ -407,9 +415,8 @@ void AosToSoa::replaceAccesses(const VariableAddress& oldVar, const VariablePtr&
 		const StatementAddress& begin, const StatementAddress& end, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
-	pattern::TreePattern structAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::callExpr(
-				pattern::atom(builder.getLangBasic().getRefDeref()), pattern::atom(oldVar)), var("index", pattern::any)),
-				pattern::var("member", pattern::any)));
+	pattern::TreePattern structAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)),
+			var("index", pattern::any)), pattern::var("member", pattern::any)));
 
 //	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 //		ExpressionPtr old = builder.arrayRefElem()
@@ -479,6 +486,47 @@ bool AosToSoa::addNewDel(NodeAddress& toTransform, const ExpressionPtr& oldVar, 
 		return false;
 	});
 
+}
+
+const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
+	// stop recursion at type level
+	if (element->getNodeCategory() == NodeCategory::NC_Type) {
+		return element;
+	}
+
+	if(element.isa<CompoundStmtPtr>())
+		return element->substitute(mgr, *this);
+
+	if(CallExprPtr call = element.isa<CallExprPtr>()) {
+		LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
+
+		// functions with no implementation are ignored
+		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
+			return element;
+
+
+		std::vector<ExpressionPtr> args(call->getArguments());
+		bool addNew = false;
+
+		pattern::TreePattern isOldVarArg = pattern::atom(oldVar) | pirp::refDeref(pattern::atom(oldVar));
+
+		for(ExpressionPtr arg : args) {
+			if(isOldVarArg.match(arg))
+				addNew = true;
+		}
+
+		// oldVar is not an argument, nothing will be done
+		if(!addNew)
+			return element;
+
+		// if oldVar was an argument, newVar will be added too and search is continued in the called function
+		args.push_back(newVar);
+
+		IRBuilder builder(mgr);
+		builder.callExpr(call->getType(), call->getFunctionExpr(), args);
+	}
+
+	return element;
 }
 
 } // datalayout
