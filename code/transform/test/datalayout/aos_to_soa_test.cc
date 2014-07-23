@@ -114,7 +114,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	load(a);"
-//		"	access(a);"
+		"	access(a);"
 		"	store(*a);"
 		"	ref.delete(*a);"
 		"}"
@@ -122,7 +122,7 @@ TEST(DataLayout, AosToSoa2) {
 
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();
