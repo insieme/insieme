@@ -325,10 +325,13 @@ namespace runtime {
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			auto rootMetas = annotations::getMetaInfos(job);
 			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
+				// skip root node of sub-tree
+				if(npr == job)
+					return false;
 				// prune for subtrees which generate their own WI description
 				if(core::analysis::isCallOf(npr, basic.getParallel()) 
 					|| core::analysis::isCallOf(npr, basic.getPFor())	
-					|| (npr.isa<core::JobExprPtr>() && npr != job)) return true;
+					|| npr.isa<core::JobExprPtr>()) return true;
 				// get metainfo
 				auto metas = annotations::getMetaInfos(npr);
 				if(metas.empty()) return false;
