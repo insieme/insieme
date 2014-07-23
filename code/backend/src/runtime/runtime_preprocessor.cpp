@@ -328,7 +328,7 @@ namespace runtime {
 				// prune for subtrees which generate their own WI description
 				if(core::analysis::isCallOf(npr, basic.getParallel()) 
 					|| core::analysis::isCallOf(npr, basic.getPFor())	
-					|| npr.isa<core::JobExprPtr>()) return true;
+					|| (npr.isa<core::JobExprPtr>() && npr != job)) return true;
 				// get metainfo
 				auto metas = annotations::getMetaInfos(npr);
 				if(metas.empty()) return false;
