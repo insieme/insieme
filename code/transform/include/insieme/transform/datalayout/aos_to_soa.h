@@ -54,30 +54,30 @@ class AosToSoa {
 	core::NodeManager& mgr;
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
-	void replaceAssignments(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::StructTypePtr& newStructType,
+	void replaceAssignments(const core::VariableMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionPtr& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 
 	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	std::vector<core::StatementAddress> addMarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar,
+	std::vector<core::StatementAddress> addMarshalling(const core::VariableMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::ExpressionPtr& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	std::vector<core::StatementAddress> addUnmarshalling(const core::VariableAddress& oldVar, const core::VariablePtr& newVar,
+	std::vector<core::StatementAddress> addUnmarshalling(const core::VariableMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::StatementAddress& begin,
 			const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	void replaceAccesses(const core::VariableAddress& oldVar, const core::VariablePtr& newVar, const core::NodeAddress& toTransform,
+	void replaceAccesses(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
 			const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::VariablePtr& oldVar, const core::VariablePtr& newVar,
 			const core::StructTypePtr& newStructType);
-	bool addNewDel(core::NodeAddress& toTransform, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	void addNewDel(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
 public:
 	AosToSoa(core::NodePtr& toTransform);
@@ -92,7 +92,7 @@ class VariableAdder: public core::transform::CachedNodeMapping {
 public:
 	VariableAdder(core::VariablePtr oldVar, core::VariablePtr newVar, core::VariableMap& varReplacements)
 			: mgr(oldVar->getNodeManager()), oldVar(oldVar), newVar(newVar), varReplacements(varReplacements) {
-		varReplacements[oldVar] = varReplacements[newVar];
+		varReplacements[oldVar] = newVar;
 	}
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
