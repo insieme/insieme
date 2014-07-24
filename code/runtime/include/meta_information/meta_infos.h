@@ -58,7 +58,10 @@ struct _irt_meta_info_table_entry {
 #include "insieme/meta_information/meta_infos.def"
 
 // build printer for metainformation
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "meta_information/printer_generator.inc"
 #include "insieme/meta_information/meta_infos.def"
+#pragma GCC diagnostic pop
 
 #endif //#ifndef __GUARD_META_INFORMATION_META_INFOS_H
