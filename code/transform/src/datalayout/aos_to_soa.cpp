@@ -161,14 +161,7 @@ bool contains(std::vector<T> vec, const T& val) {
 AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
 	IRBuilder builder(mgr);
 
-	std::map<VariablePtr, RefTypePtr> structs;
-
-	pattern::TreePattern structVar = pirp::variable(pattern::aT(var("structType", pirp::refType(pirp::arrayType(
-			pirp::structType(*pattern::any))))));
-
-	pirp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
-		structs[match.as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-	});
+	std::map<VariablePtr, RefTypePtr> structs = findCandidates(toTransform);
 
 	std::map<NodeAddress, NodePtr> replacements;
 	NodeAddress tta(toTransform);
@@ -206,8 +199,9 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			if(match) {
 				nElems = match.get()["nElems"].getValue().as<ExpressionPtr>();
 			}
+			newStructType = builder.structType(newMember);
 
-			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, builder.structType(newMember)).as<RefTypePtr>();
+			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, newStructType).as<RefTypePtr>();
 			newVar = builder.variable(newType);
 
 			// replace declaration with compound statement containing the declaration itself, the
@@ -216,7 +210,6 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			allDecls.push_back(builder.declarationStmt(newVar, builder.undefinedVar(newType)));
 
 			// split up initialization expressions
-			newStructType = newType->getElementType().as<StructTypePtr>();
 
 			for(NamedTypePtr memberType : newStructType->getElements()) {
 				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
@@ -257,6 +250,18 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 //dumpPretty(toTransform);
 }
 
+std::map<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr toTransform) {
+	std::map<VariablePtr, RefTypePtr> structs;
+
+	pattern::TreePattern structVar = pirp::variable(pattern::aT(var("structType", pirp::refType(pirp::arrayType(
+			pirp::structType(*pattern::any))))));
+
+	pirp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
+		structs[match.as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
+	});
+
+	return structs;
+}
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }
