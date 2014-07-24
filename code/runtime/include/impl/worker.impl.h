@@ -58,6 +58,7 @@
 #include "utils/impl/affinity.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/instrumentation_events.impl.h"
+#include "meta_information/meta_infos.h"
 #include "utils/frequency.h"
 
 #ifdef IRT_VERBOSE
@@ -194,6 +195,11 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED,
 		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", self, wi);
 	self->cur_context = wi->context_id;
+#ifdef IRT_ENABLE_AUTOTUNING
+	irt_wi_implementation_variant variant = wi->impl->variants[self->default_variant];
+	if(variant.meta_info && variant.meta_info->autotuning.available)
+			irt_cpu_freq_set_frequency_worker(self, variant.meta_info->autotuning.frequency);
+#endif // IRT_ENABLE_AUTOTUNING
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->state = IRT_WI_STATE_STARTED;
