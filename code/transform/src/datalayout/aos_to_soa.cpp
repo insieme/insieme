@@ -41,6 +41,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -593,7 +594,15 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		VariableAdder vaForInnserScope(params[idx], params.back(), varReplacements);
 		StatementPtr newBody = vaForInnserScope.mapElement(0, lambdaExpr->getBody()).as<StatementPtr>();
 
-		return builder.callExpr(call->getType(), builder.lambdaExpr(newFunType, params, newBody), args);
+		LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
+		CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
+
+		//migrate possible annotations
+		core::transform::utils::migrateAnnotations(lambdaExpr->getBody(), newBody);
+		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
+		core::transform::utils::migrateAnnotations(call, newCall);
+
+		return newCall;
 	}
 
 	return element;
