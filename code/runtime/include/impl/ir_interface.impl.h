@@ -71,6 +71,13 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
     irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[0]), &(impl->variants[0]));
     irt_optimizer_apply_dvfs(&(impl->variants[0]));
 
+	#ifdef IRT_ENABLE_AUTOTUNING
+	irt_wi_implementation_variant variant = impl->variants[0];
+	if(variant.meta_info && variant.meta_info->autotuning.available) {
+		group->cur_sched.participants = variant.meta_info->autotuning.map.size;
+	}
+	#endif // IRT_ENABLE_AUTOTUNING
+
 	irt_schedule_loop(self, group, range, impl, args);
 
     irt_optimizer_remove_dvfs(&(impl->variants[0]));
