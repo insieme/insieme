@@ -186,20 +186,14 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			oldVar = check;
 
 			StructTypePtr oldType = candidate.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
-			NodeRange<NamedTypePtr> member = oldType->getElements();
-			std::vector<NamedTypePtr> newMember;
-			for(NamedTypePtr memberType : member) {
-	//			std::cout << "member: " << memberType << std::endl;
-				newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
 
-			}
+			newStructType = createNewType(oldType);
 
 			// check if the declaration does an allocation and try to extract the number of elements in that case
 			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
 			if(match) {
 				nElems = match.get()["nElems"].getValue().as<ExpressionPtr>();
 			}
-			newStructType = builder.structType(newMember);
 
 			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, newStructType).as<RefTypePtr>();
 			newVar = builder.variable(newType);
@@ -262,6 +256,20 @@ std::map<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr toTransform) 
 
 	return structs;
 }
+
+StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
+	IRBuilder builder(mgr);
+
+	NodeRange<NamedTypePtr> member = oldType->getElements();
+	std::vector<NamedTypePtr> newMember;
+	for(NamedTypePtr memberType : member) {
+	//			std::cout << "member: " << memberType << std::endl;
+		newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
+
+	}
+	return builder.structType(newMember);
+}
+
 ExpressionPtr AosToSoa::updateInit(ExpressionPtr init, TypePtr oldType, TypePtr newType) {
 	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
 }

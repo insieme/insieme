@@ -54,6 +54,7 @@ class AosToSoa {
 	core::NodeManager& mgr;
 
 	virtual std::map<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
+	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
 	void replaceAssignments(const core::VariableMap& varReplacements, const core::StructTypePtr& newStructType,

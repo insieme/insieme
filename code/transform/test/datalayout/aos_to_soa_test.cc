@@ -41,6 +41,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/simplify.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -94,6 +95,12 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
+	int cnt = 0;
+	core::visitDepthFirst(code, [&](const core::CompoundStmtPtr& csp) {
+		++cnt;
+	});
+
+	EXPECT_EQ(53, cnt);
 }
 
 TEST(DataLayout, AosToSoa2) {
@@ -139,6 +146,12 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
+	int cnt = 0;
+	core::visitDepthFirst(code, [&](const core::CompoundStmtPtr& csp) {
+		++cnt;
+	});
+
+	EXPECT_EQ(40, cnt);
 }
 
 } // transform
