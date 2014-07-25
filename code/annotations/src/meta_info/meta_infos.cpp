@@ -56,10 +56,20 @@ namespace annotations {
 
 	}
 
+	void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
+
+		// skip operation if there is nothing to do
+		if (!src || !dest || src == dest) return;
+
+		migrateMetaInfos(src, dest);
+
+		clearMetaInfos(src);
+	}
+
 	AnnotationMap getMetaInfos(const core::NodePtr& npr) {
 		AnnotationMap ann = npr->getAnnotations();
 		AnnotationMap ret;
-		for(auto elem : ann) {
+		for(const auto& elem : ann) {
 			if(isMetaInfo(elem.second)) ret.insert(elem);
 		}
 		return ret;
