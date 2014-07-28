@@ -207,8 +207,8 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
-		#ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = wi->impl;
+		#ifndef IRT_TASK_OPT
 		if(self->default_variant < wimpl->num_variants) {
             irt_optimizer_apply_dvfs(&(wimpl->variants[self->default_variant]));
 			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
@@ -217,7 +217,6 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
 		}
 		#else // !IRT_TASK_OPT
-        irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
         uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
         irt_optimizer_apply_dvfs(&(wimpl->variants[opt]));
 		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);

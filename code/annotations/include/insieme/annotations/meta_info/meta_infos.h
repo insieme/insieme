@@ -123,6 +123,12 @@ namespace annotations {
 		;
 	}
 
+	inline void clearMetaInfos(const insieme::core::NodePtr& ptr) {
+		#define INFO_STRUCT_BEGIN(_name) \
+			ptr->detachValue<_name ## _info>();
+		#include "insieme/meta_information/meta_infos.def"
+	}
+
 	#include "insieme/annotations/meta_info/generators/clear.inc"
 
 
@@ -131,6 +137,11 @@ namespace annotations {
 	 */
 	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
 	
+	/**
+	 * A utility function moving all meta information from the given src to the destination node.
+	 */
+	void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
+
 	typedef utils::Annotatable<core::NodeAnnotation>::annotation_map_type AnnotationMap;
 
 	/**

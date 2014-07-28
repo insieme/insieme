@@ -325,18 +325,27 @@ namespace runtime {
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			auto rootMetas = annotations::getMetaInfos(job);
 			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
+				// skip root node of sub-tree
+				if(npr == job)
+					return false;
 				// prune for subtrees which generate their own WI description
 				if(core::analysis::isCallOf(npr, basic.getParallel()) 
 					|| core::analysis::isCallOf(npr, basic.getPFor())	
-					|| npr.isa<core::JobExprPtr>()) return true;
+					|| npr.isa<core::JobExprPtr>())
+					return true;
+				// prune for subtrees which already generated their WI
+				if(npr.isa<core::ExpressionPtr>() &&
+							(  core::encoder::is_encoding_of<WorkItemVariant>()(npr.as<core::ExpressionPtr>())
+							|| core::encoder::is_encoding_of<WorkItemImpl>()(npr.as<core::ExpressionPtr>())))
+					return true;
 				// get metainfo
 				auto metas = annotations::getMetaInfos(npr);
 				if(metas.empty()) return false;
 				// check if duplicate metainfo 
 				assert(all(rootMetas, [&](const annotations::AnnotationMap::value_type& v) { return metas.count(v.first) == 0; } ) && "Duplicate Meta Information");
-				// migrate
-				annotations::migrateMetaInfos(npr, job);
-				return true;
+				// move metainfo
+				annotations::moveMetaInfos(npr, job);
+				return false;
 			});
 		}
 

@@ -41,6 +41,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/simplify.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
@@ -56,8 +57,7 @@ TEST(DataLayout, AosToSoa) {
 	NodePtr code = builder.normalize(builder.parseStmt(
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
-		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
-		"	ref<ref<array<twoElem,1>>> a;"// = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
+		"	ref<ref<array<twoElem,1>>> a = var(new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ))) ; "
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp;"
@@ -68,7 +68,6 @@ TEST(DataLayout, AosToSoa) {
 //		"		composite.ref.elem(tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
-//		"	store(*a);"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp;"
 		"		tmp = *(*a)[i];"
@@ -96,6 +95,63 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
+	int cnt = 0;
+	core::visitDepthFirst(code, [&](const core::CompoundStmtPtr& csp) {
+		++cnt;
+	});
+
+	EXPECT_EQ(53, cnt);
+}
+
+TEST(DataLayout, AosToSoa2) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	NodePtr code = builder.normalize(builder.parseStmt(
+		"{"
+		"	let twoElem = struct{int<4> int; real<4> float;};"
+		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
+		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
+		""
+		"	let access = (ref<ref<array<twoElem,1>>> x)->unit {"
+		"		for(int<4> i = 0 .. 42 : 1) {"
+		"			ref.deref(x)[i].int = i;"
+		"		}"
+		"	};"
+		"	ref<ref<array<twoElem,1>>> a;"
+		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
+		"	load(a);"
+		"	access(a);"
+		"	store(*a);"
+		"	ref.delete(*a);"
+		"}"
+	));
+
+	datalayout::AosToSoa ats(code);
+
+//	dumpPretty(code);
+
+	auto semantic = core::checks::check(code);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const core::checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) ;
+
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const core::checks::Message& cur) {
+		std::cout << cur << std::endl;
+	});
+
+	int cnt = 0;
+	core::visitDepthFirst(code, [&](const core::CompoundStmtPtr& csp) {
+		++cnt;
+	});
+
+	EXPECT_EQ(40, cnt);
 }
 
 } // transform

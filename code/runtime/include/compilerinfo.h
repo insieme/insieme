@@ -35,33 +35,28 @@
  */
 
 #pragma once
-#ifndef __GUARD_META_INFORMATION_META_INFOS_H
-#define __GUARD_META_INFORMATION_META_INFOS_H
+#ifndef __GUARD_COMPILERINFO_H
+#define __GUARD_COMPILERINFO_H
 
-// build struct definitions
-#include "meta_information/struct_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
+void irt_log_compiler_info() {
+	#define IRT_COMPILER_PREFIX "Compiled with: "
+	#if defined _MSC_VER
+		irt_log_comment(IRT_COMPILER_PREFIX "Microsoft C/C++ Compiler " _MSC_FULL_VER);
+	#elif defined __clang__
+		irt_log_comment(IRT_COMPILER_PREFIX "clang " __clang_version__);
+	#elif defined __INTEL_COMPILER
+		irt_log_comment(IRT_COMPILER_PREFIX "Intel Compiler " __VERSION__);
+	// check for gcc last since many compilers define __GNUC__ for compatibility reasons
+	#elif defined __GNUC__
+		#ifdef __cplusplus
+			irt_log_comment(IRT_COMPILER_PREFIX "g++ " __VERSION__);
+		#else
+			irt_log_comment(IRT_COMPILER_PREFIX "gcc " __VERSION__);
+		#endif
+	#else
+		irt_log_comment(IRT_COMPILER_PREFIX "unknown backend compiler " __VERSION__);
+	#endif
+	#undef IRT_COMPILER_PREFIX
+}
 
-// build default table entry definition containing all structs
-struct _irt_meta_info_table_entry {
-#ifdef IRT_META_INFO_TABLE_ENTRY_FIELDS
-	IRT_META_INFO_TABLE_ENTRY_FIELDS
-#else // IRT_META_INFO_TABLE_ENTRY_FIELDS
-	// generate default entry with all values
-	#include "meta_information/default_generator.inc"
-	#include "insieme/meta_information/meta_infos.def"
-#endif // IRT_META_INFO_TABLE_ENTRY_FIELDS
-};
-
-// build accessors for metainformation
-#include "meta_information/accessor_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
-
-// build printer for metainformation
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "meta_information/printer_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
-#pragma GCC diagnostic pop
-
-#endif //#ifndef __GUARD_META_INFORMATION_META_INFOS_H
+#endif //__GUARD_COMPILERINFO_H
