@@ -42,7 +42,6 @@
 // This is what the original program main will be renamed to
 int _irt_lib_renamed_main(int argc, char** argv);
 
-
 #ifdef __cplusplus 
 extern "C" {
 #endif
@@ -125,21 +124,50 @@ void irt_lib_init_run(voidfp fun, void* data, size_t data_size) {
 	irt_runtime_standalone(irt_get_default_worker_count(), &_irt_lib_context_fun, &_irt_lib_context_fun, &impl, (irt_lw_data_item*)lwdi);
 }
 
+irt_context* irt_lib_g_context;
+
+// Start runtime without scheduling any work items
+void irt_lib_init(uint32 worker_count) {
+	irt_lib_critical_init();
+	irt_lib_g_context = irt_runtime_start_in_context(worker_count, &_irt_lib_context_fun, &_irt_lib_context_fun, true);
+}
+
+// Run function as a work item within the (already inited) runtime, from a non-runtime thread
+void irt_lib_run(voidfp fun, void* data, size_t data_size) {
+	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };
+	irt_wi_implementation impl = { -1, 1, &impl_var };
+	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
+	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
+	*lwdi = (_irt_lib_lwdi) { -lwdi_size /* negative == direct size, no data item table entry */, fun };
+	memcpy(lwdi->data, data, data_size);
+	irt_runtime_run_wi(&impl, (irt_lw_data_item*)lwdi);
+}
+
+// End runtime
+void irt_lib_shutdown() {
+	if(irt_lib_g_context != NULL) irt_runtime_end_in_context(irt_lib_g_context);
+	irt_lib_g_context = NULL;
+}
+
 // rename other main function
 #define main(__argc,__argv) _irt_lib_renamed_main(__argc,__argv)
 
 /////////////////////////////////////////////////////////////////////////////// Utils
 
-irt_work_item* irt_lib_wi_get_current(){
+irt_work_item* irt_lib_wi_get_current() {
 	return irt_wi_get_current();
 }
 
-uint32 irt_lib_wi_get_wg_size(irt_work_item* wi, uint32 index){
+uint32 irt_lib_wi_get_wg_size(irt_work_item* wi, uint32 index) {
 	return irt_wi_get_wg_size(wi, index);
 }
 
-uint32 irt_lib_wi_get_wg_num(irt_work_item *wi, uint32 index){
+uint32 irt_lib_wi_get_wg_num(irt_work_item *wi, uint32 index) {
 	return irt_wi_get_wg_num(wi, index);
+}
+
+uint32 irt_lib_get_default_worker_count() {
+	return irt_get_default_worker_count();
 }
 
 /////////////////////////////////////////////////////////////////////////////// Parallel
