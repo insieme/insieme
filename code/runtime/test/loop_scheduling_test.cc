@@ -82,6 +82,7 @@ string testCaseToString(const LoopTestCase& testCase) {
 
 TEST_P(LoopSchedTest, RangeCoverage) {
 	LoopTestCase testCase = GetParam();
+	//std::cout << testCaseToString(testCase) << std::endl;
 	irt::run([testCase]() {
 		std::vector<int32_t> testVec(VEC_SIZE, 0);
 		irt::merge(irt::parallel(16, [testCase, &testVec]() {
