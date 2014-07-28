@@ -102,14 +102,22 @@ inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 
 		irt_wi_implementation* impl, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 
 	int64 memstep = policy->param.chunk_size * base_range.step;  
-	uint64 fullstep = policy->participants * memstep;
+	int64 fullstep = policy->participants * memstep;
 
 	irt_work_item_range range;
 	range.step = base_range.step;
-	for(int64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
-		range.begin = start;
-		range.end = MIN(start + memstep, base_range.end);
-		_irt_loop_fragment_run(self, range, impl, args);
+	if(range.step > 0) {
+		for(int64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
+			range.begin = start;
+			range.end = MIN(start + memstep, base_range.end);
+			_irt_loop_fragment_run(self, range, impl, args);
+		}
+	} else {
+		for(int64 start = id*memstep + base_range.begin; start > base_range.end; start += fullstep) {
+			range.begin = start;
+			range.end = MAX(start + memstep, base_range.end);
+			_irt_loop_fragment_run(self, range, impl, args);
+		}
 	}
 }
 
