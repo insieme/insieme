@@ -150,10 +150,15 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 }
 
 template<typename T>
-bool contains(std::vector<T> vec, const T& val) {
-	for(T elem : vec) {
+bool contains(std::vector<core::Address<T>> vec, const core::Address<T>& val) {
+	for(core::Address<T> elem : vec) {
 		if(elem == val)
 			return true;
+//		if(val.getDepth() > elem.getDepth()) {
+//			if(val.getParentAddress(val.getDepth() - elem.getDepth()) == elem) {
+//				return true;
+//			}
+//		}
 	}
 	return false;
 }
@@ -470,41 +475,56 @@ void AosToSoa::replaceAccesses(const VariableMap& varReplacements, const NodeAdd
 		const VariablePtr& oldVar = vr.first;
 		const VariablePtr& newVar = vr.second;
 
-		pattern::TreePattern structAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)),
+		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)),
 				var("index", pattern::any)), pattern::var("member", pattern::any)));
+
+		pattern::TreePattern structAccess = pattern::var("call", pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)), var("index", pattern::any)));
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
 	//	}
 		bool doSomething = false;
 
-		visitDepthFirstInterruptible(toTransform, [&](const StatementAddress& node)->bool {
+		visitDepthFirstPrunable(toTransform, [&](const StatementAddress& node)->bool {
 
 			if(!doSomething) {
 				if(node == begin.front())
 					doSomething = true;
-				return false;
+				return true;
 			}
 
 			if(node == end.back()) {
+				doSomething = false;
 				return true;
 			}
 
 			// do not touch marshalling and unmrashalling points
 			if(contains(begin, node))
-				return false;
+				return true;
 			if(contains(end, node))
+				return true;
+
+			CallExprAddress call = node.isa<CallExprAddress>();
+			if(!call)
 				return false;
 
-			pattern::AddressMatchOpt match = structAccess.matchAddress(node);
-			CallExprAddress call = node.isa<CallExprAddress>();
+			pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
 
-			if(match && call) {
+			if(match) {
 				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
 				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
-
 				replacements[match.get().getRoot()] = replacement;
+				return true;
+			}
+
+			match = structAccess.matchAddress(node);
+
+			if(match) {
+//				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+//				ExpressionPtr replacement;// = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
+//
+//				replacements[match.get().getRoot()] = replacement;
 			}
 
 			return false;
