@@ -278,6 +278,9 @@ namespace encoder {
 			res = res && call->getArguments().size() == static_cast<std::size_t>(1);
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantCtr;
 
+			if(!res)
+				return res;
+
 			const auto& fun = call->getArgument(0);
 			res = res && fun->getNodeType() == core::NT_LambdaExpr;
 			res = res && *fun->getType() == *ext.workItemVariantImplType;
@@ -347,6 +350,10 @@ namespace encoder {
 			bool res = true;
 			res = res && call->getArguments().size() == static_cast<std::size_t>(1);
 			res = res && *call->getFunctionExpr() == *ext.workItemImplCtr;
+
+			if(!res)
+				return res;
+
 			res = res && isEncodingOf<vector<rbe::WorkItemVariant>>(call->getArgument(0));
 			return res;
 		}
