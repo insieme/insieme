@@ -163,6 +163,13 @@ bool contains(std::vector<core::Address<T>> vec, const core::Address<T>& val) {
 	return false;
 }
 
+pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePattern rhs) {
+	pattern::TreePattern assign = pattern::var("assignment", pirp::assignment(lhs, rhs));
+	pattern::TreePattern decl = pattern::var("decl", pirp::declarationStmt(lhs, rhs));
+
+	return assign | decl;
+}
+
 AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
 	IRBuilder builder(mgr);
 
@@ -479,6 +486,7 @@ void AosToSoa::replaceAccesses(const VariableMap& varReplacements, const NodeAdd
 				var("index", pattern::any)), pattern::var("member", pattern::any)));
 
 		pattern::TreePattern structAccess = pattern::var("call", pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)), var("index", pattern::any)));
+		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("lhs", pattern::any), structAccess);
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
@@ -488,9 +496,11 @@ void AosToSoa::replaceAccesses(const VariableMap& varReplacements, const NodeAdd
 		visitDepthFirstPrunable(toTransform, [&](const StatementAddress& node)->bool {
 
 			if(!doSomething) {
-				if(node == begin.front())
+				if(node == begin.front()) {
 					doSomething = true;
-				return true;
+					return true;
+				}
+				return false;
 			}
 
 			if(node == end.back()) {
@@ -517,16 +527,23 @@ void AosToSoa::replaceAccesses(const VariableMap& varReplacements, const NodeAdd
 				replacements[match.get().getRoot()] = replacement;
 				return true;
 			}
-
+/*
 			match = structAccess.matchAddress(node);
 
 			if(match) {
-//				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-//				ExpressionPtr replacement;// = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
-//
-//				replacements[match.get().getRoot()] = replacement;
-			}
+std::cout << " addr " << node << std::endl;
+pattern::MatchOpt mo = structAccess.matchPointer(node.getChild(2));
+if(mo) std::cout << "MATCH\n";
+				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+				TypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType();
+				TupleTypePtr tty = builder.tupleType(toVector(newStructType, index->getType()));
 
+				TupleExprPtr tupleThing = builder.tupleExpr(builder.deref(newVar), index);
+dumpPretty(node);
+				assert(false);
+//				replacements[match.get().getRoot()] = tupleThing;
+			}
+*/
 			return false;
 		});
 	}
