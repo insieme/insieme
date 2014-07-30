@@ -1152,7 +1152,7 @@ namespace measure {
 		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
+		compiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
 
 		// compile code to binary
 		return utils::compiler::compileToBinary(*targetCode, compiler);
