@@ -72,6 +72,9 @@ namespace measure {
 
 	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
 		// create output directory
+		// set capabilities
+		// TODO: only do this for newer kernel versions or kernels that have this fix
+		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
 		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
 	}
 
