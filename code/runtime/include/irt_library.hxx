@@ -3,12 +3,10 @@
 #ifdef IRT_LIBRARY_MAIN
 #include "irt_library.h"
 #else
-
 extern "C" {
 
 #include "irt_globals.h"
 #include "irt_joinable.h"
-
 
 // IRT
 void irt_merge(irt_joinable);
@@ -62,10 +60,27 @@ namespace irt {
 		return irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0);
 	}
 
-	// Initial execution (only required if not using "main" replacement
+	// Initialization (only required if not using "main" replacement)
+	inline void init(uint32 num_workers = irt_lib_get_default_worker_count()) {
+		irt_lib_init(num_workers);
+	}
+
+	// Shutdown (only required if not using "main" replacement)
+	inline void shutdown() {
+		irt_lib_shutdown();
+	}
+
+	// Run code within runtime from external thread
+	// Requires previous call to init!
+	template<class Callable>
+	inline void run(const Callable& fun) {
+		irt_lib_run(&detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
+	}
+
+	// Initial execution (only required if not using "main" replacement)
 	template<class Callable>
 	inline void init_run(const Callable& fun) {
-		return irt_lib_init_run(&detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
+		irt_lib_init_run(&detail::_cpp_par_wrapper<Callable>, (void*)&fun, sizeof(Callable));
 	}
 
 	// Executes "num" parallel instances of the callable "fun"

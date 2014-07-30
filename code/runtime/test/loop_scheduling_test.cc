@@ -55,7 +55,16 @@ struct LoopTestCase {
 	irt_work_item_range range;
 };
 
-class LoopSchedTest : public ::testing::TestWithParam<LoopTestCase> {};
+class LoopSchedTest : public ::testing::TestWithParam<LoopTestCase> {
+public:
+	// Initialize runtime library once to use in all tests
+	static void SetUpTestCase() {
+		irt::init(MAX_PARA);
+	}
+	static void TearDownTestCase() {
+		irt::shutdown();
+	}
+};
 
 string testCaseToString(const LoopTestCase& testCase) {
 	std::stringstream ss;
@@ -73,7 +82,8 @@ string testCaseToString(const LoopTestCase& testCase) {
 
 TEST_P(LoopSchedTest, RangeCoverage) {
 	LoopTestCase testCase = GetParam();
-	irt::init_run([testCase]() {
+	//std::cout << testCaseToString(testCase) << std::endl;
+	irt::run([testCase]() {
 		std::vector<int32_t> testVec(VEC_SIZE, 0);
 		irt::merge(irt::parallel(16, [testCase, &testVec]() {
 			
@@ -133,10 +143,6 @@ vector<LoopTestCase> getAllCases() {
 			}
 		}
 	}
-
-	// Not very nice
-	setenv(IRT_NUM_WORKERS_ENV, xstr(MAX_PARA), 1);
-
 	return ret; 
 }
  
