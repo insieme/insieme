@@ -99,7 +99,10 @@ INFO_STRUCT_END()
  */
 
 INFO_STRUCT_BEGIN(autotuning)
-	INFO_FIELD(frequency,		unsigned,	0)
+	INFO_FIELD_EXT(frequencies,
+			struct { unsigned size; unsigned* data; },								{ 0 },
+			vector<unsigned>,														toVector(0u)
+	)
 	INFO_FIELD_EXT(map,		
 			struct { unsigned size; unsigned* data; },		 						{ 0 }, 		
 			vector<unsigned>,														toVector(0u)

@@ -75,14 +75,14 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 	irt_wi_implementation_variant variant = impl->variants[0];
 	if(variant.meta_info && variant.meta_info->autotuning.available) {
 		irt_worker* worker = irt_worker_get_current();
+		uint16 w_id = worker->id.thread;
 		irt_affinity_mask mask = { { 0 } };
-		// TODO: need to map non-participating workers to different cores to avoid congestion
+		if(worker->id.thread < variant.meta_info->autotuning.frequencies.size) {
+			irt_cpu_freq_set_frequency_worker(worker, variant.meta_info->autotuning.frequencies.data[w_id]);
+		}
 		if(worker->id.thread < variant.meta_info->autotuning.map.size) {
-			// participating in the pfor
-			irt_affinity_mask_set(&mask, variant.meta_info->autotuning.map.data[worker->id.thread], true);
+			irt_affinity_mask_set(&mask, variant.meta_info->autotuning.map.data[w_id], true);
 			group->cur_sched.participants = variant.meta_info->autotuning.map.size;
-		} else {
-			// not participating in the pfor
 		}
 	}
 	#endif // IRT_ENABLE_AUTOTUNING
