@@ -1105,14 +1105,8 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		core::ExpressionPtr retIr;
 		vector<core::ExpressionPtr> inits = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(init);
 
-		std::cout << "list initialize "  << init << " : " << init->getType() << std::endl;
-		std::cout << " \t " << targetType << " ---> "  << elementType << std::endl;
-		std::cout << " listt: " << inits << std::endl;
-		std::cout << " fist elem: " << inits[0]  << " : " << inits[0].getType() << std::endl;
-
 		// if recursive
 		assert(!elementType.isa<core::RecTypePtr>() && "we dont work with recursive types in the frontend, only gen types");
-		assert(inits.size() != 0 && "initialization with an empty list?");
 
 		if ( core::lang::isSIMDVector(elementType) )  {
 			auto internalVecTy = core::lang::getSIMDVectorType(elementType);
@@ -1210,7 +1204,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 			return (retIr = builder.vectorExpr(elements));
 		}
-
 
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
