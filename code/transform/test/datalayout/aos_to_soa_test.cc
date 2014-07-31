@@ -64,7 +64,7 @@ TEST(DataLayout, AosToSoa) {
 		"		(*a)[i] = *tmp;"
 		"	}"
 		"	for(int<4> i = 0 .. 42 : 1) {"
-//		"		ref<twoElem> tmp = ref.var(ref.deref(*a)[i]);"
+//		"		ref<twoElem> tmp = ref.var(*((*a)[i]));"
 //		"		composite.ref.elem(*tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
@@ -76,9 +76,9 @@ TEST(DataLayout, AosToSoa) {
 		"}"
 	));
 
-	dumpPretty(code);
-
 	datalayout::AosToSoa ats(code);
+
+	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();

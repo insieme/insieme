@@ -492,9 +492,10 @@ ExpressionMap AosToSoa::replaceAccesses(const VariableMap& varReplacements, cons
 		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)),
 				var("index", pattern::any)), pattern::var("member", pattern::any)));
 
-		pattern::TreePattern structAccess = pattern::var("call", pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)), var("index", pattern::any)));
-		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("lhs", pattern::var("target",
-				pirp::variable(pirp::refType(pirp::refType(pirp::structType(*pattern::any)))))), structAccess);
+		pattern::TreePattern structAccess = pattern::var("call", pirp::refDeref(pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)),
+				var("index", pattern::any))));
+		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("target",
+				pirp::variable(pirp::refType(pirp::structType(*pattern::any)))), structAccess);
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
@@ -551,21 +552,21 @@ void AosToSoa::replaceScalarStructs(const pattern::AddressMatchOpt& match, const
 		ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 
-std::cout << " addr " << match.get().getRoot() << std::endl;
-assert(false);
+//std::cout << " addr " << match.get().getRoot() << std::endl;
+//assert(false);
 
 	ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-	TypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType();
-	TupleTypePtr tty = builder.tupleType(toVector(newStructType, index->getType()));
+	StructTypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType().as<StructTypePtr>();
+	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
+//	for(NamedTypePtr memberType : newStructType->getElements()) {
+//		values.push_back(std::make_pair<memberType->getName(), builder.deref(builder.arrayRefElem(builder.deref(newVar), index)));
+//	}
 
-	TupleExprPtr tupleThing = builder.tupleExpr(builder.deref(newVar), index);
-	VariablePtr newTargetVar = builder.variable(builder.refType(tty));
+	StructExprPtr inplaceUnmarshalled = builder.structExpr(values);
 	if(match.get().isVarBound("decl"))
-		replacements[match.get().getRoot()] = builder.declarationStmt(newTargetVar, builder.refVar(tupleThing));
+		replacements[match.get().getRoot()] = builder.declarationStmt(match.get()["target"].getValue().as<VariablePtr>(), builder.refVar(inplaceUnmarshalled));
 	if(match.get().isVarBound("assignment"))
-		replacements[match.get().getRoot()] = builder.assign(newTargetVar, tupleThing);
-
-	structures[match.get()["target"].getValue().as<ExpressionPtr>()] = newTargetVar;
+		replacements[match.get().getRoot()] = builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled);
 }
 
 void AosToSoa::updateScalarStructAccesses(NodePtr& toTransform) {
