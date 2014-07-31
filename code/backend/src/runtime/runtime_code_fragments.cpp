@@ -576,8 +576,6 @@ namespace runtime {
 			if (isEncodedList(expr)) {
 				vector<core::ExpressionPtr> list = decodeList(expr);
 
-				std::cout << "List: " << list << "\n";
-
 				// create initializer
 				c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>();
 
