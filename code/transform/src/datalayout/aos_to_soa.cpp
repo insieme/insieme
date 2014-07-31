@@ -165,7 +165,7 @@ bool contains(std::vector<core::Address<T>> vec, const core::Address<T>& val) {
 
 pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePattern rhs) {
 	pattern::TreePattern assign = pattern::var("assignment", pirp::assignment(lhs, rhs));
-	pattern::TreePattern decl = pattern::var("decl", pirp::declarationStmt(lhs, rhs));
+	pattern::TreePattern decl = pattern::var("decl", pirp::declarationStmt(lhs, pirp::refVar(rhs)));
 
 	return assign | decl;
 }
@@ -494,7 +494,7 @@ ExpressionMap AosToSoa::replaceAccesses(const VariableMap& varReplacements, cons
 
 		pattern::TreePattern structAccess = pattern::var("call", pirp::arrayRefElem1D(pirp::refDeref(pattern::atom(oldVar)), var("index", pattern::any)));
 		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("lhs", pattern::var("target",
-				pirp::variable(pirp::refType(pirp::structType(*pattern::any))))), structAccess);
+				pirp::variable(pirp::refType(pirp::refType(pirp::structType(*pattern::any)))))), structAccess);
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
@@ -551,46 +551,74 @@ void AosToSoa::replaceScalarStructs(const pattern::AddressMatchOpt& match, const
 		ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 
-//std::cout << " addr " << match.get().getRoot() << std::endl;
+std::cout << " addr " << match.get().getRoot() << std::endl;
+assert(false);
+
 	ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 	TypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType();
 	TupleTypePtr tty = builder.tupleType(toVector(newStructType, index->getType()));
 
 	TupleExprPtr tupleThing = builder.tupleExpr(builder.deref(newVar), index);
-	VariablePtr newTargetVar = builder.variable(tty);
+	VariablePtr newTargetVar = builder.variable(builder.refType(tty));
 	if(match.get().isVarBound("decl"))
 		replacements[match.get().getRoot()] = builder.declarationStmt(newTargetVar, builder.refVar(tupleThing));
 	if(match.get().isVarBound("assignment"))
 		replacements[match.get().getRoot()] = builder.assign(newTargetVar, tupleThing);
 
-//dumpPretty(newTargetVar->getType());
 	structures[match.get()["target"].getValue().as<ExpressionPtr>()] = newTargetVar;
 }
 
 void AosToSoa::updateScalarStructAccesses(NodePtr& toTransform) {
 	IRBuilder builder(mgr);
 
+}
+
+/*
+void AosToSoa::replaceStructPointers(const pattern::AddressMatchOpt& match, const VariablePtr& newVar, std::map<NodeAddress, NodePtr>& replacements,
+		ExpressionMap& structures) {
+	IRBuilder builder(mgr);
+
+//std::cout << " addr " << match.get().getRoot() << std::endl;
+	ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+	TypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType();
+	TupleTypePtr tty = builder.tupleType(toVector(newStructType, index->getType()));
+
+	TupleExprPtr tupleThing = builder.tupleExpr(builder.deref(newVar), index);
+	VariablePtr newTargetVar = builder.variable(builder.refType(tty));
+	if(match.get().isVarBound("decl"))
+		replacements[match.get().getRoot()] = builder.declarationStmt(newTargetVar, builder.refVar(tupleThing));
+	if(match.get().isVarBound("assignment"))
+		replacements[match.get().getRoot()] = builder.assign(newTargetVar, tupleThing);
+
+	structures[match.get()["target"].getValue().as<ExpressionPtr>()] = newTargetVar;
+}
+
+void AosToSoa::updateStructPointerAccesses(NodePtr& toTransform) {
+	IRBuilder builder(mgr);
+
 	pattern::TreePattern scalarStructAccess = pirp::callExpr(pattern::any,
-			pattern::var("tuple", pirp::variable(
-			pirp::tupleType(pirp::structType(*pattern::any) << pattern::any))) << pattern::var("member", pattern::any) << pattern::any);
+			pirp::refDeref(pattern::var("tuple", pirp::variable(
+			pirp::refType(pirp::tupleType(pirp::structType(*pattern::any) << pattern::any))))) << pattern::var("member", pattern::any) << pattern::any);
 	NodeMap replacements;
 
 	pirp::matchAllPairs(scalarStructAccess, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
 		std::cout << "\tFOUND: " << std::endl;
-dumpPretty(match);
 		LiteralPtr member = nm["member"].getValue().as<LiteralPtr>();
 		VariablePtr tupleVar = nm["tuple"].getValue().as<VariablePtr>();
 
-
-		ExpressionPtr tupleAccess = builder.accessComponent(tupleVar, 0);
+		ExpressionPtr tupleAccess = builder.accessComponent(builder.deref(tupleVar), 0);
 		ExpressionPtr structAcces = builder.accessMember(tupleAccess, member.getValue());
-		ExpressionPtr arrayAccess = builder.arrayAccess(structAcces, builder.accessComponent(tupleVar, 1));
+		ExpressionPtr arrayAccess = builder.arrayAccess(structAcces, builder.accessComponent(builder.deref(tupleVar), 1));
 
-		replacements[match] = arrayAccess;
+std::cout << match.as<ExpressionPtr>()->getType() << " tt " << arrayAccess->getType() << std::endl;
+//dumpPretty(arrayAccess);
+		replacements[match] = builder.castExpr(match.as<ExpressionPtr>()->getType(), arrayAccess);
+//assert(false);
 	});
 
 	toTransform = core::transform::replaceAll(mgr, toTransform, replacements);
 }
+*/
 
 CompoundStmtPtr AosToSoa::generateDel(const StatementAddress& stmt, const VariablePtr& oldVar, const VariablePtr& newVar,
 		const StructTypePtr& newStructType) {
