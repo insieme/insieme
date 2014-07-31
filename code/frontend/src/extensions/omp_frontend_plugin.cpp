@@ -379,38 +379,38 @@ namespace {
         }
         assert(vars.size() == 1 && "Param clause must contain one variable");
     	core::ExpressionPtr varExpr = vars.front();
-    
+
     	// range
     	auto range = mmap.getExprs("range");
         if(!range.empty()) {
     	    assert( range.size() == 3
     	    		&& "Param clause range must contain a lower bound, an upper bound and a step!");
         }
-    
+
     	// enum
         omp::VarListPtr enumList = handleIdentifierList(mmap, "enum_list");
         if(!enumList->empty()) {
             assert(enumList->size() == 1 && "Param clause enum must contain one variable");
     	    core::ExpressionPtr enumExpr = enumList->front();
     	    core::ExpressionPtr enumSize = handleSingleExpression(mmap, "enum_size");
-    
+
     	    assert( ((!enumExpr && !enumSize) || (enumExpr && enumSize))
     	    		&& "Param clause enum must contain a list and its size!");
-    
+
     	    assert((!enumExpr
     	    		|| (enumExpr && (core::analysis::isRefOf(enumExpr, core::NT_VectorType)
     	    						|| enumExpr->getType()->getNodeType() == core::NT_VectorType)))
     	    		&& "Param clause enum must contain a base language array");
-    
+
     	    assert( ((!enumExpr && !enumSize) || (enumExpr && enumSize))
     	    		&& "Param clause enum must contain a list and its size!");
 
     	    return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), enumExpr, enumSize);
         }
-    
+
     	return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), core::ExpressionPtr(), core::ExpressionPtr());
     }
-    
+
     std::shared_ptr<core::ExpressionList> getCommaSeparatedExprs(const core::ExpressionPtr& expr) {
         std::vector<core::ExpressionPtr> exprs;
         core::visitDepthFirstPrunable (expr, [&] (const core::LiteralPtr& expr) -> bool{
@@ -429,7 +429,7 @@ namespace {
         if(typeStr.empty()) {
             return omp::TargetPtr();
         }
-    
+
         omp::Target::Type t = omp::Target::GENERAL;
     	if(typeStr == "general")
     		t = omp::Target::GENERAL;
@@ -437,21 +437,21 @@ namespace {
     		t = omp::Target::ACCELERATOR;
     	else
     		assert(false && "Unsupported target type");
-    
+
     	// group-id
         std::shared_ptr<core::ExpressionList> groupIds;
     	auto groupIdCommaExpr = mmap.getExprs("target_group");
         if(groupIdCommaExpr.size() > 0)
     	    groupIds = getCommaSeparatedExprs(groupIdCommaExpr.front());
     	core::ExpressionPtr groupIdsRangeUpper = handleSingleExpression(mmap, "target_group_upper");
-    
+
     	// core-id
         std::shared_ptr<core::ExpressionList> coreIds;
         auto coreIdCommaExpr = mmap.getExprs("target_core");
         if(coreIdCommaExpr.size() > 0)
         	coreIds = getCommaSeparatedExprs(coreIdCommaExpr.front());
         core::ExpressionPtr coreIdsRangeUpper = handleSingleExpression(mmap, "target_core_upper");
-    
+
     	return std::make_shared<omp::Target>(t, groupIds, groupIdsRangeUpper, coreIds, coreIdsRangeUpper);
     }
 
@@ -461,7 +461,7 @@ namespace {
         auto params = mmap.getStrings(key);
     	if(params.empty())
     		return std::shared_ptr<Objective::ParameterList>();
-    
+
     	Objective::ParameterList* paramList = new Objective::ParameterList();
     	for(auto paramStr : params){
     		Objective::Parameter param = Objective::TIME;
@@ -469,10 +469,10 @@ namespace {
     		else if(paramStr == "E")	param = Objective::ENERGY;
     		else if(paramStr == "P")	param = Objective::POWER;
     		else assert(false && "Objective clause constraint parameter not supported.");
-    
+
     		paramList->push_back(param);
     	}
-    
+
     	return std::shared_ptr<Objective::ParameterList>(paramList);
     }
 
@@ -482,11 +482,11 @@ namespace {
         auto factList = mmap.getStrings("obj_weights_factors");
     	if(factList.empty())
     		return;
-    
+
     	for(auto numStr : factList){
     		factors.push_back(std::atof(numStr.c_str()));
     	}
-    
+
     	return;
     }
 
@@ -496,7 +496,7 @@ namespace {
         auto ops = mmap.getStrings("obj_constraints_ops");
     	if(ops.empty())
     		return std::shared_ptr<Objective::OperatorList>();
-    
+
     	Objective::OperatorList* opList = new Objective::OperatorList();
     	for(auto opStr : ops){
     		Objective::Operator op = Objective::LESS;
@@ -506,10 +506,10 @@ namespace {
     		else if(opStr == ">=")	op = Objective::GREATEREQUAL;
     		else if(opStr == ">")	op = Objective::GREATER;
     		else assert(false && "Objective clause constraint operator not supported.");
-    
+
     		opList->push_back(op);
     	}
-    
+
     	return std::shared_ptr<Objective::OperatorList>(opList);
     }
 
@@ -521,14 +521,14 @@ namespace {
     	std::shared_ptr<omp::Objective::ParameterList> weightsParamList = handleObjectiveParamList(mmap, "obj_weights_params");
     	std::vector<double> weightsFactorList;
     	handleObjectiveFactorList(mmap, weightsFactorList);
-    
+
     	double timeWeight = 0, energyWeight = 0, powerWeight = 0;
         if(weightsParamList) {
     	    assert( weightsParamList && weightsParamList->size() <= 3 && weightsFactorList.size() <= 3 && weightsParamList->size() == weightsFactorList.size()
     	    		&& "Objective clause weights must contain time(T), energy(E) and power(P)");
-    
+
     	    auto facIt = weightsFactorList.begin();
-    
+
     	    for(auto it : *weightsParamList)
     	    {
     	    	if(it == omp::Objective::TIME)
@@ -545,11 +545,11 @@ namespace {
     	    	}
     	    	++facIt;
     	    }
-    
+
     	    assert( timeWeight + energyWeight + powerWeight == 1
     	    		&& "Sum of Objective clause weights must be equal to 1!");
         }
-    
+
     	// constraints
     	std::shared_ptr<omp::Objective::ParameterList> constraintsParamList = handleObjectiveParamList(mmap, "obj_constraints_params");
     	std::shared_ptr<omp::Objective::OperatorList> constraintsOpList = handleObjectiveOpList(mmap);
@@ -562,8 +562,8 @@ namespace {
     			|| ( constraintsParamList && constraintsOpList && constraintsParamList->size() == constraintsOpList->size()
     					&& constraintsExprList && constraintsParamList->size() == constraintsExprList->size() ))
     			&& "Objective clause constraints bad formatted" );
-    
-    	return std::make_shared<omp::Objective>(timeWeight, energyWeight, powerWeight, 
+
+    	return std::make_shared<omp::Objective>(timeWeight, energyWeight, powerWeight,
                         constraintsParamList, constraintsOpList, constraintsExprList);
     }
 
@@ -607,24 +607,12 @@ namespace {
         return marker;
     }
 
-    /**
-     *  Can be used for debugging. Print the contents
-     *  of the match object and the stmt where the match
-     *  object belongs to
-     */
-    void debug(MatchObject& object, stmtutils::StmtWrapper stmts) {
-        object.print();
-        for(auto cur : stmts) {
-            std::cout << dumpPretty(cur.as<core::StatementPtr>()) << std::endl;
-        }
-    }
-
 }
 
 
     OmpFrontendPlugin::OmpFrontendPlugin() {
 
-                // Add an handler for #pragma omp region [clause[[,] clause] ...] new-line
+                // Add a handler for #pragma omp region [clause[[,] clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "region", region_clause_list >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -641,17 +629,18 @@ namespace {
                             omp::ParamPtr paramClause = handleParamClause(object);
                             // We need to check if the
                             frontend::omp::BaseAnnotation::AnnotationList anns;
-                            anns.push_back(std::make_shared<omp::Region>(paramClause, localClause, firstLocalClause, 
+                            anns.push_back(std::make_shared<omp::Region>(paramClause, localClause, firstLocalClause,
                                             targetClause, objectiveClause));
-                            
+
                             for(unsigned i=0; i<node.size(); i++) {
                                 node[i] = getMarkedNode(node[i], anns);
                             }
+
                             return node;
                         })
                 ));
 
-                // Add an handler for pragma omp parallel:
+                // Add a handler for pragma omp parallel:
                 // #pragma omp parallel [clause[ [, ]clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "parallel", parallel_clause_list >> tok::eod,
@@ -743,7 +732,6 @@ namespace {
                                 for(unsigned i=0; i<node.size(); i++) {
                                     node[i] = getMarkedNode(node[i],anns);
                                 }
-
                                 return node;
                             }
 
@@ -764,7 +752,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for pragma omp for
+                // Add a handler for pragma omp for
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "for", for_clause_list >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -826,7 +814,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp sections [clause[[,] clause] ...] new-line
+                // Add a handler for #pragma omp sections [clause[[,] clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "sections", sections_clause_list >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -849,7 +837,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp sections [clause[[,] clause] ...] new-line
+                // Add a handler for #pragma omp sections [clause[[,] clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "section", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -862,7 +850,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp single
+                // Add a handler for #pragma omp single
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "single", single_clause_list >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -883,7 +871,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp task [clause[[,] clause] ...] new-line
+                // Add a handler for #pragma omp task [clause[[,] clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "task", task_clause_list >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -916,7 +904,7 @@ namespace {
                                                                        firstPrivateClause, sharedClause,
 			                                                           localClause, firstLocalClause, targetClause,
                                                                        objectiveClause, paramClause));
-                            
+
                             for(unsigned i=0; i<node.size(); i++) {
                                 node[i] = getMarkedNode(node[i], anns);
                             }
@@ -924,7 +912,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp master new-line
+                // Add a handler for #pragma omp master new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "master", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -937,7 +925,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp critical [(name)] new-line
+                // Add a handler for #pragma omp critical [(name)] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "critical", !(l_paren >> identifier["critical"] >> r_paren) >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -955,7 +943,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp barrier new-line
+                // Add a handler for #pragma omp barrier new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "barrier", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -963,12 +951,12 @@ namespace {
                             // does not need to be a single statement, can just be attached to first in list
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Barrier>());
-                            node[0] = getMarkedNode(node[0], anns); 
+                            node[0] = getMarkedNode(node[0], anns);
                             return node;
                         })
                 ));
 
-                // Add an handler for #pragma omp taskwait new-line
+                // Add a handler for #pragma omp taskwait new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "taskwait", tok::eod,
 					[](MatchObject object, stmtutils::StmtWrapper node) {
@@ -981,7 +969,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp atomic new-line
+                // Add a handler for #pragma omp atomic new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "atomic", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -994,7 +982,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp flush [(list)] new-line
+                // Add a handler for #pragma omp flush [(list)] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "flush", !(l_paren >> var_list["flush"] >> r_paren) >> tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -1008,7 +996,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp ordered new-line
+                // Add a handler for #pragma omp ordered new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "ordered", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
@@ -1021,7 +1009,7 @@ namespace {
                         })
                 ));
 
-                // Add an handler for #pragma omp threadprivate(list) new-line
+                // Add a handler for #pragma omp threadprivate(list) new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
                     insieme::frontend::extensions::PragmaHandler("omp", "threadprivate", threadprivate_clause >> tok::eod,
                         [&](MatchObject object, stmtutils::StmtWrapper node) {

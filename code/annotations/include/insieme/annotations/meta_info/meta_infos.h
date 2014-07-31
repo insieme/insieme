@@ -42,6 +42,7 @@
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/ir.h"
 
@@ -122,6 +123,12 @@ namespace annotations {
 		;
 	}
 
+	inline void clearMetaInfos(const insieme::core::NodePtr& ptr) {
+		#define INFO_STRUCT_BEGIN(_name) \
+			ptr->detachValue<_name ## _info>();
+		#include "insieme/meta_information/meta_infos.def"
+	}
+
 	#include "insieme/annotations/meta_info/generators/clear.inc"
 
 
@@ -129,7 +136,18 @@ namespace annotations {
 	 * A utility function copying all meta information from the given src to the destination node.
 	 */
 	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
+	
+	/**
+	 * A utility function moving all meta information from the given src to the destination node.
+	 */
+	void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
 
+	typedef utils::Annotatable<core::NodeAnnotation>::annotation_map_type AnnotationMap;
+
+	/**
+	 * A utility function returning all metainformation annotations on a node.
+	 */
+	AnnotationMap getMetaInfos(const core::NodePtr& npr);
 
 } // end namespace annotations
 } // end namespace insieme

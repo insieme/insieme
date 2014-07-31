@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -180,12 +180,12 @@ inline unsigned countTypes(const clang::DeclContext* declCtx){
 	struct Counter : public insieme::frontend::analysis::PrunableDeclVisitor<Counter> {
 		unsigned& count;
 		Counter(unsigned& count) :count (count) {}
-		void VisitRecordDecl(const clang::RecordDecl* typeDecl) { 
+		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			if (!typeDecl->isCompleteDefinition() ) return;
 			if (typeDecl->isDependentType() )      return;
 			count++;
 		}
-				
+
 		void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
 			if (!typedefDecl->getTypeForDecl()) return;
 			count++;
@@ -327,7 +327,7 @@ tu::IRTranslationUnit Converter::convert() {
 			converter.trackSourceLocation (typedefDecl);
 			converter.convertTypeDecl(typedefDecl);
 			converter.untrackSourceLocation ();
-			
+
 			if (converter.getConversionSetup().hasOption(ConversionSetup::ProgressBar)) {
 				auto str = createPrefix( converter.getTranslationUnit().getJustFileName(),1,3);
 				printProgress (str, ++processed, count);
@@ -445,7 +445,7 @@ bool isUsedToCreateConstRef(const core::StatementPtr& body, const core::Variable
 	auto& ext = body->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 	bool flag = false;
 	core::visitDepthFirstOnce (body, [&] (const core::CallExprPtr& call){
-		if (core::analysis::isCallOf(call, ext.getRefIRToConstCpp())){ 
+		if (core::analysis::isCallOf(call, ext.getRefIRToConstCpp())){
 			if (call[0] == var ){
 				flag = true;
 			}
@@ -559,7 +559,7 @@ void Converter::untrackSourceLocation (){
 	assert(!lastTrackableLocation.empty());
 	lastTrackableLocation.pop();
 }
-	
+
 //////////////////////////////////////////////////////////////////
 ///
 std::string Converter::getLastTrackableLocation() const{
@@ -614,7 +614,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
     if(!result) {
 		if (VLOG_IS_ON(1)) valDecl->dump();
 
-		// The variable has not been converted into IR variable yet, therefore we create the IR variable and 
+		// The variable has not been converted into IR variable yet, therefore we create the IR variable and
 		// insert it to the map for successive lookups
 
 		// Conversion of the variable type
@@ -672,6 +672,10 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			core::ExpressionPtr globVar =  builder.literal(name, irType);
 
 			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
+
+            // attach pragma to global variable
+			pragma::attachPragma(globVar.as<core::StatementPtr>(), valDecl, *this);
+
 			varDeclMap.insert( { valDecl, globVar } );
 
 			// some member statics might be missing because of defined in a template which was ignored
@@ -939,15 +943,15 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			if (!core::analysis::isAnyCppRef(var->getType()) && !isCppConstructor(initExpr) && !isConstant){
 				initExpr = builder.refVar(initExpr);
 			}
-			
+
 			VLOG(2) << isConstant << " "  << var << "("<<var->getType()<<")" << " := " << initExpr << " (" << initExprType << " " << ")";
-			VLOG(2) << "initExprType		: " << initExprType; 
+			VLOG(2) << "initExprType		: " << initExprType;
 			VLOG(2) << "initExpr->getType()	: " << initExpr->getType();
 			//TODO this is only handling initexpr  so move into convertInitExpr/getInitExpr
 			if(isConstant && isCppConstructor(initExpr)) {
 				initExpr = builder.tryDeref(initExpr);
 			}
-			
+
 			/*FIXME fix metainfo handling first, currently "resolve" in frontend messes up the
 			 * handling of symbols/types/etc....
 			assert_true( core::types::isSubTypeOf(getIRTranslationUnit().resolve(initExpr->getType()).as<core::TypePtr>(), getIRTranslationUnit().resolve(var->getType()).as<core::TypePtr>()))
@@ -966,6 +970,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 	VLOG(2)	<< "End of converting VarDecl";
 	VLOG(1)	<< "Converted into IR stmt: ";
 	VLOG(1)	<< "\t" << *retStmt;
+
 	return retStmt;
 }
 
@@ -1064,30 +1069,30 @@ core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& 
 core::ExpressionPtr Converter::createCallExprFromBody(const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy){
 
 	stmtutils::StmtWrapper retStmts = irStmts;
-    for(auto plugin : getConversionSetup().getPlugins()) 
+    for(auto plugin : getConversionSetup().getPlugins())
         retStmts = plugin->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, *this);
 
 	return builder.createCallExprFromBody(stmtutils::tryAggregateStmts(builder, retStmts), retType, lazy);
 }
 
 //////////////////////////////////////////////////////////////////
-/// takes care that the init expr and the target type fix (hint cppRefs wrapping/unwrapping etc) 
+/// takes care that the init expr and the target type fix (hint cppRefs wrapping/unwrapping etc)
 core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, const core::ExpressionPtr& init){
-	
+
 	core::ExpressionPtr retIr;
 	//ONLY FOR DEBUGING HELP -- better debug output uses retIR
-	FinalActions attachLog( [&] () { 
-        VLOG(1) << "************* Converter::getInitExpr ***************************"; 
+	FinalActions attachLog( [&] () {
+        VLOG(1) << "************* Converter::getInitExpr ***************************";
 		VLOG(1) << "targetType: " << targetType;
 		VLOG(1) << "init: " << init << " (" << init->getType() << ")";
-        if(retIr) { 
-            VLOG(1) << "retIr: " << *retIr << " type:( " << *retIr->getType() << " )"; 
-            if(*targetType != *retIr->getType()) { 
+        if(retIr) {
+            VLOG(1) << "retIr: " << *retIr << " type:( " << *retIr->getType() << " )";
+            if(*targetType != *retIr->getType()) {
 				VLOG(2) << "potential problem as retIr->getType differs from targetType";
 				VLOG(2) << targetType << " != " << retIr->getType();
 			}
-        } 
-        VLOG(1) << "****************************************************************************************"; 
+        }
+        VLOG(1) << "****************************************************************************************";
     } );
 
 	// null expression is allowed on globals initializations
@@ -1191,6 +1196,15 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 		}
 
+		if (inits[0].getType() == elementType){
+			if (inits.size()==1) return inits[0];
+			ExpressionList elements;
+			for (size_t i = 0; i < inits.size(); ++i) {
+				elements.push_back(inits[0]);
+			}
+			return (retIr = builder.vectorExpr(elements));
+		}
+
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
 		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;
@@ -1199,7 +1213,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
-	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) { 
+	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) {
 		return (retIr = init);
 	}
 
@@ -1258,7 +1272,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			return (retIr = builder.deref(builder.toIRRef(init)));  // might be a call by value to a function, and we need to derref
 		}
 	}
-	
+
 	// constructor
 	if (isCppConstructor(init)) {
 		return (retIr = init);
@@ -1810,7 +1824,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
             if(funcDecl->isOverloadedOperator()) {
 				//set name of the overloadop -- use the plain simple one from the funcdecl for the BE only
 				//the symbol is the rich one (with templates, const yadayadayada)
-            	functionname = funcDecl->getNameAsString(); 
+            	functionname = funcDecl->getNameAsString();
 			} else {
 				//for everything else use the rich name
 				functionname = symbol->getStringValue();

@@ -40,7 +40,7 @@
 		namespace _name ## _ns { \
 		enum FieldEnum { 
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 		_name ## Idx,
 
 #define INFO_STRUCT_END() \

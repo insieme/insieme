@@ -213,6 +213,39 @@ namespace cba {
 		out << "-----------------------------------\n";
 	}
 
+	void CBA::printConstraints(std::ostream& out) const {
+
+		// some basic stuff
+		out << "-------- CBA Statistics -----------\n";
+		out << format(" %-25s %7d\n", "#Values", getNumSets());
+		out << format(" %-25s %7d\n", "#Constraints", getNumConstraints());
+		out << format(" %-25s %7d\n", "#Labels", labels.size());
+		out << "-----------------------------------\n";
+
+		for(const auto& cur : solver.getConstraints()) {
+			out << "\t" << *cur << "\n";
+		}
+
+		out << "-----------------------------------\n";
+
+	}
+
+	void CBA::printSolution(std::ostream& out) const {
+
+		// some basic stuff
+		out << "-------- CBA Statistics -----------\n";
+		out << format(" %-25s %7d\n", "#Values", getNumSets());
+		out << format(" %-25s %7d\n", "#Constraints", getNumConstraints());
+		out << format(" %-25s %7d\n", "#Labels", labels.size());
+		out << "-----------------------------------\n";
+
+		const auto& ass = solver.getAssignment();
+		out << ass << "\n";
+
+		out << "-----------------------------------\n";
+	}
+
+
 
 } // end namespace cba
 } // end namespace analysis

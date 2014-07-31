@@ -37,17 +37,70 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/pattern/pattern.h"
 
 namespace insieme {
 namespace transform {
 namespace datalayout {
 
 class AosToSoa {
+	core::NodeManager& mgr;
 
+	virtual std::map<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
+	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
+
+	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
+	void replaceAssignments(const core::VariableMap& varReplacements, const core::StructTypePtr& newStructType,
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionPtr& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+
+	core::StatementPtr generateMarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+	std::vector<core::StatementAddress> addMarshalling(const core::VariableMap& varReplacements,
+			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::ExpressionPtr& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+	std::vector<core::StatementAddress> addUnmarshalling(const core::VariableMap& varReplacements,
+			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::StatementAddress& begin,
+			const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	core::ExpressionMap replaceAccesses(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
+			const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	void replaceScalarStructs(const core::pattern::AddressMatchOpt& match, const core::VariablePtr& newVar,
+			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+	void updateScalarStructAccesses(core::NodePtr& toTransform);
+
+	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::VariablePtr& oldVar, const core::VariablePtr& newVar,
+			const core::StructTypePtr& newStructType);
+	void addNewDel(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
+			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
 public:
-	AosToSoa(core::NodePtr toTransform);
+	AosToSoa(core::NodePtr& toTransform);
+	virtual ~AosToSoa() {}
 };
 
+class VariableAdder: public core::transform::CachedNodeMapping {
+	core::NodeManager& mgr;
+	core::VariablePtr oldVar;
+	core::VariablePtr newVar;
+	core::VariableMap& varReplacements;
+
+public:
+	VariableAdder(core::VariablePtr oldVar, core::VariablePtr newVar, core::VariableMap& varReplacements)
+			: mgr(oldVar->getNodeManager()), oldVar(oldVar), newVar(newVar), varReplacements(varReplacements) {
+		varReplacements[oldVar] = newVar;
+	}
+
+	const core::NodePtr resolveElement(const core::NodePtr& element);
+
+	core::VariableMap getVarMapping() { return varReplacements; }
+};
 
 } // datalayout
 } // transform

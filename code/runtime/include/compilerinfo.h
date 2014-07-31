@@ -35,24 +35,28 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
-#define __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
+#ifndef __GUARD_COMPILERINFO_H
+#define __GUARD_COMPILERINFO_H
 
-#include "abstraction/rapl.h"
-
-void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
+void irt_log_compiler_info() {
+	#define IRT_COMPILER_PREFIX "Compiled with: "
+	#if defined _MSC_VER
+		irt_log_comment(IRT_COMPILER_PREFIX "Microsoft C/C++ Compiler " _MSC_FULL_VER);
+	#elif defined __clang__
+		irt_log_comment(IRT_COMPILER_PREFIX "clang " __clang_version__);
+	#elif defined __INTEL_COMPILER
+		irt_log_comment(IRT_COMPILER_PREFIX "Intel Compiler " __VERSION__);
+	// check for gcc last since many compilers define __GNUC__ for compatibility reasons
+	#elif defined __GNUC__
+		#ifdef __cplusplus
+			irt_log_comment(IRT_COMPILER_PREFIX "g++ " __VERSION__);
+		#else
+			irt_log_comment(IRT_COMPILER_PREFIX "gcc " __VERSION__);
+		#endif
+	#else
+		irt_log_comment(IRT_COMPILER_PREFIX "unknown backend compiler " __VERSION__);
+	#endif
+	#undef IRT_COMPILER_PREFIX
 }
 
-bool irt_rapl_is_supported() {
-	return false;
-}
-
-bool irt_rapl_is_used() {
-	return false;
-}
-
-void irt_rapl_init() { }
-
-void irt_rapl_finalize() { }
-
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_GEMS_H
+#endif //__GUARD_COMPILERINFO_H

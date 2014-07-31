@@ -146,4 +146,76 @@ namespace insieme {
 		// delete binary
 		if(boost::filesystem::exists(fn)) boost::filesystem::remove(fn);
 	}
+
+	TEST(MetaInformationTest, Migrate) {
+			core::NodeManager manager;
+
+			// obtain test case & check that it's available
+			driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
+			EXPECT_FALSE(!testCaseOpt);
+			driver::integration::IntegrationTestCase testCase = *testCaseOpt;
+
+			// load the code using the frontend
+			core::ProgramPtr code = testCase.load(manager);
+
+			dumpPretty(code);
+
+			// find parallel
+			core::ExpressionPtr postinc;
+			core::visitDepthFirstOnceInterruptible(code, [&](const core::ExpressionPtr& expr) {
+				if(expr == manager.getLangBasic().getGenPostInc()) {
+					postinc = expr;
+					return true;
+				}
+				return false;
+			});
+			EXPECT_NE(postinc, core::ExpressionPtr());
+
+			// add meta information
+			annotations::effort_estimation_info eff;
+			eff.fallback_estimate = 42;
+			postinc->attachValue(eff);
+
+			// create target code using the runtime backend
+			auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+
+			// see whether target code can be compiled
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+
+			// add extra compiler flags from test case
+			for(const auto& flag : testCase.getCompilerArguments("main_run_compile")) {
+				compiler.addFlag(flag);
+			}
+
+			// add includes
+			for(const auto& cur : testCase.getIncludeDirs()) {
+				compiler.addIncludeDir(cur.string());
+			}
+
+			// add library directories
+			for(const auto& cur : testCase.getLibDirs()) {
+				compiler.addFlag("-L" + cur.string());
+			}
+
+			// add libraries
+			for(const auto& cur : testCase.getLibNames()) {
+				compiler.addFlag("-l" + cur);
+			}
+
+			// build binary
+			auto fn = utils::compiler::compileToBinary(*target, compiler);
+			EXPECT_FALSE(fn.empty());
+
+			// execute
+			string command = string("IRT_REPORT=1 ") + fn;
+			auto res = exec(command.c_str());
+
+			std::cout << res << "\n";
+
+			// search for our meta information
+			EXPECT_NE(res.find("fallback_estimate = 42"), res.npos);
+
+			// delete binary
+			if(boost::filesystem::exists(fn)) boost::filesystem::remove(fn);
+		}
 }

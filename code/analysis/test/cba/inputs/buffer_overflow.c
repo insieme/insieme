@@ -34,42 +34,40 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H
-#define __GUARD_UTILS_IMPL_ENERGY_IMPL_H
+#include "cba.h"
 
-#include "utils/energy.h"
+#define NUMBER 2
 
-#ifdef _WIN32
-	#warning "RAPL energy measurements in Windows are not supported!"
-#else
-	#include "utils/energy.h"
-	#include "abstraction/impl/rapl.impl.h"
-#endif
+int buf[NUMBER] = { 0 };
 
-void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
-	data->package = -1.0;
-	data->mc = -1.0;
-	data->cores = -1.0;
-}
+int main(int argc, char** argv) {
 
-void irt_energy_select_instrumentation_method() {
-	// for RAPL we need to know about the number of cores per socket, hence we need PAPI
-#ifdef IRT_USE_PAPI
-	bool papi_available = true;
-#else
-	bool papi_available = false;
-#endif
-	if(irt_rapl_is_supported() && papi_available) {
-		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
-		irt_g_inst_rapl_in_use = true;
-		irt_rapl_init();
-		irt_log_setting_s("irt energy measurement method", "rapl");
-	} else {
-		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
-		irt_log_setting_s("irt energy measurement method", "none");
+	int a = argc;
+
+	int i;
+
+	if (a <= 0 || a > 3)
+		return 0;
+
+	for (i = 0; i < NUMBER; i++)
+
+	{
+
+		if (a & (1 << i))
+			break;
+
 	}
+
+	/* <bug buffer-overflow:xfp> */buf[i] = 0; /* </bug> */
+
+	cba_print_code();
+	cba_print_int(i);
+	cba_print_constraints();
+	cba_print_solution();
+	cba_dump_equations();
+
+//                         gefragt ist      cba::getValue(i,A)
+
+	return 0;
+
 }
-
-
-#endif // ifndef __GUARD_UTILS_IMPL_ENERGY_IMPL_H

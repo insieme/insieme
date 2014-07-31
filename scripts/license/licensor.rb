@@ -1,3 +1,5 @@
+require 'date'
+
 INFO = <<EOS
 licensor.rb
 Replaces existing license, prepends if no license, no changes if license up to date
@@ -18,6 +20,9 @@ if(ARGV.length < 2 || ARGV.length > 3)
 end
 
 license = IO.read(ARGV[0])
+# update license year to current
+license.sub!(/20XX/, Date.today.year.to_s)
+
 file = IO.read(ARGV[1])
 
 match = LICENSE_REGEXP.match(file)
@@ -36,7 +41,7 @@ output = license + file.lstrip
 # write ouptput to code file, or output file if specified 
 outfn = ARGV[ARGV.length-1]
 
-File.open(outfn, "w+") do |f|
+File.open(outfn, "wb+") do |f|
 	f.print(output)
 end
 

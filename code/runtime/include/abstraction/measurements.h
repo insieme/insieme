@@ -35,26 +35,17 @@
  */
 
 #pragma once
-#ifndef __GUARD_UTILS_ENERGY_H
-#define __GUARD_UTILS_ENERGY_H
+#ifndef __GUARD_ABSTRACTION_MEASUREMENTS_H
+#define __GUARD_ABSTRACTION_MEASUREMENTS_H
 
-#include "abstraction/rapl.h"
-
-
-// pointer to the function that is used to obtain energy readings
-void (*irt_get_energy_consumption)(rapl_energy_data* data);
-
-/*
- * a dummy method if no energy instrumentation is available
- */
-
-void irt_get_energy_consumption_dummy(rapl_energy_data* data);
-
-/*
- * selects the method used to obtain energy readings
- */
-
-void irt_energy_select_instrumentation_method();
+#if defined(__arm__)
+    // nothing to include
+#elif defined(_GEMS)
+    // nothing to include
+#else
+	#include "measurements.rapl.h"
+#endif
 
 
-#endif // ifndef __GUARD_UTILS_ENERGY_H
+
+#endif // ifndef __GUARD_ABSTRACTION_MEASUREMENTS_H

@@ -35,13 +35,17 @@
  */
 
 #pragma once
-#ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
-#define __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
+#ifndef __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H
+#define __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H
 
-#if defined(_GEMS) 
-	#include "rapl.gems.impl.h"
+#if defined(__arm__)
+    // nothing to include
+#elif defined(_GEMS)
+    // nothing to include
 #else
-	#include "rapl.std.impl.h"
+	#include "measurements.rapl.impl.h"
 #endif
 
-#endif // ifndef __GUARD_ABSTRACTION_IMPL_RAPL_IMPL_H
+
+
+#endif // ifndef __GUARD_ABSTRACTION_IMPL_MEASUREMENTS_IMPL_H

@@ -42,6 +42,10 @@
 	#undef INFO_FIELD
 #endif
 
+#ifdef INFO_FIELD_EXT
+	#undef INFO_FIELD_EXT
+#endif
+
 #ifdef INFO_STRUCT_END
 	#undef INFO_STRUCT_END
 #endif

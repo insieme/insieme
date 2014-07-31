@@ -117,6 +117,11 @@ namespace pattern {
 		typename T::value_type generate(const Match<T>& match) const;
 
 		/**
+		 * Enable default handling of assignments.
+		 */
+		TreeGenerator& operator=(const TreeGenerator&) = default;
+
+		/**
 		 * Prints this generator to the given output stream -- implements the Printable interface.
 		 */
 		std::ostream& printTo(std::ostream& out) const;
@@ -162,6 +167,11 @@ namespace pattern {
 		operator const generator::impl::ListGeneratorPtr&() const {
 			return generator;
 		}
+
+		/**
+		 * Utilize default assignemnt operator.
+		 */
+		ListGenerator& operator=(const ListGenerator&) = default;
 
 		/**
 		 * This function triggers the generation of a list of trees (forest) based on the given match.

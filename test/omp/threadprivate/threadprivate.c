@@ -15,10 +15,9 @@ void calc() {
 
 
 int main() {
- 	
 	#pragma omp parallel num_threads(THREADS)
 	{
-		gd = 2;
+		gd = omp_get_thread_num();
 		#pragma omp barrier
 		#pragma omp critical		
 		gs += gd;
@@ -26,7 +25,7 @@ int main() {
 		calc();
 	}
 	
-	int success = (gs == 2*THREADS);
+	int success = (gs == (THREADS*(THREADS-1))/2);
 	#pragma omp parallel num_threads(THREADS)
 	{
 		for(int i=0; i<THREADS; ++i)

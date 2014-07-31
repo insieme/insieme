@@ -556,11 +556,67 @@ namespace runtime {
 		return c_ast::ref(converter.getCNodeManager()->create(META_TABLE_NAME));
 	}
 
+	namespace {
+
+		c_ast::ExpressionPtr convertMetaInfoEntry(const Converter& converter, ConversionContext& context, const core::ExpressionPtr& expr) {
+			static const core::encoder::DirectExprListConverter::is_encoding_of isEncodedList;
+			static const core::encoder::DirectExprListConverter::ir_to_value_converter decodeList;
+
+			// if it is the null-expression => return 0 literal
+			if (!expr) {
+				return converter.getCNodeManager()->create<c_ast::Literal>("0");
+			}
+
+			// if it is an encoded expression => decode it
+			if (core::encoder::isEncodingOf<core::ExpressionPtr>(expr)) {
+				return convertMetaInfoEntry(converter, context, core::encoder::toValue<core::ExpressionPtr>(expr));
+			}
+
+			// if it is an encoded list => decode it
+			if (isEncodedList(expr)) {
+				vector<core::ExpressionPtr> list = decodeList(expr);
+
+				std::cout << "List: " << list << "\n";
+
+				// create initializer
+				c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>();
+
+				// add size
+				init->values.push_back(converter.getCNodeManager()->create<c_ast::Literal>(toString(list.size())));
+
+				// handle empty list
+				if (list.empty()) {
+					// no data is required
+					return init;
+				}
+
+				// add data
+				c_ast::TypePtr elementType = converter.getTypeManager().getTypeInfo(list[0]->getType()).lValueType;
+				c_ast::InitializerPtr data = converter.getCNodeManager()->create<c_ast::Initializer>(
+						converter.getCNodeManager()->create<c_ast::VectorType>(elementType)
+				);
+				init->values.push_back(data);
+
+				// add values
+				for(const auto& cur : list) {
+					data->values.push_back(convertMetaInfoEntry(converter, context, cur));
+				}
+
+				// done
+				return init;
+			}
+
+			// standard case - utilize expression converter
+			return converter.getStmtConverter().convertExpression(context, expr);
+		}
+
+	}
+
+
 	unsigned MetaInfoTable::registerMetaInfoFor(const core::NodePtr& node) {
 		auto reg = core::dump::AnnotationConverterRegister::getDefault();
 		auto& mgr = node.getNodeManager();
 		core::IRBuilder builder(mgr);
-		auto zero = converter.getCNodeManager()->create<c_ast::Literal>("0");
 
 		// iterate through all annotations
 		MetaInfoTableEntry entry;
@@ -593,15 +649,8 @@ namespace runtime {
 			vector<c_ast::ExpressionPtr> fields;
 			ConversionContext context(converter, core::LambdaPtr());
 			for(const auto& cur : values) {
-				auto expr = cur;
-
 				// unpack nested expressions
-				if (core::encoder::isEncodingOf<core::ExpressionPtr>(expr)) {
-					expr = core::encoder::toValue<core::ExpressionPtr>(expr);
-				}
-
-				// add field if not null ...
-				fields.push_back((expr) ? converter.getStmtConverter().convertExpression(context, expr) : zero);
+				fields.push_back(convertMetaInfoEntry(converter, context, cur));
 			}
 
 			// add dependencies
@@ -638,7 +687,7 @@ namespace runtime {
 		std::vector<const char*>* cur;
 
 		#define INFO_STRUCT_BEGIN(_name) cur = &defaults[#_name];
-		#define INFO_FIELD(_name,_type,_default) cur->push_back(#_default);
+		#define INFO_FIELD_EXT(_name,_a,_default,_b,_c) cur->push_back(#_default);
 		#include "insieme/meta_information/meta_infos.def"
 		#undef INFO_STRUCT_BEGIN
 

@@ -194,6 +194,12 @@ namespace cba {
 			} else if (name == "cba_print_code") {
 				// just dump the code
 				dumpPretty(prog);
+			} else if (name == "cba_print_constraints") {
+				// print the list of equations
+				printConstraints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+			} else if (name == "cba_print_solution") {
+				// print the solution for the constraints
+				printSolution(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
 			} else if (name == "cba_dump_equations") {
 				// dump the dot plot
 				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());

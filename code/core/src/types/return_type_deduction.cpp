@@ -150,29 +150,6 @@ namespace {
 	};
 
 
-	void collectAllTypeVariables(const TypeList& types, TypeSet& varSet, IntTypeParamSet& paramSet) {
-
-		// assemble type-variable collecting visitor
-		auto visitor = makeLambdaVisitor([&](const NodePtr& cur) {
-			// collect all type variables
-			if (cur->getNodeType() == NT_TypeVariable) {
-				varSet.insert(static_pointer_cast<const Type>(cur));
-			}
-
-			// collect variable int-type parameters
-			if (cur->getNodeType() == NT_VariableIntTypeParam) {
-				paramSet.insert(static_pointer_cast<const VariableIntTypeParam>(cur));
-			}
-
-		}, true);
-
-		// collect type variables
-		for_each(types, [&](const TypePtr& cur) {
-			visitDepthFirstOnce(cur, visitor);
-		});
-
-	}
-
 	template<typename T>
 	Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, IntTypeParamSet& paramSet) {
 		NodeManager& manager = target->getNodeManager();

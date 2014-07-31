@@ -139,10 +139,14 @@ namespace integration {
 						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
 					});
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+					
 					// set output file, stdOutFile and stdErrFile
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".ref";
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".ref";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -154,16 +158,22 @@ namespace integration {
 					std::stringstream cmd;
 					TestSetup set=setup;
 					auto props = test.getPropertiesFor(name);
+					
+					// get execution directory	
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+					
 
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".ref";
+					cmd << executionDirectory << "/" << test.getBaseName() << ".ref";
 
 					// add arguments
 					cmd << " " << props["executionFlags"];
-
+				
 					// set output files
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// set number of threads
 					set.numThreads=numThreads;
@@ -226,10 +236,14 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// set output file, stdOutFile and stdErrFile
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insiemecc";
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insiemecc";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -242,8 +256,14 @@ namespace integration {
 					TestSetup set=setup;
 					auto props = test.getPropertiesFor(name);
 
+					// get execution directory
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc";
+					cmd << executionDirectory << "/" << test.getBaseName() << ".insiemecc";
 
 					// add arguments
 					cmd << " " << props["executionFlags"];
@@ -252,8 +272,8 @@ namespace integration {
 					set.numThreads=numThreads;
 
 					// set output files
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -268,6 +288,11 @@ namespace integration {
 					std::stringstream cmd;
 					TestSetup set=setup;
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+
 					// start with executable
 					cmd << props["compiler"];
 
@@ -275,7 +300,7 @@ namespace integration {
 					cmd << " -S";
 
 					// also dump IR
-					std::string irFile=test.getDirectory().string() + "/" + test.getBaseName() + ".ir";
+					std::string irFile=executionDirectory + "/" + test.getBaseName() + ".ir";
 					cmd << " --dump-ir " << irFile;
 
 					// add include directories
@@ -311,8 +336,8 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str(),irFile);
@@ -366,10 +391,14 @@ namespace integration {
 						cmd << " --intercept-include " << cur.string();
 					}
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// set output file, stdOut file and stdErr file
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -382,6 +411,11 @@ namespace integration {
 
 					std::stringstream cmd;
 					TestSetup set=setup;
+
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
 
 					// start with executable
 					cmd << props["compiler"];
@@ -419,7 +453,7 @@ namespace integration {
 					set.numThreads=0;
 
 					// add input file
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
@@ -433,9 +467,9 @@ namespace integration {
 					});
 
 					// set output file, stdOut file and stdErr file
-					set.outputFile=test.getDirectory().string()+"/"+test.getBaseName()+".insieme."+be;
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be;
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -451,8 +485,13 @@ namespace integration {
 					// determine backend
 					string be = getBackendKey(backend);
 
+					// get execution dir	
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// start with executable
-					cmd << test.getDirectory().string() << "/" << test.getBaseName() << ".insieme." << be;
+					cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
 
 					// set number of threads
 					set.numThreads=numThreads;
@@ -463,8 +502,8 @@ namespace integration {
 					// add arguments
 					cmd << " " << props["executionFlags"];
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -500,17 +539,22 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
 
 					//tweak lang string for c test cases
 					if(l==C)
 						langstr="_";
 					// pipe result to output file
 					if(numThreads)
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".main_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
 					else
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".main_"+be+langstr+"execute.out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute.out";
 
 
 					// add awk pattern
@@ -518,8 +562,8 @@ namespace integration {
 					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
 					cmd << " "<< outputAwk;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -540,14 +584,20 @@ namespace integration {
 					// define comparison script
 					cmd << props["sortdiff"];
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"+langstr+"_execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"+langstr+"_execute.out";
 
 					// pipe result to output file
 					if(numThreads)
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute_"+std::to_string(numThreads)+".out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute_"+std::to_string(numThreads)+".out";
 					else
-						cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute.out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute.out";
 
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
@@ -557,8 +607,8 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -579,11 +629,16 @@ namespace integration {
 					// define comparison script
 					cmd << props["sortdiff"];
 
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+
 					// start with executable
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute.out";
 
 					// pipe result to output file
-					cmd << " " << test.getDirectory().string() << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute_"<<std::to_string(numThreads)<<".out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"<<langstr<<"_execute_"<<std::to_string(numThreads)<<".out";
 
 					// add awk pattern
 					cmd << " "<< props["outputAwk"];
@@ -591,8 +646,8 @@ namespace integration {
 					// disable multithreading
 					set.numThreads=0;
 
-					set.stdOutFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".out";
-					set.stdErrFile=test.getDirectory().string()+"/"+test.getBaseName()+"."+name+".err.out";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str());
@@ -830,6 +885,35 @@ namespace integration {
 		return stepsToExecute;
 	}
 
+	//filter steps based on some conflicting steps
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting) {
+		auto props = test.getProperties();
+		vector<TestStep> stepsToExecute;
+
+		for(const TestStep step:steps){
+			string conflictingStep="";
+			for (auto  confl=conflicting.begin();confl!=conflicting.end();confl++)
+				if(step.getName().find(confl->first)!=std::string::npos){
+					conflictingStep=confl->second;
+					break;
+				}
+				
+			bool conflicts=false;
+			if(!conflictingStep.empty())
+				for (const TestStep stepConfl:stepsToExecute)
+					if(stepConfl.getName().find(conflictingStep)!=std::string::npos){
+						conflicts=true;
+						break;
+					}
+			
+			if(!isExcluded(props["excludeSteps"],step) && ! conflicts)
+				stepsToExecute.push_back(step);
+		}
+		return stepsToExecute;
+	}
+
+
+
 	namespace {
 
 		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false) {
@@ -881,15 +965,15 @@ namespace integration {
      *  Test Runner member functions
      */
     int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
-                                       const string& environmentParam, const string& outFilePath,
-                                       const string& errFilePath, unsigned cpuTimeLimit) const {
+                           const string& environmentParam, const string& outFilePath,
+                           const string& errFilePath, unsigned cpuTimeLimit) const {
 
         /*
          * Setup arguments
          */
 
-        // quick and dirty: have boost split everything and then reassemble tokens that were quoted
-        vector<string> argumentsVecTemp;
+		// quick and dirty: have boost split everything and then reassemble tokens that were quoted
+		vector<string> argumentsVecTemp;
 		vector<string> argumentsVec;
 		boost::split(argumentsVecTemp, argumentsParam, boost::is_any_of(" "));
 
@@ -995,7 +1079,7 @@ namespace integration {
 			if((fdOut = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR )) == -1)
 				std::cerr << "Unable to create stdout file " << outFilePath << ", reason: " << strerror(errno) << "\n";
 			if((fdErr = open(errFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR )) == -1)
-                std::cerr << "Unable to create stderr file " << errFilePath << ", reason: " << strerror(errno) << "\n";
+				std::cerr << "Unable to create stderr file " << errFilePath << ", reason: " << strerror(errno) << "\n";
 			if(dup2(fdOut, STDOUT_FILENO) == -1)
 				std::cerr << "Unable to redirect stdout, reason: " << strerror(errno) << "\n";
 			if(dup2(fdErr, STDERR_FILENO) == -1)
@@ -1009,188 +1093,190 @@ namespace integration {
 				std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		} else {
 		    #pragma omp critical (pids)
-		    TestRunner::getInstance().pids.push_back(pid);
+            TestRunner::getInstance().pids.push_back(pid);
 			if(waitpid(pid, &retVal, 0) == -1)
 				std::cerr << "Unable to wait for child process " << pid << ", reason: " << strerror(errno) << "\n";
 		}
 		return retVal;
 	}
 
+	TestResult TestRunner::runCommand(const string& stepName, const TestSetup& setup,
+                       const PropertyView& testConfig, const string& cmd,
+                       const string& producedFile) const {
 
+		vector<string> producedFiles;
+		producedFiles.push_back(setup.stdOutFile);
+		producedFiles.push_back(setup.stdErrFile);
 
-    TestResult TestRunner::runCommand(const string& stepName, const TestSetup& setup,
-                                      const PropertyView& testConfig, const string& cmd,
-                                      const string& producedFile) const {
-
-        vector<string> producedFiles;
-        producedFiles.push_back(setup.stdOutFile);
-        producedFiles.push_back(setup.stdErrFile);
-
-        map<string,float> metricResults;
+		map<string,float> metricResults;
         //insert dummy vals
-        metricResults["time"]=0;
-        metricResults["mem"]=0;
+		metricResults["walltime"]=0;
+		metricResults["cputime"]=0;
+		metricResults["mem"]=0;
 
-        if(!producedFile.empty()) {
-            producedFiles.push_back(producedFile);
+		if(!producedFile.empty()) {
+			producedFiles.push_back(producedFile);
+		}
+
+		string outfile="";
+		if(!setup.outputFile.empty()){
+			producedFiles.push_back(setup.outputFile);
+			outfile= " -o "+setup.outputFile;
+		}
+
+		//setup possible environment vars
+		std::stringstream env;
+		{
+			//set LD_LIBRARY_PATH
+			env << "LD_LIBRARY_PATH=";
+			for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+				env << ldPath << ":";
+			}
+			env<< "${LD_LIBRARY_PATH} ";
+
+			// set number of threads
+			if(setup.numThreads){
+				env<<"OMP_NUM_THREADS="<<setup.numThreads<<" ";
+				env<<"IRT_NUM_WORKERS="<<setup.numThreads<<" ";
+			}
+
+			// set scheduling policy
+			if(setup.sched==STATIC){
+				env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
+				env<<"IRT_LOOP_SCHED_POLICY=IRT_STATIC ";
+				env<<"OMP_SCHEDULE=STATIC ";
+			}
+			else if(setup.sched==DYNAMIC){
+				env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
+				env<<"IRT_LOOP_SCHED_POLICY=IRT_DYNAMIC ";
+				env<<"OMP_SCHEDULE=DYNAMIC ";
+			}
+			else if(setup.sched==GUIDED){
+				env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
+				env<<"IRT_LOOP_SCHED_POLICY=IRT_GUIDED ";
+				env<<"OMP_SCHEDULE=GUIDED ";
+			}
+		}
+
+		// if it is a mock-run do nothing
+		if (setup.mockRun) {
+			return TestResult(stepName,0,true,metricResults,"","",env.str() + cmd + outfile);
+		}
+
+		string perfString("");
+		vector<string> perfCodes;
+		if(setup.perf){
+			//cache load misses
+			perfCodes.push_back(setup.load_miss);
+
+			//cache write misses
+			perfCodes.push_back(setup.store_miss);
+
+			//flops
+			perfCodes.push_back(setup.flops);
+
+			//additional requested metrics
+			BOOST_FOREACH(string s,setup.perf_metrics){
+				perfCodes.push_back(s);
+			}
+
+			//build perf command
+			perfString="perf stat -x , ";
+			BOOST_FOREACH(string s,perfCodes){
+				perfString=perfString+"-e "+s+" ";
+			}
+
         }
 
-        string outfile="";
-        if(!setup.outputFile.empty()){
-            producedFiles.push_back(setup.outputFile);
-            outfile= " -o "+setup.outputFile;
-        }
+		string executable = string(testConfig["time_executable"]);
+		string envString = env.str();
+		string argumentString = string(" -f WALLTIME%e\nCPUTIME%U\nMEM%M\n ") + perfString + cmd + outfile;
 
-        //setup possible environment vars
-        std::stringstream env;
-        {
-            //set LD_LIBRARY_PATH
-            env << "LD_LIBRARY_PATH=";
-            for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
-                env << ldPath << ":";
-            }
-            env<< "${LD_LIBRARY_PATH} ";
+		// cpu time limit in seconds
+		unsigned cpuTimeLimit = 1200;
 
+		int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
 
-            // set number of threads
-            if(setup.numThreads){
-                env<<"OMP_NUM_THREADS="<<setup.numThreads<<" ";
-                env<<"IRT_NUM_WORKERS="<<setup.numThreads<<" ";
-            }
+		/*
+		 * NOTE: Ordinarily, one would use WIFSIGNALED(int exitCode) to check whether a child process was terminated by a signal.
+		 *
+		 * However, since our child process executes /usr/bin/time, the information that a signal was received is hidden and the
+		 * return/exit code of the client application + 128 is returned instead. As a result, we need to manually check for the
+		 * signal received. Note that this can cause problems for applications that return higher exit codes (i.e. exit(9) and SIGKILL
+		 * cannot be distinguished).
+		 */
 
-            // set scheduling policy
-            if(setup.sched==STATIC){
-                env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-                env<<"IRT_LOOP_SCHED_POLICY=IRT_STATIC ";
-                env<<"OMP_SCHEDULE=STATIC ";
-            }
-            else if(setup.sched==DYNAMIC){
-                env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-                env<<"IRT_LOOP_SCHED_POLICY=IRT_DYNAMIC ";
-                env<<"OMP_SCHEDULE=DYNAMIC ";
-            }
-            else if(setup.sched==GUIDED){
-                env<<"IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-                env<<"IRT_LOOP_SCHED_POLICY=IRT_GUIDED ";
-                env<<"OMP_SCHEDULE=GUIDED ";
-            }
-        }
+		int actualReturnCode = WEXITSTATUS(retVal);
 
-        // if it is a mock-run do nothing
-        if (setup.mockRun) {
-            return TestResult(stepName,0,true,metricResults,"","",env.str() + cmd + outfile);
-        }
+       		if(actualReturnCode > 128) {
+			actualReturnCode -= 128;
+			if(actualReturnCode > 0)
+				std::cerr << "Killed by signal " << actualReturnCode << "\n";
+		}
 
-        string perfString("");
-        vector<string> perfCodes;
-        if(setup.perf){
-            //cache load misses
-            perfCodes.push_back(string("r")+setup.load_miss);
+	        string output=readFile(setup.stdOutFile);
+		string error=readFile(setup.stdErrFile);
+//		std::cout<<error<<std::endl;
+		//get time, memory and perf values and remove them from stdError
+		string stdErr;
+		boost::char_separator<char> sep("\n");
+		boost::tokenizer<boost::char_separator<char>> tok(error,sep);
+		for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
+			string token(*beg);
+			if(token.find("WALLTIME")==0) {
+				metricResults["walltime"]=atof(token.substr(8).c_str());
+			} else if(token.find("CPUTIME")==0) {
+				metricResults["cputime"]=atof(token.substr(7).c_str());
+				// check if we approached the cpu time limit. If so, print a warning
+				if(((metricResults["cputime"]))/cpuTimeLimit > 0.95){
+					std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
+					metricResults["timeout"]=1;
+				}
+			} else if (token.find("MEM")==0) {
+				metricResults["mem"]=atof(token.substr(3).c_str());
+			} else {
+				//check perf metrics, otherwise append to stderr
+				bool found=false;
+				for(auto code : perfCodes) {
+					if(token.find(code)!=token.npos){
+						string value=token.substr(0,token.find(","));
+						float intVal;
+						//try cast to int
+						try{
+							intVal=boost::lexical_cast<float>(value);
+						}catch(const boost::bad_lexical_cast &){
+							//not counted or error
+							intVal=-1;
+						}
 
-            //cache write misses
-            perfCodes.push_back(string("r")+setup.store_miss);
+						//mark special perf metrics
+						if(code.compare(setup.load_miss)==0)
+							metricResults["load_miss"]=intVal;
+						else if (code.compare(setup.store_miss)==0)
+							metricResults["store_miss"]=intVal;
+						else if (code.compare(setup.flops)==0)
+							metricResults["flops"]=intVal;
+						else
+							metricResults[code]=intVal;
 
-            //flops
-            perfCodes.push_back(string("r")+setup.flops);
+						found=true;
+						break;
+					}
+				}
+				//no metric -> it is stdErr
+				if(!found)
+					stdErr+=token+"\n";
+			}
+		}
 
-            //additional requested metrics
-            BOOST_FOREACH(string s,setup.perf_metrics){
-                perfCodes.push_back(string("r")+s);
-            }
+		// check whether execution has been aborted by the user
+		if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
+			return TestResult::userAborted(stepName,metricResults, output, stdErr, cmd);
+		}
+		// produce regular result
+		return TestResult(stepName,actualReturnCode,retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
+	}
 
-            //build perf command
-            perfString="perf stat -x , ";
-            BOOST_FOREACH(string s,perfCodes){
-                perfString=perfString+"-e "+s+" ";
-            }
-
-        }
-
-        string executable = string(testConfig["time_executable"]);
-        string envString = env.str();
-        string argumentString = string(" -f TIME%e\nMEM%M ") + perfString + cmd + outfile;
-
-        // cpu time limit in seconds
-        unsigned cpuTimeLimit = 1200;
-
-        int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
-
-        /*
-         * NOTE: Ordinarily, one would use WIFSIGNALED(int exitCode) to check whether a child process was terminated by a signal.
-         *
-         * However, since our child process executes /usr/bin/time, the information that a signal was received is hidden and the
-         * return/exit code of the client application + 128 is returned instead. As a result, we need to manually check for the
-         * signal received. Note that this can cause problems for applications that return higher exit codes (i.e. exit(9) and SIGKILL
-         * cannot be distinguished).
-         */
-
-        int actualReturnCode = WEXITSTATUS(retVal);
-
-        if(actualReturnCode > 128) {
-            actualReturnCode -= 128;
-            if(actualReturnCode > 0)
-                std::cerr << "Killed by signal " << actualReturnCode << "\n";
-        }
-
-        string output=readFile(setup.stdOutFile);
-        string error=readFile(setup.stdErrFile);
-
-        //get time, memory and perf values and remove them from stdError
-        string stdErr;
-        boost::char_separator<char> sep("\n");
-        boost::tokenizer<boost::char_separator<char>> tok(error,sep);
-        for(boost::tokenizer<boost::char_separator<char>>::iterator beg=tok.begin(); beg!=tok.end();++beg){
-            string token(*beg);
-            if(token.find("TIME")==0) {
-                metricResults["time"]=atof(token.substr(4).c_str());
-                // check if we approached the cpu time limit. If so, print a warning
-                if(((metricResults["time"]))/cpuTimeLimit > 0.95)
-                    std::cerr << "Killed by timeout, CPU time was " << metricResults["time"] << ", limit was " << cpuTimeLimit << " seconds\n";
-            } else if (token.find("MEM")==0) {
-                metricResults["mem"]=atof(token.substr(3).c_str());
-            } else {
-                //check perf metrics, otherwise append to stderr
-                bool found=false;
-                for(auto code : perfCodes) {
-                    if(token.find(code)){
-                        string value=token.substr(0,token.find(","));
-                        float intVal;
-                        //try cast to int
-                        try{
-                            intVal=boost::lexical_cast<float>(value);
-                        } catch(const boost::bad_lexical_cast &){
-                            //not counted or error
-                            intVal=-1;
-                        }
-
-                        //mark special perf metrics
-                        if(code.substr(1)==setup.load_miss)
-                            metricResults["load_miss"]=intVal;
-                        else if (code.substr(1)==setup.store_miss)
-                            metricResults["store_miss"]=intVal;
-                        else if (code.substr(1)==setup.flops)
-                            metricResults["flops"]=intVal;
-                        else
-                            metricResults[code.substr(1)]=intVal;
-
-                        found=true;
-                        break;
-                    }
-                }
-                //no metric -> it is stdErr
-                if(!found)
-                    stdErr+=token+"\n";
-            }
-        }
-
-        // check whether execution has been aborted by the user
-        if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
-            return TestResult::userAborted(stepName,metricResults, output, stdErr, cmd);
-        }
-
-        // produce regular result
-        return TestResult(stepName,actualReturnCode,retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
-    }
 
 
 

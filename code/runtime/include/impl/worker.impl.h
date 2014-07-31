@@ -92,7 +92,6 @@ typedef struct __irt_worker_func_arg {
 	irt_affinity_mask affinity;
 	uint16 index;
 	irt_worker_init_signal *signal;
-	irt_context* context;
 } _irt_worker_func_arg;
 
 
@@ -130,7 +129,7 @@ void* _irt_worker_func(void *argvp) {
 	self->id.cached = self;
 	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
-	self->cur_context = arg->context->id;
+	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
 	self->finalize_wi = NULL;
 	self->default_variant = 0;
@@ -148,9 +147,6 @@ void* _irt_worker_func(void *argvp) {
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_region_init_worker(self);
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
@@ -181,11 +177,13 @@ void* _irt_worker_func(void *argvp) {
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
 
+	irt_worker_late_init(self);
+
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 		irt_scheduling_loop(self);
 	}
-	irt_worker_cleanup(self);
+	irt_inst_region_finalize_worker(self);
 	return NULL;
 }
 
@@ -209,8 +207,8 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
-		#ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = wi->impl;
+		#ifndef IRT_TASK_OPT
 		if(self->default_variant < wimpl->num_variants) {
             irt_optimizer_apply_dvfs(&(wimpl->variants[self->default_variant]));
 			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
@@ -219,7 +217,6 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
 		}
 		#else // !IRT_TASK_OPT
-        irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
         uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
         irt_optimizer_apply_dvfs(&(wimpl->variants[opt]));
 		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);
@@ -294,13 +291,21 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->num_fragments = prev_fragments;
 }
 
-void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal, irt_context* context) {
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
-	arg->context = context;
 	irt_thread_create(&_irt_worker_func, arg, NULL);
+}
+
+void irt_worker_late_init(irt_worker* self) {
+	irt_context_id nullid = irt_context_null_id();
+	// loop until context id has been set (i.e. is not nullid), which means that the context setup is done
+	while(irt_atomic_fetch_and_add(&(self->cur_context.full), 0, uint64) == nullid.full) { }
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		irt_inst_region_init_worker(self);
+	#endif
 }
 
 void _irt_worker_cancel_all_others() {
@@ -323,12 +328,20 @@ void _irt_worker_end_all() {
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		cur->state = IRT_WORKER_STATE_STOP;
-		irt_signal_worker(cur);
+		if(cur->state != IRT_WORKER_STATE_STOP) {
+			cur->state = IRT_WORKER_STATE_STOP;
+			irt_signal_worker(cur);
 
-		// avoid calling thread awaiting its own termination
-		if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
-			irt_thread_join(&(cur->thread));   
+			// avoid calling thread awaiting its own termination
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
+				irt_thread_join(&(cur->thread));
+			}
+		}
+	}
+
+	// clean up after all workers have finished running
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_worker_cleanup(irt_g_workers[i]);
 	}
 }
 
@@ -343,6 +356,7 @@ void irt_worker_cleanup(irt_worker* self) {
 			free(cur);
 			cur = next;
 		}
+		self->wi_ev_register_list = NULL;
 	}
 	{ // wg registers
 		irt_wg_event_register *cur, *next;
@@ -352,6 +366,7 @@ void irt_worker_cleanup(irt_worker* self) {
 			free(cur);
 			cur = next;
 		}
+		self->wg_ev_register_list = NULL;
 	}
 }
 

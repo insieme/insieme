@@ -896,12 +896,10 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 
 	// need to release clMem objects
 	ADD_Handler(o2i, "clReleaseMemObject",
-			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in thrid pass
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
 	);
 	ADD_Handler(o2i, "icl_release_buffer",
-			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in third pass
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
 	);
 	ADD_Handler(o2i, "icl_release_buffers",
 			// execute a ref.delete for each pointer in the argument list inside a compound statement
@@ -910,7 +908,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 			if(const CallExprPtr varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(1))) {
 				if(const TupleExprPtr varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
 					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
-						dels.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), *I, builder)));
+						dels.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), *I));
 					}
 				}
 			}
@@ -924,8 +922,10 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 
 	// release of kernel will be used to free the tuple holding the kernel arguments
 	ADD_Handler(o2i, "clReleaseKernel",
-			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in third pass
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
+	);
+	ADD_Handler(o2i, "icl_release_kernel",
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed

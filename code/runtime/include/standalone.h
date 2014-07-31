@@ -108,8 +108,10 @@ void irt_init_globals() {
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
-	_irt_setup_hardware_info();
+	_irt_hardware_info_init();
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_maintenance_init();
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -189,7 +191,11 @@ void irt_exit_handler() {
 		irt_cpu_freq_reset_frequencies();
 #endif
 
+	_irt_hardware_info_shutdown();
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_maintenance_cleanup();
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
@@ -198,14 +204,10 @@ void irt_exit_handler() {
 	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	if(irt_g_instrumentation_event_output_is_enabled)
-		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
-	for(int i = 0; i < irt_g_worker_count; ++i)
-		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
-#endif
 
 	irt_cleanup_globals();
+	for(uint32 i = 0; i < irt_g_worker_count; ++i)
+		free(irt_g_workers[i]);
 	free(irt_g_workers);
 	irt_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
@@ -272,7 +274,7 @@ void _irt_wake_sleeping_workers(irt_worker_init_signal *signal, void *ev_handle)
 	#endif
 }
 
-void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals, irt_context* context) {
+void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count, bool handle_signals) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
 		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...\n", IRT_MAX_WORKERS, worker_count);
@@ -324,10 +326,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	void* ev_handle = _irt_init_signalable(&signal);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal, context);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
 	}
 
-	// wait until all workers have signaled readyness
+	// wait until all workers have signaled readiness
 	_irt_wake_sleeping_workers(&signal, ev_handle);
 
 	#ifdef USE_OPENCL
@@ -391,8 +393,9 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	tempw.generator_id = 0;
 	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
 
-	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
-	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals, context);
+	irt_context* context = irt_context_create_standalone(cleanup_fun);
+	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
+	irt_context_initialize(context, init_fun);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -400,6 +403,12 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	}
 
 	return context;
+}
+
+void irt_runtime_end_in_context(irt_context* context) {
+	_irt_worker_end_all();
+	irt_context_destroy(context);
+	irt_exit_handler();
 }
 
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation* impl, irt_lw_data_item *startup_params) {
@@ -411,6 +420,8 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	}
 
 	irt_runtime_run_wi(impl, startup_params);
+
+	_irt_worker_end_all();
 
 	// shut-down context
 	irt_context_destroy(context);

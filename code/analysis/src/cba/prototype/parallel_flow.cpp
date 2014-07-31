@@ -44,7 +44,7 @@ namespace cba {
 namespace prototype {
 
 
-	namespace {
+	namespace detail {
 
 		std::size_t numPred(const Node& node, const Graph& graph) {
 			auto& g = graph.asBoostGraph();
@@ -340,6 +340,8 @@ namespace prototype {
 		}
 
 	}
+
+	using namespace detail;
 
 	void solve(const Graph& graph) {
 

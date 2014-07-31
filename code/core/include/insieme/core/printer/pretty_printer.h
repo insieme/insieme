@@ -98,7 +98,7 @@ struct PrettyPrinter {
 	/**
 	 * The root node of the sub-try to be printed
 	 */
-	const NodePtr& root;
+	NodePtr root;
 
 	/**
 	 * The flags set for customizing the formating

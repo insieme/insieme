@@ -52,27 +52,26 @@
 
 // ============================================================================ Scheduling (general)
 
-static inline void _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi, bool pool) {
+static inline void _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi) {
 	// if other full, find random worker
 	bool success = false;
 	while(!success) {
-		success = irt_cwb_push_back(pool ? &target->sched_data.pool : &target->sched_data.queue, wi);
+		success = irt_cwb_push_back(&target->sched_data.queue, wi);
 		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
 	}
 	irt_signal_worker(target);
 }
-static inline void _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi, bool pool) {
+static inline void _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi) {
 	// if other full, find random worker
 	bool success = false;
 	while(!success) {
-		success = irt_cwb_push_front(pool ? &target->sched_data.pool : &target->sched_data.queue, wi);
+		success = irt_cwb_push_front(&target->sched_data.queue, wi);
 		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
 	}
 	irt_signal_worker(target);
 }
 
 void irt_scheduling_init_worker(irt_worker* self) {
-	irt_cwb_init(&self->sched_data.pool);
 	irt_cwb_init(&self->sched_data.queue);
 #ifdef IRT_TASK_OPT
 	self->sched_data.demand = IRT_CWBUFFER_LENGTH;
@@ -82,13 +81,12 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
-	_irt_cwb_try_push_back(self, yielding_wi, true);
+	_irt_cwb_try_push_back(self, yielding_wi);
     _irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_POOLED, wi->id);
-	_irt_cwb_try_push_front(target, wi, true);
+	_irt_cwb_try_push_front(target, wi);
 }
 
 irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
@@ -207,25 +205,18 @@ int irt_scheduling_iteration(irt_worker* self) {
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_QUEUED, wi->id);
 #ifdef IRT_STEAL_SELF_PUSH_FRONT
-	_irt_cwb_try_push_front(target, wi, false);
+	_irt_cwb_try_push_front(target, wi);
 #else
-	_irt_cwb_try_push_back(target, wi, false);
+	_irt_cwb_try_push_back(target, wi);
 #endif
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
-	
-	// try to take a WI from the pool
-	if((wi = irt_cwb_pop_front(&self->sched_data.pool))) {
-		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
-		_irt_worker_switch_to_wi(self, wi);
-		return 1;
-	}
-	
-	// if that failed, try to take a work item from the queue
-#ifdef IRT_STEAL_SELF_POP_FRONT
+
+	// try to take a work item from the queue
+#ifndef IRT_STEAL_SELF_POP_BACK
 	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
 #else
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
@@ -328,7 +319,7 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	uint64 pop_index = irt_atomic_sub_and_fetch(&wb->front_free, 1);
 	irt_work_item* wi = wb->items[pop_index%IRT_CWBUFFER_LENGTH];
 	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
-		irt_throw_string_error(IRT_ERR_INTERNAL, "Fucking shithog A");
+		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog A");
 	}
 	printf("Popped WI %p from front position %lu, post size %ld\n", wi, pop_index, post_size);
 	return wi;	
@@ -345,7 +336,7 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	uint64 pop_index = irt_atomic_add_and_fetch(&wb->back_free, 1);
 	irt_work_item* wi = wb->items[pop_index%IRT_CWBUFFER_LENGTH];
 	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
-		irt_throw_string_error(IRT_ERR_INTERNAL, "Fucking shithog B");
+		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog B");
 	}
 	printf("Popped WI %p from back position %lu, post size %ld\n", wi, pop_index, post_size);
 	return wi;	

@@ -102,14 +102,22 @@ inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 
 		irt_wi_implementation* impl, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 
 	int64 memstep = policy->param.chunk_size * base_range.step;  
-	uint64 fullstep = policy->participants * memstep;
+	int64 fullstep = policy->participants * memstep;
 
 	irt_work_item_range range;
 	range.step = base_range.step;
-	for(int64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
-		range.begin = start;
-		range.end = MIN(start + memstep, base_range.end);
-		_irt_loop_fragment_run(self, range, impl, args);
+	if(range.step > 0) {
+		for(int64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
+			range.begin = start;
+			range.end = MIN(start + memstep, base_range.end);
+			_irt_loop_fragment_run(self, range, impl, args);
+		}
+	} else {
+		for(int64 start = id*memstep + base_range.begin; start > base_range.end; start += fullstep) {
+			range.begin = start;
+			range.end = MAX(start + memstep, base_range.end);
+			_irt_loop_fragment_run(self, range, impl, args);
+		}
 	}
 }
 
@@ -168,9 +176,9 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64_t)) {
-			uint64 new_bsize = MAX(sched_data->policy.param.chunk_size, bsize*0.8); // TODO factor tweakable?
-			//irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize);
-			sched_data->block_size = MIN(new_bsize, sched_data->block_size);
+			uint64 new_bsize = (uint64)((bsize / base_range.step) * 0.8) * base_range.step;
+			new_bsize = MAX(new_bsize, sched_data->policy.param.chunk_size * base_range.step);
+			irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize, uint64_t);
 			base_range.begin = comp;
 			base_range.end = MIN(comp+bsize, final);
 			_irt_loop_fragment_run(self, base_range, impl, args);
@@ -224,7 +232,7 @@ static inline void irt_schedule_loop_guided_chunked_prepare(volatile irt_loop_sc
 	sched_data->completed = base_range.begin;
 	int64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	int64 chunk = (numit / sched_data->policy.participants * 4);
-	sched_data->block_size = MAX(sched_data->policy.param.chunk_size, chunk);
+	sched_data->block_size = MAX(sched_data->policy.param.chunk_size, chunk)*base_range.step;
 }
 
 // prepare for loop with guided scheduling before entry

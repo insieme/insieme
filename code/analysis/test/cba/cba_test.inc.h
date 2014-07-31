@@ -47,7 +47,29 @@ namespace cba {
 
 	namespace {
 
-		void createDotDump(const CBA& analysis) {
+		inline void printConstraints(const CBA& analysis) {
+
+			std::cout << "Constraints:\n";
+			analysis.printConstraints();
+		}
+
+		inline void printConstraints(const NodeAddress& node) {
+			// extract context and print equations
+			printConstraints(getCBA(node));
+		}
+
+		inline void printSolution(const CBA& analysis) {
+
+			std::cout << "Solution:\n";
+			analysis.printSolution();
+		}
+
+		inline void printSolution(const NodeAddress& node) {
+			// extract context and print equations
+			printSolution(getCBA(node));
+		}
+
+		inline void createDotDump(const CBA& analysis) {
 			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
 			{
 				// open file
@@ -59,15 +81,16 @@ namespace cba {
 
 			// create pdf
 //			system("dot -Tpdf solution.dot -o solution.pdf");
+//			system("dot -Tpng solution.dot -o solution.png");
 			system("dot -Tsvg solution.dot -o solution.svg");
 		}
 
-		void createDotDump(const NodeAddress& node) {
+		inline void createDotDump(const NodeAddress& node) {
 			// extract context and dump it
 			createDotDump(getCBA(node));
 		}
 
-		void createDotDumpRoots(const CBA& analysis) {
+		inline void createDotDumpRoots(const CBA& analysis) {
 			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
 			{
 				// open file
@@ -82,7 +105,7 @@ namespace cba {
 			system("dot -Tsvg solution.dot -o solution.svg");
 		}
 
-		void createDotDumpRoots(const NodeAddress& node) {
+		inline void createDotDumpRoots(const NodeAddress& node) {
 			// extract context and dump it
 			createDotDumpRoots(getCBA(node));
 		}

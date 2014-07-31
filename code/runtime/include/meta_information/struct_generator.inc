@@ -42,7 +42,7 @@ typedef struct __name##_ __name##_info; \
 struct __name##_ { \
 	bool available;
 
-#define INFO_FIELD(__id, __type, __val) \
+#define INFO_FIELD_EXT(__id, __type, __val, _a, _b) \
 	__type __id;
 
 #define INFO_STRUCT_END() \

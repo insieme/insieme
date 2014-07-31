@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -318,6 +319,35 @@ namespace runtime {
             else
                 return stmt;
         }
+			
+		// migrate meta-infos from anywhere in subtree to job
+		void collectSubMetaInfos(core::NodeManager& manager, core::NodePtr job) {
+			const core::lang::BasicGenerator& basic = manager.getLangBasic();
+			auto rootMetas = annotations::getMetaInfos(job);
+			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
+				// skip root node of sub-tree
+				if(npr == job)
+					return false;
+				// prune for subtrees which generate their own WI description
+				if(core::analysis::isCallOf(npr, basic.getParallel()) 
+					|| core::analysis::isCallOf(npr, basic.getPFor())	
+					|| npr.isa<core::JobExprPtr>())
+					return true;
+				// prune for subtrees which already generated their WI
+				if(npr.isa<core::ExpressionPtr>() &&
+							(  core::encoder::is_encoding_of<WorkItemVariant>()(npr.as<core::ExpressionPtr>())
+							|| core::encoder::is_encoding_of<WorkItemImpl>()(npr.as<core::ExpressionPtr>())))
+					return true;
+				// get metainfo
+				auto metas = annotations::getMetaInfos(npr);
+				if(metas.empty()) return false;
+				// check if duplicate metainfo 
+				assert(all(rootMetas, [&](const annotations::AnnotationMap::value_type& v) { return metas.count(v.first) == 0; } ) && "Duplicate Meta Information");
+				// move metainfo
+				annotations::moveMetaInfos(npr, job);
+				return false;
+			});
+		}
 
 		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 			core::IRBuilder builder(manager);
@@ -376,6 +406,9 @@ namespace runtime {
 
 			// compute work-item implementation variants
 			vector<WorkItemVariant> variants;
+
+			// migrate meta-infos from anywhere in subtree to job
+			collectSubMetaInfos(manager, job);
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
@@ -551,6 +584,9 @@ namespace runtime {
 
 				// convert pfor body
 				auto info = pforBodyToWorkItem(args[4]);
+
+				// migrate meta-infos from anywhere in subtree to job
+				collectSubMetaInfos(manager, call);
 
 				// migrate meta infos
 				for(const auto& cur : info.first.getVariants()) {

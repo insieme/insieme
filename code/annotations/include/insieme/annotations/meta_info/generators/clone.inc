@@ -41,7 +41,7 @@
 	inline void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
 		info_type data;
 
-#define INFO_FIELD(_name, _type, _def) \
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
 		data._name = insieme::annotations::detail::field_cloner<decltype(_name)>()(target.getNodeManager(), _name);
 
 #define INFO_STRUCT_END() \

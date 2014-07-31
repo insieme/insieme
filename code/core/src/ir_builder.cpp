@@ -84,25 +84,6 @@ namespace core {
 
 namespace {
 
-	typedef std::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
-
-	InitDetails splitUp(const IRBuilder::VarValueMapping& captureInits) {
-
-		// prepare containers
-		InitDetails res;
-		vector<VariablePtr>& vars = std::get<0>(res);
-		vector<ExpressionPtr>& inits = std::get<1>(res);
-
-		// process the given map
-		for_each(captureInits, [&](const IRBuilder::VarValueMapping::value_type& cur) {
-			vars.push_back(cur.first);
-			inits.push_back(cur.second);
-		});
-
-		// return results
-		return res;
-	}
-
 	/**
 	 * Returns the list of variables referenced within an expression.
 	 * This class is used when a code block needs to be transformed into a function
@@ -149,33 +130,6 @@ namespace {
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
 
-	/**
-	 * Returns the list of variables referenced within an expression.
-	 * This class is used when a code block needs to be transformed into a function
-	 */
-	struct LiteralUsage : public IRVisitor<bool> {
-
-	    LiteralUsage (const std::set<string>& litToCap) : core::IRVisitor<bool>(false), literalToCapture(litToCap)  { }
-
-	    bool visitLiteral(const core::LiteralPtr& lit) {
-	    	if(literalToCapture.find(lit->getStringValue()) != literalToCapture.end() ) {
-				usedLiterals.insert(lit);
-			}
-
-			return false;
-		}
-
-	    bool visitNode(const NodePtr& node) { return false; }
-		const std::set<string>& literalToCapture;
-	    utils::set::PointerSet<LiteralPtr> usedLiterals;
-	};
-
-	std::vector<core::LiteralPtr> getLiteralUsage(const core::NodePtr& root, std::set<string> literalToCapture) {
-		LiteralUsage visitor(literalToCapture);
-		visitDepthFirstPrunable(root, visitor);
-
-		return std::vector<core::LiteralPtr>(visitor.usedLiterals.begin(), visitor.usedLiterals.end());
-	}
 }
 
 
@@ -824,7 +778,7 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
 	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
 	if(aType)
-		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArraySubscript1D(), array, index);
+		return callExpr(aType->getElementType(), manager.getLangBasic().getArraySubscript1D(), array, index);
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
@@ -944,7 +898,7 @@ namespace {
 	/**
 	 * Checks whether the given result type is matching the type expected when using automatic type inference.
 	 */
-	bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 		// check types
 		if (*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
 			// print a warning if they are not matching

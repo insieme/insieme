@@ -127,7 +127,17 @@ namespace addons {
 			res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ 
+
+				// the conversion from a value to a constcpp is implicit in C++
+				// 	if we have being wrappin it into a stack variable, avoid both nodes
+				if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())){
+					auto refVar = ARG(0).as<core::CallExprPtr>();
+					return CONVERT_EXPR(refVar[0]);
+				}
+			
+				return c_ast::deref(CONVERT_ARG(0)); 
+			});
 			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
 
 			#include "insieme/backend/operator_converter_end.inc"

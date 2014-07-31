@@ -42,8 +42,13 @@
  * applications utilizing the Insieme compiler and runtime infrastructure.
  */
 
-
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/utility.hpp>
 #include <boost/program_options.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <omp.h>
 #include <fstream>
 
@@ -93,8 +98,45 @@ int main(int argc, char** argv) {
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 
-	// load list of test steps
+
+	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
+	map<string,string> conflictingSteps;
+
+	// load list of test step
 	auto steps = tf::getTestSteps(options);
+	
+	//define some conflicting steps, so either c or c++ is executed (not both of them)
+	conflictingSteps["insiemecc_c++_check"]="insiemecc_c_check";
+	conflictingSteps["insiemecc_c++_compile"]="insiemecc_c_compile";
+	conflictingSteps["insiemecc_c++_execute"]="insiemecc_c_execute";
+	conflictingSteps["main_c++_sema"]="main_c_sema";
+	conflictingSteps["main_run_c++_check"]="main_run_check";
+	conflictingSteps["main_run_c++_execute"]="main_run_execute";
+	conflictingSteps["main_run_c++_compile"]="main_run_compile";
+	conflictingSteps["main_run_c++_convert"]="main_run_convert";
+	conflictingSteps["main_seq_c++_check"]="main_seq_check";
+	conflictingSteps["main_seq_c++_compile"]="main_seq_compile";
+	conflictingSteps["main_seq_c++_convert"]="main_seq_convert";
+	conflictingSteps["main_seq_c++_execute"]="main_seq_execute";
+	conflictingSteps["ref_c++_check"]="ref_c_check";
+	conflictingSteps["ref_c++_compile"]="ref_c_compile";
+	conflictingSteps["ref_c++_execute"]="ref_c_execute";
+
+	conflictingSteps["insiemecc_c_check"]="insiemecc_c++_check";
+	conflictingSteps["insiemecc_c_compile"]="insiemecc_c++_compile";
+	conflictingSteps["insiemecc_c_execute"]="insiemecc_c++_execute";
+	conflictingSteps["main_c_sema"]="main_c++_sema";
+	conflictingSteps["main_run_check"]="main_run_c++_check";
+	conflictingSteps["main_run_execute"]="main_run_c++_execute";
+	conflictingSteps["main_run_compile"]="main_run_c++_compile";
+	conflictingSteps["main_run_convert"]="main_run_c++_convert";
+	conflictingSteps["main_seq_check"]="main_seq_c++_check";
+	conflictingSteps["main_seq_compile"]="main_seq_c++_compile";
+	conflictingSteps["main_seq_convert"]="main_seq_c++_convert";
+	conflictingSteps["main_seq_execute"]="main_seq_c++_execute";
+	conflictingSteps["ref_c_check"]="ref_c++_check";
+	conflictingSteps["ref_c_compile"]="ref_c++_compile";
+	conflictingSteps["ref_c_execute"]="ref_c++_execute";
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
@@ -104,6 +146,7 @@ int main(int argc, char** argv) {
 	setup.store_miss=options.store_miss;
 	setup.flops=options.flops;
 	setup.perf_metrics=options.perf_metrics;
+	setup.executionDir=boost::filesystem::current_path().c_str();
 
 	tf::Colorize colorize(options.color);
 
@@ -111,6 +154,8 @@ int main(int argc, char** argv) {
 	std::set<std::string> highlight;
 	highlight.insert("main_seq_execute");
 	highlight.insert("main_seq_c++_execute");
+	highlight.insert("ref_c++_execute");
+	highlight.insert("ref_c_execute");
 
 	for(int i=1;i<options.statThreads;i*=2){
 		highlight.insert(std::string("main_run_execute_")+std::to_string(i));
@@ -136,6 +181,20 @@ int main(int argc, char** argv) {
 		highlight.insert(std::string("main_run_c++_execute_guid_")+std::to_string(options.statThreads));
 	}
 
+	//check if backup file exists, read results
+        std::ifstream ifs("back.bin");
+	if(ifs.good()){
+		LOG(INFO)<<"Trying recovery from crashed run!";
+		boost::archive::binary_iarchive ia(ifs);
+		tf::Options opt;
+		ia >> opt;
+		//check if backup is compatible with current run
+		if(opt==options)
+		        ia >> allResults;
+		else
+			LOG(WARNING)<<"Backup not compatible, rerun required!";
+	}
+	ifs.close();
 
 	// run test cases in parallel
 	vector<TestCase> ok;
@@ -143,50 +202,63 @@ int main(int argc, char** argv) {
 
 	bool panic = false;
 	int act=0;
-	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
+
     itc::TestRunner& runner = itc::TestRunner::getInstance();
 	for(auto it = cases.begin(); it < cases.end(); it++) {
 		const auto& cur = *it;
 
+		
+
+		bool execute=true;
+		//check if already executed (results in backup file)
+		if(allResults.count(cur)>0)
+			execute=false;
+
 		if (panic) continue;
 
 		// filter applicable steps based on test case
-		vector<TestStep> list = itc::filterSteps(steps, cur);
+		vector<TestStep> list = itc::filterSteps(steps, cur,conflictingSteps);
 		// schedule resulting steps
 		list = itc::scheduleSteps(list,cur,options.statThreads,options.statistics);
-
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
+        	string name=cur.getName();
 
-		map<TestStep,vector<TestResult>> curRes;
-		for(int rep=0;rep<options.num_repeditions;rep++){
-			for(const auto& step : list) {
-				auto res = step.run(setup, cur, runner);
-				curRes[step].push_back(res);
-				if (!res || res.hasBeenAborted()) {
-					success = false;
-					break;
-				}
+	        if(execute) {
+	            map<TestStep,vector<TestResult>> curRes;
+	            for(int rep=0;rep<options.num_repeditions;rep++){
+	                for(const auto& step : list) {
+	                    auto res = step.run(setup, cur, runner);
+	                    curRes[step].push_back(res);
+	                    if (!res || res.hasBeenAborted()) {
+	                        success = false;
+	                        break;
+	                    }
+	                    if(!success)
+	                   	 break;
+	            	}	
 			}
-			if(!success)
-				break;
-		}
-
-		for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
-			TestResult res=steps->second.front();
-			if(options.use_median){
-				std::cout<<"0\n";
-				res=TestResult::returnMedian(steps->second);
-			}
-			else
-				res=TestResult::returnAVG(steps->second);
-			results.push_back(std::make_pair(steps->first,res));
+	                for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
+	                    TestResult res=steps->second.front();
+	                    if(options.use_median){
+	                        res=TestResult::returnMedian(steps->second);
+	                    }
+	                    else
+	                        res=TestResult::returnAVG(steps->second);
+	                        results.push_back(std::make_pair(steps->first,res));
+	                    }
+	                }
+	        
+		// get cached results
+		else{
+			results=allResults[cur];
+			name=name+" -- CACHED";
 		}
 
 		// print test info
 		std::cout << "#------------------------------------------------------------------------------#\n";
-		std::cout << "#\t" << ++act << "/"<< cases.size() << "\t" << format("%-63s",cur.getName()) << "#\n";
+		std::cout << "#\t" << ++act << "/"<< cases.size() << "\t" << format("%-63s",name) << "#\n";
 		std::cout << "#------------------------------------------------------------------------------#\n";
 
 		for(const auto& curRes : results) {
@@ -222,19 +294,28 @@ int main(int argc, char** argv) {
 
 				success = success && curRes.second.wasSuccessfull();
 			}
-			if(options.clean) {
+			if(options.clean && execute) {
 				curRes.second.clean();
 			}
 
-			if (curRes.second.hasBeenAborted()) {
+			if (execute && curRes.second.hasBeenAborted()) {
 				panic = true;
 			}
 		}
 
-		//execute static metrics
-		results.push_back(std::make_pair(itc::StaticMetricsStep(),mr::getStaticMetrics(cur,results)));
-		//save results into global map
-		allResults[cur]=results;
+		if(execute){
+			//execute static metrics
+			results.push_back(std::make_pair(itc::StaticMetricsStep(),mr::getStaticMetrics(cur,results)));
+			//save results into global map
+			allResults[cur]=results;
+		}
+		//save current state into file, for crash recovery
+		remove("back.bin");
+		std::ofstream ofs("back.bin");
+		boost::archive::binary_oarchive oa(ofs);
+		oa<<options;
+		oa<<allResults;
+		ofs.close();
 
 		if(success)
 			std::cout << colorize.green();
@@ -269,7 +350,6 @@ int main(int argc, char** argv) {
 	}
 
 
-
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~ INTEGRATION TEST SUMMARY ~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 	std::cout << format("# TOTAL:          %60d #\n", cases.size());
 	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
@@ -278,6 +358,9 @@ int main(int argc, char** argv) {
 	std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
 	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
+
+	//delete backup file
+	remove("back.bin");
 
 	// done
 	return (failed.empty())?0:1;
@@ -361,7 +444,7 @@ namespace {
 		}
 
 		if(!res.perf && map.count("perf-metric")){
-			LOG(WARNING)<<"Requested perf metrics will not be executed!"<<std::endl;
+			LOG(WARNING)<<"Requested perf metrics will not be executed!";
 		}
 		res.scheduling=map.count("scheduling");
 		res.mockrun = map.count("mock");
@@ -380,12 +463,12 @@ namespace {
 			res.steps.push_back(map["step"].as<string>());
 		}
 		if(res.statThreads<1){
-			LOG(WARNING)<<"Number of threads has to be bigger than 0! Setting numThreads to 1."<<std::endl;
+			LOG(WARNING)<<"Number of threads has to be bigger than 0! Setting numThreads to 1.";
 			res.statThreads=1;
 		}
 
 		if(res.scheduling && res.statThreads<=1){
-			LOG(WARNING)<<"Undefined behaviour if scheduling option is enabled but numThreads not set! Setting numThreads to 2."<<std::endl;
+			LOG(WARNING)<<"Undefined behaviour if scheduling option is enabled but numThreads not set! Setting numThreads to 2.";
 			res.statThreads=2;
 		}
 

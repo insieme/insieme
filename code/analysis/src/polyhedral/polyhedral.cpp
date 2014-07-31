@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <set>
 #include <iomanip>
 
 #include "insieme/utils/logging.h"
@@ -125,8 +126,7 @@ namespace {
 template <class Cont>
 void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, Cont& cont) {
 	
-	auto cmp = [](const Element* lhs, const Element* rhs) -> bool { return *lhs < *rhs; };
-	std::set<const Element*,decltype(cmp)> elements(cmp);
+	std::set<const Element*,compare_target<const Element*>> elements;
 
 	if (!checked.insert(&elem).second) { return; }
 
