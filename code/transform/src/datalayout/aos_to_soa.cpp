@@ -394,6 +394,10 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 		});
 	}
 
+	// if the array has not been marshalled, the entire program has to be considered
+	if(marshalled.empty())
+		marshalled.push_back(toTransform.as<StatementAddress>());
+
 	return marshalled;
 }
 
@@ -474,6 +478,15 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 				replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);
 			}
 		});
+	}
+
+	// if the array has not been marshalled, the entire program has to be considered
+	if(unmarshallingPoints.empty()) {
+		NodeAddress progEnd = toTransform;
+		while(!progEnd.getChildAddresses().empty()) {
+			progEnd = progEnd.getAddressOfChild(progEnd.getChildAddresses().size());
+		}
+		unmarshallingPoints.push_back(progEnd.as<StatementAddress>());
 	}
 
 	return unmarshallingPoints;
@@ -558,9 +571,12 @@ void AosToSoa::replaceScalarStructs(const pattern::AddressMatchOpt& match, const
 	ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 	StructTypePtr newStructType = newVar.getType().as<RefTypePtr>()->getElementType().as<StructTypePtr>();
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
-//	for(NamedTypePtr memberType : newStructType->getElements()) {
-//		values.push_back(std::make_pair<memberType->getName(), builder.deref(builder.arrayRefElem(builder.deref(newVar), index)));
-//	}
+	for(NamedTypePtr memberType : newStructType->getElements()) {
+		StringValuePtr memberName = memberType->getName();
+		ExpressionPtr oldStructAccess = builder.deref(builder.refMember(newVar, memberName));
+		ExpressionPtr oldArrayAccess = builder.deref(builder.arrayAccess(oldStructAccess, index));
+		values.push_back(std::make_pair(memberName, oldArrayAccess));
+	}
 
 	StructExprPtr inplaceUnmarshalled = builder.structExpr(values);
 	if(match.get().isVarBound("decl"))
