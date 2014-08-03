@@ -249,7 +249,8 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			//replace array accesses
 			ExpressionMap structures = replaceAccesses(varReplacements, tta, begin, end, replacements);
 
-			toTransform = core::transform::replaceAll(mgr, replacements);
+			if(!replacements.empty())
+				toTransform = core::transform::replaceAll(mgr, replacements);
 
 			if(!structures.empty())
 				toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
@@ -482,11 +483,14 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 
 	// if the array has not been marshalled, the entire program has to be considered
 	if(unmarshallingPoints.empty()) {
-		NodeAddress progEnd = toTransform;
-		while(!progEnd.getChildAddresses().empty()) {
-			progEnd = progEnd.getAddressOfChild(progEnd.getChildAddresses().size());
-		}
-		unmarshallingPoints.push_back(progEnd.as<StatementAddress>());
+		StatementAddress progEnd;
+//		while(!progEnd.getChildAddresses().empty()) {
+//			progEnd = progEnd.getAddressOfChild(progEnd.getChildAddresses().size()-1);
+//		}
+		visitDepthFirst(toTransform, [&](const StatementAddress& cur) {
+			progEnd = cur;
+		});
+		unmarshallingPoints.push_back(progEnd);
 	}
 
 	return unmarshallingPoints;
