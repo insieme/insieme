@@ -29,41 +29,35 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
-#ifndef __GUARD_META_INFORMATION_META_INFOS_H
-#define __GUARD_META_INFORMATION_META_INFOS_H
+#ifndef __GUARD_COMMON_H
+#define __GUARD_COMMON_H
 
-#include "insieme/common/common.h"
+#ifdef __cplusplus
+	namespace insieme {
+	namespace common {
+#endif // __cplusplus
 
-// build struct definitions
-#include "meta_information/struct_generator.inc"
-#include "insieme/common/meta_infos.def"
+typedef enum {
+	IRT_STATIC = 0,
+	IRT_STATIC_CHUNKED = 1,
+	IRT_DYNAMIC = 10,
+	IRT_DYNAMIC_CHUNKED = 11,
+	IRT_DYNAMIC_CHUNKED_COUNTING = 15,
+	IRT_GUIDED = 20,
+	IRT_GUIDED_CHUNKED = 21,
+	IRT_FIXED = 30,
+	IRT_SHARES = 40
+} irt_loop_sched_policy_type;
 
-// build default table entry definition containing all structs
-struct _irt_meta_info_table_entry {
-#ifdef IRT_META_INFO_TABLE_ENTRY_FIELDS
-	IRT_META_INFO_TABLE_ENTRY_FIELDS
-#else // IRT_META_INFO_TABLE_ENTRY_FIELDS
-	// generate default entry with all values
-	#include "meta_information/default_generator.inc"
-	#include "insieme/common/meta_infos.def"
-#endif // IRT_META_INFO_TABLE_ENTRY_FIELDS
-};
+#ifdef __cplusplus
+	}
+	}
+#endif // __cplusplus
 
-// build accessors for metainformation
-#include "meta_information/accessor_generator.inc"
-#include "insieme/common/meta_infos.def"
-
-// build printer for metainformation
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "meta_information/printer_generator.inc"
-#include "insieme/common/meta_infos.def"
-#pragma GCC diagnostic pop
-
-#endif //#ifndef __GUARD_META_INFORMATION_META_INFOS_H
+#endif // __GUARD_COMMON_H

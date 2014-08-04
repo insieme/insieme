@@ -76,7 +76,7 @@ namespace compiler {
 
 	Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 		Compiler res = base;
-		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "meta_information/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "common/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 		return res;
 	}
 
