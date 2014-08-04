@@ -94,22 +94,22 @@ INFO_STRUCT_BEGIN(opencl)
 	INFO_FIELD(opencl, 	bool,	false)
 INFO_STRUCT_END()
 
-/**
- * A meta information entitiy defining the map of cores to be utilized for processing a parallel region. 
+/*
+ * A struct providing information about region-based autotuning settings
  */
-INFO_STRUCT_BEGIN(core)
+ 
+INFO_STRUCT_BEGIN(autotuning)
+	INFO_FIELD_EXT(frequencies,
+			struct { unsigned size; unsigned* data; },								{ 0 },
+			vector<unsigned>,														toVector(0u)
+	)
 	INFO_FIELD_EXT(map,		
 			struct { unsigned size; unsigned* data; },		 						{ 0 }, 		
 			vector<unsigned>,														toVector(0u)
 	)
-INFO_STRUCT_END()
-
-/*
- * A struct providing information about region-based autotuning settings
- */
-
-INFO_STRUCT_BEGIN(autotuning)
-	INFO_FIELD(frequency,		unsigned,	0)
+	INFO_FIELD(number_of_workers,													unsigned,			0)
+	INFO_FIELD(loop_scheduling,														int,				0)
+	INFO_FIELD(loop_scheduling_chunk_size,											unsigned,			0)
 INFO_STRUCT_END()
 
 // ------------ clear definitions ------------------
