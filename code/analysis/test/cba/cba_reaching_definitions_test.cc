@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,13 +41,8 @@
 
 #include "insieme/analysis/cba/framework/cba.h"
 
-#include "insieme/analysis/cba/analysis/arithmetic.h"
-#include "insieme/analysis/cba/analysis/boolean.h"
-#include "insieme/analysis/cba/analysis/simple_constant.h"
-#include "insieme/analysis/cba/analysis/callables.h"
-#include "insieme/analysis/cba/analysis/call_context.h"
-#include "insieme/analysis/cba/analysis/reachability.h"
-#include "insieme/analysis/cba/analysis/data_paths.h"
+#include "insieme/analysis/cba/analysis/references.h"
+#include "insieme/analysis/cba/framework/generator/reaching_definitions.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -83,12 +78,62 @@ namespace cba {
 
 		CBA analysis(code);
 
-//		EXPECT_EQ("[a={1},b={2}]", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("[a={3},b={4}]", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
-//		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+		// get memory location referenced by the variable a
+		const std::set<Reference<DefaultContext>>& refs = analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getVariable(), R);
+		ASSERT_EQ(1,refs.size());
+		auto loc = refs.begin()->getLocation();
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[0], RDout, DefaultContext(), loc)));
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[1], RDin, DefaultContext(), loc)));
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[1], RDtmp, DefaultContext(), loc)));
+		EXPECT_EQ("{(0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[1], RDout, DefaultContext(), loc)));
+
+		EXPECT_EQ("{(0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[2], RDin, DefaultContext(), loc)));
+		EXPECT_EQ("{(0-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[2], RDtmp, DefaultContext(), loc)));
+		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[2], RDout, DefaultContext(), loc)));
+
+	}
+
+	TEST(CBA, UncertainValue) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		map<string,NodePtr> symbols;
+		symbols["c"] = builder.variable(builder.getLangBasic().getInt4());
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	auto a = var(0);"
+				"	if ( c == 0 ) {"
+				" 		a = 1;"
+				"	} else {"
+				"		a = 2;"
+				"	}"
+				"}",
+				symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// get memory location referenced by the variable a
+		const std::set<Reference<DefaultContext>>& refs = analysis.getValuesOf(code[0].as<DeclarationStmtAddress>()->getVariable(), R);
+		ASSERT_EQ(1,refs.size());
+		auto loc = refs.begin()->getLocation();
+
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[0], RDout, DefaultContext(), loc)));
+
+		// before if
+		EXPECT_EQ("{(0-0-1-1-2-0-1-2-1,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[1], RDin, DefaultContext(), loc)));
+
+		// after if
+		EXPECT_EQ("{(0-1-1-0,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]),(0-1-2-0,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", toString(analysis.getValuesOf(code[1], RDout, DefaultContext(), loc)));
 
 	}
 
