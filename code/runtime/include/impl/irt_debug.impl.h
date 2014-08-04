@@ -65,7 +65,7 @@ void irt_dbg_print_context(irt_context* c) {
 		printf("  Info %3u:\n", i);
 		#define INFO_STRUCT_BEGIN(__name) \
 		printf("    "); irt_meta_info_print_##__name(stdout, m); printf("\n");
-		#include "insieme/meta_information/meta_infos.def"
+		#include "insieme/common/meta_infos.def"
 	}
 	printf("--------\n");
 }

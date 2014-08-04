@@ -95,38 +95,38 @@ namespace annotations {
 	// include the actual definitions
 
 	#include "insieme/annotations/meta_info/generators/enum.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/struct.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/equals.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/clone.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/dump_type.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/dump_to.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	#include "insieme/annotations/meta_info/generators/dump_from.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 
 	inline bool isMetaInfo(const insieme::core::NodeAnnotationPtr& ptr) {
 		return false
 		#define INFO_STRUCT_BEGIN(_name) \
 				|| dynamic_pointer_cast<insieme::core::value_node_annotation<_name##_info>::type>(ptr)
-		#include "insieme/meta_information/meta_infos.def"
+		#include "insieme/common/meta_infos.def"
 		;
 	}
 
 	inline void clearMetaInfos(const insieme::core::NodePtr& ptr) {
 		#define INFO_STRUCT_BEGIN(_name) \
 			ptr->detachValue<_name ## _info>();
-		#include "insieme/meta_information/meta_infos.def"
+		#include "insieme/common/meta_infos.def"
 	}
 
 	#include "insieme/annotations/meta_info/generators/clear.inc"

@@ -17,7 +17,7 @@ include_directories( ${insieme_frontend_include_dir} ) #REMOVE: added only for o
 include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_analysis_include_dir} )
 include_directories( ${insieme_backend_include_dir} )
-include_directories( ${insieme_meta_information_include_dir} )
+include_directories( ${insieme_common_include_dir} )
 
 # Build the core library
 add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs} )
