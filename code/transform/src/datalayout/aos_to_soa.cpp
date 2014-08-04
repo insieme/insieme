@@ -170,10 +170,25 @@ pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePat
 	return assign | decl;
 }
 
+template<typename T>
+VariablePtr expressionContainsMarshallingCandidate(const utils::map::PointerMap<VariablePtr, T>& candidates, const ExpressionPtr& expr) {
+	for(std::pair<VariablePtr, T> candidate : candidates) {
+		pattern::TreePattern cp = pattern::aT(pattern::atom(candidate.first));
+
+		pattern::MatchOpt match = cp.matchPointer(expr);
+		if(match) {
+			return candidate.first;
+		}
+
+	}
+
+	return VariablePtr();
+}
+
 AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
 	IRBuilder builder(mgr);
 
-	std::map<VariablePtr, RefTypePtr> structs = findCandidates(toTransform);
+	utils::map::PointerMap<VariablePtr, RefTypePtr> structs = findCandidates(toTransform);
 
 	std::map<NodeAddress, NodePtr> replacements;
 	NodeAddress tta(toTransform);
@@ -210,7 +225,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, newStructType).as<RefTypePtr>();
 			newVar = builder.variable(newType);
 
-			// replace declaration with compound statement containing the declaration itself, the
+			// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
 			StatementList allDecls;
 			allDecls.push_back(decl);
 			allDecls.push_back(builder.declarationStmt(newVar, builder.undefinedVar(newType)));
@@ -263,14 +278,17 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 //dumpPretty(toTransform);
 }
 
-std::map<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr toTransform) {
-	std::map<VariablePtr, RefTypePtr> structs;
+utils::map::PointerMap<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr toTransform) {
+	utils::map::PointerMap<VariablePtr, RefTypePtr> structs;
 
 	pattern::TreePattern structVar = pirp::variable(pattern::aT(var("structType", pirp::refType(pirp::arrayType(
 			pirp::structType(*pattern::any))))));
+	pattern::TreePattern structVarDecl = pirp::declarationStmt(var("structVar", structVar), var("init", pattern::any));
 
-	pirp::matchAllPairs(structVar, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
-		structs[match.as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
+	pirp::matchAllPairs(structVarDecl, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
+		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
+		if(!expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionPtr>()))
+			structs[nm["structVar"].getValue().as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
 	});
 
 	return structs;
@@ -747,7 +765,42 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return newCall;
 	}
 
-	return element;
+	if(DeclarationStmtPtr decl = element.isa<DeclarationStmtPtr>()) {
+		StructTypePtr newType;
+		// check type
+		if(RefTypePtr refTy = decl->getVariable()->getType().isa<RefTypePtr>())
+			if(RefTypePtr refRefTy = refTy->getElementType().isa<RefTypePtr>())
+				if(ArrayTypePtr refRefArrayTy = refRefTy->getElementType().isa<ArrayTypePtr>())
+					if(StructTypePtr refRefArrayStructTy = refRefArrayTy->getElementType().isa<StructTypePtr>())
+						newType = refRefArrayStructTy;
+					else return element->substitute(mgr, *this);
+				else return element->substitute(mgr, *this);
+			else return element->substitute(mgr, *this);
+		else return element->substitute(mgr, *this);
+
+		ExpressionPtr oldInit = decl->getInitialization();
+		VariablePtr oldLocalVar = expressionContainsMarshallingCandidate(varReplacements, oldInit);
+		if(oldLocalVar) {
+			IRBuilder builder(mgr);
+
+			VariablePtr newLocalVar = builder.variable(newVar->getType());
+			varReplacements[decl->getVariable()] = newLocalVar;
+
+			vector<std::pair<StringValuePtr, ExpressionPtr>> values;
+			for(NamedTypePtr value : newType->getEntries()) {
+				ExpressionPtr fieldInit = builder.deref(builder.refMember(newVar, value->getName()));
+				values.push_back(std::make_pair(value->getName(), fieldInit));
+			}
+
+
+			StructExprPtr fieldAccesses = builder.structExpr(values);
+
+			return builder.declarationStmt(newLocalVar, builder.refVar(fieldAccesses));
+					//core::transform::replaceAll(mgr, oldInit, oldLocalVar, varReplacements[oldLocalVar]).as<ExpressionPtr>());
+		}
+	}
+
+	return element->substitute(mgr, *this);
 }
 
 } // datalayout
