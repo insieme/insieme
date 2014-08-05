@@ -1431,58 +1431,7 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
-		// NOTE:
-		// it might be that a the typedef encloses an anonymous struct declaration, in that case
-		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
-		if (const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)){
-			if (core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()){
 
-				VLOG(2) << "typedef of an anonymous type, forward the name: ";
-				VLOG(2) << "    -" << res;
-
-				core::TypePtr trgTy =  lookupTypeDetails(symb);
-				// a new generic type will point to the previous translation unit decl
-				if (core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()){
-
-					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal ();
-
-					// build a name for the thing
-					std::string name = utils::getNameForRecord(typedefDecl, typedefType, getSourceManager());
-					core::GenericTypePtr gen = builder.genericType(name);
-
-					core::TypePtr impl = symb;
-					// if target is an annonymous type, we create a new type with the name of the typedef
-					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
-					if (namedType->getName()->getValue() == ""){
-
-						if (auto structTy = namedType.isa<core::StructTypePtr>()){
-							impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
-						}
-						else if (auto unionTy = namedType.isa<core::UnionTypePtr>()){
-							impl = builder.unionType (builder.stringValue(name), unionTy->getEntries());
-						}
-						else{
-							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
-						}
-
-						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), impl);
-						core::annotations::attachName(impl,name);
-
-						//if( decl && getHeaderTagger().isDefinedInSystemHeader(typedefDecl) ) {
-							//if the typeDef oft the anonymous type was done in a system header we need to
-							//annotate to enable the backend to avoid re-declaring the type
-							VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
-							getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
-						//}
-						VLOG(2) << "    -" << gen;
-						typeCache[typedefType] = gen;
-					}
-
-					getIRTranslationUnit().addType(gen, impl);
-					res = gen;
-				}
-			}
-		}
 	}
 
     // frequently structs and their type definitions have the same name

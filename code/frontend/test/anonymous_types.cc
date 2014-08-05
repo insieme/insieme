@@ -161,19 +161,6 @@ namespace frontend {
 
 		Source src(
 				R"(
-					typedef struct {
-						int a;    
-						int b;         
-					} A;
-
-					void f(const A* ptr){
-					}
-																						    
-					typedef A X[1];
-
-					struct wrap{
-						X field;
-					};
 
 					template <typename T>
 					struct handle {
@@ -187,6 +174,20 @@ namespace frontend {
 							return &(field.t);
 						}
 
+					};
+
+					typedef struct {
+						int a;    
+						int b;         
+					} A;
+
+					void f(const A* ptr){
+					}
+																						    
+					typedef A X[1];
+
+					struct wrap{
+						X field;
 					};
 
 					struct C : public handle<wrap>{
@@ -210,7 +211,7 @@ namespace frontend {
 
 		auto res = builder.normalize(cj.execute(mgr));
 
-		dumpPretty(res);
+	//	dumpPretty(res);
 		auto msg = insieme::core::checks::check(res);
 		if(!msg.empty()) {
 			for(auto m: msg.getErrors()) {
@@ -220,5 +221,76 @@ namespace frontend {
 		EXPECT_TRUE(msg.empty());	
 	}
 
+	TEST(AnonymousTypes, Union) {
+		Source src(
+				R"(
+
+					typedef union{
+						int a;
+						double b;
+					} mytype;
+
+					int main() {
+						mytype a;
+						a.a = 1;
+						mytype n;
+						a.b = 1.0;
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		ConversionJob cj(src);
+		cj.setStandard(ConversionSetup::Cxx03);
+
+		auto res = builder.normalize(cj.execute(mgr));
+
+	//	dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m: msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
+		}
+		EXPECT_TRUE(msg.empty());	
+	}
+	
+	TEST(AnonymousTypes, Nested) {
+		Source src(
+				R"(
+
+					typedef struct{
+						int a;
+					} B;
+
+					typedef struct{
+						B a;
+					} A;
+
+					int main() {
+						A var;
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		ConversionJob cj(src);
+		cj.setStandard(ConversionSetup::Cxx03);
+
+		auto res = builder.normalize(cj.execute(mgr));
+
+		dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m: msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
+		}
+		EXPECT_TRUE(msg.empty());	
+	}
 } // end namespace frontend
 } // end namespace insieme

@@ -64,6 +64,7 @@
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
+#include "insieme/frontend/extensions/anonymous_rename.h"
 
 namespace insieme {
 namespace frontend {
@@ -95,6 +96,7 @@ namespace frontend {
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
 		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
+		registerFrontendPlugin<extensions::AnonymousRename>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();
