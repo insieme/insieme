@@ -1196,6 +1196,15 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			}
 		}
 
+		if (inits[0].getType() == elementType){
+			if (inits.size()==1) return inits[0];
+			ExpressionList elements;
+			for (size_t i = 0; i < inits.size(); ++i) {
+				elements.push_back(inits[0]);
+			}
+			return (retIr = builder.vectorExpr(elements));
+		}
+
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
 		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;

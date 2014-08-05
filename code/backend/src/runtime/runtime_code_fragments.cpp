@@ -576,8 +576,6 @@ namespace runtime {
 			if (isEncodedList(expr)) {
 				vector<core::ExpressionPtr> list = decodeList(expr);
 
-				std::cout << "List: " << list << "\n";
-
 				// create initializer
 				c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>();
 
@@ -678,7 +676,7 @@ namespace runtime {
 		// collect all meta info structs
 		std::vector<string> infoStructs;
 		#define INFO_STRUCT_BEGIN(_name) infoStructs.push_back(#_name);
-		#include "insieme/meta_information/meta_infos.def"
+		#include "insieme/common/meta_infos.def"
 		#undef INFO_STRUCT_BEGIN
 
 		// collect all defaults
@@ -688,7 +686,7 @@ namespace runtime {
 
 		#define INFO_STRUCT_BEGIN(_name) cur = &defaults[#_name];
 		#define INFO_FIELD_EXT(_name,_a,_default,_b,_c) cur->push_back(#_default);
-		#include "insieme/meta_information/meta_infos.def"
+		#include "insieme/common/meta_infos.def"
 		#undef INFO_STRUCT_BEGIN
 
 		out <<

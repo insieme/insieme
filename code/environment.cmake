@@ -45,7 +45,7 @@ set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include
 
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
 
-set ( insieme_meta_information_include_dir 	${insieme_code_dir}/meta_information/include )
+set ( insieme_common_include_dir 		${insieme_code_dir}/common/include )
 
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 

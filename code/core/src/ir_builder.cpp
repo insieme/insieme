@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1119,7 +1119,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     VariableList params;
     vector<ExpressionPtr> callArgs;
 
-    utils::map::PointerMap<ExpressionPtr, ExpressionPtr> replVariableMap;
+    vector<pair<ExpressionPtr, ExpressionPtr> > replVariableMap;
 	for(const core::ExpressionPtr& curr : args){
 		assert(curr->getNodeType() == core::NT_Variable);
 
@@ -1133,8 +1133,8 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			argsType.push_back( parmVar->getType() );
 			params.push_back( parmVar );
 			callArgs.push_back(this->deref(bodyVar));
-			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
-			replVariableMap.insert( std::make_pair(bodyVar, refVar(parmVar)) );
+			replVariableMap.push_back( std::make_pair(deref(bodyVar), parmVar) );
+			replVariableMap.push_back( std::make_pair(bodyVar, refVar(parmVar)) );
 		}
 		else{
 			// we create a new variable to replace the captured variable
@@ -1142,7 +1142,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			argsType.push_back( varType );
 			params.push_back( parmVar );
 			callArgs.push_back(curr);
-			replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+			replVariableMap.push_back( std::make_pair(bodyVar, parmVar) );
 		}
 	}
 

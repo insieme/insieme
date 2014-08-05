@@ -425,7 +425,7 @@ public:
 	};
 
 
-	CFG() { }
+	CFG() : currId(0) { }
 
 	/**
 	 * Adds a CFG block (or node) to the Control flow graph.

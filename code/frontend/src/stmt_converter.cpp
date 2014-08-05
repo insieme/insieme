@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -112,7 +112,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 
 //		} catch ( const GlobalVariableDeclarationException& err ) {}
 	}
-
 	return retList;
 }
 
@@ -211,7 +210,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 
 	stmtutils::StmtWrapper retStmt;
     LOG_STMT_CONVERSION( forStmt, retStmt );
-	
+
 	try {
 		// Analyze loop for induction variable
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
@@ -227,7 +226,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 
 					if (cur.isa<core::LambdaExprPtr>() || cur.isa<core::ForStmtPtr>() || cur.isa<core::WhileStmtPtr>() || cur.isa<core::SwitchStmtPtr>())
 						return true;
-					else 
+					else
                         return false;
                         });
         if(breakStmtFound)
@@ -367,7 +366,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 			);
 		}
 	}
-	
+
 	return retStmt;
 }
 
@@ -591,6 +590,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	frontend_assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
 	std::map <core::LiteralPtr, std::vector<core::StatementPtr> > caseMap;
+	vector<core::StatementPtr> decls;
 	std::vector <core::LiteralPtr> openCases;
 	auto defLit = builder.literal("__insieme_default_case", gen.getUnit());
 
@@ -638,8 +638,31 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 				caseLiteral = caseExprIr.as<core::LiteralPtr>();
 			}
 		}
+
 		return caseLiteral;
 	};
+
+    auto handleDeclStmt = [this, &decls] (const clang::DeclStmt* declStmt) {
+        auto result = convFact.convertStmt(declStmt);
+        core::DeclarationStmtPtr decl;
+        if(result.isa<core::CompoundStmtPtr>()) {
+            core::CompoundStmtPtr comp = result.as<core::CompoundStmtPtr>();
+            for(auto st : comp) {
+                frontend_assert( st.isa<core::DeclarationStmtPtr>() && "Declaration stmt inside of SwitchStmt contains unknown elements.");
+                decl = st.as<core::DeclarationStmtPtr>();
+                // remove the init, use undefinedvar
+                // this is what GCC does, VC simply errors out
+                decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+                decls.push_back(decl);
+            }
+        } else {
+            decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
+            // remove the init, use undefinedvar
+            // this is what GCC does, VC simply errors out
+            decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+            decls.push_back(decl);
+        }
+    };
 
 	// looks for inner cases inside of cases stmt, and returns the compound attached
 	// 			case A
@@ -647,7 +670,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 	// 					stmt1
 	// 					stmt2
 	// 			break
-	auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases] (const clang::SwitchCase* caseStmt) {
+	auto lookForCases = [this, &caseMap, &openCases, &decls, convertCase, addStmtToOpenCases, handleDeclStmt] (const clang::SwitchCase* caseStmt) {
 		const clang::Stmt* stmt = caseStmt;
 
 		// we might find some chained stmts
@@ -660,17 +683,21 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 
 		// after the case statements, we might find the statements to be executed
 		if (stmt){
-			addStmtToOpenCases(convFact.convertStmt(stmt));
+            //it may happen that the first stmt after the case is a declstmt.
+            //in this case we need to convert it and save it in the decl list.
+            if(const clang::DeclStmt* declStmt = dyn_cast<clang::DeclStmt>(stmt)) {
+                handleDeclStmt(declStmt);
+            } else {
+                addStmtToOpenCases(convFact.convertStmt(stmt));
+            }
 		}
 	};
 
 	// iterate throw statements inside of switch
 	clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
 	frontend_assert( compStmt && "Switch statements doesn't contain a compound stmt");
-	vector<core::StatementPtr> decls;
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* currStmt = *it;
-
 		// if is a case stmt, create a literal and open it
 		if ( const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt) ){
 			lookForCases (switchCaseStmt);
@@ -678,12 +705,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		} else if( const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt) ) {
 			// collect all declarations which are in de switch body and add them (without init) to
 			// the cases
-			core::DeclarationStmtPtr decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
-
-			// remove the init, use undefinedvar
-			// this is what GCC does, VC simply errors out
-			decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
-			decls.push_back(decl);
+			handleDeclStmt(declStmt);
 			continue;
 		}
 
@@ -868,7 +890,7 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
     for(auto plugin : convFact.getConversionSetup().getPlugins()) {
         retStmt = plugin->PostVisit(stmt, retStmt, convFact);
     }
-	
+
     return retStmt;
 }
 

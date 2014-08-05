@@ -38,22 +38,16 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/pattern/pattern.h"
 
 namespace insieme {
-
-namespace core {
-namespace pattern {
-	class TreePattern;
-}
-}
-
 namespace transform {
 namespace datalayout {
 
 class AosToSoa {
 	core::NodeManager& mgr;
 
-	virtual std::map<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
+	virtual utils::map::PointerMap<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
@@ -74,9 +68,13 @@ class AosToSoa {
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::StatementAddress& begin,
 			const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	void replaceAccesses(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
+	core::ExpressionMap replaceAccesses(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
 			const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	void replaceScalarStructs(const core::pattern::AddressMatchOpt& match, const core::VariablePtr& newVar,
+			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+	void updateScalarStructAccesses(core::NodePtr& toTransform);
 
 	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::VariablePtr& oldVar, const core::VariablePtr& newVar,
 			const core::StructTypePtr& newStructType);

@@ -431,7 +431,7 @@ namespace integration {
 					// add runtime include directories
 					if (backend == Runtime) {			// TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
 						cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
-						cmd << " -I "<< SRC_ROOT_DIR << "meta_information/include";
+						cmd << " -I "<< SRC_ROOT_DIR << "common/include";
 					}
 
 					// add include directories
