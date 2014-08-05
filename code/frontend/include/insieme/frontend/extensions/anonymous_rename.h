@@ -54,7 +54,8 @@ using namespace insieme;
  */
 class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 
-	core::NodeMap typedefTypes;
+	core::NodeMap renamedTypesDefinitions;
+	core::NodeMap renamedTypesDeclarations;
 
     core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
                                                 insieme::frontend::conversion::Converter& convFact){
@@ -79,45 +80,64 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 					std::string name = utils::getNameForRecord(typedefDecl, typedefType, convFact.getSourceManager());
 					core::GenericTypePtr gen = builder.genericType(name);
 
-					core::TypePtr impl = symb;
+					core::TypePtr definition = symb;
 					// if target is an annonymous type, we create a new type with the name of the typedef
 					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
 					if (namedType->getName()->getValue() == ""){
 
 						if (auto structTy = namedType.isa<core::StructTypePtr>()){
-							impl = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+							definition = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
 						}
 						else if (auto unionTy = namedType.isa<core::UnionTypePtr>()){
-							impl = builder.unionType (builder.stringValue(name), unionTy->getEntries());
+							definition = builder.unionType (builder.stringValue(name), unionTy->getEntries());
 						}
 						else{
 							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
 						}
 
-						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), impl);
-						core::annotations::attachName(impl,name);
-						VLOG(2) << "isDefinedInSystemHeaders " << name << " " << impl;
-						convFact.getHeaderTagger().addHeaderForDecl(impl, typedefDecl);
+						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), definition);
+						core::annotations::attachName(definition,name);
+						convFact.getHeaderTagger().addHeaderForDecl(definition, typedefDecl);
 
-						VLOG(2) << "    -" << gen;
+						// just before end, solve nested anonymous issues
+						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypesDefinitions, false);
+						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypesDeclarations, false);
 
-						typedefTypes[trgTy] = impl;
+						// replace all recursive usages
+						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, trgTy, gen, false);
+
+
+						std::cout << "rename: " << trgTy << " => " << definition << std::endl;
+
+						// store for a later solver
+						renamedTypesDefinitions[trgTy] = definition;
+						renamedTypesDeclarations[symb] = gen;
+						convFact.getIRTranslationUnit().addType(gen, definition);
+
 						return gen;
 					}
 				}
 			}
 		}
+
         return nullptr;
     }
 	frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
 
-	//	first fix nested anonymous types
+		for (auto x : renamedTypesDefinitions){
+			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
+		}
+		for (auto x : renamedTypesDeclarations){
+			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
+		}
 
 		for (auto& pair : tu.getFunctions()) {
 			core::ExpressionPtr lit = pair.first;
 			core::LambdaExprPtr func = pair.second;
-			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, typedefTypes, false);
-			func = core::transform::replaceAllGen (lit->getNodeManager(), func, typedefTypes, false);
+			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDefinitions, false);
+			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypesDefinitions, false);
+			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDeclarations, false);
+			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypesDeclarations, false);
 			tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
 		}
 		for (auto& g : tu.getGlobals()) {
@@ -125,8 +145,10 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 			core::LiteralPtr symbol = g.first;
 			core::ExpressionPtr init = g.second;
 
-			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, typedefTypes, false);
-			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, typedefTypes, false);
+			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypesDefinitions, false);
+			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypesDefinitions, false);
+			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypesDeclarations, false);
+			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypesDeclarations, false);
 			auto global =  std::make_pair(symbol, init);
 			tu.replaceGlobal(g,global);
 		}	
@@ -134,8 +156,10 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 			core::GenericTypePtr lit = pair.first;
 			core::TypePtr definition = pair.second;
 
-			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, typedefTypes, false);
-			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, typedefTypes, false);
+			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDefinitions, false);
+			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypesDefinitions, false);
+			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDeclarations, false);
+			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypesDeclarations, false);
 			tu.replaceType(lit, definition);
 		}
 		return tu;
