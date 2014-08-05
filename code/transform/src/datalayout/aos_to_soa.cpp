@@ -243,7 +243,8 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			toTransform = core::transform::replaceAll(mgr, replacements);
 
 			VariableMap varReplacements;
-			VariableAdder varAdd(oldVar, newVar, varReplacements);
+			varReplacements[oldVar] = newVar;
+			VariableAdder varAdd(mgr, varReplacements);
 			toTransform = varAdd.mapElement(0, toTransform);
 
 			tta = NodeAddress(toTransform);
@@ -300,7 +301,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	NodeRange<NamedTypePtr> member = oldType->getElements();
 	std::vector<NamedTypePtr> newMember;
 	for(NamedTypePtr memberType : member) {
-	//			std::cout << "member: " << memberType << std::endl;
+//			std::cout << "member: " << memberType << std::endl;
 		newMember.push_back(builder.namedType(memberType->getName(), builder.refType(builder.arrayType(memberType->getType()))));
 
 	}
@@ -706,6 +707,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element;
 	}
 
+	pattern::TreePattern variablePattern = pirp::variable(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
@@ -721,14 +723,22 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 
 		std::vector<ExpressionPtr> args(call->getArguments());
 
-		pattern::TreePattern isOldVarArg = pattern::atom(oldVar) | pirp::refDeref(pattern::atom(oldVar));
+		pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
+		pattern::TreePattern isOldVarArg = namedVariablePattern | pirp::refDeref(namedVariablePattern);
 		ExpressionPtr oldVarArg;
+		VariablePtr oldVar, newVar;
 
 		int idx = 0;
 		for(ExpressionPtr arg : args) {
-			if(isOldVarArg.match(arg)) {
-				oldVarArg = arg;
-				break;
+			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
+			if(match) {
+				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<VariablePtr>());
+				if(varCheck != varReplacements.end()) {
+					oldVarArg = arg;
+					oldVar = varCheck->first;
+					newVar = varCheck->second;
+					break;
+				}
 			}
 			++idx;
 		}
@@ -751,8 +761,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 
 		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
 
-		VariableAdder vaForInnserScope(params[idx], params.back(), varReplacements);
-		StatementPtr newBody = vaForInnserScope.mapElement(0, lambdaExpr->getBody()).as<StatementPtr>();
+		StatementPtr newBody = lambdaExpr->getBody()->substitute(mgr, *this);
 
 		LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
 		CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
@@ -767,7 +776,8 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 
 	if(DeclarationStmtPtr decl = element.isa<DeclarationStmtPtr>()) {
 		StructTypePtr newType;
-		// check type
+
+		// check type, not needed any more for correctness but should be a little bit faster on most programs
 		if(RefTypePtr refTy = decl->getVariable()->getType().isa<RefTypePtr>())
 			if(RefTypePtr refRefTy = refTy->getElementType().isa<RefTypePtr>())
 				if(ArrayTypePtr refRefArrayTy = refRefTy->getElementType().isa<ArrayTypePtr>())
@@ -778,25 +788,40 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			else return element->substitute(mgr, *this);
 		else return element->substitute(mgr, *this);
 
-		ExpressionPtr oldInit = decl->getInitialization();
-		VariablePtr oldLocalVar = expressionContainsMarshallingCandidate(varReplacements, oldInit);
-		if(oldLocalVar) {
+		pattern::TreePattern declaredVar = var("declaredVar", variablePattern);
+		pattern::TreePattern usedVar = var("usedVar", variablePattern);
+		pattern::TreePattern initValue = var("initValue", pattern::aT(usedVar));
+		pattern::TreePattern declOfAdditionalVar = pirp::declarationStmt(declaredVar, pirp::refVar(initValue));
+		pattern::MatchOpt match = declOfAdditionalVar.matchPointer(decl);
+
+		if(match) {
 			IRBuilder builder(mgr);
+			VariablePtr oldVar = match.get()["usedVar"].getValue().as<VariablePtr>();
 
-			VariablePtr newLocalVar = builder.variable(newVar->getType());
-			varReplacements[decl->getVariable()] = newLocalVar;
+			auto check = varReplacements.find(oldVar);
+			if(check == varReplacements.end())
+				return element->substitute(mgr, *this);
 
+			VariablePtr newVar = check->second;
+
+			VariablePtr oldDeclaredVar = decl->getVariable();
+			VariablePtr newDeclaredVar = builder.variable(newVar->getType());
+			varReplacements[oldDeclaredVar] = newDeclaredVar;
+
+			// getting the address in each array of the corresponding field to initialize the new variable
 			vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 			for(NamedTypePtr value : newType->getEntries()) {
-				ExpressionPtr fieldInit = builder.deref(builder.refMember(newVar, value->getName()));
+				ExpressionPtr fieldInit = core::transform::replaceAll(mgr, match.get()["initValue"].getValue(), oldVar,
+						builder.refMember(newVar, value->getName())).as<ExpressionPtr>();
+				fieldInit = core::transform::fixTypesGen(mgr, fieldInit, VariableMap(), true );
 				values.push_back(std::make_pair(value->getName(), fieldInit));
 			}
 
 
 			StructExprPtr fieldAccesses = builder.structExpr(values);
 
-			return builder.declarationStmt(newLocalVar, builder.refVar(fieldAccesses));
-					//core::transform::replaceAll(mgr, oldInit, oldLocalVar, varReplacements[oldLocalVar]).as<ExpressionPtr>());
+			return builder.declarationStmt(newDeclaredVar, builder.refVar(fieldAccesses));
+					//core::transform::replaceAll(mgr, oldInit, oldLocalVar, varReplacements[oldVar]).as<ExpressionPtr>());
 		}
 	}
 
