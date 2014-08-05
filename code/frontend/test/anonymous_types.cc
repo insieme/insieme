@@ -149,5 +149,76 @@ namespace frontend {
 		RUN_SEMA(res);
 	}
 
+	TEST(AnonymousTypes, Tempalated) {
+		// TRACK THIS ERROR
+	//struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+	//struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+	//
+     //return RefIRToConstCpp(fun000(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type003>>, type<type003>))&[0])&[0]->mpZ);
+	 //return RefIRToConstCpp(fun001(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type001>>, type<type001>))&[0])&[0]->a);
+	 //
+
+
+		Source src(
+				R"(
+					typedef struct {
+						int a;    
+						int b;         
+					} A;
+
+					void f(const A* ptr){
+					}
+																						    
+					typedef A X[1];
+
+					struct wrap{
+						X field;
+					};
+
+					template <typename T>
+					struct handle {
+						struct block{
+							T t;
+						} field;
+
+						typedef T element_type;
+
+						const element_type* Ptr() const{
+							return &(field.t);
+						}
+
+					};
+
+					struct C : public handle<wrap>{
+						const X& getConstRef()const {
+							return Ptr()->field;
+						}
+					};
+
+					int main() {
+						C obj;
+						f(obj.getConstRef());
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		ConversionJob cj(src);
+		cj.setStandard(ConversionSetup::Cxx03);
+
+		auto res = builder.normalize(cj.execute(mgr));
+
+		dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m: msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
+		}
+		EXPECT_TRUE(msg.empty());	
+	}
+
 } // end namespace frontend
 } // end namespace insieme
