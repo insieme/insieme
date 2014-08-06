@@ -64,7 +64,6 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
 
-	std::cout << CLANG_SRC_DIR << std::endl;
 	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.registerFrontendPlugin<frontend::extensions::OclKernelPlugin>();
