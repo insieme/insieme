@@ -160,6 +160,14 @@ namespace tu {
 			assert(types.find(symbol) != types.end());
 			types[symbol] = definition;
 		}
+		void substituteType (const core::GenericTypePtr& oldSymbol, const core::GenericTypePtr& newSymbol, const core::TypePtr& definition) {
+			assert(oldSymbol );
+			assert(newSymbol );
+			assert(definition);
+			assert(types.find(oldSymbol) != types.end());
+			types.erase(oldSymbol);
+			types[newSymbol] = definition;
+		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());

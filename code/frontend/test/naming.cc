@@ -102,18 +102,24 @@ namespace frontend {
 
 		{
 			core::TypePtr type = body[0].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			EXPECT_EQ (toString(type), "AP(ref<struct name <a:int<4>>>)");
+			type = type.as<core::RefTypePtr>()->getElementType();
+			EXPECT_EQ (toString(type), "AP(struct name <a:int<4>>)");
 			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_EQ (core::annotations::getAttachedName(type), "name");
 		}
 		{
 			core::TypePtr type = body[1].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			EXPECT_EQ (toString(type), "AP(ref<struct oldname <a:int<4>>>)");
+			type = type.as<core::RefTypePtr>()->getElementType();
+			EXPECT_EQ (toString(type), "AP(struct oldname <a:int<4>>)");
 			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_EQ (core::annotations::getAttachedName(type), "oldname");
 		}
 		{
 			core::TypePtr type = body[2].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			EXPECT_EQ (toString(type), "AP(ref<struct anon_renamed <a:int<4>>>)");
+			type = type.as<core::RefTypePtr>()->getElementType();
+			EXPECT_EQ (toString(type), "AP(struct anon_renamed <a:int<4>>)");
 			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_EQ (core::annotations::getAttachedName(type), "anon_renamed");
 		}
 
 	}

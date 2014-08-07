@@ -98,6 +98,8 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), definition);
 						core::annotations::attachName(definition,name);
 						convFact.getHeaderTagger().addHeaderForDecl(definition, typedefDecl);
+						core::annotations::attachName(gen,name);
+						convFact.getHeaderTagger().addHeaderForDecl(gen, typedefDecl);
 
 						// just before end, solve nested anonymous issues
 						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypeDefinitions, false);
@@ -106,12 +108,9 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 						// replace all recursive usages
 						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, trgTy, gen, false);
 
-
-						std::cout << "rename: " << trgTy << " => " << definition << std::endl;
-
 						// store for a later solver
-						renamedTypeDefinitions[trgTy] = definition;
 						renamedTypeDeclarations[symb] = gen;
+						renamedTypeDefinitions[trgTy] = definition;
 						convFact.getIRTranslationUnit().addType(gen, definition);
 
 						return gen;
@@ -122,22 +121,13 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 
         return nullptr;
     }
+
+
+
 	frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
 
-		for (auto x : renamedTypeDefinitions){
-			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
-			if (core::annotations::hasNameAttached(x.second)){
-				std::cout << "\t- " << core::annotations::getAttachedName(x.second) << std::endl;
-			}
-		}
-		for (auto x : renamedTypeDeclarations){
-			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
-			if (core::annotations::hasNameAttached(x.second)){
-				std::cout << "\t- " << core::annotations::getAttachedName(x.second) << std::endl;
-			}
-		}
-
-		std::map<core::LiteralPtr, std::pair<core::LiteralPtr, core::LambdaExprPtr>> tuCorrections;
+		// correct functions
+		std::map<core::LiteralPtr, std::pair<core::LiteralPtr, core::LambdaExprPtr>> tuFuncCorrections;
 		for (auto& pair : tu.getFunctions()) {
 			core::LiteralPtr lit = pair.first.as<core::LiteralPtr>();
 			core::LambdaExprPtr func = pair.second;
@@ -148,12 +138,13 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 			auto newlit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDefinitions, false);
 			newlit  = core::transform::replaceAllGen (lit->getNodeManager(), newlit, renamedTypeDeclarations, false);
 
-			tuCorrections[lit] = {newlit, func};
+			tuFuncCorrections[lit] = {newlit, func};
 		}
-		for (const auto& pair : tuCorrections){
+		for (const auto& pair : tuFuncCorrections){
 			tu.substituteFunction(pair.first, pair.second.first, pair.second.second);
 		}
 
+		// correct globals
 		for (auto& g : tu.getGlobals()) {
 
 			core::LiteralPtr symbol = g.first;
@@ -167,16 +158,25 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 			auto global =  std::make_pair(symbol, init);
 			tu.replaceGlobal(g,global);
 		}	
+
+		// correct types
+		std::map<core::GenericTypePtr, std::pair<core::GenericTypePtr, core::TypePtr>> tuTypeCorrections;
 		for (auto& pair : tu.getTypes()) {
 			core::GenericTypePtr lit = pair.first;
 			core::TypePtr definition = pair.second;
 
-			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDefinitions, false);
 			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypeDefinitions, false);
-			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDeclarations, false);
 			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypeDeclarations, false);
-			tu.replaceType(lit, definition);
+			core::GenericTypePtr newType   = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDefinitions, false);
+			newType                        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDeclarations, false);
+
+			tuTypeCorrections[lit] = {newType, definition};
 		}
+		for (const auto& pair : tuTypeCorrections){
+			tu.substituteType(pair.first, pair.second.first, pair.second.second);
+		}
+
+
 		return tu;
 	}
 
