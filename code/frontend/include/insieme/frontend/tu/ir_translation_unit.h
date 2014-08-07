@@ -190,6 +190,18 @@ namespace tu {
 			assert(functions.find(symbol) != functions.end());
 			functions[symbol] = definition;
 		}
+		/**
+		 * replaces previus definition and changes the symbold that points to it
+		 */
+		void substituteFunction(const core::LiteralPtr& oldSymbol,
+								const core::LiteralPtr& newSymbol,
+								const core::LambdaExprPtr& definition){
+
+			assert_eq(*newSymbol->getType(), *definition->getType());
+			assert(functions.find(oldSymbol) != functions.end());
+			functions.erase(oldSymbol);
+			functions[newSymbol] = definition;
+		}
 
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
 			addGlobal(Global(symbol, definition));

@@ -54,8 +54,8 @@ using namespace insieme;
  */
 class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 
-	core::NodeMap renamedTypesDefinitions;
-	core::NodeMap renamedTypesDeclarations;
+	core::NodeMap renamedTypeDefinitions;
+	core::NodeMap renamedTypeDeclarations;
 
     core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
                                                 insieme::frontend::conversion::Converter& convFact){
@@ -100,8 +100,8 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 						convFact.getHeaderTagger().addHeaderForDecl(definition, typedefDecl);
 
 						// just before end, solve nested anonymous issues
-						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypesDefinitions, false);
-						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypesDeclarations, false);
+						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypeDefinitions, false);
+						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, renamedTypeDeclarations, false);
 
 						// replace all recursive usages
 						definition = core::transform::replaceAllGen (definition->getNodeManager(), definition, trgTy, gen, false);
@@ -110,8 +110,8 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 						std::cout << "rename: " << trgTy << " => " << definition << std::endl;
 
 						// store for a later solver
-						renamedTypesDefinitions[trgTy] = definition;
-						renamedTypesDeclarations[symb] = gen;
+						renamedTypeDefinitions[trgTy] = definition;
+						renamedTypeDeclarations[symb] = gen;
 						convFact.getIRTranslationUnit().addType(gen, definition);
 
 						return gen;
@@ -124,31 +124,46 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
     }
 	frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
 
-		for (auto x : renamedTypesDefinitions){
+		for (auto x : renamedTypeDefinitions){
 			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
+			if (core::annotations::hasNameAttached(x.second)){
+				std::cout << "\t- " << core::annotations::getAttachedName(x.second) << std::endl;
+			}
 		}
-		for (auto x : renamedTypesDeclarations){
+		for (auto x : renamedTypeDeclarations){
 			std::cout << "RENAME: " << x.first << " => " << x.second << std::endl;
+			if (core::annotations::hasNameAttached(x.second)){
+				std::cout << "\t- " << core::annotations::getAttachedName(x.second) << std::endl;
+			}
 		}
 
+		std::map<core::LiteralPtr, std::pair<core::LiteralPtr, core::LambdaExprPtr>> tuCorrections;
 		for (auto& pair : tu.getFunctions()) {
-			core::ExpressionPtr lit = pair.first;
+			core::LiteralPtr lit = pair.first.as<core::LiteralPtr>();
 			core::LambdaExprPtr func = pair.second;
-			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDefinitions, false);
-			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypesDefinitions, false);
-			lit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDeclarations, false);
-			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypesDeclarations, false);
-			tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
+
+			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypeDefinitions, false);
+			func = core::transform::replaceAllGen (lit->getNodeManager(), func, renamedTypeDeclarations, false);
+
+			auto newlit  = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDefinitions, false);
+			newlit  = core::transform::replaceAllGen (lit->getNodeManager(), newlit, renamedTypeDeclarations, false);
+
+			tuCorrections[lit] = {newlit, func};
 		}
+		for (const auto& pair : tuCorrections){
+			tu.substituteFunction(pair.first, pair.second.first, pair.second.second);
+		}
+
 		for (auto& g : tu.getGlobals()) {
 
 			core::LiteralPtr symbol = g.first;
 			core::ExpressionPtr init = g.second;
 
-			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypesDefinitions, false);
-			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypesDefinitions, false);
-			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypesDeclarations, false);
-			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypesDeclarations, false);
+			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypeDefinitions, false);
+			symbol  = core::transform::replaceAllGen (symbol->getNodeManager(), symbol, renamedTypeDeclarations, false);
+
+			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypeDefinitions, false);
+			init    = core::transform::replaceAllGen (symbol->getNodeManager(), init, renamedTypeDeclarations, false);
 			auto global =  std::make_pair(symbol, init);
 			tu.replaceGlobal(g,global);
 		}	
@@ -156,10 +171,10 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 			core::GenericTypePtr lit = pair.first;
 			core::TypePtr definition = pair.second;
 
-			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDefinitions, false);
-			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypesDefinitions, false);
-			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypesDeclarations, false);
-			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypesDeclarations, false);
+			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDefinitions, false);
+			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypeDefinitions, false);
+			lit        = core::transform::replaceAllGen (lit->getNodeManager(), lit, renamedTypeDeclarations, false);
+			definition = core::transform::replaceAllGen (lit->getNodeManager(), definition, renamedTypeDeclarations, false);
 			tu.replaceType(lit, definition);
 		}
 		return tu;
