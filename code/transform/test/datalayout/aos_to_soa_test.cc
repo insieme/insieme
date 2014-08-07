@@ -102,7 +102,7 @@ TEST(DataLayout, AosToSoa) {
 		++cnt;
 	});
 
-	EXPECT_EQ(73, cnt);
+	EXPECT_EQ(68, cnt);
 }
 
 TEST(DataLayout, AosToSoa2) {
@@ -153,7 +153,7 @@ TEST(DataLayout, AosToSoa2) {
 		++cnt;
 	});
 
-	EXPECT_EQ(40, cnt);
+	EXPECT_EQ(35, cnt);
 }
 
 } // transform

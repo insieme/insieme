@@ -98,6 +98,15 @@ public:
 	core::VariableMap getVarMapping() { return varReplacements; }
 };
 
+class NewCompoundsRemover: public core::transform::CachedNodeMapping {
+	core::NodeManager& mgr;
+
+public:
+	NewCompoundsRemover(core::NodeManager& mgr) : mgr(mgr) {}
+
+	const core::NodePtr resolveElement(const core::NodePtr& element);
+};
+
 } // datalayout
 } // transform
 } // insieme

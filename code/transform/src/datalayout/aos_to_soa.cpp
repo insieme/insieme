@@ -45,12 +45,40 @@
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
+#include "insieme/utils/annotation.h"
+
 namespace insieme {
 namespace transform {
 namespace datalayout {
 
 using namespace core;
 namespace pirp = pattern::irp;
+
+namespace {
+
+class RemoveMeAnnotation : public NodeAnnotation {
+public:
+	static const string NAME;
+    static const utils::StringKey<RemoveMeAnnotation> KEY;
+
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
+
+    RemoveMeAnnotation() {}
+
+
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+};
+
+const string RemoveMeAnnotation::NAME = "RemoveMeAnnotation";
+const utils::StringKey<RemoveMeAnnotation> RemoveMeAnnotation::KEY("RemoveMe");
+
+}
 
 ExpressionPtr removeRefVar(ExpressionPtr refVar) {
 //	std::cout << "remvoing var from " << refVar << std::endl;
@@ -236,7 +264,10 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
 			}
-			replacements[decl] = builder.compoundStmt(allDecls);
+
+			CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
+			cmpDecls.addAnnotation<RemoveMeAnnotation>();
+			replacements[decl] = cmpDecls;
 
 			varMapping[oldVar] = newVar;
 
@@ -265,6 +296,18 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			//replace array accesses
 			ExpressionMap structures = replaceAccesses(varReplacements, tta, begin, end, replacements);
 
+//for(std::pair<NodeAddress, NodePtr> r : replacements ) {
+//	dumpPretty(r.first);
+//	std::cout << ". . . . . . . . . . . . . . . . . . . . . . . \n";
+//	dumpPretty(r.second);
+//	std::cout << "---------------------------------------------------\n";
+//
+//	std::map<NodeAddress, NodePtr> tmp;
+//	tmp[r.first] = r.second;
+//	toTransform = core::transform::replaceAll(mgr, tmp);
+//}
+
+
 			if(!replacements.empty())
 				toTransform = core::transform::replaceAll(mgr, replacements);
 
@@ -275,6 +318,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 	// fix all accesses to now marshalled scalar structs
 	updateScalarStructAccesses(toTransform);
+
+	// remove all inserted compound expressions
+	NewCompoundsRemover remComp(mgr);
+	toTransform = remComp.mapElement(0, toTransform);
+
 
 //dumpPretty(toTransform);
 }
@@ -338,7 +386,9 @@ void AosToSoa::replaceAssignments(const VariableMap& varReplacements, const Stru
 								updateInit(call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()))));
 					}
 
-					replacements[call] = builder.compoundStmt(allAssigns);
+					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
+					cmpAssigns.addAnnotation<RemoveMeAnnotation>();
+					replacements[call] = cmpAssigns;
 	//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
 				}
 			}
@@ -364,6 +414,13 @@ StatementPtr AosToSoa::generateMarshalling(const VariablePtr& oldVar, const Vari
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 }
 
+StatementAddress getStatementReplacableParent(NodeAddress toBeReplacedByAStatement) {
+	while(!toBeReplacedByAStatement.getParentAddress().isa<CompoundStmtAddress>())
+		toBeReplacedByAStatement = toBeReplacedByAStatement.getParentAddress();
+
+	return toBeReplacedByAStatement.as<StatementAddress>();
+}
+
 std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varReplacements, const StructTypePtr& newStructType,
 		const NodeAddress& toTransform, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
@@ -380,12 +437,11 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				pattern::atom(oldVar) << *pattern::any);
+				/*pattern::aT*/(pattern::atom(oldVar)) << *pattern::any);
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
 	//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
 	//	}
-
 		pirp::matchAllPairs(assignToStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
 			ExpressionPtr start, end;
 			if(am.isVarBound("start")) { // assignToStructInLoop
@@ -396,18 +452,22 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 				// filter out builtins
 				if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
 					return;
-
 				start = builder.literal(nElems->getType(), "0");
 				end = nElems;
 			}
 
 			StatementPtr marshalling = generateMarshalling(oldVar, newVar, start, end, newStructType);
 
+
+			StatementAddress toBeReplaced = getStatementReplacableParent(match);
+
 			StatementList initAndMarshall;
-			initAndMarshall.push_back(match.getAddressedNode().as<StatementPtr>());
+			initAndMarshall.push_back(toBeReplaced);
 			initAndMarshall.push_back(marshalling);
 
-			replacements[match] = builder.compoundStmt(initAndMarshall);
+			CompoundStmtPtr cmpInitAndMarshall = builder.compoundStmt(initAndMarshall);
+			cmpInitAndMarshall.addAnnotation<RemoveMeAnnotation>();
+			replacements[toBeReplaced] = cmpInitAndMarshall;
 
 			// save the address where the marshalling was inserted
 			marshalled.push_back(match.as<StatementAddress>());
@@ -485,18 +545,22 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 			unmarshallingPoints.push_back(node.as<StatementAddress>());
 
 			auto check = replacements.find(node);
+			CompoundStmtPtr cmpUnmarshallAndExternalCall;
 			// check if there is already a replacement for the corresponding node
 			if(check != replacements.end()) {
 				// if so, add to this replacement, assume the original call is already in the existing replacement
 				CompoundStmtPtr oldReplacement = (*check).second.as<CompoundStmtPtr>();
 				StatementList combinedReplacement(oldReplacement.getElements());
 				combinedReplacement.insert(combinedReplacement.begin(), unmarshallAndExternalCall.begin(), unmarshallAndExternalCall.end());
-				replacements[node] = builder.compoundStmt(combinedReplacement);
+
+				cmpUnmarshallAndExternalCall = builder.compoundStmt(combinedReplacement);
 			} else {
 				// add origninal call
 				unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
-				replacements[node] = builder.compoundStmt(unmarshallAndExternalCall);
+				cmpUnmarshallAndExternalCall = builder.compoundStmt(unmarshallAndExternalCall);
 			}
+			cmpUnmarshallAndExternalCall.addAnnotation<RemoveMeAnnotation>();
+			replacements[node] = cmpUnmarshallAndExternalCall;
 		});
 	}
 
@@ -675,7 +739,11 @@ CompoundStmtPtr AosToSoa::generateDel(const StatementAddress& stmt, const Variab
 			deletes.push_back(builder.refDelete(refAccess(newVar, ExpressionPtr(), memberType->getName())));
 		}
 		deletes.push_back(stmt);
-		replacement = builder.compoundStmt(deletes);
+
+		CompoundStmtPtr cmpDeletes = builder.compoundStmt(deletes);
+		cmpDeletes.addAnnotation<RemoveMeAnnotation>();
+
+		replacement = cmpDeletes;
 	}
 
 	return replacement;
@@ -700,6 +768,7 @@ void AosToSoa::addNewDel(const VariableMap& varReplacements, const NodeAddress& 
 		});
 	}
 }
+
 
 const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 	// stop recursion at type level
@@ -828,6 +897,31 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 	return element->substitute(mgr, *this);
 }
 
+const NodePtr NewCompoundsRemover::resolveElement(const core::NodePtr& element) {
+	// stop recursion at type level
+	if (element->getNodeCategory() == NodeCategory::NC_Type) {
+		return element;
+	}
+
+	if(CompoundStmtPtr compound = element.isa<CompoundStmtPtr>()) {
+		IRBuilder builder(mgr);
+		StatementList newCompoundStmts;
+		for(StatementPtr stmt : compound->getStatements()) {
+			stmt = stmt->substitute(mgr, *this);
+
+			if(stmt.hasAnnotation(RemoveMeAnnotation::KEY)) {
+				CompoundStmtPtr innerCompound = stmt.as<CompoundStmtPtr>();
+				StatementList innerStmts = innerCompound->getStatements();
+				newCompoundStmts.insert(newCompoundStmts.end(), innerStmts.begin(), innerStmts.end());
+			} else {
+				newCompoundStmts.push_back(stmt);
+			}
+		}
+		return builder.compoundStmt(newCompoundStmts);
+	}
+
+	return element->substitute(mgr, *this);
+}
 } // datalayout
 } // transform
 } // insieme
