@@ -18,25 +18,29 @@ macro ( add_unit_test case_name )
 	if(USE_VALGRIND)
 		# no valgrind support in MSVC 
 		if(NOT MSVC)
-			# add valgrind as a test
-			add_test(NAME valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=no
-					--track-fds=yes
-					--error-exitcode=1
-					--track-origins=no
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
+			# omit test cases that use libraries which fail valgrind memory checks
+			string(REGEX MATCH ".*lua.*" regex_result ${case_name})
+			if(NOT regex_result)
+				# add valgrind as a test
+				add_test(NAME valgrind_${case_name} 
+					COMMAND valgrind
+						--leak-check=full
+						--show-reachable=no
+						--track-fds=yes
+						--error-exitcode=1
+						--track-origins=no
+						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+					WORKING_DIRECTORY
+						${CMAKE_CURRENT_BINARY_DIR}
+				)
+			endif(NOT regex_result)
 		endif(NOT MSVC)
 	else(USE_VALGRIND)
 		# add normal test
 		add_test(${case_name} ${case_name})
 
-		# + valgrind as a custom target (only of not explicitly prohibited)
+		# + valgrind as a custom target (only if not explicitly prohibited)
 		if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 			add_custom_target(valgrind_${case_name} 
 				COMMAND valgrind
