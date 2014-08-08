@@ -44,6 +44,7 @@
 #include <irt_maintenance.h>
 
 #define TEST_TIME_MS (5ULL * 1000)
+#define TEST_TIME_MIN 50
 #define THREADS 12
 #define ITERATIONS 1
 
@@ -145,7 +146,7 @@ TEST(maintenance, parallel) {
 		irt_maintenance_lambda lambdas[ITERATIONS];
 		uint32 r_seed = irt_time_ticks() + omp_get_thread_num();
 		for(uint32 i=0; i<ITERATIONS; ++i) {
-			uint64 interval = rand_r(&r_seed) % (TEST_TIME_MS/3) + 5;
+			uint64 interval = rand_r(&r_seed) % (TEST_TIME_MS/3) + TEST_TIME_MIN;
 			timings[i] = (mt_timing){ 0, interval, interval, 0, false };
 			lambdas[i] = (irt_maintenance_lambda){ test_mt, &timings[i], interval, NULL };
 			irt_maintenance_register(&lambdas[i]);
