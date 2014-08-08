@@ -117,11 +117,11 @@ int main(int argc, char **argv) {
 	// cl_char2
 	{
 		#pragma test \
-		"decl ref<union cl_char2 <s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(undefined(type<union cl_char2 <s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>>)))" 
+		"decl ref<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(undefined(type<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>>)))" 
 		cl_char2 var;
 
 		#pragma test \
-		"decl ref<union cl_char2 <s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(union{AP(s):=['a', 'b']}))" 
+		"decl ref<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(union{AP(s):=['a', 'b']}))" 
 		cl_char2 initVar = {'a','b'};
 
 		#pragma test \
@@ -148,11 +148,11 @@ int main(int argc, char **argv) {
 	// short 3 has a diff behaviour
 	{
 		#pragma test \
-		"decl ref<union cl_short4 <s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>> v0 = ( var(undefined(type<union cl_short4 <s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>>)))"
+		"decl ref<union<s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>> v0 = ( var(undefined(type<union<s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>>)))"
 		cl_short3 var;
 
 		#pragma test \
-		"decl ref<union cl_short4 <s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union cl_short2 <s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>> v0 = ( var(union{AP(s):=[1, 2, 3, 4]}))"
+		"decl ref<union<s:vector<int<2>,4>,__m1:struct<x:int<2>,y:int<2>,z:int<2>,w:int<2>>,__m2:struct<s0:int<2>,s1:int<2>,s2:int<2>,s3:int<2>>,__m3:struct<lo:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>,hi:union<s:vector<int<2>,2>,__m1:struct<x:int<2>,y:int<2>>,__m2:struct<s0:int<2>,s1:int<2>>,__m3:struct<lo:int<2>,hi:int<2>>>>>> v0 = ( var(union{AP(s):=[1, 2, 3, 4]}))"
 		cl_short3 initVar = {1,2,3,4};
 
 		#pragma test \
