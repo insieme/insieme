@@ -83,7 +83,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(int<4> v1, int<4> v2) -> int<4> { (( *( var(v1)))+1); return (v2-1);}(( *v100), ( *v101))"
+	"fun(int<4> v1, int<4> v2) -> int<4> { (v1+1); return (v2-1);}(( *v100), ( *v101))"
 	(a+1, b-1);
 }
 

@@ -36,7 +36,7 @@ macro ( add_unit_test case_name )
 		# add normal test
 		add_test(${case_name} ${case_name})
 
-		# + valgrind as a custom target (only of not explicitly prohibited)
+		# + valgrind as a custom target (only if not explicitly prohibited)
 		if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
 			add_custom_target(valgrind_${case_name} 
 				COMMAND valgrind

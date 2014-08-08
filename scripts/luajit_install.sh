@@ -1,7 +1,7 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=2.0.0-beta9
+VERSION=2.0.3
 
 CFLAGS="-O3 -fPIC"
 LDFLAGS="-O3 -fPIC"

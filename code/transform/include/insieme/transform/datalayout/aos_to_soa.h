@@ -47,7 +47,7 @@ namespace datalayout {
 class AosToSoa {
 	core::NodeManager& mgr;
 
-	virtual std::map<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
+	virtual utils::map::PointerMap<core::VariablePtr, core::RefTypePtr> findCandidates(core::NodePtr toTransform);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	core::ExpressionPtr updateInit(core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType);
@@ -87,19 +87,24 @@ public:
 
 class VariableAdder: public core::transform::CachedNodeMapping {
 	core::NodeManager& mgr;
-	core::VariablePtr oldVar;
-	core::VariablePtr newVar;
 	core::VariableMap& varReplacements;
 
 public:
-	VariableAdder(core::VariablePtr oldVar, core::VariablePtr newVar, core::VariableMap& varReplacements)
-			: mgr(oldVar->getNodeManager()), oldVar(oldVar), newVar(newVar), varReplacements(varReplacements) {
-		varReplacements[oldVar] = newVar;
-	}
+	VariableAdder(core::NodeManager& mgr, core::VariableMap& varReplacements)
+			: mgr(mgr), varReplacements(varReplacements) {}
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 
 	core::VariableMap getVarMapping() { return varReplacements; }
+};
+
+class NewCompoundsRemover: public core::transform::CachedNodeMapping {
+	core::NodeManager& mgr;
+
+public:
+	NewCompoundsRemover(core::NodeManager& mgr) : mgr(mgr) {}
+
+	const core::NodePtr resolveElement(const core::NodePtr& element);
 };
 
 } // datalayout
