@@ -65,8 +65,9 @@ TEST(DataLayout, AosToSoa) {
 		"	}"
 		"	for(int<4> i = 0 .. 42 : 1) {"
 		"		ref<twoElem> tmp = ref.var(*((*a)[i]));"
+		"		ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
 		"		ref<ref<array<twoElem,1>>> ptr = ref.var(scalar.to.array((*a)[i]));"
-//		"		composite.ref.elem(*tmp, lit(\"int\" : identifier), lit(int<4>)) = i;"
+		"		(*ptr)[i].int = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
 		"	for(int<4> i = 0 .. 100 : 1) {"
@@ -79,7 +80,7 @@ TEST(DataLayout, AosToSoa) {
 
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -101,7 +102,7 @@ TEST(DataLayout, AosToSoa) {
 		++cnt;
 	});
 
-//	EXPECT_EQ(55, cnt);
+	EXPECT_EQ(68, cnt);
 }
 
 TEST(DataLayout, AosToSoa2) {
@@ -152,7 +153,7 @@ TEST(DataLayout, AosToSoa2) {
 		++cnt;
 	});
 
-	EXPECT_EQ(40, cnt);
+	EXPECT_EQ(35, cnt);
 }
 
 } // transform
