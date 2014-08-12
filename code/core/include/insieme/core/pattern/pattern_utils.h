@@ -58,7 +58,8 @@ namespace irp {
 	// call the lambda for each pair of node/address and match object in the given tree
 	void matchAllPairs(const TreePattern& pattern, const core::NodePtr& root, std::function<void(core::NodePtr node, NodeMatch match)> lambda, bool matchTypes = false);
 	void matchAllPairs(const TreePattern& pattern, const core::NodeAddress& root, std::function<void(core::NodeAddress addr, AddressMatch match)> lambda, bool matchTypes = false);
-	
+	void matchAllPairsReverse(const TreePattern& pattern, const core::NodeAddress& root, std::function<void(core::NodeAddress addr, AddressMatch match)> lambda, bool matchTypes=false);
+
 	// try to match the given pattern on all instances of the given tree, 
 	// calling the passed function for each match to generate a replacement
 	// returns a new root with all matches replaced

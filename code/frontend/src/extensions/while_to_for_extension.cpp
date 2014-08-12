@@ -110,7 +110,7 @@ std::vector<core::NodeAddress> WhileToForPlugin::getAssignmentsForVar(core::Node
 	// and/or an addition/subtraction expression
 	auto assignpat=irp::assignment(irp::atom(var), pattern::any);                  // one single assignment
 	auto assignall=pattern::aT(pattern::all(pattern::var("assignment", assignpat)));     // all assignments
-	pattern::AddressMatchOpt nodes=assignall->matchAddress(body);
+	pattern::AddressMatchOpt nodes=assignall.matchAddress(body);
 
 	// if the variable matched the pattern in the loop body, save the assignment
 	if (nodes && nodes.get().isVarBound("assignment")) {
@@ -133,7 +133,7 @@ NodeBookmark WhileToForPlugin::extractStepFromAssignment(core::Address<const cor
 				 pattern::any									// any type will do (could be integer)
 				 << pattern::listVar("addsub", operatorpat)		// operation plus or minus, determines step
 				 << pattern::listVar("ops", *pattern::any)));	// operation arguments
-	pattern::AddressMatchOpt m=assignpat->matchAddress(a);
+	pattern::AddressMatchOpt m=assignpat.matchAddress(a);
 
 	// check whether we have a match, and can assign the nodes to the variables for further investigation
 	// consider for now only IRs in the form: v1 = v1 +/- ...
