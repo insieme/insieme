@@ -34,50 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/pattern/rule.h"
+#include "insieme/core/pattern/variable.h"
 
-#include "insieme/core/pattern/pattern.h"
-#include "insieme/core/pattern/generator.h"
+#include <string>
+
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace core {
-namespace pattern {
+namespace pattern{
+namespace detail {
 
-	core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
-		auto match = pattern.matchPointer(tree);
-		if (!match) return core::NodePtr();
-		return generator.generate(*match);
+	using std::string;
+
+	string getFreshVarName() {
+		static int counter = 0;
+		return format("v%d", ++counter);
 	}
 
-	core::NodePtr Rule::fixpoint(const core::NodePtr& tree) const {
-		auto res = tree;
-
-		// while applicable ..
-		while(auto next = applyTo(res)) {
-			// if nothing has changed => done
-			if (res == next) return res;
-
-			// try next iteration
-			res = next;
-		}
-
-		// done
-		return res;
-	}
-
-	Rule Rule::getNestedRule() const {
-		return Rule(
-				aT(var("%root%", pattern)),
-				generator::substitute(generator::root, generator::var("%root%"), generator)
-		);
-	}
-
-	TreePtr Rule::applyTo(const TreePtr& tree) const {
-		auto match = pattern.matchTree(tree);
-		if (!match) return TreePtr();
-		return generator.generate(*match);
-	}
-
+} // end namespace detail
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,6 +47,8 @@ namespace pattern {
 
 	namespace p = pattern;
 	namespace g = pattern::generator;
+
+	using namespace generator;
 
 	TEST(Rule, Identity) {
 
@@ -225,6 +227,64 @@ namespace pattern {
 	}
 
 
+	TEST(Rule, EmptyCompoundElemination) {
+
+
+		ListVariable xs = "x";
+		ListVariable ys = "y";
+
+		auto r = Rule(
+				irp::compoundStmt(xs << irp::compoundStmt() << ys),
+				irg::compoundStmt(xs << ys)
+		);
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto a = builder.intLit(1);
+
+		auto c = builder.compoundStmt(
+				a,
+				builder.compoundStmt(),
+				a,
+				builder.compoundStmt(builder.compoundStmt()),
+				builder.compoundStmt(builder.compoundStmt(builder.compoundStmt())),
+				builder.compoundStmt(builder.compoundStmt(),a),
+				builder.compoundStmt(), a
+		);
+
+		EXPECT_EQ("{1; {}; 1; {{};}; {{{};};}; {{}; 1;}; {}; 1;}", toString(*c));
+		EXPECT_EQ("{1; 1; {{};}; {{{};};}; {{}; 1;}; 1;}", toString(*r.fixpoint(c)));
+		EXPECT_EQ("{1; 1; {1;}; 1;}", toString(*r.fixpointNested(c)));
+
+	}
+
+
+	TEST(Rule, VarDeref) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const auto& lang = builder.getLangBasic();
+
+		Variable x;
+
+		auto r = Rule(
+				irp::callExpr(lang.getRefDeref(), irp::callExpr((irp::atom(lang.getRefVar()) | irp::atom(lang.getRefNew())) , x)),
+				x
+		);
+
+		auto a = builder.intLit(1);
+		auto b = builder.deref(builder.refVar(a));
+		auto c = builder.deref(builder.refNew(a));
+
+		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(1))", toString(*b));
+		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.heap); ref.assign(v2, v1); return v2;}}(1))", toString(*c));
+		EXPECT_EQ("1", toString(*r.fixpoint(b)));
+		EXPECT_EQ("1", toString(*r.fixpoint(c)));
+		EXPECT_EQ("1", toString(*r.fixpointNested(b)));
+		EXPECT_EQ("1", toString(*r.fixpointNested(c)));
+
+	}
 
 } // end namespace pattern
 } // end namespace core
