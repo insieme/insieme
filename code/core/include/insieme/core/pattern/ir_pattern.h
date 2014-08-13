@@ -48,6 +48,7 @@
 namespace insieme {
 namespace core {
 namespace pattern {
+/// Namespace for constructing/search for IR Patterns: irp
 namespace irp {
 	using std::make_shared;
 

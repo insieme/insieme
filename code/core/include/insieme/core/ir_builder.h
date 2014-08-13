@@ -378,7 +378,7 @@ namespace core {
 		// Build a Call expression for a pfor that mimics the effect of the given for statement
 		CallExprPtr pfor(const ForStmtPtr& initialFor) const;
 
-		// Builds a job processing the given statement and triggers it's parallel execution
+		// Builds a job processing the given statement and triggers its parallel execution
 		CallExprPtr parallel(const StatementPtr& stmt, int numThreads = -1) const;
 
 		/*
