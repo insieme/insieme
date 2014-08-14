@@ -1457,6 +1457,10 @@ namespace backend {
                 res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
 				return res;
 			});
+
+            res[irppExt.getMemberPointerCheck()] = OP_CONVERTER({
+                return CONVERT_ARG(0);
+            });
 		}
 		
 		#include "insieme/backend/operator_converter_end.inc"

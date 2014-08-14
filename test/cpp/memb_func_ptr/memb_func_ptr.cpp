@@ -78,5 +78,14 @@ int main (){
 		ptr2 = getNull2();
 	}
 
+    {
+        if(ptr) {
+            Obj a;
+            (a.*ptr)();
+        } else {
+            std::cout << "is null\n";
+        }
+    }
+
 	return 0;
 }
