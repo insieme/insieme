@@ -263,6 +263,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			for(NamedTypePtr memberType : newStructType->getElements()) {
 				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
+//			allDecls.push_back(removeRefVar(decl->getInitialization()));
 			}
 
 			CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
@@ -437,7 +438,9 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				/*pattern::aT*/(pattern::atom(oldVar)) << *pattern::any);
+//				pattern::node(pattern::any << pattern::atom(oldVar))
+				/*pattern::aT*/(pattern::atom(oldVar))
+				<< *pattern::any);
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
 	//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
@@ -631,10 +634,10 @@ ExpressionMap AosToSoa::replaceAccesses(const VariableMap& varReplacements, cons
 				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
 				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
+
 				replacements[node] = replacement;
 				return true;
 			}
-
 			match = assignStructAccess.matchAddress(node);
 
 			if(match) {
@@ -827,6 +830,9 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		funTyMembers.push_back(args.back()->getType());
 		// add a new variable to the parameter list
 		params.push_back(builder.variable(funTyMembers.back()));
+		// add the old and new variable to the replacement list
+		varReplacements[params[idx]] = params.back();
+
 
 		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
 
