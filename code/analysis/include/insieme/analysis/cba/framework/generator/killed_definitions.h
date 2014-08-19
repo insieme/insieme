@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -82,7 +82,7 @@ namespace cba {
 	namespace {
 
 		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
-		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state);
+		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedVariable<RefValue>& updatedRef, const TypedVariable<RDValue>& reaching_in, const TypedVariable<KDValue>& in_state, const TypedVariable<KDValue>& out_state);
 
 	}
 
@@ -120,33 +120,33 @@ namespace cba {
 
 		KilledDefsTmpConstraintGenerator(CBA&) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 			// nothing to do here
 
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			const auto& data = cba.getVariableParameters<Label,Context,Location<Context>>(value);
 			Label label = std::get<1>(data);
 			const auto& call = cba.getStmt(label).as<CallExprInstance>();
 			const auto& ctxt = std::get<2>(data);
 			const auto& loc  = std::get<3>(data);
 
 			// obtain
-			auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);
+			auto KD_tmp = cba.getVar(KDtmp, call, ctxt, loc);
 			assert_eq(value, KD_tmp) << "Queried a non KD_tmp id!";
 
 			// create constraints
 			for(const auto& cur : call) {
-				auto KD_out = cba.getSet(KDout, cur, ctxt, loc);
+				auto KD_out = cba.getVar(KDout, cur, ctxt, loc);
 				constraints.add(subset(KD_out, KD_tmp));
 			}
 
 			// and the function
-			constraints.add(subset(cba.getSet(KDout, call->getFunctionExpr(), ctxt, loc), KD_tmp));
+			constraints.add(subset(cba.getVar(KDout, call->getFunctionExpr(), ctxt, loc), KD_tmp));
 
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			const auto& data = cba.getVariableParameters<Label,Context,Location<Context>>(value);
 			const auto& stmt = cba.getStmt(std::get<1>(data));
 			const auto& ctxt = std::get<2>(data);
 			const auto& loc = std::get<3>(data);
@@ -193,15 +193,15 @@ namespace cba {
 			// we can stop at the creation point - no definitions will be killed before
 			if (loc.getCreationPoint() == addr) {
 
-				auto KD_out = cba.getSet(KDout, loc.getCreationPoint(), ctxt, loc);
+				auto KD_out = cba.getVar(KDout, loc.getCreationPoint(), ctxt, loc);
 				constraints.add(elem(iset<Definition<Context>>::empty(), KD_out));
 				return;
 			}
 
 			// if the current expression is assignment free we can skip the inner part
 			if (detail::isAssignmentFree(addr)) {
-				auto KD_in  = cba.getSet( KDin, addr.as<StatementInstance>(), ctxt, loc);
-				auto KD_out = cba.getSet(KDout, addr.as<StatementInstance>(), ctxt, loc);
+				auto KD_in  = cba.getVar( KDin, addr.as<StatementInstance>(), ctxt, loc);
+				auto KD_out = cba.getVar(KDout, addr.as<StatementInstance>(), ctxt, loc);
 				constraints.add(subset(KD_in, KD_out));
 				return;
 			}
@@ -227,11 +227,11 @@ namespace cba {
 				// all handled by the killedDefs constraint
 
 				// get involved sets
-				auto KD_tmp = cba.getSet(KDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
-				auto KD_out = cba.getSet(KDout, call, ctxt, loc);		// the definitions
-				auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+				auto KD_tmp = cba.getVar(KDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+				auto KD_out = cba.getVar(KDout, call, ctxt, loc);		// the definitions
+				auto R_trg = cba.getVar(R, call[0], ctxt);				// set of references locations
 
-				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the call
+				auto RD_tmp = cba.getVar(RDtmp, call, ctxt, loc);		// the definitions reaching the call
 
 				// add constraint
 				constraints.add(killedDefsAssign(loc, R_trg, RD_tmp, KD_tmp, KD_out));
@@ -264,20 +264,20 @@ namespace cba {
 			typedef typename KilledDefValue::less_op_type less_op;
 
 			const Location<Context> loc;
-			const TypedValueID<KilledDefValue> in;
-			const TypedValueID<KilledDefValue> out;
-			const TypedValueID<ReachingDefValue> reaching_in;
-			const TypedValueID<RefValue> ref;
+			const TypedVariable<KilledDefValue> in;
+			const TypedVariable<KilledDefValue> out;
+			const TypedVariable<ReachingDefValue> reaching_in;
+			const TypedVariable<RefValue> ref;
 
-			mutable vector<ValueID> inputs;
+			mutable vector<Variable> inputs;
 
 		public:
 
 			KilledDefsAssignConstraint(
 					const Location<Context>& loc,
-					const TypedValueID<KilledDefValue>& in, const TypedValueID<KilledDefValue>& out,
-					const TypedValueID<ReachingDefValue>& reaching_in, const TypedValueID<RefValue>& ref)
-				: Constraint(toVector<ValueID>(in, ref, reaching_in), toVector<ValueID>(out), true),
+					const TypedVariable<KilledDefValue>& in, const TypedVariable<KilledDefValue>& out,
+					const TypedVariable<ReachingDefValue>& reaching_in, const TypedVariable<RefValue>& ref)
+				: Constraint(toVector<Variable>(in, ref, reaching_in), toVector<Variable>(out), true),
 				  loc(loc), in(in), out(out), reaching_in(reaching_in), ref(ref) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -323,7 +323,7 @@ namespace cba {
 				return out << "if " << ref << " references " << loc << " => combine_kills(" << reaching_in << "," << in << ") in " << this->out;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 
 				// create result set
 				inputs.clear();
@@ -369,7 +369,7 @@ namespace cba {
 		};
 
 		template<typename RefValue, typename KDValue, typename RDValue, typename Context>
-		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& reaching_in, const TypedValueID<KDValue>& in_state, const TypedValueID<KDValue>& out_state) {
+		ConstraintPtr killedDefsAssign(const Location<Context>& loc, const TypedVariable<RefValue>& updatedRef, const TypedVariable<RDValue>& reaching_in, const TypedVariable<KDValue>& in_state, const TypedVariable<KDValue>& out_state) {
 			return std::make_shared<KilledDefsAssignConstraint<Context,KDValue,RDValue,RefValue>>(loc, in_state, out_state, reaching_in, updatedRef);
 		}
 

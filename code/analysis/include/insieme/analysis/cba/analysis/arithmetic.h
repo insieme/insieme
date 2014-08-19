@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -170,7 +170,7 @@ namespace cba {
 
 			// special case for the lit(1:'a) in the lang def
 			if (literal->getStringValue() == "1") {
-				constraints.add(elem(core::arithmetic::Formula(1), cba.getSet(A, literal, ctxt)));
+				constraints.add(elem(core::arithmetic::Formula(1), cba.getVar(A, literal, ctxt)));
 				return;
 			}
 
@@ -185,7 +185,7 @@ namespace cba {
 			auto value = core::arithmetic::toFormula(literal);
 			auto l_lit = cba.getLabel(literal);
 
-			auto A_lit = cba.getSet(A, l_lit, ctxt);
+			auto A_lit = cba.getVar(A, l_lit, ctxt);
 			constraints.add(elem(value, A_lit));
 
 		}
@@ -207,11 +207,11 @@ namespace cba {
 				//	=> use symbolic value
 				auto value = core::arithmetic::toFormula(var);
 
-				auto v_var = cba.getVariable(var);
+				auto v_var = cba.getVariableLabel(var);
 				auto l_var = cba.getLabel(var);
 
-				auto a_var = cba.getSet(cba::a, v_var, ctxt);
-				auto A_var = cba.getSet(cba::A, l_var, ctxt);
+				auto a_var = cba.getVar(cba::a, v_var, ctxt);
+				auto A_var = cba.getVar(cba::A, l_var, ctxt);
 
 				constraints.add(this->elem(value, a_var));
 				constraints.add(subset(a_var, A_var));
@@ -249,17 +249,17 @@ namespace cba {
 			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
-			auto A_res = cba.getSet(A, cba.getLabel(call), ctxt);
+			auto A_res = cba.getVar(A, cba.getLabel(call), ctxt);
 
 			// special handling for precision fixes (result is also not covered by the Int group)
 			if (base.isIntPrecisionFix(fun) || base.isUintPrecisionFix(fun)) {
-				constraints.add(subset(cba.getSet(A, call[0], ctxt), A_res));
+				constraints.add(subset(cba.getVar(A, call[0], ctxt), A_res));
 				return;
 			}
 
 			// also support casts
 			if (base.isScalarCast(fun)) {
-				constraints.add(subset(cba.getSet(A, call[0], ctxt), A_res));
+				constraints.add(subset(cba.getVar(A, call[0], ctxt), A_res));
 				return;
 			}
 
@@ -280,8 +280,8 @@ namespace cba {
 			}
 
 			// get sets for operators
-			auto A_lhs = cba.getSet(A, cba.getLabel(call[0]), ctxt);
-			auto A_rhs = cba.getSet(A, cba.getLabel(call[1]), ctxt);
+			auto A_lhs = cba.getVar(A, cba.getLabel(call[0]), ctxt);
+			auto A_rhs = cba.getVar(A, cba.getLabel(call[1]), ctxt);
 
 			// special handling for functions
 			if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun) || base.isGenAdd(fun)) {
@@ -312,8 +312,8 @@ namespace cba {
 		void visitCastExpr(const CastExprInstance& cast, const Context& ctxt, Constraints& constraints) {
 			// for this analysis we are ignoring casts
 			constraints.add(subset(
-					cba.getSet(A, cast->getSubExpression(), ctxt),
-					cba.getSet(A, cast, ctxt)
+					cba.getVar(A, cast->getSubExpression(), ctxt),
+					cba.getVar(A, cast, ctxt)
 			));
 
 			// also run standard operations

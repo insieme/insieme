@@ -34,56 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/entities/job.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/constraint/assignment.h"
 
 namespace insieme {
-namespace analysis {
-namespace cba {
+namespace utils {
+namespace constraint {
 
-	// ----------------- jobs ---------------
+	TEST(Assignment, Check) {
 
-	template<typename Context> class JobConstraintGenerator;
+		Assignment a;
 
-	struct job_analysis_data : public dependent_data_analysis<Job, JobConstraintGenerator> {};
-	struct job_analysis_var  : public dependent_data_analysis<Job, JobConstraintGenerator> {};
+		TypedSetVariable<int> i1(1);
+		TypedSetVariable<float> i2(2);
 
-	extern const job_analysis_data Jobs;
-	extern const job_analysis_var  jobs;
+		EXPECT_EQ("{}", toString(a));
 
+		a[i1].insert(1);
+		a[i2].insert(2.3f);
 
-	template<typename Context>
-	class JobConstraintGenerator : public DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> {
+		EXPECT_EQ("{v2={2.3},v1={1}}", toString(a));
 
-		typedef DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> super;
+		a[i1] = { 1, 2, 3 };
+		a[i2] = { 1, 3 };
+		EXPECT_EQ("{v2={1,3},v1={1,2,3}}", toString(a));
 
-		CBA& cba;
+	}
 
-	public:
-
-		JobConstraintGenerator(CBA& cba) : super(cba, Jobs, jobs), cba(cba) { };
-
-		using super::elem;
-
-		void visitJobExpr(const JobExprInstance& job, const Context& ctxt, Constraints& constraints) {
-
-			// this expression is creating a job
-			auto value = getJobFromConstructor(job, ctxt);
-			auto J_res = cba.getVar(Jobs, job, ctxt);
-
-			// add constraint fixing this job
-			constraints.add(elem(value, J_res));
-
-		}
-
-	};
-
-} // end namespace cba
-} // end namespace analysis
+} // end namespace set_constraint
+} // end namespace utils
 } // end namespace insieme
