@@ -78,6 +78,8 @@ irt_mutex_obj irt_g_error_mutex;
 irt_mutex_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
+uint32 irt_g_degree_of_parallelism;
+irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
@@ -100,9 +102,7 @@ void irt_init_globals() {
 		return;
 
 	irt_g_globals_initialization_done = true;
-
 	irt_g_exit_handling_done = false;
-
 	irt_log_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
@@ -123,6 +123,7 @@ void irt_init_globals() {
 	}
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
+	irt_mutex_init(&irt_g_degree_of_parallelism_mutex);
 	irt_mutex_init(&irt_g_active_worker_mutex);
 	irt_data_item_table_init();
 	irt_context_table_init();
@@ -313,6 +314,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
+	irt_g_degree_of_parallelism = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 
 	// initialize affinity mapping & load affinity policy

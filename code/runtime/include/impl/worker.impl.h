@@ -141,6 +141,7 @@ void* _irt_worker_func(void *argvp) {
 	irt_cond_var_init(&self->wait_cond);
 	self->wake_signal = true;
 #endif
+	irt_cond_var_init(&self->dop_wait_cond);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");

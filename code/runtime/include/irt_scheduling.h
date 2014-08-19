@@ -64,6 +64,10 @@ typedef struct _irt_worker_scheduling_data irt_worker_scheduling_data;
 struct _irt_wi_scheduling_data;
 typedef struct _irt_wi_scheduling_data irt_wi_scheduling_data;
 
+/* Set the active degree of parallelism for the runtime system
+ * Note that more threads may continue to run until a synchronization point is encountered
+ */
+void irt_scheduling_set_dop(uint32 parallelism);
 
 /* The scheduling iteration for a worker. Responsibilities include
  * executing work items assigned to the worker (and potentially distributing

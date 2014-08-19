@@ -75,6 +75,7 @@ struct _irt_worker {
 	bool wake_signal;
 	irt_cond_var wait_cond;
 #endif
+	irt_cond_var dop_wait_cond;
 
 	uint32 default_variant;
 	unsigned int rand_seed;
