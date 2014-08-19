@@ -250,7 +250,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 				nElems = match.get()["nElems"].getValue().as<ExpressionPtr>();
 			}
 
-			RefTypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, newStructType).as<RefTypePtr>();
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), candidate.second, newStructType).as<TypePtr>();
 			newVar = builder.variable(newType);
 
 			// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
@@ -438,9 +438,11 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-//				pattern::node(pattern::any << pattern::atom(oldVar))
-				/*pattern::aT*/(pattern::atom(oldVar))
+				var("oldVarCandidate", pirp::exprOfType(pirp::refType(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
+//				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
+//				pattern::aT(pattern::atom(oldVar))
 				<< *pattern::any);
+		pattern::TreePattern oldVarPattern = pattern::aT(pattern::atom(oldVar));
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
 	//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
@@ -455,9 +457,16 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 				// filter out builtins
 				if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
 					return;
+
+				// check if oldVar is accessed
+				if(!oldVarPattern.match(am["oldVarCandidate"].getValue()))
+					return;
+
 				start = builder.literal(nElems->getType(), "0");
 				end = nElems;
 			}
+//std::cout << "oldVAr " << oldVar << std::endl;
+
 
 			StatementPtr marshalling = generateMarshalling(oldVar, newVar, start, end, newStructType);
 
@@ -478,8 +487,9 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const VariableMap& varRep
 	}
 
 	// if the array has not been marshalled, the entire program has to be considered
-	if(marshalled.empty())
+	if(marshalled.empty()) {
 		marshalled.push_back(toTransform.as<StatementAddress>());
+	}
 
 	return marshalled;
 }
@@ -523,6 +533,7 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 		pirp::matchAllPairs(readFromStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
 			ExpressionPtr start, end;
 
+//std::cout << begin << " < " << node << " -> " << (begin < node) << std::endl;
 			if(!(begin < node)) {
 				// do not unmarshall before marshalling
 				return;
@@ -547,7 +558,9 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 
 			unmarshallingPoints.push_back(node.as<StatementAddress>());
 
-			auto check = replacements.find(node);
+			StatementAddress toBeReplaced = getStatementReplacableParent(node);
+
+			auto check = replacements.find(toBeReplaced);
 			CompoundStmtPtr cmpUnmarshallAndExternalCall;
 			// check if there is already a replacement for the corresponding node
 			if(check != replacements.end()) {
@@ -559,11 +572,11 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const VariableMap& varR
 				cmpUnmarshallAndExternalCall = builder.compoundStmt(combinedReplacement);
 			} else {
 				// add origninal call
-				unmarshallAndExternalCall.push_back(node.as<StatementPtr>());
+				unmarshallAndExternalCall.push_back(toBeReplaced);
 				cmpUnmarshallAndExternalCall = builder.compoundStmt(unmarshallAndExternalCall);
 			}
 			cmpUnmarshallAndExternalCall.addAnnotation<RemoveMeAnnotation>();
-			replacements[node] = cmpUnmarshallAndExternalCall;
+			replacements[toBeReplaced] = cmpUnmarshallAndExternalCall;
 		});
 	}
 
