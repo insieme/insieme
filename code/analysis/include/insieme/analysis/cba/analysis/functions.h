@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -82,7 +82,7 @@ namespace cba {
 			auto value = Callee(literal);
 			auto l_lit = cba.getLabel(literal);
 
-			auto F_lit = cba.getSet(F, l_lit, ctxt);
+			auto F_lit = cba.getVar(F, l_lit, ctxt);
 			constraints.add(elem(value, F_lit));
 
 		}
@@ -94,7 +94,7 @@ namespace cba {
 
 				auto value = Callee(var.getParentInstance().as<LambdaBindingInstance>()->getLambda());
 				auto l_var = cba.getLabel(var);
-				auto f_var = cba.getSet(f, l_var, ctxt);
+				auto f_var = cba.getVar(f, l_var, ctxt);
 
 				constraints.add(elem(value, f_var));
 
@@ -116,7 +116,7 @@ namespace cba {
 			auto value = Callee(lambda);
 			auto label = cba.getLabel(lambda);
 
-			constraints.add(elem(value, cba.getSet(F, label, ctxt)));
+			constraints.add(elem(value, cba.getVar(F, label, ctxt)));
 
 			// TODO: handle recursions
 
@@ -131,7 +131,7 @@ namespace cba {
 			auto value = Callee(bind);
 			auto label = cba.getLabel(bind);
 
-			auto F_bind = cba.getSet(F, label, ctxt);
+			auto F_bind = cba.getVar(F, label, ctxt);
 			constraints.add(elem(value, F_bind));
 
 		}

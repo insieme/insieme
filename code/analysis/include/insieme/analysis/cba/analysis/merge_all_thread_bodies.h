@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -98,10 +98,10 @@ namespace cba {
 			if (basic.isMergeAll(call->getFunctionExpr())) {
 
 				// get the list of reaching spawn points
-				auto spawns = cba.getSet(ReachingSpawnPointsTmp, call, ctxt);
+				auto spawns = cba.getVar(ReachingSpawnPointsTmp, call, ctxt);
 
 				// get the result set
-				auto res = cba.getSet(MergeAllThreadBodies, call, ctxt);
+				auto res = cba.getVar(MergeAllThreadBodies, call, ctxt);
 
 				// add the constraint
 				constraints.add(createThreadBodyMergeAllConstraint<Context>(cba, spawns, res));
@@ -126,7 +126,7 @@ namespace cba {
 		>
 		class ThreadBodyMergeAllConstraint : public utils::constraint::Constraint {
 
-			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> ThreadBodyValueID;
+			typedef TypedVariable<typename lattice<thread_body_analysis, analysis_config<Context>>::type> ThreadBodyVariable;
 
 			CBA& cba;
 
@@ -136,15 +136,15 @@ namespace cba {
 			SpawnPointsValueType spawns;
 
 			// the bodies to be collected
-			mutable std::vector<ThreadBodyValueID> bodies;
+			mutable std::vector<ThreadBodyVariable> bodies;
 
 			// the inputs this constraint is depending on
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ThreadBodyMergeAllConstraint(CBA& cba, const SpawnPointsValueType& spawns, const ThreadBodySetType& res) :
-				Constraint(toVector<ValueID>(spawns), toVector<ValueID>(res), true, true), cba(cba), res(res), spawns(spawns) {
+				Constraint(toVector<Variable>(spawns), toVector<Variable>(res), true, true), cba(cba), res(res), spawns(spawns) {
 				inputs.push_back(spawns);
 			}
 
@@ -183,7 +183,7 @@ namespace cba {
 				for(const auto& spawn : sps) {
 
 					// add dependency to spawn point of current group
-					auto curBodySet = cba.getSet(ThreadBodies, spawn.getStatement(), spawn.getContext());
+					auto curBodySet = cba.getVar(ThreadBodies, spawn.getStatement(), spawn.getContext());
 					if (!contains(bodies, curBodySet)) {
 						bodies.push_back(curBodySet);
 						inputs.push_back(curBodySet);
@@ -194,7 +194,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 

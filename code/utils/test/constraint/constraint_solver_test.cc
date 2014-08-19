@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,60 +44,10 @@ namespace insieme {
 namespace utils {
 namespace constraint {
 
-	TEST(Assignment, Check) {
-
-		Assignment a;
-
-		TypedSetID<int> i1(1);
-		TypedSetID<float> i2(2);
-
-		EXPECT_EQ("{}", toString(a));
-
-		a[i1].insert(1);
-		a[i2].insert(2.3f);
-
-		EXPECT_EQ("{v2={2.3},v1={1}}", toString(a));
-
-		a[i1] = { 1, 2, 3 };
-		a[i2] = { 1, 3 };
-		EXPECT_EQ("{v2={1,3},v1={1,2,3}}", toString(a));
-
-	}
-
-	TEST(Constraint, Basic) {
-
-		typedef TypedSetID<int> Set;
-
-		// simple set tests
-		Set a = 1;
-		Set b = 2;
-		Set c = 3;
-
-		EXPECT_EQ("v1", toString(a));
-
-		EXPECT_EQ("v1 sub v2", toString(*subset(a,b)));
-
-		EXPECT_EQ("5 in v1 => v2 sub v3", toString(*subsetIf(5,a,b,c)));
-
-		EXPECT_EQ("|v1| > 5 => v2 sub v3", toString(*subsetIfBigger(a,5,b,c)));
-
-		// constraint test
-		Constraints problem = {
-				elem(3, a),
-				subset(a,b),
-				subsetIf(5,a,b,c),
-				subsetIfBigger(a,5,b,c),
-				subsetIfReducedBigger(a, 3, 2, b, c)
-		};
-
-		EXPECT_EQ("{3 in v1,v1 sub v2,5 in v1 => v2 sub v3,|v1| > 5 => v2 sub v3,|v1 - {3}| > 2 => v2 sub v3}", toString(problem));
-
-	}
-
 
 	TEST(Solver, ConstraintInputSetsIfElem) {
 
-		typedef TypedSetID<int> Set;
+		typedef TypedSetVariable<int> Set;
 
 		Set a = 1;
 		Set b = 2;
@@ -122,8 +72,8 @@ namespace constraint {
 
 	TEST(Constraint, Check) {
 
-		auto s1 = TypedSetID<int>(1);
-		auto s2 = TypedSetID<int>(2);
+		auto s1 = TypedSetVariable<int>(1);
+		auto s2 = TypedSetVariable<int>(2);
 
 		Assignment a;
 		a[s1] = { 1, 2 };
@@ -178,7 +128,7 @@ namespace constraint {
 
 	TEST(Solver, Basic) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
 
 		Constraints problem = {
 				elem(5,s(1)),
@@ -223,7 +173,7 @@ namespace constraint {
 
 	TEST(Solver, Functions) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
 
 		auto inc = [](const std::set<int>& a)->std::set<int> {
 			std::set<int> res;
@@ -267,18 +217,18 @@ namespace constraint {
 	TEST(Solver, Lazy) {
 
 		// lazy-evaluated faculty values
-		auto resolver = [](const std::set<ValueID>& sets)->Constraints {
+		auto resolver = [](const std::set<Variable>& sets)->Constraints {
 			Constraints res;
 			for(auto cur : sets) {
 				int id = cur.getID();
 				if (id == 0) {
-					res.add(elem(0, TypedSetID<int>(id)));
+					res.add(elem(0, TypedSetVariable<int>(id)));
 				} else if (id == 1 || id == 2) {
-					res.add(elem(1, TypedSetID<int>(id)));
+					res.add(elem(1, TypedSetVariable<int>(id)));
 				} else {
-					TypedSetID<int> a(id-1);
-					TypedSetID<int> b(id-2);
-					TypedSetID<int> r(id);
+					TypedSetVariable<int> a(id-1);
+					TypedSetVariable<int> b(id-2);
+					TypedSetVariable<int> r(id);
 					res.add(subsetBinary(a, b, r, [](const std::set<int>& a, const std::set<int>& b)->std::set<int> {
 						std::set<int> res;
 						for( int x : a) for (int y : b) res.insert(x+y);
@@ -290,14 +240,14 @@ namespace constraint {
 		};
 
 		// see whether we can compute something
-		auto res = solve(TypedSetID<int>(4), resolver);
+		auto res = solve(TypedSetVariable<int>(4), resolver);
 //		std::cout << res << "\n";
-		EXPECT_EQ("{3}", toString(res[TypedSetID<int>(4)]));
+		EXPECT_EQ("{3}", toString(res[TypedSetVariable<int>(4)]));
 
 		// see whether we can compute something
-		res = solve(TypedSetID<int>(46), resolver);
+		res = solve(TypedSetVariable<int>(46), resolver);
 //		std::cout << res << "\n";
-		EXPECT_EQ("{1836311903}", toString(res[TypedSetID<int>(46)]));
+		EXPECT_EQ("{1836311903}", toString(res[TypedSetVariable<int>(46)]));
 	}
 
 
@@ -333,7 +283,7 @@ namespace constraint {
 	TEST(Solver, Lattice) {
 
 		typedef Lattice<Pair, pair_meet_assign_op, pair_less_op> PairLattice;
-		auto s = [](int id) { return TypedValueID<PairLattice>(id); };
+		auto s = [](int id) { return TypedVariable<PairLattice>(id); };
 
 		Constraints problem = {
 				subset(Pair(5,8),s(1)),
@@ -358,11 +308,11 @@ namespace constraint {
 
 		struct IncrementConstraint : public Constraint {
 
-			TypedSetID<int> in;
-			TypedSetID<int> out;
+			TypedSetVariable<int> in;
+			TypedSetVariable<int> out;
 
-			IncrementConstraint(const TypedSetID<int>& in, const TypedSetID<int>& out)
-				: Constraint(toVector<ValueID>(in), toVector<ValueID>(out)), in(in), out(out) {}
+			IncrementConstraint(const TypedSetVariable<int>& in, const TypedSetVariable<int>& out)
+				: Constraint(toVector<Variable>(in), toVector<Variable>(out)), in(in), out(out) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				const auto& sin  = ass[in];
@@ -393,14 +343,14 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
 			virtual bool hasAssignmentDependentDependencies() const { return false; }
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const { return getInputs(); }
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const { return getInputs(); }
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
 
 		};
 
 
-		ConstraintPtr increment(const TypedSetID<int>& in, const TypedSetID<int>& out) {
+		ConstraintPtr increment(const TypedSetVariable<int>& in, const TypedSetVariable<int>& out) {
 			return std::make_shared<IncrementConstraint>(in, out);
 		}
 
@@ -409,7 +359,7 @@ namespace constraint {
 
 	TEST(Solver, ResetConstraintsEager) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
 
 		Constraints problem = {
 				subset   (s(1),s(2)),
@@ -429,7 +379,7 @@ namespace constraint {
 
 	TEST(Solver, ResetConstraintsLazy) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
 
 		Constraints problem = {
 				subset   (s(1),s(2)),
@@ -439,7 +389,7 @@ namespace constraint {
 
 
 		// lazy-evaluated faculty values
-		auto resolver = [&](const std::set<ValueID>& sets)->Constraints {
+		auto resolver = [&](const std::set<Variable>& sets)->Constraints {
 			Constraints res;
 			for(auto cur : sets) {
 				int id = cur.getID();
@@ -465,17 +415,17 @@ namespace constraint {
 
 		struct DynamicConstraint : public Constraint {
 
-			TypedSetID<TypedSetID<int>> set;			// the set containing elements to be aggregated
-			TypedSetID<int> out;						// the result set
+			TypedSetVariable<TypedSetVariable<int>> set;			// the set containing elements to be aggregated
+			TypedSetVariable<int> out;						// the result set
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
-			DynamicConstraint(const TypedSetID<TypedSetID<int>>& set, const TypedSetID<int>& out)
-				: Constraint(toVector<ValueID>(set), toVector<ValueID>(out), true, true), set(set), out(out) {}
+			DynamicConstraint(const TypedSetVariable<TypedSetVariable<int>>& set, const TypedSetVariable<int>& out)
+				: Constraint(toVector<Variable>(set), toVector<Variable>(out), true, true), set(set), out(out) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
 				bool changed = false;
-				const std::set<TypedSetID<int>>& sets = ass[set];
+				const std::set<TypedSetVariable<int>>& sets = ass[set];
 				for(auto cur : sets) {
 					for(auto e : (const std::set<int>&)(ass[cur])) {
 						changed = ass[out].insert(e).second || changed;
@@ -486,7 +436,7 @@ namespace constraint {
 
 			virtual bool check(const Assignment& ass) const {
 				const std::set<int>& value = ass[out];
-				const std::set<TypedSetID<int>>& sets = ass[set];
+				const std::set<TypedSetVariable<int>>& sets = ass[set];
 				for(auto cur : sets) {
 					for(auto e : (const std::set<int>&)(ass[cur])) {
 						if (!contains(value, e)) return false;
@@ -498,10 +448,10 @@ namespace constraint {
 			virtual std::ostream& writeDotEdge(std::ostream& out) const { assert_not_implemented(); return out; }
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				inputs.clear();
 				inputs.push_back(set);
-				const std::set<TypedSetID<int>>& sets = ass[set];
+				const std::set<TypedSetVariable<int>>& sets = ass[set];
 				inputs.insert(inputs.end(), sets.begin(), sets.end());
 				return inputs;
 			}
@@ -511,12 +461,12 @@ namespace constraint {
 		};
 
 
-		ConstraintPtr collect(const TypedSetID<TypedSetID<int>>& sets, const TypedSetID<int>& out) {
+		ConstraintPtr collect(const TypedSetVariable<TypedSetVariable<int>>& sets, const TypedSetVariable<int>& out) {
 			return std::make_shared<DynamicConstraint>(sets, out);
 		}
 
 
-		typedef std::map<ValueID, std::vector<ConstraintPtr>> ConstraintMap;
+		typedef std::map<Variable, std::vector<ConstraintPtr>> ConstraintMap;
 
 		struct MapResolver {
 
@@ -526,7 +476,7 @@ namespace constraint {
 
 			MapResolver(const ConstraintMap& map) : map(map) {}
 
-			Constraints operator()(const std::set<ValueID>& values) const {
+			Constraints operator()(const std::set<Variable>& values) const {
 				Constraints res;
 
 				for(auto value : values) {
@@ -545,8 +495,8 @@ namespace constraint {
 
 	TEST(Solver, DynamicDependenciesEager) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
-		auto m = [](int id) { return TypedSetID<TypedSetID<int>>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
+		auto m = [](int id) { return TypedSetVariable<TypedSetVariable<int>>(id); };
 
 		Constraints problem = {
 				elem	 ( 1, s(1)),
@@ -573,8 +523,8 @@ namespace constraint {
 
 	TEST(Solver, DynamicDependenciesLazy) {
 
-		auto s = [](int id) { return TypedSetID<int>(id); };
-		auto m = [](int id) { return TypedSetID<TypedSetID<int>>(id); };
+		auto s = [](int id) { return TypedSetVariable<int>(id); };
+		auto m = [](int id) { return TypedSetVariable<TypedSetVariable<int>>(id); };
 
 		ConstraintMap map;
 

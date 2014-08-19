@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,6 +63,7 @@
 
 #include "insieme/utils/typed_map.h"
 #include "insieme/utils/lazy.h"
+#include "insieme/utils/constraint/solver.h"
 
 namespace insieme {
 namespace analysis {
@@ -86,12 +87,25 @@ namespace cba {
 	typedef SingleIndex ElementIndex; 		// for arrays / vectors
 	typedef FieldIndex ComponentIndex; 		// for tuples
 
-	typedef sc::ValueID ValueID;
+	typedef sc::Variable Variable;
 
+
+	/**
+	 * The central entity running an analysis by managing the set of variables, constraints and an instance
+	 * of the lazy constraint solver.
+	 */
 	class CBA : public boost::noncopyable {
 
+		// -------------------- Member Types ----------------------
+
+		/**
+		 * The type of the constraint solver instance used for solving constraints.
+		 */
 		typedef sc::LazySolver Solver;
 
+		/**
+		 * A type for building cached data.
+		 */
 		struct ContainerBase {
 			virtual ~ContainerBase() {}
 		};
@@ -126,24 +140,33 @@ namespace cba {
 
 		typedef utils::TypedMap<Container, ContainerBase> index_map_type;
 
+
+		// -------------------- Member Fields ----------------------
+
+		/**
+		 * The root statement analyzed by this analysis instance.
+		 */
 		core::StatementInstance root;
 
+		/**
+		 * The lazy solver instance used for resolving constraints
+		 */
 		Solver solver;
 
 		// a counter to be incremented for generating fresh set ids
-		int setCounter;
+		int varCounter;
 
 		// the container for all contexts, call sites and locations for individual context types
 		index_map_type indices;
 
-		std::map<ValueID, ConstraintGenerator*> value2generator;				// maps value IDs to their associated generator instances
-		std::map<std::type_index, ConstraintGenerator*> generatorIndex;			// to prevent the same type of generator being used multiple times
-		std::map<ValueID, AnalysisType> value2analysis;							// maps value IDs to their analysis type (added for stats)
+		std::map<Variable, ConstraintGenerator*> var2gen;				// maps variable IDs to their associated generator instances
+		std::map<std::type_index, ConstraintGenerator*> genIndex;		// to prevent the same type of generator being used multiple times
+		std::map<Variable, AnalysisType> var2analysis;					// maps variable IDs to their analysis type (added for stats)
 
 		// two caches for resolving labels and variables
 		int idCounter;
-		std::unordered_map<core::StatementInstance, Label> labels;
-		std::unordered_map<core::VariableAddress, Variable> vars;
+		std::unordered_map<core::StatementInstance, Label> labels;		// TODO: think about dropping those
+		std::unordered_map<core::VariableAddress, VarLabel> vars;
 
 		// a reverse lookup structure for labels
 		std::unordered_map<Label, core::StatementInstance> reverseLabels;
@@ -160,7 +183,7 @@ namespace cba {
 		CBA(const core::StatementInstance& root);
 
 		~CBA() {
-			for(auto cur : generatorIndex) delete cur.second;
+			for(auto cur : genIndex) delete cur.second;
 		}
 
 		// basic functionality
@@ -178,21 +201,21 @@ namespace cba {
 		template<typename A, typename Context = DefaultContext>
 		const typename lattice<A,analysis_config<Context>>::type::value_type&
 		getValuesOf(const core::StatementInstance& expr, const A& a, const Context& ctxt = Context()) {
-			auto id = getSet(a, getLabel(expr), ctxt);
+			auto id = getVar(a, getLabel(expr), ctxt);
 			return solver.solve(id)[id];
 		}
 
 		template<typename A, typename Context, typename ... Rest>
 		const typename lattice<A,analysis_config<Context>>::type::value_type&
 		getValuesOf(const core::StatementInstance& expr, const A& a, const Context& ctxt, const Rest& ... rest) {
-			auto id = getSet(a, getLabel(expr), ctxt, rest...);
+			auto id = getVar(a, getLabel(expr), ctxt, rest...);
 			return solver.solve(id)[id];
 		}
 
 		template<typename A, typename Context = DefaultContext>
 		const typename lattice<A,analysis_config<Context>>::type::value_type&
 		getValuesOf(const A& a) {
-			auto id = getValueID<A,analysis_config<Context>>();
+			auto id = getVariable<A,analysis_config<Context>>();
 			return solver.solve(id)[id];
 		}
 
@@ -200,32 +223,32 @@ namespace cba {
 
 	private:
 
-		struct ValueMapBase {
-			virtual ~ValueMapBase() {}
+		struct ParamMapBase {
+			virtual ~ParamMapBase() {}
 		};
 
 		template<typename T>
-		struct ValueMap : public ValueMapBase {
-			map<std::type_index,map<T,ValueID>> values;
-			map<ValueID,T> data;
+		struct ParamMap : public ParamMapBase {
+			map<std::type_index,map<T,Variable>> values;
+			map<Variable,T> data;
 		};
 
-		utils::TypedMap<ValueMap, ValueMapBase> valueMap;
+		utils::TypedMap<ParamMap, ParamMapBase> paramMap;
 
 
 		template<typename G>
 		ConstraintGenerator* getGenerator() {
-			auto& gen = generatorIndex[typeid(G)];
+			auto& gen = genIndex[typeid(G)];
 			return (gen) ? gen : (gen = new G(*this));
 		}
 
 
 		template<typename A, typename Config>
-		sc::TypedValueID<typename lattice<A,Config>::type> getValueIDInternal(const typename params<A,Config>::type& key) {
+		sc::TypedVariable<typename lattice<A,Config>::type> getVariableInternal(const typename params<A,Config>::type& key) {
 			typedef typename params<A,Config>::type params_type;
 
 			// try looking previously assigned value ID
-			auto& entry = valueMap.get<params_type>();
+			auto& entry = paramMap.get<params_type>();
 			auto& forward = entry.values[typeid(A)];
 			auto pos = forward.find(key);
 			if (pos != forward.end()) {
@@ -233,13 +256,13 @@ namespace cba {
 			}
 
 			// create new value ID
-			sc::TypedValueID<typename lattice<A,Config>::type> res(++setCounter);		// reserve 0
+			sc::TypedVariable<typename lattice<A,Config>::type> res(++varCounter);		// reserve 0
 			forward[key] = res;
 			entry.data.insert(std::make_pair(res,key));
 
 			// fix constraint generator
-			value2generator[res] = getGenerator<typename generator<A,Config>::type>();
-			value2analysis.insert(std::make_pair(res, AnalysisType(typeid(A))));
+			var2gen[res] = getGenerator<typename generator<A,Config>::type>();
+			var2analysis.insert(std::make_pair(res, AnalysisType(typeid(A))));
 
 			// done
 			return res;
@@ -248,57 +271,57 @@ namespace cba {
 	public:
 
 		template<typename A, typename Config, typename ... Params>
-		sc::TypedValueID<typename lattice<A,Config>::type> getValueID(const Params& ... params) {
+		sc::TypedVariable<typename lattice<A,Config>::type> getVariable(const Params& ... params) {
 			typedef std::tuple<AnalysisType,Params...> params_type;
-			return getValueIDInternal<A,Config>(params_type(typeid(A), params...));
+			return getVariableInternal<A,Config>(params_type(typeid(A), params...));
 		}
 
 		template<typename ... Params>
-		const std::tuple<AnalysisType,Params...>& getValueParameters(const ValueID& id) const {
+		const std::tuple<AnalysisType,Params...>& getVariableParameters(const Variable& var) const {
 			typedef std::tuple<AnalysisType,Params...> params_type;
 
 			// navigate through two-level index to obtain parameters
-			auto& map = valueMap.get<params_type>().data;
-			auto pos = map.find(id);
+			auto& map = paramMap.get<params_type>().data;
+			auto pos = map.find(var);
 			assert_true(pos != map.end())
-					<< " No entry for value ID " << id << " found.\n"
-					<< " Current set-counter: " << setCounter << "\n";
+					<< " No entry for variable " << var << " found.\n"
+					<< " Current var-counter: " << varCounter << "\n";
 			return pos->second;
 		}
 
 		template<typename Context = DefaultContext, typename A>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type) {
-			return getValueID<A,analysis_config<Context>>();
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type) {
+			return getVariable<A,analysis_config<Context>>();
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Context& context) {
-			return getValueID<A,analysis_config<Context>,Context>(context);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type, const Context& context) {
+			return getVariable<A,analysis_config<Context>,Context>(context);
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(int id, const Context& context = Context()) {
-			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(int id, const Context& context = Context()) {
+			return getVariable<A,analysis_config<Context>,int,Context>(id, context);
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, int id, const Context& context = Context()) {
-			return getValueID<A,analysis_config<Context>,int,Context>(id, context);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type, int id, const Context& context = Context()) {
+			return getVariable<A,analysis_config<Context>,int,Context>(id, context);
 		}
 
 		template<typename A, typename Address, typename Context = DefaultContext>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Address& stmt, const Context& context = Context()) {
-			return getSet(type, getLabel(stmt), context);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type, const Address& stmt, const Context& context = Context()) {
+			return getVar(type, getLabel(stmt), context);
 		}
 
 		template<typename A, typename Context, typename ... Rest>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, int id, const Context& ctxt, const Rest& ... rest) {
-			return getValueID<A,analysis_config<Context>,int,Context,Rest...>(id, ctxt, rest...);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type, int id, const Context& ctxt, const Rest& ... rest) {
+			return getVariable<A,analysis_config<Context>,int,Context,Rest...>(id, ctxt, rest...);
 		}
 
 		template<typename A, typename Address, typename Context, typename ... Rest>
-		sc::TypedValueID<typename lattice<A,analysis_config<Context>>::type> getSet(const A& type, const Address& stmt, const Context& ctxt, const Rest& ... rest) {
-			return getSet(type, getLabel(stmt), ctxt, rest...);
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(const A& type, const Address& stmt, const Context& ctxt, const Rest& ... rest) {
+			return getVar(type, getLabel(stmt), ctxt, rest...);
 		}
 
 
@@ -328,7 +351,7 @@ namespace cba {
 
 		// -- variable management --
 
-		Variable getVariable(const core::VariableAddress& var) {
+		VarLabel getVariableLabel(const core::VariableAddress& var) {
 			auto pos = vars.find(var);
 			if (pos != vars.end()) {
 				return pos->second;
@@ -337,23 +360,23 @@ namespace cba {
 			// get the definition point
 			core::VariableAddress def = getDefinitionPoint(var);
 
-			Variable res;
+			VarLabel res;
 			if (def == var) {
 				res = getLabel(def);		// use label of definition point
 				reverseVars[res] = def;
 			} else {
-				res = getVariable(def);
+				res = getVariableLabel(def);
 			}
 			vars[var] = res;
 			return res;
 		}
 
-		Variable getVariable(const core::VariableAddress& var) const {
+		VarLabel getVariableLabel(const core::VariableAddress& var) const {
 			auto pos = vars.find(var);
 			return (pos != vars.end()) ? pos->second : 0;
 		}
 
-		core::VariableAddress getVariable(const Variable& var) const {
+		core::VariableAddress getVariableAddress(const VarLabel& var) const {
 			auto pos = reverseVars.find(var);
 			return (pos != reverseVars.end()) ? pos->second : core::VariableAddress();
 		}
@@ -469,7 +492,7 @@ namespace cba {
 		}
 
 		template<typename L>
-		typename L::manager_type& getDataManager(const TypedValueID<L>& value) {
+		typename L::manager_type& getDataManager(const TypedVariable<L>& value) {
 			return getDataManager<L>();
 		}
 
@@ -486,7 +509,7 @@ namespace cba {
 		void printSolution(std::ostream& out = std::cout) const;
 
 		std::size_t getNumSets() const {
-			return value2generator.size();
+			return var2gen.size();
 		}
 
 		std::size_t getNumConstraints() const {
@@ -498,7 +521,7 @@ namespace cba {
 		template<typename T>
 		Container<T>& getContainer() { return indices.get<T>(); }
 
-		void addConstraintsFor(const ValueID& value, Constraints& res);
+		void addConstraintsFor(const Variable& value, Constraints& res);
 
 
 	private:

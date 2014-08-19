@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,30 +54,24 @@ namespace cba {
 
 	CBA::CBA(const StatementInstance& root)
 		: root(root),
-		  solver([&](const set<ValueID>& sets) {
+		  solver([&](const set<Variable>& sets) {
 				Constraints res;
 				for (auto set : sets) {
 					this->addConstraintsFor(set, res);
-//					std::cout << "Resolving set " << set << "...\n";
-//					Constraints tmp;
-//					this->addConstraintsFor(set, tmp);
-//					std::cout << "Constraints: " << tmp << "\n";
-//					if(!all(tmp, [&](const ConstraintPtr& cur) { return set == cur->getOutputs()[0]; })) { std::cout << "WARNING\n"; }
-//					res.add(tmp);
 				}
 				return res;
 		  }),
-		  setCounter(0), idCounter(0), callSiteMgr(root),
+		  varCounter(0), idCounter(0), callSiteMgr(root),
 		  callStringFilter(*this)
 	{
 		expect_true(core::checks::check(root).empty()) << core::checks::check(root);
 	};
 
-	void CBA::addConstraintsFor(const ValueID& value, Constraints& res) {
+	void CBA::addConstraintsFor(const Variable& value, Constraints& res) {
 
 		// obtain constraint generator
-		auto pos = value2generator.find(value);
-		assert_true(pos != value2generator.end()) << "Unknown value id encountered: " << value << "\n";
+		auto pos = var2gen.find(value);
+		assert_true(pos != var2gen.end()) << "Unknown value id encountered: " << value << "\n";
 
 		// let generator create constraints
 		pos->second->addConstraints(*this, value, res);
@@ -104,15 +98,15 @@ namespace cba {
 		out << "digraph G {\n\t";
 
 		// solution resolution utility
-		auto getSolution = [&](const ValueID& value)->const string& {
+		auto getSolution = [&](const Variable& value)->const string& {
 			static const string& none = "";
 			auto pos = solution.find(value);
 			return (pos != solution.end()) ? pos->second : none;
 		};
 
 		// print names of all sets
-		for(const auto& cur : value2generator) {
-			ValueID id = cur.first;
+		for(const auto& cur : var2gen) {
+			Variable id = cur.first;
 			// use constraint generator to format value
 			out << id << " [label=\"";
 
@@ -144,17 +138,17 @@ namespace cba {
 		out << "digraph G {\n\t";
 
 		// solution resolution utility
-		auto getSolution = [&](const ValueID& value)->const string& {
+		auto getSolution = [&](const Variable& value)->const string& {
 			static const string& none = "";
 			auto pos = solution.find(value);
 			return (pos != solution.end()) ? pos->second : none;
 		};
 
 		// print names of all sets
-		for(const auto& cur : value2generator) {
+		for(const auto& cur : var2gen) {
 
 			// skip non-resolved values (not important)
-			ValueID id = cur.first;
+			Variable id = cur.first;
 			if (!solver.isResolved(id)) continue;
 
 			// only print root nodes
@@ -186,7 +180,7 @@ namespace cba {
 
 		// statistics on the value types
 		std::map<AnalysisType,int> counts;
-		for(const auto& cur : value2analysis) {
+		for(const auto& cur : var2analysis) {
 			counts[cur.second]++;
 		}
 

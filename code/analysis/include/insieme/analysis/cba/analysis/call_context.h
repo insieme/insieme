@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -119,7 +119,7 @@ namespace cba {
 			if (funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
 
 			// fill predecessor set
-			auto pred_res = cba.getSet(pred, cba.getLabel(call));
+			auto pred_res = cba.getVar(pred, cba.getLabel(call));
 
 			// collect a list of all potential predecessors
 			for(auto cur : getReachingPredecessor(call)) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/utils/constraint/solver.h"
+#include "insieme/utils/constraint/variables.h"
+#include "insieme/utils/constraint/constraints.h"
 
 namespace insieme {
 namespace analysis {
@@ -50,13 +51,13 @@ namespace cba {
 	// forward declaration
 	class CBA;
 
-	namespace sc = insieme::utils::constraint;
+	namespace uc = insieme::utils::constraint;
 
 
 	// -------------------- Constraint Generator ---------------------------
 
 	// the type used for lists of constraints
-	typedef utils::constraint::Constraints Constraints;
+	typedef uc::Constraints Constraints;
 
 	/**
 	 * A generic base class for generators capable of resolving value constraints for individual values.
@@ -76,7 +77,7 @@ namespace cba {
 		 * @param value the value for which constraints should be obtained
 		 * @param constraints the constraint set to be extended
 		 */
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) =0;
+		virtual void addConstraints(CBA& cba, const uc::Variable& value, Constraints& constraints) =0;
 
 		/**
 		 * Requests this constraint generator to print a human readable description of the given
@@ -86,7 +87,7 @@ namespace cba {
 		 * @param cba the context within which the given value is utilized
 		 * @param value the value to be formated
 		 */
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const =0;
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const uc::Variable& value) const =0;
 
 	};
 

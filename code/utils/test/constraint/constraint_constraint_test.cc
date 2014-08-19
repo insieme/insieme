@@ -34,56 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba/framework/analysis_type.h"
-#include "insieme/analysis/cba/framework/entities/job.h"
-#include "insieme/analysis/cba/framework/generator/basic_data_flow.h"
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/constraint/constraints.h"
 
 namespace insieme {
-namespace analysis {
-namespace cba {
+namespace utils {
+namespace constraint {
 
-	// ----------------- jobs ---------------
+	TEST(Constraint, Basic) {
 
-	template<typename Context> class JobConstraintGenerator;
+		typedef TypedSetVariable<int> Set;
 
-	struct job_analysis_data : public dependent_data_analysis<Job, JobConstraintGenerator> {};
-	struct job_analysis_var  : public dependent_data_analysis<Job, JobConstraintGenerator> {};
+		// simple set tests
+		Set a = 1;
+		Set b = 2;
+		Set c = 3;
 
-	extern const job_analysis_data Jobs;
-	extern const job_analysis_var  jobs;
+		EXPECT_EQ("v1", toString(a));
+
+		EXPECT_EQ("v1 sub v2", toString(*subset(a,b)));
+
+		EXPECT_EQ("5 in v1 => v2 sub v3", toString(*subsetIf(5,a,b,c)));
+
+		EXPECT_EQ("|v1| > 5 => v2 sub v3", toString(*subsetIfBigger(a,5,b,c)));
+
+		// constraint test
+		Constraints problem = {
+				elem(3, a),
+				subset(a,b),
+				subsetIf(5,a,b,c),
+				subsetIfBigger(a,5,b,c),
+				subsetIfReducedBigger(a, 3, 2, b, c)
+		};
+
+		EXPECT_EQ("{3 in v1,v1 sub v2,5 in v1 => v2 sub v3,|v1| > 5 => v2 sub v3,|v1 - {3}| > 2 => v2 sub v3}", toString(problem));
+
+	}
 
 
-	template<typename Context>
-	class JobConstraintGenerator : public DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> {
-
-		typedef DataFlowConstraintGenerator<job_analysis_data, job_analysis_var, Context> super;
-
-		CBA& cba;
-
-	public:
-
-		JobConstraintGenerator(CBA& cba) : super(cba, Jobs, jobs), cba(cba) { };
-
-		using super::elem;
-
-		void visitJobExpr(const JobExprInstance& job, const Context& ctxt, Constraints& constraints) {
-
-			// this expression is creating a job
-			auto value = getJobFromConstructor(job, ctxt);
-			auto J_res = cba.getVar(Jobs, job, ctxt);
-
-			// add constraint fixing this job
-			constraints.add(elem(value, J_res));
-
-		}
-
-	};
-
-} // end namespace cba
-} // end namespace analysis
+} // end namespace set_constraint
+} // end namespace utils
 } // end namespace insieme
