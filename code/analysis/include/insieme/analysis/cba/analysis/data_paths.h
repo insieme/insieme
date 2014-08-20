@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -95,7 +95,7 @@ namespace cba {
 
 			// in this case, seed the analysis
 			auto value = DataPath();
-			constraints.add(elem(value, cba.getSet(DP, literal, ctxt)));
+			constraints.add(elem(value, cba.getVar(DP, literal, ctxt)));
 
 		}
 
@@ -109,14 +109,14 @@ namespace cba {
 			if (!base.isDataPathPrimitive(fun) || call.size() != 2u) return;
 
 			// get source and target sets
-			auto DP_src = cba.getSet(DP, call[0], ctxt);
-			auto DP_trg = cba.getSet(DP, call, ctxt);
+			auto DP_src = cba.getVar(DP, call[0], ctxt);
+			auto DP_trg = cba.getVar(DP, call, ctxt);
 
 			// check out the type of data path constructor
 			if (base.isDataPathMember(fun)) {
 
 				// get set containing value of identifier
-				auto D_field = cba.getSet(D, call[1], ctxt);	// we use the simple-constant analyses to get the identifier
+				auto D_field = cba.getVar(D, call[1], ctxt);	// we use the simple-constant analyses to get the identifier
 
 				constraints.add(combine(this->getValueManager(), DP_src, D_field, DP_trg,
 						[](const DataPath& head, const ExpressionPtr& field)->DataPath {
@@ -128,7 +128,7 @@ namespace cba {
 			} else if (base.isDataPathElement(fun)) {
 
 				// get set containing value of identifier
-				auto A_index = cba.getSet(A, call[1], ctxt);	// we use the arithmetic analyses to obtain the index
+				auto A_index = cba.getVar(A, call[1], ctxt);	// we use the arithmetic analyses to obtain the index
 
 				constraints.add(combine(this->getValueManager(), DP_src, A_index, DP_trg,
 						[](const DataPath& head, const Formula& index)->DataPath {

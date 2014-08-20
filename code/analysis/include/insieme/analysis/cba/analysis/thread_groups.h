@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,7 +83,7 @@ namespace cba {
 
 			// this expression is creating a job
 			auto value = getThreadGroupFromConstructor(expr, ctxt);
-			auto G_res = cba.getSet(ThreadGroups, expr, ctxt);
+			auto G_res = cba.getVar(ThreadGroups, expr, ctxt);
 
 			// add constraint fixing this job
 			constraints.add(elem(value, G_res));

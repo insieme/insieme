@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -102,7 +102,7 @@ namespace cba {
 			auto value = getLocation(literal, ctxt);
 			auto l_lit = cba.getLabel(literal);
 
-			auto R_lit = cba.getSet(R, l_lit, ctxt);
+			auto R_lit = cba.getVar(R, l_lit, ctxt);
 			constraints.add(elem(value, R_lit));
 
 		}
@@ -122,7 +122,7 @@ namespace cba {
 				auto value = getLocation(call, ctxt);
 				auto l_call = cba.getLabel(call);
 
-				auto R_call = cba.getSet(R, l_call, ctxt);
+				auto R_call = cba.getVar(R, l_call, ctxt);
 				constraints.add(elem(value, R_call));
 
 				// done
@@ -134,9 +134,9 @@ namespace cba {
 			if (base.isRefNarrow(fun)) {
 
 				// obtain involved sets
-				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
-				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
-				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
+				auto R_in  = cba.getVar(R, call[0], ctxt);	// the input reference
+				auto DP_in = cba.getVar(DP, call[1], ctxt);				// the data path values
+				auto R_out = cba.getVar(R, call, ctxt);		// the resulting context
 
 				// add constraint linking in and out values
 				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,
@@ -148,9 +148,9 @@ namespace cba {
 			} else if (base.isRefExpand(fun)) {
 
 				// obtain involved sets
-				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
-				auto DP_in = cba.getSet(DP, call[1], ctxt);				// the data path values
-				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
+				auto R_in  = cba.getVar(R, call[0], ctxt);	// the input reference
+				auto DP_in = cba.getVar(DP, call[1], ctxt);				// the data path values
+				auto R_out = cba.getVar(R, call, ctxt);		// the resulting context
 
 				// add constraint linking in and out values
 				constraints.add(combine(this->getValueManager(), R_in, DP_in, R_out,
@@ -163,8 +163,8 @@ namespace cba {
 
 				// re-interpret casts are ignored ... does not alter the reference
 				// obtain involved sets
-				auto R_in  = cba.getSet(R, call[0], ctxt);	// the input reference
-				auto R_out = cba.getSet(R, call, ctxt);		// the resulting context
+				auto R_in  = cba.getVar(R, call[0], ctxt);	// the input reference
+				auto R_out = cba.getVar(R, call, ctxt);		// the resulting context
 
 				// add constraint linking in and out values
 				constraints.add(subset(R_in, R_out));
@@ -175,7 +175,7 @@ namespace cba {
 			} else if (fun.isa<LiteralPtr>()) {		// it is an external function call -> no more details
 
 				auto l_call = cba.getLabel(call);
-				auto R_call = cba.getSet(R, l_call, ctxt);
+				auto R_call = cba.getVar(R, l_call, ctxt);
 				constraints.add(subset(this->getUnknownValue(), R_call));
 
 			}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -136,7 +136,7 @@ namespace cba {
 			// we can stop at the creation point - no definitions will be killed before
 			if (loc.isGlobal() && addr == cba.getRoot() && ctxt == Context()) {
 				// at the initial point a global value is undefined
-				auto setID = cba.getSet(Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
+				auto setID = cba.getVar(Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				auto unknownValue = BaseGenerator(cba).getUnknownValue();
 
 				// get type of value stored in memory location
@@ -156,9 +156,9 @@ namespace cba {
 		/**
 		 * Produces a humna-readable representation of the value represented by the given value ID.
 		 */
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 
-			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
+			auto& data = cba.getVariableParameters<int,Context,Location<Context>>(value);
 			int label = std::get<1>(data);
 			const core::NodeInstance& node = cba.getStmt(label);
 			const Context& ctxt = std::get<2>(data);
@@ -196,9 +196,9 @@ namespace cba {
 
 		ImperativeTmpStateConstraintGenerator(CBA& cba) : super(cba, Sin<BaseAnalysis>(), Stmp<BaseAnalysis>(), Sout<BaseAnalysis>()) {}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 
-			const auto& data = cba.getValueParameters<Label,Context,Location<Context>>(value);
+			const auto& data = cba.getVariableParameters<Label,Context,Location<Context>>(value);
 			Label label = std::get<1>(data);
 			const auto& stmt = cba.getStmt(label);
 			const auto& ctxt = std::get<2>(data);
@@ -224,10 +224,10 @@ namespace cba {
 			typename Element
 		>
 		class ExceedingElementsFilter : public utils::constraint::detail::Filter<false> {
-			TypedValueID<StructLattice> a;
+			TypedVariable<StructLattice> a;
 			const Element& e;
 		public:
-			ExceedingElementsFilter(const TypedValueID<StructLattice>& a, const Element& e)
+			ExceedingElementsFilter(const TypedVariable<StructLattice>& a, const Element& e)
 				: a(a), e(e) {}
 			bool operator()(const Assignment& ass) const {
 				typedef typename StructLattice::base_lattice::value_type base_value_type;
@@ -237,16 +237,16 @@ namespace cba {
 			void print(std::ostream& out) const {
 				out << "|" << a << " - {" << e << "}| > 0";
 			}
-			utils::constraint::detail::ValueIDs getInputs() const {
-				return toVector<ValueID>(a);
+			utils::constraint::detail::Variables getInputs() const {
+				return toVector<Variable>(a);
 			}
-			void addUsedInputs(const Assignment& ass, std::set<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::set<Variable>& used) const {
 				used.insert(a);
 			}
 		};
 
 		template<typename StructLattice, typename Element, typename InSet, typename OutSet>
-		utils::constraint::ConstraintPtr subsetIfExceeding(const TypedValueID<StructLattice>& set, const Element& e, const InSet& a, const OutSet& b) {
+		utils::constraint::ConstraintPtr subsetIfExceeding(const TypedVariable<StructLattice>& set, const Element& e, const InSet& a, const OutSet& b) {
 			return combine(ExceedingElementsFilter<StructLattice,Element>(set,e), e_sub(a,b));
 		}
 
@@ -274,28 +274,28 @@ namespace cba {
 			Location<Context> loc;
 
 			// the value covering the read reference
-			TypedValueID<RefLattice> ref;
+			TypedVariable<RefLattice> ref;
 
 			// the value to be assigned within this operation
-			TypedValueID<ValueLattice> in_value;
+			TypedVariable<ValueLattice> in_value;
 
 			// the old state of the memory location before the assignment
-			TypedValueID<ValueLattice> old_state;
+			TypedVariable<ValueLattice> old_state;
 
 			// the new state of the memory location after the assignment
-			TypedValueID<ValueLattice> new_state;
+			TypedVariable<ValueLattice> new_state;
 
 			// the set of inputs referenced by this constraint (internally maintained)
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			WriteConstraint(
 					mgr_type& mgr,
 					const Location<Context> loc,
-					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& in_value,
-					const TypedValueID<ValueLattice>& old_state, const TypedValueID<ValueLattice>& new_state)
-				: Constraint(toVector<ValueID>(ref, in_value, old_state), toVector<ValueID>(new_state), true),
+					const TypedVariable<RefLattice>& ref, const TypedVariable<ValueLattice>& in_value,
+					const TypedVariable<ValueLattice>& old_state, const TypedVariable<ValueLattice>& new_state)
+				: Constraint(toVector<Variable>(ref, in_value, old_state), toVector<Variable>(new_state), true),
 				  mgr(mgr), loc(loc), ref(ref), in_value(in_value), old_state(old_state), new_state(new_state) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -327,7 +327,7 @@ namespace cba {
 				return out << loc << " touched by " << ref << " => update(" << old_state << "," << in_value << ") in " << new_state;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				inputs.clear();
 				inputs.push_back(ref);
 
@@ -401,7 +401,7 @@ namespace cba {
 		};
 
 		template<typename ValueLattice, typename RefLattice, typename Context>
-		ConstraintPtr write(typename ValueLattice::manager_type& mgr, const Location<Context>& loc, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& in_value, const TypedValueID<ValueLattice>& old_state, const TypedValueID<ValueLattice>& new_state) {
+		ConstraintPtr write(typename ValueLattice::manager_type& mgr, const Location<Context>& loc, const TypedVariable<RefLattice>& ref, const TypedVariable<ValueLattice>& in_value, const TypedVariable<ValueLattice>& old_state, const TypedVariable<ValueLattice>& new_state) {
 			return std::make_shared<WriteConstraint<ValueLattice,RefLattice, Context>>(mgr, loc, ref, in_value, old_state, new_state);
 		}
 
@@ -430,25 +430,25 @@ namespace cba {
 			Location<Context> loc;
 
 			// the set of definitions reaching the merge point
-			TypedValueID<ReachingDefValue> reachingDefs;
+			TypedVariable<ReachingDefValue> reachingDefs;
 
 			// the value of the memory location leaving the merge operation (output)
-			TypedValueID<ValueLattice> out_value;
+			TypedVariable<ValueLattice> out_value;
 
 			// the internal set of values to be merged
-			mutable vector<TypedValueID<ValueLattice>> definedValues;		// this is the set of values defined at the point of reaching definitions
+			mutable vector<TypedVariable<ValueLattice>> definedValues;		// this is the set of values defined at the point of reaching definitions
 
 			// the internally maintained list of actually used inputs
-			mutable vector<ValueID> inputs;
+			mutable vector<Variable> inputs;
 
 		public:
 
 			ParallelStateMergeConstraint(
 					CBA& cba,
 					Location<Context> loc,
-					const TypedValueID<ReachingDefValue>& reachingDefs,
-					const TypedValueID<ValueLattice>& out_value)
-				: Constraint(toVector<ValueID>(reachingDefs), toVector<ValueID>(out_value), true, true),
+					const TypedVariable<ReachingDefValue>& reachingDefs,
+					const TypedVariable<ValueLattice>& out_value)
+				: Constraint(toVector<Variable>(reachingDefs), toVector<Variable>(out_value), true, true),
 				  cba(cba), loc(loc), reachingDefs(reachingDefs), out_value(out_value), definedValues() {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -499,13 +499,13 @@ namespace cba {
 
 			virtual bool updateDynamicDependencies(const Assignment& ass) const {
 				// TODO: this could be implemented more efficiently!
-				vector<TypedValueID<ValueLattice>> newDefs;
+				vector<TypedVariable<ValueLattice>> newDefs;
 
 				const set<Definition<Context>>& defs = ass[reachingDefs];
 				for(const Definition<Context>& cur : defs) {
 
 					// get the current value
-					newDefs.push_back(cba.getSet(Sout<BaseAnalyis>(), cur.getDefinitionPoint(), cur.getContext(), loc));
+					newDefs.push_back(cba.getVar(Sout<BaseAnalyis>(), cur.getDefinitionPoint(), cur.getContext(), loc));
 				}
 
 				// check whether something has changed
@@ -518,7 +518,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				// TODO: this could be implemented more efficiently!
 
 				// clear set of inputs
@@ -555,7 +555,7 @@ namespace cba {
 
 
 		template<typename BaseAnalysis, typename ReachingDefValue, typename ValueLattice, typename Context>
-		ConstraintPtr combineDefs(CBA& cba, const Location<Context>& loc, const TypedValueID<ReachingDefValue>& rd, const TypedValueID<ValueLattice>& out) {
+		ConstraintPtr combineDefs(CBA& cba, const Location<Context>& loc, const TypedVariable<ReachingDefValue>& rd, const TypedVariable<ValueLattice>& out) {
 			return std::make_shared<ParallelStateMergeConstraint<BaseAnalysis, ReachingDefValue, ValueLattice, Context>>(cba, loc, rd, out);
 		}
 
@@ -599,9 +599,9 @@ namespace cba {
 		/**
 		 * Produces a human-readable representation of the value represented by the given value ID.
 		 */
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 
-			auto& data = cba.getValueParameters<int,Context,Location<Context>>(value);
+			auto& data = cba.getVariableParameters<int,Context,Location<Context>>(value);
 			int label = std::get<1>(data);
 			const core::NodeInstance& node = cba.getStmt(label);
 			const Context& ctxt = std::get<2>(data);
@@ -620,7 +620,7 @@ namespace cba {
 			// we can stop at the creation point - no definitions will be killed before
 			if ((loc.getCreationPoint() == addr && ctxt == loc.getContext()) || (cba.getRoot() == addr && loc.isGlobal() && ctxt == Context())) {
 				// every reference is initialized by its default value
-				auto setID = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
+				auto setID = cba.getVar(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				auto unknownValue = BaseGenerator(cba).getUnknownValue();
 
 				// get type of value stored in memory location
@@ -639,8 +639,8 @@ namespace cba {
 			// if the current sub-tree does not contain any potential assignment to a pre-existing location we can skip it
 			if (detail::isAssignmentFree(addr)) {
 				// if so in = out
-				auto In  = cba.getSet( Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
-				auto Out = cba.getSet(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
+				auto In  = cba.getVar( Sin<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
+				auto Out = cba.getVar(Sout<BaseAnalysis>(), addr.as<StatementInstance>(), ctxt, loc);
 				constraints.add(subset(In,Out));
 				return;
 			}
@@ -663,15 +663,15 @@ namespace cba {
 
 //				// ---- S_out of args => S_tmp of call (only if other location is possible)
 //
-				auto S_tmp = cba.getSet(Stmp<BaseAnalysis>(), l_call, ctxt, location);
+				auto S_tmp = cba.getVar(Stmp<BaseAnalysis>(), l_call, ctxt, location);
 //
 //				// ---- combine S_tmp to S_out ...
 //
 //				// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
 
-				auto R_rhs = cba.getSet(R, l_rhs, ctxt);
-				auto A_value = cba.getSet<BaseAnalysis>(l_lhs, ctxt);
-				auto S_out = cba.getSet(Sout<BaseAnalysis>(), l_call, ctxt, location);
+				auto R_rhs = cba.getVar(R, l_rhs, ctxt);
+				auto A_value = cba.getVar<BaseAnalysis>(l_lhs, ctxt);
+				auto S_out = cba.getVar(Sout<BaseAnalysis>(), l_call, ctxt, location);
 //				constraints.add(subsetIf(location, R_rhs, A_value, S_out));
 //
 //				// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
@@ -688,8 +688,8 @@ namespace cba {
 
 				// instead of following the standard behavior we are simply combining reaching definitions here
 				auto l_call = cba.getLabel(call);
-				auto rd  = cba.getSet(RDout, l_call, ctxt, location);
-				auto out = cba.getSet(Sout<BaseAnalysis>(), l_call, ctxt, location);
+				auto rd  = cba.getVar(RDout, l_call, ctxt, location);
+				auto out = cba.getVar(Sout<BaseAnalysis>(), l_call, ctxt, location);
 				constraints.add(combineDefs<BaseAnalysis>(cba, location, rd, out));
 
 				// done

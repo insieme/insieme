@@ -54,7 +54,7 @@
 using namespace insieme;
 
 TEST(DatalayoutTransormTest, OclTest) {
-	Logger::get(std::cerr, ERROR, 0);
+	Logger::get(std::cerr, INFO, 0);
 	core::NodeManager manager;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_ROOT_DIR) << "transform/test/datalayout/inputs/sparsevec.c" << "' to IR...";
@@ -62,17 +62,19 @@ TEST(DatalayoutTransormTest, OclTest) {
 	insieme::frontend::ConversionJob job(SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c");
 	job.setDefinition("INSIEME", "");
 	job.setDefinition("UNIX", "");
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
+	job.addIncludeDirectory(SRC_ROOT_DIR "transform/test/datalayout/inputs/");
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // ocl_device.h
+	job.setOption(frontend::ConversionJob::OpenCL);
 	core::ProgramPtr program = job.execute(manager, false);
 	LOG(INFO) << "Done.";
 
-//	dumpPretty(program);
-
-//	core::NodePtr prog = program->getElement(0);
+	core::NodePtr prog = program->getElement(0);
 
 //	transform::datalayout::AosToSoa ats(prog);
 
-	auto errors = core::checks::check(program).getAll();
+//	dumpPretty(prog);
+
+	auto errors = core::checks::check(prog).getAll();
 
 	EXPECT_EQ(errors.size(), 0u);
 

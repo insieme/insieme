@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,19 +86,19 @@ namespace cba {
 
 			const Location<Context> loc;
 			const Definition<Context> def;
-			const TypedValueID<ReachingDefValue> in;
-			const TypedValueID<ReachingDefValue> out;
-			const TypedValueID<RefValue> ref;
+			const TypedVariable<ReachingDefValue> in;
+			const TypedVariable<ReachingDefValue> out;
+			const TypedVariable<RefValue> ref;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ReachingDefsConstraint(
 					const Location<Context>& loc, const Definition<Context>& def,
-					const TypedValueID<ReachingDefValue>& in, const TypedValueID<ReachingDefValue>& out,
-					const TypedValueID<RefValue>& ref)
-				: Constraint(toVector<ValueID>(in, ref), toVector<ValueID>(out), true),
+					const TypedVariable<ReachingDefValue>& in, const TypedVariable<ReachingDefValue>& out,
+					const TypedVariable<RefValue>& ref)
+				: Constraint(toVector<Variable>(in, ref), toVector<Variable>(out), true),
 				  loc(loc), def(def), in(in), out(out), ref(ref) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -150,7 +150,7 @@ namespace cba {
 				return out << " Reference of " << loc << " " << ref << " => combine(" << ref << "," << in << ") in " << this->out;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 
 				// reset the list of used inputs
 				inputs.clear();
@@ -205,7 +205,7 @@ namespace cba {
 
 
 		template<typename RefValue, typename RDValue, typename Context>
-		ConstraintPtr reachingDefs(const Location<Context>& loc, const Definition<Context>& def, const TypedValueID<RefValue>& updatedRef, const TypedValueID<RDValue>& in_state, const TypedValueID<RDValue>& out_state) {
+		ConstraintPtr reachingDefs(const Location<Context>& loc, const Definition<Context>& def, const TypedVariable<RefValue>& updatedRef, const TypedVariable<RDValue>& in_state, const TypedVariable<RDValue>& out_state) {
 			return std::make_shared<ReachingDefsConstraint<Context,RDValue,RefValue>>(loc, def, in_state, out_state, updatedRef);
 		}
 
@@ -288,15 +288,15 @@ namespace cba {
 			// we can stop at the creation point - no definitions will be killed before
 			if (loc.getCreationPoint() == addr) {
 
-				auto RD_out = cba.getSet(RDout, loc.getCreationPoint(), ctxt, loc);
+				auto RD_out = cba.getVar(RDout, loc.getCreationPoint(), ctxt, loc);
 				constraints.add(elem(set<Definition<Context>>(), RD_out));
 				return;
 			}
 
 			// if the current expression is assignment free we can skip the inner part
 			if (detail::isAssignmentFree(addr)) {
-				auto RD_in  = cba.getSet( RDin, addr.as<StatementInstance>(), ctxt, loc);
-				auto RD_out = cba.getSet(RDout, addr.as<StatementInstance>(), ctxt, loc);
+				auto RD_in  = cba.getVar( RDin, addr.as<StatementInstance>(), ctxt, loc);
+				auto RD_out = cba.getVar(RDout, addr.as<StatementInstance>(), ctxt, loc);
 				constraints.add(subset(RD_in, RD_out));
 				return;
 			}
@@ -321,9 +321,9 @@ namespace cba {
 
 
 				// get involved sets
-				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
-				auto RD_out = cba.getSet(RDout, call, ctxt, loc);		// the definitions
-				auto R_trg = cba.getSet(R, call[0], ctxt);				// set of references locations
+				auto RD_tmp = cba.getVar(RDtmp, call, ctxt, loc);		// the definitions reaching the assignment (after processing all arguments)
+				auto RD_out = cba.getVar(RDout, call, ctxt, loc);		// the definitions
+				auto R_trg = cba.getVar(R, call[0], ctxt);				// set of references locations
 
 				// add constraint
 				constraints.add(reachingDefs(loc, Definition<Context>(call, ctxt), R_trg, RD_tmp, RD_out));
@@ -340,9 +340,9 @@ namespace cba {
 				//		- subtract the set of killed definitions (KDout of merge call)
 
 				// get involved sets
-				auto RD_merge = cba.getSet(RDmerge, call, ctxt, loc);
-				auto KD_out = cba.getSet(KDout, call, ctxt, loc);
-				auto RD_out = cba.getSet(RDout, call, ctxt, loc);
+				auto RD_merge = cba.getVar(RDmerge, call, ctxt, loc);
+				auto KD_out = cba.getVar(KDout, call, ctxt, loc);
+				auto RD_out = cba.getVar(RDout, call, ctxt, loc);
 
 				// compute set difference
 				constraints.add(subsetBinary(RD_merge, KD_out, RD_out, [](const set<Definition<Context>>& a, const iset<Definition<Context>>& b)->set<Definition<Context>> {
@@ -370,7 +370,7 @@ namespace cba {
 	// forward definition
 	namespace detail {
 		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename DataValue, typename ... ExtraParams>
-		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const TypedValueID<DataValue>& in_state, const TypedValueID<DataValue>& out_state, const ExtraParams& ... params);
+		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedVariable<TGValue>& threadGroup, const TypedVariable<DataValue>& in_state, const TypedVariable<DataValue>& out_state, const ExtraParams& ... params);
 	}
 
 
@@ -413,10 +413,10 @@ namespace cba {
 				// In this case we have utilize the base implementation with a minor modification
 
 				// get involved sets
-				auto RD_tmp = cba.getSet(RDtmp, call, ctxt, loc);
-				auto RD_merge = cba.getSet(RDmerge, call, ctxt, loc);
+				auto RD_tmp = cba.getVar(RDtmp, call, ctxt, loc);
+				auto RD_merge = cba.getVar(RDmerge, call, ctxt, loc);
 
-				auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+				auto tg = cba.getVar(ThreadGroups, call[0], ctxt);
 
 				// add constraint									v---v   this is the change, by default it would be RDmerge again
 				constraints.add(detail::parallelMerge<Context>(cba, RDout, tg, RD_tmp, RD_merge, loc));

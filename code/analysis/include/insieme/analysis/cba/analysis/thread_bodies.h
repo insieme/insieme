@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -92,10 +92,10 @@ namespace cba {
 			if (basic.isParallelOp(fun)) {
 
 				// get job set
-				auto jobs = cba.getSet(Jobs, call[0], ctxt);
+				auto jobs = cba.getVar(Jobs, call[0], ctxt);
 
 				// get result set
-				auto res = cba.getSet(ThreadBodies, call, ctxt);
+				auto res = cba.getVar(ThreadBodies, call, ctxt);
 
 				// add constraint
 				constraints.add(createThreadBodySpawnConstraint(cba, jobs, res, call, ctxt));
@@ -105,10 +105,10 @@ namespace cba {
 			if (basic.isMerge(fun)) {
 
 				// get list of potential thread groups merged here => get bodies at spawn points
-				auto groups = cba.getSet(ThreadGroups, call[0], ctxt);
+				auto groups = cba.getVar(ThreadGroups, call[0], ctxt);
 
 				// get the result set
-				auto res = cba.getSet(ThreadBodies, call, ctxt);
+				auto res = cba.getVar(ThreadBodies, call, ctxt);
 
 				// add the constraint
 				constraints.add(createThreadBodyMergeConstraint<Context>(cba, groups, res));
@@ -147,15 +147,15 @@ namespace cba {
 			Context spawnCtxt;
 
 			// the bodies to be collected
-			mutable std::map<Job<Context>, TypedValueID<callable_lattice_type>> bodies;
+			mutable std::map<Job<Context>, TypedVariable<callable_lattice_type>> bodies;
 
 			// the inputs this constraint is depending on
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ThreadBodySpawnConstraint(CBA& cba, const JobSetType& job, const ThreadBodySetType& set, const CallExprInstance& spawn, const Context& spawnCtxt) :
-				Constraint(toVector<ValueID>(job), toVector<ValueID>(set), true, true), cba(cba), in(job), out(set), spawn(spawn), spawnCtxt(spawnCtxt) {
+				Constraint(toVector<Variable>(job), toVector<Variable>(set), true, true), cba(cba), in(job), out(set), spawn(spawn), spawnCtxt(spawnCtxt) {
 				inputs.push_back(job);
 			}
 
@@ -196,7 +196,7 @@ namespace cba {
 					if (bodies.find(job) != bodies.end()) continue;
 
 					// register body reference
-					auto curBodySet = cba.getSet(C, job.getCreationPoint()->getDefaultExpr(), job.getContext());
+					auto curBodySet = cba.getVar(C, job.getCreationPoint()->getDefaultExpr(), job.getContext());
 					bodies[job] = curBodySet;
 					inputs.push_back(curBodySet);
 					changed = true;
@@ -205,7 +205,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
@@ -295,7 +295,7 @@ namespace cba {
 		>
 		class ThreadBodyMergeConstraint : public utils::constraint::Constraint {
 
-			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> ThreadBodyValueID;
+			typedef TypedVariable<typename lattice<thread_body_analysis, analysis_config<Context>>::type> ThreadBodyVariable;
 
 			CBA& cba;
 
@@ -304,15 +304,15 @@ namespace cba {
 			ThreadBodySetType res;
 
 			// the bodies to be collected
-			mutable std::vector<ThreadBodyValueID> bodies;
+			mutable std::vector<ThreadBodyVariable> bodies;
 
 			// the inputs this constraint is depending on
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ThreadBodyMergeConstraint(CBA& cba, const ThreadGroupSetType& groups, const ThreadBodySetType& res) :
-				Constraint(toVector<ValueID>(groups), toVector<ValueID>(res), true, true), cba(cba), groups(groups), res(res) {
+				Constraint(toVector<Variable>(groups), toVector<Variable>(res), true, true), cba(cba), groups(groups), res(res) {
 				inputs.push_back(groups);
 			}
 
@@ -344,7 +344,7 @@ namespace cba {
 				for(const auto& group : gs) {
 
 					// add dependency to spawn point of current group
-					auto curBodySet = cba.getSet(ThreadBodies, group.getCreationPoint(), group.getContext());
+					auto curBodySet = cba.getVar(ThreadBodies, group.getCreationPoint(), group.getContext());
 					if (!::contains(bodies, curBodySet)) {
 						bodies.push_back(curBodySet);
 						inputs.push_back(curBodySet);
@@ -355,7 +355,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 

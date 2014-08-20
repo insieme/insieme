@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -171,8 +171,8 @@ namespace cba {
 
 			auto l_lit = cba.getLabel(literal);
 
-			if (isTrue  || (!isTrue && !isFalse)) constraints.add(elem(true, cba.getSet(B, l_lit, ctxt)));
-			if (isFalse || (!isTrue && !isFalse)) constraints.add(elem(false, cba.getSet(B, l_lit, ctxt)));
+			if (isTrue  || (!isTrue && !isFalse)) constraints.add(elem(true, cba.getVar(B, l_lit, ctxt)));
+			if (isFalse || (!isTrue && !isFalse)) constraints.add(elem(false, cba.getVar(B, l_lit, ctxt)));
 
 		}
 
@@ -190,7 +190,7 @@ namespace cba {
 			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
-			auto B_res = cba.getSet(B, cba.getLabel(call), ctxt);
+			auto B_res = cba.getVar(B, cba.getLabel(call), ctxt);
 
 			// handle unary literals
 			if (call.size() == 1u) {
@@ -202,7 +202,7 @@ namespace cba {
 
 				// support negation
 				if (base.isBoolLNot(fun)) {
-					auto B_arg = cba.getSet(B, cba.getLabel(call[0]), ctxt);
+					auto B_arg = cba.getVar(B, cba.getLabel(call[0]), ctxt);
 					constraints.add(subsetUnary(B_arg, B_res, [&](const set<bool>& in)->typename super::value_type {
 						set<bool> out;
 						for(bool cur : in) out.insert(!cur);
@@ -224,8 +224,8 @@ namespace cba {
 			// boolean relations
 			{
 				// get sets for operators
-				auto B_lhs = cba.getSet(B, cba.getLabel(call[0]), ctxt);
-				auto B_rhs = cba.getSet(B, cba.getLabel(call[1]), ctxt);
+				auto B_lhs = cba.getVar(B, cba.getLabel(call[0]), ctxt);
+				auto B_rhs = cba.getVar(B, cba.getLabel(call[1]), ctxt);
 
 				if (base.isBoolEq(fun)) {
 					// equality is guaranteed if symbols are identical - no matter what the value is
@@ -250,8 +250,8 @@ namespace cba {
 
 			// arithmetic relations
 			{
-				auto A_lhs = cba.getSet(cba::A, cba.getLabel(call[0]), ctxt);
-				auto A_rhs = cba.getSet(cba::A, cba.getLabel(call[1]), ctxt);
+				auto A_lhs = cba.getVar(cba::A, cba.getLabel(call[0]), ctxt);
+				auto A_rhs = cba.getVar(cba::A, cba.getLabel(call[1]), ctxt);
 
 				typedef core::arithmetic::Formula F;
 				typedef core::arithmetic::Inequality Inequality;		// shape: formula <= 0

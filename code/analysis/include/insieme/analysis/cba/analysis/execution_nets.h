@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -89,14 +89,14 @@ namespace cba {
 
 		ExecutionNetConstraintGenerator(CBA& cba) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// just create the one constraint assembling the network - the magic happens in there
 			constraints.add(createExecutionNetConstraint<Context>(cba));
 
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 			out << "ExecutionNet = " << value;
 		}
 
@@ -108,40 +108,40 @@ namespace cba {
 		class ExecutionNetConstraint : public utils::constraint::Constraint {
 
 			// some type definitions
-			typedef TypedValueID<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 					ExecutionNetValueID;
-			typedef TypedValueID<typename sync_points_analysis::lattice<analysis_config<Context>>::type> 					SyncPointValueID;
-			typedef TypedValueID<typename thread_regions_analysis::lattice<analysis_config<Context>>::type> 				ThreadRegionValueID;
-			typedef TypedValueID<typename thread_body_analysis::lattice<analysis_config<Context>>::type> 					ThreadBodyValueID;
-			typedef TypedValueID<typename channel_analysis_data::lattice<analysis_config<Context>>::type> 					ChannelValueID;
-			typedef TypedValueID<typename merge_all_thread_body_analysis::lattice<analysis_config<Context>>::type> 			MergeAllThreadBodyValueID;
+			typedef TypedVariable<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 					ExecutionNetVariable;
+			typedef TypedVariable<typename sync_points_analysis::lattice<analysis_config<Context>>::type> 					SyncPointVariable;
+			typedef TypedVariable<typename thread_regions_analysis::lattice<analysis_config<Context>>::type> 				ThreadRegionVariable;
+			typedef TypedVariable<typename thread_body_analysis::lattice<analysis_config<Context>>::type> 					ThreadBodyVariable;
+			typedef TypedVariable<typename channel_analysis_data::lattice<analysis_config<Context>>::type> 					ChannelVariable;
+			typedef TypedVariable<typename merge_all_thread_body_analysis::lattice<analysis_config<Context>>::type> 			MergeAllThreadBodyVariable;
 
 			CBA& cba;
 
-			ExecutionNetValueID net;
+			ExecutionNetVariable net;
 
-			SyncPointValueID syncPoints;
+			SyncPointVariable syncPoints;
 
-			ThreadRegionValueID regions;
+			ThreadRegionVariable regions;
 
-			mutable std::map<ProgramPoint<Context>, ThreadBodyValueID> threadBodies;
+			mutable std::map<ProgramPoint<Context>, ThreadBodyVariable> threadBodies;
 
-			mutable std::map<ProgramPoint<Context>, ChannelValueID> channelValues;
+			mutable std::map<ProgramPoint<Context>, ChannelVariable> channelValues;
 
-			mutable std::map<ProgramPoint<Context>, MergeAllThreadBodyValueID> mergedBodies;
+			mutable std::map<ProgramPoint<Context>, MergeAllThreadBodyVariable> mergedBodies;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ExecutionNetConstraint(CBA& cba) :
 				Constraint(
-						toVector<ValueID>(cba.getSet<Context>(SyncPoints), cba.getSet<Context>(ThreadRegions)),
-						toVector<ValueID>(cba.getSet<Context>(ExecutionNetAnalysis)), true, true
+						toVector<Variable>(cba.getVar<Context>(SyncPoints), cba.getVar<Context>(ThreadRegions)),
+						toVector<Variable>(cba.getVar<Context>(ExecutionNetAnalysis)), true, true
 				),
 				cba(cba),
-				net(cba.getSet<Context>(ExecutionNetAnalysis)),
-				syncPoints(cba.getSet<Context>(SyncPoints)),
-				regions(cba.getSet<Context>(ThreadRegions)) {
+				net(cba.getVar<Context>(ExecutionNetAnalysis)),
+				syncPoints(cba.getVar<Context>(SyncPoints)),
+				regions(cba.getVar<Context>(ThreadRegions)) {
 				inputs.push_back(syncPoints);
 				inputs.push_back(regions);
 			}
@@ -180,7 +180,7 @@ namespace cba {
 						if (threadBodies.find(point) != threadBodies.end()) continue;
 
 						// add dependency to thread bodies
-						auto bodySet = cba.getSet(ThreadBodies, point.getStatement(), point.getContext());
+						auto bodySet = cba.getVar(ThreadBodies, point.getStatement(), point.getContext());
 						threadBodies[point] = bodySet;
 						inputs.push_back(bodySet);
 						changed = true;
@@ -191,7 +191,7 @@ namespace cba {
 						if (mergedBodies.find(point) != mergedBodies.end()) continue;
 
 						// add dependency to thread bodies
-						auto bodySet = cba.getSet(MergeAllThreadBodies, point.getStatement(), point.getContext());
+						auto bodySet = cba.getVar(MergeAllThreadBodies, point.getStatement(), point.getContext());
 						mergedBodies[point] = bodySet;
 						inputs.push_back(bodySet);
 						changed = true;
@@ -202,7 +202,7 @@ namespace cba {
 						if (channelValues.find(point) != channelValues.end()) continue;
 
 						// add dependency to channel
-						auto channelSet = cba.getSet(Ch, point.getStatement().template as<CallExprInstance>()[0], point.getContext());
+						auto channelSet = cba.getVar(Ch, point.getStatement().template as<CallExprInstance>()[0], point.getContext());
 						channelValues[point] = channelSet;
 						inputs.push_back(channelSet);
 						changed = true;
@@ -221,7 +221,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 

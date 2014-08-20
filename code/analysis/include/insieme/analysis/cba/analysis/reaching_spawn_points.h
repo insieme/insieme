@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -111,7 +111,7 @@ namespace cba {
 			if (point.isSpawn() && point.getStatement().getParentInstance().template isa<CompoundStmtInstance>()) {		// only interested in unattached spawns
 
 				auto l = cba.getLabel(call);
-				auto R = cba.getSet(ReachingSpawnPointsOut, l, ctxt);
+				auto R = cba.getVar(ReachingSpawnPointsOut, l, ctxt);
 				constraints.add(elem(point, R));
 				// and the default handling (fall-through)
 
@@ -123,8 +123,8 @@ namespace cba {
 			// test whether sub-expressions may contain spawn points
 			if (detail::isSpawnPointFree(call)) {
 				// if so in = out
-				auto In  = cba.getSet(this->Ain, call, ctxt);
-				auto Out = cba.getSet(this->Aout, call, ctxt);
+				auto In  = cba.getVar(this->Ain, call, ctxt);
+				auto Out = cba.getVar(this->Aout, call, ctxt);
 
 				constraints.add(subset(In,Out));
 				return;
