@@ -61,9 +61,9 @@ void irt_scheduling_set_dop(uint32 parallelism) {
 	uint32 prev = irt_g_degree_of_parallelism;
 	irt_g_degree_of_parallelism = parallelism;
 	for(uint32 i = prev; i < parallelism && i < irt_g_worker_count; ++i) {
-		irt_cond_wake_one(irt_g_workers[i]->dop_wait_cond);
+		irt_cond_wake_one(&irt_g_workers[i]->dop_wait_cond);
 	}
-	irt_mutex_unlock(irt_g_degree_of_parallelism_mutex);
+	irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 }
 
 void irt_scheduling_loop(irt_worker* self) {
@@ -86,9 +86,9 @@ void irt_scheduling_loop(irt_worker* self) {
 				self->share_stack_wi = NULL;
 			}
 			#endif //IRT_ASTEROIDEA_STACKS
-			if(self->id >= irt_g_degree_of_parallelism) {
+			if(self->id.thread >= irt_g_degree_of_parallelism) {
 				irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
-				if(self->id >= irt_g_degree_of_parallelism) {
+				if(self->id.thread >= irt_g_degree_of_parallelism) {
 					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32_t);
 					// TODO: migrate queued wis if not a stealing policy
 					// wait for signal
@@ -97,7 +97,7 @@ void irt_scheduling_loop(irt_worker* self) {
 					// we were woken up by the signal and now own the mutex
 					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_RUNNING, uint32_t);
 				}
-				irt_mutex_unlock(irt_g_degree_of_parallelism_mutex);
+				irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 			}
 		}
 #ifdef IRT_WORKER_SLEEPING

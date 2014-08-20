@@ -43,9 +43,9 @@ using std::string;
 using std::ostream;
 using std::vector;
 
-#define MAX_PARA 8
+#define MAX_PARA 4
 
-#define N 2000
+#define N 1000
 
 double A[N][N];
 double B[N][N];
