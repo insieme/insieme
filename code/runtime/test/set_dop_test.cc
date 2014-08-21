@@ -70,8 +70,9 @@ TEST(SetDopTest, MMul) {
 			}
 		}
 
-		irt_scheduling_set_dop(MAX_PARA);
-		irt::merge(irt::parallel([&]() {
+		uint32 expected = 0;
+		auto workload = [&]() {
+			EXPECT_EQ(expected, irt::group_size());
 			irt::pfor_impl(0, N, 1, [&](uint64 i) {
 				for(int j=0; j<N; j++) {
 					for(int k=0; k<N; k++) {
@@ -79,37 +80,24 @@ TEST(SetDopTest, MMul) {
 					}			
 				}
 			});
-		}));
+			EXPECT_EQ(expected, irt::group_size());
+		};
+
+		irt_scheduling_set_dop(MAX_PARA);
+		expected = MAX_PARA;
+		irt::merge(irt::parallel(workload));
+
 		irt_scheduling_set_dop(MAX_PARA/2);
-		irt::merge(irt::parallel([&]() {
-			irt::pfor_impl(0, N, 1, [&](uint64 i) {
-				for(int j=0; j<N; j++) {
-					for(int k=0; k<N; k++) {
-						C[i][j] += A[i][k] * B[k][j];
-					}			
-				}
-			});
-		}));
+		expected = MAX_PARA/2;
+		irt::merge(irt::parallel(workload));
+
 		irt_scheduling_set_dop(MAX_PARA/4);
-		irt::merge(irt::parallel([&]() {
-			irt::pfor_impl(0, N, 1, [&](uint64 i) {
-				for(int j=0; j<N; j++) {
-					for(int k=0; k<N; k++) {
-						C[i][j] += A[i][k] * B[k][j];
-					}			
-				}
-			});
-		}));
+		expected = MAX_PARA/4;
+		irt::merge(irt::parallel(workload));
+
 		irt_scheduling_set_dop(MAX_PARA);
-		irt::merge(irt::parallel([&]() {
-			irt::pfor_impl(0, N, 1, [&](uint64 i) {
-				for(int j=0; j<N; j++) {
-					for(int k=0; k<N; k++) {
-						C[i][j] += A[i][k] * B[k][j];
-					}			
-				}
-			});
-		}));
+		expected = MAX_PARA;
+		irt::merge(irt::parallel(workload));
 	});
 	irt::shutdown();
 }
