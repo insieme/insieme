@@ -347,8 +347,8 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		StructTypePtr newStructType;
 		ExpressionPtr nElems;
 
-std::cout << "Handling : " << candidate.first << std::endl;
-if(candidate.first.as<VariablePtr>()->getId() > 400) continue;
+//std::cout << "Handling : " << candidate.first << std::endl;
+//if(candidate.first.as<VariablePtr>()->getId() > 400) continue;
 		std::map<VariablePtr, VariablePtr> varMapping;
 
 		pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
@@ -382,7 +382,7 @@ if(candidate.first.as<VariablePtr>()->getId() > 400) continue;
 
 			// split up initialization expressions
 			for(NamedTypePtr memberType : newStructType->getElements()) {
-//std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
+std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
@@ -439,8 +439,6 @@ if(candidate.first.as<VariablePtr>()->getId() > 400) continue;
 
 			if(!structures.empty())
 				toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
-return;
-assert(false);
 		});
 	}
 
@@ -938,6 +936,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
 			return element;
 
+std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		std::vector<ExpressionPtr> args(call->getArguments());
 
 		pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
@@ -948,11 +947,11 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		int idx = 0;
 		for(ExpressionPtr arg : args) {
 			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
-//std::cout << arg << std::endl;
+std::cout << arg << std::endl;
 			if(match) {
-//std::cout << "\tmatching\n";
 				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<VariablePtr>());
 				if(varCheck != varReplacements.end()) {
+std::cout << "\tmatching\n";
 					oldVarArg = arg;
 					oldVar = varCheck->first;
 					newVar = varCheck->second;
@@ -962,9 +961,14 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			++idx;
 		}
 
+		// do the subsitution to take care of body and function calls inside the argument list
+		CallExprPtr newCall = call->substitute(mgr, *this);
+
 		// oldVar is not an argument, nothing will be done
 		if(!oldVarArg)
-			return element;
+			return newCall;
+
+		lambdaExpr = newCall->getFunctionExpr().isa<LambdaExprPtr>();
 
 		IRBuilder builder(mgr);
 		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
@@ -988,7 +992,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		StatementPtr newBody = lambdaExpr->getBody()->substitute(mgr, *this);
 
 		LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
-		CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
+		newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
 
 		//migrate possible annotations
 		core::transform::utils::migrateAnnotations(lambdaExpr->getBody(), newBody);
