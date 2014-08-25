@@ -1171,6 +1171,11 @@ CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const strin
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
+
+	// if it is a ref type, use refMember function
+	if(type->getNodeType() == core::NT_RefType)
+		return refMember(structExpr, member);
+
 	assert((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);

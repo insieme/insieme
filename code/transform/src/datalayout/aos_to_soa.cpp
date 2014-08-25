@@ -80,6 +80,123 @@ const utils::StringKey<RemoveMeAnnotation> RemoveMeAnnotation::KEY("RemoveMe");
 
 }
 
+
+ExpressionAddress extractVariable(ExpressionAddress expr) {
+	const lang::BasicGenerator& gen = expr->getNodeManagerPtr()->getLangBasic();
+
+	if(expr->getNodeType() == NT_Variable) // return variable
+		return expr;
+
+	if(expr->getNodeType() == NT_Literal) // return literal, e.g. global variable
+		return expr;
+
+	if(CallExprAddress call = expr.isa<CallExprAddress>()) {
+		if(gen.isSubscriptOperator(call->getFunctionExpr()))
+			return expr;
+
+		if(gen.isCompositeRefElem(call->getFunctionExpr())) {
+			return expr;
+		}
+	}
+
+	if(CastExprAddress cast = expr.isa<CastExprAddress>())
+		return extractVariable(cast->getSubExpression());
+
+	if(CallExprAddress call = expr.isa<CallExprAddress>()){
+		return extractVariable(call->getArgument(0)); // crossing my fingers that that will work ;)
+
+	}
+
+	return expr;
+}
+
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+ExpressionAddress tryRemoveDeref(const ExpressionAddress& expr) {
+	NodeManager& mgr = expr->getNodeManager();
+	if(const CallExprAddress& call = expr.isa<CallExprAddress>()) {
+		if(mgr.getLangBasic().isRefDeref(call->getFunctionExpr()))
+			return tryRemoveDeref(call->getArgument(0));
+	}
+	return expr;
+}
+
+NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
+
+//std::cout << "\nlooking for var " << *var << std::endl;
+	// if the variable is a literal, its a global variable and should therefore be the root
+	if(var.isa<LiteralAddress>()) {
+//std::cout << "found literal " << *var << std::endl;
+//assert(false);
+		return var;
+	}
+
+	// search in declaration in siblings
+	NodeManager& mgr = var.getNodeManager();
+
+	pattern::TreePattern localOrGlobalVar = pirp::variable() | pirp::literal(pirp::refType(pattern::any), pattern::any);
+	pattern::TreePattern valueCopy = pattern::var("val", pirp::variable()) |
+			pirp::callExpr(mgr.getLangBasic().getRefDeref(), pattern::var("val", pirp::variable())) |
+			pirp::callExpr(mgr.getLangBasic().getRefNew(), pattern::var("val", pirp::variable())) |
+			pirp::callExpr(mgr.getLangBasic().getRefVar(), pattern::var("val", pirp::variable()));
+
+	vector<NodeAddress> childAddresses = scope.getChildAddresses();
+	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
+		NodeAddress child = *I;
+
+		if(child.getDepth() > 4) {
+			if(LambdaAddress lambda = child.isa<LambdaAddress>()) {
+//	std::cout << "Lambda: " << lambda << "\n var " << var << std::endl;
+				// if var is a parameter, continue search for declaration of corresponding argument in outer scope
+
+//	for(int i = 1; i <= 4; ++i)
+//		std::cout << "\nlp: " << utils::whatIs(lambda.getParentNode(i)) << std::endl;
+
+				CallExprAddress call = lambda.getParentAddress(4).as<CallExprAddress>();
+				NodeAddress nextScope, nextVar;
+
+				for_range(make_paired_range(call->getArguments(), lambda->getParameters()->getElements()),
+						[&](const std::pair<const ExpressionAddress, const VariableAddress>& pair) {
+					if(*var == *pair.second) {
+						nextScope = call.getParentAddress(1);
+						nextVar = tryRemoveDeref(pair.first);
+						return;
+					}
+				});
+				return getRootVariable(nextScope, nextVar);
+			}
+		}
+
+		if(DeclarationStmtAddress decl = child.isa<DeclarationStmtAddress>()) {
+			if(*(decl->getVariable()) == *var) {
+				// check if init expression is another variable
+				if(pattern::AddressMatchOpt valueInit = valueCopy.matchAddress(decl->getInitialization())) {
+					// if so, continue walk with other variable
+					return getRootVariable(scope, valueInit->getVarBinding("val").getValue());
+				}
+//std::cout << "found decl of " << *var << std::endl;
+				// if init is no other varable, the root is found
+				return decl->getVariable();
+			}
+		}
+
+		if(CallExprAddress call = var.isa<CallExprAddress>()) {
+//std::cout << "\ncalling " << *call << std::endl;//"\narg0: " << *call->getArgument(0) << "\nvar: " << *extractVariable(call->getArgument(0)) << std::endl;
+			if(!call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+				return getRootVariable(scope, extractVariable(call->getArgument(0))); // crossing my fingers that that will work ;)
+		}
+
+	}
+
+	//check if we already reached the top
+	if(scope.getDepth() <= 1)
+		return NodeAddress();
+
+	//compound expressions may not open a new scope, therefore declaration can be in the parent
+	return getRootVariable(scope.getParentAddress(), var);
+}
+
 ExpressionPtr removeRefVar(ExpressionPtr refVar) {
 //	std::cout << "remvoing var from " << refVar << std::endl;
 	if(core::analysis::isCallOf(refVar, refVar->getNodeManager().getLangBasic().getRefVar())) {
@@ -199,12 +316,15 @@ pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePat
 }
 
 template<typename T>
-VariablePtr expressionContainsMarshallingCandidate(const utils::map::PointerMap<VariablePtr, T>& candidates, const ExpressionPtr& expr) {
-	for(std::pair<VariablePtr, T> candidate : candidates) {
-		pattern::TreePattern cp = pattern::aT(pattern::atom(candidate.first));
-
-		pattern::MatchOpt match = cp.matchPointer(expr);
-		if(match) {
+VariablePtr expressionContainsMarshallingCandidate(const utils::map::PointerMap<VariablePtr, T>& candidates, const ExpressionAddress& expr,
+		const NodeAddress& scope) {
+	pattern::TreePattern cp = pattern::aT(var("variable", pirp::variable()));
+	pattern::AddressMatchOpt match = cp.matchAddress(expr);
+	if(match) {
+//std::cout << "root variable is " << *getRootVariable(scope, expr) << std::endl;
+		VariableAddress initVar = getRootVariable(scope, expr).as<VariableAddress>();
+		if(initVar) for(std::pair<VariablePtr, T> candidate : candidates) {
+			if(initVar == candidate.first)
 			return candidate.first;
 		}
 
@@ -227,6 +347,8 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		StructTypePtr newStructType;
 		ExpressionPtr nElems;
 
+//std::cout << "Handling : " << candidate.first << std::endl;
+//if(candidate.first.as<VariablePtr>()->getId() > 400) continue;
 		std::map<VariablePtr, VariablePtr> varMapping;
 
 		pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
@@ -259,8 +381,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			allDecls.push_back(builder.declarationStmt(newVar, builder.undefinedVar(newType)));
 
 			// split up initialization expressions
-
 			for(NamedTypePtr memberType : newStructType->getElements()) {
+std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
+//std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
+//builder.refMember(newVar, memberType->getName());
+//removeRefVar(decl->getInitialization());
 				allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
 						updateInit(removeRefVar(decl->getInitialization()), oldType, getBaseType(memberType->getType(), memberType->getName()))));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
@@ -335,10 +460,15 @@ utils::map::PointerMap<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr
 			pirp::structType(*pattern::any))))));
 	pattern::TreePattern structVarDecl = pirp::declarationStmt(var("structVar", structVar), var("init", pattern::any));
 
-	pirp::matchAllPairs(structVarDecl, toTransform, [&](const NodePtr& match, pattern::NodeMatch nm) {
+	NodeAddress tta(toTransform);
+	pirp::matchAllPairs(structVarDecl, tta, [&](const NodeAddress& match, pattern::AddressMatch nm) {
+//std::cout << "Checking: " << match.as<DeclarationStmtPtr>()->getVariable() << std::endl;
+
 		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
-		if(!expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionPtr>()))
+		if(!expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), tta)) {
 			structs[nm["structVar"].getValue().as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
+//std::cout << "Adding: " << match.as<DeclarationStmtPtr>()->getVariable() << " as a candidate" << std::endl;
+		}
 	});
 
 	return structs;
@@ -647,7 +777,7 @@ ExpressionMap AosToSoa::replaceAccesses(const VariableMap& varReplacements, cons
 				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
 				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
-
+std::cout << "replacing\n";
 				replacements[node] = replacement;
 				return true;
 			}
@@ -792,7 +922,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element;
 	}
 
-	pattern::TreePattern variablePattern = pirp::variable(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+	pattern::TreePattern variablePattern = pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
@@ -806,6 +936,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
 			return element;
 
+std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		std::vector<ExpressionPtr> args(call->getArguments());
 
 		pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
@@ -816,9 +947,11 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		int idx = 0;
 		for(ExpressionPtr arg : args) {
 			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
+std::cout << arg << std::endl;
 			if(match) {
 				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<VariablePtr>());
 				if(varCheck != varReplacements.end()) {
+std::cout << "\tmatching\n";
 					oldVarArg = arg;
 					oldVar = varCheck->first;
 					newVar = varCheck->second;
@@ -828,9 +961,14 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			++idx;
 		}
 
+		// do the subsitution to take care of body and function calls inside the argument list
+		CallExprPtr newCall = call->substitute(mgr, *this);
+
 		// oldVar is not an argument, nothing will be done
 		if(!oldVarArg)
-			return element;
+			return newCall;
+
+		lambdaExpr = newCall->getFunctionExpr().isa<LambdaExprPtr>();
 
 		IRBuilder builder(mgr);
 		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
@@ -838,7 +976,10 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
 
 		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
+		VariableMap oldToNew;
+		oldToNew[oldVar] = newVar;
+		args.push_back(core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false));
+		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 		// add it also to the new type of the lambda
 		funTyMembers.push_back(args.back()->getType());
 		// add a new variable to the parameter list
@@ -846,13 +987,12 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		// add the old and new variable to the replacement list
 		varReplacements[params[idx]] = params.back();
 
-
 		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
 
 		StatementPtr newBody = lambdaExpr->getBody()->substitute(mgr, *this);
 
 		LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
-		CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
+		newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
 
 		//migrate possible annotations
 		core::transform::utils::migrateAnnotations(lambdaExpr->getBody(), newBody);
@@ -891,7 +1031,6 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 				return element->substitute(mgr, *this);
 
 			VariablePtr newVar = check->second;
-
 			VariablePtr oldDeclaredVar = decl->getVariable();
 			VariablePtr newDeclaredVar = builder.variable(newVar->getType());
 			varReplacements[oldDeclaredVar] = newDeclaredVar;
@@ -900,7 +1039,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 			for(NamedTypePtr value : newType->getEntries()) {
 				ExpressionPtr fieldInit = core::transform::replaceAll(mgr, match.get()["initValue"].getValue(), oldVar,
-						builder.refMember(newVar, value->getName())).as<ExpressionPtr>();
+						builder.accessMember(newVar, value->getName())).as<ExpressionPtr>();
 				fieldInit = core::transform::fixTypesGen(mgr, fieldInit, VariableMap(), true );
 				values.push_back(std::make_pair(value->getName(), fieldInit));
 			}
