@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -312,6 +312,143 @@ namespace detail {
 		);
 
 	}
+
+
+	TEST(Parser, OpAssociativity) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto num = rule(any(), [](const Context& cur)->Result {
+			try {
+				uint64_t value = utils::numeric_cast<uint64_t>(cur.begin->getLexeme());
+				return IRBuilder(cur.manager).integerLit(value, true);
+			} catch (const boost::bad_lexical_cast&) {}
+			return false;
+		});
+
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).add(a,b);
+		}, 0);
+
+		auto sub = rule(seq(rec(), "-", rec()), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).sub(a,b);
+		}, 0);
+
+		// grammar - ordered by inverse priority
+		Grammar g(num, add, sub);
+
+		// check some priority rules
+		auto n1 = builder.integerLit(1,true);
+		auto n2 = builder.integerLit(2,true);
+		auto n3 = builder.integerLit(3,true);
+		auto n4 = builder.integerLit(4,true);
+
+		// simple stuff
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(builder.add(n1,n2), g.match(manager, "1+2"));
+		EXPECT_EQ(builder.add(builder.add(n1,n2),n3), g.match(manager, "1+2+3"));
+
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(builder.sub(n1,n2), g.match(manager, "1-2"));
+		EXPECT_EQ(builder.sub(builder.sub(n1,n2),n3), g.match(manager, "1-2-3"));
+
+		// combined stuff
+		builder.add(n1,n2);
+		builder.sub(n1,n2);
+		std::cout << " ---- \n";
+
+		// TODO: known bug - fix this!
+//		EXPECT_EQ(builder.sub(builder.add(n1,n2),n3), g.match(manager, "1+2-3"));
+//		EXPECT_EQ(builder.add(builder.sub(n1,n2),n3), g.match(manager, "1-2+3"));
+//
+//		EXPECT_EQ(builder.add(builder.sub(builder.add(n1,n2),n3),n4), g.match(manager, "1+2-3+4"));
+
+	}
+
+	TEST(Parser, OpPrecidence) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto num = rule(any(), [](const Context& cur)->Result {
+			try {
+				uint64_t value = utils::numeric_cast<uint64_t>(cur.begin->getLexeme());
+				return IRBuilder(cur.manager).integerLit(value, true);
+			} catch (const boost::bad_lexical_cast&) {}
+			return false;
+		});
+
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).add(a,b);
+		}, 1);
+
+		auto sub = rule(seq(rec(), "-", rec()), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).sub(a,b);
+		}, 1);
+
+		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).mul(a,b);
+		}, 0);
+
+		// grammar - ordered by inverse priority
+		Grammar g(num, add, sub, mul);
+
+		// check some priority rules
+		auto n1 = builder.integerLit(1,true);
+		auto n2 = builder.integerLit(2,true);
+		auto n3 = builder.integerLit(3,true);
+		auto n4 = builder.integerLit(4,true);
+
+		// simple stuff
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(builder.add(n1,n2), g.match(manager, "1+2"));
+		EXPECT_EQ(builder.add(builder.add(n1,n2),n3), g.match(manager, "1+2+3"));
+
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(builder.sub(n1,n2), g.match(manager, "1-2"));
+		EXPECT_EQ(builder.sub(builder.sub(n1,n2),n3), g.match(manager, "1-2-3"));
+
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(builder.mul(n1,n2), g.match(manager, "1*2"));
+		EXPECT_EQ(builder.mul(builder.mul(n1,n2),n3), g.match(manager, "1*2*3"));
+
+
+		// combined stuff
+		EXPECT_EQ(builder.add(n1,builder.mul(n2,n3)), g.match(manager, "1+2*3"));
+		EXPECT_EQ(builder.add(builder.mul(n1,n2),n3), g.match(manager, "1*2+3"));
+		EXPECT_EQ(builder.sub(builder.mul(n1,n2),n3), g.match(manager, "1*2-3"));
+		EXPECT_EQ(builder.sub(n1,builder.mul(n2,n3)), g.match(manager, "1-2*3"));
+
+
+		EXPECT_EQ(builder.add(builder.mul(n1,n2),builder.mul(n3,n4)), g.match(manager, "1*2+3*4"));
+		EXPECT_EQ(builder.add(builder.add(n1,builder.mul(n2,n3)),n4), g.match(manager, "1+2*3+4"));
+		EXPECT_EQ(builder.sub(builder.sub(n1,builder.mul(n2,n3)),n4), g.match(manager, "1-2*3-4"));
+		EXPECT_EQ(builder.add(builder.sub(n1,builder.mul(n2,n3)),n4), g.match(manager, "1-2*3+4"));
+		// TODO: known bug - fix this
+//		EXPECT_EQ(builder.sub(builder.add(n1,builder.mul(n2,n3)),n4), g.match(manager, "1+2*3-4"));
+
+	}
+
 
 
 	TEST(Parser, Loops) {
