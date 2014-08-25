@@ -57,6 +57,8 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 	core::NodeMap renamedTypeDefinitions;
 	core::NodeMap renamedTypeDeclarations;
 
+    std::map<core::NodePtr, std::string> nameMap;
+
     core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
                                                 insieme::frontend::conversion::Converter& convFact){
 		core::IRBuilder builder (res->getNodeManager());
@@ -84,6 +86,11 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 					// if target is an annonymous type, we create a new type with the name of the typedef
 					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
 					if (namedType->getName()->getValue() == ""){
+                        //guarantee that the second typedef does not change the name again
+                        if (nameMap.find(namedType) != nameMap.end()) {
+                            return namedType;
+                        }
+                        nameMap[namedType] = name;
 
 						if (auto structTy = namedType.isa<core::StructTypePtr>()){
 							definition = builder.structType (builder.stringValue(name), structTy->getParents(), structTy->getEntries());
