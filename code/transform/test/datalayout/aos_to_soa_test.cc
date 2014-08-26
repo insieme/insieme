@@ -131,7 +131,7 @@ TEST(DataLayout, AosToSoa2) {
 
 	datalayout::AosToSoa ats(code);
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();
