@@ -453,19 +453,23 @@ std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() <
 utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodePtr toTransform) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
-	pattern::TreePattern structVar = pirp::variable(pattern::aT(var("structType", pirp::refType(pirp::arrayType(
-			pirp::structType(*pattern::any))))));
-	pattern::TreePattern structVarDecl = pirp::declarationStmt(var("structVar", structVar), var("init", pattern::any));
+	pattern::TreePattern structType = pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+
+	pattern::TreePattern structVar = var("structVar", pirp::variable(structType));
+	pattern::TreePattern structVarDecl = pirp::declarationStmt(structVar, var("init", pattern::any));
+
+	pattern::TreePattern globalStruct = var("structVar", pirp::literal(structType, pattern::any));
 
 	NodeAddress tta(toTransform);
-	pirp::matchAllPairs(structVarDecl, tta, [&](const NodeAddress& match, pattern::AddressMatch nm) {
-std::cout << "Checking: " << match.as<DeclarationStmtPtr>()->getVariable() << std::endl;
+	pirp::matchAllPairs(structVarDecl | globalStruct, tta, [&](const NodeAddress& match, pattern::AddressMatch nm) {
+//std::cout << "Checking: " << *nm["structVar"].getValue() << std::endl;
 
 		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
-		if(!expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), tta)) {
-			structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-std::cout << "Adding: " << match.as<DeclarationStmtPtr>()->getVariable() << " as a candidate" << std::endl;
-		}
+		if(nm.isVarBound("init") && expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), tta))
+			return;
+
+		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
+//std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
 	});
 
 	return structs;
