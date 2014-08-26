@@ -126,10 +126,11 @@ NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 
 //std::cout << "\nlooking for var " << *var << std::endl;
 	// if the variable is a literal, its a global variable and should therefore be the root
-	if(var.isa<LiteralAddress>()) {
+	if(LiteralAddress lit = var.isa<LiteralAddress>()) {
+		if(lit.getType().isa<RefTypeAddress>()) { // check if literal was a global variable in the input code
 //std::cout << "found literal " << *var << std::endl;
-//assert(false);
 		return var;
+		}
 	}
 
 	// search in declaration in siblings
@@ -183,8 +184,10 @@ NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 
 		if(CallExprAddress call = var.isa<CallExprAddress>()) {
 //std::cout << "\ncalling " << *call << std::endl;//"\narg0: " << *call->getArgument(0) << "\nvar: " << *extractVariable(call->getArgument(0)) << std::endl;
-			if(!call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+			if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr())) {
+//std::cout << "\tthing: " << *call->getFunctionExpr() << std::endl;
 				return getRootVariable(scope, extractVariable(call->getArgument(0))); // crossing my fingers that that will work ;)
+			}
 		}
 
 	}
@@ -318,21 +321,13 @@ pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePat
 template<typename T>
 VariablePtr expressionContainsMarshallingCandidate(const utils::map::PointerMap<VariablePtr, T>& candidates, const ExpressionAddress& expr,
 		const NodeAddress& scope) {
-//	pattern::TreePattern cp = pattern::aT(var("variable", pirp::variable()));
-//	pattern::AddressMatchOpt match = cp.matchAddress(expr);
-//	if(match) {
-	VariablePtr retVar;
-	visitDepthFirst(expr, [&](const VariableAddress& var) {
-		VariableAddress initVar = getRootVariable(scope, var).as<VariableAddress>();
+		ExpressionAddress initVar = getRootVariable(scope, expr).as<ExpressionAddress>();
 		if(initVar) for(std::pair<VariablePtr, T> candidate : candidates) {
-			if(initVar == candidate.first) {
-				retVar = candidate.first;
-				return;
-			}
+			if(initVar == candidate.first)
+			return candidate.first;
 		}
-	});
 
-	return retVar;
+	return VariablePtr();
 }
 
 AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
