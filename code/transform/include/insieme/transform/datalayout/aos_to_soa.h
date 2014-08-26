@@ -65,7 +65,7 @@ class AosToSoa {
 	core::StatementPtr generateUnmarshalling(const core::VariablePtr& oldVar, const core::VariablePtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 	std::vector<core::StatementAddress> addUnmarshalling(const core::VariableMap& varReplacements,
-			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const core::StatementAddress& begin,
+			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
 			const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::ExpressionMap replaceAccesses(const core::VariableMap& varReplacements, const core::NodeAddress& toTransform,
