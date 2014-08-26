@@ -97,7 +97,7 @@ double omp_get_wtime();
 //#define omp_set_lock(_param) irt_lock_acquire(_param)
 //#define omp_unset_lock(_param) irt_lock_release(_param)
 
-typedef struct { int insieme_omp_lock_struct_marker; } omp_lock_t;
+typedef struct _omp_lock_t { int insieme_omp_lock_struct_marker; } omp_lock_t;
 
 void omp_init_lock(omp_lock_t* lock);
 void omp_set_lock(omp_lock_t* lock);
