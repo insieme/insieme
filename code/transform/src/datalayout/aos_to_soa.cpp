@@ -318,19 +318,21 @@ pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePat
 template<typename T>
 VariablePtr expressionContainsMarshallingCandidate(const utils::map::PointerMap<VariablePtr, T>& candidates, const ExpressionAddress& expr,
 		const NodeAddress& scope) {
-	pattern::TreePattern cp = pattern::aT(var("variable", pirp::variable()));
-	pattern::AddressMatchOpt match = cp.matchAddress(expr);
-	if(match) {
-//std::cout << "root variable is " << *getRootVariable(scope, expr) << std::endl;
-		VariableAddress initVar = getRootVariable(scope, expr).as<VariableAddress>();
+//	pattern::TreePattern cp = pattern::aT(var("variable", pirp::variable()));
+//	pattern::AddressMatchOpt match = cp.matchAddress(expr);
+//	if(match) {
+	VariablePtr retVar;
+	visitDepthFirst(expr, [&](const VariableAddress& var) {
+		VariableAddress initVar = getRootVariable(scope, var).as<VariableAddress>();
 		if(initVar) for(std::pair<VariablePtr, T> candidate : candidates) {
-			if(initVar == candidate.first)
-			return candidate.first;
+			if(initVar == candidate.first) {
+				retVar = candidate.first;
+				return;
+			}
 		}
+	});
 
-	}
-
-	return VariablePtr();
+	return retVar;
 }
 
 AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
@@ -462,12 +464,12 @@ utils::map::PointerMap<VariablePtr, RefTypePtr> AosToSoa::findCandidates(NodePtr
 
 	NodeAddress tta(toTransform);
 	pirp::matchAllPairs(structVarDecl, tta, [&](const NodeAddress& match, pattern::AddressMatch nm) {
-//std::cout << "Checking: " << match.as<DeclarationStmtPtr>()->getVariable() << std::endl;
+std::cout << "Checking: " << match.as<DeclarationStmtPtr>()->getVariable() << std::endl;
 
 		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
 		if(!expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), tta)) {
 			structs[nm["structVar"].getValue().as<VariablePtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-//std::cout << "Adding: " << match.as<DeclarationStmtPtr>()->getVariable() << " as a candidate" << std::endl;
+std::cout << "Adding: " << match.as<DeclarationStmtPtr>()->getVariable() << " as a candidate" << std::endl;
 		}
 	});
 
