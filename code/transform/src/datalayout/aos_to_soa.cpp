@@ -378,7 +378,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 			// split up initialization expressions
 			for(NamedTypePtr memberType : newStructType->getElements()) {
-std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
+//std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
@@ -413,9 +413,9 @@ std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() <
 
 		//introducing marshalling
 		std::vector<StatementAddress> begin = addMarshalling(varReplacements, newStructType, tta, nElems, replacements);
+			//introducing unmarshalling
+		std::vector<StatementAddress> end = addUnmarshalling(varReplacements, newStructType, tta, begin, nElems, replacements);
 
-		//introducing unmarshalling
-		std::vector<StatementAddress> end = addUnmarshalling(varReplacements, newStructType, tta, begin.front(), nElems, replacements);
 
 		//free memory of the new variable
 		addNewDel(varReplacements, tta, newStructType, replacements);
@@ -473,8 +473,6 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeP
 
 		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
 //std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
-	});
-
 	return structs;
 }
 
@@ -572,7 +570,7 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				var("oldVarCandidate", pirp::exprOfType(pirp::refType(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
+				var("oldVarCandidate", pirp::exprOfType(pattern::aT(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
 //				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
 //				pattern::aT(pattern::atom(oldVar))
 				<< *pattern::any);
@@ -620,11 +618,6 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 		});
 	}
 
-	// if the array has not been marshalled, the entire program has to be considered
-	if(marshalled.empty()) {
-		marshalled.push_back(toTransform.as<StatementAddress>());
-	}
-
 	return marshalled;
 }
 
@@ -647,9 +640,10 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const 
 }
 
 std::vector<StatementAddress> AosToSoa::addUnmarshalling(const ExpressionMap& varReplacements, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, const StatementAddress& begin, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const std::vector<StatementAddress>& beginV, const ExpressionPtr& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> unmarshallingPoints;
+	StatementAddress begin = beginV.empty() ? StatementAddress() : beginV.front();
 
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 		const ExpressionPtr& oldVar = vr.first;
@@ -668,7 +662,7 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const ExpressionMap& va
 			ExpressionPtr start, end;
 
 //std::cout << begin << " < " << node << " -> " << (begin < node) << std::endl;
-			if(!(begin < node)) {
+			if(begin && !(begin < node)) {
 				// do not unmarshall before marshalling
 				return;
 			}
@@ -714,18 +708,6 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const ExpressionMap& va
 		});
 	}
 
-	// if the array has not been marshalled, the entire program has to be considered
-	if(unmarshallingPoints.empty()) {
-		StatementAddress progEnd;
-//		while(!progEnd.getChildAddresses().empty()) {
-//			progEnd = progEnd.getAddressOfChild(progEnd.getChildAddresses().size()-1);
-//		}
-		visitDepthFirst(toTransform, [&](const StatementAddress& cur) {
-			progEnd = cur;
-		});
-		unmarshallingPoints.push_back(progEnd);
-	}
-
 	return unmarshallingPoints;
 }
 
@@ -750,19 +732,19 @@ ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, co
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
 	//	}
-		bool doSomething = false;
+		bool doSomething = begin.empty();
 
 		visitDepthFirstPrunable(toTransform, [&](const StatementAddress& node)->bool {
 
 			if(!doSomething) {
-				if(node == begin.front()) {
+				if(!begin.empty() && node == begin.front()) {
 					doSomething = true;
 					return true;
 				}
 				return false;
 			}
 
-			if(node == end.back()) {
+			if(!end.empty() && node == end.back()) {
 				doSomething = false;
 				return true;
 			}
@@ -940,7 +922,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
 			return element;
 
-std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
+//std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		std::vector<ExpressionPtr> args(call->getArguments());
 
 		pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
@@ -951,11 +933,9 @@ std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		int idx = 0;
 		for(ExpressionPtr arg : args) {
 			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
-std::cout << arg << std::endl;
 			if(match) {
 				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<VariablePtr>());
 				if(varCheck != varReplacements.end()) {
-std::cout << "\tmatching\n";
 					oldVarArg = arg;
 					oldVar = varCheck->first;
 					newVar = varCheck->second;
