@@ -610,7 +610,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							});
 
 							// create a new Declaration Statement which's init expression contains only the remaining fields
-							return builder.declarationStmt(cl_mems[var], builder.refNew(builder.structExpr(newInitMembers)));
+							return builder.declarationStmt(cl_mems[var].as<VariablePtr>(), builder.refNew(builder.structExpr(newInitMembers)));
 						}
 					}
 				}
@@ -655,7 +655,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					else
 						newType = cl_mems[var]->getType();
 
-					NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(newType, BASIC.getUndefined(),
+					NodePtr ret = builder.declarationStmt(cl_mems[var].as<VariablePtr>(), builder.refNew(builder.callExpr(newType, BASIC.getUndefined(),
 							builder.getTypeLiteral(newType))));
 					copyAnnotations(decl, ret);
 					return ret;

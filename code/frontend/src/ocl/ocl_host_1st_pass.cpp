@@ -1303,7 +1303,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							// check if struct is already part of the replacement map
 							if(cl_mems.find(struct_) != cl_mems.end()) {
 								// get the variable out of the struct
-								newStruct = cl_mems[struct_];
+								newStruct = cl_mems[struct_].as<VariablePtr>();
 							} else
 								newStruct = struct_;
 

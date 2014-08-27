@@ -908,7 +908,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element;
 	}
 
-	pattern::TreePattern variablePattern = pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+	pattern::TreePattern variablePattern = pirp::exprOfType(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
@@ -934,7 +934,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		for(ExpressionPtr arg : args) {
 			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
 			if(match) {
-				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<VariablePtr>());
+				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<ExpressionPtr>());
 				if(varCheck != varReplacements.end()) {
 					oldVarArg = arg;
 					oldVar = varCheck->first;
@@ -960,8 +960,8 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
 
 		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		VariableMap oldToNew;
-		oldToNew[oldVar.as<VariablePtr>()] = newVar.as<VariablePtr>();
+		ExpressionMap oldToNew;
+		oldToNew[oldVar] = newVar;
 		args.push_back(core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false));
 		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 		// add it also to the new type of the lambda
@@ -1024,7 +1024,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			for(NamedTypePtr value : newType->getEntries()) {
 				ExpressionPtr fieldInit = core::transform::replaceAll(mgr, match.get()["initValue"].getValue(), oldVar,
 						builder.accessMember(newVar, value->getName())).as<ExpressionPtr>();
-				fieldInit = core::transform::fixTypesGen(mgr, fieldInit, VariableMap(), true );
+				fieldInit = core::transform::fixTypesGen(mgr, fieldInit, ExpressionMap(), true );
 				values.push_back(std::make_pair(value->getName(), fieldInit));
 			}
 

@@ -225,7 +225,7 @@ Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T
  * @param limitScope a flag determining if also variables in inner scopes should be considered
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
-NodePtr fixTypes(NodeManager& mgr, NodePtr root, const VariableMap& replacements, bool limitScope,
+NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacements, bool limitScope,
 		const TypeHandler& typeHandler = id<StatementPtr>() );
 
 /**
@@ -241,7 +241,7 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root, const VariableMap& replacements
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 template<typename T>
-Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const VariableMap& replacements, bool limitScope,
+Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const ExpressionMap& replacements, bool limitScope,
 		const TypeHandler& typeHandler = id<StatementPtr>()) {
 	return static_pointer_cast<const T>(fixTypes(mgr, root, replacements, limitScope, typeHandler));
 }

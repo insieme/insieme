@@ -87,7 +87,7 @@ void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
 }
 
 void runOclTest(const std::string inputFile) {
-	Logger::get(std::cerr, INFO, 0);
+	Logger::get(std::cerr, ERROR, 0);
 
 	core::NodeManager manager;
 
@@ -96,7 +96,7 @@ void runOclTest(const std::string inputFile) {
 	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 	job.addIncludeDirectory(CLANG_SRC_DIR);
 	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
-//	job.setOption(fe::ConversionJob::OpenCL);
+	job.setOption(fe::ConversionJob::OpenCL);
 
 	std::string srcDir = CLANG_SRC_DIR "inputs/hello_host.c";
 
