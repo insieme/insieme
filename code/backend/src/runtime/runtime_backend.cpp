@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -111,7 +111,7 @@ namespace runtime {
 	Converter RuntimeBackend::buildConverter(core::NodeManager& manager) const {
 
 		// create and set up the converter
-		Converter converter(manager, "RuntimeBackend", config);
+		Converter converter(manager, "RuntimeBackend", getConfiguration());
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
@@ -133,7 +133,7 @@ namespace runtime {
 
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
-		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), config);
+		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
 
 		// done
 		return converter;

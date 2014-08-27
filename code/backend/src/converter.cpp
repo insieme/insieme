@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@
 namespace insieme {
 namespace backend {
 
-	Converter::Converter(core::NodeManager& nodeManager, std::string name, const BackendConfigPtr& config)
+	Converter::Converter(core::NodeManager& nodeManager, const std::string& name, const BackendConfig& config)
 		: nodeManager(nodeManager),
 		  fragmentManager(c_ast::CodeFragmentManager::createShared()),
 		  converterName(name),
@@ -99,8 +99,8 @@ namespace backend {
 		fragment->addDependencies(context.getDependencies());
 		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
-        if(!config->additionalHeaderFiles.empty())
-            fragment->addIncludes(config->additionalHeaderFiles);
+        if(!config.additionalHeaderFiles.empty())
+            fragment->addIncludes(config.additionalHeaderFiles);
 
 		vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
 

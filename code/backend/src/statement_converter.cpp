@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -127,7 +127,7 @@ namespace backend {
 
 			// fix name of main entry
 			if (node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
-				context.getConverter().getNameManager().setName(entryPoint, converter.getConverterConfig()->mainFunctionName);
+				context.getConverter().getNameManager().setName(entryPoint, converter.getBackendConfig().mainFunctionName);
 			}
 
 			// create a new context

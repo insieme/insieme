@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -128,6 +128,11 @@ namespace backend {
 		 */
 		vector<AddOnPtr> addons;
 
+		/**
+		 * This backend's configuration.
+		 */
+        BackendConfigPtr config;
+
 	public:
 
 		/**
@@ -177,9 +182,21 @@ namespace backend {
 			return converter.convert(program);
 		}
 
-	protected:
+		/**
+		 * Obtains mutable access to this backend's configuration.
+		 */
+		BackendConfig& getConfiguration() {
+			return *config;
+		}
 
-        BackendConfigPtr config;
+		/**
+		 * Obtains constant access to this backend's configuration.
+		 */
+		const BackendConfig& getConfiguration() const {
+			return *config;
+		}
+
+	protected:
 
 		// ---------------- to be implemented by sub-classes -----------------
 
