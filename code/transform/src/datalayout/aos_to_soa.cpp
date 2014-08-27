@@ -416,7 +416,6 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 			//introducing unmarshalling
 		std::vector<StatementAddress> end = addUnmarshalling(varReplacements, newStructType, tta, begin, nElems, replacements);
 
-
 		//free memory of the new variable
 		addNewDel(varReplacements, tta, newStructType, replacements);
 
@@ -473,6 +472,7 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeP
 
 		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
 //std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
+	});
 	return structs;
 }
 

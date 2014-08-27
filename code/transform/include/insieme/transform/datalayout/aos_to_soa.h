@@ -64,14 +64,13 @@ class AosToSoa {
 
 	core::StatementPtr generateUnmarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
-	std::vector<core::StatementAddress> addUnmarshalling(const core::VariableMap& varReplacements,
+	std::vector<core::StatementAddress> addUnmarshalling(const core::ExpressionMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
 			const core::ExpressionPtr& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::ExpressionMap replaceAccesses(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
-			std::map<core::NodeAddress, core::NodePtr>& replacements);
-
+			std::map<core::NodeAddress,	core::NodePtr>& replacements);
 	void replaceScalarStructs(const core::pattern::AddressMatchOpt& match, const core::ExpressionPtr& newVar,
 			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
