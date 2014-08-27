@@ -80,7 +80,7 @@ TEST(DataLayout, AosToSoa) {
 
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = core::checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -102,7 +102,7 @@ TEST(DataLayout, AosToSoa) {
 		++cnt;
 	});
 
-//	EXPECT_EQ(68, cnt);
+	EXPECT_EQ(68, cnt);
 }
 
 TEST(DataLayout, AosToSoa2) {
@@ -174,10 +174,10 @@ TEST(DataLayout, Globals) {
 		"	};"
 		"	let globalAccess = (int<4> idx)->unit {"
 		"		ref<twoElem> tmp = ref.var(*((*a)[idx]));"
-//		"		ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
-//		"		ref<ref<array<twoElem,1>>> ptr = ref.var(scalar.to.array((*a)[i]));"
-//		"		(*ptr)[i].int = i;"
-//		"		ref.deref(a)[i].int = i;"
+		"		ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
+		"		ref<ref<array<twoElem,1>>> ptr = ref.var(scalar.to.array((*a)[idx]));"
+		"		(*ptr)[idx].int = idx;"
+		"		ref.deref(a)[idx].int = idx;"
 		"	};"
 		""
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
@@ -213,7 +213,7 @@ TEST(DataLayout, Globals) {
 		++cnt;
 	});
 
-//	EXPECT_EQ(35, cnt);
+	EXPECT_EQ(52, cnt);
 }
 
 } // transform

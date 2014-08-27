@@ -908,7 +908,9 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element;
 	}
 
-	pattern::TreePattern variablePattern = pirp::exprOfType(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+	pattern::TreePattern typePattern = pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))));
+	pattern::TreePattern variablePattern = pirp::variable(typePattern) // local variable
+										| pirp::literal(pirp::refType(typePattern), pattern::any); // global variable
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
