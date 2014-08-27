@@ -70,7 +70,6 @@ namespace backend {
 
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
-
 		// -------------------------- PRE-PROCESSING ---------------------
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
@@ -121,6 +120,54 @@ namespace backend {
 
 		// create resulting code fragment
 		return c_ast::CCode::createNew(fragmentManager, source, fragments);
+	}
+
+	namespace {
+
+		struct PrettyPrinterPlugin : public core::printer::PrinterPlugin {
+
+			// requires a reference to a name manager
+			NameManager& nameManager;
+
+			/**
+			 * Create a new instance based on the content of the given name manager.
+			 */
+			PrettyPrinterPlugin(NameManager& nameManager) : nameManager(nameManager) {}
+
+
+			virtual bool covers(const core::NodePtr& node) const {
+				// it is covered if it is of a certain type
+				return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
+			}
+
+			/**
+			 * A function triggered to print the given node to the given stream.
+			 */
+			virtual std::ostream& print(std::ostream& out,const core::NodePtr& node,const std::function<void(const core::NodePtr&)>&) const {
+				return out << nameManager.getName(node);
+			}
+		};
+
+	}
+
+
+	c_ast::CommentPtr Converter::convertToComment(const core::NodePtr& node) const {
+
+		// if not enabled, return no comment
+		if (!getBackendConfig().addIRCodeAsComment) return c_ast::CommentPtr();
+
+		auto setup =
+				core::printer::PrettyPrinter::OPTIONS_DEFAULT |
+				core::printer::PrettyPrinter::Option::NO_LET_BINDINGS;
+
+		// if enabled, create comment using the pretty printer infrastructure
+		PrettyPrinterPlugin plugin(getNameManager());
+		auto comment = toString(
+				core::printer::PrettyPrinter(node, plugin, setup)
+		);
+
+		// build comment
+		return getCNodeManager()->create<c_ast::Comment>("\n" + comment + "\n");
 	}
 
 

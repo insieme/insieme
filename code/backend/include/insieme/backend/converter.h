@@ -177,6 +177,15 @@ namespace backend {
 		 */
 		backend::TargetCodePtr convert(const core::NodePtr& code);
 
+		/**
+		 * Converts the given IR node fragment into a C code fragment containing the pretty-printed
+		 * IR code referencing the same names as they are utilized by the generated C code.
+		 *
+		 * @param node the node to be referenced
+		 * @return the corresponding comment
+		 */
+		c_ast::CommentPtr convertToComment(const core::NodePtr& node) const;
+
 		const PreProcessorPtr& getPreProcessor() const {
 			assert(preProcessor);
 			return preProcessor;
@@ -246,11 +255,17 @@ namespace backend {
 
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
-		const std::string& getConverterName() const { return converterName; }
+		const std::string& getConverterName() const {
+			return converterName;
+		}
 
-		const BackendConfig& getBackendConfig() const { return config; }
+		void setConverterName(const string& name) {
+			converterName = name;
+		}
 
-		void setConverterName(const string& name) { converterName = name; }
+		const BackendConfig& getBackendConfig() const {
+			return config;
+		}
 
 	};
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -413,7 +413,7 @@ namespace c_ast {
 		 *
 		 * @param code the construct to be appended
 		 */
-		void appendCode(const NodePtr& code) { this->code.push_back(code); }
+		void appendCode(const NodePtr& code) { if (code) this->code.push_back(code); }
 
 		/**
 		 * Prints the code covered by this fragment to the given output stream.

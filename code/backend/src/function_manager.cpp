@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -937,8 +937,9 @@ namespace backend {
 			// add requirement for definition once been declared
 			declarations->addRequirement(definitions);
 
-			declarations->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
-			definitions->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
+			declarations->appendCode(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
+			definitions->appendCode(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
+			definitions->appendCode(converter.convertToComment(lambdaDefinition));
 
 			// A) get list of all lambdas within this recursive group
 			vector<std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr>> lambdas;
