@@ -1008,7 +1008,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 
 		if(match) {
 			IRBuilder builder(mgr);
-			VariablePtr oldVar = match.get()["usedVar"].getValue().as<VariablePtr>();
+			ExpressionPtr oldVar = match.get()["usedVar"].getValue().as<ExpressionPtr>();
 
 			auto check = varReplacements.find(oldVar);
 			if(check == varReplacements.end())
