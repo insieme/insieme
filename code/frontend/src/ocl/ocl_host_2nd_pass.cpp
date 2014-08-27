@@ -69,7 +69,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 }
 
 ClmemTable& Host2ndPass::getCleanedStructures() {
-	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
+	for_each(cl_mems, [&](std::pair<const ExpressionPtr, ExpressionPtr>& var) {
 //std::cout << "clmem " << var.first << " -> " << var.second << std::endl;
 			if(StructTypePtr type = dynamic_pointer_cast<const StructType>(getNonRefType(var.second))) {
 				// delete all unnecessary cl_* fields form the struct

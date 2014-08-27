@@ -84,7 +84,7 @@ TEST(Preprocessor, GlobalElimination) {
 
 	EXPECT_TRUE(program);
 
-	program = core::transform::fixTypesGen(manager, program, core::VariableMap(), false);
+	program = core::transform::fixTypesGen(manager, program, core::ExpressionMap(), false);
 
 //	std::cout << "Input: " << core::printer::PrettyPrinter(program) << "\n";
 

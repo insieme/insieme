@@ -47,7 +47,7 @@
 #define TEST_TIME_MIN 50
 #define THREADS 12
 #define ITERATIONS 1
-#define LENIENCY_FACTOR 0.3
+#define LENIENCY_FACTOR 0.4
 
 typedef struct {
 	uint64 last_ms;
@@ -58,8 +58,8 @@ typedef struct {
 } mt_timing;
 
 #define EXPECT_INTERVAL(min, max, val) \
-	EXPECT_GE(val, min * (1.0-LENIENCY_FACTOR)); \
-	EXPECT_LE(val, max * (1.0+LENIENCY_FACTOR)); 
+	EXPECT_GE(val, (min) * (1.0-LENIENCY_FACTOR)); \
+	EXPECT_LE(val, (max) * (1.0+LENIENCY_FACTOR)); 
 
 uint64 test_mt(void* data) {
 	mt_timing *timing = (mt_timing*)data;

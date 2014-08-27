@@ -121,7 +121,7 @@ ProgramPtr HostCompiler::compile() {
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
 	insieme::utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
-	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
+	for_each(cl_mems, [&](std::pair<const ExpressionPtr, ExpressionPtr> t){
 		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
 //			replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
