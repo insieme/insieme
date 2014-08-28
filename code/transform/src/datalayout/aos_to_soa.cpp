@@ -711,6 +711,14 @@ std::vector<StatementAddress> AosToSoa::addUnmarshalling(const ExpressionMap& va
 	return unmarshallingPoints;
 }
 
+// obtain return type
+//TypeList returnTypes;
+//visitDepthFirstPrunable(newBody, [&](const NodePtr& cur) {
+//	if (cur->getNodeType() == NT_ReturnStmt) {
+//		returnTypes.push_back(cur.as<ReturnStmtPtr>()->getReturnExpr()->getType());
+//	}
+//	return cur->getNodeType() == NT_LambdaExpr || cur->getNodeCategory() != NC_Statement;
+//});
 
 ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, const NodeAddress& toTransform,
 		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements) {
@@ -901,6 +909,39 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	}
 }
 
+VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
+		: mgr(mgr), varReplacements(varReplacements),
+		  typePattern(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))),
+		  variablePattern(pirp::variable(typePattern) // local variable
+				| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
+		  namedVariablePattern(var("variable", variablePattern)),
+		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern)){}
+
+int VariableAdder::searchInArgumentList(const std::vector<ExpressionPtr>& args, ExpressionPtr& newArg) {
+	ExpressionPtr oldVarArg;
+	ExpressionPtr oldVar, newVar;
+	int idx = 0;
+
+	for(ExpressionPtr arg : args) {
+		pattern::MatchOpt match = varWithOptionalDeref.matchPointer(arg);
+		if(match) {
+			auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<ExpressionPtr>());
+			if(varCheck != varReplacements.end()) {
+				oldVarArg = arg;
+				oldVar = varCheck->first;
+				newVar = varCheck->second;
+				break;
+			}
+		}
+		++idx;
+	}
+	ExpressionMap oldToNew;
+	oldToNew[oldVar] = newVar;
+	if(oldVarArg) newArg = core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false);
+
+	return idx;
+}
+
 
 const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 	// stop recursion at type level
@@ -908,13 +949,53 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		return element;
 	}
 
-	pattern::TreePattern typePattern = pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))));
-	pattern::TreePattern variablePattern = pirp::variable(typePattern) // local variable
-										| pirp::literal(pirp::refType(typePattern), pattern::any); // global variable
+//	pattern::TreePattern typePattern = pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))));
+//	pattern::TreePattern variablePattern = pirp::variable(typePattern) // local variable
+//										| pirp::literal(pirp::refType(typePattern), pattern::any); // global variable
+//	pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
+//	pattern::TreePattern isOldVarArg = namedVariablePattern | pirp::refDeref(namedVariablePattern);
+
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
 	if(CallExprPtr call = element.isa<CallExprPtr>()) {
+		// special handling for assignments
+		if(analysis::isCallOf(call, mgr.getLangBasic().getRefAssign())){
+//			dumpPretty(call);
+
+			std::vector<ExpressionPtr> args = call->getArguments();
+			ExpressionPtr newArg;
+			int rhs = searchInArgumentList(call->getArguments(), newArg);
+
+			if(newArg) {
+//				(std::cout << (rhs ? "\nrhs " : "\nlhs ") << newArg << std::endl);
+//				dumpPretty(call);
+
+				if(rhs) {
+					// at this point we know that lhs is not in the replacement list so we have to fix it's type
+				} else  { // matched on lhs
+					// lhs will be replaced, check for ways to fix the type of the rhs
+
+					// check if also rhs depends on variable in varReplacements
+					ExpressionPtr newRhs;
+					searchInArgumentList(std::vector<ExpressionPtr>(toVector(args[1])), newRhs);
+
+					if(newRhs) {
+						IRBuilder builder(mgr);
+//dumpPretty(call);
+//dumpPretty(builder.assign(newArg, newRhs));
+						return builder.assign(newArg, newRhs);
+					}
+
+					if(pattern::MatchOpt match = varWithOptionalDeref.matchPointer(args[1])) { // variable which is not in marshialling list found
+						if(match) {
+
+						}
+					}
+				}
+			}
+		}
+
 		LambdaExprPtr lambdaExpr = call->getFunctionExpr().isa<LambdaExprPtr>();
 
 		if(!lambdaExpr)
@@ -927,34 +1008,18 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 //std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		std::vector<ExpressionPtr> args(call->getArguments());
 
-		pattern::TreePattern namedVariablePattern = var("variable", variablePattern);
-		pattern::TreePattern isOldVarArg = namedVariablePattern | pirp::refDeref(namedVariablePattern);
-		ExpressionPtr oldVarArg;
-		ExpressionPtr oldVar, newVar;
-
-		int idx = 0;
-		for(ExpressionPtr arg : args) {
-			pattern::MatchOpt match = isOldVarArg.matchPointer(arg);
-			if(match) {
-				auto varCheck = varReplacements.find(match.get()["variable"].getValue().as<ExpressionPtr>());
-				if(varCheck != varReplacements.end()) {
-					oldVarArg = arg;
-					oldVar = varCheck->first;
-					newVar = varCheck->second;
-					break;
-				}
-			}
-			++idx;
-		}
+		ExpressionPtr newArg;
+		int idx = searchInArgumentList(args, newArg);
 
 		// do the subsitution to take care of body and function calls inside the argument list
 		CallExprPtr newCall = call->substitute(mgr, *this);
 
 		// oldVar is not an argument, nothing will be done
-		if(!oldVarArg)
+		if(!newArg)
 			return newCall;
 
-		lambdaExpr = newCall->getFunctionExpr().isa<LambdaExprPtr>();
+
+		lambdaExpr = newCall->getFunctionExpr().as<LambdaExprPtr>();
 
 		IRBuilder builder(mgr);
 		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
@@ -962,9 +1027,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
 
 		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		ExpressionMap oldToNew;
-		oldToNew[oldVar] = newVar;
-		args.push_back(core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false));
+		args.push_back(newArg);
 		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 		// add it also to the new type of the lambda
 		funTyMembers.push_back(args.back()->getType());
