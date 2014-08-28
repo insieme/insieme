@@ -347,6 +347,12 @@ namespace irp {
 		}), structVar, member, type);
 	}
 
+	inline TreePattern compositeMemberAccess(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
+		return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
+			return mgr.getLangBasic().getCompositeMemberAccess();
+		}), structVar, member, type);
+	}
+
 	inline TreePattern refVar(const TreePattern& expr = any) {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefVar(); }), expr);
 	}
