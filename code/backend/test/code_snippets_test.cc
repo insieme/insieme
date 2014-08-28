@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -473,6 +473,84 @@ TEST(FunctionCall, PassLabmdaToBind) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+TEST(FunctionCall, DebugCodePrinting) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    core::ProgramPtr program = builder.parseProgram(
+    	"let int = int<4>;"
+    	""
+    	"let f = ()->int { return 4; };"
+    	""
+    	"let g = (int x)->int { return x + 2; };"
+    	""
+    	"int main() {"
+		"	return g(f());"
+    	"}"
+    );
+
+    ASSERT_TRUE(program);
+
+    // without debug code
+    {
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		// upbdate backend configuration
+		be->getConfiguration().addIRCodeAsComment = false;
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+		EXPECT_PRED2(notContainsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+    }
+
+    // with debug code
+	{
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		// upbdate backend configuration
+		be->getConfiguration().addIRCodeAsComment = true;
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+		EXPECT_PRED2(containsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+}
+
 } // namespace backend
 } // namespace insieme
-

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
 #include <iostream>
+#include <functional>
 #include <map>
 
 #include "insieme/core/ir_node.h"
@@ -44,6 +45,32 @@
 namespace insieme {
 namespace core {
 namespace printer {
+
+/**
+ * A plug-in interface for pretty printers.
+ */
+struct PrinterPlugin {
+	virtual ~PrinterPlugin() {}
+
+	/**
+	 * A function testing whether this plug-in want's to handle the given node.
+	 */
+	virtual bool covers(const NodePtr&) const =0;
+
+	/**
+	 * A function triggered to print the given node to the given stream.
+	 */
+	virtual std::ostream& print(std::ostream&,const NodePtr&,const std::function<void(const NodePtr&)>&) const=0;
+};
+
+namespace detail {
+
+	/**
+	 * A factory for a empty plug-in.
+	 */
+	const PrinterPlugin& getEmptyPlugin();
+
+}
 
 /**
  * A struct representing a pretty print of a AST subtree. Instances may be streamed
@@ -101,6 +128,11 @@ struct PrettyPrinter {
 	NodePtr root;
 
 	/**
+	 * A a plug-in to be utilized for influencing IR pretty prints.
+	 */
+	const PrinterPlugin& plugin;
+
+	/**
 	 * The flags set for customizing the formating
 	 */
 	unsigned flags;
@@ -113,19 +145,39 @@ struct PrettyPrinter {
 	/**
 	 * Sets the tab separator  
 	 */
-	std::pair<char, size_t> tabSep;
+	string tabSep;
 
 	/**
 	 * Creates a new pretty print instance.
 	 *
-	 * @param root the root node of the AST to be printed
+	 * @param root the root node of the IR to be printed
 	 * @param flags options allowing users to customize the output
 	 * @param maxDepth the maximum recursive steps the pretty printer is descending into the given AST
+	 * @param tabSep the string used to print tabs
 	 */
-	PrettyPrinter( const NodePtr& root, unsigned flags = OPTIONS_DEFAULT, 
-			       unsigned maxDepth = std::numeric_limits<unsigned>::max(),
-				   std::pair<char,size_t> tabSep=std::make_pair(' ', 4) )
-			: root(root), flags(flags), maxDepth(maxDepth), tabSep(tabSep) { }
+	PrettyPrinter(
+			const NodePtr& root,
+			unsigned flags = OPTIONS_DEFAULT,
+			unsigned maxDepth = std::numeric_limits<unsigned>::max(),
+			string tabSep = "    "
+		) : root(root), plugin(detail::getEmptyPlugin()), flags(flags), maxDepth(maxDepth), tabSep(tabSep) { }
+
+	/**
+	 * Creates a new pretty print instance based on the given parameters.
+	 *
+	 * @param root the root node of the IR to be printed
+	 * @param plugin a plugin to customize the printing of nodes
+	 * @param flags options allowing users to customize the output
+	 * @param maxDepth the maximum recursive steps the pretty printer is descending into the given AST
+	 * @param tabSep the string used to print tabs
+	 */
+	PrettyPrinter(
+			const NodePtr& root,
+			const PrinterPlugin& plugin,
+			unsigned flags = OPTIONS_DEFAULT,
+			unsigned maxDepth = std::numeric_limits<unsigned>::max(),
+			string tabSep = "    "
+		) : root(root), plugin(plugin), flags(flags), maxDepth(maxDepth), tabSep(tabSep) {}
 
 	/**
 	 * Tests whether a certain option is set or not.
