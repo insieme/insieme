@@ -51,7 +51,9 @@
 #include "client_app.h"
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
-#include "irt_maintenance.h"
+#if !defined _GEMS
+	#include "irt_maintenance.h"
+#endif
 
 #ifdef _GEMS
 	#include "include_gems/stdlib.h"
@@ -109,7 +111,7 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 
 	_irt_hardware_info_init();
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_init();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
@@ -194,7 +196,7 @@ void irt_exit_handler() {
 
 	_irt_hardware_info_shutdown();
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_cleanup();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
