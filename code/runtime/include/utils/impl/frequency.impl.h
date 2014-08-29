@@ -35,47 +35,17 @@
  */
 
 #pragma once
-#ifndef __GUARD_IRT_ALL_IMPLS_H
-#define __GUARD_IRT_ALL_IMPLS_H
+#ifndef __GUARD_UTILS_IMPL_FREQUENCY_IMPL_H
+#define __GUARD_UTILS_IMPL_FREQUENCY_IMPL_H
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "impl/irt_loop_sched.impl.h"
-#include "impl/irt_logging.impl.h"
-#include "impl/papi_helper.impl.h"
-#include "irt_types.h"
-#include "meta_information/meta_infos.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "utils/impl/timing.impl.h"
-#include "utils/frequency.h"
-#include "utils/impl/frequency.impl.h"
+#if defined(_GEMS)
+	
+	#include "frequency.gems.impl.h"
 
-#ifndef IRT_MIN_MODE
-	#include "impl/irt_mqueue.impl.h"	
-	#include "utils/impl/affinity.impl.h"
+#else 
+
+	#include "frequency.std.impl.h"
+
 #endif
 
-#ifdef _WIN32
-	#include "include_win32/memalign.h"	
-#endif
-
-#include "runtime.h"
-//#include "context/impl/capture.impl.h"
-
-#ifdef USE_OPENCL 
-	#include "impl/irt_ocl.impl.h"
-#endif
-
-#include "impl/irt_debug.impl.h"
-
-
-#endif // ifndef __GUARD_IRT_ALL_IMPLS_H
+#endif // ifndef __GUARD_UTILS_IMPL_FREQUENCY_IMPL_H
