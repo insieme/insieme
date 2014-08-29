@@ -89,13 +89,13 @@ void irt_scheduling_loop(irt_worker* self) {
 			if(self->id.thread >= irt_g_degree_of_parallelism) {
 				irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
 				if(self->id.thread >= irt_g_degree_of_parallelism) {
-					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32_t);
+					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32);
 					// TODO: migrate queued wis if not a stealing policy
 					// wait for signal
 					int wait_err = irt_cond_wait(&self->dop_wait_cond, &irt_g_degree_of_parallelism_mutex);
 					IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
 					// we were woken up by the signal and now own the mutex
-					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_RUNNING, uint32_t);
+					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_RUNNING, uint32);
 				}
 				irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 			}
@@ -118,7 +118,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
 		// we were woken up by the signal and now own the mutex
 		irt_g_active_worker_count++;
-		irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_RUNNING, uint32_t);
+		irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_RUNNING, uint32);
 		irt_mutex_unlock(&irt_g_active_worker_mutex);
 #endif // IRT_WORKER_SLEEPING
 	}

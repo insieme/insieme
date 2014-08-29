@@ -344,15 +344,15 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 		irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	}
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64_t);
+	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64);
 	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
 
 	if(outer_region) {
-		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64_t) == 0) {
+		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64) == 0) {
 			_irt_inst_region_end_late_exit_measurements(wi);
 			uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64_t);
-			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64_t);
+			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64);
+			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64);
 		}
 	}
 
@@ -378,18 +378,18 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 
-	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64_t) == 0) {
+	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64) == 0) {
 		_irt_inst_region_end_late_exit_measurements(wi);
 		uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64_t);
-		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64_t);
+		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64);
+		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64);
 	}
 
 	_irt_inst_region_stack_pop(wi);
 
 	if(wi->inst_region_list->length > 0) {
 		irt_inst_region_context_data* outer_region = irt_inst_region_get_current(wi);
-		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64_t);
+		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64);
 		bool outer_first_entry = ((outer_entry_count - outer_region->num_exits) == 0);
 		if(outer_first_entry)
 			_irt_inst_region_start_early_entry_measurements(wi);

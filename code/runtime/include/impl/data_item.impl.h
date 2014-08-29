@@ -65,7 +65,7 @@ static inline void _irt_di_recycle(irt_data_item* di) {
 	free(di);
 }
 static inline void _irt_di_dec_use_count(irt_data_item* di) {
-	if(irt_atomic_sub_and_fetch((uint32*)&di->use_count, 1, uint32_t) == 0) _irt_di_recycle(di);
+	if(irt_atomic_sub_and_fetch((uint32*)&di->use_count, 1, uint32) == 0) _irt_di_recycle(di);
 }
 
 

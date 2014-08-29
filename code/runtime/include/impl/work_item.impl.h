@@ -150,7 +150,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	_irt_wi_init(self, retval, range, impl, params);
 	if(self->cur_wi != NULL) {
 		// increment child count in current wi
-		irt_atomic_inc(self->cur_wi->num_active_children, uint32_t);
+		irt_atomic_inc(self->cur_wi->num_active_children, uint32);
 	}
 	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : (uint32_t*)-1);
 	// create entry in event table
@@ -306,7 +306,7 @@ void irt_wi_end(irt_work_item* wi) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
-		irt_atomic_fetch_and_sub(&source->num_fragments, 1, uint32_t);
+		irt_atomic_fetch_and_sub(&source->num_fragments, 1, uint32);
 		if(source->num_fragments == 0) irt_wi_end(source);
 	} else {
 		// delete params struct
@@ -345,7 +345,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	if(wi->parent_num_active_children) {
 		//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
 		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
-		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32_t) == 0) {
+		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32) == 0) {
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
 			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
@@ -393,16 +393,16 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
-		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1, uint32_t); // This needs to be atomic even if it may not look like it
+		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1, uint32); // This needs to be atomic even if it may not look like it
 		for(uint32 i=0; i<source->num_groups; ++i) {
-			irt_atomic_fetch_and_add(&(source->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32_t); // TODO
+			irt_atomic_fetch_and_add(&(source->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32); // TODO
 		}
 		// splitting fragment wi, can safely delete
 		_irt_wi_recycle(wi, self);
 	} else {
-		irt_atomic_fetch_and_add(&wi->num_fragments, elements, uint32_t); // This needs to be atomic even if it may not look like it		
+		irt_atomic_fetch_and_add(&wi->num_fragments, elements, uint32); // This needs to be atomic even if it may not look like it		
 		for(uint32 i=0; i<wi->num_groups; ++i) {
-			irt_atomic_fetch_and_add(&(wi->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32_t); // TODO
+			irt_atomic_fetch_and_add(&(wi->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32); // TODO
 		}
 	}
 }
