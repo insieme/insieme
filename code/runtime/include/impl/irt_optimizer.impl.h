@@ -123,8 +123,8 @@ void get_available_freqs() {
 
     // scaling_available_frequencies not available
     
-    uint32 max = _irt_cpu_freq_get(0, "cpuinfo_max_freq");
-    uint32 min = _irt_cpu_freq_get(0, "cpuinfo_min_freq");
+    uint32 max = irt_cpu_freq_get_max_frequency_core(0);
+    uint32 min = irt_cpu_freq_get_min_frequency_core(0);
 
     irt_g_available_freq_count = 0;
     do {

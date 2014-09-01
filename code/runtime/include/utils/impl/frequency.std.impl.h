@@ -207,6 +207,14 @@ int32 irt_cpu_freq_get_max_frequency_worker(const irt_worker* worker) {
 }
 
 /*
+ * gets the maximum frequency a core is allowed to run at
+ */
+
+int32 irt_cpu_freq_get_max_frequency_core(const uint32 coreid) {
+	return _irt_cpu_freq_get(coreid, "scaling_max_freq");
+}
+
+/*
  * sets the minimum frequency a core of a worker is allowed to run at
  */
 
@@ -220,6 +228,14 @@ bool irt_cpu_freq_set_min_frequency_worker(const irt_worker* worker, const uint3
 
 int32 irt_cpu_freq_get_min_frequency_worker(const irt_worker* worker) {
 	return _irt_cpu_freq_get(irt_affinity_mask_get_first_cpu(worker->affinity), "scaling_min_freq");
+}
+
+/*
+ * gets the minimum frequency a core is allowed to run at
+ */
+
+int32 irt_cpu_freq_get_min_frequency_core(const uint32 coreid) {
+	return _irt_cpu_freq_get(coreid, "scaling_min_freq");
 }
 
 /*
@@ -346,125 +362,6 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	irt_log_setting_s("IRT_CPU_FREQUENCIES", cpu_freq_output);
 	return retval;
-}
-
-/*
- * sets the frequency of a core of a worker to the value specified by the environment variable
- *
- * MAX = maximum value
- * MIN = minimum value
- * OS = leave it to the OS to do DVFS
- * numerical value = clock frequency in MHz
- *
- * only frequencies offered by the operating system / hardware (c.f. scaling_available_frequencies) are actually written
- */
-
-int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
-	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
-	if(freq_str_orig) {
-		char *freq_str = (char*)alloca((strlen(freq_str_orig) +1) *sizeof(char)); // needed since strtok modifies the string it's working on
-		strcpy(freq_str, freq_str_orig);
-
-		int32 retval;
-		uint32 freqs[IRT_INST_MAX_CPU_FREQUENCIES];
-		uint32 length;
-
-		if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, freqs, &length)) == 0) {
-			char *tok = strtok(freq_str, ",");
-			// copies the first entry, to be used by all workers if it was the only one supplied
-			char *first_copy = (char*)alloca((strlen(tok) +1) *sizeof(char)); 
-			strcpy(first_copy, tok);
-
-			// used to check if only one setting was supplied
-			int i;
-			// skip nonrelevant entries - the n-th tok is the setting for worker with id n
-			for(i = 1; i <= worker->id.thread; ++i) {
-				tok = strtok(NULL, ",");
-				if(!tok)
-					break;
-			}
-
-			// if i != 1 we did at least one iteration => numbers of workers and frequencies must match
-			if(!tok) {
-				if(i != 1) {
-					IRT_ASSERT(tok != NULL, IRT_ERR_INSTRUMENTATION, "Number of workers is higher than number of cpu frequencies provided!")
-				} else {
-					tok = first_copy;
-				}
-			}
-
-			if(strcmp(tok, "OS") == 0) {
-				int32 retval = irt_cpu_freq_reset_frequency_worker(worker);
-			#ifdef _GEMS
-				// alloca is implemented as malloc
-				free(first_copy);
-				free(freq_str);
-			#endif
-				return retval;
-			} else if(strcmp(tok, "MAX") == 0) {
-				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[0]);
-			#ifdef _GEMS
-				// alloca is implemented as malloc
-				free(first_copy);
-				free(freq_str);
-			#endif
-				return retval;
-			} else if(strcmp(tok, "MIN") == 0) {
-				int32 retval = irt_cpu_freq_set_frequency_worker(worker, freqs[length-1]);
-			#ifdef _GEMS
-				// alloca is implemented as malloc
-				free(first_copy);
-				free(freq_str);
-			#endif
-				return retval;
-			} else {
-
-				uint32 freq = atoi(tok);
-				bool available;
-				for(uint32 i = 0; i < length; ++i) {
-					if(freq == freqs[i]) {
-						available = true;
-						break;
-					}
-				}
-
-				if(available) {
-					int32 retval = irt_cpu_freq_set_frequency_worker(worker, freq);
-				#ifdef _GEMS
-					// alloca is implemented as malloc
-					free(first_copy);
-					free(freq_str);
-				#endif
-					return retval;
-				} else {
-					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCIES));
-				#ifdef _GEMS
-					// alloca is implemented as malloc
-					free(first_copy);
-					free(freq_str);
-				#endif
-					return -1;
-				}
-			}
-		#ifdef _GEMS
-			// alloca is implemented as malloc
-			free(first_copy);
-		#endif
-		} else {
-		#ifdef _GEMS
-			// alloca is implemented as malloc
-			free(freq_str);
-		#endif
-			return retval;
-		}
-	#ifdef _GEMS
-		// alloca is implemented as malloc
-		free(freq_str);
-	#endif
-	} else {
-		return 0;
-	}
-	return 0;
 }
 
 /*

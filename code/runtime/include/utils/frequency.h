@@ -59,12 +59,6 @@ int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* f
 int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32* frequencies, uint32* length); 
 
 /*
- * gets the respective frequency setting (max/min/current/...) a core is running at
- */
-
-int32 _irt_cpu_freq_get(const uint32 coreid, const char* entry);
-	
-/*
  * gets the current frequency a core of a worker is running at
  */
 
@@ -83,6 +77,12 @@ bool irt_cpu_freq_set_max_frequency_worker(const irt_worker* worker, const uint3
 int32 irt_cpu_freq_get_max_frequency_worker(const irt_worker* worker); 
 
 /*
+ * gets the maximum frequency of a core is allowed to run at
+ */
+
+int32 irt_cpu_freq_get_max_frequency_core(const uint32 core); 
+
+/*
  * sets the minimum frequency a core of a worker is allowed to run at
  */
 
@@ -93,6 +93,12 @@ bool irt_cpu_freq_set_min_frequency_worker(const irt_worker* worker, const uint3
  */
 
 int32 irt_cpu_freq_get_min_frequency_worker(const irt_worker* worker);
+
+/*
+ * gets the minimum frequency of a core is allowed to run at
+ */
+
+int32 irt_cpu_freq_get_min_frequency_core(const uint32 core); 
 
 /*
  * resets all the min and max frequencies of all cores of all workers to the available min and max reported by the hardware
@@ -113,18 +119,6 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker);
 int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency);
 
 /*
- * this function blindly sets the frequency of cores belonging to a socket, whether the runtime actually has workers running on them or not
- */
-
-bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequency);
-
-/*
- * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like MIN/MAX/OS.
- */
-
-int32 irt_cpu_freq_set_frequency_socket_env();
-
-/*
  * sets the frequency of a core of a worker to the value specified by the environment variable
  *
  * MAX = maximum value
@@ -136,6 +130,20 @@ int32 irt_cpu_freq_set_frequency_socket_env();
  */
 
 int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker);
+
+#ifndef _GEMS
+
+/*
+ * this function blindly sets the frequency of cores belonging to a socket, whether the runtime actually has workers running on them or not
+ */
+
+bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequency);
+
+/*
+ * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like MIN/MAX/OS.
+ */
+
+int32 irt_cpu_freq_set_frequency_socket_env();
 
 /*
  * prints the current frequency of all cores of all workers to stdout
@@ -149,5 +157,6 @@ int32 irt_cpu_freq_print_cur_frequency();
 
 int32 irt_cpu_freq_set_frequency(const uint32 frequency); 
 
+#endif
 
 #endif // ifndef __GUARD_UTILS_FREQUENCY_H
