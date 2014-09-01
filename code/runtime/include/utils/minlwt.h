@@ -49,7 +49,7 @@
 #ifdef _MSC_VER
 	#include "include_win32\inttypes.h"
 #elif defined _GEMS
-	#include "include_gems/inttypes.h"
+	#include "include_gems/stdint.h"
 #else
 	#include <inttypes.h>
 #endif
