@@ -40,7 +40,7 @@
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	#include <sys/stat.h>
 #endif
 #include <errno.h>
@@ -417,7 +417,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 #include "irt_metrics.def"
 	} else {
 		// need to copy string since strtok requires it to be non-const
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 		char selection_copy[512];
 #else
 		char selection_copy[strlen(selection)];
@@ -443,7 +443,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 }
 
 void irt_inst_region_select_metrics_from_env() {
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
@@ -484,7 +484,7 @@ void irt_inst_region_output() {
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
-#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
+#if !defined(_GEMS_SIM) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
@@ -521,7 +521,7 @@ void irt_inst_region_output() {
 #include "irt_metrics.def"
 		fprintf(outputfile, "\n");
 	}
-#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
+#if !defined(_GEMS_SIM) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	fclose(outputfile);
 #endif
 }

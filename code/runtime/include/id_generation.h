@@ -46,7 +46,7 @@ typedef enum {
 	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
 } irt_id_type;
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
     #define ID_TYPE_BIT_FIELD uint8 id_type 
 #else 
     #define ID_TYPE_BIT_FIELD irt_id_type id_type : 8

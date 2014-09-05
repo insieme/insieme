@@ -38,7 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_ATOMIC_H
 #define __GUARD_ABSTRACTION_ATOMIC_H
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 
 	// direct mapping to compiler primitives/instrinsics
 	 

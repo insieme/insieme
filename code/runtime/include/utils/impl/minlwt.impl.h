@@ -198,7 +198,7 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 	#include "minlwt.mingw.impl.h"
 
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	
 	#include "minlwt.gems.impl.h"
 

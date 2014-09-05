@@ -215,7 +215,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 		_irt_db_delete(block, dim);
 	}
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	// alloca is implemented as malloc
 	free(sizes);
 #endif

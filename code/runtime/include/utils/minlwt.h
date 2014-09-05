@@ -48,7 +48,7 @@
 
 #ifdef _MSC_VER
 	#include "include_win32\inttypes.h"
-#elif defined _GEMS
+#elif defined _GEMS_SIM
 	#include "include_gems/stdint.h"
 #else
 	#include <inttypes.h>
@@ -79,7 +79,7 @@ typedef struct _lwt_reused_stack {
 
 } lwt_reused_stack;
 
-#if  defined(__x86_64__) || defined(_WIN32) || defined(_GEMS)
+#if  defined(__x86_64__) || defined(_WIN32) || defined(_GEMS_SIM) || defined(__arm__)
 //#if 0 // for testing the ucontext fallback on x64 systems
 #define USING_MINLWT 1
 typedef intptr_t lwt_context;

@@ -45,7 +45,7 @@
 
 //#define IRT_VERBOSE 1
 
-#if defined(_WIN32) || defined(_GEMS)
+#if defined(_WIN32) || defined(_GEMS_SIM)
 #define IRT_SIG_ERR SIGABRT
 #define IRT_SIG_INTERRUPT SIGINT
 #else
@@ -77,7 +77,7 @@ struct _irt_error {
 /* ------------------------------ operations ----- */
 
 #if !defined(NDEBUG) || defined(IRT_VERBOSE) || defined(IRT_ENABLE_ASSERTS)
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	/* lcc does not support macro called with 0 variadic arguments. The solution is to make the last named 
 	 * argument part of the variadic arguments in a way to have always at least one variadic argument */
 

@@ -153,9 +153,7 @@ void irt_optimizer_objective_init(irt_context *context) {
         }
     }
 
-#ifndef _GEMS
     get_available_freqs();
-#endif
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {

@@ -134,8 +134,9 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
-// gemsclaim
-#ifdef _GEMS
+// gemsclaim simulator
+#if defined(_GEMS) && !defined(__arm__)
+    #define _GEMS_SIM
 	#define	GEMS_CORE_FREQ_MHZ 100
 #endif
 

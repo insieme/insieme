@@ -46,7 +46,7 @@
 #include "../filesystem.h"
 #include "irt_logging.h"
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	#include "include_gems/impl/time.impl.h"
 #endif
 
@@ -126,9 +126,11 @@ uint64 irt_time_set_ticks_per_sec() {
  */
 
 uint64 irt_time_ticks_per_sec_calibration_mark() {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	irt_g_time_ticks_per_sec = GEMS_CORE_FREQ_MHZ * 1e6;
 	return irt_g_time_ticks_per_sec;
+#elif defined __arm__
+    #error "irt_time_ticks_per_sec_calibration_mark to be implemented" 
 #else
 	static uint64 before = 0;
 	//static struct timespec time_before;

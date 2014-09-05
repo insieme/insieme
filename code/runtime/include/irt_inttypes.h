@@ -62,7 +62,7 @@
 	#ifndef __STDC_CONSTANT_MACROS
 		#define __STDC_CONSTANT_MACROS 1
 	#endif
-    #ifdef _GEMS
+    #ifdef _GEMS_SIM
 	    #include <stdint.h>
     #else
 	    #include <inttypes.h>

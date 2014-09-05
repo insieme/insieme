@@ -286,7 +286,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
@@ -387,7 +387,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
-    #ifdef _GEMS
+    #ifdef _GEMS_SIM
         irt_mutex_init(&print_mutex);
     #endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);

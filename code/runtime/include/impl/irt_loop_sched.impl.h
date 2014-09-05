@@ -432,14 +432,14 @@ void irt_loop_sched_policy_init() {
 				}
 			} else {
 				fprintf(stderr, "unknown loop scheduler policy requested: %s\n", policy_env_copy);
-				#ifdef _GEMS
+				#ifdef _GEMS_SIM
 					// alloca is implemented as malloc
 					free(policy_env_copy);
 				#endif
 				exit(-1);
 			}
 		}
-	#ifdef _GEMS
+	#ifdef _GEMS_SIM
 		// alloca is implemented as malloc
 		free(policy_env_copy);
 	#endif
