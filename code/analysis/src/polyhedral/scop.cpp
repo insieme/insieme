@@ -76,9 +76,31 @@ using namespace insieme::analysis::polyhedral::scop;
 using arithmetic::Piecewise;
 using arithmetic::Formula;
 
-bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
+void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
+/// Determines the maximum node path depth given node n as the root node. This procedure is most likely be
+/// used before or during a PrintNodes invocation.
+unsigned int maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
+	unsigned max = 0;
+	for (auto c: n.getChildAddresses()) {
+		unsigned now=maxDepth(c);
+		if (now>max) max=now;
+	}
+	return max+1;
+}
 
+/// Print the nodes to std::cout starting from root n, one by one, displaying the node path
+/// and the visual representation. The output can be prefixed by a string, and for visually unifying several
+/// PrintNodes invocations the maximum (see MaxDepth) and current depth may also be given.
+void printNodes(const insieme::core::Address<const insieme::core::Node> n,
+								  std::string prefix="        @\t", int max=-1, unsigned int depth=0) {
+	if (max<0) max=maxDepth(n);
+	int depth0=n.getDepth()-depth;
+	std::cout << prefix << n << std::setw(2*(max-depth+1)) << "+"
+			  << std::setw(1+2*(depth0+depth-1)) << "" << *n << std::endl;
+	for (auto c: n.getChildAddresses())
+		if (depth<(unsigned int)max) printNodes(c, prefix, max, depth+1);
+}
 
 class DiscardSCoPException: public NotASCoP {
 	const ExpressionPtr expr;
@@ -411,9 +433,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	AddressList& scopList;
 	AddressList subScops;
 
-	// Stack utilized to keep track of statements which are inside a SCoP.
-	// because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
-	// we need to have a way to collect statements which can be inside nested scopes.
+	/** Stack utilized to keep track of statements which are inside a SCoP.
+	because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
+	we need to have a way to collect statements which can be inside nested scopes. **/
 	typedef std::stack<ScopRegion::StmtVect> RegionStmtStack;
 	RegionStmtStack regionStmts;
 
@@ -423,10 +445,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 	}
 	
-	// Visit the body of a SCoP. This requires to collect the iteration vector for the body and
-	// eventual ref access statements existing in the body. For each array access we extract the
-	// equality constraint used for accessing each dimension of the array and store it in the
-	// AccessFunction annotation.
+	/** Visit the body of a SCoP. This requires to collect the iteration vector for the body and
+	eventual ref access statements existing in the body. For each array access we extract the
+	equality constraint used for accessing each dimension of the array and store it in the
+	AccessFunction annotation. **/
 	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
 		
 		RefList&& refs = collectDefUse( body.getAddressedNode() );
@@ -493,6 +515,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			}
 
 			// A call expression should have not created sub scop
+			if (!subScops.empty()) std::cout << printer::PrettyPrinter(addr.getAddressedNode()) << std::endl;
 			assert(subScops.empty());
 
 			// We have to make sure this is a call to a literal which is not a builtin literal
@@ -1255,11 +1278,13 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	} );
 }
 
-bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
-	assert ( scop->hasAnnotation(ScopRegion::KEY) );
+/// postProcessSCoP makes sure that within a SCoP no parameter value is modified and that iterators are only modified within loop statements.
+/// Return
+void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
+	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
 
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	if (!region.isValid()) { return false; }
+	if (!region.isValid()) { return; }
 
 	const IterationVector& iterVec = region.getIterationVector();
 
@@ -1279,27 +1304,14 @@ bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
 		region.setValid(false);
-		return false;
-	} 
-	
-// 	if (iterVec.getIteratorNum() == 0) {
-// 		// A top level SCoP containing no loops. This is considered not a SCoP in the terminology of
-// 		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
-// 		// because this region could be inside another SCoP contanining loops therefore forming a
-// 		// valid SCoP
-// 		VLOG(1) << "Invalidating SCoP because it contains no loops "; 
-// 		return true;
-// 	}
-
-	return true;
-
+	}
 }
 
 } // end namespace anonymous 
 
 namespace insieme { namespace analysis { namespace polyhedral { 
 	
-/**************************************************************************************************
+/** ***********************************************************************************************
  * Extract constraints from a conditional expression. This is used for determining constraints for 
  * if and for statements. 
  *************************************************************************************************/
@@ -1439,7 +1451,7 @@ bool ScopRegion::containsLoopNest() const {
 	return iterVec.getIteratorNum() > 0;
 }
 
-/**************************************************************************************************
+/** ***********************************************************************************************
  * Recursively process ScopRegions caching the information related to access functions and
  * scattering matrices for the statements contained in this Scop region
  *************************************************************************************************/
@@ -1761,7 +1773,7 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 	return out << "IV: " << iterVec << ", Access: " << access;
 }
 
-//===== mark ======================================================================
+/// mark is the main entry point for SCoP analysis: Input is the program source, output is an AddressList.
 AddressList mark(const core::NodePtr& root) {
 	AddressList ret;
 	VLOG(1) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
