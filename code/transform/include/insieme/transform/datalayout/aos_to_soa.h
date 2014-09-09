@@ -65,10 +65,14 @@ class AosToSoa {
 	void addNewDecls(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
+	void addNewParams(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
+
 	void replaceAssignments(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
+	core::ExpressionPtr determineNumberOfElements(const core::ExpressionPtr& newVar,const core::ExpressionMap&  nElems);
 
 	core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
@@ -98,19 +102,23 @@ public:
 	virtual ~AosToSoa() {}
 };
 
-//class VariableAdder: public core::transform::CachedNodeMapping {
-//	core::NodeManager& mgr;
-//	core::ExpressionList& varsToReplace;
-//
-//	int searchInArgumentList(const std::vector<core::ExpressionPtr>& args, core::ExpressionPtr& newArg);
-//
-//public:
-//	VariableAdder(core::NodeManager& mgr, core::ExpressionList& varsToReplace);
-//
-//	const core::NodePtr resolveElement(const core::NodePtr& element);
-//
-//	core::ExpressionList getVarsToReplace() { return varsToReplace; }
-//};
+class VariableAdder: public core::transform::CachedNodeMapping {
+	core::NodeManager& mgr;
+	core::ExpressionMap& varsToReplace;
+	core::pattern::TreePattern typePattern;
+	core::pattern::TreePattern variablePattern;
+	core::pattern::TreePattern namedVariablePattern;
+	core::pattern::TreePattern varWithOptionalDeref;
+
+	int searchInArgumentList(const std::vector<core::ExpressionPtr>& args, core::ExpressionPtr& newArg);
+
+public:
+	VariableAdder(core::NodeManager& mgr, core::ExpressionMap& varReplacements);
+
+	const core::NodePtr resolveElement(const core::NodePtr& element);
+
+	core::ExpressionMap getVarsToReplace() { return varsToReplace; }
+};
 
 class NewCompoundsRemover: public core::transform::CachedNodeMapping {
 	core::NodeManager& mgr;
