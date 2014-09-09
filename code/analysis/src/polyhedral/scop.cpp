@@ -494,6 +494,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		return refs;
 	}
 
+	/** Visit the body of a SCoP. */
 	IterationVector visitStmt(NodeAddress addr) {
 		STACK_SIZE_GUARD;
 
@@ -514,12 +515,12 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				return ret;
 			}
 
-			// A call expression should have not created sub scop
-			if (!subScops.empty()) std::cout << printer::PrettyPrinter(addr.getAddressedNode()) << std::endl;
-			assert(subScops.empty());
+			// A call expression should have not created sub scop - I am not sure this also holds for a lambda expr (tp)
+			if (!subScops.empty() && func->getNodeType()==NT_Literal && !isBuiltIn)
+				std::cerr << "Beware of possible bugs in " << __FILE__ << ":" << std::to_string(__LINE__) << std::endl;
 
 			// We have to make sure this is a call to a literal which is not a builtin literal
-			if ( func->getNodeType() == NT_Literal && !isBuiltIn ) {
+			if (subScops.empty() && func->getNodeType()==NT_Literal && !isBuiltIn) {
 
 				FunctionSema&& sema = extractSemantics(callExpr);
 				if (sema.containsReferenceAccesses()) {
@@ -608,15 +609,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		return ret;
 	}
 
-	/**********************************************************************************************
-	 * Visit of If Statements: 
-	 * Visits the then and else body checking whether they are SCoPs. In the case both the branches
-	 * are SCoPs the condition is evaluated and a constraint created out of it. Two annotations will
-	 * be then created, one with the positive condition and the second one with the negated
-	 * condition which will be attached respectively to the then and the else body of the if
-	 * statement. In the case one of the two branches is not a SCoP, the SCoP branch is inserted in
-	 * the list of root scops (scopList) and the NotAScop exception thrown to the parent node. 
-	 *********************************************************************************************/
+	/** Visit of If Statements: Visits the then and else body checking whether they are SCoPs. In the case both the
+	branches are SCoPs the condition is evaluated and a constraint created out of it. Two annotations will be then
+	created, one with the positive condition and the second one with the negated condition which will be attached
+	respectively to the then and the else body of the if statement. In the case one of the two branches is not a SCoP, the
+	SCoP branch is inserted in the list of root scops (scopList) and the NotAScop exception thrown to the parent node. */
 	IterationVector visitIfStmt(const IfStmtAddress& ifStmt) {
 		STACK_SIZE_GUARD;
 		//LOG(INFO) << "visitIfStmt:\n" << printer::PrettyPrinter(ifStmt);
@@ -730,11 +727,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 	
 
-	/**********************************************************************************************
-	 * SwitchStmt: for each of the cases of the switch statement we create a constraint enforcing
-	 * conditionExpr - caseExpr == 0. The constraint for the default case is created by a
-	 * conjunction of the negated case constraints. 
-	 *********************************************************************************************/
+	/** SwitchStmt: for each of the cases of the switch statement we create a constraint enforcing conditionExpr -
+	caseExpr == 0. The constraint for the default case is created by a conjunction of the negated case constraints. */
 	IterationVector visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
 		STACK_SIZE_GUARD;
 		//LOG(INFO) << "visitSwitchStmt:\n" << printer::PrettyPrinter(switchStmt);
@@ -938,11 +932,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		}
 	}
 
-	/*************************************************************************************************
-	 * While stmts cannot be represented in the polyhedral form (at least in the general case). In
-	 * the future we may develop a more advanced analysis capable of representing while loops in the
-	 * polyhedral model 
-	 ************************************************************************************************/
+	/** While stmts cannot be represented in the polyhedral form (at least in the general case). In the future we may
+	develop a more advanced analysis capable of representing while loops in the polyhedral model. */
 	IterationVector visitWhileStmt(const WhileStmtAddress& whileStmt) { 
 		STACK_SIZE_GUARD;
 		// We visit the body of the while stmt because there could be SCoPs inside
@@ -1215,13 +1206,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 };
 
-/**************************************************************************************************
- * After the entry level of a SCoP has been found (using the bottom-up technique) we start the
- * top-down pass to detect conditions which would invalidate the SCoP. For example assignment to
- * parameters of the iteration vector is invalid, in order to detect this we have to consider the
- * top-level iteration vector and visit all the statements inside the scop looking for assignment
- * statements where the left side is one of the parameters of iter vec. 
- **************************************************************************************************/ 
+/** After the entry level of a SCoP has been found (using the bottom-up technique) we start the top-down pass to detect
+conditions which would invalidate the SCoP. For example assignment to parameters of the iteration vector is invalid, in
+order to detect this we have to consider the top-level iteration vector and visit all the statements inside the scop
+looking for assignment statements where the left side is one of the parameters of iter vec. */
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
@@ -1278,8 +1266,8 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	} );
 }
 
-/// postProcessSCoP makes sure that within a SCoP no parameter value is modified and that iterators are only modified within loop statements.
-/// Return
+/** postProcessSCoP makes sure that within a SCoP no parameter value is modified and that iterators are only modified
+within loop statements. */
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
 
@@ -1311,10 +1299,8 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 
 namespace insieme { namespace analysis { namespace polyhedral { 
 	
-/** ***********************************************************************************************
- * Extract constraints from a conditional expression. This is used for determining constraints for 
- * if and for statements. 
- *************************************************************************************************/
+/** Extract constraints from a conditional expression. This is used for determining constraints for if and for
+statements. */
 IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
 
 	NodeManager& mgr = cond->getNodeManager();
@@ -1681,7 +1667,8 @@ namespace {
 	}
 }
 
-
+/** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
+scattering info at this level */
 void ScopRegion::resolve() const {
 	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
@@ -1773,7 +1760,8 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 	return out << "IV: " << iterVec << ", Access: " << access;
 }
 
-/// mark is the main entry point for SCoP analysis: Input is the program source, output is an AddressList.
+/** mark is the main entry point for SCoP analysis: It finds and marks the SCoPs contained in the root subtree and
+returns a list of found SCoPs (an empty list in the case no SCoP was found). */
 AddressList mark(const core::NodePtr& root) {
 	AddressList ret;
 	VLOG(1) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
