@@ -47,10 +47,13 @@
 #include "insieme/core/pattern/pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 
+#include "insieme/analysis/defuse_collect.h"
+
 namespace insieme {
 namespace transform {
 
 using namespace core;
+namespace ia = insieme::analysis;
 
 int numberOfCompoundStmts(const NodePtr root) {
 	int cnt = 0;
@@ -100,6 +103,8 @@ TEST(DataLayout, AosToSoa) {
 		"		ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
 		"		copy = *a;"
 		"		a = *copy;"
+//		"		ref<ref<array<twoElem,1>>> uninitialized;"
+//		"		uninitialized = *a;"
 		"		ref<ref<array<twoElem,1>>> ptr = ref.var(scalar.to.array((*a)[i]));"
 		"		(*ptr)[i].int = i;"
 		"		ref.deref(a)[i].int = i;"
@@ -112,9 +117,28 @@ TEST(DataLayout, AosToSoa) {
 		"}"
 	));
 
+//	ia::RefList&& refs = ia::collectDefUse(code);
+//
+//	// all the refs are usages
+//	std::for_each(refs.begin(), refs.end(), [](const ia::RefPtr& cur){
+////			EXPECT_TRUE(cur->getUsage() == ia::Ref::USE);
+//			if (cur->getType() == ia::Ref::ARRAY) {
+//				std::cout << "\nARRAY: " << cur << std::endl;
+//			} else if(cur->getType() == ia::Ref::SCALAR){
+//				std::cout << "\nSCALAR: " << cur << std::endl;
+//			} else if(cur->getType() == ia::Ref::MEMBER){
+//				std::cout << "\nMEMBER: " << cur << std::endl;
+//			}
+//
+//			dumpPretty(cur->getBaseExpression());
+//			cur->printTo(std::cout);
+//		});
+//
+//	return;
+
 	datalayout::AosToSoa ats(code);
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -131,7 +155,7 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(68, numberOfCompoundStmts(code));
+	EXPECT_EQ(86, numberOfCompoundStmts(code));
 	EXPECT_EQ(10, countMarshalledAccesses(code));
 	EXPECT_EQ(4, countMarshalledAssigns(code));
 }
@@ -154,15 +178,36 @@ TEST(DataLayout, AosToSoa2) {
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
 		"	load(a);"
+		""
+		"	ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
+		"	store(*copy);"
+		""
 		"	access(a);"
 		"	store(*a);"
 		"	ref.delete(*a);"
 		"}"
 	));
 
+//	ia::RefList&& refs = ia::collectDefUse(code);
+
+//	std::for_each(refs.begin(), refs.end(), [](const ia::RefPtr& cur){
+////			EXPECT_TRUE(cur->getUsage() == ia::Ref::USE);
+//			if (cur->getType() == ia::Ref::ARRAY) {
+//				std::cout << "\nARRAY: " << cur << std::endl;
+//			} else if(cur->getType() == ia::Ref::SCALAR){
+//				std::cout << "\nSCALAR: " << cur << std::endl;
+//			} else if(cur->getType() == ia::Ref::MEMBER){
+//				std::cout << "\nMEMBER: " << cur << std::endl;
+//			}
+//
+//			dumpPretty(cur->getBaseExpression());
+//			cur->printTo(std::cout);
+//		});
+//
+	return;
 	datalayout::AosToSoa ats(code);
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -217,9 +262,10 @@ TEST(DataLayout, Globals) {
 		"}"
 	));
 
-	datalayout::AosToSoa ats(code);
+	return;
+	dumpPretty(code);
 
-//	dumpPretty(code);
+	datalayout::AosToSoa ats(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
