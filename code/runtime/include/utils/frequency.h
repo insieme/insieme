@@ -47,6 +47,11 @@
 static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
 
 /*
+ * reads all available frequencies for all available cores as a list into the provided pointer
+ */
+int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length);
+
+/*
  * reads all available frequencies for a specific core as a list into the provided pointer
  */
 

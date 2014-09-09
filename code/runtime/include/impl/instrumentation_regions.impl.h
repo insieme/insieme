@@ -443,7 +443,9 @@ void irt_inst_region_select_metrics(const char* selection) {
 }
 
 void irt_inst_region_select_metrics_from_env() {
-#ifndef _GEMS_SIM
+#ifdef _GEMS
+	irt_inst_region_select_metrics(GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES);
+#else
 	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
@@ -513,7 +515,7 @@ void irt_inst_region_output() {
 
 	// write data
 	for(uint32 i = 0; i < num_regions; ++i) {
-		fprintf(outputfile, "RG,%u,%lu", i, regions[i].num_executions);
+		fprintf(outputfile, "RG,%u,%llu", i, regions[i].num_executions);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 		if(irt_g_inst_region_metric_measure_##_name__) { \
 			fprintf(outputfile, "," _format_string__, (_data_type__)((double)regions[i].aggregated_##_name__ * _output_conversion_code__)); \
