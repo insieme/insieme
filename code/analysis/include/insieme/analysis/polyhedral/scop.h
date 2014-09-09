@@ -216,41 +216,33 @@ struct ScopRegion: public core::NodeAnnotation {
 	
 	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
 
-	/**
-	 * Return the iteration vector which is spawned by this region, and on which the associated
-	 * constraints are based on.
-	 */
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
 	inline const IterationVector& getIterationVector() const {  return iterVec; }
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
 	inline IterationVector& getIterationVector() {  return iterVec; }
 	
-	/** 
-	 * Retrieves the constraint combiner associated to this ScopRegion.
-	 */
+	/// Retrieves the constraint combiner associated to this ScopRegion.
 	inline const IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
-	/**
-	 * Returns the iterator through the statements and sub statements on this SCoP. 
-	 * For each statements the infromation of its iteration domain, scattering matrix 
-	 * and access functions are listed. 
-	 */
+	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
+	of its iteration domain, scattering matrix and access functions are listed. */
 	inline const Scop& getScop() const {
 		assert(isValid() && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;
 	}
 
+	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
+	of its iteration domain, scattering matrix and access functions are listed. */
 	inline Scop& getScop() {
 		assert(isValid() && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}
 
-	/** 
-	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
-	 * current iteration domain
-	 */
+	/// Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the current iteration domain
 	const SubScopList& getSubScops() const { return subScops; }
 
 	bool containsLoopNest() const;
@@ -262,30 +254,24 @@ struct ScopRegion: public core::NodeAnnotation {
 
 private:
 
-	/**
-	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
-	 * and cache all the scattering info at this level
-	 */
 	void resolve() const;
 
 
 	const core::NodePtr annNode;
 
-	// Iteration Vector on which constraints of this region are defined 
+	/// Iteration Vector on which constraints of this region are defined
 	IterationVector iterVec;
 
-	// List of statements direclty contained in this region (but not in nested sub-regions)
+	/// List of statements direclty contained in this region (but not in nested sub-regions)
 	StmtVect stmts;
 
-	// List of constraints which this SCoP defines 
+	/// List of constraints which this SCoP defines
 	IterationDomain domain;
 
-	/**
-	 * Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
-	 * relative position inside the current SCoP
-	 *  
-	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
-	 */
+	/** Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their relative position
+	inside the current SCoP
+
+	In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty */
 	SubScopList subScops;
 
 	mutable std::shared_ptr<Scop> scopInfo;
@@ -330,10 +316,6 @@ public:
 	}
 };
 
-/**************************************************************************************************
- * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
- * empty list in the case no SCoP was found). 
- *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
 
 inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
