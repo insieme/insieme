@@ -1124,13 +1124,18 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
 
+		// get new variable from the previously created map
+		VariablePtr newParam = varsToReplace[params[idx]].as<VariablePtr>();
+
+		assert(newParam && "no replacement for parameter found");
+
 		// if oldVar was an argument, newVar will be added too and search is continued in the called function
 		args.push_back(newArg);
 		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
 		// add it also to the new type of the lambda
-		funTyMembers.push_back(args.back()->getType());
+		funTyMembers.push_back(newParam->getType());
 		// add a new variable to the parameter list
-		params.push_back(varsToReplace[params[idx]].as<VariablePtr>());
+		params.push_back(newParam);
 
 		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
 
