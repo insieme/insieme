@@ -434,6 +434,17 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		//replace array accesses
 		ExpressionMap structures = replaceAccesses(varReplacements, tta, begin, end, replacements);
 
+//for(std::pair<NodeAddress, NodePtr> r : replacements) {
+//	std::cout << "\nFRom:\n";
+//	dumpPretty(r.first);
+//	std::cout << "\nTo: \n";
+//	dumpPretty(r.second);
+//	std::map<NodeAddress, NodePtr> re;
+//	re[r.first] = r.second;
+//	core::transform::replaceAll(mgr, re);
+//	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
+//}
+
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
 
@@ -575,7 +586,7 @@ CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, 
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
-			allDecls.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
+			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
 					updateInit(varReplacements, removeRefVar(decl->getInitialization()), oldStructType,
 							getBaseType(memberType->getType(), memberType->getName()), memberType->getName())));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
@@ -875,22 +886,22 @@ ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, co
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
 	//		ExpressionPtr old = builder.arrayRefElem()
 	//	}
-		bool doSomething = begin.empty();
+//		bool doSomething = begin.empty();
 
 		visitDepthFirstPrunable(toTransform, [&](const StatementAddress& node)->bool {
 
-			if(!doSomething) {
-				if(!begin.empty() && node == begin.front()) {
-					doSomething = true;
-					return true;
-				}
-				return false;
-			}
+//			if(!doSomething) {
+//				if(!begin.empty() && node == begin.front()) {
+//					doSomething = true;
+//					return true;
+//				}
+//				return false;
+//			}
 
-			if(!end.empty() && node == end.back()) {
-				doSomething = false;
-				return true;
-			}
+//			if(!end.empty() && node == end.back()) {
+//				doSomething = false;
+//				return true;
+//			}
 
 			// do not touch marshalling and unmrashalling points
 			if(contains(begin, node))
@@ -900,17 +911,23 @@ ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, co
 
 			CallExprAddress call = node.isa<CallExprAddress>();
 
-			pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
+			if(call) {
+				pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
+//std::cout << "\nCall: ";
+// dumpPretty(node);
+				if(match) {
+//	assert(false);
 
-			if(call && match) {
-				StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
-				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-				ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
 
-				replacements[node] = replacement;
-				return true;
+					StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
+					ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+					ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newVar, member)), index);
+
+					replacements[node] = replacement;
+					return true;
+				}
 			}
-			match = assignStructAccess.matchAddress(node);
+			pattern::AddressMatchOpt match = assignStructAccess.matchAddress(node);
 
 			if(match) {
 				replaceScalarStructs(match, newVar, replacements, structures);
