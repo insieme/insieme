@@ -665,9 +665,9 @@ ExpressionPtr AosToSoa::determineNumberOfElements(const ExpressionPtr& newVar,co
 		numElements = checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable->second;
 
 	// backup, simply take the first which is there and hope for the best
-	if(!numElements) numElements = nElems.begin()->second;
+	if(!numElements && !nElems.empty()) numElements = nElems.begin()->second;
 
-	assert(numElements && "Cannot determine number of elements in unmarshalling");
+	assert(numElements && "Cannot determine number of elements for (un)marshalling");
 
 	return numElements;
 }
@@ -729,9 +729,7 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 				if(!oldVarPattern.match(am["oldVarCandidate"].getValue()))
 					return;
 
-				ExpressionPtr numElements = nElems[newVar];
-
-				assert(numElements && "Cannot determine number of elements in marshalling");
+				ExpressionPtr numElements = determineNumberOfElements(newVar, nElems);
 
 				start = builder.literal(numElements->getType(), "0");
 				end = numElements;
