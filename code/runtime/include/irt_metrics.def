@@ -83,7 +83,7 @@
 GROUP(cpu_time_group, int ctg_dummy, , {}, {}, {}, {}, {}, {}, {}, {})
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_TIME)
-METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
+METRIC(cpu_time,				0,	ns,		uint64,	"%llu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
 	{ wi->inst_region_data->last_cpu_time = irt_time_ticks(); }, \
 	{ wi->inst_region_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_region_data->last_cpu_time; }, \
 	{}, \
@@ -93,7 +93,7 @@ METRIC(cpu_time,				0,	ns,		uint64,	"%lu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGRE
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_WALL_TIME)
-METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
+METRIC(wall_time,				1,	ns,		uint64, "%llu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
 	{  }, \
 	{  }, \
 	{ rg->last_wall_time = irt_time_ticks(); }, \
