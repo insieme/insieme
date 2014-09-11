@@ -372,7 +372,6 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	ia::VariableScopeMap scopes = ia::mapVariablesToScopes(tta);
 
 	for(std::pair<ExpressionPtr, RefTypePtr> candidate : structs) {
-
 		ExpressionSet toReplaceList;
 		toReplaceList.insert(candidate.first);
 
@@ -384,12 +383,16 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		}
 		toReplaceLists.push_back(std::make_pair(toReplaceList, candidate.second));
 
-//std::cout << "\nList: \n";
-//for(ExpressionPtr tr : toReplaceList)
-//	std::cout << tr << std::endl;
 	}
 
 	// TODO clean lists to remove duplicates
+	toReplaceLists = mergeLists(toReplaceLists);
+
+//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+//	std::cout << "\nList: \n";
+//	for(ExpressionPtr tr : toReplaceList.first)
+//		std::cout << tr << std::endl;
+//}
 
 	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
@@ -477,7 +480,7 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 			return;
 
 		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-//std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
+std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
 	});
 	return structs;
 }
@@ -516,8 +519,10 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 //std::cout << "alias: " << *varToAdd << std::endl;
 							if(ia::cba::isAlias(expr, potentialAlias)) {
 								if(varToAdd->getNodeType() == NT_Variable ||
-										(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType))
+										(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
+
 									toReplaceList.insert(varToAdd);
+								}
 							}
 						}
 					}
@@ -526,6 +531,29 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 		}
 	});
 
+}
+
+std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::mergeLists(std::vector<std::pair<ExpressionSet, RefTypePtr>>& toReplaceLists) {
+	std::vector<std::pair<ExpressionSet, RefTypePtr>> newLists;
+	// merge lists which contain the same variables
+	for(std::pair<ExpressionSet, RefTypePtr>& toReplaceList : toReplaceLists) {
+		bool addToOld = false;
+		for(ExpressionPtr toReplace : toReplaceList.first) {
+			for(std::pair<ExpressionSet, RefTypePtr>& newList : newLists) {
+				if(newList.first.find(toReplace) != newList.first.end()) {
+					assert(newList.second == toReplaceList.second && "Correlated variables would need to be changed to different types");
+					for(ExpressionPtr toInsert : toReplaceList.first)
+						newList.first.insert(toInsert);
+					addToOld = true;
+				}
+			}
+		}
+		if(!addToOld) {
+			newLists.push_back(toReplaceList);
+		}
+	}
+
+	return newLists;
 }
 
 StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
@@ -729,13 +757,17 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 				if(!oldVarPattern.match(am["oldVarCandidate"].getValue()))
 					return;
 
+//for(std::pair<ExpressionPtr, ExpressionPtr> e : nElems) {
+//	std::cout << "from: " << e.first << " to " << e.second << std::endl;
+//}
+//std::cout << "looking for: " << oldVar << std::endl;
+
 				ExpressionPtr numElements = determineNumberOfElements(newVar, nElems);
 
 				start = builder.literal(numElements->getType(), "0");
 				end = numElements;
 			}
 //std::cout << "oldVAr " << oldVar << std::endl;
-
 
 			StatementPtr marshalling = generateMarshalling(oldVar, newVar, start, end, newStructType);
 

@@ -55,6 +55,7 @@ class AosToSoa {
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
 			const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
+	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	core::ExpressionPtr updateInit(const core::ExpressionMap& varReplacements, core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType,
