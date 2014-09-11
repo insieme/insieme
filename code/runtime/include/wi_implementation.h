@@ -69,6 +69,7 @@ struct _irt_wi_implementation_runtime_data {
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER
     irt_optimizer_runtime_data optimizer_rt_data;
     irt_optimizer_runtime_data* wrapping_optimizer_rt_data;
+    uint32 completed_wi_count;
 #endif
 	uint32 chunk_size;
 };
