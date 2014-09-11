@@ -290,54 +290,41 @@ namespace {
 		closeBox();
 	}
 
-	//***************************************************************************************
-	// 		Polyhedral Model Extraction: analysis for SCoPs and prints out stats
-	//***************************************************************************************
+	/// Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
 	void markSCoPs(ProgramPtr& program, MessageList& errors, const CommandLineOptions& options) {
-		if (!options.MarkScop) { return; }
+		if (!options.MarkScop && !options.UsePM) return;
 		using namespace anal::polyhedral::scop;
 
+		// find SCoPs in our current program
 		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
 			[&]() -> AddressList { return mark(program); });
 
-		openBoxTitle("SCoP Analysis");
-		size_t numStmtsInScops = 0, loopNests = 0, maxLoopNest=0;
+		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
+		// loop over all SCoP annotations we have discovered
 		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
-			// Avoid to print scops with no stmts
-			if (reg.getScop().size() == 0) { return; }
+			// only print SCoPs which contain statement, at the user's request
+			if (reg.getScop().size()==0) return;
+			else { if (options.MarkScop) { std::cout << reg.getScop(); } }
 
-			LOG(INFO) << reg.getScop();
-
+			// count number of statements covered by SCoPs
 			numStmtsInScops += reg.getScop().size();
-			size_t loopNest = reg.getScop().nestingLevel();
 
-			if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
+			// count maximum and average loop nesting level
+			size_t loopNest = reg.getScop().nestingLevel();
+			if (loopNest>maxLoopNest) maxLoopNest=loopNest;
 			loopNests += loopNest;
 		});
 
 		LOG(INFO) << std::setfill(' ') << std::endl
-			  << "=========================================" << std::endl
-			  << "=             SCoP COVERAGE             =" << std::endl
-			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
-			  << "= Tot # of SCoPs                :" << std::setw(6)
-					<< std::right << sl.size() << " =" << std::endl
-			  << "= Tot # of stms covered by SCoPs:" << std::setw(6)
-					<< std::right << numStmtsInScops << " =" << std::endl
-			  << "= Avg stmt per SCoP             :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
-			  << "= Avg loop nests per SCoP       :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< (double)loopNests/sl.size() << " =" << std::endl
-			  << "= Max loop nests per SCoP       :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< maxLoopNest << " =" << std::endl
-			  << "=========================================";
-
-		closeBox();
+				  << "SCoP Analysis" << std::endl
+				  << "\t# of SCoPs: " << sl.size() << std::endl
+				  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
+				  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
+				  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
+				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
 	}
 
 	//***************************************************************************************

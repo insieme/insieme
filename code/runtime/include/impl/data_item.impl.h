@@ -65,7 +65,7 @@ static inline void _irt_di_recycle(irt_data_item* di) {
 	free(di);
 }
 static inline void _irt_di_dec_use_count(irt_data_item* di) {
-	if(irt_atomic_sub_and_fetch((uint32*)&di->use_count, 1, uint32_t) == 0) _irt_di_recycle(di);
+	if(irt_atomic_sub_and_fetch((uint32*)&di->use_count, 1, uint32) == 0) _irt_di_recycle(di);
 }
 
 
@@ -215,7 +215,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 		_irt_db_delete(block, dim);
 	}
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	// alloca is implemented as malloc
 	free(sizes);
 #endif

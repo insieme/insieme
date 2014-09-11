@@ -53,6 +53,8 @@ void irt_log_compiler_info() {
 		#else
 			irt_log_comment(IRT_COMPILER_PREFIX "gcc " __VERSION__);
 		#endif
+	#elif defined _GEMS_SIM
+		irt_log_comment(IRT_COMPILER_PREFIX "Gemsclaim Compiler");
 	#else
 		irt_log_comment(IRT_COMPILER_PREFIX "unknown backend compiler " __VERSION__);
 	#endif

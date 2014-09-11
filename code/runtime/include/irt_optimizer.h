@@ -120,7 +120,7 @@ uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
 }
 
 typedef struct _irt_optimizer_runtime_data {
-    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS);
+    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS)
     irt_optimizer_wi_data_id best;
     irt_optimizer_resources best_resources;
     irt_optimizer_wi_data_id cur;

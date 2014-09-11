@@ -87,7 +87,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
 			irt_signal_worker(irt_g_workers[i]);
 		}
-	#ifdef _GEMS
+	#ifdef _GEMS_SIM
 		// alloca is implemented as malloc
 		free(split_wis);
 	#endif

@@ -48,6 +48,7 @@
 namespace insieme {
 namespace core {
 namespace pattern {
+/// Namespace for constructing/search for IR Patterns: irp
 namespace irp {
 	using std::make_shared;
 
@@ -343,6 +344,12 @@ namespace irp {
 	inline TreePattern compositeRefElem(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
 		return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
 			return mgr.getLangBasic().getCompositeRefElem();
+		}), structVar, member, type);
+	}
+
+	inline TreePattern compositeMemberAccess(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
+		return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
+			return mgr.getLangBasic().getCompositeMemberAccess();
 		}), structVar, member, type);
 	}
 

@@ -44,37 +44,149 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-	using namespace core;
+using namespace core;
 
-	TEST(WhileToFor, Basic) {
-		NodeManager man;
-		IRBuilder builder(man);
+TEST(WhileToFor, Simple) {
+	NodeManager man;
+	IRBuilder builder(man);
 
-		core::ProgramPtr program = builder.parseProgram(
-			"int<4> main() {"
-			"   ref<int<4>> i1 = 0;"
-			"	while (i1 < 10) {"
-			"		ref<int<4>> i2 = i1;"
-			"		while(i2 > 5) {"
-			"			i2 = i2 - 1;"
-			"		}"
-			"		i1 = i1 + 2;"
-			"	}"
-			"   ref<int<4>> i3 = 2;"
-			"	while (i1 > 4) {"
-			"      i1 = i1 - i3;"
-			"   }"
-			"	return 0;"
-			"}"
-		);
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i = 0;
+					ref<int<4>> j = 4;
+					while (i < 10) {
+						ref<int<4>> i2 = i;
+						i = i + 3;
+					}
+					while (j!=0) {
+						j = j - 2;
+					}
+					return i;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
+	EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
+}
+
+TEST(WhileToFor, MultipleAss) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i = 0;
+					ref<int<4>> j = 4;
+					while (i < 10 && j!=0) {
+						ref<int<4>> i2 = i;
+						i = 1 + i + 1;
+						j = j - 2;
+						i = i - 1;
+					}
+					return 0;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
+	EXPECT_PRED2(containsSubString, str, "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.lt(ref.deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return int.ne(ref.deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref.assign(v1, int.add(int.add(1, ref.deref(v1)), 1)); ref.assign(v2, int.sub(ref.deref(v2), 2)); ref.assign(v1, int.sub(ref.deref(v1), 1));}; return 0;}");
+}
+
+TEST(WhileToFor, DISABLED_ConfusedMultipleAss) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i = 0;
+					ref<int<4>> j = 4;
+					while (i < 10 && j!=0) {
+						ref<int<4>> i2 = i;
+						i = i + 2 - i;
+						if (j == 2) { i = i + 1; }
+						j = j - 1;
+					}
+					return 0;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
+}
+
+TEST(WhileToFor, Nested) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					ref<int<4>> i1 = 0;
+					while (i1 < 10) {
+						ref<int<4>> i2 = 8;
+						while(i2 > 5) {
+							i2 = i2 - 1;
+						}
+						i1 = i1 + 2;
+					}
+					ref<int<4>> i3 = 2;
+					while (i3 > 4) {
+						i3 = i3 - 2;
+					}
+					return 0;
+				}
+				)"
+			);
+
+	ASSERT_TRUE(program);
+
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
+	EXPECT_PRED2(containsSubString, str, "{{}; for(int<4> v6 = 0 .. 10 : 2) {{}; for(int<4> v5 = 8 .. 5 : -1) {{};}; {};}; {}; for(int<4> v4 = 2 .. 4 : -2) {{};}; return 0;}");
+}
+
+TEST(WhileToFor, DISABLED_NestedDeps) {
+	NodeManager man;
+	IRBuilder builder(man);
+
+	core::ProgramPtr program = builder.parseProgram(
+				"int<4> main() {"
+				"	ref<int<4>> i1 = 0;"
+				"	while (i1 < 10) {"
+				"		ref<int<4>> i2 = i1;"
+				"		while(i2 > 5) {"
+				"			i2 = i2 - 1;"
+				"		}"
+				"		i1 = i1 + 2;"
+				"	}"
+				"   ref<int<4>> i3 = 2;"
+				"	while (i1 > 4) {"
+				"      i1 = i1 - i3;"
+				"   }"
+				"	return 0;"
+				"}"
+				);
 		
-		ASSERT_TRUE(program);
+	ASSERT_TRUE(program);
 
-		frontend::WhileToForPlugin plugin;
-		plugin.IRVisit(program);
-	}
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
+}
 	
-	TEST(WhileToFor, NonConvertible) {
+	TEST(WhileToFor, DISABLED_NonConvertible) {
 		NodeManager man;
 		IRBuilder builder(man);
 

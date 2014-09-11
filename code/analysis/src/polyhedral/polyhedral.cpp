@@ -39,6 +39,7 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_builder.h"
@@ -349,6 +350,8 @@ std::vector<core::VariablePtr> Stmt::loopNest() const {
 std::ostream& Stmt::printTo(std::ostream& out) const {
 
 	out << "stmt S_" << id << ": " << std::endl;
+	core::annotations::LocationOpt loc=core::annotations::getLocation(addr);
+	if (loc) out << "\tlocation   \t" << *loc << std::endl;
 	out << "\tnode       \t" << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
 	out << "\titer domain\t" << dom << std::endl;
 	out << "\tschedule   \t" << std::endl << schedule;
@@ -472,9 +475,8 @@ void Scop::push_back( const Stmt& stmt ) {
 	}
 }
 
-// This function determines the maximum number of loop nests within this region 
-// The analysis should be improved in a way that also the loopnest size is weighted with the number
-// of statements present at each loop level.
+/** This function determines the maximum number of loop nests within this region The analysis should be improved in a
+way that also the loopnest size is weighted with the number of statements present at each loop level. */
 size_t Scop::nestingLevel() const {
 	size_t max_loopnest=0;
 	for_each(begin(), end(), 
@@ -489,9 +491,9 @@ size_t Scop::nestingLevel() const {
 
 namespace {
 
-// Creates the scattering map for a statement inside the SCoP. This is done by building the domain
-// for such statement (adding it to the outer domain). Then the scattering map which maps this
-// statement to a logical execution date is transformed into a corresponding Map 
+/** Creates the scattering map for a statement inside the SCoP. This is done by building the domain for such statement
+(adding it to the outer domain). Then the scattering map which maps this statement to a logical execution date is
+transformed into a corresponding Map. */
 MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
 									const IterationVector&	iterVec,
 									SetPtr<>& 				outer_domain, 

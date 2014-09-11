@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -93,7 +93,10 @@ namespace backend {
 
 		std::string converterName;
 
-        BackendConfigPtr config;
+		/**
+		 * The backend configuration providing options for the conversion process.
+		 */
+        BackendConfig config;
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
@@ -160,7 +163,7 @@ namespace backend {
 		 * Creates a new uninitialized converter. Before using the resulting
 		 * converter, the required managers need to be initialized.
 		 */
-		Converter(core::NodeManager& manager, std::string name = "Backend", const BackendConfigPtr& config = std::make_shared<BackendConfig>());
+		Converter(core::NodeManager& manager, const std::string& name = "Backend", const BackendConfig& config = BackendConfig());
 
 		/**
 		 * A call to this member function triggers the actual conversion process.
@@ -173,6 +176,15 @@ namespace backend {
 		 * @return the resulting target code
 		 */
 		backend::TargetCodePtr convert(const core::NodePtr& code);
+
+		/**
+		 * Converts the given IR node fragment into a C code fragment containing the pretty-printed
+		 * IR code referencing the same names as they are utilized by the generated C code.
+		 *
+		 * @param node the node to be referenced
+		 * @return the corresponding comment
+		 */
+		c_ast::CommentPtr convertToComment(const core::NodePtr& node) const;
 
 		const PreProcessorPtr& getPreProcessor() const {
 			assert(preProcessor);
@@ -243,11 +255,17 @@ namespace backend {
 
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
-		const std::string& getConverterName() const { return converterName; }
+		const std::string& getConverterName() const {
+			return converterName;
+		}
 
-		const BackendConfigPtr& getConverterConfig() const { return config; }
+		void setConverterName(const string& name) {
+			converterName = name;
+		}
 
-		void setConverterName(const string& name) { converterName = name; }
+		const BackendConfig& getBackendConfig() const {
+			return config;
+		}
 
 	};
 

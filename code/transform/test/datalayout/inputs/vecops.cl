@@ -2,6 +2,7 @@
 
 #define localRange 256
 
+#pragma insieme mark
 __kernel __attribute__((reqd_work_group_size (localRange,1,1))) void sparsedot1_kernel(
     __global const struct svm_node* px, __global struct svm_node* py,
     __global dtype* result, __global const int* pyLength, const ulong x, const ulong y)

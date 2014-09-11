@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,25 +29,34 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once
-#ifndef __GUARD_INCLUDE_GEMS_INTTYPES_H
-#define __GUARD_INCLUDE_GEMS_INTTYPES_H
+#include <gtest/gtest.h>
 
-#include "stdint.h"
+#include "insieme/core/pattern/variable.h"
 
-typedef char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-// TODO [_GEMS]: clash with llrt code
-//typedef unsigned int uint32_t;
-typedef long long int64_t;
-typedef unsigned long long uint64_t;
+namespace insieme {
+namespace core {
+namespace pattern {
 
-#endif // ifndef __GUARD_INCLUDE_GEMS_INTTYPES_H
+	TEST(Rule, Identity) {
+
+		Variable a;
+		Variable b;
+
+		Variable x1 = "x";
+		Variable x2 = "x";
+
+		EXPECT_NE(a,b);
+		EXPECT_EQ(x1,x2);
+
+	}
+
+} // end namespace pattern
+} // end namespace core
+} // end namespace insieme
+
+

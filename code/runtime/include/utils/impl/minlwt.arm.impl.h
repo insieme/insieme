@@ -50,7 +50,9 @@ void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*
         
         /* call function if func != NULL */
         
-        "cbz r1, endlab;"
+        /* "cbz r1, endlab;" */ // cbz is not always supported
+        "cmp r1, #0;"
+        "beq endlab;"
         "bl _irt_wi_trampoline;" /* r0 still has wi, r1 still has func, so just call */
         
         /* restore registers for other coroutine */

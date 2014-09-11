@@ -102,8 +102,10 @@ METRIC(wall_time,				1,	ns,		uint64, "%lu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AG
 )
 #endif
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
     #include "irt_metrics.gems.def"
+#elif defined _GEMS && defined __arm__
+    #include "irt_metrics.gems_odroid.def"
 #else
     #include "irt_metrics.rapl.def"
 #endif
@@ -119,6 +121,8 @@ METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_
 	1 \
 )
 #endif
+
+#ifdef IRT_USE_PAPI
 
 GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS] = { 0 }, { irt_papi_init(); irt_papi_setup_context(context); }, { irt_papi_setup_worker(worker); }, { irt_papi_finalize_context(context); }, { irt_papi_finalize_worker(worker); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
 
@@ -191,6 +195,8 @@ METRIC(PAPI_TOT_CYC,			330,	unit,		uint64,		"%lu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 	1 \
 )
 #endif
+
+#endif // #ifdef IRT_USE_PAPI
 
 #undef ISOLATE_METRIC
 #undef ISOLATE_CPU_TIME

@@ -80,16 +80,6 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 
 
 irt_joinable irt_parallel(const irt_parallel_job* job) {
-	//irt_work_item *self = target->cur_wi;
-	//irt_lw_data_item *prev_args = self->parameters;
-	//irt_work_item_range prev_range = self->range;
-	//self->parameters = job->args;
-	//self->range = irt_g_wi_range_one_elem;
-	//(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0].implementation)(self);
-	//self->parameters = prev_args;
-	//self->range = prev_range;
-	//_irt_g_immediate_wis++;
-	//return NULL;
 	// Parallel
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
@@ -97,7 +87,7 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	irt_joinable ret;
 	ret.wg_id = retwg->id;
 	uint32 num_threads = (job->max/2+job->min/2);
-	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
+	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_degree_of_parallelism;
 	num_threads -= num_threads%job->mod;
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
@@ -114,9 +104,9 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 		irt_wg_insert(retwg, wis[i]);
 	}
 	for(uint32 i=0; i<num_threads; ++i) {
-		irt_scheduling_generate_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
+		irt_scheduling_generate_wi(irt_g_workers[(i+irt_g_degree_of_parallelism/2-1)%irt_g_degree_of_parallelism], wis[i]);
     }
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	// alloca is implemented as malloc
 	free(wis);
 #endif
@@ -145,12 +135,8 @@ void irt_region(const irt_parallel_job* job) {
 }
 
 void irt_merge(irt_joinable joinable) {
-	if(joinable.wi_id.full == irt_work_item_null_id().full ) return;
+	if(joinable.wi_id.full == irt_work_item_null_id().full) return;
    
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    uint32 outer_worker_count = irt_g_worker_to_enable_count;
-#endif
-
 	if(joinable.wi_id.id_type == IRT_ID_work_group) {
 		irt_wg_join(joinable.wg_id);
 	} else {

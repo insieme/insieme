@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -144,7 +144,7 @@ namespace runtime {
 
 			vector<core::ExpressionPtr> workItemImpls;
 			for_each(program->getEntryPoints(), [&](const core::ExpressionPtr& entry) {
-				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, entry, stmts.empty() && converter.getConverterConfig()->instrumentMainFunction));
+				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, entry, stmts.empty() && converter.getBackendConfig().instrumentMainFunction));
 				workItemImpls.push_back(impl);
 				stmts.push_back(registerEntryPoint(manager, impl));
 			});
@@ -964,7 +964,6 @@ namespace runtime {
         // so we have to check annotations on JobExpr
 		core::visitDepthFirstOnce(node, [&](const core::ExpressionPtr& cur) {
             if(cur->hasAttachedValue<annotations::ompp_objective_info>()) {
-                converter.getConverterConfig()->instrumentMainFunction = true;
                 unsigned regionId = cur->getAttachedValue<annotations::ompp_objective_info>().region_id;
 			    if (max < regionId) max = regionId;
             }

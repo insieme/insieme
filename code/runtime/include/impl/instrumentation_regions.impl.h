@@ -40,7 +40,7 @@
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	#include <sys/stat.h>
 #endif
 #include <errno.h>
@@ -344,15 +344,15 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 		irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	}
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64_t);
+	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64);
 	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
 
 	if(outer_region) {
-		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64_t) == 0) {
+		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64) == 0) {
 			_irt_inst_region_end_late_exit_measurements(wi);
 			uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64_t);
-			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64_t);
+			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64);
+			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64);
 		}
 	}
 
@@ -378,18 +378,18 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 
-	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64_t) == 0) {
+	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64) == 0) {
 		_irt_inst_region_end_late_exit_measurements(wi);
 		uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64_t);
-		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64_t);
+		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64);
+		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64);
 	}
 
 	_irt_inst_region_stack_pop(wi);
 
 	if(wi->inst_region_list->length > 0) {
 		irt_inst_region_context_data* outer_region = irt_inst_region_get_current(wi);
-		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64_t);
+		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64);
 		bool outer_first_entry = ((outer_entry_count - outer_region->num_exits) == 0);
 		if(outer_first_entry)
 			_irt_inst_region_start_early_entry_measurements(wi);
@@ -417,7 +417,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 #include "irt_metrics.def"
 	} else {
 		// need to copy string since strtok requires it to be non-const
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 		char selection_copy[512];
 #else
 		char selection_copy[strlen(selection)];
@@ -443,7 +443,9 @@ void irt_inst_region_select_metrics(const char* selection) {
 }
 
 void irt_inst_region_select_metrics_from_env() {
-#ifndef _GEMS
+#ifdef _GEMS
+	irt_inst_region_select_metrics(GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES);
+#else
 	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
@@ -484,7 +486,7 @@ void irt_inst_region_output() {
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
-#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
+#if !defined(_GEMS_SIM) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
@@ -513,7 +515,7 @@ void irt_inst_region_output() {
 
 	// write data
 	for(uint32 i = 0; i < num_regions; ++i) {
-		fprintf(outputfile, "RG,%u,%lu", i, regions[i].num_executions);
+		fprintf(outputfile, "RG,%u,%llu", i, regions[i].num_executions);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 		if(irt_g_inst_region_metric_measure_##_name__) { \
 			fprintf(outputfile, "," _format_string__, (_data_type__)((double)regions[i].aggregated_##_name__ * _output_conversion_code__)); \
@@ -521,7 +523,7 @@ void irt_inst_region_output() {
 #include "irt_metrics.def"
 		fprintf(outputfile, "\n");
 	}
-#if !defined(_GEMS) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
+#if !defined(_GEMS_SIM) && !defined(IRT_INSTRUMENTATION_OUTPUT_TO_STDERR)
 	fclose(outputfile);
 #endif
 }

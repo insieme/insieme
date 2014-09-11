@@ -118,13 +118,13 @@ int irt_g_dvfs_eval_count[128];
 #endif
 
 void get_available_freqs() {
-    if(!irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count))
+    if(!irt_cpu_freq_get_available_frequencies(irt_g_available_freqs, &irt_g_available_freq_count))
         return;
 
     // scaling_available_frequencies not available
     
-    uint32 max = _irt_cpu_freq_get(0, "cpuinfo_max_freq");
-    uint32 min = _irt_cpu_freq_get(0, "cpuinfo_min_freq");
+    uint32 max = irt_cpu_freq_get_max_frequency_core(0);
+    uint32 min = irt_cpu_freq_get_min_frequency_core(0);
 
     irt_g_available_freq_count = 0;
     do {
@@ -153,9 +153,7 @@ void irt_optimizer_objective_init(irt_context *context) {
         }
     }
 
-#ifndef _GEMS
     get_available_freqs();
-#endif
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {
@@ -314,7 +312,7 @@ void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {
 
     irt_spin_unlock(&data->spinlock);
 
-    //printf("%s: %d\n", __func__, data->cur.frequency);
+    printf("%s: %d\n", __func__, irt_g_available_freqs[data->cur.frequency]);
 
     return;
 }
@@ -326,7 +324,7 @@ void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {
     irt_worker* self = irt_worker_get_current();
     irt_cpu_freq_set_frequency_worker(self, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
 
-    //printf("%s: %d\n", __func__, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
+    printf("%s: %d\n", __func__, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
 
     return;
 }

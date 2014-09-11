@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@
 namespace insieme {
 namespace backend {
 
-	Converter::Converter(core::NodeManager& nodeManager, std::string name, const BackendConfigPtr& config)
+	Converter::Converter(core::NodeManager& nodeManager, const std::string& name, const BackendConfig& config)
 		: nodeManager(nodeManager),
 		  fragmentManager(c_ast::CodeFragmentManager::createShared()),
 		  converterName(name),
@@ -70,7 +70,6 @@ namespace backend {
 
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
-
 		// -------------------------- PRE-PROCESSING ---------------------
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
@@ -99,8 +98,8 @@ namespace backend {
 		fragment->addDependencies(context.getDependencies());
 		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
-        if(!config->additionalHeaderFiles.empty())
-            fragment->addIncludes(config->additionalHeaderFiles);
+        if(!config.additionalHeaderFiles.empty())
+            fragment->addIncludes(config.additionalHeaderFiles);
 
 		vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
 
@@ -121,6 +120,54 @@ namespace backend {
 
 		// create resulting code fragment
 		return c_ast::CCode::createNew(fragmentManager, source, fragments);
+	}
+
+	namespace {
+
+		struct PrettyPrinterPlugin : public core::printer::PrinterPlugin {
+
+			// requires a reference to a name manager
+			NameManager& nameManager;
+
+			/**
+			 * Create a new instance based on the content of the given name manager.
+			 */
+			PrettyPrinterPlugin(NameManager& nameManager) : nameManager(nameManager) {}
+
+
+			virtual bool covers(const core::NodePtr& node) const {
+				// it is covered if it is of a certain type
+				return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
+			}
+
+			/**
+			 * A function triggered to print the given node to the given stream.
+			 */
+			virtual std::ostream& print(std::ostream& out,const core::NodePtr& node,const std::function<void(const core::NodePtr&)>&) const {
+				return out << nameManager.getName(node);
+			}
+		};
+
+	}
+
+
+	c_ast::CommentPtr Converter::convertToComment(const core::NodePtr& node) const {
+
+		// if not enabled, return no comment
+		if (!getBackendConfig().addIRCodeAsComment) return c_ast::CommentPtr();
+
+		auto setup =
+				core::printer::PrettyPrinter::OPTIONS_DEFAULT |
+				core::printer::PrettyPrinter::Option::NO_LET_BINDINGS;
+
+		// if enabled, create comment using the pretty printer infrastructure
+		PrettyPrinterPlugin plugin(getNameManager());
+		auto comment = toString(
+				core::printer::PrettyPrinter(node, plugin, setup)
+		);
+
+		// build comment
+		return getCNodeManager()->create<c_ast::Comment>("\n" + comment + "\n");
 	}
 
 

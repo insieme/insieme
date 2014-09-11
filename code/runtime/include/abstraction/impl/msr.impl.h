@@ -42,7 +42,7 @@
 	#warning "MSR reading under Windows not implemented!"
 #elif defined(__MINGW32__)
 	#warning "MSR reading under MINGW32 not implemented!"
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	#include "abstraction/impl/msr.gems.impl.h"
 #else
 	#include "abstraction/impl/msr.unix.impl.h"

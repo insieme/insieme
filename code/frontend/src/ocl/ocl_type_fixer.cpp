@@ -167,7 +167,7 @@ void TypeFixer::fixDecls(NodeAddress pA, TypePtr type) {
 }
 
 
-void TypeFixer::updateTemps(TypePtr type, VariableMap& varReplacements) {
+void TypeFixer::updateTemps(TypePtr type, ExpressionMap& varReplacements) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -208,7 +208,7 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	if(!this->replacements.empty())
 		prog = transform::replaceAll(prog->getNodeManager(), this->replacements);
 
-	VariableMap varReplacements;
+	ExpressionMap varReplacements;
 	// replace temporal variables
 	for(TypePtr typeTofix : types)
 		updateTemps(typeTofix, varReplacements);

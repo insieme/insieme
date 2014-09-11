@@ -43,7 +43,7 @@
 #include "abstraction/threads.h"
 #include "error_handling.h"
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	#include "include_gems/sys_time.h"
 #else
 	#include <sys/time.h>
@@ -64,7 +64,7 @@ void irt_thread_get_current(irt_thread *t) {
 }
 
 void irt_thread_cancel(irt_thread *t){
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	// TODO [_GEMS]: missing implementation of pthread_cancel
 	IRT_WARN("irt_thread_cancel empty implementation\n");
 #else

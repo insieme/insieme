@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -74,14 +74,14 @@ namespace cba {
 
 		ExecutionStateConstraintGenerator(CBA& cba) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// just create the one constraint assembling the graph - the magic happens in there
 			constraints.add(createExecutionStateConstraint<Context>(cba));
 
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 			out << "ExecutionStateGraph = " << value;
 		}
 
@@ -95,25 +95,25 @@ namespace cba {
 			typedef utils::petri_net::StateGraph<Place<Context>,Transition<Context>> StateGraph;
 
 			// some type definitions
-			typedef TypedValueID<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 		ExecutionNetValueID;
-			typedef TypedValueID<typename execution_state_analysis::lattice<analysis_config<Context>>::type> 	ExecutionStateValueID;
+			typedef TypedVariable<typename execution_net_analysis::lattice<analysis_config<Context>>::type> 		ExecutionNetVariable;
+			typedef TypedVariable<typename execution_state_analysis::lattice<analysis_config<Context>>::type> 	ExecutionStateVariable;
 
 			CBA& cba;
 
-			ExecutionNetValueID in;
+			ExecutionNetVariable in;
 
-			ExecutionStateValueID out;
+			ExecutionStateVariable out;
 
 		public:
 
 			ExecutionStateConstraint(CBA& cba) :
 				Constraint(
-						toVector<ValueID>(cba.getSet<Context>(ExecutionNetAnalysis)),
-						toVector<ValueID>(cba.getSet<Context>(ExecutionStateAnalysis)), false, false
+						toVector<Variable>(cba.getVar<Context>(ExecutionNetAnalysis)),
+						toVector<Variable>(cba.getVar<Context>(ExecutionStateAnalysis)), false, false
 				),
 				cba(cba),
-				in(cba.getSet<Context>(ExecutionNetAnalysis)),
-				out(cba.getSet<Context>(ExecutionStateAnalysis)) { }
+				in(cba.getVar<Context>(ExecutionNetAnalysis)),
+				out(cba.getVar<Context>(ExecutionStateAnalysis)) { }
 
 			virtual UpdateResult update(Assignment& ass) const {
 

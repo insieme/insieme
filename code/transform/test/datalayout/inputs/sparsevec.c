@@ -103,6 +103,7 @@ void unpack(struct svm_node* px, dtype* px_u)
 	}
 }
 
+#pragma insieme mark
 int main(int argc, const char** argv)
 {
 	size_t x = 512, y = 250000; //y has to be a multiple of ciDeviceCount!
