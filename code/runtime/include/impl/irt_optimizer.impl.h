@@ -186,7 +186,10 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
 
     /* We update our optimization values every round of #workers parallel executions of the work item 
      * This applies only to parallel construct (force_computation == false)
-     * For now a ir_parallel call produces exactly #workers wi instances */
+     * For now a ir_parallel call produces exactly #workers wi instances 
+     * hence we enter this if construct only after a region execution. If not the case
+     * instrumentation readings would be meaningless.
+     */
     variant->rt_data.completed_wi_count ++;
     if(variant->meta_info->ompp_objective.region_id != UINT_MAX) {
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
@@ -232,7 +235,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
                 irt_g_dvfs_eval_energy[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
                 irt_g_dvfs_eval_time[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
-                if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
+                if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] >= IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
                     printf("frequency: energy - time - power (num of executions)\n");
                     for(int k=0; k<irt_g_available_freq_count; k++)
                         printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);

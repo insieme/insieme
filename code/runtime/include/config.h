@@ -139,8 +139,8 @@
 #ifdef __arm__
     #define _GEMS_TODO
     #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
-        "cpu_time,wall_time,a15_avgpow,a7_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
-        "a15_energy,a7_energy,mem_energy,gpu_energy,cpu_energy"
+        "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
+        "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
 #else
     #define _GEMS_SIM
 	#define	GEMS_CORE_FREQ_MHZ 100
