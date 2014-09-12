@@ -418,9 +418,12 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		VariableAdder varAdd(mgr, varReplacements);
 		toTransform = varAdd.mapElement(0, toTransform);
 
+//for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements)
+//	std::cout << "from " << rep.first << "  to  " << rep.second << std::endl;
+
 		NodeAddress tta(toTransform);
 
-		addNewDecls(varReplacements, newStructType, oldStructType, tta, replacements);
+		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		// assignments to the entire struct should be ported to the new sturct members
 		replaceAssignments(varReplacements, newStructType, tta, allocPattern, nElems, replacements);
@@ -480,7 +483,7 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 			return;
 
 		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
+//std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
 	});
 	return structs;
 }
@@ -631,14 +634,21 @@ CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, 
 	return cmpDecls;
 }
 
+
 void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-		const NodeAddress& toTransform, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	visitDepthFirst(toTransform, [&](const DeclarationStmtAddress& decl) {
 		const VariablePtr& oldVar = decl->getVariable();
 
 		auto newVarIter = varReplacements.find(oldVar);
 		if(newVarIter != varReplacements.end()) {
 			const VariablePtr& newVar = newVarIter->second.as<VariablePtr>();
+
+			// check if the declaration does an allocation and try to extract the number of elements in that case
+			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
+			if(match) {
+				nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
+			}
 
 			CompoundStmtPtr allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType);
 			replacements[decl] = allDecls;
@@ -657,7 +667,7 @@ void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const St
 
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 				if(*oldVar == *call[0]) {
-					// check if the declaration does an allocation and try to extract the number of elements in that case
+					// check if the assignment does an allocation and try to extract the number of elements in that case
 					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
 					if(match) {
 						nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
@@ -1139,6 +1149,12 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 	if(element.isa<CompoundStmtPtr>())
 		return element->substitute(mgr, *this);
 
+//	if(ForStmtPtr f = element.isa<ForStmtPtr>()) {
+//std::cout << "found for\n";
+//dumpPretty(f->getBody());
+//		return element->substitute(mgr, *this);
+//	}
+
 	if(CallExprPtr call = element.isa<CallExprPtr>()) {
 
 		LambdaExprPtr lambdaExpr = call->getFunctionExpr().isa<LambdaExprPtr>();
@@ -1156,7 +1172,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		ExpressionPtr newArg;
 		int idx = searchInArgumentList(args, newArg);
 
-		// do the subsitution to take care of body and function calls inside the argument list
+		// do the substitution to take care of body and function calls inside the argument list
 		CallExprPtr newCall = call->substitute(mgr, *this);
 
 		// oldVar is not an argument, nothing will be done
