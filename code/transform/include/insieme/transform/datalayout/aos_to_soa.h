@@ -111,7 +111,7 @@ class VariableAdder: public core::transform::CachedNodeMapping {
 	core::pattern::TreePattern namedVariablePattern;
 	core::pattern::TreePattern varWithOptionalDeref;
 
-	int searchInArgumentList(const std::vector<core::ExpressionPtr>& args, core::ExpressionPtr& newArg);
+	std::map<int, core::ExpressionPtr> searchInArgumentList(const std::vector<core::ExpressionPtr>& args);
 
 public:
 	VariableAdder(core::NodeManager& mgr, core::ExpressionMap& varReplacements);
