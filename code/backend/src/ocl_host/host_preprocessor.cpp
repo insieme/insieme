@@ -488,7 +488,6 @@ using insieme::core::pattern::anyList;
 		TypePtr newTupleType;
 		TypePtr refNewTupleType;
 		std::vector<VariablePtr> bufVarNames; // vector of buffer variables
-		VariablePtr tupleVar;
 		std::vector<LiteralPtr> tupleAccessVec;
 		std::vector<VariablePtr> tupleVarNameVec;
 
@@ -506,13 +505,13 @@ using insieme::core::pattern::anyList;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& matchKernel = callKernel.matchPointer(call);
 			if (matchKernel) {
+				VariablePtr tupleVar;
 				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
 				visitDepthFirst(varlist, [&](const CallExprPtr& call) {
 					auto&& matchGlobalWrap = wrapGlobalTuple.matchPointer(call);
 					if (matchGlobalWrap) {
-						VariablePtr tupleTmp = getVar(matchGlobalWrap, "tupleVar");
-						if (tupleVar != tupleTmp) {
-							tupleVar = tupleTmp;
+						 if (!tupleVar) {
+							tupleVar = getVar(matchGlobalWrap, "tupleVar");
 							tupleVarNameVec = core::analysis::getVariableNames(tupleVar, code);
 							std::cout << "\n== Kernel Call Parameter Tuple == \nTupleVar-> " << tupleVar << std::endl;
 							std::cout << tupleVarNameVec << std::endl;
