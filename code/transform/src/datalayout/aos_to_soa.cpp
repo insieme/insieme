@@ -497,8 +497,8 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 		// check if it is an access to the transformRoot's memory
 		if(*expr->getType() == *transformRoot.second) {
-//std::cout << "\ttesting: " << *expr << " to "<< *extractVariable(expr) << std::endl;
 			if(*transformRoot.first == *extractVariable(expr)) {
+//std::cout << "\ttesting: " << *expr << " to "<< *extractVariable(expr) << std::endl;
 
 				// if so, add all variable which alias it to the toReplaceList
 				visitDepthFirst(toTransform, [&](const ExpressionAddress& potentialAlias) {
@@ -518,13 +518,14 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 									return;
 
 
-//std::cout << "Expr:  " << *expr << std::endl;
-//std::cout << "alias: " << *varToAdd << std::endl;
-							if(ia::cba::isAlias(expr, potentialAlias)) {
-								if(varToAdd->getNodeType() == NT_Variable ||
-										(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
-
-									toReplaceList.insert(varToAdd);
+							if(varToAdd->getNodeType() == NT_Variable ||
+									(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
+								if(ia::cba::mayAlias(expr, potentialAlias)) {
+									auto newly = toReplaceList.insert(varToAdd);
+if(newly.second) {
+	std::cout << "Expr:  " << *expr;
+	std::cout << " alias: " << *potentialAlias << std::endl;
+}
 								}
 							}
 						}
@@ -984,7 +985,7 @@ void AosToSoa::replaceScalarStructs(const pattern::AddressMatchOpt& match, const
 		ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 
-//std::cout << " addr " << match.get().getRoot() << std::endl;
+//std::cout << " addr " << *match.get().getRoot() << std::endl;
 //assert(false);
 
 	ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
@@ -1107,11 +1108,16 @@ VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
 		  variablePattern(pirp::variable(typePattern) // local variable
 				| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 		  namedVariablePattern(var("variable", variablePattern)),
-		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern)){}
+		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern)){
+	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
+		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
+	}
+}
 
-int VariableAdder::searchInArgumentList(const std::vector<ExpressionPtr>& args, ExpressionPtr& newArg) {
+std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vector<ExpressionPtr>& args) {
 	ExpressionPtr oldVarArg;
 	ExpressionPtr oldVar, newVar;
+	std::map<int, ExpressionPtr> indicesToNewArgs;
 	int idx = 0;
 
 	for(ExpressionPtr arg : args) {
@@ -1122,16 +1128,17 @@ int VariableAdder::searchInArgumentList(const std::vector<ExpressionPtr>& args, 
 				oldVarArg = arg;
 				oldVar = varCheck->first;
 				newVar = varCheck->second;
-				break;
+
+				ExpressionMap oldToNew;
+				oldToNew[oldVar] = newVar;
+				ExpressionPtr newArg = core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false);
+				indicesToNewArgs[idx] = newArg;
 			}
 		}
 		++idx;
 	}
-	ExpressionMap oldToNew;
-	oldToNew[oldVar] = newVar;
-	if(oldVarArg) newArg = core::transform::fixTypesGen(mgr, oldVarArg, oldToNew, false);
 
-	return idx;
+	return indicesToNewArgs;
 }
 
 const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
@@ -1162,23 +1169,23 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		if(!lambdaExpr)
 			return element;
 
+//dumpPretty(call);
+//std::cout << "is builtin " << mgr.getLangBasic().isBuiltIn(lambdaExpr) << std::endl << "-----------------------------------------------------------------\n\n";
+		// do the substitution to take care of body and function calls inside the argument list
+		CallExprPtr newCall = call->substitute(mgr, *this);
+
 		// functions with no implementation are ignored
 		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
-			return element;
+			return newCall;
 
 //std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
 		std::vector<ExpressionPtr> args(call->getArguments());
 
-		ExpressionPtr newArg;
-		int idx = searchInArgumentList(args, newArg);
-
-		// do the substitution to take care of body and function calls inside the argument list
-		CallExprPtr newCall = call->substitute(mgr, *this);
+		std::map<int, ExpressionPtr> indicesToNewArgs = searchInArgumentList(args);
 
 		// oldVar is not an argument, nothing will be done
-		if(!newArg)
+		if(indicesToNewArgs.empty())
 			return newCall;
-
 
 		lambdaExpr = newCall->getFunctionExpr().as<LambdaExprPtr>();
 
@@ -1186,19 +1193,23 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
 		std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
+std::cout << "\ndildo\n;";
+		for(std::pair<int, ExpressionPtr> itna : indicesToNewArgs) {
+			int idx = itna.first;
+			ExpressionPtr newArg  = itna.second;
+			// get new variable from the previously created map
+			VariablePtr newParam = varsToReplace[params[idx]].as<VariablePtr>();
+std::cout << idx << "   " <<  params[idx] << std::endl;
+			assert(newParam && "no replacement for parameter found");
 
-		// get new variable from the previously created map
-		VariablePtr newParam = varsToReplace[params[idx]].as<VariablePtr>();
-
-		assert(newParam && "no replacement for parameter found");
-
-		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		args.push_back(newArg);
-		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
-		// add it also to the new type of the lambda
-		funTyMembers.push_back(newParam->getType());
-		// add a new variable to the parameter list
-		params.push_back(newParam);
+			// if oldVar was an argument, newVar will be added too and search is continued in the called function
+			args.push_back(newArg);
+			//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
+			// add it also to the new type of the lambda
+			funTyMembers.push_back(newParam->getType());
+			// add a new variable to the parameter list
+			params.push_back(newParam);
+		}
 
 		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
 
