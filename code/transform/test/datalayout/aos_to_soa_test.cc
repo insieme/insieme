@@ -138,7 +138,7 @@ TEST(DataLayout, AosToSoa) {
 
 	datalayout::AosToSoa ats(code);
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -170,7 +170,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
-		"	let access = (ref<ref<array<twoElem,1>>> x)->unit {"
+		"	let access = (ref<ref<array<twoElem,1>>> x, int<4> i)->unit {"
 		"		for(int<4> i = 0 .. 42 : 1) {"
 		"			ref.deref(x)[i].int = i;"
 		"		}"
@@ -182,7 +182,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
 		"	store(*copy);"
 		""
-		"	access(a);"
+		"	access(a, 0);"
 		"	store(*a);"
 		"	ref.delete(*a);"
 		"}"
@@ -263,9 +263,9 @@ TEST(DataLayout, Globals) {
 	));
 
 	return;
-	dumpPretty(code);
-
 	datalayout::AosToSoa ats(code);
+
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -282,9 +282,49 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(52, numberOfCompoundStmts(code));
+	EXPECT_EQ(56, numberOfCompoundStmts(code));
 	EXPECT_EQ(11, countMarshalledAccesses(code));
 	EXPECT_EQ(5, countMarshalledAssigns(code));
+}
+
+TEST(DataLayout, Tuple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	NodePtr code = builder.normalize(builder.parseStmt(
+		"{"
+		"	let twoElem = struct{int<4> int; real<4> float;};"
+		""
+		"	ref<ref<array<twoElem,1>>> a;"
+		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
+//		"	t = new(undefined(type<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>));"
+		""
+		"	ref.delete(*t);"
+		"}"
+	));
+
+//	datalayout::AosToSoa ats(code);
+
+	dumpPretty(code);
+
+	auto semantic = checks::check(code);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) ;
+
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const checks::Message& cur) {
+		std::cout << cur << std::endl;
+	});
+
+//	EXPECT_EQ(52, numberOfCompoundStmts(code));
+//	EXPECT_EQ(11, countMarshalledAccesses(code));
+//	EXPECT_EQ(5, countMarshalledAssigns(code));
 }
 
 } // transform
