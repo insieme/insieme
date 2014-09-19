@@ -50,6 +50,7 @@ namespace transform {
 namespace datalayout {
 
 class AosToSoa {
+protected:
 	core::NodeManager& mgr;
 
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);

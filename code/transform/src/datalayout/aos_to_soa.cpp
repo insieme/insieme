@@ -388,11 +388,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 	// TODO clean lists to remove duplicates
 	toReplaceLists = mergeLists(toReplaceLists);
 
-//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
-//	std::cout << "\nList: \n";
-//	for(ExpressionPtr tr : toReplaceList.first)
-//		std::cout << tr << std::endl;
-//}
+for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	std::cout << "\nList: \n";
+	for(ExpressionPtr tr : toReplaceList.first)
+		std::cout << tr << std::endl;
+}
 
 	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
@@ -473,6 +473,8 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 	pattern::TreePattern structVar = var("structVar", pirp::variable(structType));
 	pattern::TreePattern structVarDecl = pirp::declarationStmt(structVar, var("init", pattern::any));
 
+	pattern::TreePattern tupleType = pattern::aT(var("tupleType", pirp::tupleType(*pattern::any)));
+
 	pattern::TreePattern globalStruct = var("structVar", pirp::literal(structType, pattern::any));
 
 	pirp::matchAllPairs(structVarDecl | globalStruct, toTransform, [&](const NodeAddress& match, pattern::AddressMatch nm) {
@@ -482,8 +484,15 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 		if(nm.isVarBound("init") && expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), toTransform))
 			return;
 
-		structs[nm["structVar"].getValue().as<ExpressionPtr>()] = nm["structType"].getValue().as<RefTypePtr>();
-//std::cout << "Adding: " << *nm["structVar"].getValue() << " as a candidate" << std::endl;
+		ExpressionPtr structVar = nm["structVar"].getValue().as<ExpressionPtr>();
+		TypePtr varType = structVar->getType();
+		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
+
+		if(tupleType.match(varType)) {
+			return; // tuples are not candidates since only one field needs to be altered. They will only be changed if the field is an alias to some other candidate
+		}
+		structs[structVar] = structType;
+//std::cout << "Adding: " << *structVar << " as a candidate" << std::endl;
 	});
 	return structs;
 }
@@ -614,7 +623,7 @@ CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, 
 
 		// split up initialization expressions
 		for(NamedTypePtr memberType : newStructType->getElements()) {
-//std::cout << "\noldVar: " << *oldVar << "\nnewVarType: " << *newVar->getType() << std::endl;
+//std::cout << "\nnewVar: " << *newVar << "\nnewVarType: " << *newVar->getType() << std::endl;
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
@@ -1108,10 +1117,10 @@ VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
 		  variablePattern(pirp::variable(typePattern) // local variable
 				| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 		  namedVariablePattern(var("variable", variablePattern)),
-		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern)){
-	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
-		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
-	}
+		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)){
+//	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
+//		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
+//	}
 }
 
 std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vector<ExpressionPtr>& args) {
@@ -1119,8 +1128,10 @@ std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vect
 	ExpressionPtr oldVar, newVar;
 	std::map<int, ExpressionPtr> indicesToNewArgs;
 	int idx = 0;
-
+std::cout << "\nFUN\n";
 	for(ExpressionPtr arg : args) {
+std::cout << "ARG: " << arg << std::endl;
+
 		pattern::MatchOpt match = varWithOptionalDeref.matchPointer(arg);
 		if(match) {
 			auto varCheck = varsToReplace.find(match.get()["variable"].getValue().as<ExpressionPtr>());
@@ -1193,13 +1204,13 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
 		std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
 		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
-std::cout << "\ndildo\n;";
+
 		for(std::pair<int, ExpressionPtr> itna : indicesToNewArgs) {
 			int idx = itna.first;
 			ExpressionPtr newArg  = itna.second;
 			// get new variable from the previously created map
 			VariablePtr newParam = varsToReplace[params[idx]].as<VariablePtr>();
-std::cout << idx << "   " <<  params[idx] << std::endl;
+std::cout << params[idx] << std::endl;
 			assert(newParam && "no replacement for parameter found");
 
 			// if oldVar was an argument, newVar will be added too and search is continued in the called function
