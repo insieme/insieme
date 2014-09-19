@@ -8,6 +8,10 @@ extern "C" {
 #include "irt_globals.h"
 #include "irt_joinable.h"
 
+
+void irt_lib_init(uint32 worker_count);
+void irt_lib_shutdown();
+
 // IRT
 void irt_merge(irt_joinable);
 // IRT lib
@@ -23,6 +27,8 @@ void irt_lib_critical_end();
 irt_work_item* irt_lib_wi_get_current();
 uint32 irt_lib_wi_get_wg_size(irt_work_item *wi, uint32 index);
 uint32 irt_lib_wi_get_wg_num (irt_work_item *wi, uint32 index);
+uint32 irt_lib_get_default_worker_count() ;
+
 }
 #endif
 
