@@ -55,10 +55,6 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/utils/config.h"
 
-// to remove
-#include "insieme/core/checks/ir_checks.h"
-#include "insieme/core/checks/full_check.h"
-
 using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::core::annotations;
@@ -68,7 +64,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(ocl_hostKernel, baseTest) {
-/*	NodeManager manager;
+	NodeManager manager;
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
 
@@ -88,31 +84,12 @@ TEST(ocl_hostKernel, baseTest) {
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	//insieme::frontend::ocl::HostCompiler hc(program, job);
-	//hc.compile();
 
-	insieme::core::printer::PrettyPrinter pp(program);
+	insieme::core::printer::PrettyPrinter pp(program); // program->getElement(0)
 
-	auto s = insieme::core::checks::check(program->getElement(0), insieme::core::checks::getFullCheck());
-	auto w = s.getWarnings();
-	std::sort(w.begin(), w.end());
-	for_each(w, [](const insieme::core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-
-	auto e = s.getErrors();
-	std::sort(e.begin(), e.end());
-	std::cout << "** Error Before the backend pass: \n=======================" << std::endl;
-	for_each(e, [](const insieme::core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-	std::cout << "=======================" << std::endl;
-
-	std::cout << "Printing the IR: " << pp;
-
-	std::cout << "Start OpenCL Backend visit\n";
+	std::cout << "Starting OpenCL Backend visit\n";
 
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
-	std::cout << "Converted code:\n" << *converted;*/
+	std::cout << "Converted code:\n" << *converted;
 }

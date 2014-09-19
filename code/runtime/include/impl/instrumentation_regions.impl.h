@@ -86,6 +86,7 @@ irt_inst_region_context_data* _irt_inst_region_stack_pop(irt_work_item* wi) {
 
 void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	irt_inst_region_context_data* rg = irt_inst_region_get_current(wi);
+	irt_context* context = irt_context_table_lookup(wi->context_id);
 #pragma GCC diagnostic push
 // ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -108,6 +109,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 	uint64 length = list->length;
 	IRT_ASSERT(length > 0, IRT_ERR_INSTRUMENTATION, "Tried to get region data from a WI that has no region data")
 	irt_inst_region_context_data* rg = list->items[length-1];
+	irt_context* context = irt_context_table_lookup(wi->context_id);
 	irt_spin_lock(&(rg->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
