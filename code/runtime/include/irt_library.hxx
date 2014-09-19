@@ -99,7 +99,7 @@ namespace irt {
 	// (set via environment variables, or lacking that to the number of CPUs in the system)
 	template<class Callable>
 	inline irt_joinable parallel(const Callable& fun) {
-		return parallel(irt_g_worker_count, fun);
+		return parallel(irt_g_degree_of_parallelism, fun);
 	}
 
 	// Executes "fun" for each loop iteration from "begin" to "end" with step "step",

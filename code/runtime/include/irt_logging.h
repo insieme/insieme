@@ -40,7 +40,7 @@
 
 #include "declarations.h"
 
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	#undef IRT_LOGGING
 #elif !defined(IRT_LOGGING)
 	#define IRT_LOGGING 1

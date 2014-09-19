@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -204,7 +204,7 @@ namespace analysis {
 	}
 
 	// --------------------------- data member pointer -----------------------------------
-	
+
 	bool isMemberPointer (const TypePtr& type){
 
 		// filter out null-pointer
@@ -254,11 +254,22 @@ namespace analysis {
 	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& base, const ExpressionPtr& expr){
 		NodeManager& manager = base.getNodeManager();
 		IRBuilder builder(manager);
-		
+
 		// retrieve the name and the field type to build the desired access
 		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
 		return builder.callExpr(access,  toVector(base, expr));
 	}
+
+	ExpressionPtr getMemberPointerCheck (const ExpressionPtr& expr){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCheck();
+		return builder.callExpr(access, expr);
+	}
+
+
 
 	// --------------------------- C++ calls ---------------------------------------------
 
@@ -327,7 +338,7 @@ namespace analysis {
 
 		return true;
 	}
-	
+
 	bool isSignedLongLong(const TypePtr& type){
 		assert(isLongLong(type));
 		IRBuilder builder(type->getNodeManager());
@@ -352,7 +363,7 @@ namespace analysis {
 		assert(isLongLong(expr->getType()));
 		NodeManager& manager = expr.getNodeManager();
 		IRBuilder builder(manager);
-		
+
 		core::ExpressionPtr cast;
 		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
 		if (element->getType() == builder.getLangBasic().getInt8())
@@ -368,7 +379,7 @@ namespace analysis {
 		assert(isLongLong(expr->getType()));
 		NodeManager& manager = expr.getNodeManager();
 		IRBuilder builder(manager);
-		
+
 		core::ExpressionPtr cast;
 		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
 		if (element->getType() == builder.getLangBasic().getInt8()){

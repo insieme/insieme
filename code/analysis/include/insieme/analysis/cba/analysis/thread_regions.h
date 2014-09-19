@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,10 +83,10 @@ namespace cba {
 
 		ThreadRegionsConstraintGenerator(CBA& cba) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// This is a recursive definition:
-			auto TRs = cba.getSet<Context>(ThreadRegions);
+			auto TRs = cba.getVar<Context>(ThreadRegions);
 			assert_eq(TRs, value) << "Invalid target set!";
 
 			// form all pairs between sync points and reaching sync points
@@ -95,7 +95,7 @@ namespace cba {
 			// that's all ...
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 			out << "ThreadRegions = " << value;
 		}
 
@@ -106,7 +106,7 @@ namespace cba {
 		template<typename Context, typename ThreadRegionSetType>
 		class ThreadRegionGeneratorConstraint : public utils::constraint::Constraint {
 
-			typedef TypedValueID<typename lattice<reaching_sync_points_in_analysis, analysis_config<Context>>::type> reaching_sync_points_set_id_type;
+			typedef TypedVariable<typename lattice<reaching_sync_points_in_analysis, analysis_config<Context>>::type> reaching_sync_points_set_id_type;
 
 			CBA& cba;
 
@@ -115,13 +115,13 @@ namespace cba {
 			// a map linking sync points to the set of reaching sync points
 			mutable std::map<ProgramPoint<Context>, reaching_sync_points_set_id_type> sync_point_pairs;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ThreadRegionGeneratorConstraint(CBA& cba, const ThreadRegionSetType& set) :
-				Constraint(toVector<ValueID>(cba.getSet<Context>(SyncPoints)), toVector<ValueID>(set), true, true), cba(cba), TRs(set) {
-				inputs.push_back(cba.getSet<Context>(SyncPoints));
+				Constraint(toVector<Variable>(cba.getVar<Context>(SyncPoints)), toVector<Variable>(set), true, true), cba(cba), TRs(set) {
+				inputs.push_back(cba.getVar<Context>(SyncPoints));
 			}
 
 			virtual UpdateResult update(Assignment& ass) const {
@@ -157,7 +157,7 @@ namespace cba {
 			virtual bool updateDynamicDependencies(const Assignment& ass) const {
 
 				// get current set of sync points
-				const set<ProgramPoint<Context>>& all_sync_points = ass[cba.getSet(SyncPoints)];
+				const set<ProgramPoint<Context>>& all_sync_points = ass[cba.getVar(SyncPoints)];
 
 				// for all sync points ...
 				bool changed = false;
@@ -179,10 +179,10 @@ namespace cba {
 					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)
-						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
+						cur_set = cba.getVar(RSPtmp, stmt, cur.getContext());
 					} else {
 						// for rest it is the out state
-						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
+						cur_set = cba.getVar(RSPout, stmt, cur.getContext());
 					}
 
 					sync_point_pairs[cur] = cur_set;
@@ -194,7 +194,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
@@ -233,7 +233,7 @@ namespace cba {
 					out << cur.second << " -> " << TRs << "[label=\"depends on\"]\n";
 				}
 
-				out << cba.getSet<Context>(SyncPoints) << " -> " << TRs << "[label=\"for all sync points\"]\n";
+				out << cba.getVar<Context>(SyncPoints) << " -> " << TRs << "[label=\"for all sync points\"]\n";
 				return out;
 			}
 

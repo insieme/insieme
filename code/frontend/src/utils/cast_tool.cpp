@@ -444,7 +444,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 
 	if (gen.isBool(expr->getType())) return expr;
-	
+
 	if (isRefVector(expr->getType())) {
 		auto tmp = builder.callExpr(gen.getRefVectorToRefArray(), expr);
 		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), tmp));
@@ -610,10 +610,10 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			if (targetTy.isa<core::FunctionTypePtr>())
 				return expr;
-			
+
 			if (targetTy.as<core::RefTypePtr>()->isSource())
 				return builder.callExpr(gen.getRefVectorToSrcArray(), expr);
-			else 
+			else
 				return builder.callExpr(gen.getRefVectorToRefArray(), expr);
 		}
 
@@ -820,8 +820,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		    if(expr->getType().isa<core::FunctionTypePtr>()) {
                 return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getFuncIsNull(), expr ));
 		    }
-		    return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
+			frontend_assert(core::analysis::isMemberPointer (expr->getType()) ) << " not a memberPointer? " << expr << " : " << expr->getType();
 
+		    return  core::analysis::getMemberPointerCheck(expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -895,7 +896,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.toCppRef(expr);
 				exprTy = expr.getType();
 			}
-			
+
 			if (core::analysis::isCppRef(exprTy)){
 				if (!core::analysis::isCppRef(targetTy)){
 					targetTy =  core::analysis::getCppRef(targetTy);
@@ -948,7 +949,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.toCppRef(expr);
 				exprTy = expr.getType();
 			}
-			
+
 			if (core::analysis::isCppRef(exprTy)){
 				if (!core::analysis::isCppRef(targetTy)){
 					targetTy =  core::analysis::getCppRef(targetTy);

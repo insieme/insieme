@@ -43,7 +43,7 @@
 // TODO [_GEMS]: missing implementations (unix ones for reference) 
 
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 #else
 	for(int i=0; i<CPU_SETSIZE; i++) {
 		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
@@ -53,7 +53,7 @@ void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 }
 
 void irt_clear_affinity() {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 #else
 	// restore the base affinity mask
 	// printf("restoring base affinity:\n"); _irt_print_native_affinity_mask(irt_g_affinity_base_mask); printf("\n");
@@ -63,7 +63,7 @@ void irt_clear_affinity() {
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 #else
 	if(irt_affinity_mask_is_empty(irt_mask)) {
 		irt_clear_affinity();
@@ -79,7 +79,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 }
 
 uint32 _irt_affinity_next_available_physical(uint32 start) {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	return UINT_MAX;
 #else
 	for(uint32 i=start; i<CPU_SETSIZE; i++) {
@@ -91,7 +91,7 @@ uint32 _irt_affinity_next_available_physical(uint32 start) {
 
 // gets initial affinity mask and sets irt_g_affinity_base_mask
 void _irt_affinity_init_base_mask(){
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 #else
 	static bool initialized = false;
 
@@ -106,7 +106,7 @@ void _irt_affinity_init_base_mask(){
 }
 
 void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 #else
 	uint32 cur = 0;
 	uint32 i = 0;
@@ -127,7 +127,7 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 }
 
 uint32 irt_affinity_cores_available() {
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	return NUM_CORES;
 #else
 	_irt_affinity_init_base_mask();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,7 +83,7 @@ namespace cba {
 			auto value = literal.as<ExpressionPtr>();
 			auto l_lit = cba.getLabel(literal);
 
-			auto D_lit = cba.getSet(D, l_lit, ctxt);
+			auto D_lit = cba.getVar(D, l_lit, ctxt);
 			constraints.add(elem(value, D_lit));
 
 		}
@@ -98,7 +98,7 @@ namespace cba {
 			if (base.isIntArithOp(call->getFunctionExpr())) {
 
 				// mark result as being unknown
-				auto D_call = cba.getSet(D, cba.getLabel(call), ctxt);
+				auto D_call = cba.getVar(D, cba.getLabel(call), ctxt);
 				auto unknown = ExpressionPtr();
 				constraints.add(elem(unknown, D_call));
 

@@ -45,7 +45,7 @@
 	#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
 	#include "include_win32/time.h"
 	#include "include_win32/sys_time.h"
-#elif defined _GEMS
+#elif defined _GEMS_SIM
 	#include "include_gems/time.h"
 	#include "include_gems/sys_time.h"
 #else

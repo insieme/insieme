@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -76,23 +76,23 @@ namespace cba {
 
 		template<typename Lattice>
 		struct StructBuilder : public utils::constraint::detail::Executor {
-			typedef std::map<FieldIndex, TypedValueID<Lattice>> element_map;
+			typedef std::map<FieldIndex, TypedVariable<Lattice>> element_map;
 			typedef typename Lattice::manager_type manager_type;
 			typedef typename Lattice::value_type value_type;
 
 			manager_type& mgr;
 			element_map elements;
-			TypedValueID<Lattice> res;
+			TypedVariable<Lattice> res;
 		public:
-			StructBuilder(manager_type& mgr, const element_map& elements, const TypedValueID<Lattice>& res)
+			StructBuilder(manager_type& mgr, const element_map& elements, const TypedVariable<Lattice>& res)
 				: mgr(mgr), elements(elements), res(res) {}
-			utils::constraint::detail::ValueIDs getInputs() const {
-				utils::constraint::detail::ValueIDs res;
+			utils::constraint::detail::Variables getInputs() const {
+				utils::constraint::detail::Variables res;
 				for (const auto& cur : elements) res.push_back(cur.second);
 				return res;
 			}
-			utils::constraint::detail::ValueIDs getOutputs() const {
-				return toVector<ValueID>(res);
+			utils::constraint::detail::Variables getOutputs() const {
+				return toVector<Variable>(res);
 			}
 			void print(std::ostream& out) const {
 				out << "struct {" << join(",", elements, [](std::ostream& out, const typename element_map::value_type& cur) {
@@ -117,7 +117,7 @@ namespace cba {
 					out << cur.second << " -> " << res << label;
 				});
 			}
-			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<Variable>& used) const {
 				for(const auto& cur : elements) {
 					used.push_back(cur.second);
 				}
@@ -126,21 +126,21 @@ namespace cba {
 
 		template<typename Lattice>
 		struct StructProject : public utils::constraint::detail::Executor {
-			typedef std::map<FieldIndex, TypedValueID<Lattice>> element_map;
+			typedef std::map<FieldIndex, TypedVariable<Lattice>> element_map;
 			typedef typename Lattice::manager_type manager_type;
 			typedef typename Lattice::value_type value_type;
 
-			TypedValueID<Lattice> in;
+			TypedVariable<Lattice> in;
 			FieldIndex field;
-			TypedValueID<Lattice> res;
+			TypedVariable<Lattice> res;
 		public:
-			StructProject(const TypedValueID<Lattice>& in, const FieldIndex& field, const TypedValueID<Lattice>& res)
+			StructProject(const TypedVariable<Lattice>& in, const FieldIndex& field, const TypedVariable<Lattice>& res)
 				: in(in), field(field), res(res) {}
-			utils::constraint::detail::ValueIDs getInputs() const {
-				return toVector<ValueID>(in);
+			utils::constraint::detail::Variables getInputs() const {
+				return toVector<Variable>(in);
 			}
-			utils::constraint::detail::ValueIDs getOutputs() const {
-				return toVector<ValueID>(res);
+			utils::constraint::detail::Variables getOutputs() const {
+				return toVector<Variable>(res);
 			}
 			void print(std::ostream& out) const {
 				out << in << "." << field << " in " << res;
@@ -158,7 +158,7 @@ namespace cba {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << in << " -> " << res << label;
 			}
-			void addUsedInputs(const Assignment& ass, std::vector<ValueID>& used) const {
+			void addUsedInputs(const Assignment& ass, std::vector<Variable>& used) const {
 				used.push_back(in);
 			}
 		};
@@ -188,23 +188,23 @@ namespace cba {
 			Context ctxt;
 
 			// the value covering the read reference
-			TypedValueID<RefLattice> ref;
+			TypedVariable<RefLattice> ref;
 
 			// the set to be updated
-			TypedValueID<ValueLattice> res;
+			TypedVariable<ValueLattice> res;
 
 			// a map of referenced locations to their values
-			mutable std::map<Location<Context>, TypedValueID<ValueLattice>> loc_value_map;
+			mutable std::map<Location<Context>, TypedVariable<ValueLattice>> loc_value_map;
 
 			// the input values reference by this constraint
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ReadConstraint(
 					CBA& cba, const CallExprInstance& call, const Context& ctxt,
-					const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res
-				) : Constraint(toVector<ValueID>(ref), toVector<ValueID>(res), true, true),
+					const TypedVariable<RefLattice>& ref, const TypedVariable<ValueLattice>& res
+				) : Constraint(toVector<Variable>(ref), toVector<Variable>(res), true, true),
 				  cba(cba), readOp(call), ctxt(ctxt), ref(ref), res(res)
 			{
 				inputs.push_back(ref);
@@ -231,7 +231,7 @@ namespace cba {
 					if (loc_value_map.find(loc) != loc_value_map.end()) continue;
 
 					// it is a new location
-					auto valueSet = cba.getSet(Stmp<NestedAnalysesType>(), readOp, ctxt, loc);
+					auto valueSet = cba.getVar(Stmp<NestedAnalysesType>(), readOp, ctxt, loc);
 					loc_value_map[loc] = valueSet;
 					inputs.push_back(valueSet);
 					changed = true;
@@ -262,7 +262,7 @@ namespace cba {
 				return out << "*" << ref << " in " << res;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
@@ -311,7 +311,7 @@ namespace cba {
 		};
 
 		template<typename NestedAnalysesType, typename ValueLattice, typename RefLattice, typename Context>
-		ConstraintPtr read(CBA& cba, const CallExprInstance& readOp, const Context& readCtxt, const TypedValueID<RefLattice>& ref, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr read(CBA& cba, const CallExprInstance& readOp, const Context& readCtxt, const TypedVariable<RefLattice>& ref, const TypedVariable<ValueLattice>& res) {
 			return std::make_shared<ReadConstraint<NestedAnalysesType,ValueLattice,RefLattice,Context>>(cba, readOp, readCtxt, ref, res);
 		}
 
@@ -336,7 +336,7 @@ namespace cba {
 			CBA& cba;
 
 			// the list of callees referenced at the call site
-			TypedValueID<CallableLattice> callees;
+			TypedVariable<CallableLattice> callees;
 
 			// the bind expression looking for
 			BindExprInstance bind;
@@ -345,21 +345,21 @@ namespace cba {
 			ExpressionInstance capturedValue;
 
 			// the set to be updated
-			TypedValueID<ValueLattice> res;
+			TypedVariable<ValueLattice> res;
 
 			// the list of value sources where captured values are defined
-			mutable std::vector<TypedValueID<ValueLattice>> sources;
+			mutable std::vector<TypedVariable<ValueLattice>> sources;
 
 			// the inputs referenced by this constraint
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			BoundValueCollectorConstraint(
-					CBA& cba, const TypedValueID<CallableLattice>& callees,
+					CBA& cba, const TypedVariable<CallableLattice>& callees,
 					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
-					const TypedValueID<ValueLattice>& res
-				) : Constraint(toVector<ValueID>(callees), toVector<ValueID>(res), true, true),
+					const TypedVariable<ValueLattice>& res
+				) : Constraint(toVector<Variable>(callees), toVector<Variable>(res), true, true),
 				  cba(cba), callees(callees), bind(bind), capturedValue(capturedValue), res(res)
 			{
 				inputs.push_back(callees);
@@ -392,7 +392,7 @@ namespace cba {
 					if (cur.getDefinition() != bind) continue;
 
 					// get the set representing the value captured by the current bind
-					auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+					auto captured = cba.getVar(ValueAnalysisType(), capturedValue, cur.getContext());
 
 					// add it to the source-list
 					if (::contains(sources, captured)) continue;
@@ -432,14 +432,14 @@ namespace cba {
 				return out << "boundValues(" << callees << ") in " << res;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 		};
 
 		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename CallableLattice>
-		ConstraintPtr collectCapturedValue(CBA& cba, const TypedValueID<CallableLattice>& callables, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr collectCapturedValue(CBA& cba, const TypedVariable<CallableLattice>& callables, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedVariable<ValueLattice>& res) {
 			return std::make_shared<BoundValueCollectorConstraint<ValueAnalysisType,ValueLattice,CallableLattice,Context>>(cba, callables, bind, capturedValue, res);
 		}
 
@@ -465,7 +465,7 @@ namespace cba {
 			CBA& cba;
 
 			// the list of jobs considered by this constraint
-			TypedValueID<JobLattice> jobs;
+			TypedVariable<JobLattice> jobs;
 
 			// the bind expression looking for
 			BindExprInstance bind;
@@ -474,24 +474,24 @@ namespace cba {
 			ExpressionInstance capturedValue;
 
 			// the set to be updated
-			TypedValueID<ValueLattice> res;
+			TypedVariable<ValueLattice> res;
 
 			// the list of referenced thread bodies
-			mutable std::vector<TypedValueID<CallableLattice>> bodies;
+			mutable std::vector<TypedVariable<CallableLattice>> bodies;
 
 			// the list of captured values
-			mutable std::vector<TypedValueID<ValueLattice>> sources;
+			mutable std::vector<TypedVariable<ValueLattice>> sources;
 
 			// the inputs referenced by this constraint
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			JobValueCollectorConstraint(
-					CBA& cba, const TypedValueID<JobLattice>& jobs,
+					CBA& cba, const TypedVariable<JobLattice>& jobs,
 					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
-					const TypedValueID<ValueLattice>& res
-				) : Constraint(toVector<ValueID>(jobs), toVector<ValueID>(res), true, true),
+					const TypedVariable<ValueLattice>& res
+				) : Constraint(toVector<Variable>(jobs), toVector<Variable>(res), true, true),
 				  cba(cba), jobs(jobs), bind(bind), capturedValue(capturedValue), res(res)
 			{
 				inputs.push_back(jobs);
@@ -521,7 +521,7 @@ namespace cba {
 				for(const auto& j : job_set) {
 
 					// get set of job-bodies
-					auto body = cba.getSet(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
+					auto body = cba.getVar(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
 
 					// register body
 					if (!::contains(bodies, body)) {
@@ -539,7 +539,7 @@ namespace cba {
 						if (cur.getDefinition() != bind) continue;
 
 						// get the set representing the value captured by the current bind
-						auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+						auto captured = cba.getVar(ValueAnalysisType(), capturedValue, cur.getContext());
 
 						// add it to the source-list
 						if (::contains(sources, captured)) continue;
@@ -584,14 +584,14 @@ namespace cba {
 				return out << "boundValues(bodiesOf(" << jobs << ")) in " << res;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 		};
 
 		template<typename ValueAnalysisType, typename Context, typename ValueLattice, typename JobLattice>
-		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedValueID<JobLattice>& jobs, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr collectCapturedJobValues(CBA& cba, const TypedVariable<JobLattice>& jobs, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedVariable<ValueLattice>& res) {
 			return std::make_shared<JobValueCollectorConstraint<ValueAnalysisType,ValueLattice,JobLattice,Context>>(cba, jobs, bind, capturedValue, res);
 		}
 
@@ -628,30 +628,30 @@ namespace cba {
 			ExpressionInstance capturedValue;
 
 			// the set to be updated
-			TypedValueID<ValueLattice> res;
+			TypedVariable<ValueLattice> res;
 
 			// the list of jobs triggered by potential call sites
-			mutable std::vector<TypedValueID<JobLattice>> jobs;
+			mutable std::vector<TypedVariable<JobLattice>> jobs;
 
 			// the list of referenced thread bodies
-			mutable std::vector<TypedValueID<CallableLattice>> bodies;
+			mutable std::vector<TypedVariable<CallableLattice>> bodies;
 
 			// the list of captured values
-			mutable std::vector<TypedValueID<ValueLattice>> sources;
+			mutable std::vector<TypedVariable<ValueLattice>> sources;
 
 			// the inputs referenced by this constraint
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			NestedJobValueCollectorConstraint(
 					CBA& cba, const Context& nestedContext,
 					const BindExprInstance& bind, const ExpressionInstance& capturedValue,
-					const TypedValueID<ValueLattice>& res
-				) : Constraint(toVector<ValueID>(cba.getSet<Context>(ThreadList)), toVector<ValueID>(res), true, true),
+					const TypedVariable<ValueLattice>& res
+				) : Constraint(toVector<Variable>(cba.getVar<Context>(ThreadList)), toVector<Variable>(res), true, true),
 				  cba(cba), nestedContext(nestedContext), bind(bind), capturedValue(capturedValue), res(res)
 			{
-				inputs.push_back(cba.getSet<Context>(ThreadList));
+				inputs.push_back(cba.getVar<Context>(ThreadList));
 			}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -674,7 +674,7 @@ namespace cba {
 				const auto& threadID = nestedContext.threadContext.front();
 
 				// get the list of all jobs
-				const auto& threads = ass[cba.getSet<Context>(ThreadList)];
+				const auto& threads = ass[cba.getVar<Context>(ThreadList)];
 
 				// for each of those
 				bool changed = false;
@@ -689,7 +689,7 @@ namespace cba {
 					const auto& spawnCtxt = Context(threadID.getSpawnContext(), cur);
 
 					// get the variable representing the set of jobs
-					auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+					auto J_spawned_job = cba.getVar(Jobs, spawnStmt[0], spawnCtxt);
 
 					// check whether this one has already been processed
 					if (::contains(jobs, J_spawned_job)) continue;
@@ -708,7 +708,7 @@ namespace cba {
 					for(const auto& j : job_set) {
 
 						// get set of job-bodies
-						auto body = cba.getSet(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
+						auto body = cba.getVar(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
 
 						// register body
 						if (!::contains(bodies, body)) {
@@ -726,7 +726,7 @@ namespace cba {
 							if (cur.getDefinition() != bind) continue;
 
 							// get the set representing the value captured by the current bind
-							auto captured = cba.getSet(ValueAnalysisType(), capturedValue, cur.getContext());
+							auto captured = cba.getVar(ValueAnalysisType(), capturedValue, cur.getContext());
 
 							// add it to the source-list
 							if (::contains(sources, captured)) continue;
@@ -776,14 +776,14 @@ namespace cba {
 				return out << "boundValues(bodiesOf(" << jobs << ")) in " << res;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 		};
 
 		template<typename ValueAnalysisType, typename Context, typename ValueLattice>
-		ConstraintPtr collectCapturedNestedJobValues(CBA& cba, const Context& nestedCtxt, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedValueID<ValueLattice>& res) {
+		ConstraintPtr collectCapturedNestedJobValues(CBA& cba, const Context& nestedCtxt, const BindExprInstance& bind, const ExpressionInstance& capturedValue, const TypedVariable<ValueLattice>& res) {
 			return std::make_shared<NestedJobValueCollectorConstraint<ValueAnalysisType,ValueLattice,Context>>(cba, nestedCtxt, bind, capturedValue, res);
 		}
 	}
@@ -848,7 +848,7 @@ namespace cba {
 			// TODO: identify return statements more efficiently
 
 			auto l_body = cba.getLabel(compound);
-			auto A_body = cba.getSet(A, l_body, ctxt);
+			auto A_body = cba.getVar(A, l_body, ctxt);
 
 			// since value of a compound is the value of return statements => visit those
 			visitDepthFirstPrunable(compound, [&](const StatementInstance& stmt) {
@@ -859,10 +859,10 @@ namespace cba {
 				if (auto returnStmt = stmt.isa<ReturnStmtInstance>()) {
 					// connect value of return statement with body value
 					auto l_return = cba.getLabel(returnStmt->getReturnExpr());
-					auto A_return = cba.getSet(A, l_return, ctxt);
+					auto A_return = cba.getVar(A, l_return, ctxt);
 
 					// add constraint - forward in case end of return expression is reachable
-					auto R_ret = cba.getSet(Rout, l_return, ctxt);
+					auto R_ret = cba.getVar(Rout, l_return, ctxt);
 					constraints.add(subsetIf(Reachable(), R_ret, A_return, A_body));
 
 					// TODO: this is just a performance improvement - but for now disabled
@@ -881,7 +881,7 @@ namespace cba {
 
 		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 			// external literals are by default unknown values - could be overloaded by sub-classes
-			auto A_lit = cba.getSet(A, literal, ctxt);
+			auto A_lit = cba.getVar(A, literal, ctxt);
 			constraints.add(subset(getUnknownValue(literal->getType()), A_lit));
 		}
 
@@ -890,11 +890,11 @@ namespace cba {
 			// ----- Part I: read variable value -------
 
 			// add constraint a(var) \subset A(var)
-			auto var = cba.getVariable(variable);
+			auto var = cba.getVariableLabel(variable);
 			auto l_var = cba.getLabel(variable);
 
-			auto a_var = cba.getSet(a, var, ctxt);
-			auto A_var = cba.getSet(A, l_var, ctxt);
+			auto a_var = cba.getVar(a, var, ctxt);
+			auto A_var = cba.getVar(A, l_var, ctxt);
 
 			constraints.add(subset(a_var, A_var));
 
@@ -941,7 +941,7 @@ namespace cba {
 					auto l_init = cba.getLabel(decl->getInitialization());
 
 					// TODO: distinguish between control and data flow!
-					auto A_init = cba.getSet(A, l_init, ctxt);
+					auto A_init = cba.getVar(A, l_init, ctxt);
 					constraints.add(subset(A_init, a_var));		// TODO: add cba (passed by argument)
 
 					// finally, add constraints for init expression
@@ -957,7 +957,7 @@ namespace cba {
 					assert(!parent.isRoot());
 
 //					// obtain the set containing all the potential predecessor of the current call in the cba
-//					auto predecessor_ctxt = cba.getSet(pred, ctxt.callContext.back());
+//					auto predecessor_ctxt = cba.getVar(pred, ctxt.callContext.back());
 
 					// get containing callee (lambda or bind)
 					Callee callee(parent.getParentInstance());
@@ -1023,7 +1023,7 @@ namespace cba {
 
 									// get value of function called by bind call
 									auto l_fun_bind_call = cba.getLabel(bindCall->getFunctionExpr());
-									auto C_fun_bind_call = cba.getSet(C, l_fun_bind_call, bindCallCtxt);
+									auto C_fun_bind_call = cba.getVar(C, l_fun_bind_call, bindCallCtxt);
 
 									// create a constraint collecting all captured values
 									constraints.add(collectCapturedValue<ValueAnalysisType,Context>(cba, C_fun_bind_call, bind, arg, a_var));
@@ -1048,7 +1048,7 @@ namespace cba {
 									const auto& spawnStmt = cba.getStmt(spawnID.getSpawnLabel()).template as<CallExprInstance>();
 									const auto& spawnCtxt = Context(spawnID.getSpawnContext(), ctxt.threadContext << rootThreadContext);
 
-									auto J_spawned_job = cba.getSet(Jobs, spawnStmt[0], spawnCtxt);
+									auto J_spawned_job = cba.getVar(Jobs, spawnStmt[0], spawnCtxt);
 
 									constraints.add(collectCapturedJobValues<ValueAnalysisType,Context>(cba, J_spawned_job, bind, arg, a_var));
 
@@ -1071,13 +1071,13 @@ namespace cba {
 						for(const auto& callCtxt : contexts) {
 
 							// get value of function targeted by current call within call context
-							auto F_cur_call = cba.getSet(F, l_cur_call_fun, callCtxt);
+							auto F_cur_call = cba.getVar(F, l_cur_call_fun, callCtxt);
 
 							// get value of argument within call
-							auto A_arg = cba.getSet(A, l_arg, callCtxt);
+							auto A_arg = cba.getVar(A, l_arg, callCtxt);
 
 							// also check whether this call can actually be reached
-							auto reachable_call = cba.getSet(Rin, l_call, callCtxt);
+							auto reachable_call = cba.getVar(Rin, l_call, callCtxt);
 
 							// link argument with parameter if context is valid and function is correct
 							// TODO: you may wanna filter statically dispatched functions
@@ -1108,15 +1108,15 @@ namespace cba {
 		void visitStructExpr(const StructExprInstance& expr, const Context& ctxt, Constraints& constraints) {
 
 			// collect values of all fields
-			std::map<FieldIndex, TypedValueID<lattice_type>> elements;
+			std::map<FieldIndex, TypedVariable<lattice_type>> elements;
 			for(const core::NamedValueInstance& cur : expr->getMembers()) {
-				elements[cur.getAddressedNode()->getName()] = cba.getSet(A, cur->getValue(), ctxt);
+				elements[cur.getAddressedNode()->getName()] = cba.getVar(A, cur->getValue(), ctxt);
 			}
 
 			// combine it
 			constraints.add(
 					utils::constraint::build(
-							StructBuilder<lattice_type>(this->getValueManager(), elements, cba.getSet(A, expr, ctxt))
+							StructBuilder<lattice_type>(this->getValueManager(), elements, cba.getVar(A, expr, ctxt))
 					)
 			);
 
@@ -1138,7 +1138,7 @@ namespace cba {
 
 			// get resulting set
 			auto l_call = cba.getLabel(call);
-			auto A_call = cba.getSet(A, l_call, ctxt);
+			auto A_call = cba.getVar(A, l_call, ctxt);
 
 			// create context of target body
 			Context innerCtxt = ctxt;
@@ -1165,7 +1165,7 @@ namespace cba {
 
 						// read value from memory location
 						auto l_trg = this->cba.getLabel(call[0]);
-						auto R_trg = this->cba.getSet(R, l_trg, ctxt);
+						auto R_trg = this->cba.getVar(R, l_trg, ctxt);
 
 						// add read constraint
 						constraints.add(read<ValueAnalysisType>(cba, call, ctxt, R_trg, A_call));
@@ -1176,7 +1176,7 @@ namespace cba {
 					if (base.isCompositeMemberAccess(op)) {
 
 						// get input struct value
-						auto A_in = this->cba.getSet(A, call[0], ctxt);
+						auto A_in = this->cba.getVar(A, call[0], ctxt);
 
 						// get field name
 						auto field = call[1].as<core::LiteralPtr>()->getValue();
@@ -1203,7 +1203,7 @@ namespace cba {
 					if (base.isVectorInitUniform(op)) {
 
 						// get in and out sets
-						auto A_in = cba.getSet(A, call[0], ctxt);
+						auto A_in = cba.getVar(A, call[0], ctxt);
 
 						// init values uniformly based on input value
 						constraints.add(insieme::utils::constraint::subsetUnary(
@@ -1219,7 +1219,7 @@ namespace cba {
 
 				// for the rest, connect the result of the body with the value of the call
 				auto l_body = cba.getLabel(fun.getBody());
-				auto A_body = cba.getSet(A, l_body, innerCtxt);
+				auto A_body = cba.getVar(A, l_body, innerCtxt);
 
 				// take over value of function body
 				constraints.add(subset(A_body, A_call));
@@ -1235,13 +1235,13 @@ namespace cba {
 
 			// get set representing the value of the function expression
 			auto l_fun = cba.getLabel(fun);
-			auto F_fun = cba.getSet(F, l_fun, ctxt);
+			auto F_fun = cba.getVar(F, l_fun, ctxt);
 
 			// process all potential targets
 			for(const Callee& cur : targets) {
 				// connect target body with result value
 				auto l_body = cba.getLabel(cur.getBody());
-				auto A_body = cba.getSet(A, l_body, innerCtxt);
+				auto A_body = cba.getVar(A, l_body, innerCtxt);
 				// .. if the current target is actually targeted!
 				constraints.add(subsetIf(cur, F_fun, A_body, A_call));
 			}
@@ -1279,7 +1279,7 @@ namespace cba {
 		}
 
 		template<typename E>
-		ConstraintPtr elem(const E& e, const TypedValueID<lattice_type>& set) {
+		ConstraintPtr elem(const E& e, const TypedVariable<lattice_type>& set) {
 			return subset(atomic(e), set);
 		}
 

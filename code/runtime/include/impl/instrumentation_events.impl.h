@@ -40,7 +40,7 @@
 
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	#include <sys/stat.h>
 #endif
 #include <errno.h>
@@ -173,7 +173,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
 	if(stat_retval != 0)
@@ -338,7 +338,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		}
 	}
 
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	fclose(outputfile);
 #endif
 

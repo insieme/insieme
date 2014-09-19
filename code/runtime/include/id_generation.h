@@ -46,6 +46,12 @@ typedef enum {
 	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
 } irt_id_type;
 
+#ifdef _GEMS_SIM
+    #define ID_TYPE_BIT_FIELD uint8 id_type 
+#else 
+    #define ID_TYPE_BIT_FIELD irt_id_type id_type : 8
+#endif
+
 #define IRT_DECLARE_ID_TYPE(__type) \
 struct _irt_##__type; \
 struct _irt_##__type##_id { \
@@ -55,7 +61,7 @@ struct _irt_##__type##_id { \
 			uint32 index; \
 			uint16 thread; \
 			uint8 node; \
-			irt_id_type id_type : 8; \
+			ID_TYPE_BIT_FIELD; \
 		}; \
 	}; \
 	struct _irt_##__type* cached; \

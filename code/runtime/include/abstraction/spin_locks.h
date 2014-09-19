@@ -42,7 +42,7 @@
 
 #if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
 	typedef long irt_spinlock;
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	typedef volatile int irt_spinlock;
 #else
 	#include <pthread.h>

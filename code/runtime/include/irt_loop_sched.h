@@ -40,18 +40,10 @@
 
 #include "declarations.h"
 #include "irt_optimizer.h"
-
-typedef enum {
-	IRT_STATIC = 0,
-	IRT_STATIC_CHUNKED = 1,
-	IRT_DYNAMIC = 10,
-	IRT_DYNAMIC_CHUNKED = 11,
-	IRT_DYNAMIC_CHUNKED_COUNTING = 15,
-	IRT_GUIDED = 20,
-	IRT_GUIDED_CHUNKED = 21,
-	IRT_FIXED = 30,
-	IRT_SHARES = 40
-} irt_loop_sched_policy_type;
+#include "insieme/common/common.h"
+#ifdef __cplusplus
+using namespace insieme::common;
+#endif // __cplusplus
 
 struct _irt_loop_sched_policy {
 	irt_loop_sched_policy_type type;

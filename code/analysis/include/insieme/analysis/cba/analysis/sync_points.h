@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -91,10 +91,10 @@ namespace cba {
 
 		SyncPointsConstraintGenerator(CBA& cba) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// compute teh type of the
-			typedef sc::TypedValueID<typename sync_points_analysis::lattice<analysis_config<Context>>::type> value_id_type;
+			typedef sc::TypedVariable<typename sync_points_analysis::lattice<analysis_config<Context>>::type> value_id_type;
 
 			// This is a recursive definition:
 			value_id_type SPs(value);
@@ -110,7 +110,7 @@ namespace cba {
 			constraints.add(createAddInnerThreadConstraint<Context>(cba, SPs));
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 			out << "SyncPoints = " << value;
 		}
 
@@ -127,12 +127,12 @@ namespace cba {
 
 			mutable std::vector<SyncPointSetType> sync_points;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ReachingSyncPointsClosureConstraint(CBA& cba, const SyncPointSetType& set) :
-				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set) {
+				Constraint(toVector<Variable>(set), toVector<Variable>(set), true, true), cba(cba), SPs(set) {
 				inputs.push_back(SPs);
 			}
 
@@ -171,10 +171,10 @@ namespace cba {
 					if (call && isSynchronizingFunction(call->getFunctionExpr())) {
 						// for call expressions it is the set of sync points reaching the tmp-state
 						// (after arguments, before processing the function itself)
-						cur_set = cba.getSet(RSPtmp, stmt, cur.getContext());
+						cur_set = cba.getVar(RSPtmp, stmt, cur.getContext());
 					} else {
 						// for rest it is the out state
-						cur_set = cba.getSet(RSPout, stmt, cur.getContext());
+						cur_set = cba.getVar(RSPout, stmt, cur.getContext());
 					}
 
 					if (!::contains(sync_points,cur_set)) {
@@ -187,7 +187,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
@@ -237,7 +237,7 @@ namespace cba {
 		template<typename Context, typename SyncPointSetType>
 		class AddInnerThreadConstraint : public utils::constraint::Constraint {
 
-			typedef TypedValueID<typename lattice<thread_body_analysis, analysis_config<Context>>::type> thread_body_set_id_type;
+			typedef TypedVariable<typename lattice<thread_body_analysis, analysis_config<Context>>::type> thread_body_set_id_type;
 
 			CBA& cba;
 
@@ -246,14 +246,14 @@ namespace cba {
 			// the sets containing sets of spanned thread bodies
 			mutable std::vector<thread_body_set_id_type> thread_bodies;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 			const core::lang::BasicGenerator& basic;
 
 		public:
 
 			AddInnerThreadConstraint(CBA& cba, const SyncPointSetType& set) :
-				Constraint(toVector<ValueID>(set), toVector<ValueID>(set), true, true), cba(cba), SPs(set), basic(cba.getRoot()->getNodeManager().getLangBasic()) {
+				Constraint(toVector<Variable>(set), toVector<Variable>(set), true, true), cba(cba), SPs(set), basic(cba.getRoot()->getNodeManager().getLangBasic()) {
 				inputs.push_back(SPs);
 			}
 
@@ -292,7 +292,7 @@ namespace cba {
 					if (call && basic.isParallelOp(call->getFunctionExpr())) {
 
 						// ... add the list of potential spanned bodies to the inputs
-						auto cur_bodies = cba.getSet(ThreadBodies, call, cur.getContext());
+						auto cur_bodies = cba.getVar(ThreadBodies, call, cur.getContext());
 
 						// add it if not already present
 						if (!::contains(thread_bodies, cur_bodies)) {
@@ -307,7 +307,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 

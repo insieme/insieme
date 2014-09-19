@@ -160,6 +160,14 @@ namespace tu {
 			assert(types.find(symbol) != types.end());
 			types[symbol] = definition;
 		}
+		void substituteType (const core::GenericTypePtr& oldSymbol, const core::GenericTypePtr& newSymbol, const core::TypePtr& definition) {
+			assert(oldSymbol );
+			assert(newSymbol );
+			assert(definition);
+			assert(types.find(oldSymbol) != types.end());
+			types.erase(oldSymbol);
+			types[newSymbol] = definition;
+		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
@@ -189,6 +197,18 @@ namespace tu {
 			assert_eq(*symbol->getType(), *definition->getType());
 			assert(functions.find(symbol) != functions.end());
 			functions[symbol] = definition;
+		}
+		/**
+		 * replaces previus definition and changes the symbold that points to it
+		 */
+		void substituteFunction(const core::LiteralPtr& oldSymbol,
+								const core::LiteralPtr& newSymbol,
+								const core::LambdaExprPtr& definition){
+
+			assert_eq(*newSymbol->getType(), *definition->getType());
+			assert(functions.find(oldSymbol) != functions.end());
+			functions.erase(oldSymbol);
+			functions[newSymbol] = definition;
 		}
 
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {

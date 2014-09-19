@@ -644,7 +644,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 
 		// create a (temporary) type variable for this type
 		core::GenericTypePtr symbol = builder.genericType(name);
-		if (!name.empty()) {
+		if (!recDecl->getNameAsString().empty()) {
 			core::annotations::attachName(symbol,name);
 		}
 

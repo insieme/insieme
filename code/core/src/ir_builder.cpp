@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1119,7 +1119,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     VariableList params;
     vector<ExpressionPtr> callArgs;
 
-    utils::map::PointerMap<ExpressionPtr, ExpressionPtr> replVariableMap;
+    vector<pair<ExpressionPtr, ExpressionPtr> > replVariableMap;
 	for(const core::ExpressionPtr& curr : args){
 		assert(curr->getNodeType() == core::NT_Variable);
 
@@ -1133,8 +1133,8 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			argsType.push_back( parmVar->getType() );
 			params.push_back( parmVar );
 			callArgs.push_back(this->deref(bodyVar));
-			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
-			replVariableMap.insert( std::make_pair(bodyVar, refVar(parmVar)) );
+			replVariableMap.push_back( std::make_pair(deref(bodyVar), parmVar) );
+			replVariableMap.push_back( std::make_pair(bodyVar, refVar(parmVar)) );
 		}
 		else{
 			// we create a new variable to replace the captured variable
@@ -1142,7 +1142,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 			argsType.push_back( varType );
 			params.push_back( parmVar );
 			callArgs.push_back(curr);
-			replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+			replVariableMap.push_back( std::make_pair(bodyVar, parmVar) );
 		}
 	}
 
@@ -1171,6 +1171,14 @@ CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const strin
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
+	if ( type->getNodeType() == core::NT_RecType ) {
+		type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+	}
+
+	// if it is a ref type, use refMember function
+	if(type->getNodeType() == core::NT_RefType)
+		return refMember(structExpr, member);
+
 	assert((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);
@@ -1190,6 +1198,11 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+
+	if ( elementType->getNodeType() == core::NT_RecType ) {
+		elementType = core::static_pointer_cast<const core::RecType>(elementType)->unroll(elementType.getNodeManager());
+	}
+
 	//assert((elementType->getNodeType() == core::NT_StructType || elementType->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(elementType);

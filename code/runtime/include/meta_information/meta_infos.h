@@ -38,9 +38,11 @@
 #ifndef __GUARD_META_INFORMATION_META_INFOS_H
 #define __GUARD_META_INFORMATION_META_INFOS_H
 
+#include "insieme/common/common.h"
+
 // build struct definitions
 #include "meta_information/struct_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
+#include "insieme/common/meta_infos.def"
 
 // build default table entry definition containing all structs
 struct _irt_meta_info_table_entry {
@@ -49,19 +51,19 @@ struct _irt_meta_info_table_entry {
 #else // IRT_META_INFO_TABLE_ENTRY_FIELDS
 	// generate default entry with all values
 	#include "meta_information/default_generator.inc"
-	#include "insieme/meta_information/meta_infos.def"
+	#include "insieme/common/meta_infos.def"
 #endif // IRT_META_INFO_TABLE_ENTRY_FIELDS
 };
 
 // build accessors for metainformation
 #include "meta_information/accessor_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
+#include "insieme/common/meta_infos.def"
 
 // build printer for metainformation
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "meta_information/printer_generator.inc"
-#include "insieme/meta_information/meta_infos.def"
+#include "insieme/common/meta_infos.def"
 #pragma GCC diagnostic pop
 
 #endif //#ifndef __GUARD_META_INFORMATION_META_INFOS_H

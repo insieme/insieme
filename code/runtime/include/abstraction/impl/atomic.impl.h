@@ -38,7 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_IMPL_ATOMIC_IMPL_H
 #define __GUARD_ABSTRACTION_IMPL_ATOMIC_IMPL_H
 
-#if defined(_GEMS)
+#if defined(_GEMS_SIM)
 	#include "atomic.gems.impl.h"
 #endif
 

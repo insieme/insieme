@@ -38,9 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_MEASUREMENTS_H
 #define __GUARD_ABSTRACTION_MEASUREMENTS_H
 
-#if defined(__arm__)
-    // nothing to include
-#elif defined(_GEMS)
+#if defined(__arm__) || defined(_GEMS_SIM)
     // nothing to include
 #else
 	#include "measurements.rapl.h"

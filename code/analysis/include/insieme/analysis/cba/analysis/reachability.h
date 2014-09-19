@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -88,7 +88,7 @@ namespace cba {
 			// make sure root is reachable
 			if (!initSet && node == root && ctxt == Context()) {
 				auto l = cba.getLabel(root);
-				auto R = cba.getSet(Rin, l, ctxt);
+				auto R = cba.getVar(Rin, l, ctxt);
 				constraints.add(elem(Reachable(), R));
 				initSet = true;
 			}
@@ -113,7 +113,7 @@ namespace cba {
 
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			// every call reached will be finished
-			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rout,call,ctxt)));
+			constraints.add(subset(cba.getVar(Rin, call, ctxt), cba.getVar(Rout,call,ctxt)));
 		}
 
 		/**
@@ -121,14 +121,14 @@ namespace cba {
 		 */
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIfImpl (
-					const E& value, const TypedValueID<L>& set,
+					const E& value, const TypedVariable<L>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					Constraints& constraints
 				) const {
 
-			auto A = cba.getSet(a, al, ac);
-			auto B = cba.getSet(b, bl, bc);
+			auto A = cba.getVar(a, al, ac);
+			auto B = cba.getVar(b, bl, bc);
 			constraints.add(subsetIf(value, set, A, B));
 		}
 
@@ -147,7 +147,7 @@ namespace cba {
 
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			// every call reached will be finished
-			constraints.add(subset(cba.getSet(Rin, call, ctxt), cba.getSet(Rtmp,call,ctxt)));
+			constraints.add(subset(cba.getVar(Rin, call, ctxt), cba.getVar(Rtmp,call,ctxt)));
 		}
 
 	};

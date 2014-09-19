@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -106,7 +106,7 @@ namespace cba {
 		}
 
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, const StatementInstance& al, const Context& ac, const SetTypeB& b, const StatementInstance& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+		void connectSetsIf(const E& value, const TypedVariable<L>& set, const SetTypeA& a, const StatementInstance& al, const Context& ac, const SetTypeB& b, const StatementInstance& bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			connectStateSetsIf(value, set, a, cba.getLabel(al), ac, b, cba.getLabel(bl), bc, args..., constraints);
@@ -127,7 +127,7 @@ namespace cba {
 		}
 
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
-		void connectStateSetsIf(const E& value, const TypedValueID<L>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
+		void connectStateSetsIf(const E& value, const TypedVariable<L>& set, const SetTypeA& a, Label al, const Context& ac, const SetTypeB& b, Label bl, const Context& bc, const ExtraParams& ... args, Constraints& constraints) {
 			// filter out invalid contexts
 			if (!cba.isValid(ac) || !cba.isValid(bc)) return;
 			static_cast<Derived*>(this)->template connectStateSetsIfImpl(value,set,a,al,ac,b,bl,bc,args...,constraints);
@@ -151,14 +151,14 @@ namespace cba {
 					Constraints& constraints
 				) const {
 
-			auto A = cba.getSet(a, al, ac, params...);
-			auto B = cba.getSet(b, bl, bc, params...);
+			auto A = cba.getVar(a, al, ac, params...);
+			auto B = cba.getVar(b, bl, bc, params...);
 			constraints.add(subset(A, B));
 		}
 
 		template<typename E, typename L, typename SetTypeA, typename SetTypeB>
 		void connectStateSetsIfImpl (
-					const E& value, const TypedValueID<L>& set,
+					const E& value, const TypedVariable<L>& set,
 					const SetTypeA& a, Label al, const Context& ac,
 					const SetTypeB& b, Label bl, const Context& bc,
 					const ExtraParams& ... params,
@@ -166,8 +166,8 @@ namespace cba {
 				) const {
 
 			// simple version (no check of contexts)
-			auto A = cba.getSet(a, al, ac, params...);
-			auto B = cba.getSet(b, bl, bc, params...);
+			auto A = cba.getVar(a, al, ac, params...);
+			auto B = cba.getVar(b, bl, bc, params...);
 			constraints.add(subsetIf(value, set, A, B));
 		}
 
@@ -181,8 +181,8 @@ namespace cba {
 				) const {
 
 			// simple version (no check of contexts)
-			auto A = cba.getSet(a, al, ac, params...);
-			auto B = cba.getSet(b, bl, bc, params...);
+			auto A = cba.getVar(a, al, ac, params...);
+			auto B = cba.getVar(b, bl, bc, params...);
 			constraints.add(combine(filter, e_sub(A, B)));
 		}
 
@@ -196,15 +196,15 @@ namespace cba {
 		 * A factory function for a constrain linking the head of a thread to its spawn point(s).
 		 */
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp);
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp);
 
 		// an overload for one extra parameter
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&);
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&);
 
 		// an overload for two extra parameter
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0, typename Arg1>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&, const Arg1&);
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0&, const Arg1&);
 
 	}
 
@@ -248,7 +248,7 @@ namespace cba {
 
 			// get labels for call-site
 			auto l_fun = cba.getLabel(call->getFunctionExpr());
-			auto F_call = cba.getSet(F, l_fun, callCtxt);
+			auto F_call = cba.getVar(F, l_fun, callCtxt);
 
 			// check whether call-site is within a bind
 			bool isCallWithinBind = (!call.isRoot() && call.getParentNode()->getNodeType() == NT_BindExpr);
@@ -312,7 +312,7 @@ namespace cba {
 				} else {
 
 					// use a custom constraint collecting all potential spawn points
-					auto head = cba.getSet(this->Ain, call, ctxt, args...);
+					auto head = cba.getVar(this->Ain, call, ctxt, args...);
 					constraints.add(createSpawnPointConnectorConstraint<Context>(cba, ctxt.threadContext, head, this->Atmp, args...));
 
 				}
@@ -542,14 +542,14 @@ namespace cba {
 
 					// connect out of condition with in of body if condition may be true
 					auto l_cond = cba.getLabel(cond);
-					auto B_cond = cba.getSet(B, l_cond, ctxt);
+					auto B_cond = cba.getVar(B, l_cond, ctxt);
 					this->connectSetsIf(true, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 
 				} else if (ifStmt->getElseBody() == stmt) {
 
 					// connect out of condition with in of body if condition may be false
 					auto l_cond = cba.getLabel(cond);
-					auto B_cond = cba.getSet(B, l_cond, ctxt);
+					auto B_cond = cba.getVar(B, l_cond, ctxt);
 					this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Ain, stmt, ctxt, args..., constraints);
 
 				} else {
@@ -566,7 +566,7 @@ namespace cba {
 				// check which part of a while the current node is
 				auto cond = whileStmt->getCondition();
 				auto l_cond = cba.getLabel(cond);
-				auto B_cond = cba.getSet(B, l_cond, ctxt);
+				auto B_cond = cba.getVar(B, l_cond, ctxt);
 				if (cond == stmt) {
 					// connect in of while to in of condition
 					this->connectSets(this->Ain, whileStmt, ctxt, this->Ain, stmt, ctxt, args..., constraints);
@@ -641,29 +641,29 @@ namespace cba {
 
 			CBA& cba;
 			const ThreadOutAnalysisType& out;						// the type of analysis / values to be aggregated from the exit node of the threads
-			const TypedValueID<ThreadGroupValue> thread_group;
-			const TypedValueID<Lattice> in_state;
-			const TypedValueID<Lattice> out_state;
+			const TypedVariable<ThreadGroupValue> thread_group;
+			const TypedVariable<Lattice> in_state;
+			const TypedVariable<Lattice> out_state;
 
 			const std::tuple<ExtraParams...> params;
 
 			// the killed thread states to be merged in (only if thread_group points to a single thread)
-			mutable vector<TypedValueID<Lattice>> thread_out_states;
-			mutable vector<ValueID> dependencies;
+			mutable vector<TypedVariable<Lattice>> thread_out_states;
+			mutable vector<Variable> dependencies;
 
 			// the full list of dependencies
-			mutable vector<ValueID> allInputs;
+			mutable vector<Variable> allInputs;
 
 		public:
 
 			ParallelMergeConstraint(
 					CBA& cba,
 					const ThreadOutAnalysisType& out,
-					const TypedValueID<ThreadGroupValue>& thread_group,
-					const TypedValueID<Lattice>& in_state,
-					const TypedValueID<Lattice>& out_state,
+					const TypedVariable<ThreadGroupValue>& thread_group,
+					const TypedVariable<Lattice>& in_state,
+					const TypedVariable<Lattice>& out_state,
 					const ExtraParams& ... params)
-				: Constraint(toVector<ValueID>(thread_group, in_state), toVector<ValueID>(out_state), true, true),
+				: Constraint(toVector<Variable>(thread_group, in_state), toVector<Variable>(out_state), true, true),
 				  cba(cba), out(out), thread_group(thread_group), in_state(in_state), out_state(out_state), params(std::make_tuple(params...)) {
 				allInputs.push_back(thread_group);
 				allInputs.push_back(in_state);
@@ -727,7 +727,7 @@ namespace cba {
 				return out << "if " << thread_group << " is unique merging killed set of group and " << in_state << " into " << out_state;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				// update thread out state list and all dynamic dependencies
 				if (updateDynamicDependenciesInternal(ass)) {
 					// ... and if those have changed, update the inputs list
@@ -754,7 +754,7 @@ namespace cba {
 
 				// clear lists
 				thread_out_states.clear();
-				vector<ValueID> newDependencies;
+				vector<Variable> newDependencies;
 
 				// get set of merged threads
 				const set<ThreadGroup<Context>>& groups = ass[thread_group];
@@ -773,7 +773,7 @@ namespace cba {
 				auto spawnPoint = group.getCreationPoint().template as<CallExprInstance>();
 
 				// get potential list of jobs to be started at spawn point
-				auto jobValue = cba.getSet(Jobs, spawnPoint[0], group.getContext());
+				auto jobValue = cba.getVar(Jobs, spawnPoint[0], group.getContext());
 				newDependencies.push_back(jobValue);
 				const set<Job<Context>>& jobs = ass[jobValue];
 
@@ -791,7 +791,7 @@ namespace cba {
 				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
 
 				// get set containing list of bodies
-				auto C_body = cba.getSet(C, jobExpr->getDefaultExpr(), job.getContext());
+				auto C_body = cba.getVar(C, jobExpr->getDefaultExpr(), job.getContext());
 
 				// get list of body functions
 				newDependencies.push_back(C_body);
@@ -816,7 +816,7 @@ namespace cba {
 				threadContext >>= thread_id(cba.getLabel(spawnPoint), spawnContext.callContext);
 				auto innerContext = Context(typename Context::call_context(), threadContext);		// call context in thread is default one again
 
-				auto out_set = getValueID(out, utils::int_type<0>(), params, body, innerContext);
+				auto out_set = getVariable(out, utils::int_type<0>(), params, body, innerContext);
 				thread_out_states.push_back(out_set);
 				newDependencies.push_back(out_set);
 
@@ -857,22 +857,22 @@ namespace cba {
 		private:
 
 			template<int i, typename ValueType, typename Tuple, typename ... Args>
-			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-			getValueID(const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) const {
-				return getValueID(type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
+			sc::TypedVariable<typename lattice<ValueType,analysis_config<Context>>::type>
+			getVariable(const ValueType& type, const utils::int_type<i>& c, const Tuple& t, const Args& ... args) const {
+				return getVariable(type, utils::int_type<i+1>(), t, args..., std::get<i>(t));
 			}
 
 			template<typename ValueType, typename Tuple, typename ... Args>
-			sc::TypedValueID<typename lattice<ValueType,analysis_config<Context>>::type>
-			getValueID(const ValueType& type, const utils::int_type<sizeof...(ExtraParams)>& c, const Tuple& t, const Args& ... args) const {
-				return cba.getSet(type, args...);
+			sc::TypedVariable<typename lattice<ValueType,analysis_config<Context>>::type>
+			getVariable(const ValueType& type, const utils::int_type<sizeof...(ExtraParams)>& c, const Tuple& t, const Args& ... args) const {
+				return cba.getVar(type, args...);
 			}
 
 		};
 
 
 		template<typename Context, typename TGValue, typename ThreadOutAnalysisType, typename DataValue, typename ... ExtraParams>
-		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedValueID<TGValue>& threadGroup, const TypedValueID<DataValue>& in_state, const TypedValueID<DataValue>& out_state, const ExtraParams& ... params) {
+		ConstraintPtr parallelMerge(CBA& cba, const ThreadOutAnalysisType& out, const TypedVariable<TGValue>& threadGroup, const TypedVariable<DataValue>& in_state, const TypedVariable<DataValue>& out_state, const ExtraParams& ... params) {
 			return std::make_shared<ParallelMergeConstraint<Context,ThreadOutAnalysisType,TGValue,DataValue,ExtraParams...>>(cba,out,threadGroup,in_state,out_state, params...);
 		}
 
@@ -945,10 +945,10 @@ namespace cba {
 					//		- otherwise we can not be sure => no operation
 
 					// get involved sets
-					auto A_tmp = cba.getSet(this->Atmp, call, ctxt, params...);
-					auto A_out = cba.getSet(this->Aout, call, ctxt, params...);
+					auto A_tmp = cba.getVar(this->Atmp, call, ctxt, params...);
+					auto A_out = cba.getVar(this->Aout, call, ctxt, params...);
 
-					auto tg = cba.getSet(ThreadGroups, call[0], ctxt);
+					auto tg = cba.getVar(ThreadGroups, call[0], ctxt);
 
 					// add constraint
 					constraints.add(detail::parallelMerge<Context>(cba, this->Aout, tg, A_tmp, A_out, params...));
@@ -978,7 +978,7 @@ namespace cba {
 
 			// get set of potential target functions
 			auto l_fun = cba.getLabel(call->getFunctionExpr());
-			auto F_fun = cba.getSet(F, l_fun, ctxt);
+			auto F_fun = cba.getVar(F, l_fun, ctxt);
 
 			for(const Callee& cur : targets) {
 
@@ -1028,7 +1028,7 @@ namespace cba {
 			auto last = stmt[stmt.size()-1];
 			auto type = last->getNodeType();
 			if (!(type == NT_ReturnStmt || type == NT_ContinueStmt || type==NT_BreakStmt)) {
-				this->connectSetsIf(Reachable(), cba.getSet(Rout, last, ctxt), this->Aout, last, ctxt, this->Aout, stmt, ctxt, params..., constraints);
+				this->connectSetsIf(Reachable(), cba.getVar(Rout, last, ctxt), this->Aout, last, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 			}
 
 			// also connect stmt-out with all returns if it is a lambda body
@@ -1055,7 +1055,7 @@ namespace cba {
 			for(const ReturnStmtInstance& returnStmt : returns) {
 				// connect value of return statement with body value
 				auto l_ret = cba.getLabel(returnStmt);
-				auto R_ret = cba.getSet(Rout, l_ret, ctxt);
+				auto R_ret = cba.getVar(Rout, l_ret, ctxt);
 				this->connectStateSetsIf(Reachable(), R_ret, this->Aout, l_ret, ctxt, this->Aout, l_body, ctxt, params..., constraints);
 			}
 
@@ -1074,7 +1074,7 @@ namespace cba {
 		void visitIfStmt(const IfStmtInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// link out with out of bodies
 			auto l_cond = cba.getLabel(stmt->getCondition());
-			auto B_cond = cba.getSet(B, l_cond, ctxt);
+			auto B_cond = cba.getVar(B, l_cond, ctxt);
 			this->connectSetsIf(true,  B_cond, this->Aout, stmt->getThenBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 			this->connectSetsIf(false, B_cond, this->Aout, stmt->getElseBody(), ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
@@ -1090,7 +1090,7 @@ namespace cba {
 			// link out of condition to out if condition may ever become false
 			auto cond = stmt->getCondition();
 			auto l_cond = cba.getLabel(cond);
-			auto B_cond = cba.getSet(B, l_cond, ctxt);
+			auto B_cond = cba.getVar(B, l_cond, ctxt);
 			this->connectSetsIf(false, B_cond, this->Aout, cond, ctxt, this->Aout, stmt, ctxt, params..., constraints);
 		}
 
@@ -1099,9 +1099,9 @@ namespace cba {
 			// TODO: consider continues and breaks!
 
 			// get values defining range
-			auto Al = cba.getSet(A, stmt->getStart(), ctxt);
-			auto Au = cba.getSet(A, stmt->getEnd(), ctxt);
-			auto As = cba.getSet(A, stmt->getStep(), ctxt);
+			auto Al = cba.getVar(A, stmt->getStart(), ctxt);
+			auto Au = cba.getVar(A, stmt->getEnd(), ctxt);
+			auto As = cba.getVar(A, stmt->getStep(), ctxt);
 
 			// link out of body with out of for stmt
 			auto body = stmt->getBody();
@@ -1147,13 +1147,13 @@ namespace cba {
 
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 
-			auto A_tmp = cba.getSet(Atmp, call, ctxt, params...);
+			auto A_tmp = cba.getVar(Atmp, call, ctxt, params...);
 
 			// link it with out-state of last non-captured parameter / function
 			for(int i=(call.size()-1); i>=0; i--) {
 				auto cur = call[i];
 				if (!isCapturedValue(cur)) {
-					auto A_out = cba.getSet(Aout, cur, ctxt, params...);
+					auto A_out = cba.getVar(Aout, cur, ctxt, params...);
 					constraints.add(subset(A_out, A_tmp));
 					return;
 				}
@@ -1163,21 +1163,21 @@ namespace cba {
 			if (!isCapturedValue(call->getFunctionExpr())) {
 
 				// link it with the out of the function expression
-				auto A_fun = cba.getSet(Aout, call->getFunctionExpr(), ctxt, params...);
+				auto A_fun = cba.getVar(Aout, call->getFunctionExpr(), ctxt, params...);
 				constraints.add(subset(A_fun, A_tmp));
 				return;
 			}
 
 			// so the function expression and all its arguments are captured => link it with the in state of the call
-			auto A_in = cba.getSet(Ain, call, ctxt, params...);
+			auto A_in = cba.getVar(Ain, call, ctxt, params...);
 			constraints.add(subset(A_in, A_tmp));
 
 		}
 
 		void visitStatement(const StatementInstance& stmt, const Context& ctxt, const ExtraParams& ... params, Constraints& constraints) {
 			// simply link in with tmp
-			auto A_in  = cba.getSet(Ain, stmt, ctxt, params...);
-			auto A_tmp = cba.getSet(Atmp, stmt, ctxt, params...);
+			auto A_in  = cba.getVar(Ain, stmt, ctxt, params...);
+			auto A_tmp = cba.getVar(Atmp, stmt, ctxt, params...);
 			constraints.add(subset(A_in, A_tmp));
 		}
 
@@ -1199,7 +1199,7 @@ namespace cba {
 			typedef typename ValueLattice::meet_assign_op_type meet_assign_op_type;
 			typedef typename ValueLattice::less_op_type less_op_type;
 
-			typedef std::function<TypedValueID<ValueLattice>(CBA&, const StatementInstance&, const Context&)> var_resolver_function_type;
+			typedef std::function<TypedVariable<ValueLattice>(CBA&, const StatementInstance&, const Context&)> var_resolver_function_type;
 
 			typedef typename lattice<thread_list_analysis,analysis_config<Context>>::type thread_list_lattice;
 			typedef typename thread_list_lattice::value_type thread_list;
@@ -1209,28 +1209,28 @@ namespace cba {
 			CBA& cba;
 
 			// the program point marking the start of the linked thread
-			TypedValueID<ValueLattice> head;
+			TypedVariable<ValueLattice> head;
 
 			// the id of the nested thread
 			thread_type nestedThread;
 
 			// the variable listing all threads in the program
-			TypedValueID<thread_list_lattice> threadList;
+			TypedVariable<thread_list_lattice> threadList;
 
 			// a function generation variables describing state of a given point
 			var_resolver_function_type varGen;
 
 			// the list of variables describing the state at potential spawn points
-			mutable std::vector<TypedValueID<ValueLattice>> spawns;
+			mutable std::vector<TypedVariable<ValueLattice>> spawns;
 
 			// the inputs referenced by this constraint
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			SpawnPointConnector(
-					CBA& cba, const thread_type& nestedThread, const TypedValueID<ValueLattice>& head, const TypedValueID<thread_list_lattice>& threadList, const var_resolver_function_type& varGen
-				) : Constraint(toVector<ValueID>(threadList), toVector<ValueID>(head), true, true),
+					CBA& cba, const thread_type& nestedThread, const TypedVariable<ValueLattice>& head, const TypedVariable<thread_list_lattice>& threadList, const var_resolver_function_type& varGen
+				) : Constraint(toVector<Variable>(threadList), toVector<Variable>(head), true, true),
 				  cba(cba), head(head), nestedThread(nestedThread), threadList(threadList), varGen(varGen)
 			{
 				inputs.push_back(threadList);
@@ -1313,41 +1313,41 @@ namespace cba {
 				return out << "union({" << ::join(",", spawns) << "}) sub " << head;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
 		};
 
 		template<typename Context>
-		TypedValueID<typename lattice<thread_list_analysis,analysis_config<Context>>::type>
+		TypedVariable<typename lattice<thread_list_analysis,analysis_config<Context>>::type>
 		getThreadListVariable(CBA& cba) {
-			return cba.getSet<Context>(ThreadList);
+			return cba.getVar<Context>(ThreadList);
 		}
 
 		/**
 		 * A factory function for a constrain linking the head of a thread to its spawn point(s).
 		 */
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp) {
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp) {
 			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
-				return cba.getSet(tmp, stmt, ctxt);
+				return cba.getVar(tmp, stmt, ctxt);
 			});
 		}
 
 		// an overload for one extra parameter
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0) {
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0) {
 			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
-				return cba.getSet(tmp, stmt, ctxt, arg0);
+				return cba.getVar(tmp, stmt, ctxt, arg0);
 			});
 		}
 
 		// an overload for two extra parameter
 		template<typename Context, typename ValueLattice, typename TmpAnalysisType, typename Arg0, typename Arg1>
-		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedValueID<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0, const Arg1& arg1) {
+		ConstraintPtr createSpawnPointConnectorConstraint(CBA& cba, const typename Context::thread_context& nestedContext, const TypedVariable<ValueLattice>& startPoint, const TmpAnalysisType& tmp, const Arg0& arg0, const Arg1& arg1) {
 			return std::make_shared<SpawnPointConnector<ValueLattice,Context>>(cba, nestedContext, startPoint, getThreadListVariable<Context>(cba), [=](CBA& cba, const StatementInstance& stmt, const Context& ctxt) {
-				return cba.getSet(tmp, stmt, ctxt, arg0, arg1);
+				return cba.getVar(tmp, stmt, ctxt, arg0, arg1);
 			});
 		}
 

@@ -64,6 +64,7 @@
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
+#include "insieme/frontend/extensions/anonymous_rename.h"
 
 namespace insieme {
 namespace frontend {
@@ -88,6 +89,11 @@ namespace frontend {
 	}
 
     //register frontend plugins
+    //be CAREFUL with the order of the plugins
+    //if a plugin is stateful (e.g., OMP plugin)
+    //insieme might generates malformed code.
+    //Example: anonymous record type replacements 
+    //done before omp threadprivate handling.
     void ConversionSetup::frontendPluginInit() {
         registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptedNameSpacePatterns());
         registerFrontendPlugin<VariadicArgumentsPlugin>();
@@ -118,6 +124,7 @@ namespace frontend {
 		}
 
       	registerFrontendPlugin<FrontendCleanup>();
+		registerFrontendPlugin<extensions::AnonymousRename>();
 
 	    for(auto plugin : getPlugins()) {
             for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {

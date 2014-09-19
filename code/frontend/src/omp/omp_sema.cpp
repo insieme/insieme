@@ -356,6 +356,11 @@ protected:
 		if (type.isa<core::GenericTypePtr>() && type.as<core::GenericTypePtr>()->getName()->getValue() =="omp_lock_t"){
 			return true;
 		}
+
+		if (type.isa<core::GenericTypePtr>() && type.as<core::GenericTypePtr>()->getName()->getValue() == "_omp_lock_t"){
+			    return true;
+		}
+
 		return false;
 	}
 

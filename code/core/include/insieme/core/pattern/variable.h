@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,15 +29,17 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+
 #pragma once
 
 #include <string>
 
 #include <boost/operators.hpp>
+#include <boost/variant.hpp>
 
 #include "insieme/core/pattern/pattern.h"
 #include "insieme/core/pattern/generator.h"
@@ -47,6 +49,11 @@
 namespace insieme {
 namespace core {
 namespace pattern {
+
+	namespace detail {
+		// a utility function for creating variable names
+		string getFreshVarName();
+	}
 
 	/**
 	 * A symbolic variable representing trees within both, patterns and generators.
@@ -62,7 +69,7 @@ namespace pattern {
 		string name;
 
 		/**
-		 * The pattern version of this variable.
+		 * The tree pattern version of this variable.
 		 */
 		TreePattern pVar;
 
@@ -73,10 +80,16 @@ namespace pattern {
 
 	public:
 
-		Variable(const string& name, const TreePattern& pattern = any)
+		Variable(const string& name = detail::getFreshVarName())
+			: name(name), pVar(var(name, any)), gVar(generator::var(name)) {}
+
+		Variable(const string& name, const TreePattern& pattern)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
-		Variable(const char* name, const TreePattern& pattern = any)
+		Variable(const char* name)
+			: name(name), pVar(var(name, any)), gVar(generator::var(name)) {}
+
+		Variable(const char* name, const TreePattern& pattern)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
 		Variable(const Variable& other) = default;
@@ -113,6 +126,77 @@ namespace pattern {
 
 	};
 
+	/**
+	 * A symbolic variable representing lists of trees within both, patterns and generators.
+	 */
+	class ListVariable :
+			public boost::equality_comparable<ListVariable>,
+			public boost::less_than_comparable<ListVariable>,
+			public utils::Printable {
+
+		/**
+		 * The name of this variable.
+		 */
+		string name;
+
+		/**
+		 * The tree pattern version of this variable.
+		 */
+		ListPattern pVar;
+
+		/**
+		 * The generator version of this variable.
+		 */
+		ListGenerator gVar;
+
+	public:
+
+		ListVariable(const string& name = detail::getFreshVarName())
+			: name(name), pVar(listVar(name, anyList)), gVar(generator::listVar(name)) {}
+
+		ListVariable(const string& name, const ListPattern& pattern)
+			: name(name), pVar(listVar(name, pattern)), gVar(generator::listVar(name)) {}
+
+		ListVariable(const char* name)
+			: name(name), pVar(listVar(name, anyList)), gVar(generator::listVar(name)) {}
+
+		ListVariable(const char* name, const ListPattern& pattern)
+			: name(name), pVar(listVar(name, pattern)), gVar(generator::listVar(name)) {}
+
+		ListVariable(const ListVariable& other) = default;
+
+		ListVariable(ListVariable&& other) = default;
+
+		/**
+		 * The implicit conversion support to convert instances to list patterns.
+		 */
+		operator const ListPattern&() const {
+			return pVar;
+		}
+
+		/**
+		 * The implicit conversion support to convert instances to list generators.
+		 */
+		operator const ListGenerator&() const {
+			return gVar;
+		}
+
+		ListVariable& operator=(const ListVariable&) = default;
+
+		bool operator==(const ListVariable& other) const {
+			return this == &other || name == other.name;
+		}
+
+		bool operator<(const ListVariable& other) const {
+			return name < other.name;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "$" << name;
+		}
+
+	};
+
 	namespace detail {
 
 		/**
@@ -121,58 +205,101 @@ namespace pattern {
 		 */
 		class VarList {
 
-			vector<Variable> vars;
+			typedef boost::variant<Variable,ListVariable> var_type;
+
+			vector<var_type> vars;
 
 		public:
 
-			VarList(const Variable& a, const Variable& b)
-				: vars(toVector(a,b)) {}
+			VarList() : vars() {}
 
-			VarList(const VarList& a, const Variable& b)
-				: vars(a.vars) { vars.push_back(b); }
+			VarList(const VarList&) = default;
 
-			VarList(const Variable& a, const VarList& b)
-				: vars() { vars.push_back(a); vars.insert(vars.end(),b.vars.begin(), b.vars.end()); }
+			VarList(VarList&&) = default;
 
-			VarList(const VarList& a, const VarList& b)
-				: vars(a.vars) { vars.insert(vars.end(),b.vars.begin(), b.vars.end()); }
+			VarList& operator=(const VarList&) = default;
+
+			VarList& append(const Variable& var) {
+				vars.push_back(var);
+				return *this;
+			}
+
+			VarList& append(const ListVariable& var) {
+				vars.push_back(var);
+				return *this;
+			}
+
+			VarList& append(const VarList& list) {
+				vars.insert(vars.end(), list.vars.begin(), list.vars.end());
+				return *this;
+			}
 
 			operator ListPattern() const {
 				auto cur = vars.begin();
-				auto res = single(*cur); ++cur;
+				auto res = toPattern(*cur); ++cur;
 				for(; cur != vars.end(); ++cur) {
-					res = res << *cur;
+					res = res << toPattern(*cur);
 				}
 				return res;
 			}
 
 			operator ListGenerator() const {
 				auto cur = vars.begin();
-				auto res = generator::single(*cur); ++cur;
+				auto res = toGenerator(*cur); ++cur;
 				for(; cur != vars.end(); ++cur) {
-					res = res << *cur;
+					res = res << toGenerator(*cur);
 				}
 				return res;
+			}
+
+		private:
+
+			static ListPattern toPattern(const var_type& var) {
+				struct list_converter : public boost::static_visitor<ListPattern> {
+					ListPattern operator()(const Variable& var) const { return single(var); }
+					ListPattern operator()(const ListVariable& var) const { return var; }
+				};
+				return boost::apply_visitor(list_converter(), var);
+			}
+
+			static ListGenerator toGenerator(const var_type& var) {
+				struct list_converter : public boost::static_visitor<ListGenerator> {
+					ListGenerator operator()(const Variable& var) const { return generator::single(var); }
+					ListGenerator operator()(const ListVariable& var) const { return var; }
+				};
+				return boost::apply_visitor(list_converter(), var);
 			}
 		};
 
 	}
 
 	inline detail::VarList operator<<(const Variable& a, const Variable& b) {
-		return detail::VarList(a, b);
+		return detail::VarList().append(a).append(b);
 	}
 
-	inline detail::VarList operator<<(const detail::VarList& a, const Variable& b) {
-		return detail::VarList(a, b);
+	inline detail::VarList operator<<(const Variable& a, const ListVariable& b) {
+		return detail::VarList().append(a).append(b);
 	}
 
-	inline detail::VarList operator<<(const Variable& a, const detail::VarList& b) {
-		return detail::VarList(a, b);
+	inline detail::VarList operator<<(const ListVariable& a, const Variable& b) {
+		return detail::VarList().append(a).append(b);
 	}
 
-	inline detail::VarList operator<<(const detail::VarList& a, const detail::VarList& b) {
-		return detail::VarList(a, b);
+	inline detail::VarList operator<<(const ListVariable& a, const ListVariable& b) {
+		return detail::VarList().append(a).append(b);
 	}
+
+	template<typename V>
+	inline detail::VarList operator<<(const detail::VarList& a, const V& b) {
+		return detail::VarList().append(a).append(b);
+	}
+
+	template<typename V>
+	inline detail::VarList operator<<(detail::VarList&& a, const V& b) {
+		return a.append(b);
+	}
+
+
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme

@@ -38,7 +38,7 @@
 #ifndef __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_IMPL_H
 #define __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_IMPL_H
 
-#if defined(_GEMS)
+#if defined(_GEMS_SIM)
 	#include "spin_locks.gems.impl.h"
 	#include "atomic.impl.h"
 #elif defined(_WIN32) && !defined(IRT_USE_PTHREADS)

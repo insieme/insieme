@@ -121,7 +121,11 @@ namespace irp {
 		auto&& matches = collectAllPairs(pattern, root, matchTypes);
 		for(auto match : matches) lambda(match.first, match.second);
 	}
-	
+	void matchAllPairsReverse(const TreePattern& pattern, const core::NodeAddress& root, std::function<void(core::NodeAddress addr, AddressMatch match)> lambda, bool matchTypes) {
+		auto&& matches = collectAllPairs(pattern, root, matchTypes);
+		for(auto it=matches.rbegin(); it!=matches.rend(); it++) lambda(it->first, it->second);
+	}
+
 	NodePtr replaceAll(const TreePattern& pattern, const core::NodePtr& root, std::function<core::NodePtr(AddressMatch match)> lambda, bool matchTypes) {
 		// visit in preorder and collect matches, then go through them in reverse (postorder)
 		// postorder implies that we can easily handle non-overlapping results

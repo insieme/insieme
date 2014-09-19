@@ -165,11 +165,6 @@ void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* 
 
 
 
-/**
- * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
- * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
- * annotation which is handled later in the driver right after the frontend is completed. 
- */
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
 
@@ -196,6 +191,11 @@ void attach(const clang::SourceLocation& startLoc,
 			const core::NodePtr& node, 
 			conversion::Converter& fact);
 
+/**
+ * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
+ * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
+ * annotation which is handled later in the driver right after the frontend is completed.
+ */
 template <TransformationType TransTy>
 struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttachable {
 	
