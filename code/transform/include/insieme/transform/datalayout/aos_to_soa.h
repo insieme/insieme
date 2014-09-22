@@ -99,6 +99,9 @@ protected:
 			const core::StructTypePtr& newStructType);
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	void updateTuples(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 	virtual ~AosToSoa() {}

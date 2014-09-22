@@ -377,7 +377,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 
 		// fixpoint iteration to capture all variables that new a new versions with new type
 		size_t curNumOfVars = 0;
-std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
+//std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
 		while(curNumOfVars != toReplaceList.size()) {
 			curNumOfVars = toReplaceList.size();
 			collectVariables(candidate, toReplaceList, tta, scopes);
@@ -389,11 +389,11 @@ std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() 
 	// TODO clean lists to remove duplicates
 	toReplaceLists = mergeLists(toReplaceLists);
 
-for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
-	std::cout << "\nList: \n";
-	for(ExpressionPtr tr : toReplaceList.first)
-		std::cout << tr << std::endl;
-}
+//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+//	std::cout << "\nList: \n";
+//	for(ExpressionPtr tr : toReplaceList.first)
+//		std::cout << tr << std::endl;
+//}
 
 	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
@@ -457,6 +457,10 @@ for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 
 		if(!structures.empty())
 			toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
+
+		replacements.clear();
+		tta = NodeAddress(toTransform);
+		updateTuples(varReplacements, tta, replacements);
 	}
 
 
@@ -515,7 +519,7 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 				if(*potentialAlias->getType() == *transformRoot.second)
 				{
-dumpPretty(potentialAlias);
+//dumpPretty(potentialAlias);
 					if(ExpressionPtr varToAdd = extractVariable(potentialAlias)) {
 //dumpPretty(expr );
 						// no need to add the same variable again
@@ -530,11 +534,11 @@ dumpPretty(potentialAlias);
 						if(varToAdd->getNodeType() == NT_Variable ||
 								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
 							if(ia::cba::mayAlias(expr, potentialAlias)) {
-								auto newly = toReplaceList.insert(varToAdd);
-if(newly.second) {
-std::cout << "Expr:  " << *expr;
-std::cout << " alias: " << *potentialAlias << std::endl;
-}
+								/*auto newly =*/ toReplaceList.insert(varToAdd);
+//if(newly.second) {
+//std::cout << "Expr:  " << *expr;
+//std::cout << " alias: " << *potentialAlias << std::endl;
+//}
 							}
 						}
 					}
@@ -1113,6 +1117,23 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	}
 }
 
+void AosToSoa::updateTuples(const ExpressionMap& varReplacements, const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
+	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
+		const ExpressionPtr& oldVar = vr.first;
+		const ExpressionPtr& newVar = vr.second;
+
+		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
+		pattern::TreePattern tupleAccess = pirp::tupleRefElem(pattern::var("data", pattern::aT(pattern::var("tupleVar"))),
+				pattern::var("idx"), pattern::var("type"));
+		pattern::TreePattern tupleAssign = pirp::assignment(tupleAccess, structAccess);
+
+		pirp::matchAllPairs(tupleAssign, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+			std::cout << "Found: ";
+			dumpPretty(match["tupleVar"].getValue());
+		});
+	}
+}
+
 VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
 		: mgr(mgr), varsToReplace(varReplacements),
 		  typePattern(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))),
@@ -1130,9 +1151,9 @@ std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vect
 	ExpressionPtr oldVar, newVar;
 	std::map<int, ExpressionPtr> indicesToNewArgs;
 	int idx = 0;
-std::cout << "\nFUN\n";
+//std::cout << "\nFUN\n";
 	for(ExpressionPtr arg : args) {
-std::cout << "ARG: " << arg << std::endl;
+//std::cout << "ARG: " << arg << std::endl;
 
 		pattern::MatchOpt match = varWithOptionalDeref.matchPointer(arg);
 		if(match) {
