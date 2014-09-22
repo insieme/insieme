@@ -1120,7 +1120,7 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 void AosToSoa::updateTuples(const ExpressionMap& varReplacements, const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 		const ExpressionPtr& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+//		const ExpressionPtr& newVar = vr.second;
 
 		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
 		pattern::TreePattern tupleAccess = pirp::tupleRefElem(pattern::var("data", pattern::aT(pattern::var("tupleVar"))),
