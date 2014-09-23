@@ -64,7 +64,7 @@ protected:
 
 	core::CompoundStmtPtr generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl, const core::VariablePtr& newVar,
 			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
-	void addNewDecls(const core::ExpressionMap& varReplacements,const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+	void addNewDecls(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
 			core::NodePtr>& replacements);
 
@@ -100,8 +100,8 @@ protected:
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	void updateTuples(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
-			std::map<core::NodeAddress, core::NodePtr>& replacements);
+	void updateTuples(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 	virtual ~AosToSoa() {}

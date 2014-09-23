@@ -451,6 +451,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
+		updateTuples(structures, newStructType, toReplaceList.second, tta, replacements);
 
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
@@ -458,9 +459,8 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 		if(!structures.empty())
 			toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
 
-		replacements.clear();
-		tta = NodeAddress(toTransform);
-		updateTuples(varReplacements, tta, replacements);
+//		replacements.clear();
+//		tta = NodeAddress(toTransform);
 	}
 
 
@@ -521,7 +521,6 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 				{
 //dumpPretty(potentialAlias);
 					if(ExpressionPtr varToAdd = extractVariable(potentialAlias)) {
-//dumpPretty(expr );
 						// no need to add the same variable again
 						if(*varToAdd == *transformRoot.first)
 							return;
@@ -533,6 +532,9 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 						if(varToAdd->getNodeType() == NT_Variable ||
 								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
+//dumpPretty(expr );
+//std::cout << " ------------------------------- \n";
+//dumpPretty(potentialAlias);
 							if(ia::cba::mayAlias(expr, potentialAlias)) {
 								/*auto newly =*/ toReplaceList.insert(varToAdd);
 //if(newly.second) {
@@ -973,8 +975,6 @@ ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, co
 					StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
 					ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 
-					dumpPretty(match.get()["structAccess"].getValue());
-
 					ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, match.get()["structAccess"].getValue().getAddressedNode(),
 							oldVar, newVar, false).as<ExpressionPtr>();
 					ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newStructAccess, member)), index);
@@ -1117,19 +1117,41 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	}
 }
 
-void AosToSoa::updateTuples(const ExpressionMap& varReplacements, const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
+void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
+		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
+	IRBuilder builder(mgr);
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 		const ExpressionPtr& oldVar = vr.first;
-//		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second;
 
 		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
-		pattern::TreePattern tupleAccess = pirp::tupleRefElem(pattern::var("data", pattern::aT(pattern::var("tupleVar"))),
-				pattern::var("idx"), pattern::var("type"));
+		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar")),
+				pattern::var("idx"), pattern::var("type")));
 		pattern::TreePattern tupleAssign = pirp::assignment(tupleAccess, structAccess);
 
 		pirp::matchAllPairs(tupleAssign, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
-			std::cout << "Found: ";
-			dumpPretty(match["tupleVar"].getValue());
+			ExpressionAddress oldTupleAccess = match["access"].getValue().as<ExpressionAddress>();
+			ExpressionPtr oldTupleVar = match["tupleVar"].getValue().as<ExpressionAddress>();
+			TypePtr oldTupleVarType = oldTupleVar->getType();
+			TypeAddress oldComponentType = match["type"].getValue().as<LiteralAddress>()->getType();
+			ExpressionAddress idx = match["idx"].getValue().as<ExpressionAddress>();
+
+			TypePtr newTupleType = core::transform::replaceAllGen(mgr, oldTupleVarType, oldStructType, newStructType, true);
+
+			// check if local or global variable
+			LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
+
+			ExpressionPtr newTupleVar = globalTuple ?
+					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
+					builder.variable(newTupleType).as<ExpressionPtr>();
+			varReplacements[oldTupleVar] = newTupleVar;
+
+			ExpressionPtr newTupleAccess = core::transform::fixTypesGen(mgr, oldTupleAccess.as<ExpressionPtr>(), oldTupleVar, newTupleVar, true);
+
+			ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, match["structAccess"].getValue().getAddressedNode(),
+					oldVar, newVar, true).as<ExpressionPtr>();
+
+			replacements[node] = builder.assign(newTupleAccess, newStructAccess);
 		});
 	}
 }
@@ -1141,6 +1163,7 @@ VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
 				| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 		  namedVariablePattern(var("variable", variablePattern)),
 		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)){
+
 //	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
 //		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
 //	}
