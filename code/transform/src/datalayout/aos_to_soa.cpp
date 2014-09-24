@@ -451,7 +451,7 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		updateTuples(structures, newStructType, toReplaceList.second, tta, replacements);
+		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
 
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
@@ -1118,9 +1118,10 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 }
 
 void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
-		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
+
 		const ExpressionPtr& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second;
 
@@ -1131,7 +1132,7 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 
 		pirp::matchAllPairs(tupleAssign, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
 			ExpressionAddress oldTupleAccess = match["access"].getValue().as<ExpressionAddress>();
-			ExpressionPtr oldTupleVar = match["tupleVar"].getValue().as<ExpressionAddress>();
+			ExpressionAddress oldTupleVar = match["tupleVar"].getValue().as<ExpressionAddress>();
 			TypePtr oldTupleVarType = oldTupleVar->getType();
 			TypeAddress oldComponentType = match["type"].getValue().as<LiteralAddress>()->getType();
 			ExpressionAddress idx = match["idx"].getValue().as<ExpressionAddress>();
@@ -1140,13 +1141,25 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 
 			// check if local or global variable
 			LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
-
 			ExpressionPtr newTupleVar = globalTuple ?
 					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
 					builder.variable(newTupleType).as<ExpressionPtr>();
-			varReplacements[oldTupleVar] = newTupleVar;
+std::cout << "\nntv: \n";
+dumpPretty(oldTupleVar);
+dumpPretty(getRootVariable(node >> oldTupleVar, node));
 
-			ExpressionPtr newTupleAccess = core::transform::fixTypesGen(mgr, oldTupleAccess.as<ExpressionPtr>(), oldTupleVar, newTupleVar, true);
+			ExpressionPtr oldRootVar = getRootVariable(node >> oldTupleVar, node).as<ExpressionPtr>();
+			TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType(), oldStructType, newStructType, true);
+			LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
+			ExpressionPtr newRootVar = globalRoot ?
+					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
+					builder.variable(newTupleType).as<ExpressionPtr>();
+
+			structures[oldTupleVar] = newTupleVar;
+			structures[oldRootVar] = newRootVar;
+
+			ExpressionPtr newTupleAccess = core::transform::fixTypesGen(mgr, oldTupleAccess.as<ExpressionPtr>(), oldTupleVar.as<ExpressionPtr>(),
+					newTupleVar, true);
 
 			ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, match["structAccess"].getValue().getAddressedNode(),
 					oldVar, newVar, true).as<ExpressionPtr>();
@@ -1254,7 +1267,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			ExpressionPtr newArg  = itna.second;
 			// get new variable from the previously created map
 			VariablePtr newParam = varsToReplace[params[idx]].as<VariablePtr>();
-std::cout << params[idx] << std::endl;
+//std::cout << params[idx] << std::endl;
 			assert(newParam && "no replacement for parameter found");
 
 			// if oldVar was an argument, newVar will be added too and search is continued in the called function
