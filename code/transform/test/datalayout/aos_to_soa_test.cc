@@ -320,7 +320,7 @@ TEST(DataLayout, Tuple) {
 		"	ref.delete(*t);"
 		"}"
 	));
-
+return;
 	datalayout::AosToSoa ats(code);
 
 	dumpPretty(code);
