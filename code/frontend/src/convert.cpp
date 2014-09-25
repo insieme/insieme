@@ -74,6 +74,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -1137,7 +1138,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			for (size_t i = 0; i < inits.size(); ++i) {
 
 				auto tmp = getInitExpr(membTy, inits[i] );
-				if (frontend::utils::isRefVector(tmp->getType()) && frontend::utils::isRefArray(membTy)){
+				if (core::types::isRefVector(tmp->getType()) && frontend::utils::isRefArray(membTy)){
 					tmp = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), tmp);
 				}
 				elements.push_back(tmp);
@@ -1293,7 +1294,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
 	if ( elementType.isa<core::VectorTypePtr>() ){
 		core::ExpressionPtr initVal = init;
-		if (utils::isRefVector(init->getType())) {
+		if (core::types::isRefVector(init->getType())) {
 			initVal =  builder.deref(initVal);
 		}
 		//it can be a partial initialization

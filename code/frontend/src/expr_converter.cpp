@@ -72,6 +72,8 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/core/types/cast_tool.h"
+
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/annotations/c/include.h"
@@ -375,7 +377,7 @@ core::ExpressionPtr Converter::ExprConverter::asRValue(const core::ExpressionPtr
 	// adds a deref to expression in case expression is of a ref type, only if the target type is
 	// not a vector, nor an array, and not a ref ref
 	if (core::analysis::isRefType(value->getType()) &&
-		!(utils::isRefVector(type) || utils::isRefArray(type)) ){
+		!(core::types::isRefVector(type) || utils::isRefArray(type)) ){
 		return builder.deref(value);
 	}
 	return value;

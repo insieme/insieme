@@ -662,37 +662,6 @@ core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& t
 	return ret;
 }
 
-bool isArray(const core::TypePtr& type) {
-	return type->getNodeType() == core::NT_ArrayType;
-}
-
-bool isRefArray(const core::TypePtr& type) {
-	return type->getNodeType() == core::NT_RefType && 
-		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType;
-}
-
-bool isRefRef(const core::TypePtr& type) {
-	return type->getNodeType() == core::NT_RefType && 
-		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_RefType;
-}
-
-bool isVector(const core::TypePtr& type) {
-	return type->getNodeType() == core::NT_VectorType;
-}
-
-bool isRefVector(const core::TypePtr& type) {
-	return type->getNodeType() == core::NT_RefType && 
-		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
-}
-
-bool isNullPtrExpression(const core::ExpressionPtr& expr){
-	auto mgr (expr->getNodeManager());
-
-	return (core::analysis::isCallOf( expr, mgr.getLangBasic().getRefReinterpret()) && 
-			*mgr.getLangBasic().getRefNull() == *(expr.as<core::CallExprPtr>()[0]) ) || 
-			*mgr.getLangBasic().getRefNull() == *expr;
-}
-
 } // end utils namespace
 } // end frontend namespace 
 } // end insieme namespace 
