@@ -821,9 +821,9 @@ void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global
 #ifdef LOCAL_MODE
 	if (node == 0) {
 			irt_ocl_local_kernel* lkernel = (irt_ocl_local_kernel*)(kernel->kernel_add);
-		#ifdef IRT_OCL_DEBUG
+
 			IRT_INFO("Running Opencl Kernel in \"%s\"\n", lkernel->local_dev->name);
-		#endif
+
 			irt_spin_lock(&(lkernel->kernel_lock));
 
 			lkernel->type = IRT_OCL_NDRANGE;

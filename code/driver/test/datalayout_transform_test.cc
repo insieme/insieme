@@ -64,7 +64,7 @@ TEST(DatalayoutTransormTest, OclTest) {
 	job.setDefinition("UNIX", "");
 	job.addIncludeDirectory(SRC_ROOT_DIR "transform/test/datalayout/inputs/");
 	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // ocl_device.h
-	job.setOption(frontend::ConversionJob::OpenCL);
+//	job.setOption(frontend::ConversionJob::OpenCL);
 	core::ProgramPtr program = job.execute(manager, false);
 	LOG(INFO) << "Done.";
 

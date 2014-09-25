@@ -50,6 +50,7 @@ namespace transform {
 namespace datalayout {
 
 class AosToSoa {
+protected:
 	core::NodeManager& mgr;
 
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
@@ -63,7 +64,7 @@ class AosToSoa {
 
 	core::CompoundStmtPtr generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl, const core::VariablePtr& newVar,
 			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
-	void addNewDecls(const core::ExpressionMap& varReplacements,const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+	void addNewDecls(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
 			core::NodePtr>& replacements);
 
@@ -98,6 +99,9 @@ class AosToSoa {
 			const core::StructTypePtr& newStructType);
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
+
+	void updateTuples(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 	virtual ~AosToSoa() {}
