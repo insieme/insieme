@@ -444,20 +444,14 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions options = CommandLineOptions::parse(argc, argv);
 	if (!options.valid) return 0;		// it was a help or about request
+	string backendName; // needed now so that we can sanitize user input early (string given to --backend option)
+	be::BackendPtr backend;
 
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.LogLevel), options.Verbosity);
 	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
-
-	// first of all, parse the command line options and do backend selection
-	string backendName;
-	be::BackendPtr backend;
-	if (!options.Backend.empty()) {
-		std::tie(backendName, backend) = selectBackend(program, options);
-		options.Backend=backendName; // sanitize user input
-	}
 
 	// try to read the input sources and do some benchmarking
 	try {
@@ -475,6 +469,12 @@ int main(int argc, char** argv) {
 			// and applies them.
 			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
 					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
+
+			// after reading in the source files, we need to do backend selection
+			if (!options.Backend.empty()) {
+				std::tie(backendName, backend) = selectBackend(program, options);
+				options.Backend=backendName; // sanitize user input
+			}
 
 			printIR(program, options);
 
