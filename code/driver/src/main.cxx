@@ -62,6 +62,10 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/transformation.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -327,6 +331,19 @@ namespace {
 				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
 	}
 
+	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
+	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
+		if (!options.UsePM) return program;
+		using namespace insieme::transform;
+		std::vector<TransformationPtr> tr;
+		tr.push_back(std::make_shared<insieme::transform::polyhedral::LoopParallelize>());
+
+		// for all nodes x | if x is SCoP => perform transformation (tr)
+		auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
+		program = transform->apply(program);
+		return program;
+	}
+
 	//***************************************************************************************
 	// 				GRAPH DUMP: Dump the IR in a graphical form using DOT
 	//***************************************************************************************
@@ -460,6 +477,7 @@ int main(int argc, char** argv) {
 
 			// Perform SCoP region analysis
 			markSCoPs(program, errors, options);
+			program=SCoPTransformation(program, options);
 
 			// IR statistics
 			showStatistics(program, options);

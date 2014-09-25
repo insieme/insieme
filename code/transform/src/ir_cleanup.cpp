@@ -56,22 +56,21 @@
 #include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/transform/dfabased/dead_variables.h"
 
+#include <ostream>
+#include <execinfo.h>
+
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
 
 
+/** Is it just me, or is this function really never called? If I am wrong, please document the behaviour, and the
+relationship with the --cleanup/-C command line switch! */
 core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
-
-	// start by doing nothing ..
 	core::NodePtr res = node;
 
 	res = deadBranchElimination(res);
-
-	//res = polyhedralSemplification(res);
-
 	res = eliminateRedundantAssignments(res);
-
 	res = eliminatePseudoArrays(res);
 
 	if(constantPropagation) {
@@ -80,7 +79,6 @@ core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
 		res = removeDeadVariables(res->getNodeManager(), res);
 		res = core::transform::simplify(res->getNodeManager(), res);
 	}
-	// done
 	return res;
 }
 

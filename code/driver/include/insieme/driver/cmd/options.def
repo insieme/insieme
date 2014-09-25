@@ -62,7 +62,7 @@ FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables gen
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
 FLAG("show-line-no",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
 FLAG("use-pm",                          "use-pm",            UsePM,		false,	"Perform code transformations using the Polyhedral Model")
-FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
+FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark SCoPs (Static COntrol Parts) in the IR (analysis only)")
 FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
 FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
 FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")

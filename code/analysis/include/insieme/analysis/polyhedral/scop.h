@@ -58,14 +58,11 @@ class Formula;
 
 namespace analysis { namespace polyhedral { namespace scop {
 
-/**************************************************************************************************
- * Expection which is thrown when a particular tree is defined to be not a static control part. This
- * exception has to be forwarded until the root containing this node which has to be defined as a
- * non ScopRegion
- * 
- * Because this exception is only used within the implementation of the ScopRegion visitor, it is
- * defined in the anonymous namespace and therefore not visible outside this translation unit.
- *************************************************************************************************/
+/** Expection which is thrown when a particular tree is defined to be not a static control part. This exception has to
+be forwarded until the root containing this node which has to be defined as a non ScopRegion
+
+Because this exception is only used within the implementation of the ScopRegion visitor, it is defined in the anonymous
+namespace and therefore not visible outside this translation unit. */
 class NotASCoP : public insieme::utils::TraceableException {
 	core::NodePtr root;
 	std::string msg;
@@ -98,27 +95,23 @@ typedef std::vector<core::NodeAddress> 					AddressList;
 typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
 typedef std::list<SubScop> 								SubScopList;
 
-/************************************************************************************************** 
- * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
- * The IterationVector which is valid within the SCoP body and the set of constraints which define
- * the entry point for this SCoP.
- *
- * This annotation is attached to every node introducing changes to the iteration domain. Nodes
- * which carries ScopAnnotations are: ForLoops, IfStmt and LambdaExpr. 
- *
- * Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present)
- * and the list of ref accesses directly present in this region. Accesses in the sub region are not
- * directly listed in the current region but retrieval is possible via the aforementioned pointer to
- * the sub scops. 
- *************************************************************************************************/
+/** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
+which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.
+
+This annotation is attached to every node introducing changes to the iteration domain. Nodes which carries
+ScopAnnotations are: ForLoops, IfStmt and LambdaExpr.
+
+Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present) and the list of ref
+accesses directly present in this region. Accesses in the sub region are not directly listed in the current region but
+retrieval is possible via the aforementioned pointer to the sub scops. */
 struct ScopRegion: public core::NodeAnnotation {
 
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> 	KEY;
 
-	// This class keeps the information on how a particular reference is accessed.  This is slightly
-	// different from the DefUse::Ref class as this one also include information related to the
-	// conversion of the reference into the polyhedral model 
+	/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
+	DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
+	model */
 	struct Reference : public boost::noncopyable {
 		core::ExpressionAddress 	 		refExpr;
 		Ref::UseType						usage;
@@ -144,20 +137,16 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	typedef std::shared_ptr<Reference> ReferencePtr;
 
-	/**************************************************************************************************
-	 * ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both
-	 * direct and contained in sub-scops). 
-	 *
-	 * A statement into a SCoP has 3 piece of information associated:
-	 * 	- Iteration domain:    which define the domain on which this statement is valid
-	 * 	- Scattering function: which define the order of execution with respect of other statements in
-	 * 						   the SCoP region
-	 *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
-	 *              the statement. 
-	 *
-	 * This is information is not computed when the the SCoP region is first build but instead on demand
-	 * (lazy) and cached for future requests. 
-	 *************************************************************************************************/
+	/** ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both direct and
+	contained in sub-scops).
+
+	A statement into a SCoP has 3 piece of information associated:
+	  - Iteration domain:    which define the domain on which this statement is valid
+	  - Scattering function: which define the order of execution with respect of other statements in the SCoP region
+	  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within the statement.
+
+	This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
+	for future requests. */
 	struct Stmt { 
 
 		// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
@@ -279,13 +268,9 @@ private:
 	bool valid;
 };
 
-/**************************************************************************************************
- * AccessFunction : this annotation is used to annotate array subscript expressions with the
- * equality constraint resulting from the access function. 
- *
- * for example the subscript operation A[i+j-N] will generate an equality constraint of the type
- * i+j-N==0. Constraint which is used to annotate the expression.
- *************************************************************************************************/
+/** AccessFunction : this annotation is used to annotate array subscript expressions with the equality constraint
+resulting from the access function. For example the subscript operation A[i+j-N] will generate an equality constraint
+of the type i+j-N==0. Constraint which is used to annotate the expression. */
 class AccessFunction: public core::NodeAnnotation {
 	IterationVector 	iterVec;
 	AffineFunction 	access;
