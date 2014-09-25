@@ -736,13 +736,6 @@ ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
 	    scalarToVector(subExpr->getType(), intLit(0)) : types::smartCast(subExpr->getType(), intLit(0));
 
-	if (core::analysis::isLongLong(subExpr->getType())) {
-	    if (core::analysis::isSignedLongLong(subExpr->getType()))
-            elem = callExpr(manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong(), intLit(0));
-        else 
-            elem = callExpr(manager.getLangExtension<lang::IRppExtensions>().getULongToULongLong(), intLit(0));
-    }
-
 	//we have to check if it is a literal. if
 	//it is a literal we need to create a new
 	//literal instead of a call expr
