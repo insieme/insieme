@@ -35,7 +35,6 @@
  */
 
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/source_locations.h"
 

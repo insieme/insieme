@@ -158,45 +158,6 @@ namespace {
 	}
 
 
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr) {
-		assert(expr->getType()->getNodeType() == core::NT_RefType);
-		
-		core::IRBuilder builder( expr->getNodeManager() );
-
-		// construct result type
-		core::TypePtr&& resType = 
-			builder.refType(builder.arrayType(core::analysis::getReferencedType(expr->getType())));
-
-		// simple case distinction among structure of expression
-		if (expr->getNodeType() == core::NT_CallExpr) {
-			const core::lang::BasicGenerator& basic = builder.getLangBasic();
-			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
-
-			// check invoked function
-			try {
-				// if it is vector-ref-element:
-				if (basic.isVectorRefElem(call->getFunctionExpr()) && 
-					core::arithmetic::toFormula(call->getArgument(1)).isZero()
-				) {
-					// convert vector to array instead
-					return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
-				}
-
-				// ... or array.ref.element ...
-				if (basic.isArrayRefElem1D(call->getFunctionExpr()) && 
-					core::arithmetic::toFormula(call->getArgument(1)).isZero()
-				) {
-					// skip this step!
-					return call->getArgument(0);
-				}
-
-			} catch (const core::arithmetic::NotAFormulaException& ne) {
-				// => subscript is not zero => use default handling
-			}
-		}
-		// fall-back solution => use scalar to array literal
-		return builder.callExpr(resType, builder.getLangBasic().getScalarToArray(), expr);
-	}
 
 } // anonymous namespace
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -239,6 +200,9 @@ namespace {
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	core::ExpressionPtr smartCast (const core::ExpressionPtr& expr, const core::TypePtr& type){
+		return smartCast(type, expr);
+	}
 	core::ExpressionPtr smartCast (const core::TypePtr& type, const core::ExpressionPtr& expr){
 
 		if (type == expr->getType()){
@@ -1058,6 +1022,45 @@ namespace {
 		//assert(false && "Cast conversion not supported!");
 	}
 
+	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr) {
+		assert(expr->getType()->getNodeType() == core::NT_RefType);
+		
+		core::IRBuilder builder( expr->getNodeManager() );
+
+		// construct result type
+		core::TypePtr&& resType = 
+			builder.refType(builder.arrayType(core::analysis::getReferencedType(expr->getType())));
+
+		// simple case distinction among structure of expression
+		if (expr->getNodeType() == core::NT_CallExpr) {
+			const core::lang::BasicGenerator& basic = builder.getLangBasic();
+			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
+
+			// check invoked function
+			try {
+				// if it is vector-ref-element:
+				if (basic.isVectorRefElem(call->getFunctionExpr()) && 
+					core::arithmetic::toFormula(call->getArgument(1)).isZero()
+				) {
+					// convert vector to array instead
+					return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
+				}
+
+				// ... or array.ref.element ...
+				if (basic.isArrayRefElem1D(call->getFunctionExpr()) && 
+					core::arithmetic::toFormula(call->getArgument(1)).isZero()
+				) {
+					// skip this step!
+					return call->getArgument(0);
+				}
+
+			} catch (const core::arithmetic::NotAFormulaException& ne) {
+				// => subscript is not zero => use default handling
+			}
+		}
+		// fall-back solution => use scalar to array literal
+		return builder.callExpr(resType, builder.getLangBasic().getScalarToArray(), expr);
+	}
 
 }  // types
 }  // core

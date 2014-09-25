@@ -39,7 +39,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
 

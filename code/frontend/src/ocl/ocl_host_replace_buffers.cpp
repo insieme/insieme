@@ -48,7 +48,6 @@
 
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
-#include "insieme/frontend/utils/ir_cast.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;

@@ -40,7 +40,6 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -244,7 +243,7 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 		res = insieme::core::types::castScalar(targetType, res);
 	}
 	else{
-		res = utils::cast(res, targetType);
+		res = core::types::smartCast(targetType, res);
 	}
 
 	// if nothing has changed we are done
@@ -1041,8 +1040,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			 binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType())
 			) {
 
-			lhs = utils::cast(lhs, exprTy);
-			rhs = utils::cast(rhs, exprTy);
+			lhs = core::types::smartCast(lhs, exprTy);
+			rhs = core::types::smartCast(rhs, exprTy);
 
 			// generate a ocl_vector - scalar operation
 			opFunc = gen.getOperator(lhs->getType(), op);
@@ -1051,9 +1050,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
 				// check if we can use the type of the first argument as return type
 				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
-					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
+					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, core::types::smartCast(rhs, lhs->getType())));
 				} else { // let deduce it otherwise
-					return (retIr = builder.callExpr(opFunc, lhs, utils::cast(rhs, lhs->getType())));
+					return (retIr = builder.callExpr(opFunc, lhs, core::types::smartCast(rhs, lhs->getType())));
 				}
 			else {
 				frontend_assert(false) << "old stuff needed, tell Klaus\n";
@@ -1062,8 +1061,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		} else if((binOp->getLHS()->getType().getUnqualifiedType()->isVectorType() ||
 					binOp->getRHS()->getType().getUnqualifiedType()->isVectorType()) ) {
 
-			lhs = utils::cast(lhs, exprTy);
-			rhs = utils::cast(rhs, exprTy);
+			lhs = core::types::smartCast(lhs, exprTy);
+			rhs = core::types::smartCast(rhs, exprTy);
 
 			const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
 			auto type = lhs->getType();
@@ -1128,8 +1127,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// while they are converted into char or bool int IR. we need to recover the original
 			// CLANG typing
 			if (baseOp != clang::BO_LAnd && baseOp != clang::BO_LOr) {
-				lhs = utils::cast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
-				rhs = utils::cast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
+				lhs = core::types::smartCast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
+				rhs = core::types::smartCast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
 			}
 
 			exprTy = gen.getBool();
@@ -1140,8 +1139,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 			// TODO: would love to remove this, but some weirdos still need this cast
 			// somehow related with char type. is treated as integer everywhere, not in ir
-				lhs = utils::cast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
-				rhs = utils::cast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
+				lhs = core::types::smartCast(lhs, convFact.convertType(binOp->getLHS()->getType()) );
+				rhs = core::types::smartCast(rhs, convFact.convertType(binOp->getRHS()->getType()) );
 
 
             if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
@@ -1255,7 +1254,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 			retIr = asLValue(retIr);
 
 			frontend_assert(retIr->getType().isa<core::RefTypePtr>()) << "not a ref? " << retIr << " : " << retIr->getType();
-			return (retIr = utils::refScalarToRefArray(retIr));
+			return (retIr = core::types::refScalarToRefArray(retIr));
 		}
 	// *a
 	case clang::UO_Deref: {
@@ -1299,7 +1298,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		// !a
 	case clang::UO_LNot:
 		if( !gen.isBool(subExpr->getType()) ) {
-			subExpr = utils::cast(subExpr, gen.getBool());
+			subExpr = core::types::smartCast(subExpr, gen.getBool());
 		}
 		frontend_assert( gen.isBool(subExpr->getType()) );
 
@@ -1408,8 +1407,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
                 falseExpr = builder.toCppRef(falseExpr);        }
 
 		if(trueExpr->getType() != falseExpr->getType()) {
-			trueExpr  = utils::cast(trueExpr, retTy);
-			falseExpr = utils::cast(falseExpr, retTy);
+			trueExpr  = core::types::smartCast(trueExpr, retTy);
+			falseExpr = core::types::smartCast(falseExpr, retTy);
 		}
 		else{
 			retTy = trueExpr->getType();
@@ -1636,7 +1635,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 
 	// fix type
 	if(exprToReturn->getType() != lambdaRetType) {
-		exprToReturn = utils::cast(exprToReturn, lambdaRetType);
+		exprToReturn = core::types::smartCast(exprToReturn, lambdaRetType);
 	}
 	core::StatementPtr retExpr = convFact.builder.returnStmt(exprToReturn);
     newBody.push_back(retExpr);

@@ -45,7 +45,6 @@
 
 #include "insieme/frontend/omp/omp_annotation.h"
 
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
@@ -1302,7 +1301,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			return (retIr = initVal);
 		}
 
-		return (retIr = utils::cast( initVal, elementType));
+		return (retIr = core::types::smartCast( initVal, elementType));
 	}
 
     //FIXME: check if this is enough

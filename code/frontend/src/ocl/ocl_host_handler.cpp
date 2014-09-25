@@ -37,7 +37,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"

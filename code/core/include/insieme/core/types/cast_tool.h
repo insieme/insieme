@@ -58,6 +58,7 @@ namespace types {
 	 * 	 @return a casted/modified expression with the rightfull type
 	 */
 	core::ExpressionPtr smartCast (const core::TypePtr& type, const core::ExpressionPtr& expr);
+	core::ExpressionPtr smartCast (const core::ExpressionPtr& expr, const core::TypePtr& type );
 
 
 	/**
@@ -69,6 +70,7 @@ namespace types {
 
 	ExpressionPtr convertExprToType(const IRBuilder& builder, const TypePtr& trgTy, ExpressionPtr expr);
 
+	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//  some other tools
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////

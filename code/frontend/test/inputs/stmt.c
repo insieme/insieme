@@ -98,7 +98,7 @@ void unary_op_test() {
 	#pragma test "( *v100)"
 	+a;
 
-	#pragma test "(CAST<int<4>>(0)-( *v100))"
+	#pragma test "(0-( *v100))"
 	-a;
 
 	#pragma test "decl ref<ref<array<int<4>,1>>> v0 = ( var(scalar.to.array(v100)))"

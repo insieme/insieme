@@ -41,7 +41,6 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/analysis/expr_analysis.h"

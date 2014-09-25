@@ -48,7 +48,6 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/frontend/utils/cast_tool.h"
 
-#include "insieme/frontend/utils/ir_cast.h"
 
 #include <clang/AST/Expr.h>
 #include <clang/AST/Stmt.h>

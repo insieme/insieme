@@ -54,7 +54,6 @@
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
-#include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 

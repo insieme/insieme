@@ -56,7 +56,6 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/macros.h"
@@ -518,7 +517,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			placeHolder = builder.callExpr( builder.arrayType(type),
 											builder.getLangBasic().getArrayCreate1D(),
 											builder.getTypeLiteral(type),
-											utils::cast(arrSizeExpr, gen.getUInt4()));
+											core::types::smartCast(arrSizeExpr, gen.getUInt4()));
 			retExpr = builder.refNew(placeHolder);
 		} else {
 			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));

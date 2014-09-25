@@ -45,6 +45,8 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/config.h"
 
+#include <cstdlib>
+
 namespace insieme {
 namespace utils {
 namespace compiler {
@@ -52,9 +54,12 @@ namespace compiler {
 	namespace fs = boost::filesystem;
 
 	Compiler Compiler::getDefaultC99Compiler() {
-		// create a default version of a C99 compiler
-//		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
-		Compiler res("gcc");
+
+		const char *envVar = std::getenv("CC");
+		if (envVar == nullptr) {
+			envVar = "gcc";
+		}
+		Compiler res(envVar);
 		res.addFlag("-x c");
 		res.addFlag("-Wall");
 		res.addFlag("--std=gnu99");
@@ -63,7 +68,13 @@ namespace compiler {
 	}
 
 	Compiler Compiler::getDefaultCppCompiler() {
-		Compiler res("gcc");
+
+		const char *envVar = std::getenv("CC");
+		if (envVar == nullptr) {
+			envVar = "gcc";
+		}
+
+		Compiler res(envVar);
 		res.addFlag("-x c++");
 		res.addFlag("-lstdc++");
 		res.addFlag("-Wall");
