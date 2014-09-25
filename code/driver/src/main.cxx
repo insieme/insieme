@@ -334,12 +334,15 @@ namespace {
 	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
 	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.UsePM) return program;
+		std::cout << "### We will be using the backend: " << options.Backend << std::endl;
+
+		// filter SCoPs and build up the polyhedral transformation pipeline
 		using namespace insieme::transform;
 		std::vector<TransformationPtr> tr;
 		tr.push_back(std::make_shared<insieme::transform::polyhedral::LoopParallelize>());
-
-		// for all nodes x | if x is SCoP => perform transformation (tr)
 		auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
+
+		// apply transformation and return resulting program
 		program = transform->apply(program);
 		return program;
 	}
@@ -439,7 +442,7 @@ namespace {
  */
 int main(int argc, char** argv) {
 
-	const CommandLineOptions options = CommandLineOptions::parse(argc, argv);
+	CommandLineOptions options = CommandLineOptions::parse(argc, argv);
 	if (!options.valid) return 0;		// it was a help or about request
 
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.LogLevel), options.Verbosity);
@@ -447,6 +450,16 @@ int main(int argc, char** argv) {
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
+
+	// first of all, parse the command line options and do backend selection
+	string backendName;
+	be::BackendPtr backend;
+	if (!options.Backend.empty()) {
+		std::tie(backendName, backend) = selectBackend(program, options);
+		options.Backend=backendName; // sanitize user input
+	}
+
+	// try to read the input sources and do some benchmarking
 	try {
 		if(!options.InputFiles.empty()) {
 
@@ -487,38 +500,28 @@ int main(int argc, char** argv) {
 
 		}
 
-		{
-			// see whether a backend has been selected
-			if (!options.Backend.empty()) {
+		// write program output only if a backend has been selected
+		if (!backendName.empty()) {
+			openBoxTitle("Converting to TargetCode");
 
-				openBoxTitle("Converting to TargetCode");
+			utils::measureTimeFor<INFO>( backendName, [&](){
+				// convert code
+				be::TargetCodePtr targetCode = backend->convert(program);
+				LOG(INFO) << "\n" << *targetCode; // do logger output before writing to a file
 
-				string backendName;
-				be::BackendPtr backend;
+				// select output target
+				if(!options.Output.empty()) {
+					// write result to file ...
+					std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
+					outFile << *targetCode;
+					outFile.close();
 
-				std::tie(backendName, backend) = selectBackend(program, options);
+					// TODO: reinstate rewriter when fractions of programs are supported as entry points
+					return;
+				}
+			});
 
-				utils::measureTimeFor<INFO>( backendName, [&](){
-					// convert code
-					be::TargetCodePtr targetCode = backend->convert(program);
-
-					// select output target
-					if(!options.Output.empty()) {
-						// write result to file ...
-						std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
-						outFile << *targetCode;
-						outFile.close();
-
-						// TODO: reinstate rewriter when fractions of programs are supported as entry points
-	//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), options.Output);
-						return;
-					}
-					// just write result to logger
-					LOG(INFO) << "\n" << *targetCode;
-				});
-
-				closeBox();
-			}
+			closeBox();
 		}
 
 	} catch (fe::ClangParsingError& e) {
