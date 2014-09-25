@@ -36,61 +36,29 @@
 
 #pragma once
 
-#include <fstream>
-#include "insieme/analysis/cba/cba.h"
-#include "insieme/analysis/cba/cba_debug.h"
+#include "insieme/analysis/cba/framework/cba.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
+	/**
+	 * A range of file types supported by the debug printer.
+	 */
+	enum FileType {
+		PDF, PNG, SVG
+	};
 
-	namespace {
+	/**
+	 * The actual function printing the debug plot.
+	 */
+	void createDotDump(const CBA& analysis, const string& name = "solution", FileType type = SVG);
 
-		inline void printConstraints(const CBA& analysis) {
+	/**
+	 * A wrapper retrieving an annotated analysis instance from the given node and plotting its state.
+	 */
+	void createDotDump(const core::NodeAddress& node, const string& name = "solution", FileType type = SVG);
 
-			std::cout << "Constraints:\n";
-			analysis.printConstraints();
-		}
-
-		inline void printConstraints(const NodeAddress& node) {
-			// extract context and print equations
-			printConstraints(getCBA(node));
-		}
-
-		inline void printSolution(const CBA& analysis) {
-
-			std::cout << "Solution:\n";
-			analysis.printSolution();
-		}
-
-		inline void printSolution(const NodeAddress& node) {
-			// extract context and print equations
-			printSolution(getCBA(node));
-		}
-
-		inline void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		inline void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
-	}
-	
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

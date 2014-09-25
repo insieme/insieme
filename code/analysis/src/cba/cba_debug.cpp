@@ -34,63 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/cba/cba_debug.h"
 
 #include <fstream>
-#include "insieme/analysis/cba/cba.h"
-#include "insieme/analysis/cba/cba_debug.h"
+#include "insieme/utils/assert.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 
-	using namespace core;
+	void createDotDump(const CBA& analysis, const string& name, FileType type) {
+		std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
+		{
+			// open file
+			std::ofstream out("solution.dot", std::ios::out );
 
-	namespace {
-
-		inline void printConstraints(const CBA& analysis) {
-
-			std::cout << "Constraints:\n";
-			analysis.printConstraints();
+			// write file
+			analysis.plot(out);
 		}
 
-		inline void printConstraints(const NodeAddress& node) {
-			// extract context and print equations
-			printConstraints(getCBA(node));
+		string ext = "svg";
+
+		// switch the type
+		switch(type){
+			case PDF: ext = "png"; break;
+			case PNG: ext = "pdf"; break;
+			case SVG: ext = "svg"; break;
+			default: assert_fail() << "Invalid type: " << type << "\n"; break;
 		}
 
-		inline void printSolution(const CBA& analysis) {
-
-			std::cout << "Solution:\n";
-			analysis.printSolution();
-		}
-
-		inline void printSolution(const NodeAddress& node) {
-			// extract context and print equations
-			printSolution(getCBA(node));
-		}
-
-		inline void createDotDumpRoots(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plotRoots(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		inline void createDotDumpRoots(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDumpRoots(getCBA(node));
-		}
+		// create plot
+		system(format("dot -T%s solution.dot -o %s.%s", ext, name, ext).c_str());
 	}
-	
+
+	void createDotDump(const core::NodeAddress& node, const string& name, FileType type) {
+		// extract context and dump it
+		createDotDump(getCBA(node), name, type);
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

@@ -241,12 +241,15 @@ namespace cba {
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 			static const Formula unknown;
 
-			// conduct std-procedure
-			super::visitCallExpr(call, ctxt, constraints);
-
 			// check whether it is a literal => otherwise basic data flow is handling it
 			auto fun = call->getFunctionExpr();
-			if (!fun.isa<LiteralPtr>()) return;
+			if (!fun.isa<LiteralPtr>()) {
+				// conduct std-procedure
+				super::visitCallExpr(call, ctxt, constraints);
+
+				// nothing else
+				return;
+			}
 
 			// get some labels / ids
 			auto A_res = cba.getVar(A, cba.getLabel(call), ctxt);
@@ -263,19 +266,10 @@ namespace cba {
 				return;
 			}
 
-			// only care for integer expressions calling literals
-			if (!base.isInt(call->getType()) && !base.isGenArithmeticOp(fun)) return;
-
-			// handle unary literals
-			if (call.size() == 1u) {
-				if (base.isRefDeref(fun)) {
-					return;		// has been handled by super!
-				}
-			}
-
 			// and binary operators
 			if (call.size() != 2u) {
-				// this value is unknown (by default)
+				// this value is unknown
+				super::visitCallExpr(call, ctxt, constraints);
 				return;
 			}
 
@@ -306,7 +300,7 @@ namespace cba {
 			}
 
 			// otherwise it is unknown
-			constraints.add(elem(unknown, A_res));
+			super::visitCallExpr(call, ctxt, constraints);
 		}
 
 		void visitCastExpr(const CastExprInstance& cast, const Context& ctxt, Constraints& constraints) {
