@@ -241,7 +241,7 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 		res =  core::analysis::unwrapCppRef(res);
 	}
 	else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(type)) {
-		res = insieme::frontend::utils::castScalar(targetType, res);
+		res = insieme::core::types::castScalar(targetType, res);
 	}
 	else{
 		res = utils::cast(res, targetType);
@@ -377,7 +377,7 @@ core::ExpressionPtr Converter::ExprConverter::asRValue(const core::ExpressionPtr
 	// adds a deref to expression in case expression is of a ref type, only if the target type is
 	// not a vector, nor an array, and not a ref ref
 	if (core::analysis::isRefType(value->getType()) &&
-		!(core::types::isRefVector(type) || utils::isRefArray(type)) ){
+		!(core::types::isRefVector(type) || core::types::isRefArray(type)) ){
 		return builder.deref(value);
 	}
 	return value;
@@ -907,7 +907,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
             if(compOp->getComputationLHSType() != binOp->getType()) {
                 exprTy = convFact.convertType(compOp->getComputationLHSType());
-                subExprLHS = frontend::utils::castScalar(exprTy, subExprLHS);
+                subExprLHS = core::types::castScalar(exprTy, subExprLHS);
             }
 
 	        core::ExpressionPtr opFunc;
@@ -921,7 +921,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 
             if(compOp->getComputationResultType() != binOp->getType()) {
-                rhs = frontend::utils::castScalar(convFact.convertType( binOp->getType() ), rhs);
+                rhs = core::types::castScalar(convFact.convertType( binOp->getType() ), rhs);
             }
 		}
 
@@ -987,7 +987,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
 
-			if (frontend::utils::isRefArray (lhs->getType().as<core::RefTypePtr>()->getElementType()) && frontend::utils::isRefVector(rhs->getType() ))
+			if (core::types::isRefArray (lhs->getType().as<core::RefTypePtr>()->getElementType()) && core::types::isRefVector(rhs->getType() ))
 				rhs = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), rhs);
 
 			//OK!! here there is a problem,
@@ -1000,9 +1000,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// some casts are not pressent in IR
 			if (gen.isPrimitive(rhs->getType())) {
                 if(core::analysis::isVolatileType(GET_REF_ELEM_TYPE(lhs->getType()))) {
-                    rhs = builder.makeVolatile(frontend::utils::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
+                    rhs = builder.makeVolatile(core::types::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
                 } else {
-                    rhs = frontend::utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
+                    rhs = core::types::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
                 }
 			}
 
@@ -1020,8 +1020,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 	if ( baseOp == clang::BO_LAnd || baseOp == clang::BO_LOr ) {
-		lhs = utils::castToBool(lhs);
-		rhs = utils::castToBool(rhs);
+		lhs = core::types::castToBool(lhs);
+		rhs = core::types::castToBool(rhs);
 
 		// lazy evaluation of RHS
 		// generate a bind call
@@ -1116,8 +1116,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 		// especial case to deal with the pointer distance operation
 		//  x = ptr1 - ptr2
-		if (utils::isRefArray(lhs->getType()) &&
-			utils::isRefArray(rhs->getType()) &&
+		if (core::types::isRefArray(lhs->getType()) &&
+			core::types::isRefArray(rhs->getType()) &&
 			baseOp == clang::BO_Sub) {
 			return retIr = builder.callExpr(gen.getArrayRefDistance(), lhs, rhs);
 		}
@@ -1333,10 +1333,10 @@ core::ExpressionPtr Converter::ExprConverter::VisitConditionalOperator(const cla
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
 	core::ExpressionPtr condExpr  = Visit(condOp->getCond());
 
-	condExpr = utils::castToBool(condExpr);
+	condExpr = core::types::castToBool(condExpr);
 
 	// Dereference eventual references
-	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) && !builder.getLangBasic().isAnyRef(retTy)) {
+	if ( retTy->getNodeType() == core::NT_RefType && !core::types::isRefArray(retTy) && !builder.getLangBasic().isAnyRef(retTy)) {
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}
 
@@ -1451,7 +1451,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clan
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx =  frontend::utils::castScalar(gen.getUInt4(), idx);
+		idx =  core::types::castScalar(gen.getUInt4(), idx);
 	}
 
 	// BASE

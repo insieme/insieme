@@ -48,10 +48,14 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/types/cast_tool.h"
+
+
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/frontend/utils/ir_cast.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/logging.h"
@@ -507,7 +511,7 @@ void KernelReplacer::collectArguments() {
 		StatementList body;
 		ExpressionPtr idxArg = (gen.isUInt8(idx->getType()) ? idx.as<ExpressionPtr>() :	builder.castExpr(gen.getUInt8(), idx));
 
-		if(frontend::utils::isNullPtrExpression(arg)) {
+		if(core::types::isNullPtrExpression(arg)) {
 			// in this case arg is a local variable which has to be declared in host code
 			// need to read size parameter
 /*+			ExpressionPtr size;

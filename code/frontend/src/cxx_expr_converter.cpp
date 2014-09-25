@@ -85,6 +85,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/annotations/source_location.h"
@@ -533,7 +534,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 
 		if (callExpr->isArray()){
 			core::ExpressionPtr arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
-			arrSizeExpr = utils::castScalar(mgr.getLangBasic().getUInt8(), arrSizeExpr);
+			arrSizeExpr = core::types::castScalar(mgr.getLangBasic().getUInt8(), arrSizeExpr);
 
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();

@@ -54,6 +54,7 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
@@ -142,7 +143,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 		}
 		else if ( builder.getLangBasic().isBool( retExpr->getType())){
 			// attention with this, bools cast not handled in AST in C
-			retExpr = utils::castScalar(retTy, retExpr);
+			retExpr = core::types::castScalar(retTy, retExpr);
 		}
 
 		if (retExpr->getType()->getNodeType() == core::NT_RefType) {

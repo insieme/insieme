@@ -56,7 +56,6 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 
 // defines which are needed by LLVM
@@ -77,8 +76,6 @@ using namespace insieme::frontend::utils;
 namespace insieme {
 namespace frontend {
 namespace utils {
-
-
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +232,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = core::analysis::unwrapCppRef(expr);
 			}
 
-			if (isRefArray(expr->getType()))
+			if (core::types::isRefArray(expr->getType()))
 				return expr;
 
 			if (targetTy.isa<core::FunctionTypePtr>())

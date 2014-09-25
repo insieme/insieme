@@ -66,13 +66,9 @@ namespace utils {
 
 	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
 
-	bool isArray(const core::TypePtr& type);
-	bool isRefArray(const core::TypePtr& type);
 
 	core::TypePtr getArrayElement(const core::TypePtr& type);
 
-	bool isVector(const core::TypePtr& type);
-	bool isRefVector(const core::TypePtr& type);
 	bool isRefRef(const core::TypePtr& type);
 
 	core::TypePtr getVectorElement(const core::TypePtr& type);

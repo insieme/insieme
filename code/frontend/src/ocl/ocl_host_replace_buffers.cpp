@@ -36,6 +36,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/analysis/cba/analysis.h"
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -43,6 +44,8 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/types/cast_tool.h"
+
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/utils/ir_cast.h"
@@ -141,7 +144,7 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	NodeManager& mgr = size->getNodeManager();
 	IRBuilder builder(mgr);
 
-	ExpressionPtr fun = getClCreateBuffer(copyPtr, frontend::utils::isNullPtrExpression(errcode_ret), builder);
+	ExpressionPtr fun = getClCreateBuffer(copyPtr, core::types::isNullPtrExpression(errcode_ret), builder);
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
