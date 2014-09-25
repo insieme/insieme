@@ -65,6 +65,9 @@ void insieme_wi_implementation_for(irt_work_item* wi);
 void insieme_wi_implementation_pfor(irt_work_item* wi);
 void insieme_wi_startup_implementation_papi(irt_work_item* wi);
 void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi);
+void insieme_wi_startup_implementation_pfor_nested(irt_work_item* wi);
+void insieme_wi_implementation_pfor_nested_content(irt_work_item* wi);
+void insieme_wi_startup_implementation_merge_nested(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
 	{ &insieme_wi_startup_implementation_simple }
@@ -106,6 +109,18 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants_all_metrics[] = {
 	{ &insieme_wi_startup_implementation_all_metrics }
 };
 
+irt_wi_implementation_variant g_insieme_wi_startup_variants_pfor_nested[] = {
+	{ &insieme_wi_startup_implementation_pfor_nested }
+};
+
+irt_wi_implementation_variant g_insieme_wi_variants_pfor_nested_content[] = {
+	{ &insieme_wi_implementation_pfor_nested_content }
+};
+
+irt_wi_implementation_variant g_insieme_wi_startup_variants_merge_nested[] = {
+	{ &insieme_wi_startup_implementation_merge_nested }
+};
+
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, 1, g_insieme_wi_startup_variants_simple },
 	{ 2, 1, g_insieme_wi_startup_variants_multiple_metrics },
@@ -116,13 +131,16 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 7, 1, g_insieme_wi_variants_for },
 	{ 8, 1, g_insieme_wi_variants_pfor },
 	{ 9, 1, g_insieme_wi_startup_variants_papi },
-	{ 10, 1, g_insieme_wi_startup_variants_all_metrics }
+	{ 10, 1, g_insieme_wi_startup_variants_all_metrics },
+	{ 11, 1, g_insieme_wi_startup_variants_pfor_nested },
+	{ 12, 1, g_insieme_wi_variants_pfor_nested_content },
+	{ 13, 1, g_insieme_wi_startup_variants_merge_nested },
 };
 
 // initialization
 void insieme_init_context_common(irt_context* context) {
 	context->type_table_size = 1;
-	context->impl_table_size = 10;
+	context->impl_table_size = 13;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
@@ -153,12 +171,12 @@ void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 	irt_inst_region_select_metrics("cpu_time");
 
 	ir_inst_region_start(0);
-	sleep(1);
+	irt_nanosleep(1e8);
 	ir_inst_region_end(0);
 
 	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
-	EXPECT_GT(reg0->aggregated_cpu_time, 8e8);
-	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
+	EXPECT_GT(reg0->aggregated_cpu_time, 8e7);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e9);
 	EXPECT_EQ(reg0->last_cpu_time, 0);
 	EXPECT_EQ(reg0->num_executions, 1);
 }
@@ -168,14 +186,14 @@ void insieme_wi_startup_implementation_multiple_metrics(irt_work_item* wi) {
 	irt_inst_region_select_metrics("cpu_time,wall_time");
 
 	ir_inst_region_start(0);
-	sleep(1);
+	irt_nanosleep(1e8);
 	ir_inst_region_end(0);
 
 	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
-	EXPECT_GT(reg0->aggregated_cpu_time, 8e8);
-	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
-	EXPECT_GT(reg0->aggregated_wall_time, 8e8);
-	EXPECT_LT(reg0->aggregated_wall_time, 1e10);
+	EXPECT_GT(reg0->aggregated_cpu_time, 8e7);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg0->aggregated_wall_time, 8e7);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg0->last_cpu_time, 0);
 	EXPECT_EQ(reg0->last_wall_time, 0);
 	EXPECT_EQ(reg0->num_executions, 1);
@@ -186,17 +204,17 @@ void insieme_wi_startup_implementation_nested(irt_work_item* wi) {
 	irt_inst_region_select_metrics("cpu_time,wall_time");
 
 	ir_inst_region_start(0);
-		sleep(1);
+		irt_nanosleep(1e7);
 		ir_inst_region_start(1);
-			sleep(1);
+			irt_nanosleep(1e7);
 			ir_inst_region_start(2);
-				sleep(1);
+				irt_nanosleep(1e7);
 			ir_inst_region_end(2);
 			ir_inst_region_start(3);
 				ir_inst_region_start(4);
-					sleep(1);
+					irt_nanosleep(1e7);
 				ir_inst_region_end(4);
-				sleep(1);
+				irt_nanosleep(1e7);
 			ir_inst_region_end(3);
 		ir_inst_region_end(1);
 	ir_inst_region_end(0);
@@ -206,43 +224,43 @@ void insieme_wi_startup_implementation_nested(irt_work_item* wi) {
 	irt_inst_region_context_data* reg2 = &(irt_context_get_current()->inst_region_data[2]);
 	irt_inst_region_context_data* reg3 = &(irt_context_get_current()->inst_region_data[3]);
 	irt_inst_region_context_data* reg4 = &(irt_context_get_current()->inst_region_data[4]);
-	
+
 	// note: all time values in the runtime are clock ticks and only converted to ns during output
-	EXPECT_GT(reg0->aggregated_cpu_time, 1e9);
-	EXPECT_LT(reg0->aggregated_cpu_time, 1e11);
-	EXPECT_GT(reg0->aggregated_wall_time, 1e9);
-	EXPECT_LT(reg0->aggregated_wall_time, 1e11);
+	EXPECT_GT(reg0->aggregated_cpu_time, 1e7);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg0->aggregated_wall_time, 1e7);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg0->last_cpu_time, 0);
 	EXPECT_EQ(reg0->last_wall_time, 0);
 
-	EXPECT_GT(reg1->aggregated_cpu_time, 1e9);
-	EXPECT_LT(reg1->aggregated_cpu_time, 1e11);
-	EXPECT_GT(reg1->aggregated_wall_time, 1e9);
-	EXPECT_LT(reg1->aggregated_wall_time, 1e11);
+	EXPECT_GT(reg1->aggregated_cpu_time, 1e7);
+	EXPECT_LT(reg1->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg1->aggregated_wall_time, 1e7);
+	EXPECT_LT(reg1->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg1->last_cpu_time, 0);
 	EXPECT_EQ(reg1->last_wall_time, 0);
 
-	EXPECT_GT(reg2->aggregated_cpu_time, 1e9);
-	EXPECT_LT(reg2->aggregated_cpu_time, 1e11);
-	EXPECT_GT(reg2->aggregated_wall_time, 1e9);
-	EXPECT_LT(reg2->aggregated_wall_time, 1e11);
+	EXPECT_GT(reg2->aggregated_cpu_time, 1e7);
+	EXPECT_LT(reg2->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg2->aggregated_wall_time, 1e7);
+	EXPECT_LT(reg2->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg2->last_cpu_time, 0);
 	EXPECT_EQ(reg2->last_wall_time, 0);
 
-	EXPECT_GT(reg3->aggregated_cpu_time, 1e9);
-	EXPECT_LT(reg3->aggregated_cpu_time, 1e11);
-	EXPECT_GT(reg3->aggregated_wall_time, 1e9);
-	EXPECT_LT(reg3->aggregated_wall_time, 1e11);
+	EXPECT_GT(reg3->aggregated_cpu_time, 1e7);
+	EXPECT_LT(reg3->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg3->aggregated_wall_time, 1e7);
+	EXPECT_LT(reg3->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg3->last_cpu_time, 0);
 	EXPECT_EQ(reg3->last_wall_time, 0);
 
-	EXPECT_GT(reg4->aggregated_cpu_time, 1e9);
-	EXPECT_LT(reg4->aggregated_cpu_time, 1e11);
-	EXPECT_GT(reg4->aggregated_wall_time, 1e9);
-	EXPECT_LT(reg4->aggregated_wall_time, 1e11);
+	EXPECT_GT(reg4->aggregated_cpu_time, 1e7);
+	EXPECT_LT(reg4->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg4->aggregated_wall_time, 1e7);
+	EXPECT_LT(reg4->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg4->last_cpu_time, 0);
 	EXPECT_EQ(reg4->last_wall_time, 0);
-	
+
 	EXPECT_GT(reg0->aggregated_cpu_time, reg1->aggregated_cpu_time);
 	EXPECT_GT(reg1->aggregated_cpu_time, reg2->aggregated_cpu_time);
 	EXPECT_GT(reg1->aggregated_cpu_time, reg3->aggregated_cpu_time);
@@ -363,10 +381,10 @@ void insieme_wi_startup_implementation_papi(irt_work_item* wi) {
 
 	const char* env_string = "wall_time,PAPI_TOT_INS";
 	irt_inst_region_select_metrics(env_string);
-	// explicit call to papi necessary because we do not have an env var 
+	// explicit call to papi necessary because we do not have an env var
 	// set as it would be the case for normal apps running in the runtime
 	irt_papi_select_events(irt_worker_get_current(), irt_context_get_current(), env_string);
-	
+
 	double a = 2.0;
 	double b = 1.0;
 	ir_inst_region_start(0);
@@ -394,17 +412,105 @@ void insieme_wi_startup_implementation_all_metrics(irt_work_item* wi) {
 //	irt_papi_select_events(irt_context_get_current(), NULL);
 
 	ir_inst_region_start(0);
-	sleep(1);
+	irt_nanosleep(1e8);
 	ir_inst_region_end(0);
 
 	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
-	EXPECT_GT(reg0->aggregated_cpu_time, 8e8);
-	EXPECT_LT(reg0->aggregated_cpu_time, 1e10);
-	EXPECT_GT(reg0->aggregated_wall_time, 8e8);
-	EXPECT_LT(reg0->aggregated_wall_time, 1e10);
+	EXPECT_GT(reg0->aggregated_cpu_time, 8e7);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg0->aggregated_wall_time, 8e7);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
 	EXPECT_EQ(reg0->last_cpu_time, 0);
 	EXPECT_EQ(reg0->last_wall_time, 0);
 	EXPECT_EQ(reg0->num_executions, 1);
+}
+
+void insieme_wi_startup_implementation_pfor_nested(irt_work_item* wi) {
+	__insieme_type_helper di = {1};
+	ir_inst_region_start(0);
+	irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){0, 200, 1}, &g_insieme_impl_table[11], (irt_lw_data_item*)(&di));
+	ir_inst_region_end(0);
+}
+
+void insieme_wi_implementation_pfor_nested_content(irt_work_item* wi) {
+    irt_work_item_range wi_range = (*wi).range;
+    ir_inst_region_start(1);
+	for (int32 i = wi_range.begin; i < wi_range.end; i += wi_range.step) {
+		int32 sum = 0;
+		ir_inst_region_start(2);
+		for (uint32 j = 10; j < 50; ++j) {
+			ir_inst_region_start(3);
+			sum = sum + 1;
+			ir_inst_region_end(3);
+		}
+		ir_inst_region_end(2);
+		ir_inst_region_start(4);
+		for (uint32 j = 10; j < 50; ++j) {
+			sum = sum + 1;
+		}
+		ir_inst_region_end(4);
+	}
+	ir_inst_region_end(1);
+}
+
+void insieme_wi_startup_implementation_merge_nested(irt_work_item* wi) {
+	irt_inst_region_select_metrics("cpu_time,wall_time");
+
+	__insieme_type_helper di = {1};
+	irt_parallel_job job = {(uint64_t)1, (uint64_t)4294967295, (uint64_t)1, &g_insieme_impl_table[10], (irt_lw_data_item*)(&di)};
+
+//	ir_inst_region_start(0);
+	irt_merge(irt_parallel(&job));
+//	ir_inst_region_end(0);
+
+
+	irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
+	irt_inst_region_context_data* reg1 = &(irt_context_get_current()->inst_region_data[1]);
+	irt_inst_region_context_data* reg2 = &(irt_context_get_current()->inst_region_data[2]);
+	irt_inst_region_context_data* reg3 = &(irt_context_get_current()->inst_region_data[3]);
+	irt_inst_region_context_data* reg4 = &(irt_context_get_current()->inst_region_data[4]);
+
+	// note: all time values in the runtime are clock ticks and only converted to ns during output
+	EXPECT_GT(reg0->aggregated_cpu_time, 0);
+	EXPECT_LT(reg0->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg0->aggregated_wall_time, 0);
+	EXPECT_LT(reg0->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg0->last_cpu_time, 0);
+	EXPECT_EQ(reg0->last_wall_time, 0);
+
+	EXPECT_GT(reg1->aggregated_cpu_time, 0);
+	EXPECT_LT(reg1->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg1->aggregated_wall_time, 0);
+	EXPECT_LT(reg1->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg1->last_cpu_time, 0);
+	EXPECT_EQ(reg1->last_wall_time, 0);
+
+	EXPECT_GT(reg2->aggregated_cpu_time, 0);
+	EXPECT_LT(reg2->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg2->aggregated_wall_time, 0);
+	EXPECT_LT(reg2->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg2->last_cpu_time, 0);
+	EXPECT_EQ(reg2->last_wall_time, 0);
+
+	EXPECT_GT(reg3->aggregated_cpu_time, 0);
+	EXPECT_LT(reg3->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg3->aggregated_wall_time, 0);
+	EXPECT_LT(reg3->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg3->last_cpu_time, 0);
+	EXPECT_EQ(reg3->last_wall_time, 0);
+
+	EXPECT_GT(reg4->aggregated_cpu_time, 0);
+	EXPECT_LT(reg4->aggregated_cpu_time, 1e9);
+	EXPECT_GT(reg4->aggregated_wall_time, 0);
+	EXPECT_LT(reg4->aggregated_wall_time, 1e9);
+	EXPECT_EQ(reg4->last_cpu_time, 0);
+	EXPECT_EQ(reg4->last_wall_time, 0);
+
+	EXPECT_GT(reg0->aggregated_cpu_time, reg1->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg2->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg3->aggregated_cpu_time);
+	EXPECT_GT(reg1->aggregated_cpu_time, reg4->aggregated_cpu_time);
+	EXPECT_GT(reg3->aggregated_cpu_time, reg4->aggregated_cpu_time);
 }
 
 TEST(region_instrumentation, simple) {
@@ -475,5 +581,11 @@ TEST(region_instrumentation, papi) {
 TEST(region_instrumentation, all_metrics) {
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_simple, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[9], NULL);
+	irt_runtime_end_in_context(context);
+}
+
+TEST(region_instrumentation, pfor_nested) {
+	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context_nested_multiple, insieme_cleanup_context, false);
+	irt_runtime_run_wi(&g_insieme_impl_table[12], NULL);
 	irt_runtime_end_in_context(context);
 }

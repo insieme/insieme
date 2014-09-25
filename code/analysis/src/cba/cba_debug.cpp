@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,55 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
+#include "insieme/analysis/cba/cba_debug.h"
+
 #include <fstream>
-#include <sstream>
-#include <cmath>
+#include "insieme/utils/assert.h"
+#include "insieme/utils/string_utils.h"
 
-#include <gtest/gtest.h>
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/checks/full_check.h"
+	void createDotDump(const CBA& analysis, const string& name, FileType type) {
+		std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
+		{
+			// open file
+			std::ofstream out("solution.dot", std::ios::out );
 
-#include "insieme/frontend/frontend.h"
+			// write file
+			analysis.plot(out);
+		}
 
-#include "insieme/utils/config.h"
-#include "insieme/utils/logging.h"
+		string ext = "svg";
 
-#include "insieme/transform/datalayout/aos_to_soa.h"
+		// switch the type
+		switch(type){
+			case PDF: ext = "png"; break;
+			case PNG: ext = "pdf"; break;
+			case SVG: ext = "svg"; break;
+			default: assert_fail() << "Invalid type: " << type << "\n"; break;
+		}
 
-using namespace insieme;
+		// create plot
+		system(format("dot -T%s solution.dot -o %s.%s", ext, name, ext).c_str());
+	}
 
-TEST(DatalayoutTransormTest, OclTest) {
-	Logger::get(std::cerr, INFO, 0);
-	core::NodeManager manager;
+	void createDotDump(const core::NodeAddress& node, const string& name, FileType type) {
+		// extract context and dump it
+		createDotDump(getCBA(node), name, type);
+	}
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_ROOT_DIR) << "transform/test/datalayout/inputs/sparsevec.c" << "' to IR...";
-
-	insieme::frontend::ConversionJob job(SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c");
-	job.setDefinition("INSIEME", "");
-	job.setDefinition("UNIX", "");
-	job.addIncludeDirectory(SRC_ROOT_DIR "transform/test/datalayout/inputs/");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // ocl_device.h
-//	job.setOption(frontend::ConversionJob::OpenCL);
-	core::ProgramPtr program = job.execute(manager, false);
-	LOG(INFO) << "Done.";
-
-	core::NodePtr prog = program->getElement(0);
-
-//	transform::datalayout::AosToSoa ats(prog);
-
-//	dumpPretty(prog);
-
-	auto errors = core::checks::check(prog).getAll();
-
-	EXPECT_EQ(errors.size(), 0u);
-
-	std::sort(errors.begin(), errors.end());
-
-	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-
-
-}
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

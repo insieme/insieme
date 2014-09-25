@@ -1169,7 +1169,7 @@ namespace cba {
 
 						// add read constraint
 						constraints.add(read<ValueAnalysisType>(cba, call, ctxt, R_trg, A_call));
-
+						return;
 					}
 
 					// another case: accessing struct members
@@ -1187,6 +1187,7 @@ namespace cba {
 									StructProject<lattice_type>(A_in, field, A_call)
 								)
 						);
+						return;
 					}
 
 					// and always: if it is the undefined literal or the create array call
@@ -1197,6 +1198,7 @@ namespace cba {
 
 						// in this case initialize the value with the undefined value
 						constraints.add(subset(value, A_call));
+						return;
 					}
 
 					// also support init-uniform calls
@@ -1211,9 +1213,13 @@ namespace cba {
 									return getUniformValue(valueMgr, call->getType(), a);
 								}
 						));
+						return;
 					}
 
 					// no other literals supported by default - overloads may add more
+
+					// for all other literals the result of the computation is the unknown value
+					constraints.add(subset(getUnknownValue(), A_call));
 					return;
 				}
 

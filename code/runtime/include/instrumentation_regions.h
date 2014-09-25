@@ -86,8 +86,8 @@ typedef enum {
 typedef struct {
 	uint64 id;
 	uint64 num_executions;
-	uint64 num_entries;
-	uint64 num_exits;
+	uint64 num_participants;
+	irt_spinlock participants_lock;
 	irt_spinlock lock;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ last_##_name__; \

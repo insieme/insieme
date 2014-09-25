@@ -111,64 +111,6 @@
 			return res;
 		}
 
-
-		//////////////////////////////////////////////////////////////////////
-		//  Long long cleanup
-		//  =================
-		//
-		//  during the translation, long long behaves like a built in type, but in the backend it is mapped into the same bitwith as a long
-		//  the problem comes when we pass it as parameter to functions, because it produces overload, even when in the backend both functions
-		//  are going to have the same parameter type
-		//
-		//  after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and statically
-		//  resolved, so we wont find any problem related with typing.
-		//
-		//  The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit
-		//  overloads in 3rd party libraries (they do not make much sense anyway, do they? )
-		insieme::core::NodePtr longLongCleanup (const insieme::core::NodePtr& prog){
-
-			core::NodePtr res;
-
-			// remove all superfluous casts
-			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
-						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
-							core::IRBuilder builder (node->getNodeManager());
-							const auto& ext = node->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-
-							// TO
-							if (core::analysis::isCallOf(call, ext.getLongToLongLong()))  return call[0];
-							if (core::analysis::isCallOf(call, ext.getULongToULongLong())) return call[0];
-
-							// From
-							if (core::analysis::isCallOf(call, ext.getLongLongToLong()))  return call[0];
-							if (core::analysis::isCallOf(call, ext.getULongLongToULong())) return call[0];
-
-							// between
-							if (core::analysis::isCallOf(call, ext.getLongLongToULongLong()))
-								return builder.callExpr(builder.getLangBasic().getUInt8(),
-														builder.getLangBasic().getSignedToUnsigned(),
-														toVector (call[0], builder.getIntParamLiteral(8)));
-							if (core::analysis::isCallOf(call, ext.getULongLongToLongLong()))
-								return builder.callExpr(builder.getLangBasic().getInt8(),
-														builder.getLangBasic().getUnsignedToInt(),
-														toVector (call[0], builder.getIntParamLiteral(8)));
-						}
-						return node;
-					});
-			res = castRemover.map(prog);
-
-			// finaly, substitute any usage of the long long types
-			core::IRBuilder builder (prog->getNodeManager());
-			core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8())));
-			core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8())));
-			core::NodeMap replacements;
-			replacements [ longlongTy ] = builder.getLangBasic().getInt8();
-			replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
-			res = core::transform::replaceAllGen (prog->getNodeManager(), res, replacements, false);
-
-			return res;
-		}
-
 		//////////////////////////////////////////////////////////////////////
 		// CleanUp "deref refVar" situation
 		// ================================
@@ -278,7 +220,6 @@
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
 
-		prog = applyCleanup(prog, longLongCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
 		prog = applyCleanup(prog, superfluousCode).as<core::ProgramPtr>();

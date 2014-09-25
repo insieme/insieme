@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,55 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cmath>
+#pragma once
 
-#include <gtest/gtest.h>
+#include "insieme/analysis/cba/framework/cba.h"
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/checks/full_check.h"
+namespace insieme {
+namespace analysis {
+namespace cba {
 
-#include "insieme/frontend/frontend.h"
+	/**
+	 * A range of file types supported by the debug printer.
+	 */
+	enum FileType {
+		PDF, PNG, SVG
+	};
 
-#include "insieme/utils/config.h"
-#include "insieme/utils/logging.h"
+	/**
+	 * The actual function printing the debug plot.
+	 */
+	void createDotDump(const CBA& analysis, const string& name = "solution", FileType type = SVG);
 
-#include "insieme/transform/datalayout/aos_to_soa.h"
+	/**
+	 * A wrapper retrieving an annotated analysis instance from the given node and plotting its state.
+	 */
+	void createDotDump(const core::NodeAddress& node, const string& name = "solution", FileType type = SVG);
 
-using namespace insieme;
-
-TEST(DatalayoutTransormTest, OclTest) {
-	Logger::get(std::cerr, INFO, 0);
-	core::NodeManager manager;
-
-	LOG(INFO) << "Converting input program '" << std::string(SRC_ROOT_DIR) << "transform/test/datalayout/inputs/sparsevec.c" << "' to IR...";
-
-	insieme::frontend::ConversionJob job(SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c");
-	job.setDefinition("INSIEME", "");
-	job.setDefinition("UNIX", "");
-	job.addIncludeDirectory(SRC_ROOT_DIR "transform/test/datalayout/inputs/");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // ocl_device.h
-//	job.setOption(frontend::ConversionJob::OpenCL);
-	core::ProgramPtr program = job.execute(manager, false);
-	LOG(INFO) << "Done.";
-
-	core::NodePtr prog = program->getElement(0);
-
-//	transform::datalayout::AosToSoa ats(prog);
-
-//	dumpPretty(prog);
-
-	auto errors = core::checks::check(prog).getAll();
-
-	EXPECT_EQ(errors.size(), 0u);
-
-	std::sort(errors.begin(), errors.end());
-
-	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-
-
-}
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme

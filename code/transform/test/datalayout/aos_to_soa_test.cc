@@ -138,7 +138,7 @@ TEST(DataLayout, AosToSoa) {
 
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -207,7 +207,7 @@ TEST(DataLayout, AosToSoa2) {
 
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -265,7 +265,7 @@ TEST(DataLayout, Globals) {
 	return;
 	datalayout::AosToSoa ats(code);
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -295,27 +295,33 @@ TEST(DataLayout, Tuple) {
 		"{"
 		"	let twoElem = struct{int<4> int; real<4> float;};"
 		""
-		"	let access = (ref<ref<array<twoElem,1>>> x)->unit {"
+		"	let access = (ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
 		"		for(int<4> i = 0 .. 42 : 1) {"
-		"			(*x)[i].int = i;"
+		"			(*x[0])[i].int = i;"
 		"		}"
+		"	};"
+		""
+		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
+		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
+		"(*x[0])[3].int = 7;"
+		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
 		"	};"
 		""
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	ref<ref<array<real<4>,1>>> b;"
-		"ref<ref<array<twoElem,1>>> x;"
 		"	ref<uint<8>> c;"
-//		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
-//		"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
+		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
+		"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
 		""
-		"	access(a);"//scalar.to.array(a));"
+		"	access(scalar.to.array(a));"
 //		"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
+		"	writeToTuple(*t, scalar.to.array(a));"
 		""
-//		"	ref.delete(*t);"
+		"	ref.delete(*t);"
 		"}"
 	));
-
-//	datalayout::AosToSoa ats(code);
+return;
+	datalayout::AosToSoa ats(code);
 
 	dumpPretty(code);
 
