@@ -323,7 +323,7 @@ TEST(DataLayout, Tuple) {
 		"	ref.delete(*t);"
 		"}"
 	));
-
+return;
 	datalayout::AosToSoa ats(code);
 	ats.transform();
 
