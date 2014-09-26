@@ -359,7 +359,9 @@ bool validVar(ExpressionPtr toTest) {
 }
 
 
-AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()){
+AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()), toTransform(toTransform) {}
+
+void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
 	NodeAddress tta(toTransform);
@@ -511,9 +513,9 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 		// check if it is an access to the transformRoot's memory
 		if(*transformRoot.first == *extractVariable(expr)) {
+//std::cout << "\ttesting: " << *expr << std::endl;
 			// if so, add all variable which alias it to the toReplaceList
 			visitDepthFirst(toTransform, [&](const ExpressionAddress& potentialAlias) {
-//std::cout << "\ttesting: " << *expr << " to "<< *potentialAlias << std::endl;
 				if(potentialAlias->getType()->getNodeType() != NT_RefType)
 					return;
 
@@ -533,13 +535,13 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 						if(varToAdd->getNodeType() == NT_Variable ||
 								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
 //dumpPretty(expr );
-//std::cout << " ------------------------------- \n";
-//dumpPretty(potentialAlias);
+//std::cout << potentialAlias << " ------------------------------- \n";
 							if(ia::cba::mayAlias(expr, potentialAlias)) {
-								/*auto newly =*/ toReplaceList.insert(varToAdd);
+								/*auto newly = */toReplaceList.insert(varToAdd);
 //if(newly.second) {
 //std::cout << "Expr:  " << *expr;
-//std::cout << " alias: " << *potentialAlias << std::endl;
+//std::cout << " alias: " /* << *potentialAlias */<< std::endl;
+//dumpPretty(potentialAlias);
 //}
 							}
 						}
