@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -188,6 +188,10 @@ namespace cba {
 		std::set<Reference> refA = getValues(a, R);
 		std::set<Reference> refB = getValues(b, R);
 
+		// check that reference sets are not empty
+		assert_false(refA.empty()) << "Internal analysis error: reference set must not be empty!";
+		assert_false(refB.empty()) << "Internal analysis error: reference set must not be empty!";
+
 		// check whether there are overlapping references
 		for (const auto& a : refA) {
 			for (const auto& b : refB) {
@@ -210,6 +214,10 @@ namespace cba {
 		// compute references set
 		std::set<Reference> refA = getValues(a, R);
 		std::set<Reference> refB = getValues(b, R);
+
+		// check that reference sets are not empty
+		assert_false(refA.empty()) << "Internal analysis error: reference set must not be empty!";
+		assert_false(refB.empty()) << "Internal analysis error: reference set must not be empty!";
 
 		// check whether all references are overlapping
 		for (const auto& a : refA) {
