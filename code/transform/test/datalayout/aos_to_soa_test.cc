@@ -137,6 +137,7 @@ TEST(DataLayout, AosToSoa) {
 //	return;
 
 	datalayout::AosToSoa ats(code);
+	ats.transform();
 
 //	dumpPretty(code);
 
@@ -206,6 +207,7 @@ TEST(DataLayout, AosToSoa2) {
 //
 
 	datalayout::AosToSoa ats(code);
+	ats.transform();
 
 //	dumpPretty(code);
 
@@ -264,6 +266,7 @@ TEST(DataLayout, Globals) {
 
 	return;
 	datalayout::AosToSoa ats(code);
+	ats.transform();
 
 //	dumpPretty(code);
 
@@ -315,13 +318,14 @@ TEST(DataLayout, Tuple) {
 		""
 		"	access(scalar.to.array(a));"
 //		"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
-		"	writeToTuple(*t, scalar.to.array(a));"
+//		"	writeToTuple(*t, scalar.to.array(a));"
 		""
 		"	ref.delete(*t);"
 		"}"
 	));
-return;
+
 	datalayout::AosToSoa ats(code);
+	ats.transform();
 
 	dumpPretty(code);
 
