@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -247,6 +247,13 @@ namespace backend {
 			res->externalize = &NoOp;
 			res->internalize = &NoOp;
 			return res;
+		}
+
+		template<typename T = TypeInfo>
+		T* createInfo(c_ast::CNodeManager& nodeManager, c_ast::PrimitiveType::CType primitiveType) {
+			c_ast::IdentifierPtr ident = nodeManager.create("primitive-type");
+			c_ast::TypePtr type = nodeManager.create<c_ast::PrimitiveType>(primitiveType);
+			return createInfo<T>(type);
 		}
 
 		template<typename T = TypeInfo>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,47 +58,25 @@ namespace addons {
 	namespace {
 	    
 		const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
-            // Checking if type is a long long
-			const core::StructTypePtr& structType = type.isa<core::StructTypePtr>();
-			if (!structType) 
-                return NULL;
-			if(!(structType->getEntries().size() == 1))
-                return NULL;
-			const core::NamedTypePtr t0 = structType->getEntries()[0];
-			if(t0->getName()->getValue().compare("longlong_val"))
-                return NULL;
+			const TypeInfo* skip = nullptr;
 
-            // Converting the long long
+			// intercept 128-bit types and convert them to the long-long type
+			const auto& base = type->getNodeManager().getLangBasic();
+
+			// get the c-node manager
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
-            if(type->getNodeManager().getLangBasic().isInt8(t0->getType()))
-	            return type_info_utils::createInfo(manager, "long long");
-            else
-	            return type_info_utils::createInfo(manager, "unsigned long long");
+			// check for the two special types
+			if (base.isInt16(type)) {
+				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong);
+			}
+			if (base.isUInt16(type)) {
+				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong);
+			}
+
+			// otherwise use default handling
+			return skip;
 	    }
-
-        OperatorConverterTable getLongLongTypeOperatorTable(core::NodeManager& manager) {
-			OperatorConverterTable res;
-			const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
-
-			#include "insieme/backend/operator_converter_begin.inc"
-
-            // TO
-		    res[ext.getLongToLongLong()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-		    res[ext.getULongToULongLong()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-		    // From
-		    res[ext.getLongLongToLong()] = OP_CONVERTER({  return CONVERT_ARG(0); });
-		    res[ext.getULongLongToULong()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-		    // between
-		    res[ext.getLongLongToULongLong()] = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
-		    res[ext.getULongLongToLongLong()] = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
-
-			#include "insieme/backend/operator_converter_end.inc"
-
-            return res;
-        }
 
     }
 
@@ -106,9 +84,6 @@ namespace addons {
 
 		// registers type handler
 		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-
-		// register additional operators
-		converter.getFunctionManager().getOperatorConverterTable().insertAll(getLongLongTypeOperatorTable(converter.getNodeManager()));
 
 	}
 
