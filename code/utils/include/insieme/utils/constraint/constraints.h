@@ -337,7 +337,8 @@ namespace constraint {
 			ElementOfFilter(const E& e, const TypedVariable<L>& a)
 				: e(e), a(a) {}
 			bool operator()(const Assignment& ass) const {
-				static const typename L::less_op_type less_op;
+				typedef typename L::less_op_type less_op_type;
+				static const less_op_type less_op = less_op_type();
 				return less_op(e,ass[a]);
 			}
 			void print(std::ostream& out) const {
@@ -402,7 +403,7 @@ namespace constraint {
 			// a utility function merging sets
 			template<typename meet_assign_op, typename A, typename B>
 			bool addAll(const A& src, B& trg) const {
-				static const meet_assign_op meet_assign;
+				static const meet_assign_op meet_assign = meet_assign_op();
 				// compute meet operation and check for modification
 				return meet_assign(trg, src);
 			};
@@ -423,7 +424,7 @@ namespace constraint {
 			// a utility to check whether a certain set is a subset of another set
 			template<typename less_op, typename A, typename B>
 			bool isSubset(const A& a, const B& b) const {
-				static const less_op less;
+				static const less_op less = less_op();
 				return less(a,b);
 			}
 
