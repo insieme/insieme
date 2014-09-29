@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,6 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/frontend_ir.h"
 
@@ -58,6 +57,8 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+
+#include "insieme/core/types/cast_tool.h"
 
 
 namespace fe = insieme::frontend;
@@ -150,7 +151,7 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 		if ( argId < funcTy->getParameterTypes().size() ) {
 			arg = fixType(arg, funcTy->getParameterTypes()[argId+off]);
 		} else {
-			arg = utils::cast(arg, builder.getNodeManager().getLangBasic().getVarList());
+			arg = core::types::smartCast(builder.getNodeManager().getLangBasic().getVarList(), arg);
 		}
 		args.push_back( arg );
 	}
@@ -431,4 +432,4 @@ public:
 
 } // End conversion namespace
 } // End frontend namespace
-} // End insieme namespace
+} // End insieme namespace		return smartCast(type, expr);

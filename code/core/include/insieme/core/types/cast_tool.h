@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,60 +29,65 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
+
+#include "insieme/core/ir_types.h"
+
+
+/**
+ * The cast tool is ment to be used to conduct all casts between IR types,
+ * the idea is to have a centralized hub where to introduce new acurate type conversions,
+ * this module should substitute the CAST ir node,
+ */
 
 namespace insieme {
+namespace core {
+namespace types {
 
-// forward declarations
-namespace core { 
-template <class T>
-class Pointer;
-
-class Expression;
-typedef Pointer<const Expression> ExpressionPtr;
-
-class Type;
-typedef Pointer<const Type> TypePtr;
-
-class IRBuilder;
-} // end core namespace 
-
-namespace frontend {
-namespace utils {
 
 	/**
-	 * This function tries to restructure the given expression of a reference to a scalar
-	 * into a reference to an array - if possible without using the scalar.to.ref.array literal.
-	 *
-	 * @param expr the expression to be converted
-	 * @return the rewritten, equivalent expression exposing a reference to an array
+	 * 	Hub entry point where the compatibility between types is checked and the more precise
+	 * 	techique can be used
+	 * 	 @param type, the target type, 
+	 * 	 @param expr, the source expression we want to addapt
+	 * 	 @return a casted/modified expression with the rightfull type
 	 */
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+	core::ExpressionPtr smartCast (const core::TypePtr& type, const core::ExpressionPtr& expr);
+	core::ExpressionPtr smartCast (const core::ExpressionPtr& expr, const core::TypePtr& type );
 
-	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
+
+	/**
+	 *
+	 */
+	core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr);
+
+	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
+
+	ExpressionPtr convertExprToType(const IRBuilder& builder, const TypePtr& trgTy, ExpressionPtr expr);
+
+	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//  some other tools
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+
+	bool isRefRef(const core::TypePtr& type);
 
 	bool isArray(const core::TypePtr& type);
 	bool isRefArray(const core::TypePtr& type);
 
-	core::TypePtr getArrayElement(const core::TypePtr& type);
-
 	bool isVector(const core::TypePtr& type);
 	bool isRefVector(const core::TypePtr& type);
-	bool isRefRef(const core::TypePtr& type);
 
-	core::TypePtr getVectorElement(const core::TypePtr& type);
-
-	/**
-	 * checks if the expression corresponds to a null pointer expression 
-	 * (usually those are wrapped on a cast)
-	 */
 	bool isNullPtrExpression(const core::ExpressionPtr& expr);
 
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace
+
+}
+}
+}

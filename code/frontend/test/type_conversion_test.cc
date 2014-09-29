@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -111,10 +111,10 @@ TEST(TypeConversion, HandleBuildinType) {
 
 	// ULong
 	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
-	CHECK_BUILTIN_TYPE(ULongLong, "struct<longlong_val:uint<8>>");
+	CHECK_BUILTIN_TYPE(ULongLong, "uint<16>");
 
 	CHECK_BUILTIN_TYPE(Long, "int<8>");
-	CHECK_BUILTIN_TYPE(LongLong, "struct<longlong_val:int<8>>");
+	CHECK_BUILTIN_TYPE(LongLong, "int<16>");
 
 	// UInt128
 	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
@@ -180,9 +180,9 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_TYPE(UInt, 	"ref<array<uint<4>,1>>");
 	CHECK_POINTER_TYPE(Int, 	"ref<array<int<4>,1>>");
 	CHECK_POINTER_TYPE(ULong, 	"ref<array<uint<8>,1>>");
-	CHECK_POINTER_TYPE(ULongLong, "ref<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_POINTER_TYPE(ULongLong, "ref<array<uint<16>,1>>");
 	CHECK_POINTER_TYPE(Long, 	"ref<array<int<8>,1>>");
-	CHECK_POINTER_TYPE(LongLong, "ref<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_POINTER_TYPE(LongLong, "ref<array<int<16>,1>>");
 	CHECK_POINTER_TYPE(UInt128, "ref<array<uint<16>,1>>");
 	CHECK_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
@@ -199,9 +199,9 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_TYPE(UInt, 		"ref<array<uint<4>,1>>");
 	CHECK_CONST_POINTER_TYPE(Int, 		"ref<array<int<4>,1>>");
 	CHECK_CONST_POINTER_TYPE(ULong, 	"ref<array<uint<8>,1>>");
-	CHECK_CONST_POINTER_TYPE(ULongLong, "ref<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_CONST_POINTER_TYPE(ULongLong, "ref<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_TYPE(Long, 		"ref<array<int<8>,1>>");
-	CHECK_CONST_POINTER_TYPE(LongLong, 	"ref<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_CONST_POINTER_TYPE(LongLong, 	"ref<array<int<16>,1>>");
 	CHECK_CONST_POINTER_TYPE(UInt128, 	"ref<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_CONST_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
@@ -218,9 +218,9 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_CONST_TYPE(UInt, 		"src<array<uint<4>,1>>");
 	CHECK_POINTER_CONST_TYPE(Int, 		"src<array<int<4>,1>>");
 	CHECK_POINTER_CONST_TYPE(ULong, 	"src<array<uint<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(ULongLong, "src<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_POINTER_CONST_TYPE(ULongLong, "src<array<uint<16>,1>>");
 	CHECK_POINTER_CONST_TYPE(Long, 		"src<array<int<8>,1>>");
-	CHECK_POINTER_CONST_TYPE(LongLong, 	"src<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_POINTER_CONST_TYPE(LongLong, 	"src<array<int<16>,1>>");
 	CHECK_POINTER_CONST_TYPE(UInt128, 	"src<array<uint<16>,1>>");
 	CHECK_POINTER_CONST_TYPE(Float, 	"src<array<real<4>,1>>");
 	CHECK_POINTER_CONST_TYPE(Double, 	"src<array<real<8>,1>>");
@@ -237,9 +237,9 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_CONST_TYPE(UInt, 	  "src<array<uint<4>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Int, 	  "src<array<int<4>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(ULong, 	  "src<array<uint<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(ULongLong, "src<array<struct<longlong_val:uint<8>>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(ULongLong, "src<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Long, 	  "src<array<int<8>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(LongLong,  "src<array<struct<longlong_val:int<8>>,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(LongLong,  "src<array<int<16>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(UInt128,   "src<array<uint<16>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Float, 	  "src<array<real<4>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Double, 	  "src<array<real<8>,1>>");
@@ -282,9 +282,9 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(UInt, 		"struct<_cpp_ref:ref<uint<4>>>");
 	CHECK_REFERENCE_TYPE(Int, 		"struct<_cpp_ref:ref<int<4>>>");
 	CHECK_REFERENCE_TYPE(ULong, 	"struct<_cpp_ref:ref<uint<8>>>");
-	CHECK_REFERENCE_TYPE(ULongLong, "struct<_cpp_ref:ref<struct<longlong_val:uint<8>>>>");
+	CHECK_REFERENCE_TYPE(ULongLong, "struct<_cpp_ref:ref<uint<16>>>");
 	CHECK_REFERENCE_TYPE(Long, 		"struct<_cpp_ref:ref<int<8>>>");
-	CHECK_REFERENCE_TYPE(LongLong, 	"struct<_cpp_ref:ref<struct<longlong_val:int<8>>>>");
+	CHECK_REFERENCE_TYPE(LongLong, 	"struct<_cpp_ref:ref<int<16>>>");
 	CHECK_REFERENCE_TYPE(UInt128, 	"struct<_cpp_ref:ref<uint<16>>>");
 	CHECK_REFERENCE_TYPE(Float, 	"struct<_cpp_ref:ref<real<4>>>");
 	CHECK_REFERENCE_TYPE(Double, 	"struct<_cpp_ref:ref<real<8>>>");
@@ -301,9 +301,9 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_CONST_TYPE(UInt, 	  "struct<_const_cpp_ref:src<uint<4>>>");
 	CHECK_REFERENCE_CONST_TYPE(Int, 	  "struct<_const_cpp_ref:src<int<4>>>");
 	CHECK_REFERENCE_CONST_TYPE(ULong, 	  "struct<_const_cpp_ref:src<uint<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(ULongLong, "struct<_const_cpp_ref:src<struct<longlong_val:uint<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(ULongLong, "struct<_const_cpp_ref:src<uint<16>>>");
 	CHECK_REFERENCE_CONST_TYPE(Long, 	  "struct<_const_cpp_ref:src<int<8>>>");
-	CHECK_REFERENCE_CONST_TYPE(LongLong,  "struct<_const_cpp_ref:src<struct<longlong_val:int<8>>>>");
+	CHECK_REFERENCE_CONST_TYPE(LongLong,  "struct<_const_cpp_ref:src<int<16>>>");
 	CHECK_REFERENCE_CONST_TYPE(UInt128,   "struct<_const_cpp_ref:src<uint<16>>>");
 	CHECK_REFERENCE_CONST_TYPE(Float, 	  "struct<_const_cpp_ref:src<real<4>>>");
 	CHECK_REFERENCE_CONST_TYPE(Double, 	  "struct<_const_cpp_ref:src<real<8>>>");

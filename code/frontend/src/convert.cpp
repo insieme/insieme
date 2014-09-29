@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,7 +45,6 @@
 
 #include "insieme/frontend/omp/omp_annotation.h"
 
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/cast_tool.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
@@ -74,6 +73,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -643,7 +643,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		}
 		else{
 			// beware of const pointers, they may lack one ref (but do not change if a parameter)
-			if (utils::isRefArray(irType) && varTy.isConstQualified() && !llvm::isa<clang::ParmVarDecl>(valDecl)) {
+			if (core::types::isRefArray(irType) && varTy.isConstQualified() && !llvm::isa<clang::ParmVarDecl>(valDecl)) {
 				irType = builder.refType(irType);
 			}
 		}
@@ -952,13 +952,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExpr = builder.tryDeref(initExpr);
 			}
 
-			/*FIXME fix metainfo handling first, currently "resolve" in frontend messes up the
-			 * handling of symbols/types/etc....
-			assert_true( core::types::isSubTypeOf(getIRTranslationUnit().resolve(initExpr->getType()).as<core::TypePtr>(), getIRTranslationUnit().resolve(var->getType()).as<core::TypePtr>()))
-					<< "LHS: " << initExpr->getType() << " = " << getIRTranslationUnit().resolve(initExpr->getType()) << " of type " << initExpr->getType()->getNodeType() << "\n"
-					<< "RHS: " << var->getType() << " = " << getIRTranslationUnit().resolve(var->getType()) <<  " of type " << var->getType()->getNodeType() << "\n";
-			*/
-
 			// finally create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}
@@ -1055,8 +1048,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
  	VLOG(2) << "initExpr			: \n" << dumpPretty(initExpr);
  	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(retIr);
+ 	VLOG(2) << "type	: \n" << dumpPretty(type);
+ 	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(core::types::smartCast(retIr, type));
 
- 	return retIr;
+ 	return core::types::smartCast(retIr, type);
 }
 
 core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy){
@@ -1137,7 +1132,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			for (size_t i = 0; i < inits.size(); ++i) {
 
 				auto tmp = getInitExpr(membTy, inits[i] );
-				if (frontend::utils::isRefVector(tmp->getType()) && frontend::utils::isRefArray(membTy)){
+				if (core::types::isRefVector(tmp->getType()) && core::types::isRefArray(membTy)){
 					tmp = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), tmp);
 				}
 				elements.push_back(tmp);
@@ -1214,6 +1209,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
 	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) {
+		VLOG(2) << "is subtype of";
 		return (retIr = init);
 	}
 
@@ -1232,11 +1228,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return (retIr = init.as<core::CallExprPtr>()[0]);
-	}
-
-	// long long types
-	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType)) {
-		return (retIr = init);
 	}
 
 	////////////////////////////////////////////////////////////////////////////
@@ -1288,12 +1279,12 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	}
 
 	if (builder.getLangBasic().isPrimitive (elementType) && builder.getLangBasic().isPrimitive(init->getType())) {
-		return (retIr =frontend::utils::castScalar(elementType, init));
+		return (retIr =core::types::castScalar(elementType, init));
 	}
 
 	if ( elementType.isa<core::VectorTypePtr>() ){
 		core::ExpressionPtr initVal = init;
-		if (utils::isRefVector(init->getType())) {
+		if (core::types::isRefVector(init->getType())) {
 			initVal =  builder.deref(initVal);
 		}
 		//it can be a partial initialization
@@ -1301,7 +1292,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			return (retIr = initVal);
 		}
 
-		return (retIr = utils::cast( initVal, elementType));
+		return (retIr = core::types::smartCast( initVal, elementType));
 	}
 
     //FIXME: check if this is enough
@@ -1323,14 +1314,14 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 
     // the case of enum type initializations
     if(mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(init->getType())) {
-        return (retIr = frontend::utils::castScalar(elementType, init));
+        return (retIr = core::types::castScalar(elementType, init));
     }
 
 	// the case of the Null pointer:
 	if (core::analysis::isCallOf(init, builder.getLangBasic().getRefReinterpret()))
 		return (retIr = builder.refReinterpret(init.as<core::CallExprPtr>()[0], elementType.as<core::RefTypePtr>()->getElementType()));
 
-	if (utils::isRefArray(init->getType()) && utils::isRefArray(targetType)){
+	if (core::types::isRefArray(init->getType()) && core::types::isRefArray(targetType)){
 		return (retIr = builder.refReinterpret(init, targetType.as<core::RefTypePtr>()->getElementType()));
 	}
 
@@ -1537,7 +1528,7 @@ namespace {
 						// magic tryDeref if not a pointer.... because!
 						// dont deref if we have a refref as init and an anyref as expr
 						// otherwise void* elements in init list will fail...
-						if (!utils::isRefArray(expr->getType()) && !(frontend::utils::isRefRef(toInit.getType()) &&
+						if (!core::types::isRefArray(expr->getType()) && !(core::types::isRefRef(toInit.getType()) &&
 																	builder.getLangBasic().isAnyRef(expr->getType())))
 							expr = builder.tryDeref(expr);
 					}

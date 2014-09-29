@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,20 +48,6 @@ namespace conversion {
 }
 
 namespace utils {
-
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
-
-	/**
-	 * casts to bool an expression
-	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
-
-	/**
-	 * cast between 2 scalar types an IR expression
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   core::ExpressionPtr expr);
-
 	/**
 	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 	 *

@@ -34,49 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/addons/longlong_type.h"
+int main (){
+	
+	long long a = 0;
+	long long b = 0;
 
-#include "insieme/core/lang/basic.h"
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+	int c;
 
-namespace insieme {
-namespace backend {
-namespace addons {
+	c = a + b;
 
-	namespace {
-	    
-		const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
 
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
+	c++;
+	return 0;
+}
 
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *converter.getCNodeManager();
-
-			// check for the two special types
-			if (base.isInt16(type)) {
-				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong);
-			}
-			if (base.isUInt16(type)) {
-				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong);
-			}
-
-			// otherwise use default handling
-			return skip;
-	    }
-
-    }
-
-	void LongLongType::installOn(Converter& converter) const {
-
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-
-	}
-
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme

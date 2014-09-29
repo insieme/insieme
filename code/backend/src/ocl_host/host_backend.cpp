@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,7 +68,6 @@
 #include "insieme/backend/addons/cpp_references.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
-#include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/simd_vector.h"
 #include "insieme/backend/addons/varargs.h"
 
@@ -93,7 +92,6 @@ namespace ocl_host {
 		res->addAddOn<addons::CppReferences>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumTypes>();
-		res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::SIMDVector>();
 		res->addAddOn<addons::VarArgs>();
 		return res;

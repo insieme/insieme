@@ -675,8 +675,10 @@ OptionalMessageList GenericOpsCheck::visitCallExpr(const CallExprAddress& addres
 
 	OptionalMessageList res;
 
+	auto fun = call.as<CallExprPtr>()->getFunctionExpr();
+
 	// only interested in generic operators
-	if (!base.isGenOp(call.as<CallExprPtr>()->getFunctionExpr())) {
+	if (!fun.isa<LiteralPtr>() || !base.isGenOp(fun)) {
 		return res;
 	}
 

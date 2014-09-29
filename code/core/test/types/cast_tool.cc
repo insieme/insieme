@@ -34,49 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/addons/longlong_type.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/types/cast_tool.h"
+#include "insieme/core/ir_builder.h"
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+#include "insieme/utils/set_utils.h"
 
 namespace insieme {
-namespace backend {
-namespace addons {
+namespace core {
+namespace types {
 
-	namespace {
-	    
-		const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
 
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
+	TEST(TypeCast, Scalar) {
+	
 
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
 
-			// check for the two special types
-			if (base.isInt16(type)) {
-				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong);
-			}
-			if (base.isUInt16(type)) {
-				return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong);
-			}
+		TypePtr int1 = basic.getInt1();
+		TypePtr int2 = basic.getInt2();
+		TypePtr int4 = basic.getInt4();
+		TypePtr int8 = basic.getInt8();
+		TypePtr int16 = basic.getInt16();
 
-			// otherwise use default handling
-			return skip;
-	    }
+		{
+			auto lit = builder.literal(int1, "8");
+			
+			EXPECT_EQ(lit.getType(), int1);
+			EXPECT_EQ(smartCast(lit, int2).getType(), int2);
+		}
 
-    }
-
-	void LongLongType::installOn(Converter& converter) const {
-
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
+		{
+			auto lit = builder.literal(int2, "8");
+			
+			EXPECT_EQ(lit.getType(), int2);
+			EXPECT_EQ(smartCast(lit, int1).getType(), int1);
+		}
 
 	}
 
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme
+} // types
+} // core
+} // insieme
