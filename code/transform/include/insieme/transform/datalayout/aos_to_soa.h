@@ -52,6 +52,7 @@ namespace datalayout {
 class AosToSoa {
 protected:
 	core::NodeManager& mgr;
+	core::NodePtr& toTransform;
 
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
@@ -105,6 +106,8 @@ protected:
 public:
 	AosToSoa(core::NodePtr& toTransform);
 	virtual ~AosToSoa() {}
+
+	virtual void transform();
 };
 
 class VariableAdder: public core::transform::CachedNodeMapping {
