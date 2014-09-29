@@ -130,8 +130,8 @@ private:
 				case clang::BuiltinType::Long:			EXPECT_EQ("int<8>", toString(*irType)); break;
 
 												// long long is packed in a struct to avoid aliases with just long
-				case clang::BuiltinType::LongLong:		EXPECT_EQ("struct<longlong_val:int<8>>", toString(*irType)); break;
-				case clang::BuiltinType::ULongLong:		EXPECT_EQ("struct<longlong_val:uint<8>>", toString(*irType)); break;
+				case clang::BuiltinType::LongLong:		EXPECT_EQ("int<16>", toString(*irType)); break;
+				case clang::BuiltinType::ULongLong:		EXPECT_EQ("uint<16>", toString(*irType)); break;
 
 				// real types
 				case clang::BuiltinType::Float:			EXPECT_EQ("real<4>", toString(*irType)); break;

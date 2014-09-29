@@ -65,7 +65,6 @@ namespace {
 	static const boost::regex zeroValueFilter  ("([0]+)(\\.[0]+)?([ufl]*)");
 
 	core::ExpressionPtr castLiteral(const core::LiteralPtr lit, const core::TypePtr targetTy){
-
 		std::string old = lit->getStringValue();
 
 		core::IRBuilder builder( targetTy->getNodeManager() );
@@ -74,7 +73,7 @@ namespace {
 		boost::cmatch what;
 
 		////////////////////////////////////////
-		// CAST TO BOOLEAN
+		// convertExprToType TO BOOLEAN
 		if (gen.isBool(targetTy) ){
 			if (gen.isChar(lit->getType())) throw std::exception();
 			if (boost::regex_match(old, zeroValueFilter)) res.assign("false");
@@ -82,7 +81,7 @@ namespace {
 		}
 
 		////////////////////////////////////////
-		// CAST TO CHAR
+		// convertExprToType TO CHAR
 		if (gen.isChar(targetTy) ){
 			// do not rebuild the literal, might be a nightmare, just build a cast
 			throw std::exception();
@@ -101,7 +100,7 @@ namespace {
 		}
 
 		////////////////////////////////////////
-		// CAST TO INT and UINT
+		// convertExprToType TO INT and UINT
 		if (gen.isInt(targetTy) || gen.isUnsignedInt(targetTy)){
 			// remove any decimal
 			if(boost::regex_match(old.c_str(), what, numberFilter)){
@@ -126,7 +125,7 @@ namespace {
 		}
 
 		////////////////////////////////////////
-		// CAST TO REAL
+		// convertExprToType TO REAL
 		if (gen.isReal(targetTy)){
 			// make sure has decimal point
 
@@ -276,10 +275,6 @@ namespace {
 			return builder.callExpr(gen.getBool(), gen.getGenNe(), expr, builder.getZero(exprTy));
 		}
 
-		if (core::analysis::isLongLong (exprTy)){
-			return castScalar (gen.getBool(),core::analysis::castFromLongLong( expr));
-		}
-
 		if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
 			dumpDetail(expr);
 			std::cout << "****" << std::endl;
@@ -290,9 +285,6 @@ namespace {
 		return castScalar (gen.getBool(), expr);
 	}
 
-
-
-#define CAST(expr, type) convertExprToType(builder, expr, type)
 
 #define GET_REF_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
@@ -307,69 +299,27 @@ namespace {
 	 *
 	 */
 	core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr){
+
 		core::TypePtr exprTy = expr->getType();
 
 		// check if cast is needed at all
 		if(exprTy == trgTy) return expr;
+
+		// check whenever this expression is a literal, if so, use the right tool
+		try{
+			if(auto lit = expr.isa<core::LiteralPtr>()) return castLiteral(lit, trgTy);
+		}catch(...) { }  // if no literal cast, continue
 
 		core::TypePtr targetTy = trgTy;
 		core::IRBuilder builder( exprTy->getNodeManager() );
 		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		core::NodeManager& mgr = exprTy.getNodeManager();
 
-		//std::cout << "========= SCALAR CAST =====================" <<std::endl;
-		//std::cout << "Expr: " << expr << " : " << expr->getType() << std::endl;
-		//std::cout << "target Type: " << targetTy << std::endl;
-
 		// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 		// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
 		// handle it carefully
 		if (core::analysis::isAnyCppRef(targetTy)) {
 			return expr;
-		}
-
-		bool isLongLong = false;
-
-		if (core::analysis::isLongLong (targetTy) && core::analysis::isLongLong(expr->getType())){
-			if (core::analysis::isSignedLongLong(targetTy) == core::analysis::isSignedLongLong(expr->getType())){
-				return expr;
-			}
-			else{
-				return core::analysis::castBetweenLongLong(expr);
-			}
-		}
-
-		// casts from long to longlong and long
-		if (core::analysis::isLongLong (targetTy)){
-			isLongLong = true;
-			if (core::analysis::isSignedLongLong (targetTy))
-				targetTy = gen.getInt8();
-			else
-				targetTy = gen.getUInt8();
-
-		}
-
-		// cast from long long
-		if (core::analysis::isLongLong (exprTy)){
-			expr = core::analysis::castFromLongLong( expr);
-			exprTy = expr->getType();
-		}
-
-		auto lastStep = [&isLongLong, &gen] (const core::ExpressionPtr& expr) -> core::ExpressionPtr {
-			if (isLongLong)
-				return core::analysis::castToLongLong(expr, gen.isSignedInt(expr->getType()));
-			else
-				return expr;
-		};
-
-		// is this the cast of a literal: to simplify code we'll return
-		// a literal of the spected type
-		if (expr->getNodeType() == core::NT_Literal){
-			try{
-				return lastStep(castLiteral ( expr.as<core::LiteralPtr>(), targetTy));
-			}catch (std::exception& e){
-				// literal upgrade not supported, continue with regular cast
-			}
 		}
 
 
@@ -492,7 +442,7 @@ namespace {
 
 
 		// idelayed casts from long to longlong and long
-		return lastStep(resIr);
+		return resIr;
 	}
 
 	// This function performs the requires type conversion, from converting an expression. 
@@ -561,7 +511,7 @@ namespace {
 
 		
 		///////////////////////////////////////////////////////////////////////////////////////
-		// 							SCALAR CASTING
+		// 							SCALAR convertExprToTypeING
 		///////////////////////////////////////////////////////////////////////////////////////
 		if( (gen.isPrimitive (trgTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(trgTy))
 			&& (gen.isPrimitive(argTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)))
@@ -691,7 +641,7 @@ namespace {
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 			// Recursively call the cast function to make sure the subtype and the target type matches
-			return CAST(trgTy, builder.deref(expr));
+			return convertExprToType(builder, trgTy, builder.deref(expr));
 		}
 
 
@@ -726,26 +676,15 @@ namespace {
 			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 			
 			if (core::types::isArray(subTy) && core::types::isVector(argTy)) {
-				return CAST(subTy, expr);
+				return convertExprToType(builder, subTy, expr);
 			}
 
 			// call the function recursively
-			return builder.refVar( CAST(subTy, expr) );
+			return builder.refVar( convertExprToType(builder, subTy, expr) );
 		}
 
 		// NOTE: from this point on we are sure the type of the target type and the argument type are
 		// the same meaning that either we have a ref-type or non-ref type.
-
-		
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 						vector<'a, #n> -> array<'a,1>
-		//
-		// 	This is not directly allowed by the IR, but we can 
-		///////////////////////////////////////////////////////////////////////////////////////
-
-		//if ( builder.matchType("array<'a,#n>",trgTy) && builder.matchType("vector<'a,#n>",argTy) ) {
-		//	return CAST(builder.refType(trgTy), builder.refVar(expr));
-		//}
 
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -767,51 +706,12 @@ namespace {
 			}
 		}
 
-	//	// [ string -> vector<char,#n> ]
-	//	//
-	//	// Converts a string literal to a vector<char, #n>
-	//	if ( trgTy->getNodeType() == core::NT_VectorType && gen.isString(argTy) ) {
-	//		const core::VectorTypePtr& vecTy = core::static_pointer_cast<const core::VectorType>(trgTy);
-	//
-	//		assert(vecTy->getElementType()->getNodeType() != core::NT_RefType && 
-	//				"conversion of string literals to vector<ref<'a>> not yet supported");
-	//
-	//		assert(vecTy->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam);
-	//		size_t vecSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTy->getSize())->getValue();
-	//
-	//		// do conversion from a string to an array of char
-	//		const core::LiteralPtr& strLit = core::static_pointer_cast<const core::Literal>(expr);
-	//		std::string strVal = strLit->getStringValue();
-	//		// because string literals are stored with the corresponding " " we iterate from 1 to length()-2
-	//		// but we need an additional character to store the string terminator \0
-	//		
-	//		assert(strVal.length() - 1 <= vecSize && "Target vector type not large enough to hold string literal"); 
-	//		// FIXME: Use clang error report for this
-	//		
-	//		ExpressionList vals(vecSize);
-	//		size_t it;
-	//		for(it=0; it<strVal.length()-2; ++it) {
-	//			char c = strVal.at(it+1);
-	//			std::string str(1,c);
-	//			switch(c) {
-	//				case '\n': str = "\\n";	   break;
-	//				case '\\': str = "\\\\";   break;
-	//				case '\r': str = "\\r";	   break;
-	//				case '\t': str = "\\t";	   break;
-	//				case '\0': str = "\\0";	   break;
-	//			}
-	//			vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
-	//		}
-	//		// put '\0' terminators on the remaining elements
-	//		for (; it<vecSize; ++it ) {
-	//			vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
-	//		}
-	//		return builder.vectorExpr(vecTy , vals);
-	//	}
-
-
+			
+		///////////////////////////////////////////////////////////////////////////////////////
+		// 							vector<'a, #n> -> vector<'b, #n> 
+		///////////////////////////////////////////////////////////////////////////////////////
 		if (core::types::isRefVector(argTy) && core::types::isRefVector(trgTy)) {
-			return builder.refVar(CAST(GET_REF_ELEM_TYPE(trgTy), builder.deref(expr)));
+			return builder.refVar(convertExprToType(builder, GET_REF_ELEM_TYPE(trgTy), builder.deref(expr)));
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -1013,7 +913,7 @@ namespace {
 		}
 
 		std::cout << " =======================================================================\n" ;
-		std::cout << " FALL-TROW CAST: this should be fixed if you expect the analysis to work\n" ;
+		std::cout << " FALL-TROW CAST this should be fixed if you expect the analysis to work\n" ;
 		std::cout << " expr: " << expr << std::endl;
 		std::cout << " to type: " << trgTy << std::endl;
 		std::cout << " =======================================================================\n" ;

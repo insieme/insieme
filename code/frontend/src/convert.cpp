@@ -952,13 +952,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				initExpr = builder.tryDeref(initExpr);
 			}
 
-			/*FIXME fix metainfo handling first, currently "resolve" in frontend messes up the
-			 * handling of symbols/types/etc....
-			assert_true( core::types::isSubTypeOf(getIRTranslationUnit().resolve(initExpr->getType()).as<core::TypePtr>(), getIRTranslationUnit().resolve(var->getType()).as<core::TypePtr>()))
-					<< "LHS: " << initExpr->getType() << " = " << getIRTranslationUnit().resolve(initExpr->getType()) << " of type " << initExpr->getType()->getNodeType() << "\n"
-					<< "RHS: " << var->getType() << " = " << getIRTranslationUnit().resolve(var->getType()) <<  " of type " << var->getType()->getNodeType() << "\n";
-			*/
-
 			// finally create the var initialization
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}
@@ -1055,8 +1048,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
  	VLOG(2) << "initExpr			: \n" << dumpPretty(initExpr);
  	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(retIr);
+ 	VLOG(2) << "type	: \n" << dumpPretty(type);
+ 	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(core::types::smartCast(retIr, type));
 
- 	return retIr;
+ 	return core::types::smartCast(retIr, type);
 }
 
 core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy){
@@ -1214,6 +1209,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	// the initialization is not a list anymore, this a base case
 	//if types match, we are done
 	if(core::types::isSubTypeOf(lookupTypeDetails(init->getType()), elementType)) {
+		VLOG(2) << "is subtype of";
 		return (retIr = init);
 	}
 
@@ -1232,11 +1228,6 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
 		return (retIr = init.as<core::CallExprPtr>()[0]);
-	}
-
-	// long long types
-	if(core::analysis::isLongLong(init->getType()) && core::analysis::isLongLong(targetType)) {
-		return (retIr = init);
 	}
 
 	////////////////////////////////////////////////////////////////////////////

@@ -847,10 +847,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		// 	Base op must be either a + or a -
 		frontend_assert( (baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n" << "baseOp used: " << binOp->getOpcodeStr().str() << "\n";
 
-		// unpack long-long
-		if (core::analysis::isLongLong(rhs->getType()))
-			rhs = core::analysis::castFromLongLong(rhs);
-
 		// LOG(INFO) << rhs->getType();
 		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be an integer type\nGiven: " << *rhs->getType();
 		if (gen.isUnsignedInt(rhs->getType()))

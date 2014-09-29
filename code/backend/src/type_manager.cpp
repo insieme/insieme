@@ -460,6 +460,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::UInt32;
 				} else if (basic.isUInt8(ptr)) {
 					type = c_ast::PrimitiveType::UInt64;
+				} else if (basic.isUInt16(ptr)) {
+					type = c_ast::PrimitiveType::UInt64;
 				} else if (basic.isInt1(ptr)) {
 					type = c_ast::PrimitiveType::Int8;
 				} else if (basic.isInt2(ptr)) {
@@ -467,6 +469,8 @@ namespace backend {
 				} else if (basic.isInt4(ptr)) {
 					type = c_ast::PrimitiveType::Int32;
 				} else if (basic.isInt8(ptr)) {
+					type = c_ast::PrimitiveType::Int64;
+				} else if (basic.isInt16(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;

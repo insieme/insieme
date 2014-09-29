@@ -68,7 +68,6 @@
 #include "insieme/backend/addons/cpp_references.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
-#include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/simd_vector.h"
 #include "insieme/backend/addons/varargs.h"
 
@@ -93,7 +92,6 @@ namespace ocl_host {
 		res->addAddOn<addons::CppReferences>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumTypes>();
-		res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::SIMDVector>();
 		res->addAddOn<addons::VarArgs>();
 		return res;

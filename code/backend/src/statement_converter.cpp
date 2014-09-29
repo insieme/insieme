@@ -207,7 +207,7 @@ namespace backend {
 
 		// handle primitive types
 		auto& basic = ptr->getNodeManager().getLangBasic();
-		if (basic.isPrimitive(ptr->getType()) || core::analysis::isLongLong(ptr->getType())) {
+		if (basic.isPrimitive(ptr->getType())) {
 
 			// handle special cases
 			const string& value = ptr->getStringValue();

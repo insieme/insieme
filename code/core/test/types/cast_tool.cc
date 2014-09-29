@@ -34,34 +34,47 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/types/cast_tool.h"
+#include "insieme/core/ir_builder.h"
 
-#include "insieme/backend/addon.h"
+#include "insieme/utils/set_utils.h"
 
-/**
- * This header file defines the components required to be registered within
- * a backend instance to handle C++ references properly.
- */
 namespace insieme {
-namespace backend {
-namespace addons {
+namespace core {
+namespace types {
 
 
-	/**
-	 * An Add-On providing support for long long type 
-	 * */
-	struct LongLongType : public AddOn {
+	TEST(TypeCast, Scalar) {
+	
 
-		/**
-		 * Installs the this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
 
-	};
+		TypePtr int1 = basic.getInt1();
+		TypePtr int2 = basic.getInt2();
+		TypePtr int4 = basic.getInt4();
+		TypePtr int8 = basic.getInt8();
+		TypePtr int16 = basic.getInt16();
 
+		{
+			auto lit = builder.literal(int1, "8");
+			
+			EXPECT_EQ(lit.getType(), int1);
+			EXPECT_EQ(smartCast(lit, int2).getType(), int2);
+		}
 
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme
+		{
+			auto lit = builder.literal(int2, "8");
+			
+			EXPECT_EQ(lit.getType(), int2);
+			EXPECT_EQ(smartCast(lit, int1).getType(), int1);
+		}
+
+	}
+
+} // types
+} // core
+} // insieme
