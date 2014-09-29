@@ -118,38 +118,11 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager
 void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
-	NodeAddress tta(toTransform);
-	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs = findCandidates(tta);
-	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists;
+	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	ia::VariableScopeMap scopes = ia::mapVariablesToScopes(tta);
-
-	for(std::pair<ExpressionPtr, RefTypePtr> candidate : structs) {
-		ExpressionSet toReplaceList;
-		toReplaceList.insert(candidate.first);
-
-		// fixpoint iteration to capture all variables that new a new versions with new type
-		size_t curNumOfVars = 0;
-//std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
-		while(curNumOfVars != toReplaceList.size()) {
-			curNumOfVars = toReplaceList.size();
-			collectVariables(candidate, toReplaceList, tta, scopes);
-		}
-		toReplaceLists.push_back(std::make_pair(toReplaceList, candidate.second));
-
-	}
-
-	// TODO clean lists to remove duplicates
-	toReplaceLists = mergeLists(toReplaceLists);
-
-//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
-//	std::cout << "\nList: \n";
-//	for(ExpressionPtr tr : toReplaceList.first)
-//		std::cout << tr << std::endl;
-//}
 
 	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
@@ -224,6 +197,40 @@ void AosToSoa::transform() {
 	NewCompoundsRemover remComp(mgr);
 	toTransform = remComp.mapElement(0, toTransform);
 //dumpPretty(toTransform);
+}
+
+std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::createCandidateLists() {
+	NodeAddress tta(toTransform);
+	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs = findCandidates(tta);
+	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists;
+
+	ia::VariableScopeMap scopes = ia::mapVariablesToScopes(tta);
+
+	for(std::pair<ExpressionPtr, RefTypePtr> candidate : structs) {
+		ExpressionSet toReplaceList;
+		toReplaceList.insert(candidate.first);
+
+		// fixpoint iteration to capture all variables that new a new versions with new type
+		size_t curNumOfVars = 0;
+//std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
+		while(curNumOfVars != toReplaceList.size()) {
+			curNumOfVars = toReplaceList.size();
+			collectVariables(candidate, toReplaceList, tta, scopes);
+		}
+		toReplaceLists.push_back(std::make_pair(toReplaceList, candidate.second));
+
+	}
+
+	// TODO clean lists to remove duplicates
+	toReplaceLists = mergeLists(toReplaceLists);
+
+	//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	//	std::cout << "\nList: \n";
+	//	for(ExpressionPtr tr : toReplaceList.first)
+	//		std::cout << tr << std::endl;
+	//}
+
+	return toReplaceLists;
 }
 
 utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeAddress toTransform) {
@@ -372,7 +379,7 @@ ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, Express
 
 
 CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
-		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType) {
+		const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization

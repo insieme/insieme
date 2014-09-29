@@ -57,13 +57,14 @@ protected:
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
 			const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
+	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> createCandidateLists();
 	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	core::ExpressionPtr updateInit(const core::ExpressionMap& varReplacements, core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType,
 			core::StringValuePtr fieldName);
 
-	core::CompoundStmtPtr generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl, const core::VariablePtr& newVar,
+	virtual core::CompoundStmtPtr generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl, const core::VariablePtr& newVar,
 			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 	void addNewDecls(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
