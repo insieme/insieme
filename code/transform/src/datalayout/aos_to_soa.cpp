@@ -378,7 +378,7 @@ ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, Express
 }
 
 
-CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
 	IRBuilder builder(mgr);
 
@@ -406,6 +406,7 @@ CompoundStmtPtr AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, 
 //						getBaseType(newVar->getType(), StringValuePtr()))));
 //			}
 
+	return allDecls;
 	CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
 	cmpDecls.addAnnotation<RemoveMeAnnotation>();
 
@@ -428,10 +429,30 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 				nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
 			}
 
-			CompoundStmtPtr allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType);
-			replacements[decl] = allDecls;
+			IRBuilder builder(mgr);
+			StatementList allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType);
+			CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
+			cmpDecls.addAnnotation<RemoveMeAnnotation>();
+
+			replacements[decl] = cmpDecls;
 		}
 	});
+}
+
+StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType) {
+	IRBuilder builder(mgr);
+	StatementList allAssigns;
+
+	allAssigns.push_back(call);
+
+	for(NamedTypePtr memberType : newStructType->getElements()) {
+		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
+				updateInit(varReplacements, call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()),
+						memberType->getName())));
+	}
+
+	return allAssigns;
 }
 
 void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const StructTypePtr& newStructType,
@@ -451,15 +472,7 @@ void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const St
 						nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
 					}
 
-					StatementList allAssigns;
-
-					allAssigns.push_back(call);
-
-					for(NamedTypePtr memberType : newStructType->getElements()) {
-						allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
-								updateInit(varReplacements, call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()),
-										memberType->getName())));
-					}
+					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType);
 
 					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
 					cmpAssigns.addAnnotation<RemoveMeAnnotation>();

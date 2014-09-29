@@ -104,16 +104,16 @@ void AosToTaos::transform() {
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 
-for(std::pair<NodeAddress, NodePtr> r : replacements) {
-	std::cout << "\nFRom:\n";
-	dumpPretty(r.first);
-	std::cout << "\nTo: \n";
-	dumpPretty(r.second);
-	std::map<NodeAddress, NodePtr> re;
-	re[r.first] = r.second;
-//	core::transform::replaceAll(mgr, re);
-	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
-}
+//for(std::pair<NodeAddress, NodePtr> r : replacements) {
+//	std::cout << "\nFRom:\n";
+//	dumpPretty(r.first);
+//	std::cout << "\nTo: \n";
+//	dumpPretty(r.second);
+//	std::map<NodeAddress, NodePtr> re;
+//	re[r.first] = r.second;
+////	core::transform::replaceAll(mgr, re);
+//	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
+//}
 
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
@@ -136,7 +136,7 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-CompoundStmtPtr AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType) {
 	IRBuilder builder(mgr);
 
@@ -147,11 +147,20 @@ CompoundStmtPtr AosToTaos::generateNewDecl(const ExpressionMap& varReplacements,
 	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), core::transform::replaceAllGen(mgr, decl->getInitialization().getAddressedNode(),
 			oldStructType, newStructType, true)));
 
-	CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
-//	cmpDecls.addAnnotation<RemoveMeAnnotation>();
-
-	return cmpDecls;
+	return allDecls;
 }
+
+StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType) {
+	IRBuilder builder(mgr);
+	StatementList allAssigns;
+
+	allAssigns.push_back(call);
+
+
+	return allAssigns;
+}
+
 
 } // datalayout
 } // transform

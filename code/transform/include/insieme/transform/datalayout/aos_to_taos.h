@@ -52,8 +52,11 @@ class AosToTaos : public AosToSoa {
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
-	virtual core::CompoundStmtPtr generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
+	virtual core::StatementList generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+
+	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
+			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType);
 public:
 	AosToTaos(core::NodePtr& toTransform);
 
