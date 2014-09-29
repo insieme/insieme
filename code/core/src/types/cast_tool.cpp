@@ -633,17 +633,6 @@ namespace {
 			return gen.getRefNull();
 		}
 
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 									ref<'a> -> 'a
-		///////////////////////////////////////////////////////////////////////////////////////
-		// Converts a ref<'a> to a. This is required anywhere where a non ref type is needed and the 
-		// current expression is of ref type. 
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-			// Recursively call the cast function to make sure the subtype and the target type matches
-			return convertExprToType(builder, trgTy, builder.deref(expr));
-		}
-
 
 		///////////////////////////////////////////////////////////////////////////////////////
 		// 									'a -> ref<'a>
@@ -672,7 +661,8 @@ namespace {
 		// for string literals which can be converted to ref<arrays<>> (because of the C semantics) 
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
-
+			
+			abort();
 			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 			
 			if (core::types::isArray(subTy) && core::types::isVector(argTy)) {
@@ -916,7 +906,9 @@ namespace {
 		std::cout << " FALL-TROW CAST this should be fixed if you expect the analysis to work\n" ;
 		std::cout << " expr: " << expr << std::endl;
 		std::cout << " to type: " << trgTy << std::endl;
+		dumpPretty(expr);
 		std::cout << " =======================================================================\n" ;
+
 
 		return builder.castExpr(trgTy, expr);
 		//assert(false && "Cast conversion not supported!");

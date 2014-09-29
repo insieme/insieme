@@ -46,33 +46,110 @@ namespace core {
 namespace types {
 
 
-	TEST(TypeCast, Scalar) {
+	TEST(TypeCast, literals) {
+	
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+		std::vector<TypePtr> types;
+
+		types.push_back(basic.getInt1());
+		types.push_back(basic.getInt2());
+		types.push_back(basic.getInt4());
+		types.push_back(basic.getInt8());
+		types.push_back(basic.getInt16());
+
+		types.push_back(basic.getReal4());
+		types.push_back(basic.getReal8());
+
+		types.push_back(basic.getUInt1());
+		types.push_back(basic.getUInt2());
+		types.push_back(basic.getUInt4());
+		types.push_back(basic.getUInt8());
+		types.push_back(basic.getUInt16());
+
+		for (auto type_a : types){
+			for (auto type_b : types){
+				auto lit = builder.literal(type_a, "8");
+				
+				EXPECT_EQ(lit.getType(), type_a);
+				EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
+			}
+		}	
+		{
+		}
+	}
+
+
+	TEST(TypeCast, value) {
 	
 
 		NodeManager manager;
 		IRBuilder builder(manager);
 		const lang::BasicGenerator& basic = manager.getLangBasic();
 
-		TypePtr int1 = basic.getInt1();
-		TypePtr int2 = basic.getInt2();
-		TypePtr int4 = basic.getInt4();
-		TypePtr int8 = basic.getInt8();
-		TypePtr int16 = basic.getInt16();
+		std::vector<TypePtr> types;
 
-		{
-			auto lit = builder.literal(int1, "8");
-			
-			EXPECT_EQ(lit.getType(), int1);
-			EXPECT_EQ(smartCast(lit, int2).getType(), int2);
+		types.push_back(basic.getInt1());
+		types.push_back(basic.getInt2());
+		types.push_back(basic.getInt4());
+		types.push_back(basic.getInt8());
+		types.push_back(basic.getInt16());
+
+		types.push_back(basic.getReal4());
+		types.push_back(basic.getReal8());
+
+		types.push_back(basic.getUInt1());
+		types.push_back(basic.getUInt2());
+		types.push_back(basic.getUInt4());
+		types.push_back(basic.getUInt8());
+		types.push_back(basic.getUInt16());
+
+		for (auto type_a : types){
+			for (auto type_b : types){
+				auto var = builder.variable(builder.refType(type_a));
+				auto expr= builder.deref(var);
+				
+				EXPECT_EQ(expr.getType(), type_a);
+				EXPECT_EQ(smartCast(expr, type_b).getType(), type_b);
+			}
 		}
+	}
+	
+	TEST(TypeCast, scalartoarray) {
+	
 
-		{
-			auto lit = builder.literal(int2, "8");
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+
+		std::vector<TypePtr> types;
+
+		types.push_back(basic.getInt1());
+		types.push_back(basic.getInt2());
+		types.push_back(basic.getInt4());
+		types.push_back(basic.getInt8());
+		types.push_back(basic.getInt16());
+
+		types.push_back(basic.getReal4());
+		types.push_back(basic.getReal8());
+
+		types.push_back(basic.getUInt1());
+		types.push_back(basic.getUInt2());
+		types.push_back(basic.getUInt4());
+		types.push_back(basic.getUInt8());
+		types.push_back(basic.getUInt16());
+
+		for (auto type : types){
+	
+			auto ptr_type = builder.arrayType(type);
+			auto var = builder.variable(builder.refType(type));
+
+			EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
+			std::cout << smartCast(var, ptr_type) << std::endl;
 			
-			EXPECT_EQ(lit.getType(), int2);
-			EXPECT_EQ(smartCast(lit, int1).getType(), int1);
 		}
-
 	}
 
 } // types

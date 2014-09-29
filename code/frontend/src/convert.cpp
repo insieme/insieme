@@ -1051,6 +1051,15 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
  	VLOG(2) << "type	: \n" << dumpPretty(type);
  	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(core::types::smartCast(retIr, type));
 
+	// FIXME: fix this, improve smartCast
+	auto call = retIr.isa<core::CallExprPtr>();
+	if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+		return retIr;
+	}
+	if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor())
+	|| core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor2D())){
+		return retIr;
+	}
  	return core::types::smartCast(retIr, type);
 }
 
