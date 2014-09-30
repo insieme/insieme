@@ -242,6 +242,9 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 	else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(type)) {
 		res = insieme::core::types::castScalar(targetType, res);
 	}
+	else if (expr->getType().isa<core::RefTypePtr>() && (expr->getType().isa<core::RefTypePtr>()->getElementType() == targetType)){
+		res = builder.deref(expr);
+	}
 	else{
 		res = core::types::smartCast(targetType, res);
 	}
