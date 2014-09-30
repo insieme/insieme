@@ -677,7 +677,6 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 					  if (*varAddr == *pair.second) {
 							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
 								varAddr = tmp;
-							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
 						}
 			});
 		}

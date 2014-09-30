@@ -46,7 +46,7 @@
 #include "insieme/core/types/cast_tool.h"
 
 #include "insieme/annotations/c/include.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 
 
 #include <clang/AST/Expr.h>

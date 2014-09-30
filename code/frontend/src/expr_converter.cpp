@@ -40,7 +40,7 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/memalloc.h"
@@ -241,6 +241,9 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 	}
 	else if (mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(type)) {
 		res = insieme::core::types::castScalar(targetType, res);
+	}
+	else if (expr->getType().isa<core::RefTypePtr>() && (expr->getType().isa<core::RefTypePtr>()->getElementType() == targetType)){
+		res = builder.deref(expr);
 	}
 	else{
 		res = core::types::smartCast(targetType, res);

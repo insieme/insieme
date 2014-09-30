@@ -45,7 +45,7 @@
 
 #include "insieme/frontend/omp/omp_annotation.h"
 
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/debug.h"
@@ -1051,7 +1051,17 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
  	VLOG(2) << "type	: \n" << dumpPretty(type);
  	VLOG(2) << "initExpr (adjusted)	: \n" << dumpPretty(core::types::smartCast(retIr, type));
 
- 	return core::types::smartCast(retIr, type);
+	// FIXME: fix this, improve getInitExpr
+	auto call = retIr.isa<core::CallExprPtr>();
+	if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+		return retIr;
+	}
+	if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor())
+	|| core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor2D())){
+		return retIr;
+	}
+	if (lookupTypeDetails(type) ==  lookupTypeDetails(retIr->getType())) return retIr;
+ 	return core::types::smartCast(lookupTypeDetails(type), retIr);
 }
 
 core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy){

@@ -474,69 +474,19 @@ namespace {
 			return expr;
 		}
 
-
 		///////////////////////////////////////////////////////////////////////////////////////
-		//							ref<array<'a,#n>> -> Boolean
+		//							anything -> Boolean
 		///////////////////////////////////////////////////////////////////////////////////////
-		// This happens when a reference is used in a conditional operation. In those situation 
-		// the case is invalid and we hare to replace it with a comparison with the NULL reference.
-		// therefore:
-		//		if( ref )  ->  if( ref != Null )
-		if (gen.isBool(trgTy) && core::types::isRefArray(argTy)){
-			// convert NULL (of type AnyRef) to the same ref type as the LHS expression
-			return builder.callExpr(gen.getBoolLNot(), 
-									builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr )
-								);
+		if( gen.isBool(trgTy) ) {
+			return castToBool(expr);
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
-		// 							ref<vector<'a,#n>> -> Boolean
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( gen.isBool(trgTy) && core::types::isRefVector(argTy)) 
-		{
-			// convert NULL (of type AnyRef) to the same ref type as the LHS expression
-			return smartCast(trgTy, builder.callExpr(gen.getRefVectorToRefArray(), expr));
-		}
-
-		
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 								 anyref -> Boolean
-		///////////////////////////////////////////////////////////////////////////////////////
-		//		if( ref )  ->  if( ref != Null )
-		//
-		if ( gen.isBool(trgTy) && gen.isAnyRef(argTy) ) {
-			return builder.callExpr(gen.getBoolLNot(), builder.callExpr(gen.getBool(), 
-									gen.getRefIsNull(), expr ));
-		}
-
-		
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 							SCALAR convertExprToTypeING
+		// 							SCALAR cast
 		///////////////////////////////////////////////////////////////////////////////////////
 		if( (gen.isPrimitive (trgTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(trgTy))
 			&& (gen.isPrimitive(argTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)))
 			return core::types::castScalar (trgTy, expr);
-
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 							Signed integer -> Boolean
-		///////////////////////////////////////////////////////////////////////////////////////
-		// cast a signed integer to boolean value, this happens for integer numbers when appear in
-		// conditional expressions, for loop exit conditions or while stmt
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( gen.isBool(trgTy) && gen.isSignedInt(argTy) ) {
-			return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), {expr, builder.intLit(0)});
-		}
-		
-
-		///////////////////////////////////////////////////////////////////////////////////////
-		//							Unsigned integer -> Boolean
-		///////////////////////////////////////////////////////////////////////////////////////
-		// cast an unsigned integer to boolean value, this happens for integer numbers when appear in
-		// conditional expressions, for loop exit conditions or while stmt
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( gen.isBool(trgTy) && gen.isUnsignedInt(argTy) ) {
-			return builder.callExpr(gen.getBool(), gen.getUnsignedIntNe(), {expr, builder.uintLit(0)});
-		}
 
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -633,17 +583,6 @@ namespace {
 			return gen.getRefNull();
 		}
 
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 									ref<'a> -> 'a
-		///////////////////////////////////////////////////////////////////////////////////////
-		// Converts a ref<'a> to a. This is required anywhere where a non ref type is needed and the 
-		// current expression is of ref type. 
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-			// Recursively call the cast function to make sure the subtype and the target type matches
-			return convertExprToType(builder, trgTy, builder.deref(expr));
-		}
-
 
 		///////////////////////////////////////////////////////////////////////////////////////
 		// 									'a -> ref<'a>
@@ -672,7 +611,8 @@ namespace {
 		// for string literals which can be converted to ref<arrays<>> (because of the C semantics) 
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
-
+			
+			assert_fail() << "unused" << std::endl;
 			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 			
 			if (core::types::isArray(subTy) && core::types::isVector(argTy)) {
@@ -843,21 +783,13 @@ namespace {
 					);
 		}
 
-
-		///////////////////////////////////////////////////////////////////////////////////////
-		// 							ref<'a> -> ref<ref<'a>>
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-			const core::TypePtr& subArgTy = GET_REF_ELEM_TYPE(argTy);
-			if (*subArgTy == *trgTy) { return builder.deref( expr ); }
-		}
-
-
-
 		///////////////////////////////////////////////////////////////////////////////////////
 		// 							  ref<'a> -> ref<'b>
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+
+			const core::TypePtr& subArgTy = GET_REF_ELEM_TYPE(argTy);
+			if (*subArgTy == *trgTy) { return builder.deref( expr ); }
 
 			///////////////////////////////////////////////////////////////////////////////////////
 			// pointer (ref<ref< converted to base class... no need to reinterpret
@@ -899,16 +831,13 @@ namespace {
 			return builder.callExpr( trgTy, gen.getVolatileRead(), smartCast(core::analysis::getVolatileType(trgTy), expr) );
 		}
 
-		// [ FunctionType -> bool ]
-		if( argTy.isa<core::FunctionTypePtr>() && gen.isBool(trgTy) ) {
-			return builder.callExpr(trgTy, gen.getGenNe(), expr, builder.getZero(argTy));
-		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
 		// 									FunctionType -> FunctionType
 		///////////////////////////////////////////////////////////////////////////////////////
 		// cast a function pointer to a different type function ptr 
 		if ( argTy.isa<core::FunctionTypePtr>() && trgTy.isa<core::FunctionTypePtr>() ) {
+			assert_fail() << "unused" << std::endl;
 			return builder.castExpr(trgTy, expr);
 		}
 
@@ -916,7 +845,15 @@ namespace {
 		std::cout << " FALL-TROW CAST this should be fixed if you expect the analysis to work\n" ;
 		std::cout << " expr: " << expr << std::endl;
 		std::cout << " to type: " << trgTy << std::endl;
+		std::cout << " **********************************\n" ;
+		dumpPretty(expr);
+		std::cout << " **********************************\n" ;
+		dumpPretty(expr->getType());
+		std::cout << " **********************************\n" ;
+		dumpPretty(trgTy);
 		std::cout << " =======================================================================\n" ;
+
+		assert_fail() << "as your see, we should not be here" << std::endl;
 
 		return builder.castExpr(trgTy, expr);
 		//assert(false && "Cast conversion not supported!");

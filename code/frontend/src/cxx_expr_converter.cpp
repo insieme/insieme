@@ -57,7 +57,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/utils/debug.h"
