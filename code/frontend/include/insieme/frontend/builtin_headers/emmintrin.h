@@ -144,6 +144,11 @@ extern __v8hi __builtin_ia32_pcmpgtw128(__v8hi, __v8hi);
 extern __v4si __builtin_ia32_pcmpeqd128(__v4si, __v4si); 
 extern __v4si __builtin_ia32_pcmpgtd128(__v4si, __v4si); 
 extern void __builtin_ia32_movnti64(long long int *, long long int); 
+
+extern __m128i __builtin_ia32_pshufhw(__v8hi, int);
+extern __m128i __builtin_ia32_pshuflw(__v8hi, int);
+extern __m128i __builtin_ia32_pshufd (__v4si, int);
+
 //INSIEME HACK
 #endif
 
@@ -1461,7 +1466,7 @@ _mm_mulhi_epu16 (__m128i __A, __m128i __B)
   return (__m128i)__builtin_ia32_pmulhuw128 ((__v8hi)__A, (__v8hi)__B);
 }
 
-#ifdef __OPTIMIZE__
+//#ifdef __OPTIMIZE__
 extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_shufflehi_epi16 (__m128i __A, const int __mask)
 {
@@ -1479,14 +1484,14 @@ _mm_shuffle_epi32 (__m128i __A, const int __mask)
 {
   return (__m128i)__builtin_ia32_pshufd ((__v4si)__A, __mask);
 }
-#else
-#define _mm_shufflehi_epi16(A, N) \
-  ((__m128i)__builtin_ia32_pshufhw ((__v8hi)(__m128i)(A), (int)(N)))
-#define _mm_shufflelo_epi16(A, N) \
-  ((__m128i)__builtin_ia32_pshuflw ((__v8hi)(__m128i)(A), (int)(N)))
-#define _mm_shuffle_epi32(A, N) \
-  ((__m128i)__builtin_ia32_pshufd ((__v4si)(__m128i)(A), (int)(N)))
-#endif
+//#else
+//#define _mm_shufflehi_epi16(A, N) \
+//  ((__m128i)__builtin_ia32_pshufhw ((__v8hi)(__m128i)(A), (int)(N)))
+//#define _mm_shufflelo_epi16(A, N) \
+//  ((__m128i)__builtin_ia32_pshuflw ((__v8hi)(__m128i)(A), (int)(N)))
+//#define _mm_shuffle_epi32(A, N) \
+//  ((__m128i)__builtin_ia32_pshufd ((__v4si)(__m128i)(A), (int)(N)))
+//#endif
 
 extern __inline void __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_maskmoveu_si128 (__m128i __A, __m128i __B, char *__C)
