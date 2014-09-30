@@ -511,7 +511,7 @@ namespace {
 
 		
 		///////////////////////////////////////////////////////////////////////////////////////
-		// 							SCALAR convertExprToTypeING
+		// 							SCALAR cast
 		///////////////////////////////////////////////////////////////////////////////////////
 		if( (gen.isPrimitive (trgTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(trgTy))
 			&& (gen.isPrimitive(argTy) || builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(argTy)))
@@ -891,6 +891,7 @@ namespace {
 
 		// [ FunctionType -> bool ]
 		if( argTy.isa<core::FunctionTypePtr>() && gen.isBool(trgTy) ) {
+			assert_fail() << "this should not be used, use cast to bool instead\n" ;
 			return builder.callExpr(trgTy, gen.getGenNe(), expr, builder.getZero(argTy));
 		}
 
@@ -906,8 +907,15 @@ namespace {
 		std::cout << " FALL-TROW CAST this should be fixed if you expect the analysis to work\n" ;
 		std::cout << " expr: " << expr << std::endl;
 		std::cout << " to type: " << trgTy << std::endl;
+		std::cout << " **********************************\n" ;
 		dumpPretty(expr);
+		std::cout << " **********************************\n" ;
+		dumpPretty(expr->getType());
+		std::cout << " **********************************\n" ;
+		dumpPretty(trgTy);
 		std::cout << " =======================================================================\n" ;
+
+		abort();
 
 
 		return builder.castExpr(trgTy, expr);
