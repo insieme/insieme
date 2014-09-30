@@ -100,7 +100,7 @@ protected:
 			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
 
-	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);

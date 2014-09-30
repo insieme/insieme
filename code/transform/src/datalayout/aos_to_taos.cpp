@@ -112,6 +112,9 @@ void AosToTaos::transform() {
 		//introducing unmarshalling
 		std::vector<StatementAddress> end = addUnmarshalling(varReplacements, newStructType, tta, begin, nElems, replacements);
 
+		//free memory of the new variables
+		addNewDel(varReplacements, tta, newStructType, replacements);
+
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
 //	dumpPretty(r.first);
@@ -235,6 +238,22 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const
 
 	return builder.forStmt(builder.declarationStmt(iterator, builder.castExpr(boundaryType, builder.div(start, tilesize))),
 			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
+}
+
+StatementList AosToTaos::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+		const StructTypePtr& newStructType) {
+	StatementList deletes;
+
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
+
+	if(match) {
+		IRBuilder builder(mgr);
+		deletes.push_back(core::transform::fixTypes(mgr, match.get().getRoot(), oldVar, newVar, true).as<ExpressionPtr>());
+		deletes.push_back(stmt);
+	}
+
+	return deletes;
 }
 
 

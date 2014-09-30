@@ -848,29 +848,23 @@ std::cout << match.as<ExpressionPtr>()->getType() << " tt " << arrayAccess->getT
 }
 */
 
-CompoundStmtPtr AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+StatementList AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
 		const StructTypePtr& newStructType) {
-	CompoundStmtPtr replacement;
+	StatementList deletes;
 
 	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
-
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
 		IRBuilder builder(mgr);
-		StatementList deletes;
 		for(NamedTypePtr memberType : newStructType->getElements()) {
 			deletes.push_back(builder.refDelete(refAccess(newVar, ExpressionPtr(), memberType->getName())));
 		}
 		deletes.push_back(stmt);
 
-		CompoundStmtPtr cmpDeletes = builder.compoundStmt(deletes);
-		cmpDeletes.addAnnotation<RemoveMeAnnotation>();
-
-		replacement = cmpDeletes;
 	}
 
-	return replacement;
+	return deletes;
 }
 
 void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress& toTransform, const StructTypePtr& newStructType,
@@ -879,10 +873,15 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 		const ExpressionPtr& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second;
+		IRBuilder builder(mgr);
 
 		visitDepthFirstInterruptible(toTransform, [&](const ExpressionAddress& call)->bool {
-			StatementPtr multiDelCompound = generateDel(call, oldVar, newVar, newStructType);
-			if(multiDelCompound) {
+			StatementList deletes = generateDel(call, oldVar, newVar, newStructType);
+			if(!deletes.empty()) {
+			CompoundStmtPtr cmpDeletes = builder.compoundStmt(deletes);
+				cmpDeletes.addAnnotation<RemoveMeAnnotation>();
+
+				StatementPtr multiDelCompound = cmpDeletes;
 				replacements[call] = multiDelCompound;
 
 				return true;
