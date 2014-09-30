@@ -116,12 +116,6 @@ namespace checks {
 			return res;
 		}
 
-		auto removeLL = [] (const std::string& val) -> std::string{
-			auto it = val.find("l");
-			if (it == string::npos) return val;
-			return val.substr(0, it);
-		};
-
 		// check value range
 		if (basic.isSignedInt(type)) {
 			int64_t min = 0;
@@ -152,7 +146,7 @@ namespace checks {
 				return res;
 			}
 
-			int64_t num = utils::numeric_cast<int64_t>(removeLL(value));
+			int64_t num = utils::numeric_cast<int64_t>(value);
 			if (!(min <= num && num <= max)) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
@@ -184,7 +178,7 @@ namespace checks {
 				return res;
 			}
 
-			if (!(utils::numeric_cast<uint64_t>(removeLL(value)) <= max)) {
+			if (!(utils::numeric_cast<uint64_t>(value) <= max)) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
 						format("Literal out of range for type %s literal: %s", toString(*type), value),

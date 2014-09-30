@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,9 +86,9 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 
 	static RetTy convert(const std::string& in) {
 		// special handling for 0u and 0ul
-		if (in == "0u" || in == "0ul" || in == "0l") return static_cast<RetTy>(0);
+		if (in == "0u" || in == "0ul" || in == "0l" || in == "0ll" || in == "0ull") return static_cast<RetTy>(0);
 		// special handling for -0u and -0ul and -0l
-		if (in == "-0u" || in == "-0ul" || in == "-0l") return static_cast<RetTy>(0);
+		if (in == "-0u" || in == "-0ul" || in == "-0l" || in == "-0ll" || in == "-0ull") return static_cast<RetTy>(0);
 
 		// convert hexadecimal numbers
 		if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
@@ -97,36 +97,31 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 		if( in.compare(0, 1, "0") == 0 || in.compare(0, 2, "-0") == 0)
 			return boost::lexical_cast<OctTo<RetTy>>( in );
 
-		// Now we check the suffix of the literal 
+
+		// Now we check the suffix of the literal
 		bool isUnsigned = false;
 		
-		if(in.size() > 2 && 
-			( (in[in.size()-2] == 'l' && in[in.size()-1] == 'l') || 
-		      (in[in.size()-2] == 'L' && in[in.size()-1] == 'L')  ) 
-		) {
-			// treats as a long double
-			return boost::lexical_cast<long long>(std::string(in.begin(), in.end()-2));
+		const char* str = in.c_str();
+		std::size_t size = in.size();
+		while(size > 0 && (str[size-1] == 'l' || str[size-1] == 'L' || str[size-1] == 'u' || str[size-1] == 'U')) {
+			if (str[size-1] == 'u' || str[size-1] == 'U') {
+				isUnsigned = true;
+			}
+			size--;
 		}
 
-		if(in.size()>2 && (in[in.size()-2] == 'u' || in[in.size()-2] == 'U')) {
-			isUnsigned = true;
+		// also check sign
+		if (size > 0 && str[0] =='-') {
+			isUnsigned = false;
 		}
 
+		// get cleared value
+		std::string cleared(str,str+size);
 
-
-		if(in[in.size()-1] == 'l' || in[in.size()-1] == 'L') {
-			// treats as a long double
-			if (isUnsigned)
-				return boost::lexical_cast<unsigned long>(std::string(in.begin(), in.end()-2));
-			
-			return boost::lexical_cast<long>(std::string(in.begin(), in.end()-1)); 
-		}
-
-		if(in[in.size()-1] == 'u' || in[in.size()-1] == 'U') {
-			return boost::lexical_cast<unsigned int>(std::string(in.begin(), in.end()-1));
-		}
-
-		return boost::lexical_cast<RetTy>( in );
+		// convert to long-long and then to target type
+		return (isUnsigned)
+				? boost::lexical_cast<unsigned long long>(cleared)
+				: boost::lexical_cast<long long>(cleared);
 	}
 
 };
