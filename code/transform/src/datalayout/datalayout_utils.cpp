@@ -220,29 +220,47 @@ TypePtr getBaseType(TypePtr type, StringValuePtr field) {
 	return type;
 }
 
-ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr field) {
+ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr field, ExpressionPtr vecIndex) {
 	NodeManager& mgr = thing->getNodeManager();
 	IRBuilder builder(mgr);
 
 	if(RefTypePtr ref = thing->getType().isa<RefTypePtr>()) {
-		if(ref->getElementType().isa<ArrayTypePtr>())
-			return valueAccess(builder.deref(builder.arrayRefElem(thing, index)), index, field);
+		if(ref->getElementType().isa<ArrayTypePtr>()) {
+			if(!index)
+				return thing;
 
-		return valueAccess(builder.deref(thing), index, field);
+			return valueAccess(builder.deref(builder.arrayRefElem(thing, index)), index, field, vecIndex);
+		}
+
+		if(ref->getElementType().isa<VectorTypePtr>()) {
+			if(!vecIndex)
+				return thing;
+
+			return valueAccess(builder.deref(builder.arrayRefElem(thing, vecIndex)), index, field, vecIndex);
+		}
+
+		return valueAccess(builder.deref(thing), index, field, vecIndex);
 	}
 
 	if(thing->getType().isa<ArrayTypePtr>()) {
 		if(!index)
 			return thing;
 
-		return valueAccess(builder.arraySubscript(thing, index), index, field);
+		return valueAccess(builder.arraySubscript(thing, index), index, field, vecIndex);
+	}
+
+	if(thing->getType().isa<VectorTypePtr>()) {
+		if(!vecIndex)
+			return thing;
+
+		return valueAccess(builder.arraySubscript(thing, vecIndex), index, field, vecIndex);
 	}
 
 	if(thing->getType().isa<StructTypePtr>()) {
 		if(!field)
 			return thing;
 
-		return valueAccess(builder.accessMember(thing, field), index, field);
+		return valueAccess(builder.accessMember(thing, field), index, field, vecIndex);
 	}
 
 	return thing;

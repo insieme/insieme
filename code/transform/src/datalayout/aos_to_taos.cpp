@@ -109,6 +109,9 @@ void AosToTaos::transform() {
 		//introducing marshalling
 		std::vector<StatementAddress> begin = addMarshalling(varReplacements, newStructType, tta, nElems, replacements);
 
+		//introducing unmarshalling
+		std::vector<StatementAddress> end = addUnmarshalling(varReplacements, newStructType, tta, begin, nElems, replacements);
+
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
 //	dumpPretty(r.first);
@@ -185,15 +188,45 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const E
 //		ExpressionPtr newVectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(iterator, tilesize));
 //
 //		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-//		ExpressionPtr soaAccess = refAccess(newVar, newArrayIdx, memberType->getName(), newVectorIdx);
+//		ExpressionPtr taosAccess = refAccess(newVar, newArrayIdx, memberType->getName(), newVectorIdx);
 
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
 
 		ExpressionPtr aosAccess = valueAccess(oldVar, globalIdx, memberType->getName());
-		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
+		ExpressionPtr taosAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
 				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
 
-		loopBody.push_back(builder.assign(soaAccess, aosAccess));
+		loopBody.push_back(builder.assign(taosAccess, aosAccess));
+	}
+
+	StatementPtr innerLoop = builder.forStmt(builder.declarationStmt(tiledIterator, builder.castExpr(boundaryType, builder.uintLit(0))),
+			builder.castExpr(boundaryType, tilesize), builder.literal(boundaryType, "1"),
+			builder.compoundStmt(loopBody));
+
+	return builder.forStmt(builder.declarationStmt(iterator, builder.castExpr(boundaryType, builder.div(start, tilesize))),
+			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
+}
+
+StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+		const ExpressionPtr& end, const StructTypePtr& structType) {
+	IRBuilder builder(mgr);
+
+	std::vector<StatementPtr> loopBody;
+	TypePtr boundaryType = start->getType();
+	VariablePtr iterator = builder.variable(boundaryType);
+	VariablePtr tiledIterator = builder.variable(boundaryType);
+
+	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
+	ExpressionPtr tilesize = builder.uintLit(84537493);
+
+	for(NamedTypePtr memberType : structType->getElements()) {
+		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
+
+		ExpressionPtr aosAccess = refAccess(oldVar, globalIdx, memberType->getName());
+		ExpressionPtr taosAccess = valueAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
+				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
+
+		loopBody.push_back(builder.assign(aosAccess, taosAccess));
 	}
 
 	StatementPtr innerLoop = builder.forStmt(builder.declarationStmt(tiledIterator, builder.castExpr(boundaryType, builder.uintLit(0))),
