@@ -48,7 +48,7 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/frontend_ir.h"
 
 #include "insieme/core/lang/basic.h"
