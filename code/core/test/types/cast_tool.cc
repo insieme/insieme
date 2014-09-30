@@ -77,8 +77,6 @@ namespace types {
 				EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
 			}
 		}	
-		{
-		}
 	}
 
 
@@ -140,7 +138,11 @@ namespace types {
 		types.push_back(basic.getUInt8());
 		types.push_back(basic.getUInt16());
 
+		// cast ptr to bool
 		types.push_back(builder.refType(builder.arrayType(types[0])));
+
+		// cast function to bool
+		types.push_back(builder.functionType( types, types[0]));
 
 		for (auto type : types){
 	
