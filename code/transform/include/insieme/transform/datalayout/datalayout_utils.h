@@ -39,29 +39,38 @@
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
 namespace insieme {
-
-namespace analysis {
-typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScopeMap;
-}
-
 namespace transform {
 namespace datalayout {
 
-class AosToTaos : public AosToSoa {
-	core::IntTypeParamPtr genericTileSize;
+core::ExpressionAddress extractVariable(core::ExpressionAddress expr);
 
-	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
+core::ExpressionPtr getBaseExpression(core::ExpressionPtr expr);
 
-	virtual core::StatementList generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
-			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+/*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
 
-	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType);
-public:
-	AosToTaos(core::NodePtr& toTransform);
+core::NodeAddress getRootVariable(const core::NodeAddress scope, core::NodeAddress var);
 
-	virtual void transform();
-};
+core::ExpressionPtr removeRefVar(core::ExpressionPtr refVar);
+
+core::TypePtr removeRef(core::TypePtr refTy);
+
+core::TypePtr removeRefArray(core::TypePtr refTy);
+
+core::TypePtr getBaseType(core::TypePtr type, core::StringValuePtr field);
+
+core::ExpressionPtr valueAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field);
+
+core::ExpressionPtr refAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field);
+
+core::pattern::TreePattern declOrAssignment(core::pattern::TreePattern lhs, core::pattern::TreePattern rhs);
+
+core::StatementAddress getStatementReplacableParent(core::NodeAddress toBeReplacedByAStatement);
+
+bool validVar(core::ExpressionPtr toTest);
+
 
 } // datalayout
 } // transform
