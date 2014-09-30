@@ -118,7 +118,6 @@ namespace types {
 	}
 	
 	TEST(TypeCast, scalartoarray) {
-	
 
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -143,15 +142,54 @@ namespace types {
 
 		for (auto type : types){
 	
-			auto ptr_type = builder.arrayType(type);
+			auto ptr_type = builder.refType(builder.arrayType(type));
 			auto var = builder.variable(builder.refType(type));
 
 			EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
-			std::cout << smartCast(var, ptr_type) << std::endl;
-			
 		}
 	}
+	
+	TEST(TypeCast, vectorToArray) {
 
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+
+		std::vector<TypePtr> types;
+
+		types.push_back(basic.getInt1());
+		types.push_back(basic.getInt2());
+		types.push_back(basic.getInt4());
+		types.push_back(basic.getInt8());
+		types.push_back(basic.getInt16());
+
+		types.push_back(basic.getReal4());
+		types.push_back(basic.getReal8());
+
+		types.push_back(basic.getUInt1());
+		types.push_back(basic.getUInt2());
+		types.push_back(basic.getUInt4());
+		types.push_back(basic.getUInt8());
+		types.push_back(basic.getUInt16());
+
+
+		core::NamedCompositeType::Entries structElements;
+		structElements.push_back(builder.namedType(builder.stringValue("m1"), types[1]));
+		structElements.push_back(builder.namedType(builder.stringValue("m2"), types[0]));
+		types.push_back( builder.structType( builder.stringValue("myStruct"), structElements ));
+		types.push_back( builder.unionType( builder.stringValue("myUnion"), structElements ));
+		
+
+		for (auto type : types){
+	
+			auto ptr_type = builder.refType(builder.arrayType(type));
+			core::IntTypeParamPtr numElem = ConcreteIntTypeParam::get(manager, 4);
+			auto vectType = builder.refType(builder.vectorType(type, numElem));
+			auto var = builder.variable(vectType);
+
+			EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
+		}
+	}
 } // types
 } // core
 } // insieme
