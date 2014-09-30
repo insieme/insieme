@@ -77,8 +77,6 @@ namespace types {
 				EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
 			}
 		}	
-		{
-		}
 	}
 
 
@@ -116,7 +114,44 @@ namespace types {
 			}
 		}
 	}
+		
+	TEST(TypeCast, toBool) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+
+		std::vector<TypePtr> types;
+
+		types.push_back(basic.getInt1());
+		types.push_back(basic.getInt2());
+		types.push_back(basic.getInt4());
+		types.push_back(basic.getInt8());
+		types.push_back(basic.getInt16());
+
+		types.push_back(basic.getReal4());
+		types.push_back(basic.getReal8());
+
+		types.push_back(basic.getUInt1());
+		types.push_back(basic.getUInt2());
+		types.push_back(basic.getUInt4());
+		types.push_back(basic.getUInt8());
+		types.push_back(basic.getUInt16());
+
+		// cast ptr to bool
+		types.push_back(builder.refType(builder.arrayType(types[0])));
+
+		// cast function to bool
+		types.push_back(builder.functionType( types, types[0]));
+
+		for (auto type : types){
 	
+			auto var = builder.variable(builder.refType(type));
+			auto expr= builder.deref(var);
+			EXPECT_EQ(castToBool(expr).getType(), basic.getBool());
+		}
+	}
+
 	TEST(TypeCast, scalartoarray) {
 
 		NodeManager manager;

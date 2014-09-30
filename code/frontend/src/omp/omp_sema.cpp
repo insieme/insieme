@@ -57,7 +57,7 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/annotations/omp/omp_annotations.h"
