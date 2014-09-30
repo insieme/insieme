@@ -561,8 +561,6 @@ TEST(TypeConversion, FunctionPtr) {
 		auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
 		auto program = insieme::frontend::tu::toProgram(manager, irtu);
 
-		dumpPretty(program);
-
 		//check for some enum features
    		EXPECT_EQ("PROGRAM { \n// Entry Points: \n\trec v0.{v0=fun() {ref<(()->int<4>)> v1 = rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(rec v0.{v0=fun() {return 1;}});}}\n", toString(*program));
 }
