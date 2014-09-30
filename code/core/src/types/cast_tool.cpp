@@ -612,7 +612,7 @@ namespace {
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
 			
-			abort();
+			assert_fail() << "unused" << std::endl;
 			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 			
 			if (core::types::isArray(subTy) && core::types::isVector(argTy)) {
@@ -837,7 +837,7 @@ namespace {
 		///////////////////////////////////////////////////////////////////////////////////////
 		// cast a function pointer to a different type function ptr 
 		if ( argTy.isa<core::FunctionTypePtr>() && trgTy.isa<core::FunctionTypePtr>() ) {
-			abort();
+			assert_fail() << "unused" << std::endl;
 			return builder.castExpr(trgTy, expr);
 		}
 
