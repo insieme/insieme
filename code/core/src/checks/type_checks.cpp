@@ -682,10 +682,10 @@ OptionalMessageList GenericOpsCheck::visitCallExpr(const CallExprAddress& addres
 		return res;
 	}
 
-	// arguments need to be arithmetic types
+	// arguments need to be arithmetic types or function types
 	for(auto arg : call) {
 		auto type = arg->getType();
-		if (!type.isa<TypeVariablePtr>() && !base.isScalarType(type)) {
+		if (!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>()){
 			add(res, Message(address,
 					EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
 					format("Generic operators must only be applied on arithmetic types - found: %s", toString(*type)),
