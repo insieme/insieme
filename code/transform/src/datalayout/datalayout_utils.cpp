@@ -248,7 +248,7 @@ ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValueP
 	return thing;
 }
 
-ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr field) {
+ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr field, ExpressionPtr vecIndex) {
 	NodeManager& mgr = thing->getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -261,17 +261,24 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 			if(!index)
 				return thing;
 
-			return refAccess(builder.arrayRefElem(thing, index), index, field);
+			return refAccess(builder.arrayRefElem(thing, index), index, field, vecIndex);
+		}
+
+		if(ref->getElementType().isa<VectorTypePtr>()) {
+			if(!vecIndex)
+				return thing;
+
+			return refAccess(builder.arrayRefElem(thing, vecIndex), index, field, vecIndex);
 		}
 
 		if(ref->getElementType().isa<StructTypePtr>()) {
 			if(!field)
 				return thing;
 
-			return refAccess(builder.refMember(thing, field), index, field);
+			return refAccess(builder.refMember(thing, field), index, field, vecIndex);
 		}
 
-		return refAccess(builder.deref(thing), index, field);
+		return refAccess(builder.deref(thing), index, field, vecIndex);
 	}
 
 	return thing;

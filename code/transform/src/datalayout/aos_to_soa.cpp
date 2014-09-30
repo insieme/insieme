@@ -156,7 +156,7 @@ void AosToSoa::transform() {
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		// assignments to the entire struct should be ported to the new sturct members
-		replaceAssignments(varReplacements, newStructType, tta, allocPattern, nElems, replacements);
+		replaceAssignments(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		//introducing marshalling
 		std::vector<StatementAddress> begin = addMarshalling(varReplacements, newStructType, tta, nElems, replacements);
@@ -366,7 +366,7 @@ ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, Express
 		// replace accesses to old variable with accesses to field in new variable
 		ExpressionMap localReplacement;
 		IRBuilder builder(mgr);
-		localReplacement[varInInit.first] = builder.accessMember(varInInit.second, fieldName);
+		localReplacement[varInInit.first] = fieldName ? builder.accessMember(varInInit.second, fieldName) : varInInit.second;
 
 		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init, localReplacement, true);
 
@@ -407,10 +407,10 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 //			}
 
 	return allDecls;
-	CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
-	cmpDecls.addAnnotation<RemoveMeAnnotation>();
-
-	return cmpDecls;
+//	CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
+//	cmpDecls.addAnnotation<RemoveMeAnnotation>();
+//
+//	return cmpDecls;
 }
 
 
@@ -440,7 +440,7 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 }
 
 StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType) {
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
@@ -448,14 +448,14 @@ StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements,
 
 	for(NamedTypePtr memberType : newStructType->getElements()) {
 		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
-				updateInit(varReplacements, call[1], removeRefArray(call[1].getType()), removeRefArray(memberType->getType()),
+				updateInit(varReplacements, call[1], oldStructType, removeRefArray(memberType->getType()),
 						memberType->getName())));
 	}
 
 	return allAssigns;
 }
 
-void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const StructTypePtr& newStructType,
+void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
@@ -472,7 +472,7 @@ void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const St
 						nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
 					}
 
-					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType);
+					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType);
 
 					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
 					cmpAssigns.addAnnotation<RemoveMeAnnotation>();

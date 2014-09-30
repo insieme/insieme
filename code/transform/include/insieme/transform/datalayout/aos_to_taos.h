@@ -56,7 +56,11 @@ class AosToTaos : public AosToSoa {
 			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 
 	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType);
+			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+
+	virtual core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+
 public:
 	AosToTaos(core::NodePtr& toTransform);
 

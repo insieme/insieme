@@ -63,7 +63,8 @@ core::TypePtr getBaseType(core::TypePtr type, core::StringValuePtr field);
 
 core::ExpressionPtr valueAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field);
 
-core::ExpressionPtr refAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field);
+core::ExpressionPtr refAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field,
+		core::ExpressionPtr vecIndex = core::ExpressionPtr());
 
 core::pattern::TreePattern declOrAssignment(core::pattern::TreePattern lhs, core::pattern::TreePattern rhs);
 
