@@ -1172,6 +1172,18 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, Arithmetic_Cast) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& base = builder.getLangBasic();
+
+		ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+
+		EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+
+		EXPECT_EQ("{12}", toString(getValues(expr, A)));
+	}
+
 	TEST(CBA, Boolean_101) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
