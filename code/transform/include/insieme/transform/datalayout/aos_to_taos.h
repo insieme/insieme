@@ -67,6 +67,12 @@ class AosToTaos : public AosToSoa {
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
 
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
+
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
+
 public:
 	AosToTaos(core::NodePtr& toTransform);
 

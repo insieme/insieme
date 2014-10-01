@@ -93,11 +93,13 @@ protected:
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
 			core::ExpressionMap& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::ExpressionMap replaceAccesses(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
-			const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
+	core::ExpressionMap replaceAccesses(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType,
+			const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
 			std::map<core::NodeAddress,	core::NodePtr>& replacements);
-	void replaceScalarStructs(const core::pattern::AddressMatchOpt& match, const core::ExpressionPtr& newVar,
-			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
 
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,

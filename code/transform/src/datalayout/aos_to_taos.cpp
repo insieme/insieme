@@ -115,6 +115,9 @@ void AosToTaos::transform() {
 		//free memory of the new variables
 		addNewDel(varReplacements, tta, newStructType, replacements);
 
+		//replace array accesses
+		ExpressionMap structures = replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
 //	dumpPretty(r.first);
@@ -122,7 +125,7 @@ void AosToTaos::transform() {
 //	dumpPretty(r.second);
 //	std::map<NodeAddress, NodePtr> re;
 //	re[r.first] = r.second;
-////	core::transform::replaceAll(mgr, re);
+//	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
 
@@ -256,6 +259,46 @@ StatementList AosToTaos::generateDel(const StatementAddress& stmt, const Express
 	return deletes;
 }
 
+ExpressionPtr AosToTaos::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
+		const ExpressionPtr& oldStructAccess) {
+	IRBuilder builder(mgr);
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false);
+
+	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
+	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+
+	ExpressionPtr arrayAccess = builder.arrayAccess(builder.deref(newStructAccess), arrayIdx);
+	ExpressionPtr structAccess = builder.refMember(arrayAccess, member);
+	ExpressionPtr vectorAccess = builder.arrayAccess(structAccess, vectorIdx);
+
+	return vectorAccess;
+}
+
+ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
+	IRBuilder builder(mgr);
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false).as<ExpressionPtr>();
+
+	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
+	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+
+	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
+	for(NamedTypePtr memberType : newStructType->getElements()) {
+
+		StringValuePtr memberName = memberType->getName();
+		ExpressionPtr arrayAccess = builder.arrayAccess(builder.deref(newStructAccess), index);
+		ExpressionPtr structAccess = builder.refMember(arrayAccess, memberName);
+		ExpressionPtr vectorAccess = builder.deref(builder.arrayAccess(structAccess, index));
+
+		values.push_back(std::make_pair(memberName, vectorAccess));
+	}
+
+	return builder.structExpr(values);
+}
 
 } // datalayout
 } // transform
