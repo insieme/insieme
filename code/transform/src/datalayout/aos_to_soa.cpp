@@ -316,17 +316,25 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::mergeLists(std::vector<std::pair<ExpressionSet, RefTypePtr>>& toReplaceLists) {
 	std::vector<std::pair<ExpressionSet, RefTypePtr>> newLists;
-	// merge lists which contain the same variables
 	for(std::pair<ExpressionSet, RefTypePtr>& toReplaceList : toReplaceLists) {
 		bool addToOld = false;
-		for(ExpressionPtr toReplace : toReplaceList.first) {
-			for(std::pair<ExpressionSet, RefTypePtr>& newList : newLists) {
-				if(newList.first.find(toReplace) != newList.first.end()) {
-					assert(newList.second == toReplaceList.second && "Correlated variables would need to be changed to different types");
-					for(ExpressionPtr toInsert : toReplaceList.first)
-						newList.first.insert(toInsert);
-					addToOld = true;
-				}
+	// merge lists which contain the same variables
+//		for(ExpressionPtr toReplace : toReplaceList.first) {
+//			for(std::pair<ExpressionSet, RefTypePtr>& newList : newLists) {
+//				if(newList.first.find(toReplace) != newList.first.end()) {
+//					assert(newList.second == toReplaceList.second && "Correlated variables would need to be changed to different types");
+//					for(ExpressionPtr toInsert : toReplaceList.first)
+//						newList.first.insert(toInsert);
+//					addToOld = true;
+//				}
+//			}
+//		}
+		// merge lists of same type
+		for(std::pair<ExpressionSet, RefTypePtr>& newList : newLists) {
+			if(toReplaceList.second == newList.second) {
+				for(ExpressionPtr toInsert : toReplaceList.first)
+					newList.first.insert(toInsert);
+				addToOld = true;
 			}
 		}
 		if(!addToOld) {
