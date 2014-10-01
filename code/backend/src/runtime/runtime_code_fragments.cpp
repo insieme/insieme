@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -212,10 +212,12 @@ namespace runtime {
 			case c_ast::PrimitiveType::Int16:  kind = "IRT_T_INT16"; break;
 			case c_ast::PrimitiveType::Int32:  kind = "IRT_T_INT32"; break;
 			case c_ast::PrimitiveType::Int64:  kind = "IRT_T_INT64"; break;
+			case c_ast::PrimitiveType::Int128:  kind = "IRT_T_INT128"; break;
 			case c_ast::PrimitiveType::UInt8:  kind = "IRT_T_UINT8"; break;
 			case c_ast::PrimitiveType::UInt16: kind = "IRT_T_UINT16"; break;
 			case c_ast::PrimitiveType::UInt32: kind = "IRT_T_UINT32"; break;
 			case c_ast::PrimitiveType::UInt64: kind = "IRT_T_UINT64"; break;
+			case c_ast::PrimitiveType::UInt128: kind = "IRT_T_UINT128"; break;
 			case c_ast::PrimitiveType::Float:  kind = "IRT_T_REAL32"; break;
 			case c_ast::PrimitiveType::Double: kind = "IRT_T_REAL64"; break;
 			case c_ast::PrimitiveType::LongLong: kind = "IRT_T_INT64"; break;  

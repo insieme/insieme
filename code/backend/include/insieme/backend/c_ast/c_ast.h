@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -134,7 +134,11 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double, LongLong, ULongLong
+			Void, Bool, Char,
+			Int8, Int16, Int32, Int64, Int128,
+			UInt8, UInt16, UInt32, UInt64, UInt128,
+			Float, Double,
+			LongLong, ULongLong
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}

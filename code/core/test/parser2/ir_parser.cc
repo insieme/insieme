@@ -1030,6 +1030,16 @@ namespace parser {
 		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
 	}
 
+	TEST(IR_Parser2, Cast) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto expr = builder.parseExpr("(int<4>) 8 ");
+
+		EXPECT_EQ("cast<int<4>>(8)", toString(*expr));
+
+	}
+
 	TEST(IR_Parser2, Bind) {
 		NodeManager manager;
 		IRBuilder builder(manager);

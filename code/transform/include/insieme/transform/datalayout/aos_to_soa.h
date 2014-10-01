@@ -61,8 +61,8 @@ protected:
 	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
-	core::ExpressionPtr updateInit(const core::ExpressionMap& varReplacements, core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType,
-			core::StringValuePtr fieldName);
+	virtual core::ExpressionPtr updateInit(const core::ExpressionMap& varReplacements, core::ExpressionPtr init, core::TypePtr oldType, core::TypePtr newType,
+			core::StringValuePtr fieldName = core::StringValuePtr());
 
 	virtual core::StatementList generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
@@ -74,20 +74,20 @@ protected:
 			core::NodePtr>& replacements);
 
 	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType);
-	void replaceAssignments(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType,
+			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+	void replaceAssignments(const core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	core::ExpressionPtr determineNumberOfElements(const core::ExpressionPtr& newVar,const core::ExpressionMap&  nElems);
 
-	core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
+	virtual core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 	std::vector<core::StatementAddress> addMarshalling(const core::ExpressionMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, core::ExpressionMap& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::StatementPtr generateUnmarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
+	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 	std::vector<core::StatementAddress> addUnmarshalling(const core::ExpressionMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
@@ -100,7 +100,7 @@ protected:
 			std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
 
-	core::CompoundStmtPtr generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
