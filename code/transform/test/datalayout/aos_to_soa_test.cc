@@ -103,8 +103,8 @@ TEST(DataLayout, AosToSoa) {
 		"		ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
 		"		copy = *a;"
 		"		a = *copy;"
-//		"		ref<ref<array<twoElem,1>>> uninitialized;"
-//		"		uninitialized = *a;"
+		"		ref<ref<array<twoElem,1>>> uninitialized;"
+		"		uninitialized = *a;"
 		"		ref<ref<array<twoElem,1>>> ptr = ref.var(scalar.to.array((*a)[i]));"
 		"		(*ptr)[i].int = i;"
 		"		ref.deref(a)[i].int = i;"
@@ -156,7 +156,7 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(86, numberOfCompoundStmts(code));
+	EXPECT_EQ(96, numberOfCompoundStmts(code));
 	EXPECT_EQ(10, countMarshalledAccesses(code));
 	EXPECT_EQ(4, countMarshalledAssigns(code));
 }
