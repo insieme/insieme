@@ -39,19 +39,67 @@
 
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <atomic>
 
 int main(int argc, char **argv) {
 	auto x = irt::parallel(2, [argc](){ 
 		std::cout << "Hello World " << argc << "\n"; 
 	} );
 	irt::merge(x);
-
+	
 	irt::pfor(1, 10, 1, [](int64 it) {
-		std::cout << "Parallel Iteration " << it << "\n"; 
-	} );
+		std::cout << "Parallel Iteration " << it << " Thread: " << irt::thread_num() << "\n"; 
+	} ); 
 
 	std::vector<int> v { 1, 2, 3, 4, 5 };
 	irt::pmap(v, [](const int& elem) { return elem * 2; } );
 	for(int i : v) std::cout << i << ", ";
 	std::cout << "\n";
+
+#ifdef BENCHMARK
+	std::chrono::high_resolution_clock highc;
+	const int64 repeats = 10000000000ll;
+
+	irt::merge(irt::parallel(8, [&]{
+		decltype(highc.now()) start, end;
+		{
+			irt::master([&]{ start = highc.now(); });
+			uint64 sum; 
+			irt::pfor_impl(1, repeats, 1, [&](int64 it) {
+				sum += 1; 
+			});
+			irt::master([&]{
+				end = highc.now();
+				std::cout << "Individual Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+			});
+		}
+
+		{
+			irt::master([&]{ start = highc.now(); });
+			uint64 sum; 
+			irt::pfor_s_impl(1, repeats, 1, [&](int64 start, int64 end, int64 step) {
+				for(int64 i=start; i<end; i+=step) {
+					sum += 1;
+				}
+			});
+			irt::master([&]{
+				end = highc.now();
+				std::cout << "Sliced Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+			});
+		}
+
+		{
+			irt::master([&]{ start = highc.now(); });
+			uint64 sum; 
+			irt::times(repeats, [&](int64 it) {
+				sum += 1; 
+			});
+			irt::master([&]{
+				end = highc.now();
+				std::cout << "Generated Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+			});
+		}
+	}));
+#endif
 }
