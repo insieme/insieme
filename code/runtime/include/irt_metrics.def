@@ -83,7 +83,7 @@
 GROUP(cpu_time_group, int ctg_dummy, , {}, {}, {}, {}, {}, {}, {}, {})
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_TIME)
-METRIC(cpu_time,				0,	ns,		uint64,	"%llu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
+METRIC(cpu_time,				0,	ns,		uint64,	"%" PRIu64,		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGREGATOR_SUM,	cpu_time_group, \
 	{ wi->inst_region_data->last_cpu_time = irt_time_ticks(); }, \
 	{ wi->inst_region_data->aggregated_cpu_time += irt_time_ticks() - wi->inst_region_data->last_cpu_time; }, \
 	{}, \
@@ -93,7 +93,7 @@ METRIC(cpu_time,				0,	ns,		uint64,	"%llu",		IRT_HW_SCOPE_CORE,		IRT_METRIC_AGGR
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_WALL_TIME)
-METRIC(wall_time,				1,	ns,		uint64, "%llu",		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
+METRIC(wall_time,				1,	ns,		uint64, "%" PRIu64,		IRT_HW_SCOPE_SYSTEM,		IRT_METRIC_AGGREGATOR_NONE,	cpu_time_group, \
 	{  }, \
 	{  }, \
 	{ rg->last_wall_time = irt_time_ticks(); }, \
@@ -127,7 +127,7 @@ METRIC(socket_occupancy,			200,	unit,		double,		"%f",		IRT_HW_SCOPE_SOCKET,	IRT_
 GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS] = { 0 }, { irt_papi_init(); irt_papi_setup_context(context); }, { irt_papi_setup_worker(worker); }, { irt_papi_finalize_context(context); }, { irt_papi_finalize_worker(worker); }, { irt_papi_start(); }, { irt_papi_stop(papi_values); }, {}, {})
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_TCM)
-METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_TCM = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_TCM"); }, \
 	{  }, \
@@ -137,7 +137,7 @@ METRIC(PAPI_L1_TCM,			300,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_DCM)
-METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L1_DCM = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_DCM"); }, \
 	{  }, \
@@ -147,7 +147,7 @@ METRIC(PAPI_L1_DCM,			301,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L2_TCM)
-METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L2_TCM = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_TCM"); }, \
 	{  }, \
@@ -157,7 +157,7 @@ METRIC(PAPI_L2_TCM,			310,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L3_TCM)
-METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_L3_TCM = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L3_TCM"); }, \
 	{  }, \
@@ -167,7 +167,7 @@ METRIC(PAPI_L3_TCM,			320,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_FP_OPS)
-METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_FP_OPS = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name(context, papi_values, "PAPI_FP_OPS"); }, \
 	{  }, \
@@ -177,7 +177,7 @@ METRIC(PAPI_FP_OPS,			330,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_MET
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_TOT_INS)
-METRIC(PAPI_TOT_INS,			330,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_TOT_INS,			330,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_TOT_INS = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_TOT_INS = irt_papi_get_value_by_name(context, papi_values, "PAPI_TOT_INS"); }, \
 	{  }, \
@@ -187,7 +187,7 @@ METRIC(PAPI_TOT_INS,			330,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_ME
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_TOT_CYC)
-METRIC(PAPI_TOT_CYC,			330,	unit,		uint64,		"%llu",		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
+METRIC(PAPI_TOT_CYC,			330,	unit,		uint64,		"%" PRIu64,		IRT_HW_SCOPE_SOCKET,	IRT_METRIC_AGGREGATOR_SUM,	papi_group,	\
 	{ wi->inst_region_data->last_PAPI_TOT_CYC = 0; }, \
 	{ wi->inst_region_data->aggregated_PAPI_TOT_CYC = irt_papi_get_value_by_name(context, papi_values, "PAPI_TOT_CYC"); }, \
 	{  }, \
