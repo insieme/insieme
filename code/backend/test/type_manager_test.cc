@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -102,6 +102,21 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("int64_t", toC(info.lValueType));
 	EXPECT_EQ("int64_t", toC(info.rValueType));
 	EXPECT_EQ("int64_t", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE(info.definition == info.declaration);
+
+	EXPECT_EQ(static_cast<std::size_t>(1), info.definition->getIncludes().size());
+	EXPECT_EQ("stdint.h", *info.definition->getIncludes().begin());
+
+
+	type = basic.getUInt16();
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("uint128_t", toC(info.lValueType));
+	EXPECT_EQ("uint128_t", toC(info.rValueType));
+	EXPECT_EQ("uint128_t", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.definition);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,10 +43,11 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/subtyping.h"
-#include "insieme/annotations/c/include.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/core/types/cast_tool.h"
 
-#include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/annotations/c/include.h"
+#include "insieme/frontend/utils/clang_cast.h"
+
 
 #include <clang/AST/Expr.h>
 #include <clang/AST/Stmt.h>
@@ -141,9 +142,9 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 	// it seems that we can not normalize the thing... just write the expression OLD SCHOOL!!! but only if are pointers
 	const core::IRBuilder& builder = convFact.getIRBuilder();
 	insieme::core::NodeManager& mgr = convFact.getNodeManager();
-	if (frontend::utils::isRefArray(inductionVar->getType())
-			|| frontend::utils::isRefArray(endValue->getType())
-			|| frontend::utils::isRefArray(initValue->getType())) {
+	if (core::types::isRefArray(inductionVar->getType())
+			|| core::types::isRefArray(endValue->getType())
+			|| core::types::isRefArray(initValue->getType())) {
 		throw LoopNormalizationError(" pointer for loop not supported yet!"); 
 	} else if (!mgr.getLangBasic().isInt(inductionVar->getType())) {
 		throw LoopNormalizationError(" iterator for for-loop has to be of integraltype!"); 
@@ -180,7 +181,7 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
 			}
 		}
 
-		endValue = frontend::utils::castScalar(inductionVar->getType(), endValue);
+		endValue = core::types::castScalar(inductionVar->getType(), endValue);
 
 		newInductionExpr = inductionVar.as<insieme::core::ExpressionPtr>();  // philgs uncomment
 
@@ -329,7 +330,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 
 	// a normalized loop always steps +1
 	// special case for arrays, since we iterate with an scalar, we generate a ponter wide iteration var (UINT 8)
-	if (!frontend::utils::isRefArray(inductionVar->getType()))
+	if (!core::types::isRefArray(inductionVar->getType()))
 		incrExpr = convFact.getIRBuilder().literal("1", originalInductionExpr->getType());
 	else
 		incrExpr = convFact.getIRBuilder().literal("1", convFact.getIRBuilder().getLangBasic().getUInt8());
@@ -448,7 +449,7 @@ insieme::core::ForStmtPtr  LoopAnalyzer::getLoop(const insieme::core::StatementP
 	core::CompoundStmtPtr finalBody = convFact.getIRBuilder().compoundStmt(tmp);
 
 	// make sure we initialize the thing with the right type
-	auto startVal = frontend::utils::castScalar(inductionVar->getType(), initValue);
+	auto startVal = core::types::castScalar(inductionVar->getType(), initValue);
 
 	return convFact.getIRBuilder().forStmt(inductionVar, startVal, endValue, stepExpr, finalBody);
 }

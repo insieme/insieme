@@ -350,6 +350,44 @@ TEST(Arrays, Allocation) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+TEST(PrimitiveType, LongLong) {
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+
+	// create a code fragment allocating an array on the stack and using it
+	core::ProgramPtr program = builder.parseProgram(
+			R"(
+			let longlong = int<16>;
+
+			int<4> main() {
+				// just create a long-long variable
+				int<16> a = 10l;
+				// just create a long-long variable
+				uint<16> b = 10ul;
+			}
+			)"
+	);
+
+	ASSERT_TRUE(program);
+
+	std::cout << "Program: " << std::endl; dump(program); std::cout << std::endl;
+
+	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+	std::cout << "Converted: \n" << *converted << std::endl;
+
+	string code = toString(*converted);
+	EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10l;");
+	EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10ul;");
+
+	// try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+
 TEST(References, RefAny) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);

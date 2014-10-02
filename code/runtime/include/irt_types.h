@@ -48,7 +48,7 @@ typedef enum _irt_type_kind {
 	IRT_T_UINT8, IRT_T_UINT16, IRT_T_UINT32, IRT_T_UINT64,
 	IRT_T_REAL16, IRT_T_REAL32, IRT_T_REAL64,
 	IRT_T_STRUCT = 0xFF00,								// complex type start
-	IRT_T_UNION, IRT_T_FUNC, IRT_T_POINTER, IRT_T_ARRAY, IRT_T_VECTOR, IRT_T_VAR_VECTOR, IRT_T_CHANNEL, IRT_T_BASIC
+	IRT_T_UNION, IRT_T_FUNC, IRT_T_POINTER, IRT_T_REFERENCE, IRT_T_ARRAY, IRT_T_VECTOR, IRT_T_VAR_VECTOR, IRT_T_CHANNEL, IRT_T_BASIC
 } irt_type_kind;
 
 // TODO structs for complex types / union
@@ -85,7 +85,8 @@ static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
 	case IRT_T_UNION: return "IRT_T_UNION"; 
 	case IRT_T_FUNC: return "IRT_T_FUNC";
 	case IRT_T_POINTER: return "IRT_T_POINTER"; 
-	case IRT_T_ARRAY: return "IRT_T_ARRAY"; 
+    case IRT_T_REFERENCE: return "IRT_T_REFERENCE";
+    case IRT_T_ARRAY: return "IRT_T_ARRAY"; 
 	case IRT_T_VECTOR: return "IRT_T_VECTOR"; 
 	case IRT_T_VAR_VECTOR: return "IRT_T_VAR_VECTOR"; 
 	case IRT_T_CHANNEL: return "IRT_T_CHANNEL"; 

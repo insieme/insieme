@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,13 +50,14 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/annotations/omp/omp_annotations.h"
@@ -561,11 +562,11 @@ protected:
 		case Reduction::MINUS:
 		case Reduction::OR:
 		case Reduction::XOR:
-			ret = build.refVar(utils::castScalar (rType->getElementType(), build.literal("0", rType->getElementType())));
+			ret = build.refVar(core::types::castScalar (rType->getElementType(), build.literal("0", rType->getElementType())));
 			break;
 		case Reduction::MUL:
 		case Reduction::AND:
-			ret = build.refVar(utils::castScalar (rType->getElementType(), build.literal("1", rType->getElementType())));
+			ret = build.refVar(core::types::castScalar (rType->getElementType(), build.literal("1", rType->getElementType())));
 			break;
 		case Reduction::LAND:
 			ret = build.refVar(build.boolLit(true));
@@ -775,7 +776,7 @@ protected:
 			assign = build.assign(param.getVar(), exp);
 		}
 		else if(param.hasEnum()) {
-			auto pick = build.pickInRange( utils::castScalar(basic.getUInt8(), param.getEnumSize()) );
+			auto pick = build.pickInRange( core::types::castScalar(basic.getUInt8(), param.getEnumSize()) );
 			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
 			assign = build.assign( param.getVar(), build.deref( arrVal ) );
 		}

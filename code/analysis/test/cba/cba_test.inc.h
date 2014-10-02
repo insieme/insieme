@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,6 +38,7 @@
 
 #include <fstream>
 #include "insieme/analysis/cba/cba.h"
+#include "insieme/analysis/cba/cba_debug.h"
 
 namespace insieme {
 namespace analysis {
@@ -67,27 +68,6 @@ namespace cba {
 		inline void printSolution(const NodeAddress& node) {
 			// extract context and print equations
 			printSolution(getCBA(node));
-		}
-
-		inline void createDotDump(const CBA& analysis) {
-			std::cout << "Creating Dot-Dump for " << analysis.getNumSets() << " sets and " << analysis.getNumConstraints() << " constraints ...\n";
-			{
-				// open file
-				std::ofstream out("solution.dot", std::ios::out );
-
-				// write file
-				analysis.plot(out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf solution.dot -o solution.pdf");
-//			system("dot -Tpng solution.dot -o solution.png");
-			system("dot -Tsvg solution.dot -o solution.svg");
-		}
-
-		inline void createDotDump(const NodeAddress& node) {
-			// extract context and dump it
-			createDotDump(getCBA(node));
 		}
 
 		inline void createDotDumpRoots(const CBA& analysis) {

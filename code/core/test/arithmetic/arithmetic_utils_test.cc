@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -96,6 +96,24 @@ TEST(ArithmeticUtilsTest, fromIR) {
 	// and subtraction
 	tmp = builder.callExpr(basic.getOperator(type, lang::BasicGenerator::Sub), tmp, varC);
 	EXPECT_EQ("v1*v2+v2-v3", toString(toFormula(tmp)));
+
+}
+
+TEST(ArithmeticUtilsTest, extendedLiterals) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt16();
+
+	LiteralPtr ull = builder.literal("100ull", type);
+	LiteralPtr ll = builder.literal("100ll", type);
+	LiteralPtr l = builder.literal("100l", type);
+
+	// test constants
+	EXPECT_EQ("100", toString(toFormula(ull)));
+	EXPECT_EQ("100", toString(toFormula(ll)));
+	EXPECT_EQ("100", toString(toFormula(l)));
 
 }
 

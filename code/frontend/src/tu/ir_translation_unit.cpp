@@ -580,6 +580,24 @@ namespace tu {
 				usedLiterals.insert(literal);
 			});
 
+            // we check if the global var is used as initializer for a global var inserted in the previous step
+			core::NodeSet prevAddedLiterals = usedLiterals;
+			core::NodeSet currAddedLiterals;
+            while(!prevAddedLiterals.empty()) {
+			    for (auto cur : unit.getGlobals()) {
+                    if(contains(prevAddedLiterals, cur.first)) {
+			            core::visitDepthFirstOnce (cur.second, [&] (const core::LiteralPtr& literal){
+                            if(literal->getType().isa<RefTypePtr>()) {
+                                currAddedLiterals.insert(literal);
+                                usedLiterals.insert(literal);
+                            }
+			            });
+                    }
+                }
+                prevAddedLiterals = currAddedLiterals;
+                currAddedLiterals.clear();
+            };
+
 			// check all types for dtors which use literals
 			for( auto cur : unit.getTypes()) {
 				TypePtr def = cur.second;
