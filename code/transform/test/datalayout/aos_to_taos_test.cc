@@ -78,6 +78,7 @@ int countMarshalledAssigns(const NodePtr root) {
 			(pattern::irp::arrayRefElem1D(pattern::irp::refDeref()))), pattern::any)) ;
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
+
 	return matches.size();
 }
 
@@ -146,7 +147,7 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(114, numberOfCompoundStmts(code));
+	EXPECT_EQ(117, numberOfCompoundStmts(code));
 	EXPECT_EQ(15, countMarshalledAccesses(code));
 	EXPECT_EQ(7, countMarshalledAssigns(code));
 }

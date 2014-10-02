@@ -133,10 +133,14 @@ void AosToTaos::transform() {
 			toTransform = core::transform::replaceAll(mgr, replacements);
 
 		NodeMap tilesize;
-		tilesize[builder.uintLit(84537493)] = builder.uintLit(512);
-		tilesize[genericTileSize] = builder.concreteIntTypeParam(512);
+		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
+		tilesize[genericTileSize] = builder.concreteIntTypeParam(64);
 		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, false);
 	}
+
+	// remove all inserted compound expressions
+	NewCompoundsRemover remComp(mgr);
+	toTransform = remComp.mapElement(0, toTransform);
 }
 
 StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
@@ -190,15 +194,9 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const E
 	ExpressionPtr tilesize = builder.uintLit(84537493);
 
 	for(NamedTypePtr memberType : structType->getElements()) {
-//		ExpressionPtr newArrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(iterator, tilesize));
-//		ExpressionPtr newVectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(iterator, tilesize));
-//
-//		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-//		ExpressionPtr taosAccess = refAccess(newVar, newArrayIdx, memberType->getName(), newVectorIdx);
-
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
 
-		ExpressionPtr aosAccess = valueAccess(oldVar, globalIdx, memberType->getName());
+		ExpressionPtr aosAccess = builder.deref(refAccess(oldVar, globalIdx, memberType->getName()));
 		ExpressionPtr taosAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
 				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
 
@@ -229,8 +227,8 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
 
 		ExpressionPtr aosAccess = refAccess(oldVar, globalIdx, memberType->getName());
-		ExpressionPtr taosAccess = valueAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
-				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
+		ExpressionPtr taosAccess = builder.deref(refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
+				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator)));
 
 		loopBody.push_back(builder.assign(aosAccess, taosAccess));
 	}
@@ -269,9 +267,7 @@ ExpressionPtr AosToTaos::generateNewAccesses(const ExpressionPtr& oldVar, const 
 	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
 	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
 
-	ExpressionPtr arrayAccess = builder.arrayAccess(builder.deref(newStructAccess), arrayIdx);
-	ExpressionPtr structAccess = builder.refMember(arrayAccess, member);
-	ExpressionPtr vectorAccess = builder.arrayAccess(structAccess, vectorIdx);
+	ExpressionPtr vectorAccess = refAccess(newStructAccess, arrayIdx, member, vectorIdx);
 
 	return vectorAccess;
 }
@@ -290,9 +286,8 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 	for(NamedTypePtr memberType : newStructType->getElements()) {
 
 		StringValuePtr memberName = memberType->getName();
-		ExpressionPtr arrayAccess = builder.arrayAccess(builder.deref(newStructAccess), index);
-		ExpressionPtr structAccess = builder.refMember(arrayAccess, memberName);
-		ExpressionPtr vectorAccess = builder.deref(builder.arrayAccess(structAccess, index));
+
+		ExpressionPtr vectorAccess = builder.deref(refAccess(newStructAccess, arrayIdx, memberName, vectorIdx));
 
 		values.push_back(std::make_pair(memberName, vectorAccess));
 	}

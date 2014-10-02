@@ -518,7 +518,7 @@ StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const Ex
 
 	for(NamedTypePtr memberType : structType->getElements()) {
 
-		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr aosAccess = builder.deref(refAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName()));
 		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
 		loopBody.push_back(builder.assign(soaAccess, aosAccess));
 	}
@@ -609,7 +609,7 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const 
 	for(NamedTypePtr memberType : structType->getElements()) {
 
 		ExpressionPtr aosAccess = refAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-		ExpressionPtr soaAccess = valueAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr soaAccess = builder.deref(refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName()));
 		loopBody.push_back(builder.assign(aosAccess, soaAccess));
 	}
 
@@ -710,7 +710,7 @@ ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const E
 	IRBuilder builder(mgr);
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
 			oldVar, newVar, false).as<ExpressionPtr>();
-	ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newStructAccess, member)), index);
+	ExpressionPtr replacement = refAccess(newStructAccess, index, member);
 
 	return replacement;
 }
@@ -806,8 +806,7 @@ ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, con
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 	for(NamedTypePtr memberType : newStructType->getElements()) {
 		StringValuePtr memberName = memberType->getName();
-		ExpressionPtr structAccess = builder.deref(builder.refMember(newStructAccess, memberName));
-		ExpressionPtr arrayAccess = builder.deref(builder.arrayAccess(structAccess, index));
+		ExpressionPtr arrayAccess = builder.deref(refAccess(newStructAccess, index, memberName));
 		values.push_back(std::make_pair(memberName, arrayAccess));
 	}
 
