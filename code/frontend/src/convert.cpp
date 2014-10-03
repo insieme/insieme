@@ -1788,17 +1788,6 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isVirtual(),
 											llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst());
 			}
-			else {
-				// TODO: check if normalized look nearly the same
-//				std::cout << "function already exists" << std::endl;
-//				std::cout << "=== NEW ====================== ================================" << std::endl;
-//				dumpPretty(lambda);
-//				std::cout << "=== PREV==========================" << std::endl;
-//				dumpPretty(classInfo.getMemberFunction(funcDecl->getNameAsString(), funcTy, llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())->getImplementation());
-//				std::cout << "============================== ================================" << std::endl;
-//
-				//abort();
-			}
 		}
 		getIRTranslationUnit().addMetaInfo(classType, classInfo);
 	}
@@ -1809,7 +1798,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	// finally, add some sugar
 	attachFuncAnnotations(lambda, funcDecl);
 
-	// if the conversion is complete
+	// when conversion is complete
 	lambdaExprCache[funcDecl] = symbol;
 
 	// register function within resulting translation unit
