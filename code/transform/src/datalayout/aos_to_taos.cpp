@@ -158,25 +158,37 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 }
 
 StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
-		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType) {
+		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
 	StatementList allDecls;
 
 	allDecls.push_back(decl);
-	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(), oldStructType, newStructType)));
+
+	NodeMap inInitReplacementsInCaseOfNovarInInit;
+	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	// divide initialization size by tilesize
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+
+	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
+		inInitReplacementsInCaseOfNovarInInit)));
 
 	return allDecls;
 }
 
 StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
-	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], oldStructType, newStructType)));
+	NodeMap inInitReplacementsInCaseOfNovarInInit;
+	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	// divide initialization size by tilesize
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+
+	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
 
 	return allAssigns;
 }

@@ -358,7 +358,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, ExpressionPtr init, TypePtr oldType, TypePtr newType, StringValuePtr fieldName) {
+ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, ExpressionPtr init, NodeMap& backupReplacements, StringValuePtr fieldName) {
 	// check for marshalled variables in init expression
 	std::pair<ExpressionPtr, ExpressionPtr> varInInit;
 	visitBreadthFirstInterruptible(init, [&](const ExpressionPtr& currVar) {
@@ -382,12 +382,12 @@ ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, Express
 	}
 
 	// backup, works for e.g. memory allocation
-	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
+	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
 }
 
 
 StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
-		const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
@@ -403,9 +403,12 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
+
+			NodeMap inInitReplacementsInCaseOfNovarInInit;
+			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
+
 			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
-					updateInit(varReplacements, removeRefVar(decl->getInitialization()), oldStructType,
-							getBaseType(memberType->getType(), memberType->getName()), memberType->getName())));
+					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
 		}
 //			} else { // keep old initialization and hope it is a variable which will be replaced by one with the same type as the new one
@@ -433,12 +436,14 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 
 			// check if the declaration does an allocation and try to extract the number of elements in that case
 			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
+			ExpressionPtr nElem;
 			if(match) {
-				nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
+				nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
+				nElems[newVar] = nElem;
 			}
 
 			IRBuilder builder(mgr);
-			StatementList allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType);
+			StatementList allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType, nElem);
 			CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
 			cmpDecls.addAnnotation<RemoveMeAnnotation>();
 
@@ -448,16 +453,18 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 }
 
 StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
 
 	for(NamedTypePtr memberType : newStructType->getElements()) {
+		NodeMap inInitReplacementsInCaseOfNovarInInit;
+		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
+
 		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
-				updateInit(varReplacements, call[1], oldStructType, removeRefArray(memberType->getType()),
-						memberType->getName())));
+				updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 	}
 
 	return allAssigns;
@@ -476,11 +483,13 @@ void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const St
 				if(*oldVar == *call[0]) {
 					// check if the assignment does an allocation and try to extract the number of elements in that case
 					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
+					ExpressionPtr nElem;
 					if(match) {
-						nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
+						nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
+						nElems[newVar] = nElem;
 					}
 
-					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType);
+					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType, nElem);
 
 					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
 					cmpAssigns.addAnnotation<RemoveMeAnnotation>();
