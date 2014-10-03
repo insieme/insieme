@@ -53,10 +53,12 @@ class AosToTaos : public AosToSoa {
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	virtual core::StatementList generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
-			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems);
 
 	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
+			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems);
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
@@ -66,6 +68,12 @@ class AosToTaos : public AosToSoa {
 
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
+
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
+
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
 public:
 	AosToTaos(core::NodePtr& toTransform);

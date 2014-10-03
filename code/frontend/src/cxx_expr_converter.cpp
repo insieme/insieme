@@ -528,12 +528,22 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
-		core::TypePtr type = ctorCall->getType();
-		core::ExpressionPtr newCall = builder.undefinedNew(type);
+        core::TypePtr type = convFact.convertType(callExpr->getAllocatedType());
+        core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
 
 		if (callExpr->isArray()){
 			core::ExpressionPtr arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
 			arrSizeExpr = core::types::castScalar(mgr.getLangBasic().getUInt8(), arrSizeExpr);
+
+            //if the object is a POD the construct expression visitor will return a variable
+            //which is of course no ctor. if this is the case we create a default constructor
+            //and use this one to initalize the new elements
+            if(!core::analysis::isConstructorCall(ctorCall)) {
+                auto ctor = core::analysis::createDefaultConstructor(type);
+                auto ret = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+                                            mgr.getLangBasic().getRefNew(), ctor, arrSizeExpr);
+                return ret;
+            }
 
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
@@ -590,14 +600,22 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 	clang::CXXDestructorDecl* dtorDecl = nullptr;
 	// since destructor might be defined in a different translation unit or even in this one but after the usage
 	// we should retrieve a callable symbol and delay the conversion
-	if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(deleteExpr->getDestroyedType().getTypePtr())){
-		if (const clang::CXXRecordDecl* classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl())){
-			dtorDecl = classDecl->getDestructor();
-			if(dtorDecl) {
-				dtor = convFact.getCallableExpression(dtorDecl);
-			}
-		}
-	}
+    auto ty = deleteExpr->getDestroyedType().getTypePtr();
+    const clang::CXXRecordDecl* classDecl = nullptr;
+    // if it is a tag type everything is straight forward, but
+    // if we have a template specialization here we need to call something different to get the record decl
+    if (const clang::TagType* record = llvm::dyn_cast<clang::TagType>(ty)){
+        classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl());
+    } else if (const clang::TemplateSpecializationType* templType = llvm::dyn_cast<clang::TemplateSpecializationType>(ty)) {
+        classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(templType->getAsCXXRecordDecl());
+    }
+
+    if(classDecl){
+        dtorDecl = classDecl->getDestructor();
+        if(dtorDecl) {
+            dtor = convFact.getCallableExpression(dtorDecl);
+        }
+    }
 
 	if (deleteExpr->isArrayForm () ){
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc

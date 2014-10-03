@@ -192,6 +192,8 @@ namespace runtime {
 				return addType(c_ast::ptr(type->getManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int64))); // TODO
 			case c_ast::NT_ModifiedType:
 				return addType(static_pointer_cast<c_ast::ModifiedType>(type)->type);
+            case c_ast::NT_ReferenceType: 
+                return addType(static_pointer_cast<c_ast::ReferenceType>(type));
 			default:
 				LOG(FATAL) << "Unsupported type: " << c_ast::toC(type);
 				assert(false && "Unsupported type encountered!");
@@ -267,7 +269,19 @@ namespace runtime {
 			return addEntry(entry);
 		}
 
-		const Entry& addType(const c_ast::VectorTypePtr& type) {
+
+		const Entry& addType(const c_ast::ReferenceTypePtr& type) {
+
+			char const* kind = "IRT_T_REFERENCE";
+
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+			entry.components.push_back(resolve(type->elementType).index);
+			return addEntry(entry);
+		}
+
+        const Entry& addType(const c_ast::VectorTypePtr& type) {
 
 			char const* kind = "IRT_T_VAR_VECTOR";
 

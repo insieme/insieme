@@ -152,7 +152,7 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 		sprintf(path, "%s/insieme_reference_cpu_clocks", irt_get_tmp_dir());
 
 		if((temp_time_file = fopen(path, "r")) != NULL) {
-			if((retval = fscanf(temp_time_file, "%lu", &reference_clock)) == 1) {
+			if((retval = fscanf(temp_time_file, "%" PRIu64, &reference_clock)) == 1) {
 				if(reference_clock >= 1e6 && reference_clock <= 1e11) { // 1MHz < reference_clock < 100 GHz
 					irt_g_time_ticks_per_sec = reference_clock;
 					fclose(temp_time_file);
@@ -181,7 +181,7 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 		irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e6)/((time_after.tv_sec * 1e6 + time_after.tv_usec) - (time_before.tv_sec * 1e6 + time_before.tv_usec));
 
 		if((temp_time_file = fopen(path, "w")) != NULL) {
-			fprintf(temp_time_file, "%lu", irt_g_time_ticks_per_sec);
+			fprintf(temp_time_file, "%" PRIu64, irt_g_time_ticks_per_sec);
 			fclose(temp_time_file);
 		}
 

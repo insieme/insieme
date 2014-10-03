@@ -65,23 +65,20 @@ int numberOfCompoundStmts(const NodePtr root) {
 }
 
 int countMarshalledAccesses(const NodePtr root) {
-	pattern::TreePattern marshalledAccesses = pattern::irp::arrayRefElem1D(pattern::irp::refDeref(
-			pattern::irp::compositeRefElem()) | pattern::irp::compositeMemberAccess(),
-			pattern::any);
-
-//	pattern::irp::matchAllPairs(marshalledAccesses, root, [&](const NodePtr& match, const pattern::NodeMatch& toll) {
-//dumpPretty(match);
-//	});
+	pattern::TreePattern marshalledAccesses = (pattern::irp::vectorSubscript(pattern::irp::compositeMemberAccess(
+			pattern::irp::refDeref(pattern::irp::arrayRefElem1D())))) |
+			pattern::irp::vectorRefElem(pattern::irp::compositeRefElem((pattern::irp::arrayRefElem1D(pattern::irp::refDeref()))));
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
 	return matches.size();
 }
 
 int countMarshalledAssigns(const NodePtr root) {
-	pattern::TreePattern marshalledAccesses = pattern::irp::assignment(pattern::irp::arrayRefElem1D(pattern::irp::refDeref(
-			pattern::irp::compositeRefElem()), pattern::any), pattern::any) ;
+	pattern::TreePattern marshalledAccesses = pattern::irp::assignment(pattern::irp::vectorRefElem(pattern::irp::compositeRefElem(
+			(pattern::irp::arrayRefElem1D(pattern::irp::refDeref()))), pattern::any)) ;
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
+
 	return matches.size();
 }
 
@@ -150,9 +147,9 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-//	EXPECT_EQ(86, numberOfCompoundStmts(code));
-//	EXPECT_EQ(10, countMarshalledAccesses(code));
-//	EXPECT_EQ(4, countMarshalledAssigns(code));
+	EXPECT_EQ(117, numberOfCompoundStmts(code));
+	EXPECT_EQ(15, countMarshalledAccesses(code));
+	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 
 

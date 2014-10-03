@@ -532,7 +532,7 @@ void irt_inst_region_output() {
 
 	// write data
 	for(uint32 i = 0; i < num_regions; ++i) {
-		fprintf(outputfile, "RG,%u,%llu", i, regions[i].num_executions);
+		fprintf(outputfile, "RG,%u,%" PRIu64, i, regions[i].num_executions);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 		if(irt_g_inst_region_metric_measure_##_name__) { \
 			fprintf(outputfile, "," _format_string__, (_data_type__)((double)regions[i].aggregated_##_name__ * _output_conversion_code__)); \

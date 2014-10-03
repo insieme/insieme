@@ -115,6 +115,9 @@ void AosToTaos::transform() {
 		//free memory of the new variables
 		addNewDel(varReplacements, tta, newStructType, replacements);
 
+		//replace array accesses
+		ExpressionMap structures = replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
 //	dumpPretty(r.first);
@@ -122,7 +125,7 @@ void AosToTaos::transform() {
 //	dumpPretty(r.second);
 //	std::map<NodeAddress, NodePtr> re;
 //	re[r.first] = r.second;
-////	core::transform::replaceAll(mgr, re);
+//	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
 
@@ -130,10 +133,14 @@ void AosToTaos::transform() {
 			toTransform = core::transform::replaceAll(mgr, replacements);
 
 		NodeMap tilesize;
-		tilesize[builder.uintLit(84537493)] = builder.uintLit(512);
-		tilesize[genericTileSize] = builder.concreteIntTypeParam(512);
+		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
+		tilesize[genericTileSize] = builder.concreteIntTypeParam(64);
 		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, false);
 	}
+
+	// remove all inserted compound expressions
+	NewCompoundsRemover remComp(mgr);
+	toTransform = remComp.mapElement(0, toTransform);
 }
 
 StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
@@ -151,25 +158,37 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 }
 
 StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
-		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType) {
+		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
 	StatementList allDecls;
 
 	allDecls.push_back(decl);
-	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(), oldStructType, newStructType)));
+
+	NodeMap inInitReplacementsInCaseOfNovarInInit;
+	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	// divide initialization size by tilesize
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+
+	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
+		inInitReplacementsInCaseOfNovarInInit)));
 
 	return allDecls;
 }
 
 StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
-	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], oldStructType, newStructType)));
+	NodeMap inInitReplacementsInCaseOfNovarInInit;
+	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	// divide initialization size by tilesize
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+
+	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
 
 	return allAssigns;
 }
@@ -187,15 +206,9 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const E
 	ExpressionPtr tilesize = builder.uintLit(84537493);
 
 	for(NamedTypePtr memberType : structType->getElements()) {
-//		ExpressionPtr newArrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(iterator, tilesize));
-//		ExpressionPtr newVectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(iterator, tilesize));
-//
-//		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-//		ExpressionPtr taosAccess = refAccess(newVar, newArrayIdx, memberType->getName(), newVectorIdx);
-
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
 
-		ExpressionPtr aosAccess = valueAccess(oldVar, globalIdx, memberType->getName());
+		ExpressionPtr aosAccess = builder.deref(refAccess(oldVar, globalIdx, memberType->getName()));
 		ExpressionPtr taosAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
 				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
 
@@ -226,8 +239,8 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
 
 		ExpressionPtr aosAccess = refAccess(oldVar, globalIdx, memberType->getName());
-		ExpressionPtr taosAccess = valueAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
-				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator));
+		ExpressionPtr taosAccess = builder.deref(refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName(),
+				builder.castExpr(builder.getLangBasic().getUInt8(), tiledIterator)));
 
 		loopBody.push_back(builder.assign(aosAccess, taosAccess));
 	}
@@ -256,6 +269,43 @@ StatementList AosToTaos::generateDel(const StatementAddress& stmt, const Express
 	return deletes;
 }
 
+ExpressionPtr AosToTaos::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
+		const ExpressionPtr& oldStructAccess) {
+	IRBuilder builder(mgr);
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false);
+
+	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
+	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+
+	ExpressionPtr vectorAccess = refAccess(newStructAccess, arrayIdx, member, vectorIdx);
+
+	return vectorAccess;
+}
+
+ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
+	IRBuilder builder(mgr);
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false).as<ExpressionPtr>();
+
+	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
+	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+
+	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
+	for(NamedTypePtr memberType : newStructType->getElements()) {
+
+		StringValuePtr memberName = memberType->getName();
+
+		ExpressionPtr vectorAccess = builder.deref(refAccess(newStructAccess, arrayIdx, memberName, vectorIdx));
+
+		values.push_back(std::make_pair(memberName, vectorAccess));
+	}
+
+	return builder.structExpr(values);
+}
 
 } // datalayout
 } // transform

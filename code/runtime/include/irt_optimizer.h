@@ -98,6 +98,13 @@ typedef struct _irt_optimizer_wi_data_id {
             uint16 frequency;
             uint16 thread_count;
         };
+        // Useless struct to satisfy debug printfs in table_lookups.h
+        struct {
+            uint32 index;
+            uint16 thread;
+            uint8 node;
+            uint8 id_type;
+        };
     };
     struct _irt_optimizer_wi_data* cached;
 } irt_optimizer_wi_data_id;
