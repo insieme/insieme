@@ -1579,17 +1579,19 @@ namespace {
 		if (initList.empty()) return body;
 
 
-		//ATTENTION: this will produce an extra compound around the  initializer list and old body
-		// let fun ... {
-		//   { intializer stuff };
-		//   { original body };
-		// }
-		return builder.compoundStmt(
-				builder.compoundStmt(initList),
-				body
-		);
+		if(body.isa<core::CompoundStmtPtr>()){  
+			for(auto x : body.as<core::CompoundStmtPtr>()) {
+				initList.push_back(x);
+			}
+		}
+		else{
+			initList.push_back(body);
+		}
+
+		return builder.compoundStmt( initList);
+
 	}
-}
+} // anonymous namespace
 
 
 //////////////////////////////////////////////////////////////////
