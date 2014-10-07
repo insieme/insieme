@@ -180,7 +180,7 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
@@ -918,7 +918,7 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	}
 }
 
-void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
+void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
@@ -927,7 +927,7 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 		const ExpressionPtr& newVar = vr.second;
 
 		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
-		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar")),
+		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar", pirp::variable())),
 				pattern::var("idx"), pattern::var("type")));
 		pattern::TreePattern tupleAssign = pirp::assignment(tupleAccess, structAccess);
 
@@ -940,33 +940,44 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 
 			TypePtr newTupleType = core::transform::replaceAllGen(mgr, oldTupleVarType, oldStructType, newStructType, true);
 
-			// check if local or global variable
-			LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
-			ExpressionPtr newTupleVar = globalTuple ?
-					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
-					builder.variable(newTupleType).as<ExpressionPtr>();
-std::cout << "\nntv: \n";
-dumpPretty(oldTupleVar);
-dumpPretty(getRootVariable(node >> oldTupleVar, node));
+			ExpressionPtr newTupleVar;
+
+			if(structures.find(oldTupleVar) == structures.end()) {
+				// check if local or global variable
+				LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
+				newTupleVar = globalTuple ?
+						builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
+						builder.variable(newTupleType).as<ExpressionPtr>();
+				structures[oldTupleVar] = newTupleVar;
+			} else {
+				newTupleVar = structures[oldTupleVar];
+			}
 
 			ExpressionPtr oldRootVar = getRootVariable(node >> oldTupleVar, node).as<ExpressionPtr>();
-			TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType(), oldStructType, newStructType, true);
-			LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
-			ExpressionPtr newRootVar = globalRoot ?
-					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
-					builder.variable(newTupleType).as<ExpressionPtr>();
 
-			structures[oldTupleVar] = newTupleVar;
-			structures[oldRootVar] = newRootVar;
+			if(structures.find(oldRootVar) == structures.end()) {
+				TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType(), oldStructType, newStructType, true);
+				LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
+				ExpressionPtr newRootVar = globalRoot ?
+						builder.literal(globalRoot->getStringValue() + "_soa", newRootType).as<ExpressionPtr>() :
+						builder.variable(newRootType).as<ExpressionPtr>();
+
+				structures[oldRootVar] = newRootVar;
+			}
 
 			ExpressionPtr newTupleAccess = core::transform::fixTypesGen(mgr, oldTupleAccess.as<ExpressionPtr>(), oldTupleVar.as<ExpressionPtr>(),
 					newTupleVar, true);
 
 			ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, match["structAccess"].getValue().getAddressedNode(),
 					oldVar, newVar, true).as<ExpressionPtr>();
+std::cout << "\nntv: \n";
+dumpPretty(oldStructType);
+dumpPretty(newStructAccess);
+			newStructAccess = core::transform::replaceAllGen(mgr, newStructAccess, oldTupleVarType, newTupleType, false);
 
 			replacements[node] = builder.assign(newTupleAccess, newStructAccess);
 		});
+
 	}
 }
 
