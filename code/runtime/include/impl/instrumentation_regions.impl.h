@@ -86,6 +86,7 @@ irt_inst_region_context_data* _irt_inst_region_stack_pop(irt_work_item* wi) {
 
 void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	irt_inst_region_context_data* rg = irt_inst_region_get_current(wi);
+	irt_context* context = irt_context_table_lookup(wi->context_id);
 #pragma GCC diagnostic push
 // ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -108,6 +109,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 	uint64 length = list->length;
 	IRT_ASSERT(length > 0, IRT_ERR_INSTRUMENTATION, "Tried to get region data from a WI that has no region data")
 	irt_inst_region_context_data* rg = list->items[length-1];
+	irt_context* context = irt_context_table_lookup(wi->context_id);
 	irt_spin_lock(&(rg->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
@@ -217,9 +219,9 @@ void irt_inst_region_init(irt_context* context) {
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		context->inst_region_data[i].id	 = i;
 		context->inst_region_data[i].num_executions = 0;
-		context->inst_region_data[i].num_entries = 0;
-		context->inst_region_data[i].num_exits = 0;
+		context->inst_region_data[i].num_participants = 0;
 		irt_spin_init(&context->inst_region_data[i].lock);
+		irt_spin_init(&context->inst_region_data[i].participants_lock);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 		context->inst_region_data[i].last_##_name__ = 0; \
 		context->inst_region_data[i].aggregated_##_name__ = 0;
@@ -240,6 +242,7 @@ void irt_inst_region_finalize(irt_context* context) {
 	//irt_inst_region_debug_output();
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		irt_spin_destroy(&context->inst_region_data[i].lock);
+		irt_spin_destroy(&context->inst_region_data[i].participants_lock);
 	}
 	free(context->inst_region_data);
 }
@@ -344,24 +347,27 @@ void irt_inst_region_start(const irt_inst_region_id id) {
 		irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	}
 
-	uint64 inner_entry_count = irt_atomic_fetch_and_add(&(inner_region->num_entries), 1, uint64);
-	bool inner_first_entry = ((inner_entry_count - inner_region->num_exits) == 0);
+	uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
+	irt_spin_lock(&inner_region->participants_lock);
+	uint64 inner_entry_count = (inner_region->num_participants)++;
+
+	bool first = (inner_entry_count == 0);
+	bool last = (inner_entry_count+1) == wg_count;
 
 	if(outer_region) {
-		if(outer_region->num_entries - irt_atomic_add_and_fetch(&(outer_region->num_exits), 1, uint64) == 0) {
+		if(last)
 			_irt_inst_region_end_late_exit_measurements(wi);
-			uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-			irt_atomic_fetch_and_sub(&(outer_region->num_entries), wg_count, uint64);
-			irt_atomic_fetch_and_sub(&(outer_region->num_exits), wg_count, uint64);
-		}
 	}
 
 	_irt_inst_region_stack_push(wi, inner_region);
 
-	if(inner_first_entry)
+	if(first)
 		_irt_inst_region_start_early_entry_measurements(wi);
 
+	irt_spin_unlock(&inner_region->participants_lock);
+
 	irt_inst_region_start_measurements(wi);
+
 }
 
 // stop a region and remove it from the region stack of the WI
@@ -371,6 +377,7 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	irt_context* context = irt_context_table_lookup(wi->context_id);
 	irt_inst_region_context_data* inner_region = irt_inst_region_get_current(wi);
 	
+
 	IRT_ASSERT(id >= 0 && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "End of region id %lu requested, but only %u region(s) present", id, context->num_regions)
 	IRT_ASSERT(inner_region, IRT_ERR_INSTRUMENTATION, "Region end occurred while no region was started")
 	IRT_ASSERT(inner_region->id == id, IRT_ERR_INSTRUMENTATION, "Region end id %lu did not match currently open region id %lu", id, inner_region->id)
@@ -378,30 +385,40 @@ void irt_inst_region_end(const irt_inst_region_id id) {
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 
-	if(inner_region->num_entries - irt_atomic_add_and_fetch(&(inner_region->num_exits), 1, uint64) == 0) {
+	uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
+
+	// if there is an outer region
+	irt_inst_region_context_data* outer_region = NULL;
+	if(wi->inst_region_list->length > 1) {
+		outer_region = wi->inst_region_list->items[wi->inst_region_list->length-2];
+	}
+	irt_spin_lock(&inner_region->participants_lock);
+	uint64 outer_entry_count = --(inner_region->num_participants);
+	bool last = (outer_entry_count == 0);
+	bool first = (outer_entry_count+1 == wg_count);
+
+	// the last one to exit the inner region ends the EELE measurements
+	if(last) {
 		_irt_inst_region_end_late_exit_measurements(wi);
-		uint32 wg_count = wi->num_groups>0?irt_wi_get_wg_size(wi, 0):1;
-		irt_atomic_fetch_and_sub(&(inner_region->num_entries), wg_count, uint64);
-		irt_atomic_fetch_and_sub(&(inner_region->num_exits), wg_count, uint64);
 	}
 
 	_irt_inst_region_stack_pop(wi);
 
-	if(wi->inst_region_list->length > 0) {
-		irt_inst_region_context_data* outer_region = irt_inst_region_get_current(wi);
-		uint64 outer_entry_count = irt_atomic_fetch_and_add(&(outer_region->num_entries), 1, uint64);
-		bool outer_first_entry = ((outer_entry_count - outer_region->num_exits) == 0);
-		if(outer_first_entry)
+	if(outer_region) {
+		// the first one to enter the outer region starts the EELE measurements
+		if(first)
 			_irt_inst_region_start_early_entry_measurements(wi);
 	}
+	irt_spin_unlock(&inner_region->participants_lock);
 
 	// only increase count if wi is not member in any work group or has wg id == 0
 	if(wi->num_groups == 0 || (wi->num_groups > 0 && wi->wg_memberships[0].num == 0))
 		inner_region->num_executions++;
 
 	// if there is a region left open, continue old measurements
-	if(wi->inst_region_list->length > 0)
+	if(outer_region) {
 		irt_inst_region_start_measurements(wi);
+	}
 }
 
 // selectively enable region instrumentation metrics - NOTE: a NULL pointer or an empty string as an argument will enable all metrics!
@@ -443,7 +460,9 @@ void irt_inst_region_select_metrics(const char* selection) {
 }
 
 void irt_inst_region_select_metrics_from_env() {
-#ifndef _GEMS_SIM
+#ifdef _GEMS
+	irt_inst_region_select_metrics(GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES);
+#else
 	if (getenv(IRT_INST_REGION_INSTRUMENTATION_ENV) && strcmp(getenv(IRT_INST_REGION_INSTRUMENTATION_ENV), "enabled") == 0) {
 		irt_log_setting_s(IRT_INST_REGION_INSTRUMENTATION_ENV, "enabled");
 
@@ -513,7 +532,7 @@ void irt_inst_region_output() {
 
 	// write data
 	for(uint32 i = 0; i < num_regions; ++i) {
-		fprintf(outputfile, "RG,%u,%lu", i, regions[i].num_executions);
+		fprintf(outputfile, "RG,%u,%" PRIu64, i, regions[i].num_executions);
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 		if(irt_g_inst_region_metric_measure_##_name__) { \
 			fprintf(outputfile, "," _format_string__, (_data_type__)((double)regions[i].aggregated_##_name__ * _output_conversion_code__)); \

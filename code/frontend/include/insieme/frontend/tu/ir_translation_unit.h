@@ -232,6 +232,25 @@ namespace tu {
 
 		// operators:
 
+		IRTranslationUnit  operator=(const IRTranslationUnit& other) {
+			
+			mgr = other.mgr;
+			initializer = other.initializer;
+
+			types.clear();
+			std::copy(other.types.begin(), other.types.end(), std::inserter(types, types.end()));
+			functions.clear();
+			std::copy(other.functions.begin(), other.functions.end(), std::inserter(functions, functions.end()));
+			globals.clear();
+			std::copy(other.globals.begin(), other.globals.end(), std::back_inserter(globals));
+			entryPoints.clear();
+			std::copy(other.entryPoints.begin(), other.entryPoints.end(), std::back_inserter(entryPoints));
+			metaInfos.clear();
+			std::copy(other.metaInfos.begin(), other.metaInfos.end(), std::inserter(metaInfos, metaInfos.end()));
+			isCppCode = other.isCppCode;
+
+			return *this;
+		}
 		bool operator==(const IRTranslationUnit& other) const {
 			return types == other.types && functions == other.functions && globals == other.globals && entryPoints == other.entryPoints;
 		}

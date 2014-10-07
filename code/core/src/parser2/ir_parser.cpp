@@ -1288,16 +1288,25 @@ namespace parser {
 							structType = a->getType().as<StructTypePtr>();
 						} else if (a->getType()->getNodeType() == NT_RefType) {
 							TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+
+							if ( type->getNodeType() == core::NT_RecType ) {
+								type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+							}
+
 							structType = type.isa<StructTypePtr>();
 							if (!structType) {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
+								std::cout << *type << std::endl;
 								return fail(cur, "Accessing element of non-struct type!");
 							}
 						} else {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing element of non-struct type!");
 						}
 
 						// check field
 						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							std::cout << "unknown field" << std::endl;
 							return fail(cur, "Accessing unknown field!");
 						}
 
@@ -1318,17 +1327,24 @@ namespace parser {
 
 						// check whether target is a reference
 						if (a->getType()->getNodeType() != NT_RefType) {
+								std::cout << "Accessing non-pointer elemet!" << std::endl;
 							return fail(cur, "Accessing non-pointer element!");
 						}
 
 						// extract struct type
-						StructTypePtr structType = a->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>();
+						TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+						if ( type->getNodeType() == core::NT_RecType ) {
+							type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+						}
+						StructTypePtr structType = type.isa<StructTypePtr>();
 						if (!structType) {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing non-struct element!");
 						}
 
 						// check field
 						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							std::cout << "unknown field" << std::endl;
 							return fail(cur, "Accessing unknown field!");
 						}
 

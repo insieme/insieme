@@ -48,7 +48,8 @@
 #define IRT_GEM_STEP_FREQ   (5 * 1000)      // 5 MHz
 
 
-int32 _irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length){
+int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length){
+#ifdef _GEM_SIM
     uint32 freq = IRT_GEM_MIN_FREQ;
     uint32 j = 0;
 
@@ -58,6 +59,10 @@ int32 _irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* lengt
     }
 
     *length = j;
+#else
+    for(*length=0; *length<9; (*length)++)
+        frequencies[*length] = freq_table_a15[*length];
+#endif
 
     return 0;
 } 
@@ -69,7 +74,7 @@ int32 _irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* lengt
 int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* frequencies, uint32* length) {
     IRT_ASSERT(irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity) == coreid,
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current core is unsupported");
-    return _irt_cpu_freq_get_available_frequencies(frequencies, length);
+    return irt_cpu_freq_get_available_frequencies(frequencies, length);
 }
 
 /*
@@ -79,7 +84,7 @@ int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* f
 int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32* frequencies, uint32* length) {
     IRT_ASSERT(irt_worker_get_current() == worker,
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
-    return _irt_cpu_freq_get_available_frequencies(frequencies, length);
+    return irt_cpu_freq_get_available_frequencies(frequencies, length);
 }
 
 /*
@@ -91,7 +96,18 @@ int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker){
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
 
     return rapmi_get_freq();
-} 
+}  
+
+/*
+ * sets the frequency of a core of a worker to a specific value by setting both the min and max to this value
+ */
+
+int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency){
+    IRT_ASSERT(irt_worker_get_current() == worker,
+        IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
+
+    return rapmi_set_freq(frequency);
+}
 
 /*
  * sets the maximum frequency a core of a worker is allowed to run at
@@ -160,17 +176,6 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker){
     /* No limits on the gemsclaim simulator */
 
     return (IRT_GEM_MAX_FREQ - IRT_GEM_MIN_FREQ) / IRT_GEM_STEP_FREQ + 1;
-} 
-
-/*
- * sets the frequency of a core of a worker to a specific value by setting both the min and max to this value
- */
-
-int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency){
-    IRT_ASSERT(irt_worker_get_current() == worker,
-        IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
-
-    return rapmi_set_freq(frequency);
 }
 
 #endif // ifndef __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H

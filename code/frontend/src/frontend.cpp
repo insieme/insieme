@@ -85,7 +85,7 @@ namespace frontend {
 
 	bool ConversionSetup::isCxx(const path& file) const {
 		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
-		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+		return standard == Cxx03 || standard == Cxx98 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
     //register frontend plugins
@@ -227,7 +227,7 @@ namespace frontend {
 	}
 
 	bool ConversionJob::isCxx() const {
-		if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
+		if (getStandard() == Standard::Cxx03 || getStandard() == Cxx98 || getStandard() == Standard::Cxx11) return true;
 		if (getStandard() == Standard::C99) return false;
 
 		bool cppFile = any(files, [&](const path& cur) {

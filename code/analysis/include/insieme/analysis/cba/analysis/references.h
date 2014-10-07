@@ -109,12 +109,6 @@ namespace cba {
 
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
-			// and default handling
-			super::visitCallExpr(call, ctxt, constraints);
-
-			// we only need to handle references
-			if (!call->getType().isa<RefTypePtr>()) return;
-
 			// introduce memory location in some cases
 			if (isMemoryConstructor(call)) {
 
@@ -169,15 +163,9 @@ namespace cba {
 				// add constraint linking in and out values
 				constraints.add(subset(R_in, R_out));
 
-			} else if (base.isBuiltIn(fun)) {
-				// do nothing - should be properly supported
-
-			} else if (fun.isa<LiteralPtr>()) {		// it is an external function call -> no more details
-
-				auto l_call = cba.getLabel(call);
-				auto R_call = cba.getVar(R, l_call, ctxt);
-				constraints.add(subset(this->getUnknownValue(), R_call));
-
+			} else {
+				// use default handling
+				super::visitCallExpr(call, ctxt, constraints);
 			}
 		}
 

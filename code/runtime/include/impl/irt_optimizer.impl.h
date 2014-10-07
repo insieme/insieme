@@ -118,7 +118,7 @@ int irt_g_dvfs_eval_count[128];
 #endif
 
 void get_available_freqs() {
-    if(!irt_cpu_freq_get_available_frequencies_core(0, irt_g_available_freqs, &irt_g_available_freq_count))
+    if(!irt_cpu_freq_get_available_frequencies(irt_g_available_freqs, &irt_g_available_freq_count))
         return;
 
     // scaling_available_frequencies not available
@@ -184,13 +184,20 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
     
     irt_spin_lock(&variant->rt_data.optimizer_rt_data.spinlock);
 
-    // We update our optimization values every round of #workers parallel executions of the work item 
+    /* We update our optimization values every round of #workers parallel executions of the work item 
+     * This applies only to parallel construct (force_computation == false)
+     * For now a ir_parallel call produces exactly #workers wi instances 
+     * hence we enter this if construct only after a region execution. If not the case
+     * instrumentation readings would be meaningless.
+     */
+    variant->rt_data.completed_wi_count ++;
     if(variant->meta_info->ompp_objective.region_id != UINT_MAX) {
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-        if(force_computation || regions[variant->meta_info->ompp_objective.region_id].num_executions % irt_g_active_worker_count == 0) {
+        if(force_computation || variant->rt_data.completed_wi_count == irt_g_active_worker_count) {
 #else
-        if(force_computation || regions[variant->meta_info->ompp_objective.region_id].num_executions % irt_g_worker_count == 0) {
+        if(force_computation || variant->rt_data.completed_wi_count == irt_g_worker_count) {
 #endif
+            variant->rt_data.completed_wi_count = 0;
             irt_optimizer_wi_data* new_element = calloc(1, sizeof(irt_optimizer_wi_data)); 
 
             // collecting data                          
@@ -228,7 +235,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
                 irt_g_dvfs_eval_energy[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
                 irt_g_dvfs_eval_time[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
-                if(regions[variant->meta_info->ompp_objective.region_id].num_executions == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
+                if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] >= IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
                     printf("frequency: energy - time - power (num of executions)\n");
                     for(int k=0; k<irt_g_available_freq_count; k++)
                         printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
@@ -264,7 +271,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
                 static int next_freq = 0;
                 irt_g_dvfs_eval_count[next_freq] ++;
-                if(irt_g_dvfs_eval_count[next_freq] == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS / irt_g_available_freq_count) {
+                if(irt_g_dvfs_eval_count[next_freq] >= IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
                     next_freq ++;
                     if(next_freq > irt_g_available_freq_count-1)
                         next_freq = irt_g_available_freq_count-1;
@@ -312,7 +319,7 @@ void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {
 
     irt_spin_unlock(&data->spinlock);
 
-    //printf("%s: %d\n", __func__, data->cur.frequency);
+    //printf("%s: %d\n", __func__, irt_g_available_freqs[data->cur.frequency]);
 
     return;
 }

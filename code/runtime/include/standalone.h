@@ -55,7 +55,7 @@
 	#include "irt_maintenance.h"
 #endif
 
-#ifdef _GEMS
+#if defined _GEMS && !defined _GEMS_TODO
 	#include "include_gems/stdlib.h"
 #endif
 
@@ -306,9 +306,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
-	#ifdef _GEMS
-		irt_inst_region_select_metrics("rapmi_energy,rapmi_average_power,rapmi_ticks");
-	#endif
 #endif
 
 	irt_log_comment("starting worker threads");

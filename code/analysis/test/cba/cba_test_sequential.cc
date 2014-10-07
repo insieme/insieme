@@ -1148,6 +1148,41 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, Arithmetic_103) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto in = builder.parseStmt(
+			"{"
+			"	let int = int<4>;"
+			"	let f = lit(\"xyz\": () -> int);"
+			"	f();"
+			"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// check values
+//		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, Arithmetic_Cast) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& base = builder.getLangBasic();
+
+		ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+
+		EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+
+		EXPECT_EQ("{12}", toString(getValues(expr, A)));
+	}
 
 	TEST(CBA, Boolean_101) {
 		NodeManager mgr;

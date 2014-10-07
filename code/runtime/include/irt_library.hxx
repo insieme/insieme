@@ -8,6 +8,10 @@ extern "C" {
 #include "irt_globals.h"
 #include "irt_joinable.h"
 
+
+void irt_lib_init(uint32 worker_count);
+void irt_lib_shutdown();
+
 // IRT
 void irt_merge(irt_joinable);
 // IRT lib
@@ -23,6 +27,8 @@ void irt_lib_critical_end();
 irt_work_item* irt_lib_wi_get_current();
 uint32 irt_lib_wi_get_wg_size(irt_work_item *wi, uint32 index);
 uint32 irt_lib_wi_get_wg_num (irt_work_item *wi, uint32 index);
+uint32 irt_lib_get_default_worker_count() ;
+
 }
 #endif
 
@@ -34,14 +40,27 @@ namespace irt {
 	// Implementation details
 	namespace detail {
 		template<class Callable>
-		void _cpp_par_wrapper(void *callable) {
+		inline void _cpp_par_wrapper(void *callable) {
 			(*((Callable*)callable))();
 		}
 
 		template<class LoopCallable>
-		void _cpp_loop_wrapper(int64 num, void *callable) {
+		inline void _cpp_loop_wrapper(int64 num, void *callable) {
 			(*((LoopCallable*)callable))(num);
 		}
+
+		template<class LoopSlicedCallable>
+		inline void _cpp_loop_s_wrapper(int64 start, int64 end, int64 step, void *callable) {
+			(*((LoopSlicedCallable*)callable))(start, end, step);
+		}
+
+		template<class ElemCallable>
+		struct SlicedCaller {
+			ElemCallable& fun;
+			inline void operator()(int64 start, int64 end, int64 step) {
+				for(int64 i=start; i<end; i+=step) fun(i);
+			}
+		};
 	}
 
 	inline void merge_all() {
@@ -100,24 +119,39 @@ namespace irt {
 	// on the current team of parallel threads, or a new one if there isn't any
 	template<class LoopCallable>
 	inline void pfor_impl(int64 begin, int64 end, int64 step, const LoopCallable& fun) {
-		if(irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0) < 1) {
+		if(irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0) <= 1) {
 			irt::merge( irt::parallel([&](){ irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable)); } ) );
 		} else {
 			irt_lib_pfor(begin, end, step, &detail::_cpp_loop_wrapper<LoopCallable>, (void*)&fun, sizeof(LoopCallable));
 		}
 		return;
 	}
+	template<class LoopSlicedCallable>
+	inline void pfor_s_impl(int64 begin, int64 end, int64 step, const LoopSlicedCallable& fun) {
+		if(irt_lib_wi_get_wg_size(irt_lib_wi_get_current(), 0) <= 1) {
+			irt::merge( irt::parallel([&](){ irt_lib_pfor_s(begin, end, step, &detail::_cpp_loop_s_wrapper<LoopSlicedCallable>, (void*)&fun, sizeof(LoopSlicedCallable)); } ) );
+		} else {
+			irt_lib_pfor_s(begin, end, step, &detail::_cpp_loop_s_wrapper<LoopSlicedCallable>, (void*)&fun, sizeof(LoopSlicedCallable));
+		}
+		return;
+	}
+	
+	// Executes "fun" "times" times in parallel, iterations 0 to times-1
+	template<class ElemCallable>
+	inline void times(int64 times, ElemCallable fun) {
+		pfor_s_impl(0, times, 1, detail::SlicedCaller<ElemCallable>{fun});
+	}
 
 	// Executes "fun" for each element of the given container in parallel
 	template<class ElemCallable, class Container>
 	inline void pfor(Container& container, ElemCallable fun) {
-		pfor_impl(0, container.size(), 1, [&](int64 i) { fun(container[i]); });
+		times(container.size(), [&](int64 i) { fun(container[i]); });
 	}
 
 	// Executes "fun" for each element of the given container in parallel
 	template<class IterA, class IterB, class StepType, class ElemCallable>
 	inline void pfor(const IterA& begin, const IterB& end, StepType step, ElemCallable fun) {
-		pfor_impl(0, end - begin, step, [=](int64 i) { fun(begin + i); });
+		pfor_s_impl(0, end - begin, step, [&](int64 start, int64 end, int64 step) { for(int64 i = start; i < end; i += step) fun(begin + i); });
 	}
 
 	// Executes "fun" for each element of the given container in parallel
@@ -129,7 +163,7 @@ namespace irt {
 	// Maps each element of the given container to the result of executing "mapper" on it (in place)
 	template<class MapCallable, class Container>
 	inline void pmap(Container& container, MapCallable mapper) {
-		pfor_impl(0, container.size(), 1, [&](int64 i) { container[i] = mapper(container[i]); });
+		times(container.size(), [&](int64 i) { container[i] = mapper(container[i]); });
 	}
 
 	// a barrier for the current work group

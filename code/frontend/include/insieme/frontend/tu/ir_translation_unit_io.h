@@ -43,6 +43,17 @@ namespace frontend {
 namespace tu {
 
 	/**
+	 * dumps the TU into a sigle IR node, useful tu use visitors on the whole thing
+	 * and do not loose a bit
+	 */
+	core::ExpressionPtr toIR ( core::NodeManager& manager, const IRTranslationUnit& unit);
+
+	/**
+	 * 	builds a translation unit from a previously dumped TU, or spetialy crafted IR node
+	 */
+	IRTranslationUnit fromIR (const core::ExpressionPtr& node);
+
+	/**
 	 * Dumps the given translation unit to the given output stream.
 	 *
 	 * @param out the target stream

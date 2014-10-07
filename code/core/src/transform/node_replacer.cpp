@@ -1379,6 +1379,14 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacemen
 	return applyReplacer(mgr, root, mapper);
 }
 
+NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
+		const TypeHandler& typeHandler ) {
+	ExpressionMap replacements;
+	replacements[toReplace] = replacement;
+	return fixTypes(mgr, root, replacements, limitScope, typeHandler);
+}
+
+
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
 	assert(root && "Root must not be a null pointer!");
 

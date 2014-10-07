@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -235,25 +235,6 @@ namespace analysis {
 	 */
 	bool isDefaultConstructor(const LambdaExprPtr& lambda);
 
-	// ------------------------------- Long Long ---------------------------------------
-
-	/**
-	 * checks whenever the inner implementation of the type represents a long long
-	 */
-	bool isLongLong(const TypePtr& type);
-	bool isSignedLongLong(const TypePtr& type);
-
-	/**
-	 * cast to long long
-	 */
-	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed = false);
-
-	/**
-	 * cast from long long
-	 */
-	ExpressionPtr castFromLongLong( const ExpressionPtr& expr);
-
-	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr);
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

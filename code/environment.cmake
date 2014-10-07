@@ -60,10 +60,12 @@ find_package(Git)
 if(GIT_FOUND)
 	# deduce the code version using git describe
 	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
-	#set ( insieme_version "shit" )
 else()
 	set ( insieme_version "unknown" )
 endif()
+
+# add insieme version definition (add_definitions escapes back-quotes)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
 
 # -------------------------------------------------------------- find location of utilities
@@ -317,9 +319,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	else()
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
-
-	# add insieme version definition (add_definitions escapes back-quotes)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
 endif()
 

@@ -303,7 +303,12 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 	std::stringstream ss;
 	ss << "_enum";
 
-	ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
+    // A canonical path is needed to avoid different names for 
+    // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
+    char path[PATH_MAX];
+    realpath(sm.getFilename(enumDecl->getLocStart()).str().c_str(), path);
+    ss << path;
+
 	ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
 	ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
 	ss << "_";
@@ -322,7 +327,13 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_enumCtnt";
-	ss << sm.getFilename(ecd->getLocStart()).str();   //.getHashValue();
+    
+    // A canonical path is needed to avoid different names for 
+    // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
+    char path[PATH_MAX];
+    realpath(sm.getFilename(ecd->getLocStart()).str().c_str(), path);
+    ss << path;
+
 	ss << sm.getExpansionLineNumber (ecd->getLocStart());
 	ss << sm.getExpansionColumnNumber(ecd->getLocStart());
 	ss << "_";

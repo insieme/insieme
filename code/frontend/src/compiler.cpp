@@ -331,12 +331,16 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	}
 
 	if (config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) pimpl->m_isCXX = true;
-	if (config.getStandard() == ConversionSetup::Cxx03 || config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
+	if (config.getStandard() == ConversionSetup::Cxx03 || 
+		config.getStandard() == ConversionSetup::Cxx98 || 
+		config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
 
 	if (pimpl->m_isCXX){
 		// set cxx standard to c++98
 		if (config.getStandard() == ConversionSetup::Cxx11)
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
+		else if (config.getStandard() == ConversionSetup::Cxx98)
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
 		else
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 
