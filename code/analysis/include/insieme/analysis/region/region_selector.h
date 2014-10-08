@@ -56,7 +56,7 @@ namespace region {
 	 * than an address pointing to it. Hence, regions are typedefed to be
 	 * equivalent to NodeAddresses.
 	 */
-	typedef core::CompoundStmtAddress Region;
+	typedef core::StatementAddress Region;
 	typedef vector<Region> RegionList;
 
 	/**
